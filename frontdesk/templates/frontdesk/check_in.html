@@ -1,0 +1,32 @@
+{% extends "base/base.html" %}
+
+{% block title %}Check In{% endblock %}
+
+{% block header %}
+<h2>Check In – Room {{ room.room_number }}</h2>
+{% endblock %}
+
+{% block content %}
+<form method="post">
+    {% csrf_token %}
+
+    <label>First Name</label><br>
+    <input type="text" name="first_name" required><br><br>
+
+    <label>Last Name</label><br>
+    <input type="text" name="last_name" required><br><br>
+
+    <label>Phone</label><br>
+    <input type="text" name="phone"><br><br>
+
+    <label>Email</label><br>
+    <input type="email" name="email"><br><br>
+
+    <button type="submit">Check In</button>
+    <a href="/frontdesk/">Cancel</a>
+</form>
+
+<p style="margin-top:10px; color:#555;">
+Returning guests can be checked in using phone number only.
+</p>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base/base.html" %}
+
+{% block title %}Active Stay{% endblock %}
+
+{% block header %}
+<h2>Room {{ room.room_number }} – Active Stay</h2>
+{% endblock %}
+
+{% block content %}
+
+<!-- ================= GUEST INFO ================= -->
+<section class="card">
+    <h3>Guest Information</h3>
+    {% if guest %}
+    <p><strong>Name:</strong> {{ guest.first_name }} {{ guest.last_name }}</p>
+    <p><strong>Phone:</strong> {{ guest.phone|default:"—" }}</p>
+    <p><strong>Email:</strong> {{ guest.email|default:"—" }}</p>
+{% else %}
+    <p style="color:red;">
+        Guest information missing — please update.
+    </p>
+{% endif %}
+
+</section>
+
+<!-- ================= ROOM INFO ================= -->
+<section class="card">
+    <h3>Room Details</h3>
+    <p><strong>Room:</strong> {{ room.room_number }}</p>
+    <p><strong>Category:</strong> {{ room.category.name }}</p>
+    <p><strong>Status:</strong> {{ room.status }}</p>
+    <p><strong>Check-in:</strong> {{ folio.check_in_at }}</p>
+    <p><strong>Nights:</strong> {{ folio.nights }}</p>
+    <p><strong>Rate:</strong> ₦{{ room.category.rate.price_per_night }}</p>
+
+</section>
+
+<!-- ================= ACTIVITY TIMELINE ================= -->
+<section class="card">
+    <h3>Stay Activity</h3>
+
+    {% if timeline %}
+        <ul style="list-style:none;padding-left:0;">
+            {% for item in timeline %}
+                <li style="padding:10px 0;border-bottom:1px solid #eee;">
+                    <strong>{{ item.label }}</strong>
+                    <br>
+                    <small>{{ item.time|date:"Y-m-d H:i" }}</small>
+                    <br>
+                    {{ item.description }}
+
+                    {% if item.amount %}
+                        <span style="float:right;
+                            color:{% if item.amount < 0 %}green{% else %}red{% endif %};">
+                            ₦{{ item.amount }}
+                        </span>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No activity recorded.</p>
+    {% endif %}
+</section>
+
+
+<!-- ================= CHARGES ================= -->
+<section style="border:1px solid #ccc;padding:15px;margin-bottom:20px;">
+    <h3>Charges</h3>
+
+    {% if charges_by_department %}
+        {% for dept, data in charges_by_department.items %}
+            <h4>{{ dept }}</h4>
+
+            <table width="100%" border="1" cellpadding="6" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th width="120">Date</th>
+                        <th width="120" align="right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in data.charges %}
+                        <tr>
+                            <td>{{ c.description }}</td>
+                            <td>{{ c.created_at|date:"d M Y H:i" }}</td>
+                            <td align="right">₦{{ c.amount }}</td>
+                        </tr>
+                    {% endfor %}
+                    <tr>
+                        <th colspan="2" align="right">Subtotal</th>
+                        <th align="right">₦{{ data.total }}</th>
+                    </tr>
+                </tbody>
+            </table>
+
+            <br>
+        {% endfor %}
+    {% else %}
+        <p>No charges yet.</p>
+    {% endif %}
+</section>
+
+<!-- ================= PAYMENTS ================= -->
+<section class="card">
+    <h3>Payments</h3>
+
+    {% if payments %}
+        <ul>
+            {% for p in payments %}
+                <li>
+                    {{ p.method }} – ₦{{ p.amount }}
+                    <small>({{ p.collected_at }})</small>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No payments recorded.</p>
+    {% endif %}
+</section>
+
+<!-- ================= SUMMARY ================= -->
+<section class="card highlight">
+    <h3>Financial Summary</h3>
+    <p>Total Charges: ₦{{ folio.total_charges }}</p>
+    <p>Total Payments: ₦{{ folio.total_payments }}</p>
+    <p><strong>Balance: ₦{{ folio.balance }}</strong></p>
+</section>
+
+<!-- ================= ACTIONS ================= -->
+<!-- ================= ACTIONS ================= -->
+<section style="display:flex; gap:10px; flex-wrap:wrap;">
+
+    <a href="{% url 'frontdesk_take_payment' room.id %}">
+        <button>Take Payment</button>
+    </a>
+
+    <a href="{% url 'frontdesk_invoice' folio.id %}" target="_blank">
+        <button>View / Print Invoice</button>
+    </a>
+
+    {% if folio.balance == 0 %}
+        <a href="{% url 'frontdesk_checkout' room.id %}">
+            <button style="background:green;color:white;">Checkout</button>
+        </a>
+    {% elif can_force_checkout %}
+        <a href="{% url 'frontdesk_checkout' room.id %}">
+            <button style="background:orange;color:white;">
+                Force Checkout
+            </button>
+        </a>
+    {% endif %}
+
+    <a href="{% url 'frontdesk_room_board' %}">
+        <button>Back</button>
+    </a>
+
+</section>
+
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base/base.html" %}
+
+{% block title %}Front Desk – Room Board{% endblock %}
+
+{% block header %}
+<h2>Room Board</h2>
+{% endblock %}
+
+{% block content %}
+
+{% for category, rooms in categories.items %}
+    <h3>{{ category.name }}</h3>
+
+    <div style="display:flex; flex-wrap:wrap; gap:15px; margin-bottom:30px;">
+
+        {% for room in rooms %}
+
+            {% if room.status == "AVAILABLE" %}
+                <a href="/frontdesk/check-in/{{ room.id }}/"
+                   style="width:160px;height:100px;background:#2ecc71;
+                          color:white;padding:10px;border-radius:6px;
+                          text-decoration:none;display:flex;
+                          flex-direction:column;justify-content:center;
+                          align-items:center;">
+                    <strong>Room {{ room.room_number }}</strong>
+                    <small>Available</small>
+                </a>
+
+            {% elif room.status == "OCCUPIED" %}
+                <a href="/frontdesk/stay/{{ room.id }}/"
+                   style="width:160px;height:100px;background:#e74c3c;
+                          color:white;padding:10px;border-radius:6px;
+                          text-decoration:none;display:flex;
+                          flex-direction:column;justify-content:center;
+                          align-items:center;">
+                    <strong>Room {{ room.room_number }}</strong>
+                    <small>Occupied</small>
+                </a>
+
+            {% elif room.status == "OCCUPIED_DIRTY" %}
+                <a href="/frontdesk/stay/{{ room.id }}/"
+                   style="width:160px;height:100px;background:#f1c40f;
+                          color:black;padding:10px;border-radius:6px;
+                          text-decoration:none;display:flex;
+                          flex-direction:column;justify-content:center;
+                          align-items:center;">
+                    <strong>Room {{ room.room_number }}</strong>
+                    <small>Occupied – Needs Cleaning</small>
+                </a>
+
+            {% else %}
+                <div onclick="alert('Room needs housekeeping before check-in')"
+                     style="width:160px;height:100px;background:#e67e22;
+                            color:white;padding:10px;border-radius:6px;
+                            display:flex;flex-direction:column;
+                            justify-content:center;align-items:center;
+                            cursor:pointer;">
+                    <strong>Room {{ room.room_number }}</strong>
+                    <small>Needs Cleaning</small>
+                </div>
+            {% endif %}
+
+        {% endfor %}
+    </div>
+{% endfor %}
+
+{% endblock %}

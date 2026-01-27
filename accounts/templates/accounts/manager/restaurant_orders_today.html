@@ -1,0 +1,53 @@
+{% extends "base/base.html" %}
+
+{% block title %}Restaurant Orders Today{% endblock %}
+
+{% block header %}
+<h2>Restaurant Orders — Today</h2>
+{% endblock %}
+
+{% block content %}
+
+<table class="table">
+    <tr>
+        <th>#</th>
+        <th>Time</th>
+        <th>Staff</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>Total</th>
+        <th></th>
+    </tr>
+
+    {% for o in orders %}
+    <tr>
+        <td>{{ o.id }}</td>
+        <td>{{ o.created_at|date:"H:i" }}</td>
+        <td>{{ o.created_by.username }}</td>
+        <td>
+            {% if o.charge_to_room %}
+                Room {{ o.room.room_number }}
+            {% else %}
+                Walk-in
+            {% endif %}
+        </td>
+        <td>{{ o.status }}</td>
+        <td>₦{{ o.total_amount }}</td>
+        <td>
+            <a href="{% url 'restaurant_order_detail' o.id %}">
+                View
+            </a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="7">No orders today</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<a href="{% url 'manager_dashboard' %}">
+    <button>Back</button>
+</a>
+
+{% endblock %}

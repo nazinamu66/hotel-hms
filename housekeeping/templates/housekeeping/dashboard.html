@@ -1,0 +1,35 @@
+{% extends "base/base.html" %}
+
+{% block title %}Housekeeping{% endblock %}
+
+{% block header %}
+<h2>Housekeeping Dashboard</h2>
+{% endblock %}
+
+{% block content %}
+
+{% if rooms %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,200px);gap:15px;">
+        {% for room in rooms %}
+            <div style="
+                padding:15px;
+                border-radius:8px;
+                background:
+                    {% if room.status == 'VACANT_DIRTY' %}#f39c12{% else %}#f1c40f{% endif %};
+                color:#fff;
+            ">
+                <strong>Room {{ room.room_number }}</strong><br>
+                <small>{{ room.get_status_display }}</small>
+
+                <br><br>
+                <a href="{% url 'housekeeping_mark_clean' room.id %}">
+                    <button style="width:100%;">Mark Clean</button>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p>No rooms require cleaning 🎉</p>
+{% endif %}
+
+{% endblock %}

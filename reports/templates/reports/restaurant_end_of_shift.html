@@ -1,0 +1,51 @@
+{% extends "base/base.html" %}
+{% block title %}End of Shift{% endblock %}
+
+{% block content %}
+<h2>Restaurant End-of-Shift Report</h2>
+
+<form method="get" style="margin-bottom:20px;">
+    <label>
+        Date:
+        <input type="date" name="date" value="{{ date }}">
+    </label>
+
+    <label style="margin-left:10px;">
+        Staff:
+        <select name="staff">
+            <option value="">All Staff</option>
+            {% for staff in staff_list %}
+                <option value="{{ staff.id }}"
+                    {% if staff.id|stringformat:"s" == selected_staff %}selected{% endif %}
+                >
+                    {{ staff.username }}
+                </option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <button type="submit">Generate</button>
+</form>
+
+<hr>
+
+<h3>Summary</h3>
+<table cellpadding="8">
+    <tr><td>Total Sales</td><td>₦{{ total_sales }}</td></tr>
+    <tr><td>Total Refunds</td><td>₦{{ total_refunds }}</td></tr>
+    <tr><td><strong>Net Sales</strong></td><td><strong>₦{{ net_sales }}</strong></td></tr>
+</table>
+
+<hr>
+
+<h3>Payment Breakdown</h3>
+<table cellpadding="8">
+    <tr><td>Cash</td><td>₦{{ payment_summary.CASH }}</td></tr>
+    <tr><td>POS</td><td>₦{{ payment_summary.POS }}</td></tr>
+    <tr><td>Transfer</td><td>₦{{ payment_summary.TRANSFER }}</td></tr>
+</table>
+
+<hr>
+
+<button onclick="window.print()">🖨 Print Report</button>
+{% endblock %}

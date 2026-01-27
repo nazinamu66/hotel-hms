@@ -1,0 +1,46 @@
+{% extends "base/base.html" %}
+
+{% block title %}Confirm Order{% endblock %}
+
+{% block header %}
+<h2>Confirm Order</h2>
+{% endblock %}
+
+{% block content %}
+<h3>Order Summary</h3>
+
+<table border="1" cellpadding="8">
+    <tr>
+        <th>Item</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th>Total</th>
+    </tr>
+    {% for item in items %}
+    <tr>
+        <td>{{ item.name }}</td>
+        <td>{{ item.qty }}</td>
+        <td>{{ item.price }}</td>
+        <td>{{ item.line_total }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h3>Total: {{ total }}</h3>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="step" value="confirm">
+    <input type="hidden" name="order_id" value="{{ order.id }}">
+
+    {% if is_walkin %}
+        <label>
+            <input type="checkbox" name="pay_now" value="yes">
+            Pay now (Cash)
+        </label><br><br>
+    {% endif %}
+
+    <button type="submit">Confirm & Process</button>
+    <a href="/restaurant/pos/">Cancel</a>
+</form>
+{% endblock %}

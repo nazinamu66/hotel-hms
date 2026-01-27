@@ -1,0 +1,84 @@
+{% extends "base/base.html" %}
+{% block title %}Restaurant Orders{% endblock %}
+
+{% block content %}
+<h2>Restaurant Orders</h2>
+
+<form method="get"
+      style="margin-bottom:15px; display:flex; gap:15px; flex-wrap:wrap; align-items:end;">
+
+    <div>
+        <label>Date</label><br>
+        <input type="date" name="date" value="{{ selected_date|default:'' }}">
+    </div>
+
+    <div>
+        <label>Staff</label><br>
+        <select name="staff">
+            <option value="">All Staff</option>
+            {% for staff in staff_list %}
+                <option value="{{ staff.id }}"
+                    {% if staff.id|stringformat:"s" == selected_staff %}selected{% endif %}
+                >
+                    {{ staff.username }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label>Order #</label><br>
+        <input type="text" name="order" value="{{ order_number|default:'' }}"
+               placeholder="e.g. 1023">
+    </div>
+
+    <div>
+        <label>Status</label><br>
+        <select name="status">
+            <option value="">All Status</option>
+            {% for code,label in status_choices %}
+                <option value="{{ code }}"
+                    {% if code == selected_status %}selected{% endif %}
+                >
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <button type="submit">Filter</button>
+        <a href="{% url 'restaurant_order_list' %}">Reset</a>
+    </div>
+</form>
+
+{% if orders %}
+<table border="1" cellpadding="8" cellspacing="0" width="100%">
+    <tr>
+        <th>#</th>
+        <th>Date</th>
+        <th>Staff</th>
+        <th>Status</th>
+        <th>Total</th>
+        <th>Action</th>
+    </tr>
+
+    {% for order in orders %}
+    <tr>
+        <td>{{ order.id }}</td>
+        <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+        <td>{{ order.created_by.username }}</td>
+        <td>{{ order.status }}</td>
+        <td>₦{{ order.total_amount }}</td>
+        <td>
+            <a href="{% url 'restaurant_order_detail' order.id %}">
+                View
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p>No orders found.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base/base.html" %}
+
+{% block title %}Order {{ order.id }}{% endblock %}
+{% load restaurant_extras %}
+
+
+{% block content %}
+<h2>Order #{{ order.id }}</h2>
+<h2>Restaurant Receipt</h2>
+<p><strong>Order #{{ order.id }}</strong></p>
+<hr>
+
+
+<p>
+    <strong>Date:</strong> {{ order.created_at }}<br>
+    <strong>Staff:</strong> {{ order.created_by }}<br>
+    <strong>Status:</strong> {{ order.status }}<br>
+    <strong>Type:</strong>
+    {% if order.charge_to_room %}
+        Room {{ order.room.room_number }}
+    {% else %}
+        Walk-in
+    {% endif %}
+</p>
+
+<h3>Items</h3>
+<table border="1" cellpadding="8">
+    <tr>
+        <th>Item</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th>Total</th>
+    </tr>
+
+    {% for item in order.items.all %}
+    <tr>
+        <td>{{ item.menu_item.name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.price }}</td>
+        <td>{{ item.quantity|mul:item.price }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h3>Total: {{ order.total_amount }}</h3>
+
+<hr>
+{% if not order.is_refunded and user.role in "MANAGER ADMIN" %}
+<hr>
+<h3>Manager Actions</h3>
+
+<form method="post" action="{% url 'restaurant_order_refund' order.id %}">
+    {% csrf_token %}
+    <textarea name="reason"
+              placeholder="Refund reason"
+              required></textarea><br><br>
+    <button type="submit"
+            style="background:red;color:white">
+        Refund Order
+    </button>
+</form>
+{% endif %}
+{% if order.is_refunded %}
+<p style="color:red">
+    ❌ Refunded on {{ order.refunded_at }} by {{ order.refunded_by }}
+</p>
+{% endif %}
+
+<a href="/restaurant/pos-v2/">← New Sale</a> |
+<a href="{% url 'restaurant_order_list' %}">View All Orders</a>
+
+
+<a href="{% url 'restaurant_order_list' %}">← Back to Orders</a>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base/base.html" %}
+
+{% block title %}Room Activity Today{% endblock %}
+
+{% block header %}
+<h2>Room Activity — Today</h2>
+{% endblock %}
+
+{% block content %}
+
+<h3>Check-ins</h3>
+<table class="table">
+    <tr>
+        <th>Room</th>
+        <th>Guest</th>
+        <th>Time</th>
+    </tr>
+    {% for f in checkins %}
+    <tr>
+        <td>{{ f.room.room_number }}</td>
+        <td>{{ f.guest }}</td>
+        <td>{{ f.created_at|date:"H:i" }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="3">No check-ins today</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<hr>
+
+<h3>Active Stays</h3>
+<table class="table">
+    <tr>
+        <th>Room</th>
+        <th>Guest</th>
+        <th>Balance</th>
+        <th></th>
+    </tr>
+    {% for f in active_stays %}
+    <tr>
+        <td>{{ f.room.room_number }}</td>
+        <td>{{ f.guest }}</td>
+        <td>₦{{ f.balance }}</td>
+        <td>
+            <a href="{% url 'frontdesk_active_stay' f.room.id %}">
+                Open
+            </a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="4">No active stays</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<a href="{% url 'manager_dashboard' %}">
+    <button>Back</button>
+</a>
+
+{% endblock %}

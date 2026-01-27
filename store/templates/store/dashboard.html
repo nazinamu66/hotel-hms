@@ -1,0 +1,42 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h2>Store Dashboard</h2>
+
+{% if low_stocks %}
+<div style="background:#fff3cd; padding:10px; margin-bottom:15px;">
+    <strong>⚠ Low Stock Items:</strong>
+    <ul>
+        {% for s in low_stocks %}
+        <li>{{ s.product.name }} ({{ s.quantity }})</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<table border="1" cellpadding="8">
+    <tr>
+        <th>Product</th>
+        <th>Quantity</th>
+        <th>Status</th>
+    </tr>
+
+    {% for stock in stocks %}
+    <tr>
+        <td>{{ stock.product.name }}</td>
+        <td>{{ stock.quantity }}</td>
+        <td>
+            {% if stock.is_low %}
+                <span style="color:red;">LOW</span>
+            {% else %}
+                OK
+            {% endif %}
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="3">No stock found.</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base/base.html" %}
+{% load dict_extras %}
+{% block content %}
+<h2>Kitchen Production</h2>
+
+{% for message in messages %}
+<p style="color: green">{{ message }}</p>
+{% endfor %}
+
+<table border="1" cellpadding="8">
+    <tr>
+        <th>Food</th>
+        <th>Restaurant Stock</th>
+        <th>Produce</th>
+    </tr>
+
+    {% for recipe in recipes %}
+    <tr>
+        <td>{{ recipe.name }}</td>
+        <td>
+            {{ restaurant_stock|get_item:recipe.product.id|default:0 }}
+        </td>
+        <td>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="recipe_id" value="{{ recipe.id }}">
+                <input type="number" name="quantity" min="1" required>
+                <button type="submit">Produce</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

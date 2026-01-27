@@ -1,0 +1,33 @@
+{% extends "base/base.html" %}
+
+{% block header %}
+<h2>Room Setup</h2>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'room_create' %}">
+    <button>Add Room</button>
+</a>
+
+<table>
+    <tr>
+        <th>Room</th>
+        <th>Category</th>
+        <th>Building</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+
+    {% for room in rooms %}
+    <tr>
+        <td>{{ room.room_number }}</td>
+        <td>{{ room.category }}</td>
+        <td>{{ room.building|default:"—" }}</td>
+        <td>{{ room.get_status_display }}</td>
+        <td>
+            <a href="{% url 'room_edit' room.id %}">Edit</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

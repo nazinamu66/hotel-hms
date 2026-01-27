@@ -1,0 +1,32 @@
+{% extends "base/base.html" %}
+
+{% block header %}
+<h2>Buildings</h2>
+{% endblock %}
+
+{% block content %}
+
+<a href="{% url 'building_create' %}">
+    <button>Add Building</button>
+</a>
+
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Status</th>
+        <th>Action</th>
+    </tr>
+    {% for b in buildings %}
+    <tr>
+        <td>{{ b.name }}</td>
+        <td>{{ b.is_active|yesno:"Active,Inactive" }}</td>
+        <td>
+            <a href="{% url 'building_toggle' b.id %}">
+                {% if b.is_active %}Deactivate{% else %}Activate{% endif %}
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

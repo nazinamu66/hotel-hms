@@ -1,0 +1,29 @@
+{% extends "base/base.html" %}
+{% block header %}
+<h2>Take Payment – Room {{ room.room_number }}</h2>
+{% endblock %}
+
+{% block content %}
+<form method="post">
+    {% csrf_token %}
+
+    <label>Amount</label><br>
+    <input type="number" step="0.01" name="amount" required><br><br>
+
+    <label>Payment Method</label><br>
+    <select name="method" required>
+        <option value="CASH">Cash</option>
+        <option value="POS">POS</option>
+        <option value="TRANSFER">Bank Transfer</option>
+    </select><br><br>
+
+    <label>Reference (POS slip / Transfer ref)</label><br>
+    <input type="text" name="reference"><br><br>
+
+    <label>Note</label><br>
+    <textarea name="note"></textarea><br><br>
+
+    <button type="submit">Record Payment</button>
+    <a href="{% url 'frontdesk_active_stay' room.id %}">Cancel</a>
+</form>
+{% endblock %}

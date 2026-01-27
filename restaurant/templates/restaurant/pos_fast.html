@@ -1,0 +1,65 @@
+{% extends "base/base.html" %}
+{% load restaurant_extras %}
+
+{% block title %}Restaurant POS{% endblock %}
+
+{% block content %}
+<h2>Restaurant POS</h2>
+
+<form method="post">
+    {% csrf_token %}
+
+    <table border="1" cellpadding="8">
+        <tr>
+            <th>Item</th>
+            <th>Price</th>
+            <th>Qty</th>
+        </tr>
+        {% for item in menu_items %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.price }}</td>
+            <td>
+                <input type="number"
+                       name="qty_{{ item.id }}"
+                       value="{{ order.items|get_item:item.id|default:'0' }}"
+                       min="0"
+                       style="width:60px;">
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h3>Total: {{ total }}</h3>
+
+    <hr>
+
+    <label>
+        <input type="radio" name="charge_type" value="WALKIN"
+               {% if order.charge_type == 'WALKIN' %}checked{% endif %}>
+        Walk-in
+    </label>
+
+    <label>
+        <input type="radio" name="charge_type" value="ROOM"
+               {% if order.charge_type == 'ROOM' %}checked{% endif %}>
+        Charge to Room
+    </label>
+
+    <select name="room">
+        <option value="">---</option>
+        {% for room in occupied_rooms %}
+            <option value="{{ room.id }}"
+                {% if room.id|stringformat:"s" == order.room_id %}selected{% endif %}>
+                Room {{ room.room_number }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    <button type="submit">Update Order</button>
+    <button type="submit" name="submit">Submit Order</button>
+    <button type="submit" name="clear">Clear</button>
+</form>
+{% endblock %}

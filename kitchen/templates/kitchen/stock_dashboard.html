@@ -1,0 +1,26 @@
+{% extends "base/base.html" %}
+{% block content %}
+<h2>Kitchen Stock</h2>
+
+{% if low_stocks %}
+<div style="background:#ffe6e6; padding:10px; margin-bottom:15px;">
+    <strong>⚠ Low Ingredients:</strong>
+    <ul>
+        {% for s in low_stocks %}
+        <li>{{ s.product.name }} ({{ s.quantity }})</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<table border="1" cellpadding="8">
+<tr><th>Ingredient</th><th>Qty</th><th>Status</th></tr>
+{% for s in stocks %}
+<tr>
+    <td>{{ s.product.name }}</td>
+    <td>{{ s.quantity }}</td>
+    <td>{% if s.is_low %}<span style="color:red;">LOW</span>{% else %}OK{% endif %}</td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}

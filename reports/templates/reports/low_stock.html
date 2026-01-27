@@ -1,0 +1,18 @@
+{% extends "base/base.html" %}
+{% block content %}
+<h2>Low Stock Overview</h2>
+
+<h3>Kitchen</h3>
+<ul>
+{% for s in kitchen_low %}
+<li>{{ s.product.name }} ({{ s.quantity }})</li>
+{% empty %}<li>All good</li>{% endfor %}
+</ul>
+
+<h3>Store</h3>
+<ul>
+{% for s in store_low %}
+<li>{{ s.product.name }} ({{ s.quantity }})</li>
+{% empty %}<li>All good</li>{% endfor %}
+</ul>
+{% endblock %}

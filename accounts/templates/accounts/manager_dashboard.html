@@ -1,0 +1,99 @@
+{% extends "base/base.html" %}
+
+{% block title %}Manager Dashboard{% endblock %}
+
+{% block header %}
+<h2>Manager Dashboard — {{ date }}</h2>
+{% endblock %}
+
+{% block content %}
+
+
+<!-- ROOMS -->
+<section class="card">
+    <h3>Rooms Overview</h3>
+    <ul>
+        <li>Total Rooms: {{ room_stats.total }}</li>
+        <li>Occupied: {{ room_stats.occupied }}</li>
+        <li>Vacant: {{ room_stats.vacant }}</li>
+        <li>Needs Cleaning: {{ room_stats.needs_cleaning }}</li>
+    </ul>
+    <a href="/accounts/manager/room-activity/">
+    <button>Room Activity</button>
+</a>
+</section>
+
+<!-- FINANCE -->
+<section class="card">
+    <h3>Financial Summary (Today)</h3>
+    <ul>
+        <li>Total Charges: ₦{{ total_charges }}</li>
+        <li>Total Payments: ₦{{ total_payments }}</li>
+        <li><strong>Net Revenue: ₦{{ net_revenue }}</strong></li>
+        <li>Outstanding Balance: ₦{{ outstanding_balance }}</li>
+    </ul>
+
+    <a href="/accounts/manager/payments/">
+    <button>Payments</button>
+</a>
+
+</section>
+
+<!-- DEPARTMENTS -->
+<section class="card">
+    <h3>Revenue by Department</h3>
+    <ul>
+        {% for dept, amount in revenue_by_department.items %}
+            <li>{{ dept }} — ₦{{ amount }}</li>
+        {% empty %}
+            <li>No charges today</li>
+        {% endfor %}
+    </ul>
+</section>
+
+<!-- RESTAURANT -->
+<section class="card">
+    <h3>Restaurant Activity</h3>
+    <ul>
+        <li>Orders: {{ restaurant_stats.orders }}</li>
+        <li>Paid Orders: {{ restaurant_stats.paid }}</li>
+        <li>Charged to Room: {{ restaurant_stats.room_charges }}</li>
+        <li>Refunds: {{ restaurant_stats.refunds }}</li>
+    </ul>
+
+    <a href="/restaurant/orders/">
+        <button>View Orders</button>
+    </a>
+    <a href="/accounts/manager/restaurant-orders/">
+    <button>Restaurant Orders</button>
+</a>
+
+</section>
+
+<section class="card">
+    <h3>Operational Activity</h3>
+    <ul>
+        <li>Room Check-ins: {{ activity.checkins }}</li>
+        <li>Restaurant Orders: {{ activity.restaurant_orders }}</li>
+    </ul>
+</section>
+
+
+<!-- RISK -->
+<section class="card">
+    <h3>Attention Needed</h3>
+
+    {% if risky_folios %}
+        <ul>
+            {% for f in risky_folios %}
+                <li>
+                    Folio #{{ f.id }} — Balance ₦{{ f.balance }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No risky folios 🎉</p>
+    {% endif %}
+</section>
+
+{% endblock %}

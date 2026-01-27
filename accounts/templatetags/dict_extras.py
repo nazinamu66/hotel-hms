@@ -1,0 +1,13 @@
+from django import template
+
+register = template.Library()
+
+
+@register.filter
+def get_item(dictionary, key):
+    """
+    Safely get item from dict in templates
+    """
+    if dictionary is None:
+        return None
+    return dictionary.get(key)

@@ -1,0 +1,41 @@
+{% extends "base/base.html" %}
+
+{% block title %}Payments Today{% endblock %}
+
+{% block header %}
+<h2>Payments — Today</h2>
+{% endblock %}
+
+{% block content %}
+
+<table class="table">
+    <tr>
+        <th>Time</th>
+        <th>Method</th>
+        <th>Amount</th>
+        <th>Collected By</th>
+        <th>Reference</th>
+        <th>Folio</th>
+    </tr>
+
+    {% for p in payments %}
+    <tr>
+        <td>{{ p.collected_at|date:"H:i" }}</td>
+        <td>{{ p.method }}</td>
+        <td>₦{{ p.amount }}</td>
+        <td>{{ p.collected_by }}</td>
+        <td>{{ p.reference|default:"—" }}</td>
+        <td>#{{ p.folio.id }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="6">No payments today</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<a href="{% url 'manager_dashboard' %}">
+    <button>Back</button>
+</a>
+
+{% endblock %}

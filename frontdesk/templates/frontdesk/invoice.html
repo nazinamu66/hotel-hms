@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invoice – Folio {{ folio.id }}</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            font-size: 14px;
+        }
+
+        h2, h3 {
+            margin-bottom: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+
+        th {
+            background: #f4f4f4;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .no-border td {
+            border: none;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .header img {
+            max-height: 70px;
+        }
+
+        .header-details h2 {
+            margin: 0;
+        }
+
+        .muted {
+            color: #666;
+            font-size: 12px;
+        }
+
+        @media print {
+            button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- ================= HEADER ================= -->
+<div class="header">
+    {% if business_profile.logo %}
+        <img src="{{ business_profile.logo.url }}" alt="Logo">
+    {% endif %}
+
+    <div class="header-details">
+        <h2>{{ business_profile.name|default:"Hotel Management System" }}</h2>
+        {% if business_profile.address %}
+            <div class="muted">{{ business_profile.address }}</div>
+        {% endif %}
+        {% if business_profile.phone %}
+            <div class="muted">Phone: {{ business_profile.phone }}</div>
+        {% endif %}
+        {% if business_profile.email %}
+            <div class="muted">Email: {{ business_profile.email }}</div>
+        {% endif %}
+    </div>
+</div>
+
+<p><strong>Final Invoice</strong></p>
+
+<hr>
+
+<!-- ================= GUEST & INVOICE META ================= -->
+<table class="no-border">
+<tr>
+    <td>
+        <strong>Guest:</strong> {{ guest.first_name }} {{ guest.last_name }}<br>
+        <strong>Phone:</strong> {{ guest.phone|default:"—" }}<br>
+        <strong>Email:</strong> {{ guest.email|default:"—" }}
+    </td>
+    <td class="right">
+        <strong>Invoice #:</strong> {{ folio.id }}<br>
+        <strong>Room:</strong> {{ room.room_number }}<br>
+        <strong>Date:</strong> {{ folio.created_at|date:"Y-m-d" }}
+    </td>
+</tr>
+</table>
+
+<hr>
+
+<!-- ================= CHARGES ================= -->
+{% for dept, data in charges_by_department.items %}
+<h3>{{ dept }}</h3>
+<table>
+<tr>
+    <th>Description</th>
+    <th class="right">Amount</th>
+</tr>
+{% for c in data.charges %}
+<tr>
+    <td>{{ c.description }}</td>
+    <td class="right">₦{{ c.amount }}</td>
+</tr>
+{% endfor %}
+<tr>
+    <th class="right">Subtotal</th>
+    <th class="right">₦{{ data.total }}</th>
+</tr>
+</table>
+{% endfor %}
+
+<!-- ================= PAYMENTS ================= -->
+<h3>Payments</h3>
+<table>
+<tr>
+    <th>Method</th>
+    <th>Date</th>
+    <th class="right">Amount</th>
+</tr>
+{% for p in payments %}
+<tr>
+    <td>{{ p.method }}</td>
+    <td>{{ p.collected_at|date:"Y-m-d H:i" }}</td>
+    <td class="right">₦{{ p.amount }}</td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="3">No payments recorded</td>
+</tr>
+{% endfor %}
+</table>
+
+<hr>
+
+<!-- ================= SUMMARY ================= -->
+<table>
+<tr>
+    <th>Total Charges</th>
+    <td class="right">₦{{ total_charges }}</td>
+</tr>
+<tr>
+    <th>Total Payments</th>
+    <td class="right">₦{{ total_payments }}</td>
+</tr>
+<tr>
+    <th><strong>Balance</strong></th>
+    <th class="right"><strong>₦{{ balance }}</strong></th>
+</tr>
+</table>
+
+<br>
+<a href="{% url 'frontdesk_invoice_pdf' folio.id %}">
+    <button>Download PDF</button></a>
+
+
+<button onclick="window.print()">Print Invoice</button>
+
+</body>
+</html>

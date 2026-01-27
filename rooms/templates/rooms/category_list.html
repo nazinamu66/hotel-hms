@@ -1,0 +1,33 @@
+{% extends "base/base.html" %}
+
+{% block header %}
+<h2>Room Categories</h2>
+{% endblock %}
+
+{% block content %}
+<a href="{% url 'category_create' %}">
+    <button>Add Category</button>
+</a>
+
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Actions</th>
+    </tr>
+
+    {% for c in categories %}
+    <tr>
+        <td>{{ c.name }}</td>
+        <td>{{ c.description|default:"—" }}</td>
+        <td>
+            <a href="{% url 'category_edit' c.id %}">Edit</a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="3">No categories created yet.</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

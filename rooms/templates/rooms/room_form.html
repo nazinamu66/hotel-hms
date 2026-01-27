@@ -1,0 +1,49 @@
+{% extends "base/base.html" %}
+
+{% block header %}
+<h2>{% if room %}Edit{% else %}Add{% endif %} Room</h2>
+{% endblock %}
+
+{% block content %}
+<form method="post">
+    {% csrf_token %}
+
+    <label>Room Number</label><br>
+    <input type="text" name="room_number"
+           value="{{ room.room_number|default:'' }}" required><br><br>
+
+    <label>Category</label><br>
+    <select name="category" required>
+        {% for c in categories %}
+        <option value="{{ c.id }}"
+            {% if room.category.id == c.id %}selected{% endif %}>
+            {{ c.name }}
+        </option>
+        {% endfor %}
+    </select><br><br>
+
+    <label>Building</label><br>
+    <select name="building">
+        <option value="">— None —</option>
+        {% for b in buildings %}
+        <option value="{{ b.id }}"
+            {% if room.building and room.building.id == b.id %}selected{% endif %}>
+            {{ b.name }}
+        </option>
+        {% endfor %}
+    </select><br><br>
+
+    <label>Status</label><br>
+    <select name="status">
+        {% for key,label in statuses %}
+        <option value="{{ key }}"
+            {% if room.status == key %}selected{% endif %}>
+            {{ label }}
+        </option>
+        {% endfor %}
+    </select><br><br>
+
+    <button type="submit">Save</button>
+    <a href="{% url 'room_list' %}">Cancel</a>
+</form>
+{% endblock %}

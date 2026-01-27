@@ -1,0 +1,235 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% load restaurant_extras %}
+
+{% block title %}Restaurant POS{% endblock %}
+{% block content %}
+
+<h2>Restaurant POS</h2>
+
+{% if messages %}
+    <div style="margin-bottom:10px;">
+        {% for message in messages %}
+            <div style="color:red;">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<div style="display:flex; gap:20px">
+
+    <!-- MENU -->
+    <div style="width:60%">
+
+        <!-- FOOD -->
+        <h3>Food</h3>
+        {% for item in menu_items %}
+            {% if item.category == 'FOOD' %}
+                {% with stock=stock_map|get_item:item.id %}
+                <button
+                    onclick="addItem({{ item.id }})"
+                    {% if stock <= 0 %}disabled{% endif %}
+                    style="width:150px;height:70px;margin:5px;
+                           {% if stock <= 0 %}opacity:0.5;{% endif %}"
+                >
+                    {{ item.name }}<br>
+                    ₦{{ item.price }}<br>
+                    <small>
+                        {% if stock > 0 %}
+                            In stock: {{ stock }}
+                        {% else %}
+                            Out of stock
+                        {% endif %}
+                    </small>
+                </button>
+                {% endwith %}
+            {% endif %}
+        {% endfor %}
+
+        <hr style="margin:20px 0;">
+
+        <!-- DRINKS -->
+        <h3>Drinks</h3>
+        {% for item in menu_items %}
+            {% if item.category == 'DRINK' %}
+                {% with stock=stock_map|get_item:item.id %}
+                <button
+                    onclick="addItem({{ item.id }})"
+                    {% if stock <= 0 %}disabled{% endif %}
+                    style="width:150px;height:70px;margin:5px;
+                           {% if stock <= 0 %}opacity:0.5;{% endif %}"
+                >
+                    {{ item.name }}<br>
+                    ₦{{ item.price }}<br>
+                    <small>
+                        {% if stock > 0 %}
+                            In stock: {{ stock }}
+                        {% else %}
+                            Out of stock
+                        {% endif %}
+                    </small>
+                </button>
+                {% endwith %}
+            {% endif %}
+        {% endfor %}
+
+    </div>
+
+    <!-- CART -->
+    <div style="width:40%;border-left:1px solid #ccc;padding-left:15px">
+        <h3>Current Order</h3>
+
+        {% if cart.items %}
+            <ul>
+                {% for key,item in cart.items.items %}
+                    <li>
+                        {{ item.name }} –
+                        <input type="number"
+                               value="{{ item.qty }}"
+                               min="0"
+                               onchange="updateItem('{{ key }}', this.value)"
+                               style="width:50px">
+                        × ₦{{ item.price }}
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <h3>Total: ₦{{ total }}</h3>
+            <button onclick="clearCart()">Clear</button>
+        {% else %}
+            <p>No items</p>
+        {% endif %}
+    </div>
+</div>
+
+<form method="post" action="{% url 'restaurant_pos_commit' %}">
+    {% csrf_token %}
+
+    <h4>Settlement</h4>
+
+    <label>
+        <input type="radio" name="settlement" value="PAY_NOW" checked id="settle-pay">
+        Pay Now
+    </label>
+
+    <label style="margin-left:15px;">
+        <input type="radio" name="settlement" value="ROOM" id="settle-room">
+        Charge to Room
+    </label>
+
+    <!-- PAYMENT METHOD (Pay Now) -->
+    <div id="payment-method-box" style="margin-top:10px;">
+        <label>
+            Payment Method
+            <br>
+            <select name="payment_method" id="payment-method">
+                <option value="CASH">Cash</option>
+                <option value="POS">POS</option>
+                <option value="TRANSFER">Transfer</option>
+            </select>
+        </label>
+    </div>
+
+    <!-- ROOM SELECTOR (Charge to Room) -->
+    <div id="room-select-container" style="display:none; margin-top:10px;">
+        <label>
+            Select Room
+            <br>
+            <select name="room" id="room-select">
+                <option value="">---</option>
+                {% for room in occupied_rooms %}
+                    <option value="{{ room.id }}">
+                        Room {{ room.room_number }}
+                    </option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+
+    <br>
+    <button type="submit">Submit Order</button>
+</form>
+
+<script>
+function addItem(id) {
+    fetch(`/restaurant/cart/add/${id}/`)
+        .then(() => location.reload());
+}
+
+function updateItem(id, qty) {
+    fetch(`/restaurant/cart/update/${id}/`, {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: new URLSearchParams({ qty })
+    }).then(() => location.reload());
+}
+
+function clearCart() {
+    fetch(`/restaurant/cart/clear/`)
+        .then(() => location.reload());
+}
+document.addEventListener("DOMContentLoaded", function () {
+    const walkinRadio = document.getElementById("charge-walkin");
+    const roomRadio = document.getElementById("charge-room");
+    const roomContainer = document.getElementById("room-select-container");
+    const roomSelect = document.getElementById("room-select");
+
+    function toggleRoomSelect() {
+        if (roomRadio.checked) {
+            roomContainer.style.display = "block";
+            roomSelect.required = true;
+        } else {
+            roomContainer.style.display = "none";
+            roomSelect.value = "";
+            roomSelect.required = false;
+        }
+    }
+
+    walkinRadio.addEventListener("change", toggleRoomSelect);
+    roomRadio.addEventListener("change", toggleRoomSelect);
+
+    // Initial state
+    toggleRoomSelect();
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+    const payRadio = document.getElementById("settle-pay");
+    const roomRadio = document.getElementById("settle-room");
+
+    const paymentBox = document.getElementById("payment-method-box");
+    const paymentSelect = document.getElementById("payment-method");
+
+    const roomBox = document.getElementById("room-select-container");
+    const roomSelect = document.getElementById("room-select");
+
+    function toggleSettlement() {
+        if (roomRadio.checked) {
+            // Charge to Room
+            roomBox.style.display = "block";
+            roomSelect.required = true;
+
+            paymentBox.style.display = "none";
+            paymentSelect.required = false;
+        } else {
+            // Pay Now
+            paymentBox.style.display = "block";
+            paymentSelect.required = true;
+
+            roomBox.style.display = "none";
+            roomSelect.required = false;
+            roomSelect.value = "";
+        }
+    }
+
+    payRadio.addEventListener("change", toggleSettlement);
+    roomRadio.addEventListener("change", toggleSettlement);
+
+    // Initial state
+    toggleSettlement();
+});
+</script>
+
+{% endblock %}
