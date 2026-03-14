@@ -1,0 +1,51 @@
+{% extends "base/base.html" %}
+
+{% block title %}Departments{% endblock %}
+
+{% block content %}
+
+<h2>Departments</h2>
+
+<div style="margin-bottom:15px;">
+<a class="btn btn-primary" href="{% url 'department_create' %}">
++ Add Department
+</a>
+</div>
+
+<table class="table">
+
+<thead>
+<tr>
+<th>Hotel</th>
+<th>Name</th>
+<th>Type</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for dept in departments %}
+<tr>
+<td>{{ dept.hotel.name }}</td>
+<td>{{ dept.name }}</td>
+<td>{{ dept.get_department_type_display }}</td>
+<td>
+{% if dept.is_active %}
+Active
+{% else %}
+Inactive
+{% endif %}
+</td>
+</tr>
+{% empty %}
+<tr>
+<td colspan="4">No departments found</td>
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

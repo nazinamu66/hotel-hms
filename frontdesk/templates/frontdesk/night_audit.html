@@ -1,0 +1,36 @@
+{% extends "base/base.html" %}
+
+{% block title %}Night Audit{% endblock %}
+
+{% block header %}
+<h2>Run Night Audit</h2>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+<p>
+Running the night audit will apply room charges for all active stays.
+</p>
+
+<p style="color:#c0392b;">
+This should normally be done once per day after midnight.
+</p>
+
+<form method="post">
+{% csrf_token %}
+
+<button class="btn btn-primary">
+Run Night Audit
+</button>
+
+<a href="{% url 'frontdesk_room_board' %}" class="btn btn-secondary">
+Cancel
+</a>
+
+</form>
+
+</div>
+
+{% endblock %}

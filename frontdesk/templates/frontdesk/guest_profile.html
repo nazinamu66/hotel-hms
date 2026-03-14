@@ -1,0 +1,108 @@
+{% extends "base/base.html" %}
+
+{% block title %}Guest Profile{% endblock %}
+
+{% block header %}
+<h2>{{ guest.full_name }}</h2>
+{% endblock %}
+
+{% block content %}
+
+<!-- GUEST DETAILS -->
+
+<section class="card">
+
+<h3>Guest Information</h3>
+
+<p><strong>Name:</strong> {{ guest.full_name }}</p>
+<p><strong>Phone:</strong> {{ guest.phone|default:"—" }}</p>
+<p><strong>Email:</strong> {{ guest.email|default:"—" }}</p>
+<p><strong>Nationality:</strong> {{ guest.nationality|default:"—" }}</p>
+<p><strong>ID:</strong> {{ guest.id_number|default:"—" }}</p>
+
+</section>
+
+<br>
+
+<!-- STATS -->
+
+<section class="card">
+
+<h3>Guest Statistics</h3>
+
+<p>Total Stays: {{ folios.count }}</p>
+<p>Total Spent: ₦{{ total_spent }}</p>
+
+</section>
+
+<br>
+
+<!-- CURRENT STAY -->
+
+{% if active_folio %}
+
+<section class="card">
+
+<h3>Active Stay</h3>
+
+<p>Room: {{ active_folio.room.room_number }}</p>
+<p>Check-in: {{ active_folio.check_in_at }}</p>
+
+<a href="{% url 'frontdesk_active_stay' active_folio.room.id %}">
+<button>View Stay</button>
+</a>
+
+</section>
+
+<br>
+
+{% endif %}
+
+<!-- STAY HISTORY -->
+
+<section class="card">
+
+<h3>Stay History</h3>
+
+<table border="1" width="100%" cellpadding="6">
+
+<tr>
+<th>Room</th>
+<th>Check-in</th>
+<th>Checkout</th>
+<th>Total Charges</th>
+</tr>
+
+{% for f in folios %}
+
+<tr>
+
+<td>{{ f.room.room_number }}</td>
+
+<td>{{ f.check_in_at|date:"Y-m-d" }}</td>
+
+<td>
+{% if f.check_out_at %}
+{{ f.check_out_at|date:"Y-m-d" }}
+{% else %}
+Active
+{% endif %}
+</td>
+
+<td>₦{{ f.total_charges }}</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+</section>
+
+<br>
+
+<a href="{% url 'frontdesk_guest_search' %}">
+<button>Back</button>
+</a>
+
+{% endblock %}

@@ -7,10 +7,10 @@
 <p style="color: green">{{ message }}</p>
 {% endfor %}
 
-<table border="1" cellpadding="8">
+<table class="table">
     <tr>
         <th>Food</th>
-        <th>Restaurant Stock</th>
+        <th>Kitchen Stock</th>
         <th>Produce</th>
     </tr>
 
@@ -18,8 +18,8 @@
     <tr>
         <td>{{ recipe.name }}</td>
         <td>
-            {{ restaurant_stock|get_item:recipe.product.id|default:0 }}
-        </td>
+  {{ kitchen_stock|get_item:recipe.product.id|default:0 }}
+</td>
         <td>
             <form method="post">
                 {% csrf_token %}

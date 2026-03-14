@@ -1,0 +1,33 @@
+{% extends "base/base.html" %}
+{% load dict_extras %}
+{% block content %}
+
+<h2>Prepared Foods</h2>
+
+<br><br>
+
+<table class="table">
+  <tr>
+    <th>Food</th>
+    <th>Kitchen Stock</th>
+    <th>Actions</th>
+  </tr>
+
+  {% for food in foods %}
+  <tr>
+    <td>{{ food.name }}</td>
+    <td>{{ stock_map|get_item:food.id|default:0 }}</td>
+    <td>
+<a href="{% url 'inventory:kitchen_recipe_edit' food.id %}">
+        🧾 Edit Recipe
+      </a>
+    </td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="3">No prepared foods yet.</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock %}

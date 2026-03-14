@@ -1,0 +1,42 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Daily Stock Movement Report</h2>
+
+<form method="get">
+  From:
+  <input type="date" name="from" value="{{ date_from }}">
+  To:
+  <input type="date" name="to" value="{{ date_to }}">
+  <button type="submit">Filter</button>
+</form>
+
+<br>
+
+<table class="table">
+  <tr>
+    <th>Date</th>
+    <th>Product</th>
+    <th>Type</th>
+    <th>From</th>
+    <th>To</th>
+    <th>Qty</th>
+  </tr>
+
+  {% for m in movements %}
+  <tr>
+    <td>{{ m.created_at|date:"Y-m-d H:i" }}</td>
+    <td>{{ m.product.name }}</td>
+    <td>{{ m.get_movement_type_display }}</td>
+    <td>{{ m.from_department|default:"—" }}</td>
+    <td>{{ m.to_department|default:"—" }}</td>
+    <td>{{ m.quantity }}</td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="6">No movements for selected period.</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock %}

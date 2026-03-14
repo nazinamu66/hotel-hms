@@ -2,12 +2,15 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.core.exceptions import ValidationError
 from inventory.models import Department
+from inventory.models import Hotel
+
 
 
 class User(AbstractUser):
     ROLE_CHOICES = (
         ('ADMIN', 'Admin'),
         ('MANAGER', 'Manager'),
+        ('DIRECTOR', 'Director'),
 
         # Front of house
         ('FRONTDESK', 'Front Desk / Reception'),
@@ -38,6 +41,15 @@ class User(AbstractUser):
         help_text="Required for operational staff (restaurant, store, kitchen, housekeeping, etc.)"
     )
 
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Hotel user belongs to (Managers, Accountants)"
+    )
+
+
     phone = models.CharField(max_length=20, blank=True, null=True)
 
     def __str__(self):
@@ -47,9 +59,15 @@ class User(AbstractUser):
     # VALIDATION RULES
     # =========================
     def clean(self):
-        """
-        Enforce role → department consistency
-        """
+
+        if self.role == "DIRECTOR":
+            self.department = None
+
+        if self.role == "MANAGER":
+            if not self.hotel:
+                raise ValidationError("Manager must belong to a hotel.")
+            self.department = None
+
         department_required_roles = {
             'RESTAURANT',
             'STORE',
@@ -57,17 +75,13 @@ class User(AbstractUser):
             'HOUSEKEEPING',
             'LAUNDRY',
             'GYM',
+            'FRONTDESK',
         }
 
-        if self.role in department_required_roles and not self.department:
-            raise ValidationError({
-                'department': f"{self.role} users must be assigned a department."
-            })
-
-        if self.role == 'ADMIN' and self.department:
-            raise ValidationError({
-                'department': "Admin users should not be tied to a department."
-            })
+        if self.role in department_required_roles:
+            if not self.department:
+                raise ValidationError("This role requires a department.")
+            self.hotel = self.department.hotel
 
     # =========================
     # ROLE HELPERS (CLEAN USAGE)

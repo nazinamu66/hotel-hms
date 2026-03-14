@@ -1,0 +1,60 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Kitchen Ingredient Requests (Store)</h2>
+
+{% if requests %}
+  {% for req in requests %}
+  <div style="border:1px solid #ddd; padding:15px; margin-bottom:25px; border-radius:6px;">
+
+    <h3>Request #{{ req.id }}</h3>
+    <p><strong>Status:</strong> {{ req.status }}</p>
+    <p><strong>Requested By:</strong> {{ req.requested_by }}</p>
+
+    <table border="1" cellpadding="6" width="100%" style="border-collapse: collapse;">
+      <thead>
+        <tr>
+          <th>Ingredient</th>
+          <th>Requested</th>
+          <th>Issued</th>
+          <th>Remaining</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in req.store_items %}
+        <tr>
+          <td>{{ item.ingredient.name }}</td>
+          <td>{{ item.quantity }}</td>
+          <td>{{ item.total_issued }}</td>
+          <td>{{ item.remaining }}</td>
+          <td>
+            {% if item.remaining > 0 %}
+              <form method="post" action="{% url 'issue_request_item' item.id %}">
+                {% csrf_token %}
+                <button type="submit">
+                  Issue Available
+                </button>
+              </form>
+            {% else %}
+              <span style="color:green;">✔ Completed</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" style="text-align:center;">
+            No store items in this request.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+  </div>
+  {% endfor %}
+{% else %}
+  <p>No store ingredient requests.</p>
+{% endif %}
+
+{% endblock %}

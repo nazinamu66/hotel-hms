@@ -1,0 +1,85 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h2>Manual Stock Issue</h2>
+
+<div style="background:#f8d7da; padding:10px; margin-bottom:20px;">
+    <strong>⚠ Manual Issue</strong><br>
+    Use this only for emergency or non-request transfers.
+</div>
+
+<!-- ===================== -->
+<!-- CURRENT STOCK TABLE -->
+<!-- ===================== -->
+<h3>Current Store Stock</h3>
+
+<table border="1" cellpadding="8" width="100%" style="margin-bottom:30px;">
+    <tr>
+        <th>Product</th>
+        <th>Available</th>
+    </tr>
+
+    {% for stock in stocks %}
+    <tr>
+        <td>{{ stock.product.name }}</td>
+        <td>
+            {% if stock.quantity <= stock.reorder_level %}
+                <span style="color:red;">{{ stock.quantity }}</span>
+            {% else %}
+                {{ stock.quantity }}
+            {% endif %}
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="2">No stock available.</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<!-- ===================== -->
+<!-- MANUAL ISSUE FORM -->
+<!-- ===================== -->
+<h3>Issue Stock</h3>
+
+<form method="post" style="background:white; padding:20px; border:1px solid #ddd; max-width:500px;">
+    {% csrf_token %}
+
+    <div style="margin-bottom:15px;">
+        <label>Product</label><br>
+        <select name="product_id" required>
+            <option value="">Select Product</option>
+            {% for stock in stocks %}
+                {% if stock.quantity > 0 %}
+                <option value="{{ stock.product.id }}">
+                    {{ stock.product.name }} ({{ stock.quantity }})
+                </option>
+                {% endif %}
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="margin-bottom:15px;">
+        <label>Issue To</label><br>
+        <select name="department_id" required>
+            <option value="">Select Department</option>
+            {% for dept in departments %}
+                <option value="{{ dept.id }}">{{ dept.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div style="margin-bottom:15px;">
+        <label>Quantity</label><br>
+        <input type="number" name="quantity" min="1" required>
+    </div>
+
+    <div style="margin-bottom:15px;">
+        <label>Reason / Note</label><br>
+        <input type="text" name="note" placeholder="Why is this being issued?">
+    </div>
+
+    <button type="submit">Issue Stock</button>
+</form>
+
+{% endblock %}

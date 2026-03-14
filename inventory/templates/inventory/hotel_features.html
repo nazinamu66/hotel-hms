@@ -1,0 +1,38 @@
+{% extends "base/base.html" %}
+
+{% block title %}Hotel Features{% endblock %}
+
+{% block content %}
+
+<h2>Hotel Features</h2>
+
+<div class="card">
+
+<form method="post">
+{% csrf_token %}
+
+{% for key,label in features.items %}
+
+<label>
+<input type="checkbox"
+       name="features"
+       value="{{ key }}"
+       {% if key in active_features %}checked{% endif %}>
+
+{{ label }}
+
+</label>
+
+<br>
+
+{% endfor %}
+
+<br>
+
+<button class="btn btn-primary">Save Features</button>
+
+</form>
+
+</div>
+
+{% endblock %}

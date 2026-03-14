@@ -1,0 +1,36 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Department Consumption Report</h2>
+
+<form method="get">
+  From:
+  <input type="date" name="from" value="{{ date_from }}">
+  To:
+  <input type="date" name="to" value="{{ date_to }}">
+  <button type="submit">Filter</button>
+</form>
+
+<br>
+
+<table class="table">
+  <tr>
+    <th>Department</th>
+    <th>Product</th>
+    <th>Total Consumed</th>
+  </tr>
+
+  {% for c in consumptions %}
+  <tr>
+    <td>{{ c.from_department__name }}</td>
+    <td>{{ c.product__name }}</td>
+    <td>{{ c.total_qty }}</td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="3">No consumption recorded for this period.</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock %}

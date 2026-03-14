@@ -1,0 +1,47 @@
+{% extends "base/base.html" %}
+
+{% block title %}Suppliers{% endblock %}
+
+{% block content %}
+
+<h2>Suppliers</h2>
+
+<div style="margin-bottom:15px;">
+<a href="{% url 'inventory:supplier_create' %}" class="btn btn-primary">
+➕ Add Supplier
+</a>
+</div>
+
+<table class="table">
+
+<thead>
+<tr>
+<th>Name</th>
+<th>Phone</th>
+<th>Email</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for supplier in suppliers %}
+
+<tr>
+<td>{{ supplier.name }}</td>
+<td>{{ supplier.phone|default:"—" }}</td>
+<td>{{ supplier.email|default:"—" }}</td>
+</tr>
+
+{% empty %}
+
+<tr>
+<td colspan="3">No suppliers yet.</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Direct Purchases</h2>
+
+<table border="1" cellpadding="8" width="100%">
+  <tr>
+    <th>ID</th>
+    <th>Supplier</th>
+    <th>Total Cost</th>
+    <th>Status</th>
+    <th>Created</th>
+  </tr>
+
+  {% for dp in purchases %}
+  <tr>
+    <td>
+      <a href="{% url 'direct_purchase_detail' dp.id %}">
+        #{{ dp.id }}
+      </a>
+    </td>
+    <td>{{ dp.supplier.name }}</td>
+    <td>₦{{ dp.computed_total|default:dp.total_cost }}</td>
+    <td>{{ dp.status }}</td>
+    <td>{{ dp.created_at|date:"Y-m-d H:i" }}</td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="5" style="text-align:center;">
+      No direct purchases
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock %}

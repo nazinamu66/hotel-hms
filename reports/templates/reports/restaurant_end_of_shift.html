@@ -1,19 +1,22 @@
 {% extends "base/base.html" %}
-{% block title %}End of Shift{% endblock %}
+{% block title %}Restaurant End of Shift{% endblock %}
 
 {% block content %}
+
 <h2>Restaurant End-of-Shift Report</h2>
 
 <form method="get" style="margin-bottom:20px;">
+
     <label>
         Date:
-        <input type="date" name="date" value="{{ date }}">
+        <input type="date" name="date" value="{{ date|date:'Y-m-d' }}">
     </label>
 
-    <label style="margin-left:10px;">
+    <label style="margin-left:15px;">
         Staff:
         <select name="staff">
             <option value="">All Staff</option>
+
             {% for staff in staff_list %}
                 <option value="{{ staff.id }}"
                     {% if staff.id|stringformat:"s" == selected_staff %}selected{% endif %}
@@ -25,27 +28,62 @@
     </label>
 
     <button type="submit">Generate</button>
+
 </form>
 
 <hr>
 
-<h3>Summary</h3>
-<table cellpadding="8">
-    <tr><td>Total Sales</td><td>₦{{ total_sales }}</td></tr>
-    <tr><td>Total Refunds</td><td>₦{{ total_refunds }}</td></tr>
-    <tr><td><strong>Net Sales</strong></td><td><strong>₦{{ net_sales }}</strong></td></tr>
+<h3>Shift Summary</h3>
+
+<table class="table table-bordered" cellpadding="8">
+
+<tr>
+<td><strong>Total Orders</strong></td>
+<td>{{ order_count }}</td>
+</tr>
+
+<tr>
+<td>Total Sales</td>
+<td>₦{{ total_sales }}</td>
+</tr>
+
+<tr>
+<td>Total Refunds</td>
+<td>₦{{ total_refunds }}</td>
+</tr>
+
+<tr>
+<td><strong>Net Sales</strong></td>
+<td><strong>₦{{ net_sales }}</strong></td>
+</tr>
+
 </table>
 
 <hr>
 
 <h3>Payment Breakdown</h3>
-<table cellpadding="8">
-    <tr><td>Cash</td><td>₦{{ payment_summary.CASH }}</td></tr>
-    <tr><td>POS</td><td>₦{{ payment_summary.POS }}</td></tr>
-    <tr><td>Transfer</td><td>₦{{ payment_summary.TRANSFER }}</td></tr>
+
+<table class="table table-bordered" cellpadding="8">
+
+<tr>
+<td>Cash</td>
+<td>₦{{ payment_summary.CASH }}</td>
+</tr>
+
+<tr>
+<td>POS</td>
+<td>₦{{ payment_summary.POS }}</td>
+</tr>
+
+<tr>
+<td>Transfer</td>
+<td>₦{{ payment_summary.TRANSFER }}</td>
+</tr>
+
 </table>
 
 <hr>
 
 <button onclick="window.print()">🖨 Print Report</button>
+
 {% endblock %}

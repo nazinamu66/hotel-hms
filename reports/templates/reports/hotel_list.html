@@ -1,0 +1,49 @@
+{% extends "base/base.html" %}
+
+{% block title %}Hotels{% endblock %}
+
+{% block content %}
+
+<h2>Hotels</h2>
+
+<div style="margin-bottom:15px;">
+    <a class="btn btn-primary" href="{% url 'hotel_create' %}">
+        + Add Hotel
+    </a>
+</div>
+
+<table class="table">
+
+<thead>
+<tr>
+<th>Name</th>
+<th>Location</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for hotel in hotels %}
+<tr>
+<td>{{ hotel.name }}</td>
+<td>{{ hotel.location }}</td>
+<td>
+{% if hotel.is_active %}
+Active
+{% else %}
+Inactive
+{% endif %}
+</td>
+</tr>
+{% empty %}
+<tr>
+<td colspan="3">No hotels found.</td>
+</tr>
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

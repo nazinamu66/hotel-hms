@@ -1,0 +1,116 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<h2>Production History</h2>
+
+<!-- FILTERS -->
+<form method="get" style="margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap;">
+
+<label>
+From:
+<input type="date" name="from" value="{{ filters.from }}">
+</label>
+
+<label>
+To:
+<input type="date" name="to" value="{{ filters.to }}">
+</label>
+
+<label>
+Food:
+<select name="recipe">
+<option value="">All</option>
+{% for r in recipes %}
+<option value="{{ r.id }}"
+{% if filters.recipe == r.id|stringformat:"s" %}selected{% endif %}>
+{{ r.name }}
+</option>
+{% endfor %}
+</select>
+</label>
+
+<label>
+Produced By:
+<select name="user">
+<option value="">All</option>
+{% for u in users %}
+<option value="{{ u.id }}"
+{% if filters.user == u.id|stringformat:"s" %}selected{% endif %}>
+{{ u.username }}
+</option>
+{% endfor %}
+</select>
+</label>
+
+<button type="submit">Filter</button>
+
+<a href="{% url 'kitchen_production_history' %}">
+<button type="button">Reset</button>
+</a>
+
+</form>
+
+
+<!-- TABLE -->
+
+<table style="width:100%; border-collapse:collapse;" border="1">
+
+<thead>
+<tr>
+
+<th>
+<a href="?{% if filters.from %}from={{ filters.from }}&{% endif %}
+{% if filters.to %}to={{ filters.to }}&{% endif %}
+{% if filters.recipe %}recipe={{ filters.recipe }}&{% endif %}
+{% if filters.user %}user={{ filters.user }}&{% endif %}
+sort={% if ordering == '-created_at' %}created_at{% else %}-created_at{% endif %}">
+Date
+</a>
+</th>
+
+<th>Food</th>
+<th>Quantity</th>
+<th>Produced By</th>
+<th>Details</th>
+
+</tr>
+</thead>
+
+<tbody>
+
+{% for batch in batches %}
+
+<tr>
+
+<td>{{ batch.created_at|date:"Y-m-d H:i" }}</td>
+
+<td>{{ batch.recipe.name }}</td>
+
+<td>{{ batch.quantity_produced }}</td>
+
+<td>{{ batch.produced_by.username }}</td>
+
+<td>
+<a href="{% url 'kitchen_production_detail' batch.id %}">
+View
+</a>
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+<td colspan="5" style="text-align:center;">
+No production batches yet.
+</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

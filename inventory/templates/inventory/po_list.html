@@ -1,0 +1,35 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h2>Purchase Orders</h2>
+
+<a href="{% url 'inventory:po_create' %}">➕ New Purchase Order</a>
+
+<table border="1" cellpadding="8" style="margin-top:10px;">
+  <tr>
+    <th>ID</th>
+    <th>Supplier</th>
+    <th>Department</th>
+    <th>Status</th>
+    <th>Created</th>
+    <th></th>
+  </tr>
+
+  {% for po in pos %}
+  <tr>
+    <td>{{ po.id }}</td>
+    <td>{{ po.supplier }}</td>
+    <td>{{ po.department }}</td>
+    <td>{{ po.status }}</td>
+    <td>{{ po.created_at|date:"Y-m-d" }}</td>
+    <td>
+      <a href="{% url 'inventory:po_detail' po.pk %}">View</a>
+    </td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="6">No purchase orders found.</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

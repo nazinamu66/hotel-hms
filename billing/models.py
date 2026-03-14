@@ -5,16 +5,35 @@ from inventory.models import Department
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 from django.utils import timezone
+from inventory.models import Hotel
+
 
 
 User = settings.AUTH_USER_MODEL
 
 
 class Guest(models.Model):
+
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.PROTECT,
+        related_name="guests"
+    )
+
     first_name = models.CharField(max_length=75)
     last_name = models.CharField(max_length=75)
+
     phone = models.CharField(max_length=50, blank=True)
     email = models.EmailField(blank=True)
+
+    nationality = models.CharField(max_length=100, blank=True)
+
+    id_number = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Passport / National ID"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property
@@ -37,6 +56,12 @@ class Folio(models.Model):
     )
 
     folio_type = models.CharField(max_length=10, choices=FOLIO_TYPE)
+
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.PROTECT,
+        related_name="folios"
+    )
 
     room = models.ForeignKey(
         "rooms.Room",
@@ -169,12 +194,15 @@ class Folio(models.Model):
 
     @classmethod
     def get_active_room_folio(cls, room):
+        if not room or not room.hotel:
+            return None
+
         return cls.objects.filter(
             folio_type="ROOM",
             room=room,
+            hotel=room.hotel,   # 🔒 Hotel safety
             is_closed=False
         ).select_related("guest").first()
-
 
 # =========================
 # CHARGE (CONSUMPTION)

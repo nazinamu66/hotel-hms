@@ -1,0 +1,49 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Add Ingredient to {{ recipe.name }}</h2>
+
+<form method="post">
+    {% csrf_token %}
+
+    {{ form.non_field_errors }}
+
+    <div>
+        <label>Ingredient</label><br>
+        {{ form.ingredient }}
+        {{ form.ingredient.errors }}
+    </div>
+
+    <br>
+
+    <div>
+        <label>Quantity per portion</label><br>
+        {{ form.quantity }}
+        {{ form.quantity.errors }}
+    </div>
+
+    <br>
+
+    <div>
+        <label>Control Mode</label><br>
+        {{ form.control_mode }}
+        {{ form.control_mode.errors }}
+    </div>
+
+    <br>
+
+    <div>
+        <label>Tolerance % (only for TOLERANCE mode)</label><br>
+        {{ form.tolerance_percent }}
+        {{ form.tolerance_percent.errors }}
+    </div>
+
+    <br>
+
+    <button type="submit">➕ Add Ingredient</button>
+    <a href="{% url 'inventory:kitchen_recipe_edit' recipe.product.id %}">
+        Cancel
+    </a>
+</form>
+
+{% endblock %}

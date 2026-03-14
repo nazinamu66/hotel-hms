@@ -1,0 +1,168 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Kitchen Board</h2>
+<audio id="ticket-sound">
+    <source src="/static/sounds/kitchen-bell.mp3" type="audio/mpeg">
+</audio>
+
+<div style="display:flex; gap:20px">
+
+<!-- NEW -->
+<div style="flex:1">
+<h3 style="color:red;">NEW</h3>
+
+
+{% for ticket in new_tickets %}
+
+<div style="border:1px solid #ccc;padding:10px;margin-bottom:10px">
+
+<b>Ticket #{{ ticket.id }}</b><br>
+
+{% if ticket.order.table %}
+Table {{ ticket.order.table.name }}
+
+{% elif ticket.room %}
+Room {{ ticket.room.room_number }}
+
+{% else %}
+Walk-in
+{% endif %}
+
+<hr>
+
+<ul>
+{% for item in ticket.items.all %}
+<li>{{ item.quantity }} × {{ item.menu_item.name }}</li>
+{% endfor %}
+</ul>
+
+<form method="post" action="{% url 'kitchen_ticket_start' ticket.id %}">
+{% csrf_token %}
+<input type="number" name="eta_minutes" placeholder="ETA" min="1" required style="width:70px">
+<button type="submit">Start</button>
+</form>
+
+</div>
+
+{% empty %}
+<p>No new tickets</p>
+{% endfor %}
+
+</div>
+
+
+<!-- PREPARING -->
+<div style="flex:1">
+<h3 style="color:orange;">PREPARING</h3>
+
+{% for ticket in preparing_tickets %}
+
+<div style="border:1px solid orange;padding:10px;margin-bottom:10px">
+
+<b style="font-size:18px;">Ticket #{{ ticket.id }}</b>
+
+{% if ticket.eta_minutes %}
+<p>ETA: {{ ticket.eta_minutes }} min</p>
+<p><span id="timer-{{ ticket.id }}"></span></p>
+{% endif %}
+
+<hr>
+
+<ul>
+{% for item in ticket.items.all %}
+<li>{{ item.quantity }} × {{ item.menu_item.name }}</li>
+{% endfor %}
+</ul>
+
+<a href="{% url 'kitchen_ticket_ready' ticket.id %}">
+<button>Mark Ready</button>
+</a>
+
+</div>
+
+{% empty %}
+<p>No orders cooking</p>
+{% endfor %}
+
+</div>
+
+
+<!-- READY -->
+<div style="flex:1">
+<h3 style="color:green;">READY</h3>
+
+{% for ticket in ready_tickets %}
+
+<div style="border:1px solid green;padding:10px;margin-bottom:10px">
+
+<b>Ticket #{{ ticket.id }}</b>
+
+<hr>
+
+<ul>
+{% for item in ticket.items.all %}
+<li>{{ item.quantity }} × {{ item.menu_item.name }}</li>
+{% endfor %}
+</ul>
+
+<a href="{% url 'kitchen_ticket_served' ticket.id %}">
+<button>Served</button>
+</a>
+
+</div>
+
+{% empty %}
+<p>No ready orders</p>
+{% endfor %}
+
+</div>
+
+</div>
+
+
+<script>
+function startTimer(id, minutes) {
+
+    let seconds = minutes * 60;
+
+    const el = document.getElementById("timer-" + id);
+    if (!el) return;
+
+    setInterval(function(){
+
+        if(seconds <= 0){
+            el.innerHTML = "Ready";
+            return;
+        }
+
+        seconds--;
+
+        let m = Math.floor(seconds / 60);
+        let s = seconds % 60;
+
+        el.innerHTML = m + ":" + (s < 10 ? "0" : "") + s;
+
+    },1000);
+}
+
+{% for ticket in preparing_tickets %}
+{% if ticket.eta_minutes %}
+startTimer({{ ticket.id }}, {{ ticket.eta_minutes }});
+{% endif %}
+{% endfor %}
+
+const newTickets = {{ new_tickets|length }};
+const previousCount = localStorage.getItem("kitchen_ticket_count");
+
+if (previousCount !== null && newTickets > previousCount) {
+    document.getElementById("ticket-sound").play();
+}
+localStorage.setItem("kitchen_ticket_count", newTickets);
+setTimeout(function(){
+    location.reload();
+}, 8000);
+
+</script>
+
+{% endblock %}

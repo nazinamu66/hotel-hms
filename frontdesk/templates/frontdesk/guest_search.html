@@ -1,0 +1,54 @@
+{% extends "base/base.html" %}
+
+{% block header %}
+<h2>Guest Search</h2>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" style="margin-bottom:20px;">
+    <input type="text"
+           name="q"
+           value="{{ query }}"
+           placeholder="Search name, phone, email or ID"
+           style="width:300px;padding:6px;">
+
+    <button type="submit">Search</button>
+</form>
+
+<table class="table">
+
+<tr>
+<th>Name</th>
+<th>Phone</th>
+<th>Email</th>
+<th>Nationality</th>
+<th>Action</th>
+</tr>
+
+{% for guest in guests %}
+<tr>
+
+<td>{{ guest.full_name }}</td>
+<td>{{ guest.phone|default:"—" }}</td>
+<td>{{ guest.email|default:"—" }}</td>
+<td>{{ guest.nationality|default:"—" }}</td>
+
+<td>
+<a href="{% url 'frontdesk_guest_profile' guest.id %}">
+View
+</a>
+</td>
+
+</tr>
+{% empty %}
+
+<tr>
+<td colspan="5">No guests found</td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

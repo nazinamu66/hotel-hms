@@ -1,0 +1,92 @@
+{% extends "base/base.html" %}
+
+{% block title %}Create User{% endblock %}
+
+{% block content %}
+
+<h2>Create User</h2>
+
+<div class="card">
+
+<form method="post">
+    {% csrf_token %}
+
+    <!-- USERNAME -->
+    <label>Username</label>
+    {{ form.username }}
+
+    {% if form.username.errors %}
+        <div class="alert error">
+            {{ form.username.errors }}
+        </div>
+    {% endif %}
+
+    <br><br>
+
+    <!-- EMAIL -->
+    <label>Email</label>
+    {{ form.email }}
+
+    {% if form.email.errors %}
+        <div class="alert error">
+            {{ form.email.errors }}
+        </div>
+    {% endif %}
+
+    <br><br>
+
+    <!-- ROLE -->
+    <label>Role</label>
+    {{ form.role }}
+
+    <br><br>
+
+    <!-- HOTEL -->
+    <label>Hotel</label>
+    {{ form.hotel }}
+
+    {% if form.hotel.errors %}
+        <div class="alert error">
+            {{ form.hotel.errors }}
+        </div>
+    {% endif %}
+
+    <br><br>
+
+    <!-- DEPARTMENT -->
+    <label>Department</label>
+    {{ form.department }}
+
+    {% if form.department.errors %}
+        <div class="alert error">
+            {{ form.department.errors }}
+        </div>
+    {% endif %}
+
+    <br><br>
+
+    <!-- PASSWORD -->
+    <label>Password</label>
+    {{ form.password }}
+
+    {% if form.password.errors %}
+        <div class="alert error">
+            {{ form.password.errors }}
+        </div>
+    {% endif %}
+
+    <br><br>
+
+    <button class="btn btn-primary" type="submit">
+        Create User
+    </button>
+
+    <a href="{% url 'accounts_users' %}" class="btn btn-secondary">
+        Cancel
+    </a>
+
+</form>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h2>Review Stock Request #{{ request_obj.id }}</h2>
+
+<p>
+  <strong>Store:</strong> {{ request_obj.department }}<br>
+  <strong>Product:</strong> {{ request_obj.product.name }}<br>
+  <strong>Requested Quantity:</strong> {{ request_obj.requested_quantity }}<br>
+  <strong>Requested By:</strong> {{ request_obj.requested_by }}<br>
+</p>
+
+<hr>
+
+<form method="post">
+  {% csrf_token %}
+
+  <label>
+    Approved Quantity:
+    <input
+      type="number"
+      name="approved_quantity"
+      min="0"
+      max="{{ request_obj.requested_quantity }}"
+      value="{{ request_obj.requested_quantity }}"
+      required
+    >
+  </label>
+
+  <br><br>
+
+  <label>
+    Manager Note (optional):
+    <br>
+    <textarea name="manager_note" rows="3"></textarea>
+  </label>
+
+  <br><br>
+
+  <button type="submit" name="action" value="approve">
+    ✅ Approve & Create Draft PO
+  </button>
+
+  <button
+    type="submit"
+    name="action"
+    value="reject"
+    style="margin-left:10px;"
+  >
+    ❌ Reject
+  </button>
+</form>
+
+<br>
+
+<a href="{% url 'inventory:manager_stock_requests' %}">
+  ⬅ Back to Requests
+</a>
+{% endblock %}

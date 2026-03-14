@@ -1,49 +1,110 @@
 {% extends "base/base.html" %}
 
-{% block header %}
-<h2>{% if room %}Edit{% else %}Add{% endif %} Room</h2>
-{% endblock %}
+{% block title %}Room Setup{% endblock %}
 
 {% block content %}
+
+<h2>{% if room %}Edit{% else %}Add{% endif %} Room</h2>
+
+<div class="card">
+
 <form method="post">
-    {% csrf_token %}
+{% csrf_token %}
 
-    <label>Room Number</label><br>
-    <input type="text" name="room_number"
-           value="{{ room.room_number|default:'' }}" required><br><br>
+<!-- ROOM NUMBER -->
+<label>Room Number</label>
+<input type="text"
+       name="room_number"
+       value="{{ room.room_number|default:'' }}"
+       required>
 
-    <label>Category</label><br>
-    <select name="category" required>
-        {% for c in categories %}
-        <option value="{{ c.id }}"
-            {% if room.category.id == c.id %}selected{% endif %}>
-            {{ c.name }}
-        </option>
-        {% endfor %}
-    </select><br><br>
+<br><br>
 
-    <label>Building</label><br>
-    <select name="building">
-        <option value="">— None —</option>
-        {% for b in buildings %}
-        <option value="{{ b.id }}"
-            {% if room.building and room.building.id == b.id %}selected{% endif %}>
-            {{ b.name }}
-        </option>
-        {% endfor %}
-    </select><br><br>
+<!-- CATEGORY -->
+<label>Room Category</label>
+<select name="category" required>
 
-    <label>Status</label><br>
-    <select name="status">
-        {% for key,label in statuses %}
-        <option value="{{ key }}"
-            {% if room.status == key %}selected{% endif %}>
-            {{ label }}
-        </option>
-        {% endfor %}
-    </select><br><br>
+{% for c in categories %}
 
-    <button type="submit">Save</button>
-    <a href="{% url 'room_list' %}">Cancel</a>
+<option value="{{ c.id }}"
+{% if room and room.category and room.category.id == c.id %}selected{% endif %}>
+{{ c.name }}
+</option>
+
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<!-- BUILDING -->
+<label>Building</label>
+<select name="building">
+
+<option value="">— None —</option>
+
+{% for b in buildings %}
+
+<option value="{{ b.id }}"
+{% if room and room.building and room.building.id == b.id %}selected{% endif %}>
+{{ b.name }}
+</option>
+
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<!-- FLOOR -->
+<label>Floor</label>
+<select name="floor">
+
+<option value="">— None —</option>
+
+{% for f in floors %}
+
+<option value="{{ f.id }}"
+{% if room and room.floor and room.floor.id == f.id %}selected{% endif %}>
+{{ f.name }} ({{ f.building.name }})
+</option>
+
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<!-- STATUS -->
+<label>Status</label>
+
+<select name="status">
+
+{% for key,label in statuses %}
+
+<option value="{{ key }}"
+{% if room and room.status == key %}selected{% endif %}>
+{{ label }}
+</option>
+
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<!-- ACTION BUTTONS -->
+
+<button type="submit" class="btn btn-primary">
+Save
+</button>
+
+<a href="{% url 'room_list' %}" class="btn btn-secondary">
+Cancel
+</a>
+
 </form>
+
+</div>
+
 {% endblock %}

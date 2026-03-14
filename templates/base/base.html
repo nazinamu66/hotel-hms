@@ -1,146 +1,277 @@
+{% load static %}
+{% load hotel_features %}
+
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{% block title %}Hotel HMS{% endblock %}</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            background: #f4f6f8;
-        }
-
-        /* Layout */
-        .layout {
-            display: flex;
-            height: 100vh;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 230px;
-            background: #2c3e50;
-            color: #ecf0f1;
-            padding: 20px;
-        }
-
-        .sidebar h3 {
-            margin-top: 0;
-            margin-bottom: 20px;
-            font-size: 20px;
-        }
-
-        .sidebar h4 {
-            margin: 15px 0 5px;
-            font-size: 14px;
-            text-transform: uppercase;
-            color: #bdc3c7;
-        }
-
-        .sidebar a {
-            display: block;
-            color: #ecf0f1;
-            text-decoration: none;
-            padding: 6px 0;
-            font-size: 14px;
-        }
-
-        .sidebar a:hover {
-            text-decoration: underline;
-        }
-
-        /* Main */
-        .main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Topbar */
-        .topbar {
-            background: #ffffff;
-            padding: 12px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .system-name {
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .user-info {
-            text-align: right;
-            font-size: 13px;
-        }
-
-        .user-info strong {
-            display: block;
-        }
-
-        /* Page content */
-        .content {
-            padding: 20px;
-            overflow-y: auto;
-        }
-    </style>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <title>{% block title %}Hotel HMS{% endblock %}</title>  
 </head>
 
 <body>
 <div class="layout">
 
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-        <h3>Hotel HMS</h3>
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
 
-        {% if user.is_authenticated %}
+{% if user.is_authenticated %}
 
-            {% if user.role == 'RESTAURANT' %}
-                <h4>Restaurant</h4>
-                <a href="/restaurant/pos/">POS</a>
-                <a href="/restaurant/orders/">Previous Orders</a>
-                <a href="/reports/restaurant/end-of-shift/">End of Shift</a>
 
-                <!-- Future -->
-                <!-- <a href="#">End of Shift</a> -->
-                <!-- <a href="#">Refunds</a> -->
-            {% endif %}
+<!-- EXECUTIVE -->
+{% if user.role == "DIRECTOR" %}
+<h4 class="menu-toggle" onclick="toggleMenu('exec_menu', this)">
+<span class="arrow">▸</span> Executive
+</h4>
 
-            {% if user.role == 'FRONTDESK' %}
-                <h4>Front Desk</h4>
-                <a href="/frontdesk/">Dashboard</a>
-            {% endif %}
+<div id="exec_menu" class="menu-section">
+<a href="{% url 'owner_dashboard' %}">🏨 Executive Dashboard</a>
+<a href="{% url 'inventory:hotel_feature_setup' %}">⚙ Hotel Features</a>
+</div>
+{% endif %}
 
-            {% if user.role == 'STORE' %}
-                <h4>Store</h4>
-                <a href="/store/">Dashboard</a>
-                <a href="/store/issue/">Issue to Kitchen</a>
-            {% endif %}
 
-            {% if user.role == 'KITCHEN' %}
-                <h4>Kitchen</h4>
-                <a href="/kitchen/stock/">Stock</a>
-                <a href="/kitchen/produce/">Production</a>
-            {% endif %}
+<!-- HOTEL IDENTIFIER -->
+{% if user.role == "DIRECTOR" %}
+<h3>All Hotels</h3>
 
-            {% if user.role == 'ADMIN' %}
-                <h4>System</h4>
-                <a href="/admin/">Admin Panel</a>
-            {% endif %}
-            {% if user.role in "ADMIN MANAGER" %}
-<hr>
-<h4>Setup</h4>
-<a href="/manage/rooms/">Rooms</a>
-<a href="/manage/categories/">Room Categories</a>
-<a href="/manage/buildings/">Buildings</a>
+{% elif user.hotel %}
+<h3>{{ user.hotel.name }}</h3>
+
+{% elif user.department %}
+<h3>{{ user.department.hotel.name }}</h3>
+{% endif %}
+
+
+<!-- FRONT DESK -->
+
+{% if user.role == "FRONTDESK" or user.role == "MANAGER" or user.role == "ADMIN" or user.role == "DIRECTOR" %}
+
+<h4 class="menu-toggle" onclick="toggleMenu('frontdesk_menu', this)">
+<span class="arrow">▸</span> Front Desk
+</h4>
+
+<div id="frontdesk_menu" class="menu-section">
+<a href="{% url 'frontdesk_room_board' %}">Dashboard</a>
+<a href="{% url 'frontdesk_guest_search' %}">Guest Search</a>
+</div>
+
+{% endif %}
+
+<!-- RESTAURANT -->
+{% feature_enabled user "RESTAURANT" as restaurant_enabled %}
+
+{% if restaurant_enabled and user.role == "RESTAURANT" %}
+<h4 class="menu-toggle" onclick="toggleMenu('restaurant_menu', this)">
+<span class="arrow">▸</span> Restaurant
+</h4>
+
+<div id="restaurant_menu" class="menu-section">
+<a href="/restaurant/pos/">POS</a>
+<a href="/restaurant/orders/">Previous Orders</a>
+<a href="/reports/restaurant/end-of-shift/">End of Shift</a>
+</div>
+{% endif %}
+
+
+<!-- KITCHEN -->
+{% feature_enabled user "KITCHEN" as kitchen_enabled %}
+
+{% if kitchen_enabled and user.role in "KITCHEN MANAGER ADMIN DIRECTOR" %}
+<h4 class="menu-toggle" onclick="toggleMenu('kitchen_menu', this)">
+<span class="arrow">▸</span> Kitchen
+</h4>
+
+<div id="kitchen_menu" class="menu-section">
+
+<a href="{% url 'kitchen_dashboard' %}">Dashboard</a>
+<a href="{% url 'kitchen_ingredients' %}">Ingredients</a>
+<a href="{% url 'kitchen_food_list' %}">🍲 Prepared Foods</a>
+<a href="{% url 'kitchen_quick_production' %}">⚡ Quick Production</a>
+<a href="{% url 'kitchen_production_history' %}">📊 Production History</a>
+<a href="{% url 'kitchen_ingredient_requests' %}">🧾 My Ingredient Requests</a>
+
+{% if user.role == "MANAGER" or user.role == "DIRECTOR" %}
+<a href="{% url 'manager_ingredient_requests' %}">🧂 Ingredient Requests</a>
+{% endif %}
+
+</div>
+{% endif %}
+
+<!-- STORE -->
+{% feature_enabled user "STORE" as store_enabled %}
+
+{% if store_enabled and user.role in "STORE MANAGER ADMIN" %}
+<h4 class="menu-toggle" onclick="toggleMenu('store_menu', this)">
+<span class="arrow">▸</span> Store
+</h4>
+
+<div id="store_menu" class="menu-section">
+
+<a href="/store/">Dashboard</a>
+<a href="/store/issue/">Issue Stock</a>
+<a href="{% url 'store_request_low_stock' %}">Request Stock</a>
+<a href="{% url 'store_requests' %}">My Stock Requests</a>
+<a href="{% url 'inventory:store_incoming_pos' %}">Incoming Deliveries</a>
+<a href="{% url 'store_movement_log' %}">Stock Movements</a>
+<a href="{% url 'store_issue_history' %}">📤 Issue History</a>
+<a href="{% url 'store_receive_history' %}">📥 Receive History</a>
+<a href="{% url 'store_ingredient_requests' %}">🧾 Kitchen Requests</a>
+
+</div>
 {% endif %}
 
 
 
-        {% endif %}
-    </div>
+<!-- PROCUREMENT -->
+{% if store_enabled and user.role in "MANAGER ADMIN DIRECTOR ACCOUNTANT" %}
+<h4 class="menu-toggle" onclick="toggleMenu('proc_menu', this)">
+<span class="arrow">▸</span> Procurement
+</h4>
 
+<div id="proc_menu" class="menu-section">
+
+<a href="{% url 'inventory:po_list' %}">Purchase Orders</a>
+
+{% if user.role in "ADMIN DIRECTOR ACCOUNTANT" %}
+<a href="{% url 'direct_purchase_list' %}">🧾 Direct Purchases</a>
+{% endif %}
+
+{% if user.role == "ADMIN" %}
+<a href="{% url 'inventory:supplier_list' %}">Suppliers</a>
+{% endif %}
+
+</div>
+{% endif %}
+
+
+
+<!-- APPROVALS -->
+{% if store_enabled and user.role in "MANAGER ADMIN DIRECTOR ACCOUNTANT" %}
+<h4 class="menu-toggle" onclick="toggleMenu('approval_menu', this)">
+<span class="arrow">▸</span> Approvals
+</h4>
+
+<div id="approval_menu" class="menu-section">
+
+<a href="{% url 'inventory:manager_stock_requests' %}">
+Pending Stock Requests
+</a>
+
+<a href="{% url 'manager_ingredient_requests' %}">
+Ingredient Requests
+</a>
+
+</div>
+{% endif %}
+
+<!-- REPORTS -->
+
+{% feature_enabled user "STORE" as store_enabled %}
+{% feature_enabled user "KITCHEN" as kitchen_enabled %}
+{% feature_enabled user "RESTAURANT" as restaurant_enabled %}
+
+{% if user.role in "STORE MANAGER ADMIN DIRECTOR" %}
+<h4 class="menu-toggle" onclick="toggleMenu('reports_menu', this)">
+<span class="arrow">▸</span> Reports
+</h4>
+
+<div id="reports_menu" class="menu-section">
+
+{% if store_enabled %}
+<a href="{% url 'daily_stock_report' %}">
+📊 Daily Stock Movement
+</a>
+{% endif %}
+
+{% if kitchen_enabled %}
+<a href="{% url 'department_consumption_report' %}">
+🏭 Department Consumption
+</a>
+{% endif %}
+
+</div>
+{% endif %}
+
+
+
+<!-- MANAGEMENT -->
+
+{% if user.role in "DIRECTOR ADMIN" %}
+<h4 class="menu-toggle" onclick="toggleMenu('management_menu', this)">
+<span class="arrow">▸</span> Management
+</h4>
+
+<div id="management_menu" class="menu-section">
+
+<a href="/accounts/users/">User Management</a>
+<a href="{% url 'department_list' %}">Departments</a>
+
+</div>
+{% endif %}
+
+
+
+<!-- SYSTEM -->
+
+{% if user.role in "ADMIN DIRECTOR" %}
+
+<h4 class="menu-toggle" onclick="toggleMenu('system_menu', this)">
+<span class="arrow">▸</span> System
+</h4>
+
+<div id="system_menu" class="menu-section">
+
+<!-- ADMIN -->
+{% if user.role == "ADMIN" %}
+<a href="/admin/">Admin Panel</a>
+<hr>
+{% endif %}
+
+<!-- BUSINESS STRUCTURE -->
+<strong>Business Setup</strong>
+
+<a href="{% url 'hotel_list' %}">Hotels</a>
+<a href="{% url 'inventory:hotel_feature_setup' %}">Hotel Features</a>
+<a href="{% url 'department_list' %}">Departments</a>
+
+<hr>
+<strong>Kitchen Setup</strong>
+
+<a href="{% url 'inventory:kitchen_food_create' %}">Create Food</a>
+
+<!-- ROOM MANAGEMENT -->
+<strong>Rooms</strong>
+
+<a href="{% url 'room_list' %}">Rooms</a>
+<a href="/manage/categories/">Room Categories</a>
+<a href="/manage/buildings/">Buildings</a>
+<a href="{% url 'rate_list' %}">Room Rates</a>
+<a href="{% url 'floor_list' %}">Floors</a>
+
+<hr>
+
+<!-- INVENTORY SETUP -->
+{% if store_enabled %}
+<strong>Inventory</strong>
+
+<a href="{% url 'inventory:product_list' %}">Products</a>
+<a href="{% url 'inventory:supplier_list' %}">Suppliers</a>
+
+<hr>
+{% endif %}
+
+<!-- USERS -->
+<strong>Users</strong>
+
+<a href="/accounts/users/">Staff Users</a>
+
+</div>
+
+
+{% endif %}
+{% endif %}
+
+</div>
     <!-- MAIN -->
     <div class="main">
 
@@ -162,11 +293,52 @@
 
         <!-- PAGE CONTENT -->
         <div class="content">
-            {% block content %}{% endblock %}
-        </div>
+
+    {% if messages %}
+      <div style="margin-bottom:20px;">
+        {% for message in messages %}
+          <div class="alert {{ message.tags }}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+</div>
 
     </div>
 
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const toggles = document.querySelectorAll(".menu-toggle");
+
+    toggles.forEach(function(toggle) {
+
+        toggle.addEventListener("click", function() {
+
+            const menu = this.nextElementSibling;
+            const arrow = this.querySelector(".arrow");
+
+            if (!menu) return;
+
+            menu.classList.toggle("open");
+
+            if (menu.classList.contains("open")) {
+                arrow.textContent = "▾";
+            } else {
+                arrow.textContent = "▸";
+            }
+
+        });
+
+    });
+
+});
+</script>
 </body>
 </html>

@@ -1,0 +1,56 @@
+{% extends "base/base.html" %}
+{% block title %}Owner Dashboard{% endblock %}
+
+{% block content %}
+
+<h2>Owner Dashboard – {{ date }}</h2>
+
+<div class="grid-3">
+{% for data in hotel_data %}
+<div class="card">
+
+    <h3>{{ data.hotel.name }}</h3>
+
+    <p><strong>Total Sales:</strong> ₦{{ data.total }}</p>
+    <p><strong>Room Revenue:</strong> ₦{{ data.room }}</p>
+    <p><strong>Restaurant Revenue:</strong> ₦{{ data.restaurant }}</p>
+    <p><strong>Refunds:</strong> ₦{{ data.refunds }}</p>
+
+    <hr>
+
+    <h3>Net: ₦{{ data.net }}</h3>
+
+</div>
+{% endfor %}
+</div>
+
+<hr>
+
+<h3>System Setup</h3>
+
+<div class="grid-3">
+
+<a class="card" href="{% url 'hotel_list' %}">
+    Manage Hotels
+</a>
+
+<a class="card" href="{% url 'department_list' %}">
+    Departments
+</a>
+
+<a class="card" href="{% url 'room_list' %}">
+    Rooms
+</a>
+
+<a class="card" href="{% url 'inventory:supplier_list'  %}">
+    Suppliers
+</a>
+
+
+
+<a class="card" href="/accounts/users/">
+    Staff Users
+</a>
+
+</div>
+{% endblock %}

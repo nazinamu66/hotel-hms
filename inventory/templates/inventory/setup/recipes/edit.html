@@ -1,0 +1,60 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Recipe: {{ food.name }}</h2>
+
+<table border="1" cellpadding="6">
+  <tr>
+    <th>Ingredient</th>
+    <th>Qty / Portion</th>
+    <th>Control</th>
+    <th>Tolerance %</th>
+    <th></th>
+  </tr>
+
+  {% for item in items %}
+  <tr>
+    <td>{{ item.ingredient.name }}</td>
+    <td>{{ item.quantity }}</td>
+    <td>{{ item.get_control_mode_display }}</td>
+    <td>
+        {% if item.control_mode == "TOLERANCE" %}
+            {{ item.tolerance_percent }}%
+        {% else %}
+            —
+        {% endif %}
+    </td>
+
+    <td>
+      <form method="post"
+            action="{% url 'inventory:kitchen_recipe_item_delete' item.id %}"
+            style="display:inline;">
+        {% csrf_token %}
+        <button type="submit"
+                onclick="return confirm('Remove {{ item.ingredient.name }}?')">
+          ❌ Remove
+        </button>
+      </form>
+    </td>
+  </tr>
+
+  {% empty %}
+  <tr>
+    <td colspan="5">No ingredients yet.</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<br>
+
+<a href="{% url 'inventory:kitchen_recipe_item_add' recipe.id %}">
+➕ Add Ingredient
+</a>
+
+<br><br>
+
+<a href="{% url 'kitchen_food_list' %}">
+⬅ Back
+</a>
+
+{% endblock %}

@@ -8,6 +8,9 @@ from .views import (
     pos_order_list,
     pos_order_detail,
     refund_order,
+    close_shift,
+    table_list,
+    restaurant_select_table,
 )
 
 urlpatterns = [
@@ -20,5 +23,10 @@ urlpatterns = [
     path("orders/", pos_order_list, name="restaurant_order_list"),
     path("orders/<int:order_id>/", pos_order_detail, name="restaurant_order_detail"),
     path("orders/<int:order_id>/refund/",refund_order, name="restaurant_order_refund"),
+    path("shift/close/", close_shift, name="restaurant_shift_close"),
+    path("tables/", table_list, name="restaurant_table_list"),
+    path("tables/<int:table_id>/select/", restaurant_select_table, name="restaurant_select_table"),
+
+
 
 ]

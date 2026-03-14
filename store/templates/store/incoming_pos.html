@@ -1,0 +1,32 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Incoming Deliveries</h2>
+
+<table class="table">
+  <tr>
+    <th>PO</th>
+    <th>Supplier</th>
+    <th>Paid At</th>
+    <th></th>
+  </tr>
+
+  {% for po in pos %}
+  <tr>
+    <td>PO-{{ po.id }}</td>
+    <td>{{ po.supplier.name }}</td>
+    <td>{{ po.paid_at|date:"Y-m-d H:i" }}</td>
+    <td>
+      <a href="{% url 'inventory:po_detail' po.pk %}">
+        Open
+      </a>
+    </td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="4">No incoming deliveries.</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock %}

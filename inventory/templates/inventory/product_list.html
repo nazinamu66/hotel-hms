@@ -1,0 +1,86 @@
+{% extends "base/base.html" %}
+
+{% block title %}Products{% endblock %}
+
+{% block content %}
+
+<h2>Products</h2>
+
+<div style="margin-bottom:15px;">
+<a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
+Add Product
+</a>
+</div>
+<form method="get" style="margin-bottom:20px;">
+
+<label>Filter by type:</label>
+
+<select name="type" onchange="this.form.submit()">
+
+<option value="">All</option>
+
+{% for key,label in product_types %}
+
+<option value="{{ key }}"
+{% if selected_type == key %}selected{% endif %}>
+{{ label }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</form>
+
+<table class="table">
+
+<thead>
+<tr>
+<th>Name</th>
+<th>SKU</th>
+<th>Type</th>
+<th>Base Unit</th>
+<th>Supply Source</th>
+<th>Reorder Level</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for product in products %}
+
+<tr class="type-{{ product.product_type }}">
+<td>{{ product.name }}</td>
+<td>{{ product.sku }}</td>
+<td>{{ product.get_product_type_display }}</td>
+<td>{{ product.base_unit }}</td>
+<td>{{ product.get_supply_source_display }}</td>
+<td>{{ product.reorder_level }}</td>
+<td>
+<a href="{% url 'inventory:product_edit' product.id %}">Edit</a> |
+<a href="{% url 'inventory:product_delete' product.id %}">Archive</a>
+</td>
+</tr>
+
+{% empty %}
+
+<tr>
+<td colspan="7">No products created yet.</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<style>
+.type-RAW { background:#fffdf5; }
+.type-FOOD { background:#f5fff7; }
+.type-DRINK { background:#f5f9ff; }
+.type-SUPPLY { background:#fff5f5; }
+.type-BOUTIQUE { background:#faf5ff; }
+</style>
+
+{% endblock %}

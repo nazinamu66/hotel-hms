@@ -1,0 +1,92 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Stock Movement Log</h2>
+
+<form method="get" style="margin-bottom:15px; display:flex; gap:15px; flex-wrap:wrap;">
+    
+    From:
+    <input type="date" name="from" value="{{ date_from }}">
+
+    To:
+    <input type="date" name="to" value="{{ date_to }}">
+
+    Type:
+    <select name="type">
+        <option value="">All</option>
+        <option value="IN" {% if movement_type == "IN" %}selected{% endif %}>IN</option>
+        <option value="OUT" {% if movement_type == "OUT" %}selected{% endif %}>OUT</option>
+        <option value="TRANSFER" {% if movement_type == "TRANSFER" %}selected{% endif %}>TRANSFER</option>
+    </select>
+
+    <button type="submit">Filter</button>
+</form>
+
+<table class="table">
+  <tr>
+  <th>
+    <a href="?sort={% if current_sort == 'date' %}-date{% else %}date{% endif %}">
+      Date
+    </a>
+  </th>
+
+  <th>
+    <a href="?sort={% if current_sort == 'product' %}-product{% else %}product{% endif %}">
+      Product
+    </a>
+  </th>
+
+  <th>
+    <a href="?sort={% if current_sort == 'type' %}-type{% else %}type{% endif %}">
+      Type
+    </a>
+  </th>
+
+  <th>From</th>
+  <th>To</th>
+
+  <th>
+    <a href="?sort={% if current_sort == 'quantity' %}-quantity{% else %}quantity{% endif %}">
+      Qty
+    </a>
+  </th>
+
+  <th>By</th>
+  <th>Ref</th>
+</tr>
+
+  {% for m in movements %}
+<tr>
+  <td>{{ m.created_at|date:"Y-m-d H:i" }}</td>
+  <td>{{ m.product.name }}</td>
+  <td>{{ m.get_movement_type_display }}</td>
+  <td>{{ m.from_department|default:"—" }}</td>
+  <td>{{ m.to_department|default:"—" }}</td>
+  <td>{{ m.quantity }}</td>
+  <td>{{ m.created_by|default:"System" }}</td>
+
+  <td>
+    {% if m.movement_type == "TRANSFER" %}
+      <a href="{% url 'store_transfer_detail' m.reference|cut:'TRANSFER-' %}">
+        {{ m.reference }}
+      </a>
+
+    {% elif m.movement_type == "IN" %}
+      <a href="{% url 'inventory:incoming_delivery_detail' m.reference|cut:'PO-' %}">
+        View Delivery
+      </a>
+
+    {% else %}
+      {{ m.reference }}
+    {% endif %}
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="8">No stock movements recorded.</td>
+</tr>
+{% endfor %}
+
+</table>
+
+{% endblock %}

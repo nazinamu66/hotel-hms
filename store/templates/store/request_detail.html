@@ -1,0 +1,37 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h2>Stock Request #{{ request_obj.id }}</h2>
+
+<p>
+    <strong>Product:</strong> {{ request_obj.product.name }} <br>
+    <strong>Requested Quantity:</strong> {{ request_obj.requested_quantity }} <br>
+    <strong>Status:</strong> {{ request_obj.status }} <br>
+    <strong>Requested On:</strong> {{ request_obj.created_at|date:"Y-m-d H:i" }}
+</p>
+
+{% if request_obj.status == "REJECTED" %}
+<hr>
+<p style="color:red;">
+    <strong>Manager Note:</strong><br>
+    {{ request_obj.manager_note|default:"No note provided." }}
+</p>
+{% endif %}
+
+{% if request_obj.status == "APPROVED" %}
+<hr>
+<p style="color:green;">
+    ✅ Approved. Purchase Order is being processed.
+</p>
+{% endif %}
+
+{% if request_obj.status == "APPROVED" and request_obj.purchase_order.status == "PAID" %}
+  <hr>
+  <a href="{% url 'inventory:po_receive_store' request_obj.purchase_order.pk %}">
+    📦 Receive Goods
+  </a>
+{% endif %}
+
+
+<a href="{% url 'store_requests' %}">⬅ Back to My Requests</a>
+{% endblock %}

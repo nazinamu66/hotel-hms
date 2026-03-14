@@ -1,0 +1,29 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Low Stock Requests</h2>
+
+<table border="1">
+<tr>
+    <th>Product</th>
+    <th>Available</th>
+    <th>Request</th>
+</tr>
+
+{% for stock in stocks %}
+<tr>
+    <td>{{ stock.product.name }}</td>
+    <td>{{ stock.quantity }}</td>
+    <td>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="product_id" value="{{ stock.product.id }}">
+            <input type="number" name="quantity" min="1" required>
+            <button type="submit">Request</button>
+        </form>
+    </td>
+</tr>
+{% endfor %}
+</table>
+
+{% endblock %}

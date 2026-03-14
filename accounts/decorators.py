@@ -15,5 +15,9 @@ def role_required(*allowed_roles):
         return wrapper
     return decorator
 
-def manager_or_admin(user):
-    return user.role in ["MANAGER", "ADMIN"]
+def manager_admin_or_director(user):
+    return user.is_authenticated and user.role in [
+        "MANAGER",
+        "ADMIN",
+        "DIRECTOR",
+    ]

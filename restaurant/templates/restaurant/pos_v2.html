@@ -1,23 +1,65 @@
 {% extends "base/base.html" %}
-{% load static %}
 {% load restaurant_extras %}
-
 {% block title %}Restaurant POS{% endblock %}
 {% block content %}
+
+<style>
+.menu-btn {
+    width:160px;
+    height:90px;
+    margin:5px;
+    transition:0.2s ease;
+}
+
+.btn-ok {
+    border:1px solid #ccc;
+}
+
+.btn-low {
+    border:2px solid orange;
+}
+
+.btn-out {
+    opacity:0.4;
+    border:1px solid #ddd;
+    cursor:not-allowed;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255,165,0,0.6); }
+    70% { box-shadow: 0 0 0 6px rgba(255,165,0,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,165,0,0); }
+}
+
+.btn-low {
+    animation: pulse 1.5s infinite;
+}
+</style>
 
 <h2>Restaurant POS</h2>
 
 {% if messages %}
-    <div style="margin-bottom:10px;">
-        {% for message in messages %}
-            <div style="color:red;">
-                {{ message }}
-            </div>
-        {% endfor %}
-    </div>
+    {% for message in messages %}
+        <div style="color:red;margin-bottom:5px;">
+            {{ message }}
+        </div>
+    {% endfor %}
 {% endif %}
 
+{% if table %}
+<div style="margin-bottom:10px;">
+    <strong>Table:</strong> {{ table.name }}
+    <a href="{% url 'restaurant_table_list' %}">Change</a>
+</div>
+{% else %}
+<div style="margin-bottom:10px;">
+    <a href="{% url 'restaurant_table_list' %}">Assign Table</a>
+</div>
+{% endif %}
+
+
 <div style="display:flex; gap:20px">
+    
 
     <!-- MENU -->
     <div style="width:60%">
@@ -25,52 +67,83 @@
         <!-- FOOD -->
         <h3>Food</h3>
         {% for item in menu_items %}
-            {% if item.category == 'FOOD' %}
-                {% with stock=stock_map|get_item:item.id %}
+            {% if item.category == "FOOD" %}
+
+                {% with r_stock=restaurant_stock_map|get_item:item.product.id|default:0 %}
+                {% with k_stock=kitchen_stock_map|get_item:item.product.id|default:0 %}
+
                 <button
                     onclick="addItem({{ item.id }})"
-                    {% if stock <= 0 %}disabled{% endif %}
-                    style="width:150px;height:70px;margin:5px;
-                           {% if stock <= 0 %}opacity:0.5;{% endif %}"
+                    {% if k_stock <= 0 %}disabled{% endif %}
+                    class="menu-btn
+                    {% if r_stock <= 0 and k_stock <= 0 %}
+                        btn-out
+                    {% elif r_stock <= item.product.reorder_level %}
+                        btn-low
+                    {% else %}
+                        btn-ok
+                    {% endif %}"
                 >
-                    {{ item.name }}<br>
+                    <strong>{{ item.name }}</strong><br>
                     ₦{{ item.price }}<br>
-                    <small>
-                        {% if stock > 0 %}
-                            In stock: {{ stock }}
-                        {% else %}
-                            Out of stock
-                        {% endif %}
+                    <br>
+
+                    <small style="color:gray;">
+                    Kitchen available: {{ k_stock }}
                     </small>
+
                 </button>
+
                 {% endwith %}
+                {% endwith %}
+
             {% endif %}
         {% endfor %}
 
-        <hr style="margin:20px 0;">
+        <hr>
 
         <!-- DRINKS -->
         <h3>Drinks</h3>
         {% for item in menu_items %}
-            {% if item.category == 'DRINK' %}
-                {% with stock=stock_map|get_item:item.id %}
+            {% if item.category == "DRINK" %}
+
+                {% with r_stock=restaurant_stock_map|get_item:item.product.id|default:0 %}
+                {% with k_stock=kitchen_stock_map|get_item:item.product.id|default:0 %}
+
                 <button
                     onclick="addItem({{ item.id }})"
-                    {% if stock <= 0 %}disabled{% endif %}
-                    style="width:150px;height:70px;margin:5px;
-                           {% if stock <= 0 %}opacity:0.5;{% endif %}"
+                    {% if r_stock <= 0 %}disabled{% endif %}
+                    class="menu-btn
+                        {% if r_stock <= 0 %}
+                            btn-out
+                        {% elif r_stock <= item.product.reorder_level %}
+                            btn-low
+                        {% else %}
+                            btn-ok
+                        {% endif %}"
                 >
-                    {{ item.name }}<br>
+
+                    <strong>{{ item.name }}</strong><br>
                     ₦{{ item.price }}<br>
+
                     <small>
-                        {% if stock > 0 %}
-                            In stock: {{ stock }}
+                        {% if r_stock > 0 %}
+                            Restaurant: {{ r_stock }}
                         {% else %}
                             Out of stock
                         {% endif %}
                     </small>
+                    <br>
+
+                    <small style="color:gray;">
+                        Kitchen: {{ k_stock }}
+                    </small>
+
                 </button>
+
                 {% endwith %}
+                {% endwith %}
+
             {% endif %}
         {% endfor %}
 
@@ -103,6 +176,8 @@
     </div>
 </div>
 
+
+<!-- SETTLEMENT -->
 <form method="post" action="{% url 'restaurant_pos_commit' %}">
     {% csrf_token %}
 
@@ -118,116 +193,91 @@
         Charge to Room
     </label>
 
-    <!-- PAYMENT METHOD (Pay Now) -->
+    <!-- PAYMENT METHOD -->
     <div id="payment-method-box" style="margin-top:10px;">
-        <label>
-            Payment Method
-            <br>
-            <select name="payment_method" id="payment-method">
-                <option value="CASH">Cash</option>
-                <option value="POS">POS</option>
-                <option value="TRANSFER">Transfer</option>
-            </select>
-        </label>
+        <select name="payment_method" id="payment-method">
+            <option value="CASH">Cash</option>
+            <option value="POS">POS</option>
+            <option value="TRANSFER">Transfer</option>
+        </select>
     </div>
 
-    <!-- ROOM SELECTOR (Charge to Room) -->
+    <!-- ROOM SELECTOR -->
     <div id="room-select-container" style="display:none; margin-top:10px;">
-        <label>
-            Select Room
-            <br>
-            <select name="room" id="room-select">
-                <option value="">---</option>
-                {% for room in occupied_rooms %}
-                    <option value="{{ room.id }}">
-                        Room {{ room.room_number }}
-                    </option>
-                {% endfor %}
-            </select>
-        </label>
+        <select name="room" id="room-select">
+            <option value="">---</option>
+            {% for room in occupied_rooms %}
+                <option value="{{ room.id }}">
+                    Room {{ room.room_number }}
+                </option>
+            {% endfor %}
+        </select>
     </div>
 
     <br>
     <button type="submit">Submit Order</button>
+    <a href="{% url 'restaurant_shift_close' %}" class="btn btn-danger">
+Close Shift
+</a>
 </form>
+
 
 <script>
 function addItem(id) {
     fetch(`/restaurant/cart/add/${id}/`)
-        .then(() => location.reload());
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                alert(data.error);
+            } else {
+                location.reload();
+            }
+        });
 }
 
 function updateItem(id, qty) {
     fetch(`/restaurant/cart/update/${id}/`, {
         method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}"
-        },
+        headers: { "X-CSRFToken": "{{ csrf_token }}" },
         body: new URLSearchParams({ qty })
-    }).then(() => location.reload());
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) {
+            alert(data.error);
+            location.reload();
+        } else {
+            location.reload();
+        }
+    });
 }
 
 function clearCart() {
     fetch(`/restaurant/cart/clear/`)
         .then(() => location.reload());
 }
-document.addEventListener("DOMContentLoaded", function () {
-    const walkinRadio = document.getElementById("charge-walkin");
-    const roomRadio = document.getElementById("charge-room");
-    const roomContainer = document.getElementById("room-select-container");
-    const roomSelect = document.getElementById("room-select");
-
-    function toggleRoomSelect() {
-        if (roomRadio.checked) {
-            roomContainer.style.display = "block";
-            roomSelect.required = true;
-        } else {
-            roomContainer.style.display = "none";
-            roomSelect.value = "";
-            roomSelect.required = false;
-        }
-    }
-
-    walkinRadio.addEventListener("change", toggleRoomSelect);
-    roomRadio.addEventListener("change", toggleRoomSelect);
-
-    // Initial state
-    toggleRoomSelect();
-});
 
 document.addEventListener("DOMContentLoaded", function () {
+
     const payRadio = document.getElementById("settle-pay");
     const roomRadio = document.getElementById("settle-room");
 
     const paymentBox = document.getElementById("payment-method-box");
-    const paymentSelect = document.getElementById("payment-method");
-
     const roomBox = document.getElementById("room-select-container");
-    const roomSelect = document.getElementById("room-select");
 
     function toggleSettlement() {
         if (roomRadio.checked) {
-            // Charge to Room
-            roomBox.style.display = "block";
-            roomSelect.required = true;
-
             paymentBox.style.display = "none";
-            paymentSelect.required = false;
+            roomBox.style.display = "block";
         } else {
-            // Pay Now
             paymentBox.style.display = "block";
-            paymentSelect.required = true;
-
             roomBox.style.display = "none";
-            roomSelect.required = false;
-            roomSelect.value = "";
         }
     }
 
     payRadio.addEventListener("change", toggleSettlement);
     roomRadio.addEventListener("change", toggleSettlement);
 
-    // Initial state
     toggleSettlement();
 });
 </script>

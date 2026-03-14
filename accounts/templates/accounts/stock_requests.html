@@ -1,0 +1,28 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Pending Stock Requests</h2>
+
+<table border="1">
+<tr>
+    <th>Product</th>
+    <th>Dept</th>
+    <th>Qty</th>
+    <th>Requested By</th>
+    <th>Action</th>
+</tr>
+
+{% for r in requests %}
+<tr>
+    <td>{{ r.product.name }}</td>
+    <td>{{ r.department.name }}</td>
+    <td>{{ r.requested_quantity }}</td>
+    <td>{{ r.requested_by }}</td>
+    <td>
+        <a href="{% url 'approve_stock_request' r.id %}">Approve</a>
+    </td>
+</tr>
+{% endfor %}
+</table>
+
+{% endblock %}

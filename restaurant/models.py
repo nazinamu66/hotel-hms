@@ -1,14 +1,17 @@
 from django.db import models, transaction
 from django.conf import settings
-from inventory.models import Product, Department, stock_out
-# from billing.models import Folio, Charge, Payment
+from inventory.models import Product, Department, stock_out, stock_in
 from django.utils import timezone
-from inventory.models import Stock
-from billing.models import Charge, Payment
-from django.db import transaction
+from inventory.models import Stock,StockMovement
+from kitchen.models import KitchenTicket, KitchenTicketItem
+from billing.models import Charge, Payment, Folio
 from rooms.models import Room
+from decimal import Decimal
+from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 
+# from inventory.services.stock import stock_in  # adjust import if needed
 
 
 User = settings.AUTH_USER_MODEL
@@ -37,68 +40,55 @@ class MenuItem(models.Model):
         return f"{self.name} ({self.category})"
 
 
-from django.db import models, transaction
-from django.conf import settings
-
-from billing.models import Folio, Charge, Payment
-from inventory.models import stock_out
-from inventory.models import Department
-
 User = settings.AUTH_USER_MODEL
 
 
+
+
 class POSOrder(models.Model):
+
     STATUS_CHOICES = (
-        ('OPEN', 'Open'),        # being built
-        ('CHARGED', 'Charged'),  # stock deducted + charge created
-        ('PAID', 'Paid'),        # payment received
+        ('OPEN', 'Open'),
+        ('CHARGED', 'Charged'),
+        ('PAID', 'Paid'),
         ('CANCELLED', 'Cancelled'),
     )
 
-    # ===== CONTEXT =====
     department = models.ForeignKey(Department, on_delete=models.PROTECT)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-
-    # ===== ROOM / BILLING =====
-    room = models.ForeignKey(
-        Room,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        help_text="Select when charging to room"
-    )
-
-    charge_to_room = models.BooleanField(
-        default=False,
-        help_text="If checked, order is charged to room folio"
-    )
 
     folio = models.ForeignKey(
         Folio,
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        editable=False
+        related_name="pos_orders"
     )
 
-    # ===== FINANCIAL =====
-    total_amount = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0
-    )
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='OPEN'
     )
+    shift = models.ForeignKey(
+        "restaurant.Shift",
+        on_delete=models.PROTECT,
+        related_name="orders",
+        null=True,
+        blank=True
+    )
+
+    table = models.ForeignKey(
+        "restaurant.RestaurantTable",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"POS-{self.id} ({self.status})"
-    
+    # Refund tracking
     is_refunded = models.BooleanField(default=False)
     refunded_at = models.DateTimeField(null=True, blank=True)
     refunded_by = models.ForeignKey(
@@ -109,62 +99,92 @@ class POSOrder(models.Model):
         related_name="refunded_orders"
     )
     refund_reason = models.TextField(blank=True)
-    # ==========================================================
-    # INTERNAL HELPERS
-    # ==========================================================
-    def _resolve_folio(self):
-        """
-        Determine which folio this order belongs to.
-        """
-        if self.charge_to_room:
-            if not self.room:
-                raise ValueError("Room must be selected when charging to room.")
 
-            folio = Folio.get_active_room_folio(self.room)
-            if not folio:
-                raise ValueError("No active folio for selected room.")
+    def __str__(self):
+        return f"POS-{self.id} ({self.status})"
 
-            return folio
+    # -----------------------------------------
+    # 🔒 Internal Safety Check (Hotel Isolation)
+    # -----------------------------------------
+    def _validate_hotel_integrity(self):
 
-        # Walk-in customer
-        return Folio.objects.create(
-            folio_type='WALKIN',
-            guest_name='Walk-in Customer'
-        )
+        if not self.department:
+            raise ValidationError("Order must belong to a department.")
 
-    # ==========================================================
-    # STEP 1: CHARGE ORDER (STOCK + CHARGE)
-    # ==========================================================
+        hotel = self.department.hotel
+
+        if not hotel:
+            raise ValidationError("Department must belong to a hotel.")
+
+        if self.created_by and self.created_by.department:
+            if self.created_by.department.hotel != hotel:
+                raise ValidationError("User and order must belong to same hotel.")
+
+        if self.folio and hasattr(self.folio, "hotel"):
+            if self.folio.hotel != hotel:
+                raise ValidationError("Folio and order must belong to same hotel.")
+
+        return hotel
+
+    # =====================================
+    # CHARGE ORDER
+    # =====================================
     @transaction.atomic
     def charge_order(self):
-        """
-        - Deduct stock ONCE
-        - Create Charge ONCE
-        - Move order to CHARGED
-        """
-        if self.status != 'OPEN':
-            return  # idempotent safety
 
-        self.folio = self._resolve_folio()
-        self.save(update_fields=['folio'])
+        if self.status != "OPEN":
+            raise ValidationError("Only OPEN orders can be charged.")
 
-        total = 0
+        hotel = self._validate_hotel_integrity()
 
-        for item in self.items.select_related('menu_item__product'):
+        total = Decimal("0.00")
+        food_items = []
+
+        # =========================
+        # PROCESS ORDER ITEMS
+        # =========================
+        for item in self.items.select_related("menu_item__product"):
+
             line_total = item.quantity * item.price
             total += line_total
 
-            # 🔴 STOCK IS DEDUCTED HERE (ONCE)
-            stock_out(
-                product=item.menu_item.product,
-                department=self.department,
-                quantity=item.quantity,
-                user=self.created_by,
-                reason="Restaurant sale",
-                reference=f"POS-{self.id}"
+            # Only drinks affect restaurant stock
+            if item.menu_item.category == "DRINK":
+
+                stock_out(
+                    product=item.menu_item.product,
+                    department=self.department,
+                    quantity=item.quantity,
+                    user=self.created_by,
+                    reason="Drink sale",
+                    reference=f"POS-{self.id}"
+                )
+
+        # =========================
+        # CREATE KITCHEN TICKET
+        # =========================
+        food_items = [
+            item for item in self.items.select_related("menu_item")
+            if item.menu_item.category == "FOOD"
+        ]
+
+        if food_items:
+
+            ticket = KitchenTicket.objects.create(
+                order=self,
+                room=self.folio.room if self.folio.folio_type == "ROOM" else None
             )
 
-        # 🔴 CHARGE IS CREATED HERE (ONCE)
+            for item in food_items:
+                KitchenTicketItem.objects.create(
+                    ticket=ticket,
+                    menu_item=item.menu_item,
+                    quantity=item.quantity
+                )
+
+        # =========================
+        # CREATE FOLIO CHARGE
+        # =========================
         Charge.objects.create(
             folio=self.folio,
             description=f"Restaurant Order #{self.id}",
@@ -173,78 +193,113 @@ class POSOrder(models.Model):
             reference=f"POS-{self.id}"
         )
 
+        # =========================
+        # FINALIZE ORDER
+        # =========================
         self.total_amount = total
-        self.status = 'CHARGED'
-        self.save(update_fields=['total_amount', 'status'])
+        self.status = "CHARGED"
+        self.save(update_fields=["total_amount", "status"])
 
-    # ==========================================================
-    # STEP 2: PAY ORDER (PAYMENT ONLY)
-    # ==========================================================
+    # =====================================
+    # PAY ORDER
+    # =====================================
     @transaction.atomic
-    def pay_order(self, payment_method='CASH'):
-        """
-        - Record payment
-        - NEVER touches stock
-        - NEVER creates charges
-        """
-        if self.status != 'CHARGED':
-            return  # idempotent safety
+    def pay_order(self, method="CASH"):
+
+        if self.status != "CHARGED":
+            raise ValidationError("Only CHARGED orders can be paid.")
+
+        self._validate_hotel_integrity()
 
         Payment.objects.create(
             folio=self.folio,
             amount=self.total_amount,
-            method=payment_method,
+            method=method,
             collected_by=self.created_by,
             reference=f"POS-{self.id}"
         )
 
-        self.status = 'PAID'
-        self.save(update_fields=['status'])
-    
+        self.status = "PAID"
+        self.save(update_fields=["status"])
 
+    # =====================================
+    # REFUND ORDER
+    # =====================================
     @transaction.atomic
     def refund(self, user, reason=""):
-        if self.is_refunded:
-            raise ValueError("Order already refunded.")
 
-        # 1️⃣ Restore stock
+        if self.is_refunded:
+            raise ValidationError("Order already refunded.")
+
+        if self.status not in ["CHARGED", "PAID"]:
+            raise ValidationError("Only charged or paid orders can be refunded.")
+
+        if self.status == "CANCELLED":
+            raise ValidationError("Cancelled orders cannot be refunded.")
+
+        if not user:
+            raise ValidationError("Refund user required.")
+
+        hotel = self._validate_hotel_integrity()
+
+        # 1️⃣ Restore stock to restaurant department
         for item in self.items.select_related("menu_item__product"):
-            stock = Stock.objects.filter(
+
+            stock = Stock.objects.select_for_update().filter(
                 product=item.menu_item.product,
                 department=self.department
             ).first()
 
-            if stock:
-                stock.quantity += item.quantity
-                stock.save()
+            if not stock:
+                stock = Stock.objects.create(
+                    product=item.menu_item.product,
+                    department=self.department,
+                    quantity=0
+                )
 
-        # 2️⃣ Reverse charge
-        Charge.objects.create(
-            folio=self.folio,
-            description=f"Refund for Order #{self.id}",
-            department=self.department,
-            amount=-self.total_amount,
-            reference=f"REFUND-{self.id}"
-        )
+            stock.quantity += item.quantity
+            stock.save(update_fields=["quantity"])
 
-        # 3️⃣ Reverse payment if it was paid immediately
+            StockMovement.objects.create(
+                product=item.menu_item.product,
+                to_department=self.department,
+                quantity=item.quantity,
+                movement_type="IN",
+                created_by=user,
+                reference=f"POS-REFUND-{self.id}"
+            )
+
+        # 2️⃣ Reverse financials
         if self.status == "PAID":
             Payment.objects.create(
                 folio=self.folio,
                 amount=-self.total_amount,
                 method="REFUND",
                 collected_by=user,
-                reference=f"REFUND-{self.id}"
+                reference=f"POS-REFUND-{self.id}"
             )
 
-        # 4️⃣ Mark refunded
+        Charge.objects.create(
+            folio=self.folio,
+            description=f"Refund for POS Order #{self.id}",
+            department=self.department,
+            amount=-self.total_amount,
+            reference=f"POS-REFUND-{self.id}"
+        )
+
         self.is_refunded = True
         self.refunded_at = timezone.now()
         self.refunded_by = user
         self.refund_reason = reason
         self.status = "CANCELLED"
-        self.save()
 
+        self.save(update_fields=[
+            "is_refunded",
+            "refunded_at",
+            "refunded_by",
+            "refund_reason",
+            "status"
+        ])
 
 
 # =========================
@@ -265,3 +320,102 @@ class POSOrderItem(models.Model):
 
     def line_total(self):
         return self.quantity * self.price
+
+
+class Shift(models.Model):
+
+    STATUS_CHOICES = (
+        ("OPEN", "Open"),
+        ("CLOSED", "Closed"),
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="restaurant_shifts"
+    )
+
+    department = models.ForeignKey(
+        "inventory.Department",
+        on_delete=models.PROTECT
+    )
+
+    opened_at = models.DateTimeField(auto_now_add=True)
+
+    closed_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    opening_cash = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
+    closing_cash = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default="OPEN"
+    )
+
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-opened_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "department"],
+                condition=Q(status="OPEN"),
+                name="one_open_shift_per_user"
+            )
+        ]
+
+    def close(self, closing_cash):
+
+        self.closing_cash = closing_cash
+        self.closed_at = timezone.now()
+        self.status = "CLOSED"
+
+        self.save()
+
+    def __str__(self):
+        return f"{self.user} - {self.opened_at}"
+    
+    def save(self, *args, **kwargs):
+
+        if not self.pk and self.status == "OPEN":
+
+            existing = Shift.objects.filter(
+                user=self.user,
+                status="OPEN"
+            ).exists()
+
+            if existing:
+                raise ValueError("User already has an open shift.")
+
+        super().save(*args, **kwargs)
+        
+
+class RestaurantTable(models.Model):
+
+    department = models.ForeignKey(
+        "inventory.Department",
+        on_delete=models.PROTECT
+    )
+
+    name = models.CharField(max_length=50)
+
+    capacity = models.PositiveIntegerField(default=4)
+
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name

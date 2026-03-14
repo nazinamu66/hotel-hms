@@ -1,0 +1,116 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Quick Production</h2>
+
+<form method="post" id="production-form">
+  {% csrf_token %}
+
+  {{ batch_form.as_p }}
+
+  {{ formset.management_form }}
+
+  <table border="1" cellpadding="6" id="ingredients-table">
+    <thead>
+      <tr>
+        <th>Ingredient</th>
+        <th>Actual Quantity Used</th>
+      </tr>
+    </thead>
+    <tbody id="ingredients-body">
+      <tr>
+        <td colspan="2" style="text-align:center;">
+          Select a recipe to load ingredients
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <br>
+  <button type="submit">Produce</button>
+</form>
+
+<script>
+const recipeSelect = document.getElementById("id_recipe");
+const portionsInput = document.getElementById("id_quantity_produced");
+const tableBody = document.getElementById("ingredients-body");
+const totalFormsInput = document.getElementById("id_ingredients-TOTAL_FORMS");
+
+function loadIngredients() {
+    const recipeId = recipeSelect.value;
+    const portions = parseFloat(portionsInput.value) || 1;
+
+    if (!recipeId) {
+        tableBody.innerHTML = `
+          <tr>
+            <td colspan="3" style="text-align:center;">
+              Select a recipe to load ingredients
+            </td>
+          </tr>`;
+        totalFormsInput.value = 0;
+        return;
+    }
+
+    fetch(`/kitchen/recipe/${recipeId}/ingredients/`)
+        .then(res => res.json())
+        .then(data => {
+
+            tableBody.innerHTML = "";
+            totalFormsInput.value = data.length;
+
+            if (data.length === 0) {
+                tableBody.innerHTML = `
+                  <tr>
+                    <td colspan="3" style="color:red; text-align:center;">
+                      This recipe has no ingredients
+                    </td>
+                  </tr>`;
+                return;
+            }
+
+            data.forEach((item, index) => {
+
+                const expectedTotal = (item.expected_quantity * portions).toFixed(3);
+
+                let readonlyAttr = "";
+                let badge = "";
+
+                if (item.control_mode === "STRICT") {
+                    readonlyAttr = "readonly";
+                    badge = `<span style="color:red;">STRICT</span>`;
+                }
+                else if (item.control_mode === "TOLERANCE") {
+                    badge = `<span style="color:orange;">±${item.tolerance_percent}%</span>`;
+                }
+                else {
+                    badge = `<span style="color:green;">FLEXIBLE</span>`;
+                }
+
+                tableBody.innerHTML += `
+                  <tr>
+                    <td>
+                      ${item.ingredient}<br>
+                      ${badge}
+                    </td>
+                    <td>
+                      <input type="hidden"
+                             name="ingredients-${index}-ingredient_id"
+                             value="${item.ingredient_id}">
+                      <input type="number"
+                             step="0.001"
+                             min="0.001"
+                             required
+                             ${readonlyAttr}
+                             name="ingredients-${index}-actual_quantity"
+                             value="${expectedTotal}">
+                    </td>
+                  </tr>`;
+            });
+        });
+}
+
+recipeSelect.addEventListener("change", loadIngredients);
+portionsInput.addEventListener("input", loadIngredients);
+</script>
+
+{% endblock %}

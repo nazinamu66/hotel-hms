@@ -1,0 +1,44 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Production Detail</h2>
+
+<p><strong>Food:</strong> {{ batch.recipe.name }}</p>
+<p><strong>Quantity Produced:</strong> {{ batch.quantity_produced }}</p>
+<p><strong>Produced By:</strong> {{ batch.produced_by }}</p>
+<p><strong>Date:</strong> {{ batch.created_at|date:"Y-m-d H:i" }}</p>
+
+<hr>
+
+<h3>Ingredient Usage</h3>
+
+<table border="1" cellpadding="6">
+  <tr>
+    <th>Ingredient</th>
+    <th>Expected</th>
+    <th>Actual</th>
+    <th>Variance</th>
+  </tr>
+
+  {% for usage in batch.ingredient_usages.all %}
+  <tr>
+    <td>{{ usage.ingredient.name }}</td>
+    <td>{{ usage.expected_quantity }}</td>
+    <td>{{ usage.actual_quantity }}</td>
+    <td>
+      {% if usage.variance > 0 %}
+        <span style="color:red;">+{{ usage.variance }}</span>
+      {% elif usage.variance < 0 %}
+        <span style="color:orange;">{{ usage.variance }}</span>
+      {% else %}
+        0
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<br>
+<a href="{% url 'kitchen_production_history' %}">⬅ Back</a>
+
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Reject Stock Request</h2>
+
+<p>
+<strong>Product:</strong> {{ request_obj.product.name }}<br>
+<strong>Quantity:</strong> {{ request_obj.requested_quantity }}
+</p>
+
+<form method="post">
+    {% csrf_token %}
+    <label>Reason (optional)</label><br>
+    <textarea name="note" rows="4"></textarea>
+
+    <br><br>
+
+    <button type="submit">Reject Request</button>
+    <a href="{% url 'manager_stock_requests' %}">Cancel</a>
+</form>
+
+{% endblock %}

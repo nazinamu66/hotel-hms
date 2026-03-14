@@ -1,0 +1,51 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Incoming Delivery – PO #{{ po.id }}</h2>
+
+<p>
+  <strong>Supplier:</strong> {{ po.supplier.name }}<br>
+  <strong>Department:</strong> {{ po.department.name }}<br>
+  <strong>Paid At:</strong> {{ po.paid_at|date:"Y-m-d H:i" }}
+</p>
+
+<hr>
+
+<h3>Items Received</h3>
+
+<table class="table">
+  <tr>
+    <th>Product</th>
+    <th>Quantity</th>
+    <th>Unit</th>
+  </tr>
+
+  {% for item in po.items.all %}
+  <tr>
+    <td>{{ item.product.name }}</td>
+    <td>{{ item.purchase_quantity }}</td>
+    <td>{{ item.product.purchase_unit }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<hr>
+
+{% if po.status == "PAID" %}
+<form method="post" action="{% url 'inventory:po_receive_store' po.pk %}">
+  {% csrf_token %}
+  <button type="submit">
+    ✅ Confirm Receive & Update Stock
+  </button>
+</form>
+{% else %}
+<p><strong>Status:</strong> {{ po.status }}</p>
+{% endif %}
+
+<br>
+
+<a href="{% url 'inventory:store_incoming_pos' %}">
+  ⬅ Back to Incoming Deliveries
+</a>
+
+{% endblock %}

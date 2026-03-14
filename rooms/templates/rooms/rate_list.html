@@ -1,0 +1,51 @@
+{% extends "base/base.html" %}
+
+{% block title %}Room Rates{% endblock %}
+
+{% block content %}
+
+<h2>Room Rates</h2>
+
+<div style="margin-bottom:15px;">
+<a href="{% url 'rate_create' %}" class="btn btn-primary">
+Add Rate
+</a>
+</div>
+
+<table class="table">
+
+<thead>
+<tr>
+<th>Category</th>
+<th>Price</th>
+<th>Currency</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for rate in rates %}
+
+<tr>
+<td>{{ rate.category.name }}</td>
+<td>{{ rate.price_per_night }}</td>
+<td>{{ rate.currency }}</td>
+<td>{{ rate.is_active|yesno:"Active,Inactive" }}</td>
+</tr>
+
+{% empty %}
+
+<tr>
+<td colspan="4">
+No room rates configured.
+</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

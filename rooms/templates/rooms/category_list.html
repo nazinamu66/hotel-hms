@@ -1,33 +1,55 @@
 {% extends "base/base.html" %}
 
-{% block header %}
-<h2>Room Categories</h2>
-{% endblock %}
+{% block title %}Room Categories{% endblock %}
 
 {% block content %}
-<a href="{% url 'category_create' %}">
-    <button>Add Category</button>
+
+<h2>Room Categories</h2>
+
+<div style="margin-bottom:15px;">
+<a href="{% url 'category_create' %}" class="btn btn-primary">
+Add Category
 </a>
+</div>
 
-<table>
-    <tr>
-        <th>Name</th>
-        <th>Description</th>
-        <th>Actions</th>
-    </tr>
+<table class="table">
 
-    {% for c in categories %}
-    <tr>
-        <td>{{ c.name }}</td>
-        <td>{{ c.description|default:"—" }}</td>
-        <td>
-            <a href="{% url 'category_edit' c.id %}">Edit</a>
-        </td>
-    </tr>
-    {% empty %}
-    <tr>
-        <td colspan="3">No categories created yet.</td>
-    </tr>
-    {% endfor %}
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Actions</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for c in categories %}
+
+<tr>
+<td>{{ c.name }}</td>
+<td>{{ c.description|default:"—" }}</td>
+
+<td>
+<a href="{% url 'category_edit' c.id %}">
+Edit
+</a>
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+<td colspan="3">
+No categories created yet.
+</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
 </table>
+
 {% endblock %}

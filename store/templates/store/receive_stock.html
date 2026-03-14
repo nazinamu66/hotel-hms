@@ -1,0 +1,33 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h2>Receive Stock into Store</h2>
+
+{% for message in messages %}
+<p style="color: green">{{ message }}</p>
+{% endfor %}
+
+<form method="post">
+    {% csrf_token %}
+
+    <label>Product</label><br>
+    <select name="product_id" required>
+        <option value="">Select Product</option>
+        {% for p in products %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+        {% endfor %}
+    </select>
+    <br><br>
+
+    <label>Quantity Received</label><br>
+    <input type="number" name="quantity" min="1" required>
+    <br><br>
+
+    <label>Note (optional)</label><br>
+    <textarea name="note" rows="3"></textarea>
+    <br><br>
+
+    <button type="submit">Receive Stock</button>
+    <a href="/store/">Cancel</a>
+</form>
+{% endblock %}

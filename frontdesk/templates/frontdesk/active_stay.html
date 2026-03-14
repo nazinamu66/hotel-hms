@@ -129,7 +129,6 @@
 </section>
 
 <!-- ================= ACTIONS ================= -->
-<!-- ================= ACTIONS ================= -->
 <section style="display:flex; gap:10px; flex-wrap:wrap;">
 
     <a href="{% url 'frontdesk_take_payment' room.id %}">
@@ -139,7 +138,16 @@
     <a href="{% url 'frontdesk_invoice' folio.id %}" target="_blank">
         <button>View / Print Invoice</button>
     </a>
-
+    <a href="{% url 'frontdesk_extend_stay' room.id %}">
+        <button style="background:#3498db;color:white;">
+            Extend Stay
+        </button>
+    </a>
+    <a href="{% url 'frontdesk_change_room' room.id %}">
+    <button style="background:#9b59b6;color:white;">
+        Change Room
+    </button>
+</a>
     {% if folio.balance == 0 %}
         <a href="{% url 'frontdesk_checkout' room.id %}">
             <button style="background:green;color:white;">Checkout</button>

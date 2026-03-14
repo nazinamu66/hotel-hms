@@ -1,0 +1,62 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Direct Purchase #{{ dp.id }}</h2>
+
+<p><strong>Status:</strong> {{ dp.status }}</p>
+<p><strong>Supplier:</strong> {{ dp.supplier }}</p>
+<p><strong>Requested by:</strong> {{ dp.requested_by }}</p>
+<p><strong>Total Cost:</strong>₦{{ dp.total_cost|default:0 }}</p>
+
+{% if dp.note %}
+<p><strong>Note:</strong> {{ dp.note }}</p>
+{% endif %}
+
+<hr>
+
+<h3>Items</h3>
+<table border="1" cellpadding="6" width="100%">
+  <tr>
+    <th>Ingredient</th>
+    <th>Quantity</th>
+    <th>Unit Cost</th>
+    <th>Total</th>
+  </tr>
+
+  {% for item in dp.items.all %}
+  <tr>
+    <td>{{ item.product.name }}</td>
+    <td>{{ item.quantity }}</td>
+    <td>₦{{ item.unit_cost }}</td>
+    <td>₦{{ item.total_cost }}</td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="4">No items</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<hr>
+
+{# ===== ACCOUNTING ===== #}
+{% if user.role in "ACCOUNTANT DIRECTOR ADMIN" and dp.status == "APPROVED" %}
+<form method="post" action="{% url 'direct_purchase_pay' dp.id %}">
+  {% csrf_token %}
+  <label>Payment Reference</label><br>
+  <input type="text" name="payment_reference" required><br><br>
+  <button type="submit">💳 Mark as Paid</button>
+</form>
+{% endif %}
+
+{# ===== KITCHEN ===== #}
+{% if user.role == "KITCHEN" and dp.status == "PAID" %}
+<form method="post" action="{% url 'direct_purchase_receive' dp.id %}">
+  {% csrf_token %}
+  <button type="submit">📦 Receive into Kitchen</button>
+</form>
+{% endif %}
+
+<a href="{% url 'kitchen_dashboard' %}">⬅ Back</a>
+
+{% endblock %}

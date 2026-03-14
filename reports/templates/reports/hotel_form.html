@@ -1,0 +1,37 @@
+{% extends "base/base.html" %}
+
+{% block title %}Create Hotel{% endblock %}
+
+{% block content %}
+
+<h2>Create Hotel</h2>
+
+<form method="POST">
+
+{% csrf_token %}
+
+<div class="card">
+
+<label>Name</label><br>
+<input type="text" name="name" required>
+
+<br><br>
+
+<label>Location</label><br>
+<input type="text" name="location">
+
+<br><br>
+
+<button class="btn btn-primary" type="submit">
+Save
+</button>
+
+<a class="btn btn-secondary" href="{% url 'hotel_list' %}">
+Cancel
+</a>
+
+</div>
+
+</form>
+
+{% endblock %}

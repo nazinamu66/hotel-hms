@@ -1,0 +1,49 @@
+{% extends "base/base.html" %}
+
+{% block title %}Create Department{% endblock %}
+
+{% block content %}
+
+<h2>Create Department</h2>
+
+<form method="POST">
+{% csrf_token %}
+
+<div class="card">
+
+<label>Hotel</label>
+<select name="hotel">
+
+{% for hotel in hotels %}
+<option value="{{ hotel.id }}">
+{{ hotel.name }}
+</option>
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<label>Department Name</label>
+<input type="text" name="name" required>
+
+<br><br>
+
+<label>Department Type</label>
+<select name="department_type">
+
+{% for value,label in types %}
+<option value="{{ value }}">{{ label }}</option>
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<button class="btn btn-primary">Save</button>
+
+</div>
+
+</form>
+
+{% endblock %}

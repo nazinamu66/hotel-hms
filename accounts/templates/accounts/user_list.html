@@ -1,0 +1,73 @@
+{% extends "base/base.html" %}
+
+{% block title %}Users{% endblock %}
+
+{% block header %}
+<h2>User Management</h2>
+{% endblock %}
+
+{% block content %}
+
+<a href="/accounts/users/create/">
+<button>Create User</button>
+</a>
+
+<br><br>
+
+<table style="width:100%; border-collapse:collapse;">
+
+<thead style="background:#eee;">
+<tr>
+<th style="padding:10px;">Username</th>
+<th>Email</th>
+<th>Role</th>
+<th>Department</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for user in users %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+<td style="padding:10px;">
+{{ user.username }}
+</td>
+
+<td>
+{{ user.email }}
+</td>
+
+<td>
+{{ user.role }}
+</td>
+
+<td>
+{{ user.department|default:"—" }}
+</td>
+
+<td>
+{% if user.is_active %}
+Active
+{% else %}
+Inactive
+{% endif %}
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+<td colspan="5">No users found.</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

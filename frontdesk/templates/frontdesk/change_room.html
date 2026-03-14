@@ -1,0 +1,46 @@
+{% extends "base/base.html" %}
+
+{% block title %}Change Room{% endblock %}
+
+{% block header %}
+<h2>Change Room – Room {{ room.room_number }}</h2>
+{% endblock %}
+
+{% block content %}
+
+<form method="post">
+{% csrf_token %}
+
+<p>
+Guest:
+<strong>{{ folio.guest.full_name }}</strong>
+</p>
+
+<p>
+Current Room:
+<strong>{{ room.room_number }}</strong>
+</p>
+
+<label>Select New Room</label><br>
+
+<select name="new_room" required>
+
+{% for r in available_rooms %}
+<option value="{{ r.id }}">
+Room {{ r.room_number }} ({{ r.category.name }})
+</option>
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<button type="submit">Move Guest</button>
+
+<a href="{% url 'frontdesk_active_stay' room.id %}">
+Cancel
+</a>
+
+</form>
+
+{% endblock %}

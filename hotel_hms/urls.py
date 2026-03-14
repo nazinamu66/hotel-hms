@@ -31,6 +31,12 @@ urlpatterns = [
     path("housekeeping/", include("housekeeping.urls")),
     path("manager/rooms/", include("rooms.urls")),
     path("manage/", include("rooms.urls")),
+    
+path(
+    "inventory/",
+    include(("inventory.urls", "inventory"), namespace="inventory"),
+),
+
 
 
 

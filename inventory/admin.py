@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Department, Supplier, Product,
-    Stock, PurchaseOrder, PurchaseItem, StockMovement
+    Stock, PurchaseOrder, PurchaseItem, StockMovement, Hotel
 )
 from .models import StockOut
 from django.core.exceptions import ValidationError
@@ -15,48 +15,24 @@ class PurchaseItemInline(admin.TabularInline):
 
 @admin.register(PurchaseOrder)
 class PurchaseOrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'supplier', 'department', 'is_received', 'created_at')
-    list_filter = ('is_received', 'department')
-    inlines = [PurchaseItemInline]
-    actions = ['mark_as_received']
+    list_display = (
+        'id',
+        'supplier',
+        'department',
+        'status',
+        'created_by',
+        'created_at',
+    )
 
-    # Helper
-    def is_admin(self, user):
-        return user.is_superuser or user.role == 'ADMIN'
+    list_filter = (
+        'status',
+        'department',
+    )
 
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        if self.is_admin(request.user):
-            return qs
-        return qs.filter(department=request.user.department)
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "department":
-            if not self.is_admin(request.user):
-                kwargs["queryset"] = Department.objects.filter(
-                    id=request.user.department_id
-                )
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-    def save_model(self, request, obj, form, change):
-        if not change:
-            if not self.is_admin(request.user):
-                obj.department = request.user.department
-            obj.created_by = request.user
-        super().save_model(request, obj, form, change)
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj and not self.is_admin(request.user):
-            return ('department',)
-        return ()
-
-    def mark_as_received(self, request, queryset):
-        count = 0
-        for po in queryset:
-            if not po.is_received:
-                po.receive(request.user)
-                count += 1
-        self.message_user(request, f"{count} purchase order(s) received.")
+    search_fields = (
+        'id',
+        'supplier__name',
+    )
 
 
 @admin.register(Stock)
@@ -116,5 +92,20 @@ class StockOutAdmin(admin.ModelAdmin):
 
 admin.site.register(Department)
 admin.site.register(Supplier)
-admin.site.register(Product)
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "product_type",
+        "base_unit",
+        "purchase_unit",
+        "unit_multiplier",
+        "reorder_level",
+    )
+    list_filter = ("product_type",)
+    search_fields = ("name", "sku")
 admin.site.register(StockMovement)
+
+admin.site.register(Hotel)
+

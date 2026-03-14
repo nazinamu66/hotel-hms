@@ -1,0 +1,17 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Stock Transfer #{{ transfer.id }}</h2>
+
+<p>
+  <strong>Product:</strong> {{ transfer.product.name }}<br>
+  <strong>From:</strong> {{ transfer.from_department }}<br>
+  <strong>To:</strong> {{ transfer.to_department }}<br>
+  <strong>Quantity:</strong> {{ transfer.quantity }}<br>
+  <strong>By:</strong> {{ transfer.created_by }}<br>
+  <strong>Date:</strong> {{ transfer.created_at|date:"Y-m-d H:i" }}
+</p>
+
+<a href="{% url 'store_movement_log' %}">⬅ Back to movements</a>
+
+{% endblock %}

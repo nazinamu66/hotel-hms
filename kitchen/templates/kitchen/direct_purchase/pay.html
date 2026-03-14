@@ -1,0 +1,19 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Pay Direct Purchase #{{ dp.id }}</h2>
+
+<p><strong>Supplier:</strong> {{ dp.supplier }}</p>
+<p><strong>Total Amount:</strong> ₦{{ dp.total_cost }}</p>
+
+<form method="post">
+  {% csrf_token %}
+  <label>Payment Reference</label><br>
+  <input type="text" name="payment_reference" required><br><br>
+
+  <button type="submit">✅ Confirm Payment</button>
+</form>
+
+<a href="{% url 'direct_purchase_detail' dp.id %}">⬅ Cancel</a>
+
+{% endblock %}

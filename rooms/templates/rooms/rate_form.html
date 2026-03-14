@@ -1,0 +1,66 @@
+{% extends "base/base.html" %}
+
+{% block title %}Room Rate Setup{% endblock %}
+
+{% block content %}
+
+<h2>Room Rate</h2>
+
+<div class="card">
+
+<form method="post">
+
+{% csrf_token %}
+
+<!-- ROOM CATEGORY -->
+<label>Room Category</label>
+<select name="category" required>
+
+{% for c in categories %}
+
+<option value="{{ c.id }}">
+{{ c.name }}
+</option>
+
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<!-- PRICE -->
+<label>Price Per Night</label>
+<input type="number"
+       step="0.01"
+       name="price"
+       placeholder="Example: 25000"
+       required>
+
+<br><br>
+
+<!-- CURRENCY -->
+<label>Currency</label>
+
+<select name="currency">
+
+<option value="NGN">NGN (₦)</option>
+<option value="USD">USD ($)</option>
+<option value="EUR">EUR (€)</option>
+
+</select>
+
+<br><br>
+
+<button type="submit" class="btn btn-primary">
+Save Rate
+</button>
+
+<a href="{% url 'rate_list' %}" class="btn btn-secondary">
+Cancel
+</a>
+
+</form>
+
+</div>
+
+{% endblock %}

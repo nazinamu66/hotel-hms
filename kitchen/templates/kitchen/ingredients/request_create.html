@@ -1,0 +1,98 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Request Ingredients</h2>
+
+<form method="post">
+  {% csrf_token %}
+
+  {{ formset.management_form }}
+
+  <!-- ========================= -->
+  <!-- INGREDIENT ITEMS TABLE -->
+  <!-- ========================= -->
+  <table border="1" cellpadding="6" width="100%" id="items-table">
+    <thead>
+      <tr>
+        <th>Ingredient</th>
+        <th>Quantity</th>
+        <th>Source</th>
+        <th>Remove</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for form in formset %}
+      <tr class="item-row">
+        <td>{{ form.ingredient }}</td>
+        <td>{{ form.quantity }}</td>
+        <td>{{ form.source }}</td>
+        <td>
+          {% if form.instance.pk %}
+            {{ form.DELETE }}
+          {% else %}
+            <button type="button" onclick="removeRow(this)">✖</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- ADD ITEM -->
+  <div style="margin-top:10px;">
+    <button type="button" onclick="addRow()">➕ Add another ingredient</button>
+  </div>
+
+  <hr>
+
+  <!-- ========================= -->
+  <!-- NOTES -->
+  <!-- ========================= -->
+  <fieldset>
+    <legend>Notes</legend>
+  {{ request_form.note.errors }}
+  {{ request_form.note }}
+    <p style="font-size:12px;color:#666;">
+      Optional notes (urgent, market purchase, special quality, etc.)
+    </p>
+  </fieldset>
+
+  <br>
+
+  <!-- ========================= -->
+  <!-- ACTIONS -->
+  <!-- ========================= -->
+  <button type="submit">Submit Request</button>
+  <a href="{% url 'kitchen_ingredients' %}">Cancel</a>
+
+</form>
+
+<!-- ========================= -->
+<!-- JAVASCRIPT -->
+<!-- ========================= -->
+<script>
+function addRow() {
+  const table = document.querySelector("#items-table tbody");
+  const totalForms = document.getElementById("id_items-TOTAL_FORMS");
+
+  const formIndex = parseInt(totalForms.value);
+  const templateRow = table.querySelector(".item-row");
+  const newRow = templateRow.cloneNode(true);
+
+  newRow.querySelectorAll("input, select").forEach(el => {
+    el.name = el.name.replace(/-\d+-/, `-${formIndex}-`);
+    el.id = el.id.replace(/-\d+-/, `-${formIndex}-`);
+    if (el.type !== "hidden") el.value = "";
+    if (el.type === "checkbox") el.checked = false;
+  });
+
+  table.appendChild(newRow);
+  totalForms.value = formIndex + 1;
+}
+
+function removeRow(btn) {
+  btn.closest("tr").remove();
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base/base.html" %}
+
+{% block title %}Restaurant Tables{% endblock %}
+
+{% block content %}
+
+<style>
+.table-btn{
+    width:120px;
+    height:80px;
+}
+
+.table-free{
+    background:#ccffcc;
+}
+
+.table-occupied{
+    background:#ffcccc;
+}
+</style>
+
+<h2>Select Table</h2>
+
+<div style="display:flex; flex-wrap:wrap; gap:10px;">
+
+{% for table in tables %}
+
+<a href="{% url 'restaurant_select_table' table.id %}">
+
+<button
+class="table-btn {% if table.id in open_table_ids %}table-occupied{% else %}table-free{% endif %}"
+>
+{{ table.name }}
+</button>
+
+</a>
+
+{% endfor %}
+
+</div>
+
+{% endblock %}

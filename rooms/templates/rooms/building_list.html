@@ -1,32 +1,57 @@
 {% extends "base/base.html" %}
 
-{% block header %}
-<h2>Buildings</h2>
-{% endblock %}
+{% block title %}Buildings{% endblock %}
 
 {% block content %}
 
-<a href="{% url 'building_create' %}">
-    <button>Add Building</button>
-</a>
+<h2>Buildings</h2>
 
-<table>
-    <tr>
-        <th>Name</th>
-        <th>Status</th>
-        <th>Action</th>
-    </tr>
-    {% for b in buildings %}
-    <tr>
-        <td>{{ b.name }}</td>
-        <td>{{ b.is_active|yesno:"Active,Inactive" }}</td>
-        <td>
-            <a href="{% url 'building_toggle' b.id %}">
-                {% if b.is_active %}Deactivate{% else %}Activate{% endif %}
-            </a>
-        </td>
-    </tr>
-    {% endfor %}
+<div style="margin-bottom:15px;">
+<a href="{% url 'building_create' %}" class="btn btn-primary">
+Add Building
+</a>
+</div>
+
+<table class="table">
+
+<thead>
+<tr>
+<th>Name</th>
+<th>Status</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for b in buildings %}
+<tr>
+<td>{{ b.name }}</td>
+
+<td>
+{% if b.is_active %}
+Active
+{% else %}
+Inactive
+{% endif %}
+</td>
+
+<td>
+<a href="{% url 'building_toggle' b.id %}">
+{% if b.is_active %}Deactivate{% else %}Activate{% endif %}
+</a>
+</td>
+
+</tr>
+
+{% empty %}
+<tr>
+<td colspan="3">No buildings created yet.</td>
+</tr>
+{% endfor %}
+
+</tbody>
+
 </table>
 
 {% endblock %}

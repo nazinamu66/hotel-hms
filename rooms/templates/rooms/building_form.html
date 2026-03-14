@@ -1,15 +1,31 @@
 {% extends "base/base.html" %}
 
-{% block header %}
-<h2>Add Building</h2>
-{% endblock %}
+{% block title %}Add Building{% endblock %}
 
 {% block content %}
+
+<h2>Add Building</h2>
+
+<div class="card">
+
 <form method="post">
     {% csrf_token %}
+
     <label>Building Name</label><br>
-    <input type="text" name="name" required><br><br>
-    <button type="submit">Save</button>
-    <a href="{% url 'building_list' %}">Cancel</a>
+    <input type="text" name="name" required>
+
+    <br><br>
+
+    <button class="btn btn-primary" type="submit">
+        Save
+    </button>
+
+    <a class="btn btn-secondary" href="{% url 'building_list' %}">
+        Cancel
+    </a>
+
 </form>
+
+</div>
+
 {% endblock %}

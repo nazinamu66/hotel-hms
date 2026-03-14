@@ -1,0 +1,73 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h2>Purchase Order #{{ po.id }}</h2>
+
+<p>
+  <strong>Status:</strong> {{ po.status }} <br>
+  <strong>Supplier:</strong> {{ po.supplier }} <br>
+  <strong>Department:</strong> {{ po.department }}
+</p>
+
+<hr>
+
+<h3>Items</h3>
+<ul>
+  {% for item in po.items.all %}
+    <li>
+      {{ item.product }} –
+      {{ item.purchase_quantity }} {{ item.product.purchase_unit }}
+      ({{ item.base_quantity }} {{ item.product.base_unit }})
+    </li>
+  {% empty %}
+    <li>No items added yet.</li>
+  {% endfor %}
+</ul>
+
+{# ===================== DRAFT ONLY ===================== #}
+{% if po.status == "DRAFT" %}
+  <hr>
+  <h4>Add Item</h4>
+  <form method="post">
+    {% csrf_token %}
+    {{ item_form.as_p }}
+    <button>Add Item</button>
+  </form>
+
+  <hr>
+  <a href="{% url 'inventory:po_finalize' po.pk %}">
+    ✏️ Finalize Purchase Order
+  </a>
+{% endif %}
+
+{# ===================== SUBMITTED ONLY ===================== #}
+{% if po.status == "SUBMITTED" and request.user.role == "ACCOUNTANT" %}
+  <hr>
+  <a href="{% url 'inventory:po_pay' po.pk %}">
+    💰 Approve & Pay
+  </a>
+{% endif %}
+
+{% if po.status == "SUBMITTED" and request.user.role == "DIRECTOR" %}
+  <hr>
+  <a href="{% url 'inventory:po_pay' po.pk %}">
+    💰 Approve & Pay
+  </a>
+{% endif %}
+
+{% if po.status == "SUBMITTED" and request.user.role == "ADMIN" %}
+  <hr>
+  <a href="{% url 'inventory:po_pay' po.pk %}">
+    💰 Approve & Pay
+  </a>
+{% endif %}
+
+{# ===================== PAID ONLY ===================== #}
+{% if po.status == "PAID" and request.user.role == "STORE" %}
+  <hr>
+  <a href="{% url 'inventory:po_receive_store' po.pk %}">
+    📦 Receive Goods
+  </a>
+{% endif %}
+
+{% endblock %}

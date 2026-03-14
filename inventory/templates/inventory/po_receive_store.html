@@ -1,0 +1,38 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h2>Receive Goods — Purchase Order #{{ po.id }}</h2>
+
+<p>
+  <strong>Supplier:</strong> {{ po.supplier }}<br>
+  <strong>Status:</strong> {{ po.status }}<br>
+  <strong>Department:</strong> {{ po.department }}
+</p>
+
+<hr>
+
+<h3>Items to Receive</h3>
+
+<table class="table">
+  <tr>
+    <th>Product</th>
+    <th>Quantity</th>
+  </tr>
+
+  {% for item in po.items.all %}
+  <tr>
+    <td>{{ item.product.name }}</td>
+    <td>{{ item.purchase_quantity }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<form method="post" style="margin-top:20px;">
+  {% csrf_token %}
+  <button type="submit">
+    📦 Confirm Goods Received
+  </button>
+</form>
+
+<a href="{% url 'store_requests' %}">⬅ Back</a>
+{% endblock %}

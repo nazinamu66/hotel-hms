@@ -8,6 +8,14 @@
 
 {% block content %}
 
+<div style="margin-bottom:20px;">
+    <a href="{% url 'frontdesk_night_audit' %}"
+       style="background:#2c3e50;color:white;padding:10px 15px;
+              text-decoration:none;border-radius:5px;">
+        Run Night Audit
+    </a>
+</div>
+
 {% for category, rooms in categories.items %}
     <h3>{{ category.name }}</h3>
 

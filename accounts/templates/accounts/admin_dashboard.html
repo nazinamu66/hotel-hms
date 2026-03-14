@@ -1,11 +1,63 @@
 {% extends "base/base.html" %}
 
-{% block content %}
-<h2>Admin Panel</h2>
+{% block title %}Administration{% endblock %}
 
-<ul>
-    <li><a href="/admin/">Django Admin</a></li>
-    <li><a href="/accounts/users/">User Management</a></li>
-    <li><a href="/reports/">System Reports</a></li>
-</ul>
+{% block header %}
+<h2>Administration</h2>
+{% if hotel %}
+<p>Hotel: {{ hotel.name }}</p>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,220px);gap:20px;">
+
+    <!-- SYSTEM -->
+    <div class="card">
+        <h3>System</h3>
+        <ul>
+            <li><a href="/admin/">Django Admin</a></li>
+            <li><a href="/reports/">System Reports</a></li>
+        </ul>
+    </div>
+
+    <!-- STAFF -->
+    <div class="card">
+        <h3>Staff</h3>
+        <ul>
+            <li><a href="/accounts/users/">User Management</a></li>
+        </ul>
+    </div>
+
+    <!-- HOTEL SETUP -->
+    <div class="card">
+        <h3>Hotel Setup</h3>
+        <ul>
+            <li><a href="/admin/hotels/">Hotels</a></li>
+            <li><a href="/admin/buildings/">Buildings</a></li>
+            <li><a href="/admin/departments/">Departments</a></li>
+        </ul>
+    </div>
+
+    <!-- ROOMS -->
+    <div class="card">
+        <h3>Rooms</h3>
+        <ul>
+            <li><a href="/admin/room-categories/">Room Categories</a></li>
+            <li><a href="/admin/rooms/">Rooms</a></li>
+        </ul>
+    </div>
+
+    <!-- INVENTORY -->
+    <div class="card">
+        <h3>Inventory</h3>
+        <ul>
+            <li><a href="/inventory/products/">Products</a></li>
+            <li><a href="/inventory/suppliers/">Suppliers</a></li>
+        </ul>
+    </div>
+
+</div>
+
 {% endblock %}

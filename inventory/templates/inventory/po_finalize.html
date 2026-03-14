@@ -1,0 +1,61 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h2>Finalize Purchase Order #{{ po.id }}</h2>
+
+<form method="post">
+  {% csrf_token %}
+
+  <label>
+    Supplier:
+    <select name="supplier" required>
+<option value="{{ s.id }}" {% if po.supplier_id == s.id %}selected{% endif %}>
+  {{ s.name }}
+</option>
+      {% for s in suppliers %}
+        <option value="{{ s.id }}">{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <hr>
+
+  <table class="table">
+    <tr>
+      <th>Product</th>
+      <th>Quantity</th>
+      <th>Unit Cost</th>
+    </tr>
+
+    {% for item in items %}
+    <tr>
+      <td>{{ item.product.name }}</td>
+      <td>
+        <input
+          type="number"
+          name="qty_{{ item.id }}"
+          value="{{ item.purchase_quantity }}"
+          min="0"
+        >
+      </td>
+      <td>
+        <input
+          type="number"
+          step="0.01"
+          name="cost_{{ item.id }}"
+          value="{{ item.unit_cost }}"
+        >
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <br>
+
+  <button type="submit">
+    📤 Submit for Payment Approval
+  </button>
+</form>
+
+<a href="{% url 'inventory:po_detail' po.pk %}">⬅ Back to PO</a>
+{% endblock %}

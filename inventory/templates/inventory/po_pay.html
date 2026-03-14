@@ -1,0 +1,37 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h2>Approve & Pay Purchase Order #{{ po.id }}</h2>
+
+<p>
+  <strong>Supplier:</strong> {{ po.supplier }}<br>
+  <strong>Status:</strong> {{ po.status }}
+</p>
+
+<h3>Items</h3>
+<ul>
+  {% for item in po.items.all %}
+    <li>
+      {{ item.product.name }} –
+      {{ item.purchase_quantity }} × {{ item.unit_cost }}
+    </li>
+  {% endfor %}
+</ul>
+
+<form method="post">
+  {% csrf_token %}
+
+  <label>
+    Payment Reference (optional):
+    <input type="text" name="payment_reference">
+  </label>
+
+  <br><br>
+
+  <button type="submit">
+    💰 Approve & Mark as Paid
+  </button>
+</form>
+
+<a href="{% url 'inventory:po_detail' po.pk %}">⬅ Back</a>
+{% endblock %}

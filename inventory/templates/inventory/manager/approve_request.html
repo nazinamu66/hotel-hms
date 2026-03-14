@@ -1,0 +1,34 @@
+{% extends "base/base.html" %}
+{% block content %}
+
+<h2>Approve Stock Request</h2>
+
+<p>
+<strong>Product:</strong> {{ request_obj.product.name }}<br>
+<strong>Quantity:</strong> {{ request_obj.requested_quantity }}<br>
+<strong>Department:</strong> {{ request_obj.department.name }}
+</p>
+
+<form method="post">
+    {% csrf_token %}
+
+    <label>Supplier:</label><br>
+    <select name="supplier" required>
+        <option value="">-- Select Supplier --</option>
+        {% for s in suppliers %}
+        <option value="{{ s.id }}">{{ s.name }}</option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    <label>Unit Cost (optional):</label><br>
+    <input type="number" step="0.01" name="unit_cost">
+
+    <br><br>
+
+    <button type="submit">Approve & Create PO</button>
+    <a href="{% url 'manager_stock_requests' %}">Cancel</a>
+</form>
+
+{% endblock %}

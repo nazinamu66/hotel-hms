@@ -1,0 +1,73 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h2>My Stock Requests</h2>
+<form method="get" style="margin-bottom:15px;">
+    From:
+    <input type="date" name="from" value="{{ date_from }}">
+    To:
+    <input type="date" name="to" value="{{ date_to }}">
+    <button type="submit">Filter</button>
+</form>
+
+<a href="{% url 'store_request_stock' %}">➕ New Request</a>
+
+<table border="1" cellpadding="8" style="margin-top:10px;">
+    <tr>
+    <th>ID</th>
+
+    <th>
+        <a href="?sort={% if current_sort == 'product' %}-product{% else %}product{% endif %}">
+            Product
+        </a>
+    </th>
+
+    <th>
+        <a href="?sort={% if current_sort == 'quantity' %}-quantity{% else %}quantity{% endif %}">
+            Requested Qty
+        </a>
+    </th>
+
+    <th>
+        <a href="?sort={% if current_sort == 'status' %}-status{% else %}status{% endif %}">
+            Status
+        </a>
+    </th>
+
+    <th>
+        <a href="?sort={% if current_sort == 'date' %}-date{% else %}date{% endif %}">
+            Date
+        </a>
+    </th>
+
+    <th></th>
+</tr>
+
+    {% for r in requests %}
+    <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.product.name }}</td>
+        <td>{{ r.requested_quantity }}</td>
+<td>
+    {% if r.status == "PENDING" %}
+        <span style="color:orange;">{{ r.status }}</span>
+    {% elif r.status == "APPROVED" %}
+        <span style="color:green;">{{ r.status }}</span>
+    {% elif r.status == "REJECTED" %}
+        <span style="color:red;">{{ r.status }}</span>
+    {% else %}
+        {{ r.status }}
+    {% endif %}
+</td>
+        <td>{{ r.created_at|date:"Y-m-d H:i" }}</td>
+        <td>
+            <a href="{% url 'store_request_detail' r.pk %}">View</a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="6">No stock requests yet.</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

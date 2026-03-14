@@ -1,0 +1,80 @@
+{% extends "base/base.html" %}
+
+{% block title %}Close Shift{% endblock %}
+
+{% block content %}
+
+<h2>Close Shift</h2>
+
+<p>
+Shift opened at: <strong>{{ shift.opened_at }}</strong>
+</p>
+
+<hr>
+
+<h3>Shift Summary</h3>
+
+<table class="table table-bordered">
+
+<tr>
+<td>Total Orders</td>
+<td>{{ order_count }}</td>
+</tr>
+
+<tr>
+<td>Total Sales</td>
+<td>₦{{ total_sales }}</td>
+</tr>
+
+</table>
+
+<hr>
+
+<h3>Payment Breakdown</h3>
+
+<table class="table table-bordered">
+
+<tr>
+<td>Cash</td>
+<td>₦{{ payment_summary.CASH }}</td>
+</tr>
+
+<tr>
+<td>POS</td>
+<td>₦{{ payment_summary.POS }}</td>
+</tr>
+
+<tr>
+<td>Transfer</td>
+<td>₦{{ payment_summary.TRANSFER }}</td>
+</tr>
+
+</table>
+
+<hr>
+
+<h3>Cash Reconciliation</h3>
+
+<p>
+Expected Cash: <strong>₦{{ expected_cash }}</strong>
+</p>
+
+<form method="post">
+
+{% csrf_token %}
+
+<label>
+Counted Cash
+</label>
+
+<input type="number" step="0.01" name="counted_cash" required>
+
+<br><br>
+
+<button class="btn btn-danger">
+Close Shift
+</button>
+
+</form>
+
+{% endblock %}
