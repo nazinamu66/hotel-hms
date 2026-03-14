@@ -1,0 +1,41 @@
+{% extends "base/base.html" %}
+
+{% block title %}Report Maintenance Issue{% endblock %}
+
+{% block content %}
+
+<h2>Report Maintenance Issue</h2>
+
+<p><strong>Room:</strong> {{ room.room_number }}</p>
+
+<form method="post">
+
+{% csrf_token %}
+
+<label>Description</label>
+<br>
+<textarea name="description" required style="width:400px;height:120px;"></textarea>
+
+<br><br>
+
+<label>Priority</label>
+<br>
+<select name="priority">
+
+<option value="LOW">Low</option>
+<option value="MEDIUM" selected>Medium</option>
+<option value="HIGH">High</option>
+
+</select>
+
+<br><br>
+
+<button type="submit">Submit Ticket</button>
+
+<a href="{% url 'housekeeping_dashboard' %}">
+<button type="button">Cancel</button>
+</a>
+
+</form>
+
+{% endblock %}

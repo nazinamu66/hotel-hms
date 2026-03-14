@@ -7,7 +7,11 @@ from .models import MaintenanceTicket
 @role_required("HOUSEKEEPING", "FRONTDESK", "MANAGER", "DIRECTOR")
 def create_ticket(request, room_id):
 
-    room = get_object_or_404(Room, id=room_id)
+    room = get_object_or_404(
+        Room,
+        id=room_id,
+        hotel=request.user.department.hotel
+    )
 
     if request.method == "POST":
 
