@@ -1,0 +1,10 @@
+git add .
+git commit -m "Housekeeping module: cleaning log and history"
+git push
+
+cd ~/hotel_projects/hotel_hms
+
+source ~/hotel_projects/venv/bin/activate
+
+python manage.py runserver
+git add . && git commit -m "checkpoint" && git push
