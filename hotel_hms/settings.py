@@ -49,7 +49,8 @@ INSTALLED_APPS = [
     'reports',
     'kitchen',
     'rooms',
-    'housekeeping'
+    'housekeeping',
+    "maintenance",
 ]
 
 MIDDLEWARE = [

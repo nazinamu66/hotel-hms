@@ -1,32 +1,55 @@
 {% extends "base/base.html" %}
 
+{% block title %}Cleaning History{% endblock %}
+
 {% block content %}
 
 <h2>Cleaning History</h2>
 
-<table border="1" cellpadding="6">
+<table style="width:100%; border-collapse:collapse;">
 
+<thead style="background:#eee;">
 <tr>
-<th>Date</th>
+<th style="padding:10px;">Date</th>
 <th>Room</th>
 <th>Cleaned By</th>
 <th>Previous Status</th>
 </tr>
+</thead>
+
+<tbody>
 
 {% for log in logs %}
 
-<tr>
-<td>{{ log.cleaned_at }}</td>
-<td>{{ log.room.room_number }}</td>
-<td>{{ log.cleaned_by }}</td>
-<td>{{ log.previous_status }}</td>
+<tr style="border-bottom:1px solid #ddd;">
+
+<td style="padding:10px;">
+{{ log.cleaned_at|date:"Y-m-d H:i" }}
+</td>
+
+<td>
+Room {{ log.room.room_number }}
+</td>
+
+<td>
+{{ log.cleaned_by }}
+</td>
+
+<td>
+{{ log.previous_status }}
+</td>
+
 </tr>
 
 {% empty %}
+
 <tr>
-<td colspan="4">No cleaning history yet</td>
+<td colspan="4">No cleaning records found.</td>
 </tr>
+
 {% endfor %}
+
+</tbody>
 
 </table>
 

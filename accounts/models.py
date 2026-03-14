@@ -49,6 +49,10 @@ class User(AbstractUser):
         help_text="Hotel user belongs to (Managers, Accountants)"
     )
 
+    is_department_head = models.BooleanField(
+        default=False,
+        help_text="Head of department responsible for assignments and supervision"
+    )
 
     phone = models.CharField(max_length=20, blank=True, null=True)
 

@@ -9,6 +9,7 @@ from .views import (
     manager_payments_today,
     manager_restaurant_orders_today,
     manager_room_activity_today,
+    user_edit,
 )
 
 urlpatterns = [
@@ -23,5 +24,6 @@ urlpatterns = [
     path("manager/restaurant-orders/", manager_restaurant_orders_today),
     path("manager/room-activity/", manager_room_activity_today),
     path("manager/payments/", manager_payments_today),
+    path("users/<int:user_id>/edit/",user_edit,name="accounts_user_edit"),
 
 ]

@@ -19,6 +19,7 @@ class UserCreateForm(forms.ModelForm):
             "role",
             "hotel",
             "department",
+            "is_department_head",
             "password"
         ]
 

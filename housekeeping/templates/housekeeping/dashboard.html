@@ -20,7 +20,11 @@
             ">
                 <strong>Room {{ room.room_number }}</strong><br>
                 <small>{{ room.get_status_display }}</small>
-
+                <a href="{% url 'housekeeping_assign_room' room.id %}">
+<button style="width:100%;margin-top:5px;">
+Assign
+</button>
+</a>
                 <br><br>
                 <a href="{% url 'housekeeping_mark_clean' room.id %}">
                     <button style="width:100%;">Mark Clean</button>

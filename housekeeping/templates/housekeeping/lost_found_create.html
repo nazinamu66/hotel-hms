@@ -1,0 +1,46 @@
+{% extends "base/base.html" %}
+
+{% block title %}Record Lost Item{% endblock %}
+
+{% block content %}
+
+<h2>Record Lost Item</h2>
+
+<form method="post">
+
+{% csrf_token %}
+
+<label>Room</label>
+<br>
+<select name="room">
+<option value="">Unknown / Public Area</option>
+
+{% for room in rooms %}
+<option value="{{ room.id }}">
+Room {{ room.room_number }}
+</option>
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<label>Description</label>
+<br>
+<textarea name="description" required></textarea>
+
+<br><br>
+
+<button type="submit">
+Save
+</button>
+
+<a href="{% url 'housekeeping_lost_found' %}">
+<button type="button">
+Cancel
+</button>
+</a>
+
+</form>
+
+{% endblock %}

@@ -65,6 +65,18 @@
 
     <br><br>
 
+    <!-- HEAD OF DEPARTMENT -->
+    <label>Head of Department</label>
+    {{ form.is_department_head }}
+
+    {% if form.is_department_head.errors %}
+    <div class="alert error">
+    {{ form.is_department_head.errors }}
+    </div>
+    {% endif %}
+
+    <br><br>
+
     <!-- PASSWORD -->
     <label>Password</label>
     {{ form.password }}

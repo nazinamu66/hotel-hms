@@ -97,6 +97,22 @@
 </div>
 {% endif %}
 
+
+<!-- HOUSEKEEPING -->
+{% if user.role == "HOUSEKEEPING" or user.role == "MANAGER" or user.role == "ADMIN" or user.role == "DIRECTOR" %}
+
+<h4 class="menu-toggle" onclick="toggleMenu('hk_menu', this)">
+<span class="arrow">▸</span> Housekeeping
+</h4>
+
+<div id="hk_menu" class="menu-section">
+<a href="{% url 'housekeeping_dashboard' %}">Dashboard</a>
+<a href="{% url 'housekeeping_cleaning_history' %}">Cleaning History</a>
+<a href="{% url 'housekeeping_lost_found' %}">Lost & Found</a>
+</div>
+
+{% endif %}
+
 <!-- STORE -->
 {% feature_enabled user "STORE" as store_enabled %}
 

@@ -191,18 +191,62 @@ def user_create(request):
 
     form = UserCreateForm(request.POST or None)
 
+    # Restrict department selection for non-directors
     if request.user.role != "DIRECTOR":
         form.fields["department"].queryset = Department.objects.filter(
             hotel=hotel
         )
 
     if form.is_valid():
-        form.save()
+
+        user = form.save(commit=False)
+
+        # Ensure hotel is inherited from department
+        if user.department:
+            user.hotel = user.department.hotel
+
+        user.save()
+
         messages.success(request, "User created successfully.")
+
         return redirect("accounts_users")
 
     return render(
         request,
         "accounts/user_form.html",
-        {"form": form}
+        {
+            "form": form,
+        }
+    )
+
+@role_required("ADMIN", "DIRECTOR")
+def user_edit(request, user_id):
+
+    user_obj = get_object_or_404(User, id=user_id)
+
+    form = UserCreateForm(
+        request.POST or None,
+        instance=user_obj
+    )
+
+    if form.is_valid():
+
+        user = form.save(commit=False)
+
+        if user.department:
+            user.hotel = user.department.hotel
+
+        user.save()
+
+        messages.success(request, "User updated successfully.")
+
+        return redirect("accounts_users")
+
+    return render(
+        request,
+        "accounts/user_form.html",
+        {
+            "form": form,
+            "edit_mode": True
+        }
     )

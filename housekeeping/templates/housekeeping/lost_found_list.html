@@ -1,0 +1,63 @@
+{% extends "base/base.html" %}
+
+{% block title %}Lost & Found{% endblock %}
+
+{% block content %}
+
+<h2>Lost & Found</h2>
+
+<a href="{% url 'housekeeping_lost_found_create' %}">
+<button>Record Item</button>
+</a>
+
+<br><br>
+
+<table style="width:100%; border-collapse:collapse;">
+
+<thead style="background:#eee;">
+<tr>
+<th>Date</th>
+<th>Room</th>
+<th>Description</th>
+<th>Found By</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for item in items %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+<td>{{ item.found_at|date:"Y-m-d H:i" }}</td>
+
+<td>
+{% if item.room %}
+Room {{ item.room.room_number }}
+{% else %}
+—
+{% endif %}
+</td>
+
+<td>{{ item.description }}</td>
+
+<td>{{ item.found_by }}</td>
+
+<td>{{ item.status }}</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+<td colspan="5">No items recorded.</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

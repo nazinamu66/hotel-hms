@@ -1,0 +1,42 @@
+{% extends "base/base.html" %}
+
+{% block title %}Assign Room{% endblock %}
+
+{% block content %}
+
+<h2>Assign Room {{ room.room_number }}</h2>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <label>Select Housekeeper</label>
+    <br><br>
+
+    <select name="user" required>
+
+        <option value="">-- Select Staff --</option>
+
+        {% for staff in housekeepers %}
+        <option value="{{ staff.id }}">
+            {{ staff.username }}
+        </option>
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <button type="submit">
+        Assign Room
+    </button>
+
+    <a href="{% url 'housekeeping_dashboard' %}">
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}
