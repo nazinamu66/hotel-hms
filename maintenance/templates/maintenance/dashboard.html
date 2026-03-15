@@ -16,6 +16,7 @@
 <th>Priority</th>
 <th>Status</th>
 <th>Reported By</th>
+<th>Action</th>
 <th>Date</th>
 
 </tr>
@@ -45,6 +46,12 @@ Room {{ ticket.room.room_number }}
 
 <td>
 {{ ticket.reported_by }}
+</td>
+
+<td>
+<a href="{% url 'maintenance_resolve_ticket' ticket.id %}">
+<button>Resolve</button>
+</a>
 </td>
 
 <td>

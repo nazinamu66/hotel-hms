@@ -9,10 +9,13 @@ from billing.models import Guest, Folio
 from collections import defaultdict
 from decimal import Decimal
 from core.models import BusinessProfile
-from datetime import datetime
 from django.utils import timezone
-from billing.models import Guest
+from billing.models import Guest, Reservation
 from django.db.models import Q
+from frontdesk.services import get_available_rooms
+from datetime import timedelta, datetime
+
+
 
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
@@ -76,6 +79,42 @@ def guest_profile(request, guest_id):
         context
     )
 
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def guest_create(request):
+
+    hotel = request.user.department.hotel
+
+    if request.method == "POST":
+
+        first_name = request.POST.get("first_name")
+        last_name = request.POST.get("last_name")
+        phone = request.POST.get("phone")
+        email = request.POST.get("email")
+        nationality = request.POST.get("nationality")
+        id_number = request.POST.get("id_number")
+
+        if not first_name or not last_name:
+            messages.error(request, "First and last name are required.")
+            return redirect(request.path)
+
+        guest = Guest.objects.create(
+            hotel=hotel,
+            first_name=first_name,
+            last_name=last_name,
+            phone=phone,
+            email=email,
+            nationality=nationality,
+            id_number=id_number
+        )
+
+        messages.success(request, "Guest created successfully.")
+
+        return redirect("frontdesk_guest_profile", guest.id)
+
+    return render(
+        request,
+        "frontdesk/guest_create.html"
+    )
 
 
 def build_invoice_context(folio):
@@ -618,4 +657,279 @@ def night_audit(request):
     return render(
         request,
         "frontdesk/night_audit.html"
+    )
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def reservation_list(request):
+
+    hotel = request.user.department.hotel
+
+    reservations = (
+        Reservation.objects
+        .filter(hotel=hotel)
+        .select_related("guest", "room_category")
+        .order_by("-created_at")
+    )
+
+    return render(
+        request,
+        "frontdesk/reservations.html",
+        {"reservations": reservations}
+    )
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def create_reservation(request):
+
+    hotel = request.user.department.hotel
+
+    # Categories that exist in this hotel
+    categories = (
+        RoomCategory.objects
+        .filter(rooms__hotel=hotel)
+        .distinct()
+        .order_by("name")
+    )
+
+    if request.method == "POST":
+
+        guest_id = request.POST.get("guest")
+        category_id = request.POST.get("category")
+        check_in = request.POST.get("check_in")
+        check_out = request.POST.get("check_out")
+
+        if not guest_id or not category_id:
+            messages.error(request, "Guest and room category required.")
+            return redirect(request.path)
+
+        guest = get_object_or_404(
+            Guest,
+            id=guest_id,
+            hotel=hotel
+        )
+
+        category = get_object_or_404(
+            RoomCategory,
+            id=category_id
+        )
+
+        # Check availability
+        available_rooms = get_available_rooms(
+            hotel,
+            category,
+            check_in,
+            check_out
+        )
+
+        if not available_rooms.exists():
+            messages.error(
+                request,
+                "No rooms available for selected dates."
+            )
+            return redirect(request.path)
+
+        Reservation.objects.create(
+            guest=guest,
+            hotel=hotel,
+            room_category=category,
+            check_in_date=check_in,
+            check_out_date=check_out,
+            created_by=request.user
+        )
+
+        messages.success(request, "Reservation created.")
+
+        return redirect("frontdesk_reservations")
+
+    guests = (
+        Guest.objects
+        .filter(hotel=hotel)
+        .order_by("-created_at")[:50]
+    )
+
+    return render(
+        request,
+        "frontdesk/create_reservation.html",
+        {
+            "guests": guests,
+            "categories": categories
+        }
+    )
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def reservation_checkin(request, reservation_id):
+
+    reservation = get_object_or_404(Reservation, id=reservation_id)
+
+    if reservation.status != "RESERVED":
+        messages.error(request, "Reservation not valid.")
+        return redirect("frontdesk_reservations")
+
+
+    available_rooms = get_available_rooms(
+        reservation.hotel,
+        reservation.room_category,
+        reservation.check_in_date,
+        reservation.check_out_date
+    )
+
+    available_room = available_rooms.first()
+
+    if not available_room:
+        messages.error(request, "No room available.")
+        return redirect("frontdesk_reservations")
+
+    folio = Folio.objects.create(
+        folio_type="ROOM",
+        guest=reservation.guest,
+        room=available_room,
+        hotel=reservation.hotel
+    )
+
+    reservation.room = available_room
+    reservation.status = "CHECKED_IN"
+    reservation.save(update_fields=["room", "status"])
+
+    available_room.refresh_status()
+
+    messages.success(request, "Guest checked in.")
+
+    return redirect("frontdesk_active_stay", available_room.id)
+
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def reservation_calendar(request):
+
+    hotel = request.user.department.hotel
+
+    # -------------------------
+    # Filters
+    # -------------------------
+    start = request.GET.get("start")
+    category_id = request.GET.get("category")
+    room_number = request.GET.get("room")
+
+    if start:
+        try:
+            start_date = datetime.strptime(start[:10], "%Y-%m-%d").date()
+        except ValueError:
+            start_date = timezone.now().date()
+    else:
+        start_date = timezone.now().date()
+
+    days = [start_date + timedelta(days=i) for i in range(14)]
+
+    prev_week = start_date - timedelta(days=7)
+    next_week = start_date + timedelta(days=7)
+
+    # -------------------------
+    # Rooms Query
+    # -------------------------
+    rooms = Room.objects.filter(hotel=hotel).select_related("category")
+
+    if category_id:
+        rooms = rooms.filter(category_id=category_id)
+
+    if room_number:
+        rooms = rooms.filter(room_number__icontains=room_number)
+
+    rooms = rooms.order_by("room_number")
+
+    # -------------------------
+    # Reservations
+    # -------------------------
+    reservations = Reservation.objects.filter(
+        hotel=hotel,
+        status="RESERVED"
+    )
+
+    calendar = []
+
+    for room in rooms:
+
+        row = {
+            "room": room,
+            "days": []
+        }
+
+        for day in days:
+
+            reservation = reservations.filter(
+                room=room,
+                check_in_date__lte=day,
+                check_out_date__gt=day
+            ).first()
+
+            row["days"].append({
+                "date": day,
+                "reservation": reservation,
+                "room_id": room.id
+            })
+
+        calendar.append(row)
+
+    categories = (
+        RoomCategory.objects
+        .filter(rooms__hotel=hotel)
+        .distinct()
+        .order_by("name")
+    )
+
+    context = {
+        "calendar": calendar,
+        "days": days,
+        "start_date": start_date,
+        "prev_week": prev_week,
+        "next_week": next_week,
+        "categories": categories,
+        "filters": request.GET
+    }
+
+    return render(
+        request,
+        "frontdesk/reservation_calendar.html",
+        context
+    )
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def calendar_create_reservation(request):
+
+    hotel = request.user.department.hotel
+
+    room_id = request.GET.get("room")
+    check_in = request.GET.get("date")
+
+    room = get_object_or_404(Room, id=room_id, hotel=hotel)
+
+    guests = Guest.objects.filter(hotel=hotel)[:50]
+
+    if request.method == "POST":
+
+        guest_id = request.POST.get("guest")
+        check_out = request.POST.get("check_out")
+
+        guest = get_object_or_404(Guest, id=guest_id, hotel=hotel)
+
+        Reservation.objects.create(
+            guest=guest,
+            hotel=hotel,
+            room=room,
+            room_category=room.category,
+            check_in_date=check_in,
+            check_out_date=check_out,
+            created_by=request.user
+        )
+
+        messages.success(request, "Reservation created.")
+
+        return redirect("frontdesk_reservation_calendar")
+
+    return render(
+        request,
+        "frontdesk/calendar_reservation.html",
+        {
+            "room": room,
+            "check_in": check_in,
+            "guests": guests
+        }
     )

@@ -1,0 +1,50 @@
+{% extends "base/base.html" %}
+
+{% block title %}Create Guest{% endblock %}
+
+{% block content %}
+
+<h2>Create Guest</h2>
+
+<form method="post">
+{% csrf_token %}
+
+<label>First Name</label><br>
+<input type="text" name="first_name" required>
+
+<br><br>
+
+<label>Last Name</label><br>
+<input type="text" name="last_name" required>
+
+<br><br>
+
+<label>Phone</label><br>
+<input type="text" name="phone">
+
+<br><br>
+
+<label>Email</label><br>
+<input type="email" name="email">
+
+<br><br>
+
+<label>Nationality</label><br>
+<input type="text" name="nationality">
+
+<br><br>
+
+<label>ID / Passport Number</label><br>
+<input type="text" name="id_number">
+
+<br><br>
+
+<button type="submit">Create Guest</button>
+
+<a href="{% url 'frontdesk_guest_search' %}">
+<button type="button">Cancel</button>
+</a>
+
+</form>
+
+{% endblock %}

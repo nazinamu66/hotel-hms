@@ -1,0 +1,48 @@
+{% extends "base/base.html" %}
+
+{% block title %}Create Reservation{% endblock %}
+
+{% block content %}
+
+<h2>Create Reservation</h2>
+
+<p>
+Room: {{ room.room_number }} <br>
+Check-in: {{ check_in }}
+</p>
+
+<form method="post">
+
+{% csrf_token %}
+
+<label>Guest</label>
+
+<select name="guest" required>
+
+<option value="">Select Guest</option>
+
+{% for g in guests %}
+<option value="{{ g.id }}">
+{{ g.first_name }} {{ g.last_name }}
+</option>
+{% endfor %}
+
+</select>
+
+<br><br>
+
+<label>Check-out Date</label>
+
+<input type="date" name="check_out" required>
+
+<br><br>
+
+<button type="submit">Create Reservation</button>
+
+<a href="{% url 'frontdesk_reservation_calendar' %}">
+Cancel
+</a>
+
+</form>
+
+{% endblock %}

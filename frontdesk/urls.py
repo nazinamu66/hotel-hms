@@ -11,7 +11,13 @@ from .views import (
     guest_profile,
     guest_search,
     extend_stay,
-    change_room
+    change_room,
+    reservation_list,
+    create_reservation,
+    reservation_checkin,
+    guest_create,
+    reservation_calendar,
+    calendar_create_reservation,
 )
 
 urlpatterns = [
@@ -27,5 +33,11 @@ urlpatterns = [
     path("guests/<int:guest_id>/", guest_profile, name="frontdesk_guest_profile"),
     path("stay/<int:room_id>/extend/",extend_stay,name="frontdesk_extend_stay"),
     path("stay/<int:room_id>/change-room/",change_room,name="frontdesk_change_room"),
+    path("reservations/",reservation_list,name="frontdesk_reservations"),
+    path("reservations/create/",create_reservation,name="frontdesk_create_reservation"),
+    path("reservations/<int:reservation_id>/checkin/",reservation_checkin,name="frontdesk_reservation_checkin"),
+    path("guests/create/",guest_create,name="frontdesk_guest_create"),
+    path("calendar/",reservation_calendar,name="frontdesk_reservation_calendar"),
+    path("calendar/create/",calendar_create_reservation,name="frontdesk_calendar_create_reservation"),
 
 ]

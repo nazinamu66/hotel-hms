@@ -80,6 +80,8 @@ class Room(models.Model):
         ("OCCUPIED", "Occupied"),
         ("OCCUPIED_DIRTY", "Occupied – Needs Cleaning"),
         ("VACANT_DIRTY", "Vacant – Needs Cleaning"),
+        ("OUT_OF_ORDER", "Out of Order"),
+
     )
 
     status = models.CharField(

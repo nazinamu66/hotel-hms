@@ -1,0 +1,77 @@
+{% extends "base/base.html" %}
+
+{% block title %}Reservations{% endblock %}
+
+{% block content %}
+
+<h2>Reservations</h2>
+
+<a href="{% url 'frontdesk_create_reservation' %}">
+<button>Create Reservation</button>
+</a>
+
+<br><br>
+
+<table style="width:100%; border-collapse:collapse;">
+
+<thead style="background:#eee;">
+<tr>
+<th>ID</th>
+<th>Guest</th>
+<th>Room Category</th>
+<th>Check-in</th>
+<th>Check-out</th>
+<th>Status</th>
+<th></th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for r in reservations %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+<td>{{ r.id }}</td>
+
+<td>
+{{ r.guest.first_name }} {{ r.guest.last_name }}
+</td>
+
+<td>
+{{ r.room_category.name }}
+</td>
+
+<td>{{ r.check_in_date }}</td>
+
+<td>{{ r.check_out_date }}</td>
+
+<td>{{ r.status }}</td>
+
+<td>
+
+{% if r.status == "RESERVED" %}
+
+<a href="{% url 'frontdesk_reservation_checkin' r.id %}">
+<button>Check-in</button>
+</a>
+
+{% endif %}
+
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+<td colspan="7">No reservations found.</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

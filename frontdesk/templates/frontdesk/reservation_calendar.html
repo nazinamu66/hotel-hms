@@ -1,0 +1,121 @@
+{% extends "base/base.html" %}
+
+{% block title %}Reservation Calendar{% endblock %}
+
+{% block content %}
+
+<h2>Reservation Calendar</h2>
+
+<!-- FILTERS -->
+<form method="get" style="margin-bottom:20px;">
+
+<label>Start Date</label>
+<input type="date" name="start" value="{{ filters.start }}">
+
+<label>Category</label>
+<select name="category">
+
+<option value="">All</option>
+
+{% for c in categories %}
+<option value="{{ c.id }}"
+{% if filters.category == c.id|stringformat:"s" %}selected{% endif %}
+>
+{{ c.name }}
+</option>
+{% endfor %}
+
+</select>
+
+<label>Room</label>
+<input type="text" name="room" value="{{ filters.room }}" placeholder="Room number">
+
+<button type="submit">Filter</button>
+
+<a href="{% url 'frontdesk_reservation_calendar' %}">
+Reset
+</a>
+
+</form>
+
+
+<!-- NAVIGATION -->
+<div style="margin-bottom:20px;">
+
+<a href="?start={{ prev_week|date:'Y-m-d' }}">
+◀ Previous Week
+</a>
+
+|
+
+<a href="?start={{ next_week|date:'Y-m-d' }}">
+Next Week ▶
+</a>
+
+</div>
+
+
+<!-- CALENDAR -->
+<table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;">
+
+<thead>
+
+<tr>
+
+<th>Room</th>
+
+{% for d in days %}
+<th>{{ d|date:"d M" }}</th>
+{% endfor %}
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for row in calendar %}
+
+<tr>
+
+<td>
+Room {{ row.room.room_number }}
+</td>
+
+{% for day in row.days %}
+
+<td style="text-align:center;
+{% if day.reservation %}
+background:#ff6b6b;
+{% else %}
+background:#7bed9f;
+{% endif %}
+">
+
+{% if day.reservation %}
+
+<a href="{% url 'frontdesk_reservation_checkin' day.reservation.id %}">
+■
+</a>
+
+{% else %}
+
+<a href="{% url 'frontdesk_calendar_create_reservation' %}?room={{ row.room.id }}&date={{ day.date|date:'Y-m-d' }}">
++
+</a>
+
+{% endif %}
+
+</td>
+
+{% endfor %}
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

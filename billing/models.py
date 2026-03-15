@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal
 from django.utils import timezone
 from inventory.models import Hotel
+from rooms.models import Room,RoomCategory
 
 
 
@@ -255,3 +256,64 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.method} – {self.amount}"
+    
+
+class Reservation(models.Model):
+
+    STATUS_CHOICES = (
+        ("RESERVED", "Reserved"),
+        ("CHECKED_IN", "Checked In"),
+        ("CANCELLED", "Cancelled"),
+        ("NO_SHOW", "No Show"),
+    )
+
+    guest = models.ForeignKey(
+        Guest,
+        on_delete=models.PROTECT,
+        related_name="reservations"
+    )
+
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.PROTECT
+    )
+
+    room_category = models.ForeignKey(
+        RoomCategory,
+        on_delete=models.PROTECT
+    )
+
+    room = models.ForeignKey(
+        Room,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True
+    )
+
+    check_in_date = models.DateField()
+    check_out_date = models.DateField()
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="RESERVED"
+    )
+
+    source = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Walk-in, Phone, Website, Booking.com etc"
+    )
+
+    note = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True
+    )
+
+    def __str__(self):
+        return f"Reservation {self.id} - {self.guest}"
