@@ -27,6 +27,8 @@ from accounts.services.manager_reports import (
     get_today_payments,
 )
 
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 class CustomLoginView(LoginView):
@@ -46,14 +48,9 @@ def role_redirect(request):
 
     role = request.user.role
 
-    if role == "DIRECTOR":
-        return redirect("owner_dashboard")
-
-    if role == "MANAGER":
-        return redirect("manager_dashboard")
-
-    if role == "ADMIN":
-        return redirect("admin_dashboard")
+    # Executive / management dashboard
+    if role in ["DIRECTOR", "MANAGER", "ADMIN", "ACCOUNTANT"]:
+        return redirect("hotel_dashboard")
 
     if role == "FRONTDESK":
         return redirect("/frontdesk/")
@@ -71,7 +68,6 @@ def role_redirect(request):
         return redirect("/housekeeping/")
 
     return redirect("login")
-
 
 
 
@@ -115,57 +111,6 @@ def manager_payments_today(request):
         {"payments": payments}
     )
 
-
-@role_required("MANAGER", "ADMIN", "DIRECTOR")
-def manager_dashboard(request):
-
-    user = request.user
-    hotel = get_user_hotel(user)
-
-    if user.role == "MANAGER":
-        context = build_manager_daily_report(hotel=hotel)
-
-    elif user.role in ["ADMIN", "DIRECTOR"]:
-        context = build_manager_daily_report(hotel=None)  # global
-
-    else:
-        return redirect("role_redirect")
-
-    return render(request, "accounts/manager_dashboard.html", context)
-
-
-@role_required("ADMIN", "DIRECTOR")
-def admin_dashboard(request):
-
-    hotel = None
-
-    if request.user.department:
-        hotel = request.user.department.hotel
-
-    context = {
-        "hotel": hotel
-    }
-
-    return render(
-        request,
-        "accounts/admin_dashboard.html",
-        context
-    )
-
-from django.contrib.auth import get_user_model
-from django.shortcuts import render
-from accounts.decorators import role_required
-from core.utils import get_user_hotel
-
-User = get_user_model()
-
-
-from django.db.models import Q
-
-from django.contrib.auth import get_user_model
-from accounts.decorators import role_required
-
-User = get_user_model()
 
 
 @role_required("ADMIN", "DIRECTOR")

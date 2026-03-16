@@ -31,7 +31,7 @@ urlpatterns = [
     path("housekeeping/", include("housekeeping.urls")),
     path("manager/rooms/", include("rooms.urls")),
     path("manage/", include("rooms.urls")),
-  
+    path("", include("core.urls")),
     path("inventory/",include(("inventory.urls", "inventory"), namespace="inventory"),),
     path("maintenance/",include("maintenance.urls")),
     

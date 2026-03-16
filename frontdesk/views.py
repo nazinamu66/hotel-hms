@@ -14,6 +14,7 @@ from billing.models import Guest, Reservation
 from django.db.models import Q
 from frontdesk.services import get_available_rooms
 from datetime import timedelta, datetime
+from maintenance.models import MaintenanceTicket
 
 
 
@@ -209,12 +210,65 @@ def room_board(request):
         Room.objects
         .filter(hotel=hotel)
         .select_related("category")
-        .order_by(
-            "category__name",
-            "status",
-            "room_number"
-        )
+        .order_by("category__name", "room_number")
     )
+
+    today = timezone.now().date()
+    tomorrow = today + timedelta(days=1)
+
+    expected_departures_today = set(
+        Folio.objects.filter(
+            hotel=hotel,
+            is_closed=False,
+            check_out_at__date=today
+        ).values_list("room_id", flat=True)
+    )
+
+    # Reservations
+    reservations_today = set(
+        Reservation.objects.filter(
+            hotel=hotel,
+            check_in_date=today,
+            status="RESERVED"
+        ).values_list("room_id", flat=True)
+    )
+
+    arrivals_tomorrow = set(
+        Reservation.objects.filter(
+            hotel=hotel,
+            check_in_date=tomorrow,
+            status="RESERVED"
+        ).values_list("room_id", flat=True)
+    )
+
+    # Active folios
+    active_folios = Folio.objects.filter(
+        hotel=hotel,
+        is_closed=False
+    ).select_related("guest", "room")
+
+    folio_map = {f.room_id: f for f in active_folios}
+
+    # Maintenance rooms
+    maintenance_rooms = set(
+        MaintenanceTicket.objects.exclude(
+            status="RESOLVED"
+        ).values_list("room_id", flat=True)
+    )
+
+    stats = {
+        "available": rooms.filter(status="AVAILABLE").count(),
+        "occupied": rooms.filter(status="OCCUPIED").count(),
+        "dirty": rooms.filter(
+            status__in=["VACANT_DIRTY", "OCCUPIED_DIRTY"]
+        ).count(),
+        "arrivals": len(reservations_today),
+        "departures": Folio.objects.filter(
+            hotel=hotel,
+            check_out_at__date=today,
+            is_closed=False
+        ).count()
+    }
 
     categories = {}
 
@@ -224,7 +278,16 @@ def room_board(request):
     return render(
         request,
         "frontdesk/room_board.html",
-        {"categories": categories}
+        {
+            "categories": categories,
+            "stats": stats,
+            "folio_map": folio_map,
+            "reservations_today": reservations_today,
+            "arrivals_tomorrow": arrivals_tomorrow,
+            "maintenance_rooms": maintenance_rooms,
+            "expected_departures_today": expected_departures_today,
+            "today": today
+        }
     )
 
 
@@ -931,5 +994,38 @@ def calendar_create_reservation(request):
             "room": room,
             "check_in": check_in,
             "guests": guests
+        }
+    )
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def arrivals_departures_today(request):
+
+    hotel = request.user.department.hotel
+    today = timezone.now().date()
+
+    arrivals = Reservation.objects.filter(
+        hotel=hotel,
+        check_in_date=today,
+        status="RESERVED"
+    ).select_related("guest", "room_category")
+
+    departures = Folio.objects.filter(
+        hotel=hotel,
+        check_out_at__date=today,
+        is_closed=False
+    ).select_related("guest", "room")
+
+    in_house = Folio.objects.filter(
+        hotel=hotel,
+        is_closed=False
+    ).select_related("guest", "room")
+
+    return render(
+        request,
+        "frontdesk/today_board.html",
+        {
+            "arrivals": arrivals,
+            "departures": departures,
+            "in_house": in_house
         }
     )

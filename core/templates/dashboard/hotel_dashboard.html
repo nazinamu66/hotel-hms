@@ -1,0 +1,80 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<h2>Dashboard</h2>
+
+{% if user.role == "MANAGER" %}
+
+<div class="grid">
+
+<div class="card">
+Rooms Available
+{{ rooms_available }}
+</div>
+
+<div class="card">
+Rooms Occupied
+{{ rooms_occupied }}
+</div>
+
+<div class="card">
+Dirty Rooms
+{{ rooms_dirty }}
+</div>
+
+<div class="card">
+Maintenance
+{{ maintenance_open }}
+</div>
+
+<div class="card">
+Kitchen Tickets
+{{ kitchen_tickets }}
+</div>
+
+<div class="card">
+Arrivals Today
+{{ arrivals_today }}
+</div>
+
+<div class="card">
+Departures Today
+{{ departures_today }}
+</div>
+
+</div>
+
+{% endif %}
+
+
+{% if user.role == "DIRECTOR" %}
+
+<div class="card">
+Restaurant Sales Today
+₦{{ restaurant_sales_today }}
+</div>
+
+<div class="card">
+Payments Today
+₦{{ payments_today }}
+</div>
+
+{% endif %}
+
+
+{% if user.role == "ACCOUNTANT" %}
+
+<div class="card">
+Payments Today
+₦{{ payments_today_total }}
+</div>
+
+<div class="card">
+Open Folios
+{{ open_folios }}
+</div>
+
+{% endif %}
+
+{% endblock %}

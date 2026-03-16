@@ -18,6 +18,7 @@ from .views import (
     guest_create,
     reservation_calendar,
     calendar_create_reservation,
+    arrivals_departures_today,
 )
 
 urlpatterns = [
@@ -39,5 +40,6 @@ urlpatterns = [
     path("guests/create/",guest_create,name="frontdesk_guest_create"),
     path("calendar/",reservation_calendar,name="frontdesk_reservation_calendar"),
     path("calendar/create/",calendar_create_reservation,name="frontdesk_calendar_create_reservation"),
+    path("today/",arrivals_departures_today,name="frontdesk_today_board"),
 
 ]
