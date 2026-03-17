@@ -102,27 +102,7 @@ class Folio(models.Model):
         ]
 
     def charge_room_stay(self, charged_by):
-        if self.folio_type != "ROOM":
-            return
-
-        if not self.room or not self.room.category:
-            raise ValidationError("Room or category missing.")
-
-        rate = getattr(self.room.category, "rate", None)
-
-        if not rate or not rate.is_active:
-            raise ValidationError("No active rate for this room category.")
-
-        nights = self.nights
-        total = Decimal(rate.price_per_night) * nights
-
-        Charge.objects.create(
-            folio=self,
-            description=f"Room charge ({nights} night(s))",
-            department=Department.objects.get(name__iexact="Frontdesk"),
-            amount=total,
-            reference=f"ROOM-{self.room.room_number}"
-        )
+        pass  # deprecated, using daily charges
 
     def clean(self):
         
@@ -143,6 +123,7 @@ class Folio(models.Model):
 
 
     def apply_daily_room_charge(self, charged_by=None):
+
         if self.folio_type != "ROOM" or self.is_closed:
             return
 
@@ -159,13 +140,21 @@ class Folio(models.Model):
         if self.last_room_charge_date == today:
             return
 
-        Charge.objects.create(
+        # ✅ CREATE ONCE
+        charge = Charge.objects.create(
             folio=self,
             description=f"Room charge – {today}",
             department=Department.objects.get(name__iexact="Frontdesk"),
             amount=Decimal(rate.price_per_night),
             reference=f"ROOM-{self.room.room_number}-{today}"
         )
+
+        # 🔥 ACCOUNTING HOOK
+        try:
+            from accounting.services.postings.room_charge import post_room_charge
+            post_room_charge(self, charge.amount, charged_by)
+        except Exception as e:
+            print("Accounting error (room charge):", e)
 
         self.last_room_charge_date = today
         self.save(update_fields=["last_room_charge_date"])

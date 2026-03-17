@@ -8,7 +8,7 @@ from inventory.models import StockMovement
 from django.db import models
 from kitchen.models import IngredientRestockItem
 from decimal import Decimal, InvalidOperation
-from core.utils import get_user_hotel
+from core.utils import get_user_hotels
 from django.utils.timezone import now
 from inventory.models import StockMovement
 from accounts.decorators import role_required
@@ -454,7 +454,7 @@ def store_incoming_pos(request):
 
 @role_required("STORE", "MANAGER", "ADMIN")
 def stock_movement_log(request):
-    hotel = get_user_hotel(request.user)
+    hotel = get_user_hotels(request.user)
 
     if request.user.role == "STORE":
         department = request.user.department
@@ -536,7 +536,7 @@ def daily_stock_report(request):
     date_from = request.GET.get("from", today)
     date_to = request.GET.get("to", today)
 
-    hotel = get_user_hotel(request.user)
+    hotel = get_user_hotels(request.user)
     movements = StockMovement.objects.filter(
         created_at__date__range=[date_from, date_to]
     )

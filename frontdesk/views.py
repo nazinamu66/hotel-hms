@@ -663,7 +663,7 @@ def take_payment(request, room_id):
             messages.error(request, "Reference is required for this payment method.")
             return redirect(request.path)
 
-        Payment.objects.create(
+        payment = Payment.objects.create(
             folio=folio,
             amount=amount,
             method=method,
@@ -671,6 +671,13 @@ def take_payment(request, room_id):
             note=note,
             collected_by=request.user,
         )
+
+        # 🔥 ACCOUNTING HOOK
+        try:
+            from accounting.services.postings.payment import post_payment
+            post_payment(payment)
+        except Exception as e:
+            print("Accounting error (payment):", e)
 
         messages.success(request, "Payment recorded successfully.")
         return redirect("frontdesk_active_stay", room.id)

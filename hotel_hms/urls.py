@@ -34,6 +34,7 @@ urlpatterns = [
     path("", include("core.urls")),
     path("inventory/",include(("inventory.urls", "inventory"), namespace="inventory"),),
     path("maintenance/",include("maintenance.urls")),
+    path("accounting/", include("accounting.urls")),
     
 
 

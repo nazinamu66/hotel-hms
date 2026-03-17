@@ -3,12 +3,12 @@ from django.db.models import Sum
 from billing.models import Payment, Folio
 
 
-def get_accountant_dashboard(hotel):
+def get_accountant_dashboard(hotels):
 
     today = timezone.now().date()
 
     payments_today = Payment.objects.filter(
-        folio__hotel=hotel,
+        folio__hotel__in=hotels,
         collected_at__date=today
     )
 
@@ -19,7 +19,7 @@ def get_accountant_dashboard(hotel):
 
         "open_folios":
             Folio.objects.filter(
-                hotel=hotel,
+                hotel__in=hotels,
                 is_closed=False
             ).count()
     }

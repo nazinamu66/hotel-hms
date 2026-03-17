@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction
 from django.core.exceptions import PermissionDenied
-from core.utils import get_user_hotel
+from core.utils import get_user_hotels
 from accounts.decorators import role_required
 from .models import Supplier, PurchaseOrder, PurchaseItem, Department, LowStockRequest,StockMovement,Stock,Product,HotelFeature
 from .forms import SupplierForm, PurchaseOrderForm, PurchaseItemForm,ProductForm
@@ -268,7 +268,7 @@ def recipe_item_add(request, recipe_id):
 @role_required("STORE", "MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT")
 def po_list(request):
 
-    hotel = get_user_hotel(request.user)
+    hotel = get_user_hotels(request.user)
 
     qs = PurchaseOrder.objects.select_related("supplier", "department")
 
@@ -294,7 +294,7 @@ def po_create(request):
         po.status = "DRAFT"
 
         # 🔒 ENFORCE STORE AS RECEIVING DEPARTMENT
-        hotel = get_user_hotel(request.user)
+        hotel = get_user_hotels(request.user)
 
         po.department = Department.objects.get(
             hotel=hotel,
@@ -310,7 +310,7 @@ def po_create(request):
 
 @role_required("STORE", "MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT")
 def po_detail(request, pk):
-    hotel = get_user_hotel(request.user)
+    hotel = get_user_hotels(request.user)
 
     po = get_object_or_404(
         PurchaseOrder,
@@ -345,7 +345,7 @@ def po_detail(request, pk):
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 def po_submit(request, pk):
-    hotel = get_user_hotel(request.user)
+    hotel = get_user_hotels(request.user)
 
     po = get_object_or_404(PurchaseOrder, pk=pk, status="DRAFT")
 
@@ -366,7 +366,7 @@ def po_submit(request, pk):
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 @transaction.atomic
 def po_finalize(request, pk):
-    hotel = get_user_hotel(request.user)
+    hotel = get_user_hotels(request.user)
 
     po = get_object_or_404(PurchaseOrder, pk=pk, status="DRAFT")
     if hotel and po.department.hotel != hotel:
@@ -418,7 +418,7 @@ def po_finalize(request, pk):
 @role_required("ACCOUNTANT", "DIRECTOR", "ADMIN")
 @transaction.atomic
 def po_pay(request, pk):
-    hotel = get_user_hotel(request.user)
+    hotel = get_user_hotels(request.user)
     po = get_object_or_404(PurchaseOrder, pk=pk, status="SUBMITTED")
 
     if hotel and po.department.hotel != hotel:

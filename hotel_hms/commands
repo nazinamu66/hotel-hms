@@ -8,3 +8,20 @@ source ~/hotel_projects/venv/bin/activate
 
 python manage.py runserver
 git add . && git commit -m "checkpoint" && git push
+
+Open a terminal.
+Find the process ID (PID) using the port:
+bash
+lsof -i :port_number
+Alternatively, you can use netstat to see what process is using the port:
+bash
+sudo netstat -tulpn | grep port_number
+Terminate the process using its PID:
+bash
+kill -9 PID
+A quicker command to kill the process directly is:
+bash
+sudo fuser -k port_number/tcp
+
+
+python manage.py flush

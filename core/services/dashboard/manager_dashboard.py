@@ -5,20 +5,20 @@ from kitchen.models import KitchenTicket
 from billing.models import Reservation
 
 
-def get_manager_dashboard(hotel):
+def get_manager_dashboard(hotels):
 
     today = timezone.now().date()
 
-    rooms = Room.objects.filter(hotel=hotel)
+    rooms = Room.objects.filter(hotel__in=hotels)
 
     arrivals_today = Reservation.objects.filter(
-        hotel=hotel,
+        hotel__in=hotels,
         check_in_date=today,
         status="RESERVED"
     ).count()
 
     departures_today = Reservation.objects.filter(
-        hotel=hotel,
+        hotel__in=hotels,
         check_out_date=today,
         status="RESERVED"
     ).count()
@@ -30,12 +30,12 @@ def get_manager_dashboard(hotel):
         "rooms_occupied": rooms.filter(status="OCCUPIED").count(),
 
         "rooms_dirty": rooms.filter(
-            status__in=["VACANT_DIRTY","OCCUPIED_DIRTY"]
+            status__in=["VACANT_DIRTY", "OCCUPIED_DIRTY"]
         ).count(),
 
         "maintenance_open":
             MaintenanceTicket.objects.filter(
-                room__hotel=hotel,
+                room__hotel__in=hotels,
                 status="OPEN"
             ).count(),
 

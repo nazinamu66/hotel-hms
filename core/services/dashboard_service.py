@@ -7,7 +7,7 @@ from maintenance.models import MaintenanceTicket
 from billing.models import Charge
 
 
-def get_dashboard_data(hotel=None):
+def get_dashboard_data(hotels=None):
 
     today = timezone.now().date()
 
@@ -17,8 +17,8 @@ def get_dashboard_data(hotel=None):
 
     rooms = Room.objects.all()
 
-    if hotel:
-        rooms = rooms.filter(hotel=hotel)
+    if hotels:
+        rooms = rooms.filter(hotel__in=hotels)
 
     # ----------------------
     # MAINTENANCE
@@ -26,8 +26,8 @@ def get_dashboard_data(hotel=None):
 
     maintenance = MaintenanceTicket.objects.exclude(status="RESOLVED")
 
-    if hotel:
-        maintenance = maintenance.filter(room__hotel=hotel)
+    if hotels:
+        maintenance = maintenance.filter(room__hotel__in=hotels)
 
     # ----------------------
     # KITCHEN
@@ -35,9 +35,9 @@ def get_dashboard_data(hotel=None):
 
     kitchen_tickets = KitchenTicket.objects.exclude(status="SERVED")
 
-    if hotel:
+    if hotels:
         kitchen_tickets = kitchen_tickets.filter(
-            order__department__hotel=hotel
+            order__department__hotel__in=hotels
         )
 
     # ----------------------
@@ -49,10 +49,14 @@ def get_dashboard_data(hotel=None):
         created_at__date=today
     )
 
-    if hotel:
+    if hotels:
         charges = charges.filter(
-            department__hotel=hotel
+            department__hotel__in=hotels
         )
+
+    # ----------------------
+    # RESULTS
+    # ----------------------
 
     return {
 

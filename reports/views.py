@@ -15,7 +15,7 @@ from django.db.models import Sum
 from django.db.models import Q
 from inventory.models import Hotel
 from django.shortcuts import redirect
-from core.utils import get_user_hotel
+from core.utils import get_user_hotels
 
 
 @role_required("STORE", "MANAGER", "ADMIN")
@@ -324,7 +324,7 @@ def owner_dashboard(request):
 
     today = date.today()
     user = request.user
-    user_hotel = get_user_hotel(user)
+    user_hotel = get_user_hotels(user)
 
     # -----------------------------------
     # 1️⃣ Resolve Hotels Based on Role

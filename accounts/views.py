@@ -12,7 +12,7 @@ from django.contrib import messages
 from restaurant.models import POSOrder
 from billing.models import Folio, Payment
 from django.utils import timezone
-from core.utils import get_user_hotel
+from core.utils import get_user_hotels
 from reports.utils import today_range
 from django.shortcuts import get_object_or_404
 from accounts.services.manager_reports import build_manager_daily_report
@@ -74,7 +74,7 @@ def role_redirect(request):
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 def manager_restaurant_orders_today(request):
 
-    hotel = get_user_hotel(request.user)
+    hotel = get_user_hotels(request.user)
 
     orders = get_today_restaurant_orders(hotel=hotel)
 
@@ -87,7 +87,7 @@ def manager_restaurant_orders_today(request):
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 def manager_room_activity_today(request):
 
-    hotel = get_user_hotel(request.user)
+    hotel = get_user_hotels(request.user)
 
     activity = get_today_room_activity(hotel=hotel)
 
@@ -101,7 +101,7 @@ def manager_room_activity_today(request):
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 def manager_payments_today(request):
 
-    hotel = get_user_hotel(request.user)
+    hotel = get_user_hotels(request.user)
 
     payments = get_today_payments(hotel=hotel)
 
@@ -132,7 +132,7 @@ def user_list(request):
 @role_required("ADMIN", "DIRECTOR")
 def user_create(request):
 
-    hotel = get_user_hotel(request.user)
+    hotel = get_user_hotels(request.user)
 
     form = UserCreateForm(request.POST or None)
 
