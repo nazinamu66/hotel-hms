@@ -25,3 +25,4 @@ sudo fuser -k port_number/tcp
 
 
 python manage.py flush
+python manage.py createsuperuser

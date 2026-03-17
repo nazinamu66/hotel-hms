@@ -1,48 +1,86 @@
 {% extends "base/base.html" %}
 
-{% block title %}Create Department{% endblock %}
+{% block title %}
+    {% if edit_mode %}Edit Department{% else %}Create Department{% endif %}
+{% endblock %}
 
 {% block content %}
 
-<h2>Create Department</h2>
+<h2>
+    {% if edit_mode %}Edit Department{% else %}Create Department{% endif %}
+</h2>
 
 <form method="POST">
-{% csrf_token %}
+    {% csrf_token %}
 
-<div class="card">
+    <div class="card">
 
-<label>Hotel</label>
-<select name="hotel">
+        <!-- HOTEL -->
+        <label>Hotel</label>
+        <select name="hotel" required>
 
-{% for hotel in hotels %}
-<option value="{{ hotel.id }}">
-{{ hotel.name }}
-</option>
-{% endfor %}
+            <option value="">-- Select Hotel --</option>
 
-</select>
+            {% for hotel in hotels %}
+                <option value="{{ hotel.id }}"
+                    {% if dept and dept.hotel_id == hotel.id %}
+                        selected
+                    {% endif %}
+                >
+                    {{ hotel.name }}
+                </option>
+            {% endfor %}
 
-<br><br>
+        </select>
 
-<label>Department Name</label>
-<input type="text" name="name" required>
+        <br><br>
 
-<br><br>
+        <!-- NAME -->
+        <label>Department Name</label>
+        <input
+            type="text"
+            name="name"
+            value="{{ dept.name|default:'' }}"
+            placeholder="e.g. Kitchen, Store, Frontdesk"
+            required
+        >
 
-<label>Department Type</label>
-<select name="department_type">
+        <br><br>
 
-{% for value,label in types %}
-<option value="{{ value }}">{{ label }}</option>
-{% endfor %}
+        <!-- TYPE -->
+        <label>Department Type</label>
+        <select name="department_type" required>
 
-</select>
+            <option value="">-- Select Type --</option>
 
-<br><br>
+            {% for value, label in types %}
+                <option value="{{ value }}"
+                    {% if dept and dept.department_type == value %}
+                        selected
+                    {% endif %}
+                >
+                    {{ label }}
+                </option>
+            {% endfor %}
 
-<button class="btn btn-primary">Save</button>
+        </select>
 
-</div>
+        <br><br>
+
+        <!-- ACTIONS -->
+        <div style="display:flex; gap:10px;">
+
+            <button class="btn btn-primary" type="submit">
+                {% if edit_mode %}Update{% else %}Save{% endif %}
+            </button>
+
+            <a href="{% url 'department_list' %}" class="btn btn-secondary">
+                Cancel
+            </a>
+
+        </div>
+
+    </div>
 
 </form>
 

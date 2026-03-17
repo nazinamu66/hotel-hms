@@ -2,7 +2,6 @@ from datetime import date
 from decimal import Decimal
 from collections import defaultdict
 from inventory.models import Stock, Department, Supplier,Product
-from django.shortcuts import render
 from accounts.decorators import role_required
 from billing.models import Charge, Payment
 from restaurant.models import POSOrder
@@ -16,6 +15,11 @@ from django.db.models import Q
 from inventory.models import Hotel
 from django.shortcuts import redirect
 from core.utils import get_user_hotels
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.shortcuts import get_object_or_404
+
+
 
 
 @role_required("STORE", "MANAGER", "ADMIN")
@@ -453,6 +457,8 @@ def department_list(request):
         context
     )
 
+
+
 @role_required("DIRECTOR", "ADMIN")
 def department_create(request):
 
@@ -464,12 +470,17 @@ def department_create(request):
         name = request.POST.get("name")
         dept_type = request.POST.get("department_type")
 
+        if not hotel_id or not name or not dept_type:
+            messages.error(request, "All fields are required.")
+            return redirect(request.path)
+
         Department.objects.create(
             hotel_id=hotel_id,
             name=name,
             department_type=dept_type
         )
 
+        messages.success(request, "Department created successfully.")
         return redirect("department_list")
 
     return render(
@@ -481,3 +492,34 @@ def department_create(request):
         }
     )
 
+@role_required("DIRECTOR", "ADMIN")
+def department_edit(request, dept_id):
+
+    dept = get_object_or_404(Department, id=dept_id)
+    hotels = Hotel.objects.filter(is_active=True)
+
+    if request.method == "POST":
+
+        dept.hotel_id = request.POST.get("hotel")
+        dept.name = request.POST.get("name")
+        dept.department_type = request.POST.get("department_type")
+
+        if not dept.hotel_id or not dept.name or not dept.department_type:
+            messages.error(request, "All fields are required.")
+            return redirect(request.path)
+
+        dept.save()
+
+        messages.success(request, "Department updated successfully.")
+        return redirect("department_list")
+
+    return render(
+        request,
+        "reports/department_form.html",
+        {
+            "dept": dept,
+            "hotels": hotels,
+            "types": Department.DEPARTMENT_TYPES,
+            "edit_mode": True
+        }
+    )

@@ -310,16 +310,16 @@ def po_create(request):
 
 @role_required("STORE", "MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT")
 def po_detail(request, pk):
-    hotel = get_user_hotels(request.user)
 
-    po = get_object_or_404(
-        PurchaseOrder,
-        pk=pk,
-    )
+    hotels = get_user_hotels(request.user)
 
-    if hotel and po.department.hotel != hotel:
+    po = get_object_or_404(PurchaseOrder, pk=pk)
+
+    # 🔒 Multi-hotel security
+    if hotels and not hotels.filter(id=po.department.hotel_id).exists():
         raise PermissionDenied
 
+    # 🔒 Store restriction
     if request.user.role == "STORE" and po.status not in ["PAID", "RECEIVED"]:
         raise PermissionDenied
 
@@ -333,13 +333,17 @@ def po_detail(request, pk):
             item = item_form.save(commit=False)
             item.purchase_order = po
             item.save()
+
             messages.success(request, "Item added.")
             return redirect("inventory:po_detail", pk=pk)
 
     return render(
         request,
         "inventory/po_detail.html",
-        {"po": po, "item_form": item_form}
+        {
+            "po": po,
+            "item_form": item_form
+        }
     )
 
 

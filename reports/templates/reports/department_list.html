@@ -19,7 +19,9 @@
 <th>Hotel</th>
 <th>Name</th>
 <th>Type</th>
+<th>Actions</th>
 <th>Status</th>
+
 </tr>
 </thead>
 
@@ -30,6 +32,11 @@
 <td>{{ dept.hotel.name }}</td>
 <td>{{ dept.name }}</td>
 <td>{{ dept.get_department_type_display }}</td>
+<td>
+    <a href="{% url 'department_edit' dept.id %}">
+        Edit
+    </a>
+</td>
 <td>
 {% if dept.is_active %}
 Active

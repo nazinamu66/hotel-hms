@@ -15,5 +15,5 @@ urlpatterns = [
     # path("products/",views.product_list,name="product_list"),
     path("hotels/create/",views.hotel_create,name="hotel_create"),
     path("departments/create/",views.department_create,name="department_create"),
-
+    path("departments/<int:dept_id>/edit/", views.department_edit, name="department_edit"),
 ]
