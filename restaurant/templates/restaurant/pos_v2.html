@@ -67,7 +67,7 @@
         <!-- FOOD -->
         <h3>Food</h3>
         {% for item in menu_items %}
-            {% if item.category == "FOOD" %}
+        {% if item.product.product_type == "FOOD" %}
 
                 {% with r_stock=restaurant_stock_map|get_item:item.product.id|default:0 %}
                 {% with k_stock=kitchen_stock_map|get_item:item.product.id|default:0 %}
@@ -105,7 +105,7 @@
         <!-- DRINKS -->
         <h3>Drinks</h3>
         {% for item in menu_items %}
-            {% if item.category == "DRINK" %}
+        {% if item.product.product_type == "DRINK" %}
 
                 {% with r_stock=restaurant_stock_map|get_item:item.product.id|default:0 %}
                 {% with k_stock=kitchen_stock_map|get_item:item.product.id|default:0 %}

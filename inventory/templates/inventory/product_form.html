@@ -1,22 +1,126 @@
 {% extends "base/base.html" %}
 
-{% block title %}Create Product{% endblock %}
+{% block title %}
+    {% if product %}Edit Product{% else %}Create Product{% endif %}
+{% endblock %}
 
 {% block content %}
 
-<h2>Create Product</h2>
+<h2>
+    {% if product %}Edit Product{% else %}Create Product{% endif %}
+</h2>
 
-<div class="card">
+<div class="card" style="max-width:750px;padding:20px;background:white;border:1px solid #ddd;">
 
 <form method="post">
 {% csrf_token %}
 
-{{ form.as_p }}
+<!-- ===================== -->
+<!-- BASIC INFO -->
+<!-- ===================== -->
+<h4>Basic Info</h4>
 
-<button class="btn btn-primary">Save</button>
+<label>Name</label>
+{{ form.name }}
+
+<br><br>
+
+<label>SKU</label>
+{{ form.sku }}
+
+<br><br>
+
+<label>Barcode</label>
+{{ form.barcode }}
+
+<br><br>
+
+<!-- ===================== -->
+<!-- CLASSIFICATION -->
+<!-- ===================== -->
+<h4>Classification</h4>
+
+<label>Product Type</label>
+{{ form.product_type }}
+
+<br><br>
+
+<label>Usage Type</label>
+{{ form.usage_type }}
+
+<small style="color:gray;">
+    Consumable → Used internally (sugar, soap)<br>
+    Resale → Sold (drinks, boutique)<br>
+    Internal → Operational use (cleaning)<br>
+    Asset → Reusable (towels, bedsheets)
+</small>
+
+<br><br>
+
+<label>Supply Source</label>
+{{ form.supply_source }}
+
+<br><br>
+
+<!-- ===================== -->
+<!-- UNITS -->
+<!-- ===================== -->
+<h4>Units</h4>
+
+<label>Base Unit</label>
+{{ form.base_unit }}
+
+<br><br>
+
+<label>Purchase Unit</label>
+{{ form.purchase_unit }}
+
+<br><br>
+
+<label>Unit Multiplier</label>
+{{ form.unit_multiplier }}
+
+<br><br>
+
+<!-- ===================== -->
+<!-- PRICING -->
+<!-- ===================== -->
+<h4>Pricing</h4>
+
+<label>Selling Price</label>
+{{ form.price }}
+
+<br><br>
+
+<label>Cost Price</label>
+{{ form.cost_price }}
+
+<br><br>
+
+<!-- ===================== -->
+<!-- CONTROL -->
+<!-- ===================== -->
+<h4>Control</h4>
+
+<label>Reorder Level</label>
+{{ form.reorder_level }}
+
+<br><br>
+
+<label>Departments</label>
+{{ form.departments }}
+
+<br><br>
+
+<!-- ===================== -->
+<!-- ACTIONS -->
+<!-- ===================== -->
+<button class="btn btn-primary">
+    {% if product %}Update Product{% else %}Create Product{% endif %}
+</button>
 
 <a href="{% url 'inventory:product_list' %}" class="btn btn-secondary">
-Cancel
+    Cancel
 </a>
 
 </form>

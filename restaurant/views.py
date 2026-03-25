@@ -20,6 +20,9 @@ from restaurant.models import Shift
 from django.contrib import messages
 from django.db.models import Sum
 from django.utils import timezone
+from accounting.services.postings.cogs import post_cogs_for_order
+
+
 
 
 
@@ -161,7 +164,7 @@ def pos_v2(request):
         MenuItem.objects
         .filter(
             is_active=True,
-            product__product_type__in=["FOOD", "DRINK"]
+            product__usage_type="RESALE"   # 🔥 THE REAL LOGIC
         )
         .select_related("product")
         .order_by("category", "name")
@@ -354,110 +357,194 @@ def cart_clear(request):
 
 
 
+from django.db import transaction
+from decimal import Decimal
+
 @role_required("RESTAURANT")
 @require_POST
 @transaction.atomic
 def pos_commit(request):
 
-    cart = request.session.get("pos_cart")
-
-    if not cart or not cart["items"]:
-        messages.error(request, "Cart is empty.")
+    # ------------------------------
+    # PREVENT DOUBLE SUBMISSION (SESSION LOCK)
+    # ------------------------------
+    if request.session.get("pos_processing"):
+        messages.warning(request, "Already processing this order.")
         return redirect("/restaurant/pos-v2/")
 
-    settlement = request.POST.get("settlement")
-    payment_method = request.POST.get("payment_method")
-
-    restaurant = request.user.department
-    shift_id = request.session.get("shift_id")
-    shift = get_object_or_404(Shift, id=shift_id)
-
-    # ------------------------------
-    # Resolve folio
-    # ------------------------------
     try:
+        request.session["pos_processing"] = True
 
-        if settlement == "ROOM":
+        cart = request.session.get("pos_cart")
 
-            room_id = request.POST.get("room")
-            room = get_object_or_404(Room, id=room_id)
+        if not cart or not cart.get("items"):
+            messages.error(request, "Cart is empty.")
+            return redirect("/restaurant/pos-v2/")
 
-            folio = get_active_room_folio_or_fail(room)
+        settlement = request.POST.get("settlement")
+        payment_method = request.POST.get("payment_method")
 
-        else:
+        restaurant = request.user.department
+        hotel = restaurant.hotel
 
-            folio = get_or_create_walkin_folio(restaurant)
+        shift_id = request.session.get("shift_id")
+        shift = get_object_or_404(Shift, id=shift_id)
 
-    except ValueError as e:
+        # ------------------------------
+        # RESOLVE KITCHEN
+        # ------------------------------
+        kitchen = Department.objects.filter(
+            hotel=hotel,
+            department_type="KITCHEN",
+            is_active=True
+        ).first()
 
-        messages.error(request, str(e))
-        return redirect("/restaurant/pos-v2/")
+        if not kitchen:
+            messages.error(request, "Kitchen not configured.")
+            return redirect("/restaurant/pos-v2/")
 
+        # ------------------------------
+        # RESOLVE FOLIO
+        # ------------------------------
+        try:
+            if settlement == "ROOM":
+                room_id = request.POST.get("room")
+                room = get_object_or_404(Room, id=room_id)
+                folio = get_active_room_folio_or_fail(room)
+            else:
+                folio = get_or_create_walkin_folio(restaurant)
 
-    # ------------------------------
-    # Validate DRINK stock only
-    # ------------------------------
-    for item_id, data in cart["items"].items():
+        except ValueError as e:
+            messages.error(request, str(e))
+            return redirect("/restaurant/pos-v2/")
 
-        menu_item = get_object_or_404(MenuItem, id=item_id)
+        # ------------------------------
+        # STOCK VALIDATION (LOCKED)
+        # ------------------------------
+        stock_map = {}
+        for item_id, data in cart["items"].items():
 
-        if menu_item.category == "DRINK":
+            menu_item = get_object_or_404(MenuItem, id=item_id)
+            product = menu_item.product
+            qty = int(data["qty"])
 
-            stock = Stock.objects.filter(
-                product=menu_item.product,
-                department=restaurant
-            ).first()
+            if not product.is_stock_item():
+                continue
 
-            if not stock or stock.quantity < data["qty"]:
+            if product.product_type == "DRINK":
+                stock = Stock.objects.select_for_update().filter(
+                    product=product,
+                    department=restaurant
+                ).first()
 
-                messages.error(
-                    request,
-                    f"Insufficient stock for {menu_item.name}"
-                )
+            elif product.product_type == "FOOD":
+                stock = Stock.objects.select_for_update().filter(
+                    product=product,
+                    department=kitchen
+                ).first()
+            else:
+                stock = None
 
+            if not stock or stock.quantity < qty:
+                messages.error(request, f"Insufficient stock for {product.name}")
                 return redirect("/restaurant/pos-v2/")
 
+            stock_map[product.id] = stock
 
-    # ------------------------------
-    # Create POS Order
-    # ------------------------------
-    order = POSOrder.objects.create(
-        department=restaurant,
-        created_by=request.user,
-        folio=folio,
-        shift=shift
-    )
-    # ------------------------------
-    # Add Order Items
-    # ------------------------------
-    for item_id, data in cart["items"].items():
+        # ------------------------------
+        # CREATE ORDER
+        # ------------------------------
 
-        POSOrderItem.objects.create(
-            order=order,
-            menu_item_id=item_id,
-            quantity=data["qty"],
-            price=Decimal(data["price"])
+        from accounting.utils import get_current_business_day
+
+        business_day = get_current_business_day(hotel)
+
+        order = POSOrder.objects.create(
+            department=restaurant,
+            created_by=request.user,
+            folio=folio,
+            shift=shift,
+            business_day=business_day   # 🔥 NEW
         )
-    # ------------------------------
-    # Charge Order
-    # ------------------------------
-    order.charge_order()
-    # ------------------------------
-    # Optional Payment
-    # ------------------------------
-    if settlement == "PAY_NOW":
 
-        order.pay_order(payment_method or "CASH")
-    # ------------------------------
-    # Clear Cart
-    # ------------------------------
-    request.session.pop("pos_cart", None)
-    messages.success(
-        request,
-        f"Order #{order.id} processed successfully."
-    )
+        # ------------------------------
+        # ADD ITEMS
+        # ------------------------------
+        for item_id, data in cart["items"].items():
+            POSOrderItem.objects.create(
+                order=order,
+                menu_item_id=item_id,
+                quantity=int(data["qty"]),
+                price=Decimal(data["price"])
+            )
 
-    return redirect("restaurant_order_detail", order_id=order.id)
+        # ------------------------------
+        # CHARGE ORDER
+        # ------------------------------
+        order.charge_order()
+
+        # ------------------------------
+        # STOCK DEDUCTION (SAFE)
+        # ------------------------------
+        for item in order.items.select_related("menu_item__product"):
+
+            product = item.menu_item.product
+            qty = item.quantity
+
+            if not product.is_stock_item():
+                continue
+
+            stock = stock_map.get(product.id)
+            if not stock:
+                continue
+
+            stock.quantity -= qty
+            stock.save()
+        
+        post_cogs_for_order(order)
+
+        # ------------------------------
+        # PAYMENT
+        # ------------------------------
+        if settlement == "PAY_NOW":
+            order.pay_order(payment_method or "CASH")
+
+        # ------------------------------
+        # ACCOUNTING
+        # ------------------------------
+        from accounting.services.journal import record_transaction_by_slug
+
+        if settlement == "PAY_NOW":
+            record_transaction_by_slug(
+                source_slug="cash",
+                destination_slug="restaurant-revenue",
+                amount=order.total_amount,
+                description=f"POS Sale #{order.id}",
+                hotel=hotel,
+                created_by=order.created_by
+            )
+
+        elif settlement == "ROOM":
+            record_transaction_by_slug(
+                source_slug="accounts-receivable",
+                destination_slug="restaurant-revenue",
+                amount=order.total_amount,
+                description=f"Room POS Order #{order.id}",
+                hotel=hotel,
+                created_by=request.user
+            )
+
+        # ------------------------------
+        # CLEAR CART
+        # ------------------------------
+        request.session.pop("pos_cart", None)
+
+        messages.success(request, f"Order #{order.id} processed successfully.")
+        return redirect("restaurant_order_detail", order_id=order.id)
+
+    finally:
+        # ALWAYS clear processing flag
+        request.session.pop("pos_processing", None)
 
 
 @role_required("RESTAURANT", "MANAGER", "ADMIN")

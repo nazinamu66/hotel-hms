@@ -20,6 +20,7 @@ DEFAULT_ACCOUNTS = [
 
     # Equity
     {"code": "3000", "name": "Owner Capital", "type": EQUITY},
+    {"code": "3001", "name": "Retained Earnings", "type": EQUITY},
 
     # Income
     {"code": "4000", "name": "Room Revenue", "type": INCOME},

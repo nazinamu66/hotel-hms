@@ -9,6 +9,8 @@ from rooms.models import Room
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from accounting.models import BusinessDay
+
 
 
 # from inventory.services.stock import stock_in  # adjust import if needed
@@ -38,6 +40,13 @@ class MenuItem(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.category})"
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product"],
+                name="unique_menu_item_per_product"
+            )
+        ]
 
 
 User = settings.AUTH_USER_MODEL
@@ -86,8 +95,15 @@ class POSOrder(models.Model):
         related_name="orders"
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    business_day = models.ForeignKey(
+        BusinessDay,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True
+    )
 
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_posted = models.BooleanField(default=False)
     # Refund tracking
     is_refunded = models.BooleanField(default=False)
     refunded_at = models.DateTimeField(null=True, blank=True)

@@ -17,6 +17,37 @@
 
 {% if user.is_authenticated %}
 
+<li>
+    <span>Accounting</span>
+    <ul>
+        <li>
+            <a href="{% url 'accounting:chart' %}">
+                Chart of Accounts
+            </a>
+        </li>
+
+        <li>
+            <a href="{% url 'accounting:pnl' %}">
+                Profit & Loss
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'accounting:balance_sheet' %}">
+                Balance Sheet
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'accounting:journal' %}">
+                Journal
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'accounting:trial_balance' %}">
+                Trial Balance
+            </a>
+        </li>
+    </ul>
+</li>
 
 <!-- EXECUTIVE -->
 {% if user.role == "DIRECTOR" %}

@@ -1,0 +1,59 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<h2>Profit & Loss</h2>
+
+<form method="get" class="mb-3">
+
+    <label>From:</label>
+    <input type="date" name="start_date" value="{{ start_date }}">
+
+    <label>To:</label>
+    <input type="date" name="end_date" value="{{ end_date }}">
+
+    <button type="submit" class="btn btn-primary">
+        Filter
+    </button>
+
+    <a href="{% url 'accounting:pnl' %}" class="btn btn-secondary">
+        Reset
+    </a>
+
+</form>
+
+<h4 class="mt-4">Revenue</h4>
+<table class="table">
+    {% for r in revenue_data %}
+    <tr>
+        <td>{{ r.name }}</td>
+        <td>{{ r.amount|floatformat:2 }}</td>
+    </tr>
+    {% endfor %}
+    <tr>
+        <th>Total Revenue</th>
+        <th>{{ revenue_total }}</th>
+    </tr>
+</table>
+
+<h4 class="mt-4">Expenses</h4>
+<table class="table">
+    {% for e in expense_data %}
+    <tr>
+        <td>{{ e.name }}</td>
+        <td>{{ e.amount }}</td>
+    </tr>
+    {% endfor %}
+    <tr>
+        <th>Total Expenses</th>
+        <th>{{ expense_total }}</th>
+    </tr>
+</table>
+
+<h3 class="mt-4">
+    Net Profit:
+    <span style="color: {% if net_profit > 0 %}green{% else %}red{% endif %}">
+        {{ net_profit }}
+    </span>
+</h3>
+
+{% endblock %}

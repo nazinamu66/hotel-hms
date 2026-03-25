@@ -26,3 +26,6 @@ sudo fuser -k port_number/tcp
 
 python manage.py flush
 python manage.py createsuperuser
+
+from inventory.models import Hotel
+hotel = Hotel.objects.first()

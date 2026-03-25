@@ -10,7 +10,8 @@ from kitchen.models import IngredientRestockItem
 from decimal import Decimal, InvalidOperation
 from core.utils import get_user_hotels
 from django.utils.timezone import now
-from inventory.models import StockMovement
+from inventory.models import StockMovement,Product
+from django.db.models import Q
 from accounts.decorators import role_required
 from inventory.models import (
     Stock,
@@ -29,13 +30,23 @@ from inventory.models import (
 def store_dashboard(request):
     store = request.user.department
 
-    stocks = (
-        Stock.objects
-        .filter(department=store, product__product_type="RAW")
-        .select_related("product")
+    # ✅ ALL products store can handle
+    products = Product.objects.filter(
+        departments=store,
+        is_active=True
     )
 
-    low_stocks = stocks.filter(quantity__lte=F("reorder_level"))
+    # ✅ Stock map
+    stock_map = {
+        s.product_id: s
+        for s in Stock.objects.filter(department=store)
+    }
+
+    # ✅ Low stock (computed)
+    low_stocks = [
+        s for s in stock_map.values()
+        if s.quantity <= s.reorder_level
+    ]
 
     recent_movements = (
         StockMovement.objects
@@ -51,14 +62,14 @@ def store_dashboard(request):
         request,
         "store/dashboard.html",
         {
-            "stocks": stocks,
+            "products": products,
+            "stock_map": stock_map,
             "low_stocks": low_stocks,
             "recent_movements": recent_movements,
-            "total_items": stocks.count(),
-            "low_stock_count": low_stocks.count(),
+            "total_items": products.count(),
+            "low_stock_count": len(low_stocks),
         }
     )
-
 # =========================
 # ISSUE STOCK (STORE → OPS)
 # =========================
@@ -74,7 +85,10 @@ def issue_stock(request):
 
     stocks = (
         Stock.objects
-        .filter(department=store, product__product_type="RAW")
+        .filter(
+            department=store,
+            product__supply_source="STORE"
+        )
         .select_related("product")
     )
 
@@ -347,10 +361,17 @@ def store_ingredient_requests(request):
 def request_low_stock(request):
     store = request.user.department
 
-    low_stocks = Stock.objects.filter(
-        department=store,
-        quantity__lte=F("reorder_level")
-    ).select_related("product")
+    # 🔥 ALL PRODUCTS store can request
+    products = Product.objects.filter(
+        departments=store,
+        is_active=True
+    )
+
+    # 🔥 STOCK MAP
+    stock_map = {
+        s.product_id: s.quantity
+        for s in Stock.objects.filter(department=store)
+    }
 
     if request.method == "POST":
         product_id = request.POST.get("product_id")
@@ -373,7 +394,10 @@ def request_low_stock(request):
     return render(
         request,
         "store/request_low_stock.html",
-        {"stocks": low_stocks}
+        {
+            "products": products,
+            "stock_map": stock_map,
+        }
     )
 
 

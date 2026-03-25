@@ -2,6 +2,11 @@ from django.db import models, transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.utils.text import slugify
+
+
+
+
 # from inventory.models import Department
 
 
@@ -38,6 +43,15 @@ class Hotel(models.Model):
 
     def __str__(self):
         return self.name
+    # inventory/models.py
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        if is_new:
+            from accounting.services.setup_accounts import create_system_accounts
+            create_system_accounts(self)
 
 class HotelFeature(models.Model):
 
@@ -135,14 +149,25 @@ class Supplier(models.Model):
 
 class Product(models.Model):
 
+    # -----------------------------
+    # PRODUCT CLASSIFICATION
+    # -----------------------------
     PRODUCT_TYPE = (
-        ("RAW", "Raw Material"),           # kitchen ingredients
-        ("FOOD", "Prepared Food"),        # kitchen finished food
-        ("DRINK", "Beverage"),            # restaurant drinks
+        ("RAW", "Raw Material"),
+        ("FOOD", "Prepared Food"),
+        ("DRINK", "Beverage"),
         ("HOUSEKEEPING", "Housekeeping Supply"),
         ("LAUNDRY", "Laundry Supply"),
         ("BOUTIQUE", "Boutique Item"),
         ("SERVICE", "Service"),
+    )
+
+    # 🔥 NEW (CRITICAL)
+    USAGE_TYPE = (
+        ("CONSUMABLE", "Consumable"),     # sugar, soap, tea
+        ("RESALE", "Resale Item"),        # drinks, boutique
+        ("INTERNAL", "Internal Use"),     # cleaning, ops
+        ("ASSET", "Asset"),               # towels, bedsheets
     )
 
     SUPPLY_SOURCE_CHOICES = (
@@ -150,16 +175,11 @@ class Product(models.Model):
         ("DIRECT", "Direct Purchase"),
     )
 
-    name = models.CharField(
-        max_length=150,
-        unique=True
-    )
-
-    sku = models.CharField(
-        max_length=50,
-        unique=True
-    )
-
+    # -----------------------------
+    # BASIC INFO
+    # -----------------------------
+    name = models.CharField(max_length=150, unique=True)
+    sku = models.CharField(max_length=50, unique=True)
     barcode = models.CharField(
         max_length=50,
         blank=True,
@@ -167,12 +187,30 @@ class Product(models.Model):
         unique=True
     )
 
+    # -----------------------------
+    # CLASSIFICATION
+    # -----------------------------
     product_type = models.CharField(
         max_length=20,
         choices=PRODUCT_TYPE,
         default="RAW"
     )
 
+    usage_type = models.CharField(
+        max_length=20,
+        choices=USAGE_TYPE,
+        default="CONSUMABLE"
+    )
+
+    supply_source = models.CharField(
+        max_length=10,
+        choices=SUPPLY_SOURCE_CHOICES,
+        default="STORE"
+    )
+
+    # -----------------------------
+    # UNITS & PRICING
+    # -----------------------------
     base_unit = models.CharField(
         max_length=20,
         help_text="Internal unit (kg, pcs, litre)"
@@ -183,45 +221,70 @@ class Product(models.Model):
         blank=True,
         help_text="Purchase unit (bag, carton, crate)"
     )
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-
-    is_active = models.BooleanField(default=True)
 
     unit_multiplier = models.PositiveIntegerField(
         default=1,
         help_text="How many base units in purchase unit"
     )
 
-    supply_source = models.CharField(
-        max_length=10,
-        choices=SUPPLY_SOURCE_CHOICES,
-        default="STORE"
-    )
-
-    reorder_level = models.PositiveIntegerField(
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
         default=0
     )
 
+    cost_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0
+    )
+
+    # -----------------------------
+    # CONTROL
+    # -----------------------------
+    reorder_level = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
     departments = models.ManyToManyField(
-        Department,
-        help_text="Departments allowed to stock this product",
-        blank=True
+        "inventory.Department",
+        blank=True,
+        help_text="Departments allowed to use/request this product"
     )
 
-    created_at = models.DateTimeField(
-        auto_now_add=True
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
+    # -----------------------------
+    # META
+    # -----------------------------
     class Meta:
         ordering = ["name"]
 
-    # def clean(self):
+    # -----------------------------
+    # VALIDATION
+    # -----------------------------
+    def clean(self):
 
-        # if self.product_type == "RAW" and self.supply_source == "DIRECT":
-        #     raise ValidationError(
-        #         "Raw materials should normally come from store."
-        #     )
+        # 🔥 RAW should usually come from store
+        if self.product_type == "RAW" and self.supply_source == "DIRECT":
+            raise ValidationError(
+                "Raw materials should normally come from store."
+            )
 
+        # 🔥 SERVICE should not have stock logic
+        if self.product_type == "SERVICE" and self.usage_type != "INTERNAL":
+            raise ValidationError(
+                "Service items should be INTERNAL usage type."
+            )
+
+        # 🔥 ASSETS should not be resale
+        if self.usage_type == "ASSET" and self.product_type in ["FOOD", "DRINK"]:
+            raise ValidationError(
+                "Assets cannot be FOOD or DRINK."
+            )
+
+    # -----------------------------
+    # SAVE
+    # -----------------------------
     def save(self, *args, **kwargs):
 
         if self.name:
@@ -230,26 +293,68 @@ class Product(models.Model):
         if self.sku:
             self.sku = self.sku.strip().upper()
 
+        if not self.barcode:
+            self.barcode = slugify(self.sku)
+
         super().save(*args, **kwargs)
+
+    # -----------------------------
+    # HELPERS
+    # -----------------------------
+    def is_stock_item(self):
+        """
+        Only consumable + resale affect stock
+        """
+        return self.usage_type in ["CONSUMABLE", "RESALE"]
+
+    def is_sellable(self):
+        return self.usage_type == "RESALE"
+
+    def is_asset(self):
+        return self.usage_type == "ASSET"
 
     def __str__(self):
         return self.name
+    
+    def clean(self):
+        if self.cost_price <= 0:
+            raise ValidationError("Cost price must be greater than 0.")
+    
 
 class Stock(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.PROTECT)
-    department = models.ForeignKey(Department, on_delete=models.PROTECT)
-    quantity = models.PositiveIntegerField(default=0)
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT
+    )
+
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.PROTECT
+    )
+
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
+
     reorder_level = models.PositiveIntegerField(default=5)
 
     class Meta:
         unique_together = ("product", "department")
 
+    # -----------------------------
+    # LOGIC
+    # -----------------------------
     def is_low(self):
         return self.quantity <= self.reorder_level
 
+    def can_consume(self, qty):
+        return self.quantity >= qty
+
     def __str__(self):
         return f"{self.product} - {self.department}"
-
 
 # =========================
 # PURCHASE ORDERS
@@ -297,6 +402,9 @@ class PurchaseOrder(models.Model):
 
     @transaction.atomic
     def receive(self, user):
+
+        from accounting.services.postings.purchase import post_inventory_receipt
+
         print(">>> ENTERING receive()", self.id)
 
         if self.status == "RECEIVED":
@@ -319,6 +427,9 @@ class PurchaseOrder(models.Model):
         self.status = "RECEIVED"
         self.received_at = timezone.now()
         self.save(update_fields=["status", "received_at"])
+
+        # ✅ FIXED
+        post_inventory_receipt(self)
 
 
 class PurchaseItem(models.Model):

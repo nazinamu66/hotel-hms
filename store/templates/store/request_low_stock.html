@@ -10,14 +10,20 @@
     <th>Request</th>
 </tr>
 
-{% for stock in stocks %}
+{% load store_extras %}
+
+{% for product in products %}
 <tr>
-    <td>{{ stock.product.name }}</td>
-    <td>{{ stock.quantity }}</td>
+    <td>{{ product.name }}</td>
+
+    {% with qty=stock_map|get_item:product.id %}
+        <td>{{ qty|default:0 }}</td>
+    {% endwith %}
+
     <td>
         <form method="post">
             {% csrf_token %}
-            <input type="hidden" name="product_id" value="{{ stock.product.id }}">
+            <input type="hidden" name="product_id" value="{{ product.id }}">
             <input type="number" name="quantity" min="1" required>
             <button type="submit">Request</button>
         </form>

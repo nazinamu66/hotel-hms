@@ -17,7 +17,10 @@ class ProductForm(forms.ModelForm):
             "unit_multiplier",
             "supply_source",
             "departments",
+            "usage_type",
             "reorder_level",
+            "price",
+            "cost_price",   # ✅ ADD THIS
         ]
 
         widgets = {

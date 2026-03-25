@@ -14,6 +14,8 @@ from kitchen.forms import (
     RecipeItemForm,
 
 )
+from restaurant.models import MenuItem
+
 
 from kitchen.models import (
     Recipe,
@@ -83,12 +85,26 @@ def product_create(request):
 
     form = ProductForm(request.POST or None)
 
+    from restaurant.models import MenuItem
+
     if form.is_valid():
 
-        form.save()
+        product = form.save()
+
+        # 🔥 AUTO CREATE MENU ITEM
+        if product.usage_type == "RESALE":
+
+            existing = MenuItem.objects.filter(product=product).first()
+
+            if not existing:
+                MenuItem.objects.create(
+                    name=product.name,
+                    product=product,
+                    price=product.price or 0,
+                    is_active=True
+                )
 
         messages.success(request, "Product created successfully.")
-
         return redirect("inventory:product_list")
 
     return render(
@@ -268,7 +284,7 @@ def recipe_item_add(request, recipe_id):
 @role_required("STORE", "MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT")
 def po_list(request):
 
-    hotel = get_user_hotels(request.user)
+    hotels = get_user_hotels(request.user)
 
     qs = PurchaseOrder.objects.select_related("supplier", "department")
 
@@ -278,11 +294,13 @@ def po_list(request):
             status__in=["PAID", "RECEIVED"]
         )
 
-    elif hotel:
-        qs = qs.filter(department__hotel=hotel)
+    else:
+        if hotels.exists():
+            qs = qs.filter(department__hotel__in=hotels)
+        else:
+            qs = qs.none()
 
     return render(request, "inventory/po_list.html", {"pos": qs})
-
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 def po_create(request):
@@ -370,11 +388,14 @@ def po_submit(request, pk):
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 @transaction.atomic
 def po_finalize(request, pk):
-    hotel = get_user_hotels(request.user)
+    hotels = get_user_hotels(request.user)
 
-    po = get_object_or_404(PurchaseOrder, pk=pk, status="DRAFT")
-    if hotel and po.department.hotel != hotel:
-        raise PermissionDenied
+    po = get_object_or_404(
+        PurchaseOrder,
+        pk=pk,
+        status="DRAFT",
+        department__hotel__in=hotels
+    )
     
     items = po.items.select_related("product")
 
@@ -422,11 +443,14 @@ def po_finalize(request, pk):
 @role_required("ACCOUNTANT", "DIRECTOR", "ADMIN")
 @transaction.atomic
 def po_pay(request, pk):
-    hotel = get_user_hotels(request.user)
-    po = get_object_or_404(PurchaseOrder, pk=pk, status="SUBMITTED")
+    hotels = get_user_hotels(request.user)
 
-    if hotel and po.department.hotel != hotel:
-            raise PermissionDenied
+    po = get_object_or_404(
+        PurchaseOrder,
+        pk=pk,
+        status="SUBMITTED",
+        department__hotel__in=hotels
+    )
     
     if request.method == "POST":
         po.status = "PAID"
@@ -627,12 +651,19 @@ def product_edit(request, pk):
 
     form = ProductForm(request.POST or None, instance=product)
 
-    if form.is_valid():
 
-        form.save()
+    if form.is_valid():
+        product = form.save()
+
+        # 🔥 sync MenuItem
+        if product.product_type in ["FOOD", "DRINK"]:
+            menu_item, _ = MenuItem.objects.get_or_create(product=product)
+            menu_item.name = product.name
+            menu_item.price = product.price
+            menu_item.is_active = True
+            menu_item.save()
 
         messages.success(request, "Product updated.")
-
         return redirect("inventory:product_list")
 
     return render(

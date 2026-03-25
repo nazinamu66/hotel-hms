@@ -1,0 +1,44 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<h2>Trial Balance</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Account</th>
+            <th>Debit</th>
+            <th>Credit</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+        {% for row in data %}
+        <tr>
+            <td>{{ row.code }}</td>
+            <td>{{ row.name }}</td>
+            <td>{{ row.debit }}</td>
+            <td>{{ row.credit }}</td>
+        </tr>
+        {% endfor %}
+
+        <!-- TOTAL -->
+        <tr>
+            <th colspan="2">TOTAL</th>
+            <th>{{ total_debit }}</th>
+            <th>{{ total_credit }}</th>
+        </tr>
+
+    </tbody>
+</table>
+
+{% if total_debit == total_credit %}
+    <p style="color:green;"><strong>Balanced ✅</strong></p>
+{% else %}
+    <p style="color:red;"><strong>Not Balanced ❌</strong></p>
+{% endif %}
+
+{% endblock %}

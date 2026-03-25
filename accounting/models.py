@@ -2,10 +2,10 @@ from django.db import models
 from django.conf import settings
 from django.utils.text import slugify
 from decimal import Decimal
-
+from django.db.models import Sum
 from inventory.models import Hotel
-
 from inventory.models import Supplier
+
 
 class Account(models.Model):
 
@@ -64,6 +64,60 @@ class Account(models.Model):
     def __str__(self):
         return f"{self.code} - {self.name}"
     
+
+    # from django.db.models import Sum
+    # from decimal import Decimal
+
+    def get_balance(self):
+        debit = self.journalline_set.aggregate(
+            total=Sum("debit")
+        )["total"] or Decimal("0.00")
+
+        credit = self.journalline_set.aggregate(
+            total=Sum("credit")
+        )["total"] or Decimal("0.00")
+
+        # Asset, Expense, Bank → Debit normal
+        if self.account_type in ["asset", "expense", "bank"]:
+            return self.opening_balance + debit - credit
+
+        # Liability, Equity, Income → Credit normal
+        return self.opening_balance + credit - debit
+    
+
+class AccountingPeriod(models.Model):
+
+    hotel = models.ForeignKey("inventory.Hotel", on_delete=models.CASCADE)
+
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+    is_closed = models.BooleanField(default=False)
+
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.start_date} → {self.end_date} | Closed: {self.is_closed}"
+
+
+class BusinessDay(models.Model):
+
+    hotel = models.ForeignKey("inventory.Hotel", on_delete=models.CASCADE)
+
+    date = models.DateField()
+
+    is_closed = models.BooleanField(default=False)
+
+    opened_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ("hotel", "date")
+
+    def __str__(self):
+        return f"{self.hotel} - {self.date} ({'Closed' if self.is_closed else 'Open'})"
+    
+
 class JournalEntry(models.Model):
 
     hotel = models.ForeignKey(
@@ -87,6 +141,13 @@ class JournalEntry(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL
+    )
+
+    business_day = models.ForeignKey(
+        BusinessDay,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -202,4 +263,5 @@ class ExpenseEntry(models.Model):
 
     def __str__(self):
         return f"{self.expense_account.name} - {self.amount}"
+
 

@@ -1,26 +1,20 @@
 {% extends "base/base.html" %}
-
+{% load store_extras %}
 {% block content %}
-
 <h2>Store Dashboard</h2>
-
 <!-- ===================== -->
 <!-- SUMMARY CARDS -->
 <!-- ===================== -->
 <div style="display:flex; gap:20px; margin-bottom:20px;">
-
     <div style="flex:1; background:white; padding:15px; border:1px solid #ddd;">
         <h4>Total SKUs</h4>
         <h2>{{ total_items }}</h2>
     </div>
-
     <div style="flex:1; background:white; padding:15px; border:1px solid #ddd;">
         <h4>Low Stock Items</h4>
         <h2 style="color:red;">{{ low_stock_count }}</h2>
     </div>
-
 </div>
-
 <!-- ===================== -->
 <!-- LOW STOCK ALERT -->
 <!-- ===================== -->
@@ -36,38 +30,42 @@
     </ul>
 </div>
 {% endif %}
-
 <!-- ===================== -->
 <!-- CURRENT STOCK TABLE -->
 <!-- ===================== -->
 <h3>Current Stock</h3>
-
 <table border="1" cellpadding="8" width="100%" style="background:white;">
     <tr>
         <th>Product</th>
         <th>Quantity</th>
         <th>Status</th>
     </tr>
+    {% for product in products %}
 
-    {% for stock in stocks %}
-    <tr>
-        <td>{{ stock.product.name }}</td>
-        <td>{{ stock.quantity }}</td>
-        <td>
-            {% if stock.is_low %}
-                <span style="color:red; font-weight:bold;">LOW</span>
-            {% else %}
-                <span style="color:green;">OK</span>
-            {% endif %}
-        </td>
-    </tr>
-    {% empty %}
-    <tr>
-        <td colspan="3">No stock found.</td>
-    </tr>
-    {% endfor %}
+<tr>
+    <td>{{ product.name }}</td>
+
+    {% with stock=stock_map|get_item:product.id %}
+        {% if stock %}
+            <td>{{ stock.quantity }}</td>
+
+            <td>
+                {% if stock.quantity <= stock.reorder_level %}
+                    <span style="color:red;">LOW</span>
+                {% else %}
+                    OK
+                {% endif %}
+            </td>
+        {% else %}
+            <td>0</td>
+            <td style="color:gray;">No Stock</td>
+        {% endif %}
+    {% endwith %}
+
+</tr>
+
+{% endfor %}
 </table>
-
 <!-- ===================== -->
 <!-- RECENT MOVEMENTS -->
 <!-- ===================== -->
@@ -82,7 +80,6 @@
         <th>To</th>
         <th>Qty</th>
     </tr>
-
     {% for m in recent_movements %}
     <tr>
         <td>{{ m.created_at }}</td>
@@ -98,5 +95,4 @@
     </tr>
     {% endfor %}
 </table>
-
 {% endblock %}

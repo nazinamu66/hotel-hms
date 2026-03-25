@@ -1,0 +1,89 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<h2>Journal</h2>
+
+<form method="get" class="mb-3">
+
+    <label>From:</label>
+    <input type="date" name="start_date" value="{{ start_date }}">
+
+    <label>To:</label>
+    <input type="date" name="end_date" value="{{ end_date }}">
+
+    <label>Account:</label>
+    <select name="account">
+
+        <option value="">All</option>
+
+        {% for acc in accounts %}
+            <option value="{{ acc.id }}"
+                {% if selected_account == acc.id|stringformat:"s" %}selected{% endif %}>
+                {{ acc.name }}
+            </option>
+        {% endfor %}
+
+    </select>
+
+    <label>Search:</label>
+    <input type="text" name="search" value="{{ search }}" placeholder="e.g. POS Sale #1">
+
+    <button type="submit" class="btn btn-primary">
+        Filter
+    </button>
+
+    <a href="{% url 'accounting:journal' %}" class="btn btn-secondary">
+        Reset
+    </a>
+
+
+</form>
+<br><br>
+{% if start_date or end_date %}
+<p><strong>Filtered results</strong></p>
+{% endif %}
+
+{% for entry in entries %}
+
+<div class="card mb-3" style="padding:15px;">
+
+    <strong>
+        {{ entry.date }} | {{ entry.description }}
+    </strong>
+
+    <table class="table mt-2">
+        <thead>
+            <tr>
+                <th>Account</th>
+                <th>Debit</th>
+                <th>Credit</th>
+            </tr>
+        </thead>
+        <tbody>
+
+    {% for line in entry.lines.all %}
+        <tr>
+            <td>{{ line.account.name }}</td>
+            <td>{{ line.debit }}</td>
+            <td>{{ line.credit }}</td>
+        </tr>
+        {% endfor %}
+
+        <!-- ✅ TOTAL ROW -->
+        <tr>
+            <th>Total</th>
+            <th>{{ entry.total_debit }}</th>
+            <th>{{ entry.total_credit }}</th>
+        </tr>
+
+    </tbody>
+    </table>
+
+</div>
+
+{% empty %}
+<p>No journal entries found.</p>
+{% endfor %}
+
+{% endblock %}
