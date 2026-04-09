@@ -135,6 +135,19 @@ class JournalEntry(models.Model):
         blank=True,
         null=True
     )
+    
+    entry_type = models.CharField(
+        max_length=20,
+        choices=[
+            ("NORMAL", "Normal"),
+            ("SALE", "Sale"),
+            ("COGS", "COGS"),
+            ("PURCHASE", "Purchase"),
+            ("CLOSING", "Closing"),
+            ("PRODUCTION", "Production"),
+        ],
+        default="NORMAL"
+    )
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

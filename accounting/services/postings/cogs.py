@@ -22,9 +22,11 @@ def post_cogs_for_order(order):
 
     record_transaction_by_slug(
         source_slug="cost-of-goods-sold",   # DEBIT
-        destination_slug="inventory-asset",  # ✅ FIXED  # CREDIT
+        destination_slug="finished-goods-inventory",  # ✅ FIXED  # CREDIT
         amount=total_cogs,
         description=f"COGS for POS Order #{order.id}",
         hotel=hotel,
-        created_by=order.created_by
+        created_by=order.created_by,
+        entry_type="COGS" ,  # ✅ ADD
+
     )

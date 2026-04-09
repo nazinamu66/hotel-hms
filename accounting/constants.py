@@ -31,4 +31,11 @@ DEFAULT_ACCOUNTS = [
     {"code": "5000", "name": "Cost of Goods Sold", "type": EXPENSE},
     {"code": "5100", "name": "Maintenance Expense", "type": EXPENSE},
     {"code": "5200", "name": "Utilities Expense", "type": EXPENSE},
+    {"code": "5001", "name": "Spoilage Expense", "type": EXPENSE, "slug": "spoilage-expense"},
+
+    # Finished goods (cooked food)
+    {"code": "1210", "name": "Finished Goods Inventory", "type": ASSET, "slug": "finished-goods-inventory"},
+
+    # POS clearing (for shift-based cash)
+    {"code": "1015", "name": "POS Clearing", "type": ASSET, "slug": "pos-clearing"},
 ]

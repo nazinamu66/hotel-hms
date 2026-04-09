@@ -13,4 +13,5 @@ urlpatterns = [
     path("close-day/", views.close_day, name="close_day"),
     path("journal/", views.journal_view, name="journal"),
     path("reports/trial-balance/", views.trial_balance, name="trial_balance"),
+    path("journal/<int:journal_id>/", views.journal_detail, name="journal_detail"),
 ]

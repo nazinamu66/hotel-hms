@@ -83,26 +83,49 @@ from django.db import IntegrityError
 @role_required("DIRECTOR")
 def product_create(request):
 
+    from restaurant.models import MenuItem
+
     form = ProductForm(request.POST or None)
 
-    from restaurant.models import MenuItem
+    print("FORM VALID:", form.is_valid())
+    print("FORM ERRORS:", form.errors)
 
     if form.is_valid():
 
-        product = form.save()
+        product = form.save(commit=False)
+
+        print("CLEANED DATA:", form.cleaned_data)
+
+        print("COST PRICE AFTER SET:", product.cost_price)
+
+        # FOOD rules
+        if product.product_type == "FOOD":
+            product.base_unit = "portion"
+            product.purchase_unit = "portion"
+            product.unit_multiplier = 1
+            product.cost_price = 0
+            product.usage_type = "RESALE"
+
+        try:
+            product.save()
+            print("PRODUCT SAVED ✅")
+
+        except Exception as e:
+            print("SAVE ERROR:", e)
+
+        form.save_m2m()
 
         # 🔥 AUTO CREATE MENU ITEM
         if product.usage_type == "RESALE":
 
-            existing = MenuItem.objects.filter(product=product).first()
-
-            if not existing:
-                MenuItem.objects.create(
-                    name=product.name,
-                    product=product,
-                    price=product.price or 0,
-                    is_active=True
-                )
+            MenuItem.objects.get_or_create(
+                product=product,
+                defaults={
+                    "name": product.name,
+                    "price": product.price or 0,
+                    "is_active": True,
+                }
+            )
 
         messages.success(request, "Product created successfully.")
         return redirect("inventory:product_list")
@@ -149,48 +172,48 @@ def hotel_feature_setup(request):
         }
     )
 
-@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
-@transaction.atomic
-def prepared_food_create(request):
+# @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
+# @transaction.atomic
+# def prepared_food_create(request):
 
-    form = PreparedFoodForm(request.POST or None)
+#     form = PreparedFoodForm(request.POST or None)
 
-    if form.is_valid():
-        food = form.save(commit=False)
+#     if form.is_valid():
+#         food = form.save(commit=False)
 
-        # enforce system rules
-        food.product_type = "FOOD"
-        food.base_unit = "portion"
-        food.purchase_unit = "portion"
-        food.unit_multiplier = 1
+#         # enforce system rules
+#         food.product_type = "FOOD"
+#         food.base_unit = "portion"
+#         food.purchase_unit = "portion"
+#         food.unit_multiplier = 1
 
-        food.save()
+#         food.save()
 
-        # auto create menu item
-        from restaurant.models import MenuItem
+#         # auto create menu item
+#         from restaurant.models import MenuItem
 
-        MenuItem.objects.get_or_create(
-            product=food,
-            defaults={
-                "name": food.name,
-                "price": 0,
-                "category": "FOOD",
-                "is_active": True
-            }
-        )
+#         MenuItem.objects.get_or_create(
+#             product=food,
+#             defaults={
+#                 "name": food.name,
+#                 "price": 0,
+#                 "category": "FOOD",
+#                 "is_active": True
+#             }
+#         )
 
-        messages.success(
-            request,
-            f"{food.name} created. Now add its recipe."
-        )
+#         messages.success(
+#             request,
+#             f"{food.name} created. Now add its recipe."
+#         )
 
-        return redirect("kitchen_food_list")
+#         return redirect("kitchen_food_list")
 
-    return render(
-        request,
-        "inventory/setup/foods/create.html",
-        {"form": form}
-    )
+#     return render(
+#         request,
+#         "inventory/setup/foods/create.html",
+#         {"form": form}
+#     )
 
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
@@ -656,12 +679,22 @@ def product_edit(request, pk):
         product = form.save()
 
         # 🔥 sync MenuItem
-        if product.product_type in ["FOOD", "DRINK"]:
-            menu_item, _ = MenuItem.objects.get_or_create(product=product)
-            menu_item.name = product.name
-            menu_item.price = product.price
-            menu_item.is_active = True
-            menu_item.save()
+        if product.usage_type == "RESALE":
+
+            menu_item, created = MenuItem.objects.get_or_create(
+                product=product,
+                defaults={
+                    "name": product.name,
+                    "price": product.price or 0,
+                    "is_active": True,
+                }
+            )
+
+            if not created:
+                menu_item.name = product.name
+                menu_item.price = product.price or 0
+                menu_item.is_active = True
+                menu_item.save()
 
         messages.success(request, "Product updated.")
         return redirect("inventory:product_list")

@@ -7,6 +7,9 @@ from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied
 from accounting.models import JournalEntry
 from django.db.models import Q
+from accounting.utils import get_current_business_day
+from inventory.models import Hotel
+
 
 
 def trial_balance(request):
@@ -59,6 +62,7 @@ def journal_view(request):
     end_date = request.GET.get("end_date")
     account_id = request.GET.get("account")
     search = request.GET.get("search")
+    
 
     if start_date:
         entries = entries.filter(date__gte=start_date)
@@ -91,6 +95,27 @@ def journal_view(request):
         "search": search,
     })
 
+
+def journal_detail(request, journal_id):
+
+    entry = get_object_or_404(
+        JournalEntry.objects.select_related("created_by", "business_day"),
+        id=journal_id
+    )
+
+    lines = entry.lines.select_related("account")
+
+    total_debit = sum(line.debit for line in lines)
+    total_credit = sum(line.credit for line in lines)
+
+    return render(request, "accounting/journal_detail.html", {
+        "entry": entry,
+        "lines": lines,
+        "total_debit": total_debit,
+        "total_credit": total_credit,
+    })
+
+
 @role_required("DIRECTOR", "ACCOUNTANT","ADMIN")
 @require_POST
 def close_day(request):
@@ -114,94 +139,155 @@ def close_day(request):
 
     return redirect("accounting:pnl")
 
+
 def account_ledger(request, account_id):
 
     account = get_object_or_404(Account, id=account_id)
+    user_id = request.GET.get("user")
+
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    users = User.objects.filter(is_active=True)
+
+    # 🔹 Filters
+    start_date = request.GET.get("start_date")
+    end_date = request.GET.get("end_date")
 
     lines = JournalLine.objects.filter(
         account=account
-    ).select_related("journal").order_by("journal__date", "id")
+    ).select_related("journal", "journal__created_by", "journal__business_day")
 
-    balance = 0
+    # 🔹 Date filtering (BUSINESS DAY)
+    if start_date:
+        lines = lines.filter(journal__business_day__date__gte=start_date)
+    
+    if user_id:
+        lines = lines.filter(journal__created_by_id=user_id)
+
+    if end_date:
+        lines = lines.filter(journal__business_day__date__lte=end_date)
+
+    lines = lines.order_by("journal__date", "id")
+
+    # 🔥 Opening balance (before start_date)
+    opening_balance = 0
+
+    if start_date:
+        opening = JournalLine.objects.filter(
+            account=account,
+            journal__business_day__date__lt=start_date
+        ).aggregate(
+            debit=Sum("debit"),
+            credit=Sum("credit")
+        )
+
+        opening_balance = (opening["debit"] or 0) - (opening["credit"] or 0)
+
+    balance = opening_balance
     ledger_data = []
 
     for line in lines:
-        balance += line.debit - line.credit
+
+        if account.account_type in ["asset", "expense"]:
+            balance += line.debit - line.credit
+        else:
+            balance += line.credit - line.debit
 
         ledger_data.append({
             "date": line.journal.date,
-            "reference": line.journal.reference,
+            "business_day": line.journal.business_day.date if line.journal.business_day else None,
             "description": line.journal.description,
+            "user": line.journal.created_by,
             "debit": line.debit,
             "credit": line.credit,
-            "balance": balance
+            "balance": balance,
+            "journal_id": line.journal.id,
         })
 
     return render(request, "accounting/ledger.html", {
         "account": account,
-        "ledger": ledger_data
+        "ledger": ledger_data,
+        "opening_balance": opening_balance,
+        "start_date": start_date,
+        "end_date": end_date,
+        "users": users,          # ✅ HERE
+        "user_id": user_id,      # ✅ HERE
     })
-
 
 def profit_and_loss(request):
 
-    revenue_accounts = Account.objects.filter(account_type="income")
-    expense_accounts = Account.objects.filter(account_type="expense")
+    # 🔹 Get hotel safely
+    if request.user.department:
+        hotel = request.user.department.hotel
+    else:
+        hotel = Hotel.objects.first()
 
+    # 🔹 Get filters
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
+
+    # 🔹 Base queryset (EXCLUDE closing entries)
+    base_filter = {
+        "account__hotel": hotel
+    }
+
+    # 🔹 Date filtering (BUSINESS DAY)
+    if start_date:
+        base_filter["journal__business_day__date__gte"] = start_date
+
+    if end_date:
+        base_filter["journal__business_day__date__lte"] = end_date
+
+    # 🔥 Fetch ALL lines once (important optimization)
+    lines = (
+        JournalLine.objects
+        .filter(**base_filter)
+        .exclude(journal__entry_type="CLOSING")
+        .select_related("account")
+    )
+
+    # 🔹 Group balances
+    account_data = {}
+
+    for line in lines:
+        acc = line.account
+
+        if acc.id not in account_data:
+            account_data[acc.id] = {
+                "name": acc.name,
+                "type": acc.account_type,
+                "debit": 0,
+                "credit": 0,
+            }
+
+        account_data[acc.id]["debit"] += line.debit
+        account_data[acc.id]["credit"] += line.credit
+
+    # 🔹 Separate revenue & expenses
+    revenue_data = []
+    expense_data = []
 
     revenue_total = 0
     expense_total = 0
 
-    revenue_data = []
-    expense_data = []
+    for acc in account_data.values():
 
-    for acc in revenue_accounts:
+        if acc["type"] == "income":
+            balance = acc["credit"] - acc["debit"]
+            revenue_total += balance
+            revenue_data.append({
+                "name": acc["name"],
+                "amount": balance
+            })
 
-        lines = acc.journalline_set.exclude(
-            journal__description__startswith="Closing Entry"
-        )
-
-        if start_date:
-            lines = lines.filter(journal__date__gte=start_date)
-
-        if end_date:
-            lines = lines.filter(journal__date__lte=end_date)
-
-        credit = lines.aggregate(Sum("credit"))["credit__sum"] or 0
-        debit = lines.aggregate(Sum("debit"))["debit__sum"] or 0
-
-        balance = credit - debit
-        revenue_total += balance
-
-        revenue_data.append({
-            "name": acc.name,
-            "amount": balance
-        })
-
-    for acc in expense_accounts:
-
-        lines = acc.journalline_set.exclude(
-            journal__description__startswith="Closing Entry"
-        )
-
-        if start_date:
-            lines = lines.filter(journal__date__gte=start_date)
-
-        if end_date:
-            lines = lines.filter(journal__date__lte=end_date)
-
-        debit = lines.aggregate(Sum("debit"))["debit__sum"] or 0
-        credit = lines.aggregate(Sum("credit"))["credit__sum"] or 0
-
-        balance = debit - credit
-        expense_total += balance
-
-        expense_data.append({
-            "name": acc.name,
-            "amount": balance
-        })
+        elif acc["type"] == "expense":
+            balance = acc["debit"] - acc["credit"]
+            expense_total += balance
+            expense_data.append({
+                "name": acc["name"],
+                "amount": balance
+            })
 
     return render(request, "accounting/profit_and_loss.html", {
         "revenue_data": revenue_data,
@@ -212,7 +298,6 @@ def profit_and_loss(request):
         "start_date": start_date,
         "end_date": end_date,
     })
-
 
 def balance_sheet(request):
 

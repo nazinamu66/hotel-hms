@@ -3,31 +3,71 @@
 {% block content %}
 
 <h2>{{ account.name }} Ledger</h2>
+<form method="get" class="mb-3">
+    <label>From:</label>
+    <input type="date" name="start_date" value="{{ start_date }}">
+
+    <label>To:</label>
+    <input type="date" name="end_date" value="{{ end_date }}">
+
+    <select name="user">
+    <option value="">All Users</option>
+    {% for u in users %}
+    <option value="{{ u.id }}" {% if user_id == u.id|stringformat:"s" %}selected{% endif %}>
+        {{ u.username }}
+    </option>
+    {% endfor %}
+</select>
+
+    <button class="btn btn-primary">Filter</button>
+</form>
 
 <table class="table">
     <thead>
         <tr>
             <th>Date</th>
-            <th>Reference</th>
+            <th>Business Day</th>
             <th>Description</th>
+            <th>User</th>
             <th>Debit</th>
             <th>Credit</th>
             <th>Balance</th>
         </tr>
+        
     </thead>
 
-    <tbody>
-        {% for line in ledger %}
-        <tr>
-            <td>{{ line.date }}</td>
-            <td>{{ line.reference }}</td>
-            <td>{{ line.description }}</td>
-            <td>{{ line.debit }}</td>
-            <td>{{ line.credit }}</td>
-            <td>{{ line.balance }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
+        <tbody>
+
+            <tr>
+                <td colspan="6"><strong>Opening Balance</strong></td>
+                <td><strong>{{ opening_balance }}</strong></td>
+            </tr>
+
+            {% for line in ledger %}
+            <tr>
+                <td>{{ line.date }}</td>
+                <td>{{ line.business_day }}</td>
+                <td>
+                    <a href="{% url 'accounting:journal_detail' line.journal_id %}">
+                        {{ line.description }}
+                    </a>
+                </td>
+                <td>{{ line.user }}</td>
+                <td style="color:green;">{{ line.debit }}</td>
+                <td style="color:red;">{{ line.credit }}</td>
+                {% if line.balance < 0 %}
+                <td style="color:red;">{{ line.balance }}</td>
+                {% endif %}
+                <td><strong>{{ line.balance }}</strong></td>
+            </tr>
+            {% endfor %}
+
+            </tbody>
 </table>
+
+<br><br>
+<a href="javascript:history.back()" class="btn btn-secondary mb-3">
+    ← Back
+</a>
 
 {% endblock %}

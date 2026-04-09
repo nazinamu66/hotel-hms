@@ -17,8 +17,24 @@ def post_journal_entry(
     description,
     lines,
     reference=None,
-    created_by=None
+    created_by=None,
+    entry_type="NORMAL",   # ✅ ADD THIS
+
 ):
+    
+    from decimal import Decimal
+
+    if not lines or len(lines) < 2:
+        raise ValueError("Journal entry must have at least 2 lines.")
+
+    total_debit = sum(Decimal(l.get("debit", 0)) for l in lines)
+    total_credit = sum(Decimal(l.get("credit", 0)) for l in lines)
+
+    if total_debit != total_credit:
+        raise ValueError("Journal entry is not balanced.")
+
+    if total_debit <= 0:
+        raise ValueError("Amount must be greater than zero.")
     """
     lines format:
 
@@ -42,7 +58,9 @@ def post_journal_entry(
         date=business_day.date,
         business_day=business_day,   # 🔥 IMPORTANT
         reference=reference,
-        created_by=created_by
+        created_by=created_by,
+        entry_type=entry_type   # ✅ ADD THIS
+
     )
 
     for line in lines:
@@ -69,6 +87,8 @@ def record_transaction_by_slug(
     description="",
     hotel=None,
     created_by=None,
+    entry_type="NORMAL",   # ✅ ADD
+
 ):
 
     if not hotel:
@@ -89,5 +109,7 @@ def record_transaction_by_slug(
         hotel=hotel,
         description=description,
         lines=lines,
-        created_by=created_by
+        created_by=created_by,
+        entry_type="NORMAL",   # ✅ ADD
+
     )

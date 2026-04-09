@@ -11,25 +11,25 @@
   {{ formset.management_form }}
 
   <table border="1" cellpadding="6" id="ingredients-table">
-    <thead>
-      <tr>
-        <th>Ingredient</th>
-        <th>Actual Quantity Used</th>
-      </tr>
-    </thead>
-    <tbody id="ingredients-body">
-      <tr>
-        <td colspan="2" style="text-align:center;">
-          Select a recipe to load ingredients
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <thead>
+    <tr>
+      <th>Ingredient</th>
+      <th>Expected</th>
+      <th>Actual Used</th>
+    </tr>
+  </thead>
+  <tbody id="ingredients-body">
+    <tr>
+      <td colspan="3" style="text-align:center;">
+        Select a recipe to load ingredients
+      </td>
+    </tr>
+  </tbody>
+</table>
 
   <br>
   <button type="submit">Produce</button>
 </form>
-
 <script>
 const recipeSelect = document.getElementById("id_recipe");
 const portionsInput = document.getElementById("id_quantity_produced");
@@ -42,16 +42,16 @@ function loadIngredients() {
 
     if (!recipeId) {
         tableBody.innerHTML = `
-          <tr>
+        <tr>
             <td colspan="3" style="text-align:center;">
-              Select a recipe to load ingredients
+                Select a recipe to load ingredients
             </td>
-          </tr>`;
+        </tr>`;
         totalFormsInput.value = 0;
         return;
     }
 
-    fetch(`/kitchen/recipe/${recipeId}/ingredients/`)
+    fetch(`/kitchen/recipe/${recipeId}/ingredients/?qty=${portions}`)
         .then(res => res.json())
         .then(data => {
 
@@ -60,17 +60,17 @@ function loadIngredients() {
 
             if (data.length === 0) {
                 tableBody.innerHTML = `
-                  <tr>
+                <tr>
                     <td colspan="3" style="color:red; text-align:center;">
-                      This recipe has no ingredients
+                        This recipe has no ingredients
                     </td>
-                  </tr>`;
+                </tr>`;
                 return;
             }
 
             data.forEach((item, index) => {
 
-                const expectedTotal = (item.expected_quantity * portions).toFixed(3);
+                const expectedTotal = item.expected_quantity.toFixed(3);
 
                 let readonlyAttr = "";
                 let badge = "";
@@ -87,29 +87,38 @@ function loadIngredients() {
                 }
 
                 tableBody.innerHTML += `
-                  <tr>
+                <tr>
                     <td>
-                      ${item.ingredient}<br>
-                      ${badge}
+                        ${item.ingredient}<br>
+                        ${badge}
                     </td>
+
                     <td>
-                      <input type="hidden"
-                             name="ingredients-${index}-ingredient_id"
-                             value="${item.ingredient_id}">
-                      <input type="number"
-                             step="0.001"
-                             min="0.001"
-                             required
-                             ${readonlyAttr}
-                             name="ingredients-${index}-actual_quantity"
-                             value="${expectedTotal}">
+                        ${expectedTotal} ${item.unit}
                     </td>
-                  </tr>`;
+
+                    <td>
+                        <input type="hidden"
+                               name="ingredients-${index}-ingredient_id"
+                               value="${item.ingredient_id}">
+
+                        <input type="number"
+                               step="0.001"
+                               min="0.001"
+                               required
+                               ${readonlyAttr}
+                               name="ingredients-${index}-actual_quantity"
+                               value="${expectedTotal}">
+                    </td>
+                </tr>`;
             });
         });
 }
 
+// 🔥 Reload when recipe changes
 recipeSelect.addEventListener("change", loadIngredients);
+
+// 🔥 Reload when portions change (IMPORTANT)
 portionsInput.addEventListener("input", loadIngredients);
 </script>
 

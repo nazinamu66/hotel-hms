@@ -40,6 +40,19 @@ class MenuItem(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.category})"
+    
+    def get_cost_price(self):
+    # If product has a recipe → calculate from ingredients
+        if hasattr(self.product, "recipe"):
+            return self.product.recipe.total_cost()
+
+        # Otherwise fallback (e.g. drinks)
+        return self.product.cost_price
+
+
+    def get_profit(self):
+        return self.price - self.get_cost_price()
+    
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -154,34 +167,59 @@ class POSOrder(models.Model):
         hotel = self._validate_hotel_integrity()
 
         total = Decimal("0.00")
-        food_items = []
+
+        restaurant = self.department
+
+        kitchen = Department.objects.filter(
+            hotel=restaurant.hotel,
+            department_type="KITCHEN",
+            is_active=True
+        ).first()
 
         # =========================
         # PROCESS ORDER ITEMS
         # =========================
         for item in self.items.select_related("menu_item__product"):
 
-            line_total = item.quantity * item.price
+            product = item.menu_item.product
+            qty = item.quantity
+
+            line_total = qty * item.price
             total += line_total
 
-            # Only drinks affect restaurant stock
-            if item.menu_item.category == "DRINK":
+            # =========================
+            # DRINK STOCK (POS HANDLES)
+            # =========================
+            if product.product_type == "DRINK":
 
-                stock_out(
-                    product=item.menu_item.product,
-                    department=self.department,
-                    quantity=item.quantity,
-                    user=self.created_by,
-                    reason="Drink sale",
+                stock = Stock.objects.select_for_update().filter(
+                    product=product,
+                    department=restaurant
+                ).first()
+
+                if not stock or stock.quantity < qty:
+                    raise ValidationError(
+                        f"Insufficient restaurant stock for {product.name}"
+                    )
+
+                stock.quantity -= qty
+                stock.save(update_fields=["quantity"])
+
+                StockMovement.objects.create(
+                    product=product,
+                    from_department=restaurant,
+                    quantity=qty,
+                    movement_type="OUT",
+                    created_by=self.created_by,
                     reference=f"POS-{self.id}"
                 )
 
         # =========================
-        # CREATE KITCHEN TICKET
+        # CREATE KITCHEN TICKET (FOOD ONLY)
         # =========================
         food_items = [
-            item for item in self.items.select_related("menu_item")
-            if item.menu_item.category == "FOOD"
+            item for item in self.items.select_related("menu_item__product")
+            if item.menu_item.product.product_type == "FOOD"
         ]
 
         if food_items:

@@ -88,7 +88,9 @@ def close_period(hotel, user=None):
         hotel=hotel,
         description=f"Closing Entry - {closing_date}",
         lines=lines,
-        created_by=user
+        created_by=user,
+        entry_type="CLOSING"   # ✅ ADD
+
     )
 
     # 🔒 MARK DAY CLOSED

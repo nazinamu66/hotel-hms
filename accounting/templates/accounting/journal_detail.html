@@ -1,0 +1,49 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<h2>Journal Entry #{{ entry.id }}</h2>
+
+<div class="card mb-3" style="padding:15px;">
+
+    <p><strong>Date:</strong> {{ entry.date }}</p>
+    <p><strong>Business Day:</strong> {{ entry.business_day.date }}</p>
+    <p><strong>Description:</strong> {{ entry.description }}</p>
+    <p><strong>Reference:</strong> {{ entry.reference }}</p>
+    <p><strong>Created By:</strong> {{ entry.created_by }}</p>
+
+</div>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Account</th>
+            <th>Debit</th>
+            <th>Credit</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for line in lines %}
+        <tr>
+            <td>{{ line.account.name }}</td>
+            <td>{{ line.debit }}</td>
+            <td>{{ line.credit }}</td>
+        </tr>
+        {% endfor %}
+
+        <tr>
+            <th>Total</th>
+            <th>{{ total_debit }}</th>
+            <th>{{ total_credit }}</th>
+        </tr>
+    </tbody>
+</table>
+
+<br><br>
+
+<a href="javascript:history.back()" class="btn btn-secondary mb-3">
+    ← Back
+</a>
+
+{% endblock %}

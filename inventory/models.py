@@ -222,6 +222,13 @@ class Product(models.Model):
         help_text="Purchase unit (bag, carton, crate)"
     )
 
+    purchase_cost = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        help_text="Cost per purchase unit (carton, bag, crate)"
+    )
+
     unit_multiplier = models.PositiveIntegerField(
         default=1,
         help_text="How many base units in purchase unit"
@@ -238,7 +245,6 @@ class Product(models.Model):
         decimal_places=2,
         default=0
     )
-
     # -----------------------------
     # CONTROL
     # -----------------------------
@@ -264,23 +270,50 @@ class Product(models.Model):
     # -----------------------------
     def clean(self):
 
-        # 🔥 RAW should usually come from store
-        if self.product_type == "RAW" and self.supply_source == "DIRECT":
-            raise ValidationError(
-                "Raw materials should normally come from store."
-            )
+        # ----------------------------------
+        # RAW MATERIAL RULES
+        # ----------------------------------
+        if self.product_type == "RAW":
 
-        # 🔥 SERVICE should not have stock logic
-        if self.product_type == "SERVICE" and self.usage_type != "INTERNAL":
-            raise ValidationError(
-                "Service items should be INTERNAL usage type."
-            )
+            if self.supply_source == "DIRECT":
+                raise ValidationError("Raw materials should normally come from store.")
 
-        # 🔥 ASSETS should not be resale
-        if self.usage_type == "ASSET" and self.product_type in ["FOOD", "DRINK"]:
-            raise ValidationError(
-                "Assets cannot be FOOD or DRINK."
-            )
+            if self.cost_price <= 0:
+                raise ValidationError("Raw materials must have cost price.")
+
+        # ----------------------------------
+        # FINISHED FOOD RULES
+        # ----------------------------------
+        if self.product_type == "FOOD":
+
+            # 🔥 FOOD is always produced, not purchased
+            self.supply_source = "STORE"
+
+            # 🔥 cost comes from recipe, NOT manual
+            self.cost_price = 0
+
+            # 🔥 must be resale
+            if self.usage_type != "RESALE":
+                raise ValidationError("Prepared food must be RESALE.")
+
+        # ----------------------------------
+        # DRINK / BOUTIQUE RULES
+        # ----------------------------------
+        if self.product_type in ["DRINK", "BOUTIQUE"]:
+
+            if self.usage_type != "RESALE":
+                raise ValidationError("Sellable items must be RESALE.")
+
+            if self.cost_price <= 0:
+                raise ValidationError("Resale items must have cost price.")
+
+        # ----------------------------------
+        # SERVICE RULES
+        # ----------------------------------
+        if self.product_type == "SERVICE":
+
+            if self.usage_type != "INTERNAL":
+                raise ValidationError("Service items must be INTERNAL.")
 
     # -----------------------------
     # SAVE
@@ -296,6 +329,10 @@ class Product(models.Model):
         if not self.barcode:
             self.barcode = slugify(self.sku)
 
+        # 🔥 AUTO COST NORMALIZATION
+        if self.unit_multiplier > 0 and self.purchase_cost:
+            self.cost_price = self.purchase_cost / self.unit_multiplier
+
         super().save(*args, **kwargs)
 
     # -----------------------------
@@ -306,6 +343,20 @@ class Product(models.Model):
         Only consumable + resale affect stock
         """
         return self.usage_type in ["CONSUMABLE", "RESALE"]
+    def to_base_unit(self, quantity):
+        """
+        Convert purchase unit → base unit
+        """
+        return quantity * self.unit_multiplier
+
+
+    def from_base_unit(self, quantity):
+        """
+        Convert base unit → purchase unit
+        """
+        if self.unit_multiplier == 0:
+            return quantity
+        return quantity / self.unit_multiplier
 
     def is_sellable(self):
         return self.usage_type == "RESALE"
@@ -316,10 +367,7 @@ class Product(models.Model):
     def __str__(self):
         return self.name
     
-    def clean(self):
-        if self.cost_price <= 0:
-            raise ValidationError("Cost price must be greater than 0.")
-    
+  
 
 class Stock(models.Model):
 
@@ -414,12 +462,11 @@ class PurchaseOrder(models.Model):
             raise ValidationError("Only PAID purchase orders can be received.")
 
         for item in self.items.select_related("product"):
-            print("Adding:", item.base_quantity)
 
             stock_in(
                 product=item.product,
                 department=self.department,
-                quantity=item.base_quantity,
+                quantity=item.quantity,  # ✅ FIXED
                 user=user,
                 reference=f"PO-{self.id}"
             )
@@ -596,13 +643,16 @@ def stock_in(product, department, quantity, user, reason="", reference=""):
         defaults={"quantity": 0}
     )
 
-    stock.quantity += quantity
+    # ✅ FIXED
+    base_qty = product.to_base_unit(quantity)
+
+    stock.quantity += base_qty
     stock.save(update_fields=["quantity"])
 
     StockMovement.objects.create(
         product=product,
         to_department=department,
-        quantity=quantity,
+        quantity=quantity,  # keep original for traceability
         movement_type="IN",
         created_by=user,
         reference=reference or reason
@@ -674,4 +724,31 @@ class LowStockRequest(models.Model):
     def __str__(self):
         return f"{self.product} ({self.requested_quantity}) - {self.status}"
     
-   
+
+class StockAdjustment(models.Model):
+
+    ADJUSTMENT_TYPE = (
+        ("LOSS", "Loss / Spoilage"),
+        ("DAMAGE", "Damage"),
+        ("COUNT", "Stock Count Correction"),
+    )
+
+    product = models.ForeignKey("Product", on_delete=models.CASCADE)
+    department = models.ForeignKey("Department", on_delete=models.CASCADE)
+
+    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+
+    adjustment_type = models.CharField(max_length=10, choices=ADJUSTMENT_TYPE)
+
+    reason = models.TextField(blank=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.product.name} - {self.quantity} ({self.adjustment_type})"

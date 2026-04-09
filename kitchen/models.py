@@ -29,15 +29,22 @@ class Recipe(models.Model):
 
     is_active = models.BooleanField(default=True)
 
+    version = models.IntegerField(default=1)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def total_cost(self):
+        return sum(
+            item.ingredient.cost_price * item.quantity
+            for item in self.items.all()
+        )
+
     def clean(self):
-        if self.product.product_type != "FINISHED":
+        if self.product.product_type not in ["FOOD", "DRINK"]:
             raise ValidationError(
                 "Recipe product must be a FINISHED product."
             )
-
-
+    
     def __str__(self):
         return self.name
 
@@ -85,6 +92,13 @@ class RecipeItem(models.Model):
         default=0,
         help_text="Allowed variance % (only for TOLERANCE mode)"
     )
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recipe", "ingredient"],
+                name="unique_ingredient_per_recipe"
+            )
+        ]
 
 class ProductionBatch(models.Model):
 
@@ -110,6 +124,64 @@ class ProductionBatch(models.Model):
     def __str__(self):
         return f"{self.recipe} x {self.quantity_produced}"
 
+    def total_cost(self):
+        return sum(
+            usage.actual_quantity * usage.ingredient.cost_price
+            for usage in self.ingredient_usages.all()
+        )
+
+    def cost_per_unit(self):
+        if self.quantity_produced == 0:
+            return 0
+        return self.total_cost() / self.quantity_produced
+    
+    def calculate_variance(self):
+
+        variance_data = []
+
+        for item in self.recipe.items.all():
+
+            expected = item.quantity * self.quantity_produced
+
+            actual = sum(
+                u.actual_quantity
+                for u in self.ingredient_usages.filter(
+                    ingredient=item.ingredient
+                )
+            )
+
+            variance = actual - expected
+
+            variance_data.append({
+                "ingredient": item.ingredient.name,
+                "expected": expected,
+                "actual": actual,
+                "variance": variance,
+            })
+
+        return variance_data
+    
+    def calculate_variance_cost(self):
+
+        total_loss = 0
+
+        for item in self.recipe.items.all():
+
+            expected = item.quantity * self.quantity_produced
+
+            actual = sum(
+                u.actual_quantity
+                for u in self.ingredient_usages.filter(
+                    ingredient=item.ingredient
+                )
+            )
+
+            variance = actual - expected
+
+            if variance > 0:
+                total_loss += variance * item.ingredient.cost_price
+
+        return total_loss
     # =====================================
     # EXECUTE PRODUCTION
     # =====================================
@@ -281,13 +353,52 @@ class ProductionBatch(models.Model):
     # =====================================
     # FINALIZE BATCH
     # =====================================
+
     def _finalize(self):
 
+        # --------------------------------------
+        # ACCOUNTING ENTRY (RAW → FINISHED)
+        # --------------------------------------
+        from accounting.services.journal import post_journal_entry
+        from accounting.models import Account
+
+        hotel = self.produced_by.department.hotel
+
+        raw_inventory = Account.objects.get(
+            hotel=hotel,
+            slug="inventory-asset"
+        )
+
+        finished_inventory = Account.objects.get(
+            hotel=hotel,
+            slug="finished-goods-inventory"
+        )
+
+        # 🔥 total cost of ingredients used
+        total_cost = sum(
+            usage.actual_quantity * usage.ingredient.cost_price
+            for usage in self.ingredient_usages.all()
+        )
+
+        if total_cost > 0:
+            post_journal_entry(
+                hotel=hotel,
+                description=f"Production #{self.id} - {self.recipe.name}",
+                created_by=self.produced_by,
+                lines=[
+                    # ✅ ADD finished goods
+                    {"account": finished_inventory, "debit": total_cost},
+
+                    # ✅ REMOVE raw materials
+                    {"account": raw_inventory, "credit": total_cost},
+                ]
+            )
+
+        # --------------------------------------
+        # FINALIZE
+        # --------------------------------------
         self.is_executed = True
         self.save(update_fields=["is_executed"])
-
-
-    
 
 class ProductionIngredientUsage(models.Model):
     """

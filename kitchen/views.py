@@ -305,16 +305,19 @@ def direct_purchase_list(request):
         {"purchases": qs}
     )
 
-@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
 def recipe_ingredients_api(request, recipe_id):
     recipe = get_object_or_404(Recipe, id=recipe_id)
+
+    qty = float(request.GET.get("qty", 1))  # 🔥 NEW
 
     data = [
         {
             "ingredient_id": item.ingredient.id,
             "ingredient": item.ingredient.name,
-            "expected_quantity": float(item.quantity),
+            "expected_quantity": float(item.quantity) * qty,  # 🔥 FIX
+            "per_unit_quantity": float(item.quantity),        # 🔥 OPTIONAL
             "control_mode": item.control_mode,
+            "unit": item.ingredient.base_unit,
             "tolerance_percent": float(item.tolerance_percent),
         }
         for item in recipe.items.select_related("ingredient")
@@ -796,6 +799,9 @@ def kitchen_ticket_served(request, ticket_id):
             created_by=request.user,
             reference=f"KOT-{ticket.id}"
         )
+
+    from accounting.services.postings.cogs import post_cogs_for_order
+    post_cogs_for_order(ticket.order)
 
     ticket.status = "SERVED"
     ticket.save(update_fields=["status"])

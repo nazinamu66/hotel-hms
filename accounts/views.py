@@ -132,7 +132,7 @@ def user_list(request):
 @role_required("ADMIN", "DIRECTOR")
 def user_create(request):
 
-    hotel = get_user_hotels(request.user)
+    hotel = request.user.hotel
 
     form = UserCreateForm(request.POST or None)
 

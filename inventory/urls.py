@@ -29,7 +29,7 @@ urlpatterns = [
     path("incoming/<int:pk>/", views.incoming_delivery_detail, name="incoming_delivery_detail"),
     path("hotel/features/",views.hotel_feature_setup,name="hotel_feature_setup"),
 
-    path("foods/create/", views.prepared_food_create, name="kitchen_food_create"),
+    # path("foods/create/", views.prepared_food_create, name="kitchen_food_create"),
     path("foods/<int:food_id>/recipe/", views.recipe_edit, name="kitchen_recipe_edit"),
     path("recipe/item/<int:item_id>/delete/", views.recipe_item_delete, name="kitchen_recipe_item_delete"),
     path("recipe/<int:recipe_id>/item/add/", views.recipe_item_add, name="kitchen_recipe_item_add"),

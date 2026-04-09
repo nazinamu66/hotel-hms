@@ -32,8 +32,6 @@ from billing.services.folio_factory import (
 )
 
 
-
-
 from django.contrib.auth.decorators import user_passes_test
 
 def is_manager(user):
@@ -267,7 +265,8 @@ def cart_add(request, item_id):
     # --------------------------------
     # Determine stock department
     # --------------------------------
-    if menu_item.category == "DRINK":
+    # Determine stock department
+    if menu_item.product.product_type == "DRINK":
         stock_department = restaurant
     else:
         stock_department = Department.objects.filter(
@@ -286,15 +285,19 @@ def cart_add(request, item_id):
     item_id = str(item_id)
     current_qty = cart["items"].get(item_id, {}).get("qty", 0)
 
-    if current_qty + 1 > available_qty:
+    # ❌ DO NOT BLOCK SALES
+    if not stock:
         return JsonResponse({
             "success": False,
-            "error": "Insufficient stock"
+            "error": "Item not available"
         })
 
-    # --------------------------------
+    response = {"success": True}
+
+    if current_qty + 1 > available_qty:
+        response["warning"] = f"Low stock ({available_qty} left)"
+
     # Add to cart
-    # --------------------------------
     if item_id not in cart["items"]:
         cart["items"][item_id] = {
             "name": menu_item.name,
@@ -306,7 +309,7 @@ def cart_add(request, item_id):
 
     request.session.modified = True
 
-    return JsonResponse({"success": True})
+    return JsonResponse(response)
 
 
 @role_required("RESTAURANT")
@@ -482,27 +485,7 @@ def pos_commit(request):
         # CHARGE ORDER
         # ------------------------------
         order.charge_order()
-
-        # ------------------------------
-        # STOCK DEDUCTION (SAFE)
-        # ------------------------------
-        for item in order.items.select_related("menu_item__product"):
-
-            product = item.menu_item.product
-            qty = item.quantity
-
-            if not product.is_stock_item():
-                continue
-
-            stock = stock_map.get(product.id)
-            if not stock:
-                continue
-
-            stock.quantity -= qty
-            stock.save()
-        
-        post_cogs_for_order(order)
-
+  
         # ------------------------------
         # PAYMENT
         # ------------------------------
@@ -516,13 +499,14 @@ def pos_commit(request):
 
         if settlement == "PAY_NOW":
             record_transaction_by_slug(
-                source_slug="cash",
-                destination_slug="restaurant-revenue",
-                amount=order.total_amount,
-                description=f"POS Sale #{order.id}",
-                hotel=hotel,
-                created_by=order.created_by
-            )
+            source_slug="pos-clearing",
+            destination_slug="restaurant-revenue",
+            amount=order.total_amount,
+            description=f"POS Sale #{order.id}",
+            hotel=hotel,
+            created_by=request.user,
+            entry_type="SALE"   # ✅ ADD
+        )
 
         elif settlement == "ROOM":
             record_transaction_by_slug(
@@ -578,6 +562,8 @@ def pos_order_detail(request, order_id):
 @role_required("RESTAURANT")
 def close_shift(request):
 
+    from accounting.services.journal import record_transaction_by_slug
+
     user = request.user
     department = user.department
 
@@ -630,10 +616,25 @@ def close_shift(request):
 
         counted_cash = Decimal(request.POST.get("counted_cash", "0"))
 
+        # --------------------------------------
+        # ACCOUNTING: MOVE POS → CASH
+        # --------------------------------------
+        if expected_cash > 0:
+            record_transaction_by_slug(
+                source_slug="cash",              # Dr Cash
+                destination_slug="pos-clearing", # Cr POS Clearing
+                amount=expected_cash,
+                description=f"Shift close - {shift.id}",
+                hotel=department.hotel,
+                created_by=user
+            )
+
+        # --------------------------------------
+        # CLOSE SHIFT
+        # --------------------------------------
         shift.closing_cash = counted_cash
         shift.closed_at = timezone.now()
         shift.status = "CLOSED"
-
         shift.save()
 
         request.session.pop("shift_id", None)
