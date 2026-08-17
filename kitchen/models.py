@@ -385,11 +385,10 @@ class ProductionBatch(models.Model):
                 hotel=hotel,
                 description=f"Production #{self.id} - {self.recipe.name}",
                 created_by=self.produced_by,
+                entry_type="PRODUCTION",
+                reference=f"PROD-{self.id}",
                 lines=[
-                    # ✅ ADD finished goods
                     {"account": finished_inventory, "debit": total_cost},
-
-                    # ✅ REMOVE raw materials
                     {"account": raw_inventory, "credit": total_cost},
                 ]
             )

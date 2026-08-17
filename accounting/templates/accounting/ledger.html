@@ -39,30 +39,70 @@
         <tbody>
 
             <tr>
-                <td colspan="6"><strong>Opening Balance</strong></td>
-                <td><strong>{{ opening_balance }}</strong></td>
+                <td colspan="6">
+                    <strong>Opening Balance</strong>
+                </td>
+
+                <td>
+                    <strong>
+                        {{ opening_balance|floatformat:2 }}
+                    </strong>
+                </td>
             </tr>
 
             {% for line in ledger %}
+
             <tr>
-                <td>{{ line.date }}</td>
-                <td>{{ line.business_day }}</td>
+
+                <td>
+                    {{ line.date }}
+                </td>
+
+                <td>
+                    {{ line.business_day }}
+                </td>
+
                 <td>
                     <a href="{% url 'accounting:journal_detail' line.journal_id %}">
                         {{ line.description }}
                     </a>
                 </td>
-                <td>{{ line.user }}</td>
-                <td style="color:green;">{{ line.debit }}</td>
-                <td style="color:red;">{{ line.credit }}</td>
-                {% if line.balance < 0 %}
-                <td style="color:red;">{{ line.balance }}</td>
-                {% endif %}
-                <td><strong>{{ line.balance }}</strong></td>
+
+                <td>
+                    {{ line.user }}
+                </td>
+
+                <td>
+                    {{ line.debit|floatformat:2 }}
+                </td>
+
+                <td>
+                    {{ line.credit|floatformat:2 }}
+                </td>
+
+                <td>
+                    <strong
+                        {% if line.balance < 0 %}
+                            style="color:red;"
+                        {% endif %}
+                    >
+                        {{ line.balance|floatformat:2 }}
+                    </strong>
+                </td>
+
             </tr>
+
+            {% empty %}
+
+            <tr>
+                <td colspan="7">
+                    No transactions found.
+                </td>
+            </tr>
+
             {% endfor %}
 
-            </tbody>
+        </tbody>
 </table>
 
 <br><br>

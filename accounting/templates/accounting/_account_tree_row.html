@@ -1,0 +1,109 @@
+<tr>
+
+    <!-- CODE -->
+
+    <td>
+        {{ item.account.code }}
+    </td>
+
+
+    <!-- ACCOUNT -->
+
+    <td>
+
+        <div class="account-name account-level-{{ item.level }}">
+
+            {% if item.level > 0 %}
+
+                <span class="text-muted">
+                    └─
+                </span>
+
+            {% endif %}
+
+
+            <a
+                href="{% url 'accounting:ledger' item.account.id %}"
+            >
+                {{ item.account.name }}
+            </a>
+
+        </div>
+
+    </td>
+
+
+    <!-- TYPE -->
+
+    <td>
+
+        {{ item.account.get_account_type_display }}
+
+    </td>
+
+
+    <!-- STATUS -->
+
+    <td>
+
+        {% if item.account.is_system %}
+
+            <span class="badge bg-secondary">
+                System
+            </span>
+
+        {% else %}
+
+            <span class="badge bg-info">
+                User
+            </span>
+
+        {% endif %}
+
+    </td>
+
+
+    <!-- BALANCE -->
+
+    <td class="text-end">
+
+        {{ item.account.get_balance|floatformat:2 }}
+
+    </td>
+
+
+    <!-- ACTIONS -->
+
+    <td class="text-end">
+
+        <a
+            href="{% url 'accounting:ledger' item.account.id %}"
+            class="btn btn-sm btn-outline-primary"
+        >
+            Ledger
+        </a>
+
+
+        {% if not item.account.is_system %}
+
+            <a
+                href="{% url 'accounting:edit_account' item.account.id %}"
+                class="btn btn-sm btn-outline-secondary"
+            >
+                Edit
+            </a>
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+
+<!-- CHILD ACCOUNTS -->
+
+{% for child in item.children %}
+
+    {% include "accounting/_account_tree_row.html" with item=child %}
+
+{% endfor %}

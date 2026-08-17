@@ -1,0 +1,15 @@
+DEFAULT_DEPARTMENTS = [
+    ("FD","Front Desk","FRONTDESK"),
+    ("HK","Housekeeping","HOUSEKEEPING"),
+    ("RST","Restaurant","RESTAURANT"),
+    ("KIT","Kitchen","KITCHEN"),
+    ("STR","Store","STORE"),
+    ("LDY","Laundry","LAUNDRY"),
+    ("GYM","Gym","GYM"),
+    ("ACC","Accounting","ACCOUNTING"),
+    ("ADM","Administration","ADMINISTRATION"),
+    ("HR","Human Resources","HUMAN_RESOURCES"),
+    ("MNT","Maintenance","MAINTENANCE"),
+    ("SEC","Security","SECURITY"),
+    ("IT","Information Technology","IT"),
+]

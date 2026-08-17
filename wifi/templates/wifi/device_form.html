@@ -1,0 +1,129 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+
+    <h1>{{ page_title }}</h1>
+
+    <p>
+        Register and manage devices that connect to the hotel's Wi-Fi.
+    </p>
+
+</div>
+
+<div class="card">
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div class="form-group">
+
+            <label for="{{ form.name.id_for_label }}">
+                Device Name
+            </label>
+
+            {{ form.name }}
+
+            {{ form.name.errors }}
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="{{ form.mac_address.id_for_label }}">
+                MAC Address
+            </label>
+
+            {{ form.mac_address }}
+
+            {{ form.mac_address.errors }}
+
+            <small>
+                Example: AA:BB:CC:11:22:33
+            </small>
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="{{ form.device_type.id_for_label }}">
+                Device Type
+            </label>
+
+            {{ form.device_type }}
+
+            {{ form.device_type.errors }}
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                {{ form.is_exempt }}
+                Exempt from guest Wi-Fi authentication
+            </label>
+
+            {{ form.is_exempt.errors }}
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                {{ form.is_active }}
+                Device is active
+            </label>
+
+            {{ form.is_active.errors }}
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label for="{{ form.description.id_for_label }}">
+                Description
+            </label>
+
+            {{ form.description }}
+
+            {{ form.description.errors }}
+
+        </div>
+
+
+        <div style="margin-top: 20px;">
+
+            <button
+                type="submit"
+                class="btn btn-primary"
+            >
+                Save Device
+            </button>
+
+            <a
+                href="{% url 'wifi:device_list' %}"
+                class="btn btn-secondary"
+            >
+                Cancel
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

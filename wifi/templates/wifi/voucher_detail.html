@@ -1,0 +1,186 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+
+    <h1>Wi-Fi Voucher</h1>
+
+    <p>
+        View voucher access information.
+    </p>
+
+</div>
+
+
+{% if is_new %}
+
+<div class="alert alert-success">
+
+    <strong>Voucher generated successfully.</strong>
+
+    <p>
+        Give this code to the visitor or guest.
+    </p>
+
+</div>
+
+{% endif %}
+
+
+<div class="card">
+
+    <h2>Voucher Code</h2>
+
+    <div
+        style="
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            margin: 20px 0;
+        "
+    >
+        {{ voucher.code }}
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <h2>Voucher Details</h2>
+
+    <table class="table">
+
+        <tr>
+            <th>Profile</th>
+            <td>
+                {{ voucher.profile.name }}
+            </td>
+        </tr>
+
+        <tr>
+            <th>Download Speed</th>
+            <td>
+                {{ voucher.profile.download_speed_mbps }} Mbps
+            </td>
+        </tr>
+
+        <tr>
+            <th>Upload Speed</th>
+            <td>
+                {{ voucher.profile.upload_speed_mbps }} Mbps
+            </td>
+        </tr>
+
+        <tr>
+            <th>Maximum Devices</th>
+            <td>
+                {{ voucher.max_devices }}
+            </td>
+        </tr>
+
+        <tr>
+            <th>Valid From</th>
+            <td>
+                {{ voucher.valid_from|date:"d M Y H:i" }}
+            </td>
+        </tr>
+
+        <tr>
+            <th>Valid Until</th>
+            <td>
+                {{ voucher.valid_until|date:"d M Y H:i" }}
+            </td>
+        </tr>
+
+        <tr>
+            <th>Status</th>
+            <td>
+                {{ voucher.get_status_display }}
+            </td>
+        </tr>
+
+        <tr>
+            <th>Created By</th>
+            <td>
+                {% if voucher.created_by %}
+                    {{ voucher.created_by.username }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+        </tr>
+
+        <tr>
+            <th>Created</th>
+            <td>
+                {{ voucher.created_at|date:"d M Y H:i" }}
+            </td>
+        </tr>
+
+        {% if voucher.used_at %}
+
+            <tr>
+                <th>Used At</th>
+                <td>
+                    {{ voucher.used_at|date:"d M Y H:i" }}
+                </td>
+            </tr>
+
+        {% endif %}
+
+        {% if voucher.notes %}
+
+            <tr>
+                <th>Notes</th>
+                <td>
+                    {{ voucher.notes }}
+                </td>
+            </tr>
+
+        {% endif %}
+
+    </table>
+
+</div>
+{% if voucher.status == "ACTIVE" %}
+
+<div style="margin-top: 20px;">
+
+    <form
+        method="post"
+        action="{% url 'wifi:voucher_revoke' voucher.id %}"
+        onsubmit="return confirm(
+            'Are you sure you want to revoke this voucher? Any active Wi-Fi sessions using it will be terminated.'
+        );"
+    >
+
+        {% csrf_token %}
+
+        <button
+            type="submit"
+            class="btn btn-danger"
+        >
+            Revoke Voucher
+        </button>
+
+    </form>
+
+</div>
+
+{% endif %}
+
+
+<div style="margin-top: 20px;">
+
+    <a
+        href="{% url 'wifi:voucher_list' %}"
+        class="btn btn-secondary"
+    >
+        ← Back to Vouchers
+    </a>
+
+</div>
+
+{% endblock %}

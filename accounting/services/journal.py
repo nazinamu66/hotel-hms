@@ -18,91 +18,131 @@ def post_journal_entry(
     lines,
     reference=None,
     created_by=None,
-    entry_type="NORMAL",   # ✅ ADD THIS
-
+    entry_type="NORMAL",
 ):
-    
+
     from decimal import Decimal
 
     if not lines or len(lines) < 2:
         raise ValueError("Journal entry must have at least 2 lines.")
 
-    total_debit = sum(Decimal(l.get("debit", 0)) for l in lines)
-    total_credit = sum(Decimal(l.get("credit", 0)) for l in lines)
+    total_debit = Decimal("0")
+    total_credit = Decimal("0")
+
+    for line in lines:
+
+        debit = Decimal(str(line.get("debit", 0)))
+        credit = Decimal(str(line.get("credit", 0)))
+
+        if debit < 0 or credit < 0:
+            raise ValueError("Negative values not allowed")
+
+        if not debit and not credit:
+            raise ValueError("Line must have debit or credit")
+
+        account = line["account"]
+
+        if account.hotel != hotel:
+            raise ValueError("Account does not belong to this hotel")
+
+        total_debit += debit
+        total_credit += credit
 
     if total_debit != total_credit:
         raise ValueError("Journal entry is not balanced.")
 
     if total_debit <= 0:
         raise ValueError("Amount must be greater than zero.")
-    """
-    lines format:
 
-    [
-        {"account": account_obj, "debit": 100},
-        {"account": account_obj, "credit": 100},
-    ]
-    """
+    # 🔥 IDEMPOTENCY CHECK
+    if reference:
+        existing = JournalEntry.objects.filter(
+            hotel=hotel,
+            reference=reference,
+            entry_type=entry_type
+        ).first()
 
-    total_debit = sum(Decimal(l.get("debit", 0)) for l in lines)
-    total_credit = sum(Decimal(l.get("credit", 0)) for l in lines)
+        if existing:
+            return existing
 
-    if total_debit != total_credit:
-        raise ValueError("Journal entry is not balanced.")
-    
     business_day = get_current_business_day(hotel)
 
     entry = JournalEntry.objects.create(
         hotel=hotel,
         description=description,
         date=business_day.date,
-        business_day=business_day,   # 🔥 IMPORTANT
+        business_day=business_day,
         reference=reference,
         created_by=created_by,
-        entry_type=entry_type   # ✅ ADD THIS
-
+        entry_type=entry_type
     )
 
-    for line in lines:
-
-        JournalLine.objects.create(
-            journal=entry,   # ✅ FIXED
+    JournalLine.objects.bulk_create([
+        JournalLine(
+            journal=entry,
             account=line["account"],
-            debit=line.get("debit", 0),
-            credit=line.get("credit", 0)
+            debit=Decimal(str(line.get("debit", 0))),
+            credit=Decimal(str(line.get("credit", 0)))
         )
+        for line in lines
+    ])
 
     return entry
 
 def get_account(hotel, code):
     return Account.objects.get(hotel=hotel, code=code)
 
+def get_system_account(hotel,system_key,):
+    return Account.objects.get(
+        hotel=hotel,
+        system_key=system_key,
+        is_system=True,
+    )
+
 # accounting/services/journal.py
 
 
-def record_transaction_by_slug(
-    source_slug=None,
-    destination_slug=None,
-    amount=0,
-    description="",
-    hotel=None,
+def record_transaction(
+    debit_system_key,
+    credit_system_key,
+    amount,
+    description,
+    hotel,
     created_by=None,
-    entry_type="NORMAL",   # ✅ ADD
-
+    entry_type="NORMAL",
+    reference=None,
 ):
 
     if not hotel:
         raise ValueError("Hotel is required")
 
-    source = Account.objects.filter(slug=source_slug, hotel=hotel).first()
-    destination = Account.objects.filter(slug=destination_slug, hotel=hotel).first()
+    if amount <= 0:
+        raise ValueError("Amount must be greater than zero")
 
-    if not source or not destination:
-        raise ValueError("Invalid account slug(s)")
+    debit_account = get_system_account(
+        hotel,
+        debit_system_key,
+    )
+
+    credit_account = get_system_account(
+        hotel,
+        credit_system_key,
+    )
+
+    if debit_account == credit_account:
+        raise ValueError(
+            "Debit and credit accounts cannot be the same"
+        )
 
     lines = [
-        {"account": source, "debit": amount},
-        {"account": destination, "credit": amount},
+        {
+            "account": debit_account,
+            "debit": amount,
+        },
+        {
+            "account": credit_account,
+            "credit": amount,
+        },
     ]
 
     return post_journal_entry(
@@ -110,6 +150,6 @@ def record_transaction_by_slug(
         description=description,
         lines=lines,
         created_by=created_by,
-        entry_type="NORMAL",   # ✅ ADD
-
+        entry_type=entry_type,
+        reference=reference,
     )

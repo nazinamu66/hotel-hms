@@ -800,8 +800,8 @@ def kitchen_ticket_served(request, ticket_id):
             reference=f"KOT-{ticket.id}"
         )
 
-    from accounting.services.postings.cogs import post_cogs_for_order
-    post_cogs_for_order(ticket.order)
+    from hotel_hms.core.workflows.finalize_order import finalize_order
+    finalize_order(ticket.order)
 
     ticket.status = "SERVED"
     ticket.save(update_fields=["status"])

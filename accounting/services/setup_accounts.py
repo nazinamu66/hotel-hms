@@ -4,23 +4,48 @@ from accounting.constants import DEFAULT_ACCOUNTS
 
 def create_system_accounts(hotel):
     """
-    Creates default chart of accounts for a hotel.
+    Create or synchronize the default Chart of Accounts
+    for a hotel.
     """
 
     created = []
+    updated = []
 
     for acc in DEFAULT_ACCOUNTS:
 
-        account, is_created = Account.objects.get_or_create(
+        account, was_created = Account.objects.update_or_create(
             hotel=hotel,
             code=acc["code"],
             defaults={
                 "name": acc["name"],
-                "account_type": acc["type"]
-            }
+                "account_type": acc["type"],
+                "system_key": acc.get("system_key"),
+                "is_system": acc.get("is_system", True),
+                "allow_posting": acc.get(
+                    "allow_posting",
+                    True,
+                ),
+                "allow_manual_entries": acc.get(
+                    "allow_manual_entries",
+                    True,
+                ),
+                "is_active": acc.get(
+                    "is_active",
+                    True,
+                ),
+                "display_order": acc.get(
+                    "display_order",
+                    0,
+                ),
+            },
         )
 
-        if is_created:
+        if was_created:
             created.append(account.name)
+        else:
+            updated.append(account.name)
 
-    return created
+    return {
+        "created": created,
+        "updated": updated,
+    }

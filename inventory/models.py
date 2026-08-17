@@ -25,14 +25,28 @@ from django.utils.text import slugify
 
 class Hotel(models.Model):
 
-    name = models.CharField(max_length=150, unique=True)
-    slug = models.SlugField(unique=True, blank=True)
+    name = models.CharField(
+        max_length=150,
+        unique=True,
+    )
 
-    location = models.CharField(max_length=150, blank=True)
+    slug = models.SlugField(
+        unique=True,
+        blank=True,
+    )
 
-    is_active = models.BooleanField(default=True)
+    location = models.CharField(
+        max_length=150,
+        blank=True,
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
 
     def save(self, *args, **kwargs):
 
@@ -43,15 +57,6 @@ class Hotel(models.Model):
 
     def __str__(self):
         return self.name
-    # inventory/models.py
-
-    def save(self, *args, **kwargs):
-        is_new = self.pk is None
-        super().save(*args, **kwargs)
-
-        if is_new:
-            from accounting.services.setup_accounts import create_system_accounts
-            create_system_accounts(self)
 
 class HotelFeature(models.Model):
 
@@ -65,6 +70,7 @@ class HotelFeature(models.Model):
         ("POOL", "Swimming Pool"),
         ("SPA", "Spa"),
         ("BOUTIQUE", "Boutique Shop"),
+        ("WIFI", "Wi-Fi Management"),
     )
 
     hotel = models.ForeignKey(
@@ -93,13 +99,25 @@ from django.utils.text import slugify
 class Department(models.Model):
 
     DEPARTMENT_TYPES = (
-        ("KITCHEN", "Kitchen"),
-        ("STORE", "Store"),
-        ("RESTAURANT", "Restaurant"),
+
+        # ---------------- Operations ----------------
+
         ("FRONTDESK", "Front Desk"),
         ("HOUSEKEEPING", "Housekeeping"),
+        ("RESTAURANT", "Restaurant"),
+        ("KITCHEN", "Kitchen"),
+        ("STORE", "Store"),
         ("LAUNDRY", "Laundry"),
         ("GYM", "Gym"),
+
+        # ---------------- Administration ----------------
+
+        ("ACCOUNTING", "Accounting"),
+        ("ADMINISTRATION", "Administration"),
+        ("HUMAN_RESOURCES", "Human Resources"),
+        ("MAINTENANCE", "Maintenance"),
+        ("SECURITY", "Security"),
+        ("IT", "Information Technology"),
     )
 
     hotel = models.ForeignKey(
@@ -108,28 +126,21 @@ class Department(models.Model):
         related_name="departments",
     )
 
+    code = models.CharField(
+        max_length=10,
+        unique=False,
+    )
+
     name = models.CharField(max_length=100)
+
     slug = models.SlugField(blank=True)
 
     department_type = models.CharField(
         max_length=30,
-        choices=DEPARTMENT_TYPES
+        choices=DEPARTMENT_TYPES,
     )
 
     is_active = models.BooleanField(default=True)
-
-    class Meta:
-        unique_together = ("hotel", "name")
-
-    def save(self, *args, **kwargs):
-
-        if not self.slug:
-            self.slug = slugify(self.name)
-
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.hotel.name} - {self.name}"    
 
 class Supplier(models.Model):
 
@@ -466,9 +477,9 @@ class PurchaseOrder(models.Model):
             stock_in(
                 product=item.product,
                 department=self.department,
-                quantity=item.quantity,  # ✅ FIXED
+                quantity=item.purchase_quantity,
                 user=user,
-                reference=f"PO-{self.id}"
+                reference=f"PO-{self.id}",
             )
 
         self.status = "RECEIVED"

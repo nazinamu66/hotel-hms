@@ -1,0 +1,142 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <h2>Create Account</h2>
+
+        <a
+            href="{% url 'accounting:chart' %}"
+            class="btn btn-secondary"
+        >
+            Back to Chart of Accounts
+        </a>
+
+    </div>
+
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <div class="card mb-4">
+
+            <div class="card-header">
+                Account Information
+            </div>
+
+            <div class="card-body">
+
+                {{ account_form.non_field_errors }}
+
+                {% for field in account_form %}
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            {{ field.label }}
+                        </label>
+
+                        {{ field }}
+
+                        {% if field.errors %}
+                            <div class="text-danger">
+                                {{ field.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="bank-section"
+            class="card mb-4"
+        >
+
+            <div class="card-header">
+                Bank Account Information
+            </div>
+
+            <div class="card-body">
+
+                {% for field in bank_form %}
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            {{ field.label }}
+                        </label>
+
+                        {{ field }}
+
+                        {% if field.errors %}
+                            <div class="text-danger">
+                                {{ field.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+
+        <button
+            type="submit"
+            class="btn btn-primary"
+        >
+            Create Account
+        </button>
+
+    </form>
+
+</div>
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const accountType =
+        document.getElementById("id_account_type");
+
+    const bankSection =
+        document.getElementById("bank-section");
+
+    function toggleBankFields() {
+
+        if (accountType.value === "bank") {
+
+            bankSection.style.display = "block";
+
+        } else {
+
+            bankSection.style.display = "none";
+
+        }
+    }
+
+    accountType.addEventListener(
+        "change",
+        toggleBankFields
+    );
+
+    toggleBankFields();
+
+});
+
+</script>
+
+{% endblock %}

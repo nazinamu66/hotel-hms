@@ -14,4 +14,6 @@ urlpatterns = [
     path("journal/", views.journal_view, name="journal"),
     path("reports/trial-balance/", views.trial_balance, name="trial_balance"),
     path("journal/<int:journal_id>/", views.journal_detail, name="journal_detail"),
+    path("accounts/create/",views.create_account,name="create_account",),
+    path("accounts/<int:account_id>/edit/",views.edit_account,name="edit_account",),
 ]

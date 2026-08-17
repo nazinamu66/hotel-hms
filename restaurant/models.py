@@ -117,6 +117,7 @@ class POSOrder(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     is_posted = models.BooleanField(default=False)
+    is_cogs_posted = models.BooleanField(default=False)
     # Refund tracking
     is_refunded = models.BooleanField(default=False)
     refunded_at = models.DateTimeField(null=True, blank=True)
@@ -164,21 +165,19 @@ class POSOrder(models.Model):
         if self.status != "OPEN":
             raise ValidationError("Only OPEN orders can be charged.")
 
-        hotel = self._validate_hotel_integrity()
+        self._validate_hotel_integrity()
 
         total = Decimal("0.00")
 
         restaurant = self.department
 
-        kitchen = Department.objects.filter(
-            hotel=restaurant.hotel,
-            department_type="KITCHEN",
-            is_active=True
-        ).first()
+        
 
         # =========================
         # PROCESS ORDER ITEMS
         # =========================
+        cogs_posted = False
+
         for item in self.items.select_related("menu_item__product"):
 
             product = item.menu_item.product
@@ -187,9 +186,6 @@ class POSOrder(models.Model):
             line_total = qty * item.price
             total += line_total
 
-            # =========================
-            # DRINK STOCK (POS HANDLES)
-            # =========================
             if product.product_type == "DRINK":
 
                 stock = Stock.objects.select_for_update().filter(
@@ -213,7 +209,6 @@ class POSOrder(models.Model):
                     created_by=self.created_by,
                     reference=f"POS-{self.id}"
                 )
-
         # =========================
         # CREATE KITCHEN TICKET (FOOD ONLY)
         # =========================
@@ -252,7 +247,7 @@ class POSOrder(models.Model):
         # =========================
         self.total_amount = total
         self.status = "CHARGED"
-        self.save(update_fields=["total_amount", "status"])
+        self.save(update_fields=["total_amount", "status",])
 
     # =====================================
     # PAY ORDER
@@ -276,86 +271,16 @@ class POSOrder(models.Model):
         self.status = "PAID"
         self.save(update_fields=["status"])
 
-    # =====================================
-    # REFUND ORDER
-    # =====================================
     @transaction.atomic
-    def refund(self, user, reason=""):
+    def refund(order, user, reason=""):
 
-        if self.is_refunded:
-            raise ValidationError("Order already refunded.")
+        from restaurant.workflows.refund_order import refund_order
 
-        if self.status not in ["CHARGED", "PAID"]:
-            raise ValidationError("Only charged or paid orders can be refunded.")
-
-        if self.status == "CANCELLED":
-            raise ValidationError("Cancelled orders cannot be refunded.")
-
-        if not user:
-            raise ValidationError("Refund user required.")
-
-        hotel = self._validate_hotel_integrity()
-
-        # 1️⃣ Restore stock to restaurant department
-        for item in self.items.select_related("menu_item__product"):
-
-            stock = Stock.objects.select_for_update().filter(
-                product=item.menu_item.product,
-                department=self.department
-            ).first()
-
-            if not stock:
-                stock = Stock.objects.create(
-                    product=item.menu_item.product,
-                    department=self.department,
-                    quantity=0
-                )
-
-            stock.quantity += item.quantity
-            stock.save(update_fields=["quantity"])
-
-            StockMovement.objects.create(
-                product=item.menu_item.product,
-                to_department=self.department,
-                quantity=item.quantity,
-                movement_type="IN",
-                created_by=user,
-                reference=f"POS-REFUND-{self.id}"
-            )
-
-        # 2️⃣ Reverse financials
-        if self.status == "PAID":
-            Payment.objects.create(
-                folio=self.folio,
-                amount=-self.total_amount,
-                method="REFUND",
-                collected_by=user,
-                reference=f"POS-REFUND-{self.id}"
-            )
-
-        Charge.objects.create(
-            folio=self.folio,
-            description=f"Refund for POS Order #{self.id}",
-            department=self.department,
-            amount=-self.total_amount,
-            reference=f"POS-REFUND-{self.id}"
+        return refund_order(
+            order=order,
+            user=user,
+            reason=reason,
         )
-
-        self.is_refunded = True
-        self.refunded_at = timezone.now()
-        self.refunded_by = user
-        self.refund_reason = reason
-        self.status = "CANCELLED"
-
-        self.save(update_fields=[
-            "is_refunded",
-            "refunded_at",
-            "refunded_by",
-            "refund_reason",
-            "status"
-        ])
-
-
 # =========================
 # POS ORDER ITEM (LINE ITEM)
 # =========================
@@ -368,6 +293,11 @@ class POSOrderItem(models.Model):
     menu_item = models.ForeignKey(MenuItem, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    cost_at_sale = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0
+    )
 
     def __str__(self):
         return f"{self.menu_item} x {self.quantity}"

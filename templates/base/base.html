@@ -159,6 +159,32 @@
 </div>
 {% endif %}
 
+<!-- WI-FI -->
+{% if user.role == "MANAGER" or user.role == "ADMIN" or user.role == "DIRECTOR" %}
+
+<h4 class="menu-toggle" onclick="toggleMenu('wifi_menu', this)">
+    <span class="arrow">▸</span> Wi-Fi
+</h4>
+
+<div id="wifi_menu" class="menu-section">
+
+    <a href="{% url 'wifi:profile_list' %}">
+        Profiles
+    </a>
+
+    <a href="{% url 'wifi:account_list' %}">
+        Guest Accounts
+    </a>
+    
+    <a href="{% url 'wifi:device_list' %}">
+        Devices
+    </a>
+
+
+</div>
+
+{% endif %}
+
 <!-- STORE -->
 {% feature_enabled user "STORE" as store_enabled %}
 

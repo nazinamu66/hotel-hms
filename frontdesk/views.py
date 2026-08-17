@@ -15,6 +15,8 @@ from django.db.models import Q
 from frontdesk.services import get_available_rooms
 from datetime import timedelta, datetime
 from maintenance.models import MaintenanceTicket
+from django.core.exceptions import ValidationError
+from frontdesk.workflows.check_in import check_in_guest
 
 
 
@@ -292,107 +294,65 @@ def room_board(request):
 
 
 @role_required("FRONTDESK")
-@transaction.atomic
 def check_in(request, room_id):
 
     room = get_object_or_404(
         Room,
         id=room_id,
-        hotel=request.user.department.hotel
+        hotel=request.user.department.hotel,
     )
-
-    # Prevent check-in if room is occupied
-    if room.status in ["OCCUPIED", "OCCUPIED_DIRTY"]:
-        messages.error(request, "Room is already occupied.")
-        return redirect("/frontdesk/")
 
     if request.method == "POST":
 
-        first_name = request.POST.get("first_name")
-        last_name = request.POST.get("last_name")
-        phone = request.POST.get("phone")
-        email = request.POST.get("email")
+        data = {
+            "first_name": request.POST.get("first_name"),
+            "last_name": request.POST.get("last_name"),
+            "phone": request.POST.get("phone"),
+            "email": request.POST.get("email"),
+            "nationality": request.POST.get("nationality"),
+            "id_number": request.POST.get("id_number"),
+            "expected_checkout": request.POST.get(
+                "expected_checkout"
+            ),
+        }
 
-        nationality = request.POST.get("nationality")
-        id_number = request.POST.get("id_number")
-        expected_checkout = request.POST.get("expected_checkout")
-
-        if not first_name or not last_name:
-            messages.error(request, "First and last name are required.")
-            return redirect(request.path)
-
-        guest = None
-
-        # 🔎 Try find returning guest
-        if phone:
-            guest = Guest.objects.filter(
-                phone=phone,
-                hotel=room.hotel
-            ).first()
-
-        # 🆕 Create guest if not found
-        if not guest:
-            guest = Guest.objects.create(
-                first_name=first_name,
-                last_name=last_name,
-                phone=phone,
-                email=email,
-                nationality=nationality,
-                id_number=id_number,
-                hotel=room.hotel
-            )
-        else:
-            # Update guest info if changed
-            guest.first_name = first_name
-            guest.last_name = last_name
-            guest.email = email
-            guest.nationality = nationality
-            guest.id_number = id_number
-            guest.save()
-
-        # 🔐 Ensure no active stay exists
-        existing = Folio.get_active_room_folio(room)
-
-        if existing:
-            messages.error(request, "Room already has an active stay.")
-            return redirect("/frontdesk/")
-
-        # 📂 Create folio
-        folio = Folio.objects.create(
-            folio_type="ROOM",
-            room=room,
-            guest=guest,
-            hotel=room.hotel
-        )
-
-        # Optional expected checkout
-        if expected_checkout:
-            folio.check_out_at = expected_checkout
-            folio.save(update_fields=["check_out_at"])
-
-        # 💰 Apply first night charge
         try:
-            folio.apply_daily_room_charge(charged_by=request.user)
-        except Exception as e:
-            messages.error(request, str(e))
+
+            folio = check_in_guest(
+                room=room,
+                user=request.user,
+                data=data,
+            )
+
+            messages.success(
+                request,
+                f"{folio.guest.full_name} checked into Room "
+                f"{room.room_number}"
+            )
+
             return redirect("/frontdesk/")
 
-        # 🛏 Update room status
-        room.refresh_status()
+        except ValidationError as e:
 
-        messages.success(
-            request,
-            f"{guest.full_name} checked into Room {room.room_number}"
-        )
+            messages.error(
+                request,
+                str(e),
+            )
 
-        return redirect("/frontdesk/")
+        except Exception as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
 
     return render(
         request,
         "frontdesk/check_in.html",
-        {"room": room}
+        {
+            "room": room,
+        },
     )
-
 
 @role_required('FRONTDESK', 'MANAGER', 'ADMIN')
 def active_stay(request, room_id):
@@ -484,102 +444,129 @@ def active_stay(request, room_id):
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def extend_stay(request, room_id):
 
+    from frontdesk.workflows.extend_stay import (
+        extend_guest_stay,
+        get_active_folio,
+    )
+
     room = get_object_or_404(
         Room,
         id=room_id,
-        hotel=request.user.department.hotel
+        hotel=request.user.department.hotel,
     )
 
-    folio = Folio.get_active_room_folio(room)
-
-    if not folio:
-        messages.error(request, "No active stay found.")
+    try:
+        folio = get_active_folio(room)
+    except ValidationError as e:
+        messages.error(request, str(e))
         return redirect("/frontdesk/")
 
     if request.method == "POST":
 
-        new_date = request.POST.get("new_checkout")
+        try:
 
-        if not new_date:
-            messages.error(request, "Checkout date required.")
+            extend_guest_stay(
+                room=room,
+                new_checkout=request.POST.get("new_checkout"),
+            )
+
+        except ValidationError as e:
+
+            messages.error(request, str(e))
             return redirect(request.path)
-
-        folio.check_out_at = new_date
-        folio.save(update_fields=["check_out_at"])
 
         messages.success(
             request,
-            f"Stay extended until {new_date}"
+            "Stay extended successfully.",
         )
 
-        return redirect(f"/frontdesk/stay/{room.id}/")
+        return redirect(
+            "frontdesk_active_stay",
+            room.id,
+        )
 
     return render(
         request,
         "frontdesk/extend_stay.html",
         {
             "room": room,
-            "folio": folio
-        }
+            "folio": folio,
+        },
     )
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
-@transaction.atomic
 def change_room(request, room_id):
+
+    from frontdesk.workflows.change_room import (
+        change_guest_room,
+        get_active_folio,
+    )
 
     room = get_object_or_404(
         Room,
         id=room_id,
-        hotel=request.user.department.hotel
+        hotel=request.user.department.hotel,
     )
 
-    folio = Folio.get_active_room_folio(room)
+    try:
+        folio = get_active_folio(room)
 
-    if not folio:
-        messages.error(request, "No active stay found.")
+    except ValidationError as e:
+
+        messages.error(
+            request,
+            str(e),
+        )
+
         return redirect("/frontdesk/")
 
-    # rooms that can receive guest
-    available_rooms = Room.objects.filter(
-        hotel=room.hotel,
-        status="AVAILABLE"
-    ).exclude(id=room.id)
+    available_rooms = (
+        Room.objects
+        .filter(
+            hotel=room.hotel,
+            status="AVAILABLE",
+        )
+        .exclude(id=room.id)
+    )
 
     if request.method == "POST":
 
-        new_room_id = request.POST.get("new_room")
+        try:
 
-        if not new_room_id:
-            messages.error(request, "Please select a room.")
+            old_room, new_room = change_guest_room(
+                room=room,
+                new_room_id=request.POST.get("new_room"),
+            )
+
+        except ValidationError as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
             return redirect(request.path)
 
-        new_room = get_object_or_404(
-            Room,
-            id=new_room_id,
-            hotel=room.hotel
-        )
+        except Exception as e:
 
-        if new_room.status != "AVAILABLE":
-            messages.error(request, "Selected room is not available.")
+            messages.error(
+                request,
+                str(e),
+            )
+
             return redirect(request.path)
-
-        old_room = folio.room
-
-        # move folio
-        folio.room = new_room
-        folio.save(update_fields=["room"])
-
-        # update statuses
-        old_room.status = "VACANT_DIRTY"
-        old_room.save(update_fields=["status"])
-
-        new_room.refresh_status()
 
         messages.success(
             request,
-            f"Guest moved from Room {old_room.room_number} to {new_room.room_number}"
+            f"Guest moved from Room "
+            f"{old_room.room_number} "
+            f"to Room "
+            f"{new_room.room_number}",
         )
 
-        return redirect(f"/frontdesk/stay/{new_room.id}/")
+        return redirect(
+            "frontdesk_active_stay",
+            new_room.id,
+        )
 
     return render(
         request,
@@ -587,100 +574,72 @@ def change_room(request, room_id):
         {
             "room": room,
             "folio": folio,
-            "available_rooms": available_rooms
-        }
+            "available_rooms": available_rooms,
+        },
     )
-
-@role_required("FRONTDESK", "MANAGER", "ADMIN")
-def checkout(request, room_id):
-    room = get_object_or_404(
-        Room,
-        id=room_id,
-        hotel=request.user.department.hotel
-    )
-    folio = Folio.get_active_room_folio(room)
-
-    if not folio:
-        messages.error(request, "No active stay found.")
-        return redirect("/frontdesk/")
-
-    # 🔐 Normal staff cannot checkout with balance
-    if folio.balance != 0 and request.user.role == "FRONTDESK":
-        messages.error(
-            request,
-            "Outstanding balance. Manager approval required."
-        )
-        return redirect("frontdesk_active_stay", room.id)
-
-    try:
-        folio.check_out_at = timezone.now()
-        folio.charge_room_stay(charged_by=request.user)
-        folio.is_closed = True
-        folio.save()
-
-        room.status = "VACANT_DIRTY"
-        room.save(update_fields=["status"])
-
-    except Exception as e:
-        messages.error(request, str(e))
-        return redirect("frontdesk_active_stay", room.id)
-
-    messages.success(
-        request,
-        f"Room {room.room_number} checked out successfully."
-    )
-    return redirect("/frontdesk/")
-
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def take_payment(request, room_id):
+
+    from frontdesk.workflows.payment import (
+        take_payment as process_payment,
+    )
+
     room = get_object_or_404(
         Room,
         id=room_id,
-        hotel=request.user.department.hotel
+        hotel=request.user.department.hotel,
     )
-    folio = Folio.get_active_room_folio(room)
-
-    if not folio:
-        messages.error(request, "No active stay found.")
-        return redirect("/frontdesk/")
 
     if request.method == "POST":
-        amount = Decimal(request.POST.get("amount", "0"))
+
+        amount = Decimal(
+            request.POST.get("amount", "0")
+        )
+
         method = request.POST.get("method")
         reference = request.POST.get("reference", "")
         note = request.POST.get("note", "")
 
-        if amount <= 0:
-            messages.error(request, "Invalid payment amount.")
+        try:
+
+            process_payment(
+                room=room,
+                user=request.user,
+                amount=amount,
+                method=method,
+                reference=reference,
+                note=note,
+            )
+
+        except ValidationError as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
             return redirect(request.path)
 
-        if amount > folio.balance:
-            messages.error(request, "Payment exceeds outstanding balance.")
+        except Exception as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
             return redirect(request.path)
 
-        if method in ["POS", "TRANSFER"] and not reference:
-            messages.error(request, "Reference is required for this payment method.")
-            return redirect(request.path)
-
-        payment = Payment.objects.create(
-            folio=folio,
-            amount=amount,
-            method=method,
-            reference=reference,
-            note=note,
-            collected_by=request.user,
+        messages.success(
+            request,
+            "Payment recorded successfully.",
         )
 
-        # 🔥 ACCOUNTING HOOK
-        try:
-            from accounting.services.postings.payment import post_payment
-            post_payment(payment)
-        except Exception as e:
-            print("Accounting error (payment):", e)
-
-        messages.success(request, "Payment recorded successfully.")
-        return redirect("frontdesk_active_stay", room.id)
+        return redirect(
+            "frontdesk_active_stay",
+            room.id,
+        )
+    folio = Folio.get_active_room_folio(room)
 
     return render(
         request,
@@ -691,42 +650,114 @@ def take_payment(request, room_id):
         }
     )
 
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def checkout(request, room_id):
+
+    from frontdesk.workflows.checkout import checkout_guest
+
+    room = get_object_or_404(
+        Room,
+        id=room_id,
+        hotel=request.user.department.hotel,
+    )
+
+    try:
+
+        checkout_guest(
+            room=room,
+            user=request.user,
+        )
+
+    except ValidationError as e:
+
+        messages.error(
+            request,
+            str(e),
+        )
+
+        return redirect(
+            "frontdesk_active_stay",
+            room.id,
+        )
+
+    except Exception as e:
+
+        messages.error(
+            request,
+            str(e),
+        )
+
+        return redirect(
+            "frontdesk_active_stay",
+            room.id,
+        )
+
+    messages.success(
+        request,
+        f"Room {room.room_number} checked out successfully.",
+    )
+
+    return redirect("/frontdesk/")
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR", "FRONTDESK")
 @transaction.atomic
 def night_audit(request):
 
+    from frontdesk.workflows.night_audit import (
+        run_night_audit,
+    )
+
     hotel = request.user.department.hotel
 
     if request.method == "POST":
 
-        active_folios = Folio.objects.filter(
-            folio_type="ROOM",
-            hotel=hotel,
-            is_closed=False
-        ).select_related("room", "room__category")
+        try:
 
-        charged = 0
+            result = run_night_audit(
+                hotel=hotel,
+                user=request.user,
+            )
 
-        for folio in active_folios:
+        except ValidationError as e:
 
-            before = folio.last_room_charge_date
+            messages.error(
+                request,
+                str(e),
+            )
 
-            folio.apply_daily_room_charge(charged_by=request.user)
+            return redirect(
+                "frontdesk_room_board",
+            )
 
-            if folio.last_room_charge_date != before:
-                charged += 1
+        except Exception as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
+            return redirect(
+                "frontdesk_room_board",
+            )
+
+        room_result = result["room_charges"]
 
         messages.success(
             request,
-            f"Night Audit complete. {charged} room charges applied."
+            (
+                "Night Audit complete. "
+                f"{room_result['charged']} room charges applied. "
+                f"{room_result['failed']} failed."
+            ),
         )
 
-        return redirect("frontdesk_room_board")
+        return redirect(
+            "frontdesk_room_board",
+        )
 
     return render(
         request,
-        "frontdesk/night_audit.html"
+        "frontdesk/night_audit.html",
     )
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
@@ -750,9 +781,12 @@ def reservation_list(request):
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def create_reservation(request):
 
+    from frontdesk.workflows.reservation import (
+        create_reservation as create_reservation_workflow,
+    )
+
     hotel = request.user.department.hotel
 
-    # Categories that exist in this hotel
     categories = (
         RoomCategory.objects
         .filter(rooms__hotel=hotel)
@@ -762,53 +796,43 @@ def create_reservation(request):
 
     if request.method == "POST":
 
-        guest_id = request.POST.get("guest")
-        category_id = request.POST.get("category")
-        check_in = request.POST.get("check_in")
-        check_out = request.POST.get("check_out")
+        try:
 
-        if not guest_id or not category_id:
-            messages.error(request, "Guest and room category required.")
-            return redirect(request.path)
+            create_reservation_workflow(
+                hotel=hotel,
+                user=request.user,
+                guest_id=request.POST.get("guest"),
+                category_id=request.POST.get("category"),
+                check_in=request.POST.get("check_in"),
+                check_out=request.POST.get("check_out"),
+            )
 
-        guest = get_object_or_404(
-            Guest,
-            id=guest_id,
-            hotel=hotel
-        )
+        except ValidationError as e:
 
-        category = get_object_or_404(
-            RoomCategory,
-            id=category_id
-        )
-
-        # Check availability
-        available_rooms = get_available_rooms(
-            hotel,
-            category,
-            check_in,
-            check_out
-        )
-
-        if not available_rooms.exists():
             messages.error(
                 request,
-                "No rooms available for selected dates."
+                str(e),
             )
+
             return redirect(request.path)
 
-        Reservation.objects.create(
-            guest=guest,
-            hotel=hotel,
-            room_category=category,
-            check_in_date=check_in,
-            check_out_date=check_out,
-            created_by=request.user
+        except Exception as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
+            return redirect(request.path)
+
+        messages.success(
+            request,
+            "Reservation created.",
         )
 
-        messages.success(request, "Reservation created.")
-
-        return redirect("frontdesk_reservations")
+        return redirect(
+            "frontdesk_reservations",
+        )
 
     guests = (
         Guest.objects
@@ -821,49 +845,61 @@ def create_reservation(request):
         "frontdesk/create_reservation.html",
         {
             "guests": guests,
-            "categories": categories
-        }
+            "categories": categories,
+        },
     )
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def reservation_checkin(request, reservation_id):
 
-    reservation = get_object_or_404(Reservation, id=reservation_id)
-
-    if reservation.status != "RESERVED":
-        messages.error(request, "Reservation not valid.")
-        return redirect("frontdesk_reservations")
-
-
-    available_rooms = get_available_rooms(
-        reservation.hotel,
-        reservation.room_category,
-        reservation.check_in_date,
-        reservation.check_out_date
+    from frontdesk.workflows.reservation_checkin import (
+        check_in_reservation,
     )
 
-    available_room = available_rooms.first()
-
-    if not available_room:
-        messages.error(request, "No room available.")
-        return redirect("frontdesk_reservations")
-
-    folio = Folio.objects.create(
-        folio_type="ROOM",
-        guest=reservation.guest,
-        room=available_room,
-        hotel=reservation.hotel
+    reservation = get_object_or_404(
+        Reservation,
+        id=reservation_id,
+        hotel=request.user.department.hotel,
     )
 
-    reservation.room = available_room
-    reservation.status = "CHECKED_IN"
-    reservation.save(update_fields=["room", "status"])
+    try:
 
-    available_room.refresh_status()
+        room, folio = check_in_reservation(
+            reservation=reservation,
+            user=request.user,
+        )
 
-    messages.success(request, "Guest checked in.")
+    except ValidationError as e:
 
-    return redirect("frontdesk_active_stay", available_room.id)
+        messages.error(
+            request,
+            str(e),
+        )
+
+        return redirect(
+            "frontdesk_reservations",
+        )
+
+    except Exception as e:
+
+        messages.error(
+            request,
+            str(e),
+        )
+
+        return redirect(
+            "frontdesk_reservations",
+        )
+
+    messages.success(
+        request,
+        "Guest checked in.",
+    )
+
+    return redirect(
+        "frontdesk_active_stay",
+        room.id,
+    )
 
 
 
@@ -964,35 +1000,54 @@ def reservation_calendar(request):
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def calendar_create_reservation(request):
 
+    from frontdesk.workflows.reservation import (
+        create_reservation,
+    )
+
     hotel = request.user.department.hotel
 
-    room_id = request.GET.get("room")
+    room = get_object_or_404(
+        Room,
+        id=request.GET.get("room"),
+        hotel=hotel,
+    )
+
     check_in = request.GET.get("date")
 
-    room = get_object_or_404(Room, id=room_id, hotel=hotel)
-
-    guests = Guest.objects.filter(hotel=hotel)[:50]
+    guests = Guest.objects.filter(
+        hotel=hotel,
+    )[:50]
 
     if request.method == "POST":
 
-        guest_id = request.POST.get("guest")
-        check_out = request.POST.get("check_out")
+        try:
 
-        guest = get_object_or_404(Guest, id=guest_id, hotel=hotel)
+            create_reservation(
+                hotel=hotel,
+                user=request.user,
+                guest_id=request.POST.get("guest"),
+                room=room,
+                check_in=check_in,
+                check_out=request.POST.get("check_out"),
+            )
 
-        Reservation.objects.create(
-            guest=guest,
-            hotel=hotel,
-            room=room,
-            room_category=room.category,
-            check_in_date=check_in,
-            check_out_date=check_out,
-            created_by=request.user
+        except ValidationError as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
+            return redirect(request.path)
+
+        messages.success(
+            request,
+            "Reservation created.",
         )
 
-        messages.success(request, "Reservation created.")
-
-        return redirect("frontdesk_reservation_calendar")
+        return redirect(
+            "frontdesk_reservation_calendar",
+        )
 
     return render(
         request,
@@ -1000,8 +1055,8 @@ def calendar_create_reservation(request):
         {
             "room": room,
             "check_in": check_in,
-            "guests": guests
-        }
+            "guests": guests,
+        },
     )
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")

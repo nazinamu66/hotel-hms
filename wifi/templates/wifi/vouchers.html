@@ -1,0 +1,108 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+
+    <h1>Wi-Fi Vouchers</h1>
+
+    <p>
+        Generate and manage temporary Wi-Fi access vouchers.
+    </p>
+
+</div>
+
+<div style="margin-bottom: 20px;">
+
+    <a
+        href="{% url 'wifi:voucher_create' %}"
+        class="btn btn-primary"
+    >
+        + Generate Voucher
+    </a>
+
+</div>
+
+
+<div class="card">
+
+    <table class="table">
+
+        <thead>
+            <tr>
+                <th>Voucher</th>
+                <th>Profile</th>
+                <th>Valid From</th>
+                <th>Valid Until</th>
+                <th>Devices</th>
+                <th>Status</th>
+                <th>Created By</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for voucher in vouchers %}
+
+                <tr>
+
+                    <td>
+                        <strong>{{ voucher.code }}</strong>
+                    </td>
+
+                    <td>
+                        {{ voucher.profile.name }}
+                    </td>
+
+                    <td>
+                        {{ voucher.valid_from|date:"d M Y H:i" }}
+                    </td>
+
+                    <td>
+                        {{ voucher.valid_until|date:"d M Y H:i" }}
+                    </td>
+
+                    <td>
+                        {{ voucher.max_devices }}
+                    </td>
+
+                    <td>
+                        {{ voucher.get_status_display }}
+                    </td>
+
+                    <td>
+                        {% if voucher.created_by %}
+                            {{ voucher.created_by.username }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <a
+                            href="{% url 'wifi:voucher_detail' voucher.id %}"
+                        >
+                            View
+                        </a>
+                    </td>
+
+                </tr>
+
+            {% empty %}
+
+                <tr>
+                    <td colspan="8">
+                        No Wi-Fi vouchers have been generated yet.
+                    </td>
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}

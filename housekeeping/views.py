@@ -5,6 +5,8 @@ from django.contrib import messages
 from .models import CleaningAssignment,LostFoundItem
 from accounts.models import User
 from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ValidationError
+
 
 
 @role_required("HOUSEKEEPING", "MANAGER", "ADMIN")
@@ -27,43 +29,56 @@ def dashboard(request):
 from housekeeping.models import CleaningLog
 
 
-@role_required("HOUSEKEEPING", "MANAGER", "ADMIN")
+@role_required("HOUSEKEEPING","MANAGER","ADMIN",)
 def mark_clean(request, room_id):
+
+    from housekeeping.workflows.clean_room import (
+        clean_room,
+    )
 
     room = get_object_or_404(
         Room,
         id=room_id,
-        hotel=request.user.department.hotel
+        hotel=request.user.department.hotel,
     )
 
-    if room.status not in ["VACANT_DIRTY", "OCCUPIED_DIRTY"]:
-        messages.error(request, "Room does not need cleaning.")
-        return redirect("/housekeeping/")
+    try:
 
-    previous_status = room.status
+        clean_room(
+            room=room,
+            user=request.user,
+        )
 
-    # Correct operational logic
-    if room.status == "VACANT_DIRTY":
-        room.status = "AVAILABLE"
+    except ValidationError as e:
 
-    elif room.status == "OCCUPIED_DIRTY":
-        room.status = "OCCUPIED"
+        messages.error(
+            request,
+            str(e),
+        )
 
-    room.save(update_fields=["status"])
+        return redirect(
+            "housekeeping_dashboard",
+        )
 
-    # Create cleaning log
-    CleaningLog.objects.create(
-        room=room,
-        cleaned_by=request.user,
-        previous_status=previous_status
-    )
+    except Exception as e:
+
+        messages.error(
+            request,
+            str(e),
+        )
+
+        return redirect(
+            "housekeeping_dashboard",
+        )
 
     messages.success(
         request,
-        f"Room {room.room_number} cleaned successfully."
+        f"Room {room.room_number} cleaned successfully.",
     )
 
-    return redirect("/housekeeping/")
+    return redirect(
+        "housekeeping_dashboard",
+    )
 
 @role_required("HOUSEKEEPING", "MANAGER", "ADMIN", "DIRECTOR")
 def cleaning_history(request):
@@ -80,45 +95,82 @@ def cleaning_history(request):
         {"logs": logs}
     )
 
-@role_required("HOUSEKEEPING", "MANAGER", "ADMIN")
+@role_required(
+    "HOUSEKEEPING",
+    "MANAGER",
+    "ADMIN",
+)
 def assign_room(request, room_id):
+
+    from housekeeping.workflows.assign_room import (
+        assign_room as assign_room_workflow,
+    )
 
     room = get_object_or_404(
         Room,
         id=room_id,
-        hotel=request.user.department.hotel
+        hotel=request.user.department.hotel,
     )
-
-    # Only department head or manager/admin can assign
-    if (
-        not request.user.is_department_head
-        and request.user.role not in ["MANAGER", "ADMIN"]
-    ):
-        raise PermissionDenied("Only the department head can assign rooms.")
 
     housekeepers = User.objects.filter(
         role="HOUSEKEEPING",
         department=request.user.department,
-        is_active=True
-    ).order_by("username")
+        is_active=True,
+    ).order_by(
+        "username",
+    )
 
     if request.method == "POST":
 
-        user_id = request.POST.get("user")
+        try:
 
-        if not user_id:
-            messages.error(request, "Please select a housekeeper.")
-            return redirect(request.path)
+            assign_room_workflow(
+                room=room,
+                assigned_by=request.user,
+                housekeeper_id=request.POST.get("user"),
+            )
 
-        CleaningAssignment.objects.create(
-            room=room,
-            assigned_to_id=user_id,
-            assigned_by=request.user
+        except PermissionDenied as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
+            return redirect(
+                request.path,
+            )
+
+        except ValidationError as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
+            return redirect(
+                request.path,
+            )
+
+        except Exception as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
+            return redirect(
+                request.path,
+            )
+
+        messages.success(
+            request,
+            f"Room {room.room_number} assigned.",
         )
 
-        messages.success(request, f"Room {room.room_number} assigned.")
-
-        return redirect("housekeeping_dashboard")
+        return redirect(
+            "housekeeping_dashboard",
+        )
 
     return render(
         request,
@@ -126,7 +178,7 @@ def assign_room(request, room_id):
         {
             "room": room,
             "housekeepers": housekeepers,
-        }
+        },
     )
 
 @role_required("HOUSEKEEPING", "MANAGER", "ADMIN", "DIRECTOR")
@@ -147,30 +199,69 @@ def lost_found_list(request):
         {"items": items}
     )
 
-@role_required("HOUSEKEEPING", "MANAGER", "ADMIN")
+@role_required(
+    "HOUSEKEEPING",
+    "MANAGER",
+    "ADMIN",
+)
 def lost_found_create(request):
 
+    from housekeeping.workflows.lost_found import (
+        record_item,
+    )
+
     rooms = Room.objects.filter(
-        hotel=request.user.department.hotel
+        hotel=request.user.department.hotel,
     )
 
     if request.method == "POST":
 
-        room_id = request.POST.get("room")
-        description = request.POST.get("description")
+        room = None
 
-        LostFoundItem.objects.create(
-            room_id=room_id if room_id else None,
-            description=description,
-            found_by=request.user
+        room_id = request.POST.get("room")
+
+        if room_id:
+
+            room = get_object_or_404(
+                Room,
+                id=room_id,
+                hotel=request.user.department.hotel,
+            )
+
+        try:
+
+            record_item(
+                room=room,
+                description=request.POST.get(
+                    "description",
+                ),
+                found_by=request.user,
+            )
+
+        except ValidationError as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
+            return redirect(
+                request.path,
+            )
+
+        messages.success(
+            request,
+            "Item recorded successfully.",
         )
 
-        messages.success(request, "Item recorded successfully.")
-
-        return redirect("housekeeping_lost_found")
+        return redirect(
+            "housekeeping_lost_found",
+        )
 
     return render(
         request,
         "housekeeping/lost_found_create.html",
-        {"rooms": rooms}
+        {
+            "rooms": rooms,
+        },
     )

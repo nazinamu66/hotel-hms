@@ -18,6 +18,8 @@ from core.utils import get_user_hotels
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
+from django.db import transaction
+from inventory.services.setup_hotel import setup_new_hotel
 
 
 
@@ -418,21 +420,48 @@ def hotel_list(request):
 
 
 @role_required("DIRECTOR", "ADMIN")
+@transaction.atomic
 def hotel_create(request):
 
     if request.method == "POST":
 
-        name = request.POST.get("name")
-        location = request.POST.get("location")
+        name = request.POST.get("name", "").strip()
+        location = request.POST.get("location", "").strip()
 
-        Hotel.objects.create(
+        if not name:
+            messages.error(
+                request,
+                "Hotel name is required."
+            )
+
+            return redirect(request.path)
+
+        if Hotel.objects.filter(name__iexact=name).exists():
+            messages.error(
+                request,
+                "A hotel with this name already exists."
+            )
+
+            return redirect(request.path)
+
+        hotel = Hotel.objects.create(
             name=name,
-            location=location
+            location=location,
+        )
+
+        setup_new_hotel(hotel)
+
+        messages.success(
+            request,
+            f"Hotel '{hotel.name}' created and initialized successfully."
         )
 
         return redirect("hotel_list")
 
-    return render(request, "reports/hotel_form.html")
+    return render(
+        request,
+        "reports/hotel_form.html"
+    )
 
 @role_required("DIRECTOR", "ADMIN")
 def department_list(request):

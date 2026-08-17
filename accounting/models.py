@@ -5,17 +5,27 @@ from decimal import Decimal
 from django.db.models import Sum
 from inventory.models import Hotel
 from inventory.models import Supplier
+from accounting.constants import DEBIT_NORMAL_TYPES
+
 
 
 class Account(models.Model):
 
     ACCOUNT_TYPES = [
-        ("asset", "Asset"),
-        ("liability", "Liability"),
+
+        ("cash", "Cash"),
+        ("bank", "Bank"),
+        ("current_asset", "Current Asset"),
+        ("inventory", "Inventory"),
+        ("fixed_asset", "Fixed Asset"),
+        ("current_liability", "Current Liability"),
+        ("long_term_liability", "Long-Term Liability"),
         ("equity", "Equity"),
         ("income", "Income"),
+        ("other_income", "Other Income"),
+        ("cogs", "Cost of Goods Sold"),
         ("expense", "Expense"),
-        ("bank", "Bank"),
+        ("other_expense", "Other Expense"),
     ]
 
     hotel = models.ForeignKey(
@@ -27,8 +37,11 @@ class Account(models.Model):
     code = models.CharField(max_length=20)
 
     name = models.CharField(max_length=255)
+    description = models.TextField(
+    blank=True,
+)
 
-    slug = models.SlugField(unique=True, blank=True)
+    slug = models.SlugField(blank=True)
 
     account_type = models.CharField(
         max_length=20,
@@ -49,6 +62,25 @@ class Account(models.Model):
         default=Decimal("0.00")
     )
 
+    system_key = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+    )
+    allow_manual_entries = models.BooleanField(
+        default=True,
+    )
+
+    is_system = models.BooleanField(
+        default=False,
+    )
+
+    allow_posting = models.BooleanField(
+        default=True,
+    )
+    display_order = models.PositiveIntegerField(
+        default=0,
+    )
     is_active = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -56,9 +88,28 @@ class Account(models.Model):
     class Meta:
         ordering = ["code"]
 
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "slug"],
+                name="unique_account_slug_per_hotel",
+            ),
+            models.UniqueConstraint(
+                fields=["hotel", "code"],
+                name="unique_account_code_per_hotel",
+            ),
+        ]
+
     def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(self.name)
+        # System accounts keep stable slugs because
+        # accounting services depend on them.
+        if self.is_system:
+            if not self.slug:
+                self.slug = slugify(self.name)
+        # User-created accounts get a hotel-safe,
+        # code-based slug.
+        else:
+            if not self.pk:
+                self.slug = f"{slugify(self.name)}-{slugify(self.code)}"
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -69,6 +120,7 @@ class Account(models.Model):
     # from decimal import Decimal
 
     def get_balance(self):
+
         debit = self.journalline_set.aggregate(
             total=Sum("debit")
         )["total"] or Decimal("0.00")
@@ -77,12 +129,85 @@ class Account(models.Model):
             total=Sum("credit")
         )["total"] or Decimal("0.00")
 
-        # Asset, Expense, Bank → Debit normal
-        if self.account_type in ["asset", "expense", "bank"]:
+        if self.account_type in DEBIT_NORMAL_TYPES:
             return self.opening_balance + debit - credit
 
-        # Liability, Equity, Income → Credit normal
-        return self.opening_balance + credit - debit
+        return self.opening_balance + credit - debit    
+    
+
+from django.core.exceptions import ValidationError
+
+
+class BankAccount(models.Model):
+
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.CASCADE,
+        related_name="bank_accounts",
+    )
+
+    account = models.OneToOneField(
+        Account,
+        on_delete=models.PROTECT,
+        related_name="bank_account",
+    )
+
+    bank_name = models.CharField(
+        max_length=100
+    )
+
+    account_name = models.CharField(
+        max_length=150
+    )
+
+    account_number = models.CharField(
+        max_length=50
+    )
+
+    currency = models.CharField(
+        max_length=10,
+        default="NGN",
+    )
+
+    is_default = models.BooleanField(
+        default=False
+    )
+
+    is_active = models.BooleanField(
+        default=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def clean(self):
+
+        # Account may not exist yet during ModelForm validation.
+        # Only validate it when it has actually been assigned.
+
+        if self.account_id:
+
+            account = self.account
+
+            if account.account_type != "bank":
+                raise ValidationError({
+                    "account": (
+                        "BankAccount must be linked "
+                        "to a Bank account."
+                    )
+                })
+
+            if self.hotel_id and self.hotel_id != account.hotel_id:
+                raise ValidationError({
+                    "account": (
+                        "Bank account and accounting "
+                        "account must belong to the same hotel."
+                    )
+                })
+
+    def __str__(self):
+        return f"{self.bank_name} ({self.account_number})"
     
 
 class AccountingPeriod(models.Model):
@@ -167,6 +292,8 @@ class JournalEntry(models.Model):
 
     class Meta:
         ordering = ["-date", "-id"]
+    class Meta:
+        unique_together = ("hotel", "reference", "entry_type")
 
     def __str__(self):
         return f"JE-{self.id} | {self.date}"

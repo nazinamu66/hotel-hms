@@ -2,36 +2,166 @@
 
 {% block content %}
 
-<h2>Chart of Accounts</h2>
+<div class="container-fluid mt-4">
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>Code</th>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Balance</th>
-        </tr>
-    </thead>
+    <div class="d-flex justify-content-between align-items-center mb-4">
 
-    <tbody>
-        {% for acc in accounts %}
-        <tr>
-            <td>{{ acc.code }}</td>
-            <td>
-                <a href="{% url 'accounting:ledger' acc.id %}">
-                    {{ acc.name }}
-                </a>
-            </td>            
-            <td>{{ acc.get_account_type_display }}</td>
-            <td>{{ acc.get_balance|floatformat:2 }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="4">No accounts found</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+        <div>
+            <h2>Chart of Accounts</h2>
+
+            <p class="text-muted mb-0">
+                {{ request.user.department.hotel.name }}
+            </p>
+        </div>
+
+        <a
+            href="{% url 'accounting:create_account' %}"
+            class="btn btn-primary"
+        >
+            + Create Account
+        </a>
+
+    </div>
+
+
+    <!-- SEARCH / FILTER -->
+
+    <div class="card mb-4">
+
+        <div class="card-body">
+
+            <form method="get" class="row g-2">
+
+                <div class="col-md-4">
+
+                    <input
+                        type="text"
+                        name="search"
+                        class="form-control"
+                        placeholder="Search account..."
+                        value="{{ request.GET.search }}"
+                    >
+
+                </div>
+
+
+                <div class="col-md-3">
+
+                    <select
+                        name="account_type"
+                        class="form-select"
+                    >
+
+                        <option value="">
+                            All Types
+                        </option>
+
+                        {% for value, label in account_types %}
+
+                            <option
+                                value="{{ value }}"
+                                {% if request.GET.account_type == value %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <div class="col-md-2">
+
+                    <button
+                        type="submit"
+                        class="btn btn-secondary"
+                    >
+                        Filter
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- CHART OF ACCOUNTS -->
+
+    <div class="card">
+
+        <div class="table-responsive">
+
+            <table class="table table-hover mb-0">
+
+                <thead>
+
+                    <tr>
+
+                        <th style="width: 120px;">
+                            Code
+                        </th>
+
+                        <th>
+                            Account
+                        </th>
+
+                        <th>
+                            Type
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
+                        <th class="text-end">
+                            Balance
+                        </th>
+
+                        <th class="text-end">
+                            Actions
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for item in account_tree %}
+
+                        {% include "accounting/_account_tree_row.html" with item=item %}
+
+                    {% empty %}
+
+                        <tr>
+
+                            <td
+                                colspan="6"
+                                class="text-center py-4"
+                            >
+                                No accounts found.
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
 
 {% endblock %}

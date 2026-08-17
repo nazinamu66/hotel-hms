@@ -1,0 +1,184 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2>Wi-Fi Profiles</h2>
+            <p class="text-muted mb-0">
+                Manage bandwidth and device profiles for guest Wi-Fi.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'wifi:profile_create' %}"
+            class="btn btn-primary"
+        >
+            + Create Profile
+        </a>
+
+    </div>
+
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+
+    <div class="card">
+
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-hover mb-0">
+
+                    <thead>
+
+                        <tr>
+                            <th>Profile</th>
+                            <th>Download</th>
+                            <th>Upload</th>
+                            <th>Devices</th>
+                            <th>Session Timeout</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for profile in profiles %}
+
+                        <tr>
+
+                            <td>
+                                <strong>
+                                    {{ profile.name }}
+                                </strong>
+
+                                {% if profile.description %}
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ profile.description }}
+                                    </small>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ profile.download_speed_mbps }} Mbps
+                            </td>
+
+                            <td>
+                                {{ profile.upload_speed_mbps }} Mbps
+                            </td>
+
+                            <td>
+                                {{ profile.max_devices }}
+                            </td>
+
+                            <td>
+
+                                {% if profile.session_timeout_minutes %}
+
+                                    {{ profile.session_timeout_minutes }}
+                                    minutes
+
+                                {% else %}
+
+                                    No limit
+
+                                {% endif %}
+
+                            </td>
+
+                            <td>
+
+                                {% if profile.is_active %}
+
+                                    <span class="badge bg-success">
+                                        Active
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="badge bg-secondary">
+                                        Inactive
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+                            <td>
+
+                                <a
+                                    href="{% url 'wifi:profile_edit' profile.id %}"
+                                    class="btn btn-sm btn-outline-primary"
+                                >
+                                    Edit
+                                </a>
+
+                                <form
+                                    method="post"
+                                    action="{% url 'wifi:profile_toggle' profile.id %}"
+                                    style="display:inline;"
+                                >
+
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-sm btn-outline-secondary"
+                                    >
+
+                                        {% if profile.is_active %}
+                                            Deactivate
+                                        {% else %}
+                                            Activate
+                                        {% endif %}
+
+                                    </button>
+
+                                </form>
+
+                            </td>
+
+                        </tr>
+
+                        {% empty %}
+
+                        <tr>
+
+                            <td
+                                colspan="7"
+                                class="text-center py-4"
+                            >
+                                No Wi-Fi profiles have been created yet.
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

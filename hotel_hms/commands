@@ -29,3 +29,5 @@ python manage.py createsuperuser
 
 from inventory.models import Hotel
 hotel = Hotel.objects.first()
+
+tree -L 3

@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404,redirect
-from .models import Account, JournalLine
+from .models import Account, JournalLine,BankAccount
 from django.db.models import Sum
 from accounts.decorators import role_required
 from django.contrib import messages
@@ -9,12 +9,23 @@ from accounting.models import JournalEntry
 from django.db.models import Q
 from accounting.utils import get_current_business_day
 from inventory.models import Hotel
+from accounting.constants import DEBIT_NORMAL_TYPES
+from accounting.constants import (INCOME_TYPES,EXPENSE_TYPES,)
+from accounting.constants import (ASSET_TYPES,LIABILITY_TYPES,EQUITY,)
+from django.db import transaction
+from accounting.forms import AccountForm, BankAccountForm
 
 
 
 def trial_balance(request):
 
-    accounts = Account.objects.all().order_by("code")
+    hotel = request.user.hotel
+
+    accounts = (
+        Account.objects
+        .filter(hotel=hotel)
+        .order_by("code")
+    )
 
     data = []
     total_debit = 0
@@ -42,21 +53,80 @@ def trial_balance(request):
     })
 
 
+
 def chart_of_accounts(request):
-    accounts = Account.objects.all().order_by("code")
 
-    return render(request, "accounting/chart_of_accounts.html", {
-        "accounts": accounts
-    })
+    hotel = request.user.hotel
 
+    accounts = (
+        Account.objects
+        .filter(
+            hotel=hotel,
+            is_active=True,
+        )
+        .select_related("parent")
+        .order_by("code")
+    )
 
+    # --------------------------------------------------
+    # BUILD ACCOUNT HIERARCHY
+    # --------------------------------------------------
+
+    account_tree = []
+
+    accounts_by_parent = {}
+
+    for account in accounts:
+
+        parent_id = account.parent_id
+
+        accounts_by_parent.setdefault(
+            parent_id,
+            []
+        ).append(account)
+
+    def build_tree(parent_id=None, level=0):
+
+        tree = []
+
+        for account in accounts_by_parent.get(
+            parent_id,
+            []
+        ):
+
+            tree.append({
+                "account": account,
+                "level": level,
+                "children": build_tree(
+                    account.id,
+                    level + 1,
+                ),
+            })
+
+        return tree
+
+    account_tree = build_tree()
+
+    return render(
+        request,
+        "accounting/chart_of_accounts.html",
+        {
+            "account_tree": account_tree,
+        },
+    )
 
 
 def journal_view(request):
 
-    entries = JournalEntry.objects.prefetch_related("lines__account")\
-        .select_related("created_by")\
+    hotel = request.user.hotel
+
+    entries = (
+        JournalEntry.objects
+        .filter(hotel=hotel)
+        .prefetch_related("lines__account")
+        .select_related("created_by")
         .order_by("-date", "-id")
+    )
 
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
@@ -80,7 +150,11 @@ def journal_view(request):
             Q(reference__icontains=search)
         )
 
-    accounts = Account.objects.all()
+    accounts = (
+        Account.objects
+        .filter(hotel=hotel)
+        .order_by("code")
+    )
 
     for entry in entries:
         entry.total_debit = sum(line.debit for line in entry.lines.all())
@@ -124,7 +198,7 @@ def close_day(request):
 
     # ✅ Directors/Admins don't need department
     if request.user.department:
-        hotel = request.user.department.hotel
+        hotel = request.user.hotel
     else:
         # fallback: get hotel directly (adjust if multi-hotel later)
         from inventory.models import Hotel
@@ -142,7 +216,14 @@ def close_day(request):
 
 def account_ledger(request, account_id):
 
-    account = get_object_or_404(Account, id=account_id)
+    hotel = request.user.hotel
+
+    account = get_object_or_404(
+        Account,
+        id=account_id,
+        hotel=hotel,
+    )
+
     user_id = request.GET.get("user")
 
     from django.contrib.auth import get_user_model
@@ -150,76 +231,146 @@ def account_ledger(request, account_id):
 
     users = User.objects.filter(is_active=True)
 
-    # 🔹 Filters
+    # --------------------------------------------------
+    # FILTERS
+    # --------------------------------------------------
+
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
 
-    lines = JournalLine.objects.filter(
-        account=account
-    ).select_related("journal", "journal__created_by", "journal__business_day")
+    # --------------------------------------------------
+    # BASE JOURNAL LINES
+    # --------------------------------------------------
 
-    # 🔹 Date filtering (BUSINESS DAY)
+    lines = (
+        JournalLine.objects
+        .filter(account=account)
+        .select_related(
+            "journal",
+            "journal__created_by",
+            "journal__business_day",
+        )
+    )
+
+    # --------------------------------------------------
+    # OPENING BALANCE
+    #
+    # Start with the account's configured opening balance.
+    # Then add/subtract transactions before start_date.
+    # --------------------------------------------------
+
+    opening_balance = account.opening_balance
+
     if start_date:
-        lines = lines.filter(journal__business_day__date__gte=start_date)
-    
-    if user_id:
-        lines = lines.filter(journal__created_by_id=user_id)
 
-    if end_date:
-        lines = lines.filter(journal__business_day__date__lte=end_date)
-
-    lines = lines.order_by("journal__date", "id")
-
-    # 🔥 Opening balance (before start_date)
-    opening_balance = 0
-
-    if start_date:
-        opening = JournalLine.objects.filter(
+        opening_lines = JournalLine.objects.filter(
             account=account,
-            journal__business_day__date__lt=start_date
-        ).aggregate(
-            debit=Sum("debit"),
-            credit=Sum("credit")
+            journal__business_day__date__lt=start_date,
         )
 
-        opening_balance = (opening["debit"] or 0) - (opening["credit"] or 0)
+        if user_id:
+            opening_lines = opening_lines.filter(
+                journal__created_by_id=user_id
+            )
+
+        opening = opening_lines.aggregate(
+            debit=Sum("debit"),
+            credit=Sum("credit"),
+        )
+
+        debit_before = opening["debit"] or 0
+        credit_before = opening["credit"] or 0
+
+        if account.account_type in DEBIT_NORMAL_TYPES:
+            opening_balance += debit_before - credit_before
+        else:
+            opening_balance += credit_before - debit_before
+
+    # --------------------------------------------------
+    # APPLY DISPLAY FILTERS
+    # --------------------------------------------------
+
+    if start_date:
+        lines = lines.filter(
+            journal__business_day__date__gte=start_date
+        )
+
+    if end_date:
+        lines = lines.filter(
+            journal__business_day__date__lte=end_date
+        )
+
+    if user_id:
+        lines = lines.filter(
+            journal__created_by_id=user_id
+        )
+
+    # --------------------------------------------------
+    # ORDER
+    # --------------------------------------------------
+
+    lines = lines.order_by(
+        "journal__date",
+        "id",
+    )
+
+    # --------------------------------------------------
+    # RUNNING BALANCE
+    # --------------------------------------------------
 
     balance = opening_balance
+
     ledger_data = []
 
     for line in lines:
 
-        if account.account_type in ["asset", "expense"]:
+        if account.account_type in DEBIT_NORMAL_TYPES:
             balance += line.debit - line.credit
         else:
             balance += line.credit - line.debit
 
         ledger_data.append({
             "date": line.journal.date,
-            "business_day": line.journal.business_day.date if line.journal.business_day else None,
+
+            "business_day": (
+                line.journal.business_day.date
+                if line.journal.business_day
+                else None
+            ),
+
             "description": line.journal.description,
+
             "user": line.journal.created_by,
+
             "debit": line.debit,
+
             "credit": line.credit,
+
             "balance": balance,
+
             "journal_id": line.journal.id,
         })
 
-    return render(request, "accounting/ledger.html", {
-        "account": account,
-        "ledger": ledger_data,
-        "opening_balance": opening_balance,
-        "start_date": start_date,
-        "end_date": end_date,
-        "users": users,          # ✅ HERE
-        "user_id": user_id,      # ✅ HERE
-    })
+    return render(
+        request,
+        "accounting/ledger.html",
+        {
+            "account": account,
+            "ledger": ledger_data,
+            "opening_balance": opening_balance,
+            "start_date": start_date,
+            "end_date": end_date,
+            "users": users,
+            "user_id": user_id,
+        },
+    )
+
 
 def profit_and_loss(request):
 
     # 🔹 Get hotel safely
     if request.user.department:
-        hotel = request.user.department.hotel
+        hotel = request.user.hotel
     else:
         hotel = Hotel.objects.first()
 
@@ -273,7 +424,7 @@ def profit_and_loss(request):
 
     for acc in account_data.values():
 
-        if acc["type"] == "income":
+        if acc["type"] in INCOME_TYPES:
             balance = acc["credit"] - acc["debit"]
             revenue_total += balance
             revenue_data.append({
@@ -281,7 +432,7 @@ def profit_and_loss(request):
                 "amount": balance
             })
 
-        elif acc["type"] == "expense":
+        elif acc["type"] in EXPENSE_TYPES:
             balance = acc["debit"] - acc["credit"]
             expense_total += balance
             expense_data.append({
@@ -305,9 +456,22 @@ def balance_sheet(request):
 
     date = request.GET.get("date")
 
-    assets = Account.objects.filter(account_type="asset")
-    liabilities = Account.objects.filter(account_type="liability")
-    equity = Account.objects.filter(account_type="equity")
+    hotel = request.user.hotel
+
+    assets = Account.objects.filter(
+        hotel=hotel,
+        account_type__in=ASSET_TYPES,
+    )
+
+    liabilities = Account.objects.filter(
+        hotel=hotel,
+        account_type__in=LIABILITY_TYPES,
+    )
+
+    equity = Account.objects.filter(
+        hotel=hotel,
+        account_type=EQUITY,
+    )
 
     def calculate(accounts, normal="debit"):
         data = []
@@ -350,3 +514,269 @@ def balance_sheet(request):
         "equity_total": equity_total,
         "date": date,
     })
+
+@role_required("DIRECTOR", "ACCOUNTANT", "ADMIN", "KITCHEN")
+@transaction.atomic
+def create_account(request):
+
+    hotel = request.user.hotel
+
+    if request.method == "POST":
+
+        account_form = AccountForm(
+            request.POST,
+            hotel=hotel,
+        )
+
+        bank_form = BankAccountForm(request.POST)
+
+        # -----------------------------------------
+        # Validate Account first
+        # -----------------------------------------
+
+        account_valid = account_form.is_valid()
+
+        # -----------------------------------------
+        # Validate Bank form only when needed
+        # -----------------------------------------
+
+        bank_valid = True
+
+        if (
+            account_valid
+            and account_form.cleaned_data["account_type"] == "bank"
+        ):
+            bank_valid = bank_form.is_valid()
+
+        # -----------------------------------------
+        # Stop if anything is invalid
+        # -----------------------------------------
+
+        if not account_valid or not bank_valid:
+
+            return render(
+                request,
+                "accounting/create_account.html",
+                {
+                    "account_form": account_form,
+                    "bank_form": bank_form,
+                }
+            )
+
+        # -----------------------------------------
+        # Create accounting account
+        # -----------------------------------------
+
+        account = account_form.save(commit=False)
+
+        account.hotel = hotel
+
+        # User-created accounts can NEVER
+        # become system accounts.
+        account.is_system = False
+        account.system_key = None
+
+        account.save()
+
+        # -----------------------------------------
+        # Create BankAccount when applicable
+        # -----------------------------------------
+
+        if account.account_type == "bank":
+
+            bank_account = bank_form.save(
+                commit=False
+            )
+
+            bank_account.hotel = hotel
+            bank_account.account = account
+
+            # Explicitly run model validation.
+            bank_account.full_clean()
+
+            bank_account.save()
+
+        # -----------------------------------------
+        # Success
+        # -----------------------------------------
+
+        messages.success(
+            request,
+            f"Account '{account.name}' created successfully."
+        )
+
+        return redirect(
+            "accounting:chart"
+        )
+
+    # -----------------------------------------
+    # GET
+    # -----------------------------------------
+
+    account_form = AccountForm(
+        hotel=hotel
+    )
+
+    bank_form = BankAccountForm()
+
+    return render(
+        request,
+        "accounting/create_account.html",
+        {
+            "account_form": account_form,
+            "bank_form": bank_form,
+        }
+    )
+
+
+@role_required("DIRECTOR","ACCOUNTANT","ADMIN","KITCHEN",)
+
+@transaction.atomic
+def edit_account(request, account_id):
+
+    hotel = request.user.hotel
+
+    account = get_object_or_404(
+        Account,
+        id=account_id,
+        hotel=hotel,
+    )
+
+    # --------------------------------------------------
+    # SYSTEM ACCOUNT PROTECTION
+    # --------------------------------------------------
+
+    if account.is_system:
+        messages.error(
+            request,
+            "System accounts cannot be edited."
+        )
+
+        return redirect(
+            "accounting:chart"
+        )
+
+    # --------------------------------------------------
+    # BANK ACCOUNT
+    # --------------------------------------------------
+
+    try:
+        bank_account = account.bank_account
+    except BankAccount.DoesNotExist:
+        bank_account = None
+
+    # --------------------------------------------------
+    # POST
+    # --------------------------------------------------
+
+    if request.method == "POST":
+
+        account_form = AccountForm(
+            request.POST,
+            instance=account,
+            hotel=hotel,
+        )
+
+        if account_form.is_valid():
+
+            account = account_form.save(
+                commit=False
+            )
+
+            # Never allow these to be changed
+            account.hotel = hotel
+            account.is_system = False
+            account.system_key = None
+
+            account.save()
+
+            # --------------------------------------------------
+            # BANK ACCOUNT
+            # --------------------------------------------------
+
+            if account.account_type == "bank":
+
+                if bank_account:
+
+                    bank_form = BankAccountForm(
+                        request.POST,
+                        instance=bank_account,
+                    )
+
+                else:
+
+                    bank_form = BankAccountForm(
+                        request.POST
+                    )
+
+                if bank_form.is_valid():
+
+                    bank_account = bank_form.save(
+                        commit=False
+                    )
+
+                    bank_account.hotel = hotel
+                    bank_account.account = account
+
+                    bank_account.save()
+
+                else:
+
+                    return render(
+                        request,
+                        "accounting/edit_account.html",
+                        {
+                            "account_form": account_form,
+                            "bank_form": bank_form,
+                            "account": account,
+                        },
+                    )
+
+            messages.success(
+                request,
+                f"Account '{account.name}' updated successfully."
+            )
+
+            return redirect(
+                "accounting:chart"
+            )
+
+        bank_form = (
+            BankAccountForm(
+                request.POST,
+                instance=bank_account,
+            )
+            if bank_account
+            else BankAccountForm(request.POST)
+        )
+
+    # --------------------------------------------------
+    # GET
+    # --------------------------------------------------
+
+    else:
+
+        account_form = AccountForm(
+            instance=account,
+            hotel=hotel,
+        )
+
+        if bank_account:
+
+            bank_form = BankAccountForm(
+                instance=bank_account,
+            )
+
+        else:
+
+            bank_form = BankAccountForm()
+
+    return render(
+        request,
+        "accounting/edit_account.html",
+        {
+            "account_form": account_form,
+            "bank_form": bank_form,
+            "account": account,
+        },
+    )

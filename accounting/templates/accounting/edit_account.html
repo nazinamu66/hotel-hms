@@ -1,0 +1,89 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <h2>
+            Edit Account
+        </h2>
+
+        <a
+            href="{% url 'accounting:chart' %}"
+            class="btn btn-secondary"
+        >
+            ← Back to Chart of Accounts
+        </a>
+
+    </div>
+
+
+    <form method="post">
+
+        {% csrf_token %}
+
+
+        <!-- ========================================= -->
+        <!-- ACCOUNT INFORMATION -->
+        <!-- ========================================= -->
+
+        <div class="card mb-4">
+
+            <div class="card-body">
+
+                <h4 class="mb-3">
+                    Account Information
+                </h4>
+
+                {{ account_form.as_p }}
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- BANK INFORMATION -->
+        <!-- ========================================= -->
+
+        {% if account.account_type == "bank" %}
+
+        <div class="card mb-4">
+
+            <div class="card-body">
+
+                <h4 class="mb-3">
+                    Bank Account Information
+                </h4>
+
+                {{ bank_form.as_p }}
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+        <button
+            type="submit"
+            class="btn btn-primary"
+        >
+            Save Changes
+        </button>
+
+
+        <a
+            href="{% url 'accounting:chart' %}"
+            class="btn btn-secondary"
+        >
+            Cancel
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}
