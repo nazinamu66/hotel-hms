@@ -1,19 +1,10 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
-from billing.models import Folio
 from django.utils import timezone
+from frontdesk.workflows.common import (
+    get_active_folio,
+)
 
-
-def get_active_folio(room):
-
-    folio = Folio.get_active_room_folio(room)
-
-    if not folio:
-        raise ValidationError(
-            "No active stay found."
-        )
-
-    return folio
 
 def validate_checkout(folio):
 
