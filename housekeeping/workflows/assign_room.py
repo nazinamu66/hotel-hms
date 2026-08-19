@@ -5,34 +5,11 @@ from accounts.models import User
 from housekeeping.models import (
     CleaningAssignment,
 )
-
-
-def validate_assigner(user):
-
-    if (
-        not user.is_department_head
-        and user.role not in [
-            "MANAGER",
-            "ADMIN",
-        ]
-    ):
-        raise PermissionDenied(
-            "Only the department head can assign rooms."
-        )
+from .common import (
+    validate_assigner,
+    get_housekeeper,
+)
     
-
-def get_housekeeper(
-    department,
-    user_id,
-):
-
-    return User.objects.get(
-        id=user_id,
-        role="HOUSEKEEPING",
-        department=department,
-        is_active=True,
-    )
-
 
 def validate_room_assignment(room):
 

@@ -1,16 +1,6 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
-
-
-def validate_room(room):
-
-    if room.status not in [
-        "VACANT_DIRTY",
-        "OCCUPIED_DIRTY",
-    ]:
-        raise ValidationError(
-            "Room does not need cleaning."
-        )
+from .common import validate_room_requires_cleaning
 
 
 def mark_room_clean(room):
@@ -56,7 +46,7 @@ def clean_room(
     user,
 ):
 
-    validate_room(room)
+    validate_room_requires_cleaning(room)
 
     previous_status = mark_room_clean(
         room,
