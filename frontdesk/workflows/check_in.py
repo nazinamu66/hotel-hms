@@ -1,5 +1,7 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from datetime import datetime, time
+from django.utils import timezone
 from billing.models import (
     Guest,
     Folio,
@@ -94,7 +96,20 @@ def create_folio(room, guest, expected_checkout):
     )
 
     if expected_checkout:
-        folio.check_out_at = expected_checkout
+
+        if isinstance(expected_checkout, datetime):
+            checkout_at = expected_checkout
+
+        else:
+            checkout_at = timezone.make_aware(
+                datetime.combine(
+                    expected_checkout,
+                    time.min,
+                )
+            )
+
+        folio.check_out_at = checkout_at
+
         folio.save(
             update_fields=[
                 "check_out_at",
@@ -102,7 +117,6 @@ def create_folio(room, guest, expected_checkout):
         )
 
     return folio
-
 
 def post_first_room_charge(folio, user):
 

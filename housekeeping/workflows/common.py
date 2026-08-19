@@ -67,18 +67,17 @@ def get_housekeeper(
 
 def get_active_assignment(room):
     """
-    Return the active cleaning assignment
+    Return the current active cleaning assignment
     for a room.
     """
 
-    return (
-        CleaningAssignment.objects
-        .filter(
-            room=room,
-            status__in=[
-                "ASSIGNED",
-                "IN_PROGRESS",
-            ],
-        )
-        .first()
+    assignments = CleaningAssignment.objects.filter(
+        room_id=room.id,
+        status__in=[
+            "ASSIGNED",
+            "IN_PROGRESS",
+            "INSPECTION",
+        ],
     )
+
+    return assignments.first()

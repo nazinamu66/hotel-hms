@@ -33,6 +33,7 @@ class CleaningAssignment(models.Model):
         ("ASSIGNED", "Assigned"),
         ("IN_PROGRESS", "In Progress"),
         ("DONE", "Done"),
+        ("INSPECTION", "Waiting Inspection"),
     )
 
     room = models.ForeignKey(
@@ -58,10 +59,36 @@ class CleaningAssignment(models.Model):
         choices=STATUS_CHOICES,
         default="ASSIGNED"
     )
+    notes = models.TextField(
+        blank=True,
+    )
 
-    assigned_at = models.DateTimeField(auto_now_add=True)
+    assigned_at = models.DateTimeField(
+        auto_now_add=True,
+    )
 
-    completed_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    inspected_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    inspected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="inspected_cleanings",
+    )
+
 
     def __str__(self):
         return f"Room {self.room.room_number} → {self.assigned_to}"

@@ -9,36 +9,140 @@
 {% block content %}
 
 {% if rooms %}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,200px);gap:15px;">
+
+    <div style="
+        display:grid;
+        grid-template-columns:repeat(auto-fill,220px);
+        gap:15px;
+    ">
+
         {% for room in rooms %}
+
             <div style="
                 padding:15px;
                 border-radius:8px;
-                background:
-                    {% if room.status == 'VACANT_DIRTY' %}#f39c12{% else %}#f1c40f{% endif %};
-                color:#fff;
+                background:#f5f5f5;
             ">
-                <strong>Room {{ room.room_number }}</strong><br>
-                <small>{{ room.get_status_display }}</small>
-                <a href="{% url 'housekeeping_assign_room' room.id %}">
-                <button style="width:100%;margin-top:5px;">
-                Assign
-                </button>
-                </a>
-                <br><br>
+
+                <strong>
+                    Room {{ room.room_number }}
+                </strong>
+
+                <br>
+
+                <small>
+                    {{ room.get_status_display }}
+                </small>
+
+                {% with assignment=room.active_cleaning_assignments.0 %}
+
+                    {% if assignment %}
+
+                        <hr>
+
+                        <strong>
+                            Cleaning:
+                        </strong>
+
+                        <br>
+
+                        <small>
+                            {{ assignment.get_status_display }}
+                        </small>
+
+                        <br>
+
+                        {% if assignment.assigned_to %}
+                            <small>
+                                Assigned to:
+                                {{ assignment.assigned_to.username }}
+                            </small>
+                        {% endif %}
+
+                        <br><br>
+
+                        {% if assignment.status == "ASSIGNED" %}
+
+                            {% if assignment.assigned_to == request.user %}
+
+                                <a href="{% url 'housekeeping_start_cleaning' room.id %}">
+                                    <button style="width:100%;">
+                                        Start Cleaning
+                                    </button>
+                                </a>
+
+                            {% else %}
+
+                                <small>
+                                    Waiting for assigned housekeeper.
+                                </small>
+
+                            {% endif %}
+
+                        {% elif assignment.status == "IN_PROGRESS" %}
+
+                            {% if assignment.assigned_to == request.user %}
+
+                                <a href="{% url 'housekeeping_finish_cleaning' room.id %}">
+                                    <button style="width:100%;">
+                                        Finish Cleaning
+                                    </button>
+                                </a>
+
+                            {% endif %}
+
+                        {% elif assignment.status == "INSPECTION" %}
+
+                            {% if request.user.is_department_head or request.user.role == "MANAGER" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+
+                                <a href="{% url 'housekeeping_approve_cleaning' room.id %}">
+                                    <button style="width:100%;">
+                                        Approve Cleaning
+                                    </button>
+                                </a>
+
+                            {% else %}
+
+                                <small>
+                                    Waiting for inspection.
+                                </small>
+
+                            {% endif %}
+
+                        {% endif %}
+
+                    {% else %}
+
+                        <br><br>
+
+                        <a href="{% url 'housekeeping_assign_room' room.id %}">
+                            <button style="width:100%;">
+                                Assign
+                            </button>
+                        </a>
+
+                    {% endif %}
+
+                {% endwith %}
+
+                <br>
+
                 <a href="{% url 'maintenance_create_ticket' room.id %}">
-<button style="width:100%;margin-top:5px;">
-Report Issue
-</button>
-</a>
-                <a href="{% url 'housekeeping_mark_clean' room.id %}">
-                    <button style="width:100%;">Mark Clean</button>
+                    <button style="width:100%;margin-top:5px;">
+                        Report Issue
+                    </button>
                 </a>
+
             </div>
+
         {% endfor %}
+
     </div>
+
 {% else %}
+
     <p>No rooms require cleaning 🎉</p>
+
 {% endif %}
 
 {% endblock %}

@@ -6,25 +6,56 @@ from .models import CleaningAssignment,LostFoundItem
 from accounts.models import User
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
+from django.db.models import Prefetch
 
 
 
-@role_required("HOUSEKEEPING", "MANAGER", "ADMIN")
+@role_required(
+    "HOUSEKEEPING",
+    "MANAGER",
+    "ADMIN",
+)
 def dashboard(request):
 
     hotel = request.user.department.hotel
 
-    dirty_rooms = Room.objects.filter(
-        hotel=hotel,
-        status__in=["VACANT_DIRTY", "OCCUPIED_DIRTY"]
-    ).order_by("room_number")
+    active_assignments = CleaningAssignment.objects.filter(
+        status__in=[
+            "ASSIGNED",
+            "IN_PROGRESS",
+            "INSPECTION",
+        ],
+    ).select_related(
+        "assigned_to",
+        "assigned_by",
+    )
+
+    dirty_rooms = (
+        Room.objects
+        .filter(
+            hotel=hotel,
+            status__in=[
+                "VACANT_DIRTY",
+                "OCCUPIED_DIRTY",
+            ],
+        )
+        .prefetch_related(
+            Prefetch(
+                "cleaning_assignments",
+                queryset=active_assignments,
+                to_attr="active_cleaning_assignments",
+            )
+        )
+        .order_by("room_number")
+    )
 
     return render(
         request,
         "housekeeping/dashboard.html",
-        {"rooms": dirty_rooms}
+        {
+            "rooms": dirty_rooms,
+        },
     )
-
 
 from housekeeping.models import CleaningLog
 
@@ -264,4 +295,136 @@ def lost_found_create(request):
         {
             "rooms": rooms,
         },
+    )
+@role_required(
+    "HOUSEKEEPING",
+    "MANAGER",
+    "ADMIN",
+)
+def start_cleaning(request, room_id):
+
+    from housekeeping.workflows.start_cleaning import (
+        start_cleaning as start_cleaning_workflow,
+    )
+
+    room = get_object_or_404(
+        Room,
+        id=room_id,
+        hotel=request.user.department.hotel,
+    )
+
+    try:
+
+        start_cleaning_workflow(
+            room=room,
+            user=request.user,
+        )
+
+    except (ValidationError, PermissionDenied) as e:
+
+        messages.error(
+            request,
+            str(e),
+        )
+
+        return redirect(
+            "housekeeping_dashboard",
+        )
+
+    messages.success(
+        request,
+        f"Cleaning started for Room {room.room_number}.",
+    )
+
+    return redirect(
+        "housekeeping_dashboard",
+    )
+
+@role_required(
+    "HOUSEKEEPING",
+    "MANAGER",
+    "ADMIN",
+)
+def finish_cleaning(request, room_id):
+
+    from housekeeping.workflows.finish_cleaning import (
+        finish_cleaning as finish_cleaning_workflow,
+    )
+
+    room = get_object_or_404(
+        Room,
+        id=room_id,
+        hotel=request.user.department.hotel,
+    )
+
+    try:
+
+        finish_cleaning_workflow(
+            room=room,
+            user=request.user,
+        )
+
+    except (ValidationError, PermissionDenied) as e:
+
+        messages.error(
+            request,
+            str(e),
+        )
+
+        return redirect(
+            "housekeeping_dashboard",
+        )
+
+    messages.success(
+        request,
+        f"Room {room.room_number} is waiting for inspection.",
+    )
+
+    return redirect(
+        "housekeeping_dashboard",
+    )
+
+@role_required(
+    "HOUSEKEEPING",
+    "MANAGER",
+    "ADMIN",
+    "DIRECTOR",
+)
+def approve_cleaning(request, room_id):
+
+    from housekeeping.workflows.approve_cleaning import (
+        approve_cleaning as approve_cleaning_workflow,
+    )
+
+    room = get_object_or_404(
+        Room,
+        id=room_id,
+        hotel=request.user.department.hotel,
+    )
+
+    try:
+
+        approve_cleaning_workflow(
+            room=room,
+            user=request.user,
+        )
+
+    except (ValidationError, PermissionDenied) as e:
+
+        messages.error(
+            request,
+            str(e),
+        )
+
+        return redirect(
+            "housekeeping_dashboard",
+        )
+
+    messages.success(
+        request,
+        f"Room {room.room_number} approved and ready.",
+    )
+
+    return redirect(
+        "housekeeping_dashboard",
     )

@@ -8,6 +8,7 @@ from housekeeping.models import (
 from .common import (
     validate_assigner,
     get_housekeeper,
+    validate_room_requires_cleaning
 )
     
 
@@ -49,6 +50,10 @@ def assign_room(
 
     validate_assigner(
         assigned_by,
+    )
+
+    validate_room_requires_cleaning(
+        room,
     )
 
     housekeeper = get_housekeeper(
