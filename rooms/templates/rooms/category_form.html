@@ -1,11 +1,17 @@
 {% extends "base/base.html" %}
 
-{% block title %}Room Category{% endblock %}
+{% block title %}
+Room Category Setup
+{% endblock %}
 
 {% block content %}
 
 <h2>
-{% if category %}Edit{% else %}Add{% endif %} Room Category
+{% if category %}
+    Edit Room Category
+{% else %}
+    Add Room Category
+{% endif %}
 </h2>
 
 <div class="card">
@@ -13,24 +19,94 @@
 <form method="post">
 {% csrf_token %}
 
+<h3>Room Category</h3>
+
 <label>Name</label><br>
-<input type="text"
-       name="name"
-       value="{{ category.name|default:'' }}"
-       required>
+
+<input
+    type="text"
+    name="name"
+    value="{{ category.name|default:'' }}"
+    required
+>
 
 <br><br>
 
 <label>Description</label><br>
-<textarea name="description">{{ category.description|default:'' }}</textarea>
+
+<textarea
+    name="description"
+>{{ category.description|default:'' }}</textarea>
+
+<hr>
+
+<h3>Room Rate</h3>
+
+<label>Price Per Night</label><br>
+
+<input
+    type="number"
+    name="price"
+    step="0.01"
+    min="0.01"
+    value="{{ rate.price_per_night|default:'' }}"
+    placeholder="Example: 50000"
+    required
+>
 
 <br><br>
 
-<button class="btn btn-primary">Save</button>
+<label>Currency</label><br>
 
-<a class="btn btn-secondary"
-   href="{% url 'category_list' %}">
-Cancel
+<select name="currency">
+
+<option
+    value="NGN"
+    {% if not rate or rate.currency == "NGN" %}
+        selected
+    {% endif %}
+>
+    NGN (₦)
+</option>
+
+<option
+    value="USD"
+    {% if rate and rate.currency == "USD" %}
+        selected
+    {% endif %}
+>
+    USD ($)
+</option>
+
+<option
+    value="EUR"
+    {% if rate and rate.currency == "EUR" %}
+        selected
+    {% endif %}
+>
+    EUR (€)
+</option>
+
+</select>
+
+<br><br>
+
+<button
+    type="submit"
+    class="btn btn-primary"
+>
+    {% if category %}
+        Save Changes
+    {% else %}
+        Create Category
+    {% endif %}
+</button>
+
+<a
+    href="{% url 'category_list' %}"
+    class="btn btn-secondary"
+>
+    Cancel
 </a>
 
 </form>

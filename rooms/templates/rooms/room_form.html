@@ -11,24 +11,54 @@
 <form method="post">
 {% csrf_token %}
 
+<!-- HOTEL -->
+<label>Hotel</label>
+
+<select name="hotel" required>
+
+{% for hotel in hotels %}
+
+<option
+    value="{{ hotel.id }}"
+    {% if room and room.hotel_id == hotel.id %}
+        selected
+    {% endif %}
+>
+    {{ hotel.name }}
+</option>
+
+{% endfor %}
+
+</select>
+
+<br><br>
+
 <!-- ROOM NUMBER -->
 <label>Room Number</label>
-<input type="text"
-       name="room_number"
-       value="{{ room.room_number|default:'' }}"
-       required>
+
+<input
+    type="text"
+    name="room_number"
+    value="{{ room.room_number|default:'' }}"
+    required
+>
 
 <br><br>
 
 <!-- CATEGORY -->
 <label>Room Category</label>
+
 <select name="category" required>
 
 {% for c in categories %}
 
-<option value="{{ c.id }}"
-{% if room and room.category and room.category.id == c.id %}selected{% endif %}>
-{{ c.name }}
+<option
+    value="{{ c.id }}"
+    {% if room and room.category_id == c.id %}
+        selected
+    {% endif %}
+>
+    {{ c.name }}
 </option>
 
 {% endfor %}
@@ -39,15 +69,20 @@
 
 <!-- BUILDING -->
 <label>Building</label>
+
 <select name="building">
 
 <option value="">— None —</option>
 
 {% for b in buildings %}
 
-<option value="{{ b.id }}"
-{% if room and room.building and room.building.id == b.id %}selected{% endif %}>
-{{ b.name }}
+<option
+    value="{{ b.id }}"
+    {% if room and room.building_id == b.id %}
+        selected
+    {% endif %}
+>
+    {{ b.hotel.name }} — {{ b.name }}
 </option>
 
 {% endfor %}
@@ -58,15 +93,24 @@
 
 <!-- FLOOR -->
 <label>Floor</label>
+
 <select name="floor">
 
 <option value="">— None —</option>
 
 {% for f in floors %}
 
-<option value="{{ f.id }}"
-{% if room and room.floor and room.floor.id == f.id %}selected{% endif %}>
-{{ f.name }} ({{ f.building.name }})
+<option
+    value="{{ f.id }}"
+    {% if room and room.floor_id == f.id %}
+        selected
+    {% endif %}
+>
+    {{ f.building.hotel.name }}
+    —
+    {{ f.building.name }}
+    —
+    {{ f.name }}
 </option>
 
 {% endfor %}
@@ -80,11 +124,15 @@
 
 <select name="status">
 
-{% for key,label in statuses %}
+{% for key, label in statuses %}
 
-<option value="{{ key }}"
-{% if room and room.status == key %}selected{% endif %}>
-{{ label }}
+<option
+    value="{{ key }}"
+    {% if room and room.status == key %}
+        selected
+    {% endif %}
+>
+    {{ label }}
 </option>
 
 {% endfor %}
@@ -95,12 +143,18 @@
 
 <!-- ACTION BUTTONS -->
 
-<button type="submit" class="btn btn-primary">
-Save
+<button
+    type="submit"
+    class="btn btn-primary"
+>
+    Save
 </button>
 
-<a href="{% url 'room_list' %}" class="btn btn-secondary">
-Cancel
+<a
+    href="{% url 'room_list' %}"
+    class="btn btn-secondary"
+>
+    Cancel
 </a>
 
 </form>
