@@ -1,0 +1,102 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Room {{ room.room_number }}
+{% endblock %}
+
+{% block header %}
+<h2>Room {{ room.room_number }}</h2>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+    <h3>Room Information</h3>
+
+    <p>
+        <strong>Category:</strong>
+        {{ room.category.name }}
+    </p>
+
+    <p>
+        <strong>Building:</strong>
+        {{ room.building.name|default:"-" }}
+    </p>
+
+    <p>
+        <strong>Floor:</strong>
+        {{ room.floor.name|default:"-" }}
+    </p>
+
+    <p>
+        <strong>Status:</strong>
+        {{ room.get_status_display }}
+    </p>
+
+</div>
+
+<br>
+
+<div class="card">
+
+    <h3>Room Amenities</h3>
+
+    <ul>
+
+        {% for room_amenity in room.room_amenities.all %}
+
+            <li>
+
+                <strong>
+                    {{ room_amenity.amenity.name }}
+                </strong>
+
+                — {{ room_amenity.get_status_display }}
+
+                {% if room_amenity.quantity > 1 %}
+                    — Quantity: {{ room_amenity.quantity }}
+                {% endif %}
+
+            </li>
+
+        {% empty %}
+
+            <li>
+                No amenities configured.
+            </li>
+
+        {% endfor %}
+
+    </ul>
+
+    <a
+        href="{% url 'room_amenities' room.id %}"
+        class="btn btn-primary"
+    >
+        Configure Amenities
+    </a>
+
+</div>
+
+<br>
+
+<div>
+
+    <a
+        href="{% url 'room_edit' room.id %}"
+        class="btn btn-secondary"
+    >
+        Edit Room
+    </a>
+
+    <a
+        href="{% url 'room_list' %}"
+        class="btn btn-secondary"
+    >
+        Back to Rooms
+    </a>
+
+</div>
+
+{% endblock %}

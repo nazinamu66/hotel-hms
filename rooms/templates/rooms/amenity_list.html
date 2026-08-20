@@ -1,0 +1,105 @@
+{% extends "base/base.html" %}
+
+{% block title %}Room Amenities{% endblock %}
+
+{% block header %}
+<h2>Room Amenities</h2>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+    <div style="margin-bottom:20px;">
+
+        <a
+            href="{% url 'amenity_create' %}"
+            class="btn btn-primary"
+        >
+            Add Amenity
+        </a>
+
+    </div>
+
+    <table width="100%" cellpadding="10">
+
+        <thead>
+
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for amenity in amenities %}
+
+                <tr>
+
+                    <td>
+                        <strong>
+                            {{ amenity.name }}
+                        </strong>
+                    </td>
+
+                    <td>
+                        {{ amenity.description|default:"—" }}
+                    </td>
+
+                    <td>
+
+                        {% if amenity.is_active %}
+                            Active
+                        {% else %}
+                            Inactive
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+                        <a
+                            href="{% url 'amenity_edit' amenity.id %}"
+                            class="btn btn-secondary"
+                        >
+                            Edit
+                        </a>
+
+                        <a
+                            href="{% url 'amenity_toggle_active' amenity.id %}"
+                            class="btn btn-secondary"
+                        >
+                            {% if amenity.is_active %}
+                                Deactivate
+                            {% else %}
+                                Activate
+                            {% endif %}
+                        </a>
+
+                    </td>
+
+                </tr>
+
+            {% empty %}
+
+                <tr>
+
+                    <td colspan="4">
+                        No amenities have been configured.
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}

@@ -171,3 +171,83 @@ class Floor(models.Model):
 
     def __str__(self):
         return f"{self.building.name} - {self.name}"
+    
+class Amenity(models.Model):
+
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.CASCADE,
+        related_name="amenities",
+    )
+
+    name = models.CharField(
+        max_length=100,
+    )
+
+    description = models.TextField(
+        blank=True,
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "name"],
+                name="unique_hotel_amenity",
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class RoomAmenity(models.Model):
+
+    STATUS_CHOICES = (
+        ("AVAILABLE", "Available"),
+        ("DAMAGED", "Damaged"),
+        ("MISSING", "Missing"),
+        ("MAINTENANCE", "Under Maintenance"),
+    )
+
+    room = models.ForeignKey(
+        Room,
+        on_delete=models.CASCADE,
+        related_name="room_amenities",
+    )
+
+    amenity = models.ForeignKey(
+        Amenity,
+        on_delete=models.PROTECT,
+        related_name="room_assignments",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="AVAILABLE",
+    )
+
+    quantity = models.PositiveIntegerField(
+        default=1,
+    )
+
+    notes = models.TextField(
+        blank=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["room", "amenity"],
+                name="unique_room_amenity",
+            )
+        ]
+        ordering = ["room", "amenity"]
+
+    def __str__(self):
+        return f"{self.room} - {self.amenity}"

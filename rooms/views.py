@@ -1,9 +1,23 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
-
+from django.core.exceptions import ValidationError
 from accounts.decorators import manager_admin_or_director
-from .models import Building, RoomCategory, Room,Floor,RoomRate
+from .models import (
+    Building,
+    RoomCategory,
+    Room,
+    Floor,
+    RoomRate,
+    Amenity,
+)
+from .workflows.assign_amenity import (
+    assign_amenity,
+)
+
+from .workflows.remove_amenity import (
+    remove_amenity,
+)
 
 
 @user_passes_test(manager_admin_or_director)
@@ -113,16 +127,42 @@ def manager_admin_or_director(user):
 
 @user_passes_test(manager_admin_or_director)
 def room_list(request):
-    rooms = Room.objects.select_related(
-        "category", "building"
-    ).order_by("room_number")
+
+    if not request.user.hotel:
+        messages.error(
+            request,
+            "Your account is not assigned to a hotel.",
+        )
+
+        return redirect(
+            "owner_dashboard",
+        )
+
+    rooms = (
+        Room.objects
+        .filter(
+            hotel=request.user.hotel,
+        )
+        .select_related(
+            "category",
+            "building",
+            "floor",
+        )
+        .prefetch_related(
+            "room_amenities__amenity",
+        )
+        .order_by(
+            "room_number",
+        )
+    )
 
     return render(
         request,
         "rooms/room_list.html",
-        {"rooms": rooms}
+        {
+            "rooms": rooms,
+        },
     )
-
 @user_passes_test(manager_admin_or_director)
 def room_create(request):
 
@@ -182,7 +222,7 @@ def room_edit(request, pk):
         messages.error(request, "Your account is not assigned to a hotel.")
         return redirect("owner_dashboard")
 
-    room = get_object_or_404(Room, pk=pk)
+    room = get_object_or_404(Room,pk=pk,hotel=request.user.hotel,)
 
     categories = RoomCategory.objects.all()
 
@@ -217,6 +257,394 @@ def room_edit(request, pk):
             "floors": floors,
             "statuses": Room.STATUS_CHOICES,
         }
+    )
+
+@user_passes_test(manager_admin_or_director)
+def room_detail(request, pk):
+
+    if not request.user.hotel:
+        messages.error(
+            request,
+            "Your account is not assigned to a hotel.",
+        )
+
+        return redirect(
+            "owner_dashboard",
+        )
+
+    room = get_object_or_404(
+        Room.objects
+        .select_related(
+            "category",
+            "building",
+            "floor",
+        )
+        .prefetch_related(
+            "room_amenities__amenity",
+        ),
+        pk=pk,
+        hotel=request.user.hotel,
+    )
+
+    return render(
+        request,
+        "rooms/room_detail.html",
+        {
+            "room": room,
+        },
+    )
+
+@user_passes_test(manager_admin_or_director)
+def amenity_list(request):
+
+    if not request.user.hotel:
+        messages.error(
+            request,
+            "Your account is not assigned to a hotel.",
+        )
+        return redirect("owner_dashboard")
+
+    amenities = (
+        Amenity.objects
+        .filter(
+            hotel=request.user.hotel,
+        )
+        .order_by("name")
+    )
+
+    return render(
+        request,
+        "rooms/amenity_list.html",
+        {
+            "amenities": amenities,
+        },
+    )
+
+
+@user_passes_test(manager_admin_or_director)
+def amenity_create(request):
+
+    if not request.user.hotel:
+        messages.error(
+            request,
+            "Your account is not assigned to a hotel.",
+        )
+        return redirect("owner_dashboard")
+
+    if request.method == "POST":
+
+        name = request.POST.get(
+            "name",
+            "",
+        ).strip()
+
+        description = request.POST.get(
+            "description",
+            "",
+        ).strip()
+
+        if not name:
+            messages.error(
+                request,
+                "Amenity name is required.",
+            )
+
+            return redirect(
+                "amenity_create",
+            )
+
+        if Amenity.objects.filter(
+            hotel=request.user.hotel,
+            name__iexact=name,
+        ).exists():
+
+            messages.error(
+                request,
+                "An amenity with this name already exists for your hotel.",
+            )
+
+            return redirect(
+                "amenity_create",
+            )
+
+        Amenity.objects.create(
+            hotel=request.user.hotel,
+            name=name,
+            description=description,
+        )
+
+        messages.success(
+            request,
+            f"Amenity '{name}' created.",
+        )
+
+        return redirect(
+            "amenity_list",
+        )
+
+    return render(
+        request,
+        "rooms/amenity_form.html",
+    )
+
+
+@user_passes_test(manager_admin_or_director)
+def amenity_edit(request, pk):
+
+    if not request.user.hotel:
+        messages.error(
+            request,
+            "Your account is not assigned to a hotel.",
+        )
+        return redirect("owner_dashboard")
+
+    amenity = get_object_or_404(
+        Amenity,
+        pk=pk,
+        hotel=request.user.hotel,
+    )
+
+    if request.method == "POST":
+
+        name = request.POST.get(
+            "name",
+            "",
+        ).strip()
+
+        description = request.POST.get(
+            "description",
+            "",
+        ).strip()
+
+        if not name:
+            messages.error(
+                request,
+                "Amenity name is required.",
+            )
+
+            return redirect(
+                "amenity_edit",
+                pk=amenity.pk,
+            )
+
+        duplicate = (
+            Amenity.objects
+            .filter(
+                hotel=request.user.hotel,
+                name__iexact=name,
+            )
+            .exclude(
+                pk=amenity.pk,
+            )
+            .exists()
+        )
+
+        if duplicate:
+
+            messages.error(
+                request,
+                "An amenity with this name already exists for your hotel.",
+            )
+
+            return redirect(
+                "amenity_edit",
+                pk=amenity.pk,
+            )
+
+        amenity.name = name
+        amenity.description = description
+
+        amenity.save(
+            update_fields=[
+                "name",
+                "description",
+            ],
+        )
+
+        messages.success(
+            request,
+            "Amenity updated.",
+        )
+
+        return redirect(
+            "amenity_list",
+        )
+
+    return render(
+        request,
+        "rooms/amenity_form.html",
+        {
+            "amenity": amenity,
+        },
+    )
+
+
+@user_passes_test(manager_admin_or_director)
+def amenity_toggle_active(request, pk):
+
+    if not request.user.hotel:
+        messages.error(
+            request,
+            "Your account is not assigned to a hotel.",
+        )
+        return redirect("owner_dashboard")
+
+    amenity = get_object_or_404(
+        Amenity,
+        pk=pk,
+        hotel=request.user.hotel,
+    )
+
+    amenity.is_active = not amenity.is_active
+
+    amenity.save(
+        update_fields=[
+            "is_active",
+        ],
+    )
+
+    state = (
+        "activated"
+        if amenity.is_active
+        else "deactivated"
+    )
+
+    messages.success(
+        request,
+        f"Amenity '{amenity.name}' {state}.",
+    )
+
+    return redirect(
+        "amenity_list",
+    )
+
+@user_passes_test(manager_admin_or_director)
+def room_amenities(request, pk):
+
+    if not request.user.hotel:
+        messages.error(
+            request,
+            "Your account is not assigned to a hotel.",
+        )
+
+        return redirect(
+            "owner_dashboard",
+        )
+
+    room = get_object_or_404(
+        Room.objects
+        .select_related(
+            "category",
+            "building",
+            "floor",
+        )
+        .prefetch_related(
+            "room_amenities__amenity",
+        ),
+        pk=pk,
+        hotel=request.user.hotel,
+    )
+
+    amenities = (
+        Amenity.objects
+        .filter(
+            hotel=request.user.hotel,
+            is_active=True,
+        )
+        .order_by(
+            "name",
+        )
+    )
+
+    assigned_amenity_ids = set(
+        room.room_amenities.values_list(
+            "amenity_id",
+            flat=True,
+        )
+    )
+
+    available_amenities = amenities.exclude(
+        id__in=assigned_amenity_ids,
+    )
+
+    if request.method == "POST":
+
+        action = request.POST.get(
+            "action",
+        )
+
+        if action == "add":
+
+            amenity_id = request.POST.get(
+                "amenity",
+            )
+
+            quantity = request.POST.get(
+                "quantity",
+                "1",
+            )
+
+            try:
+
+                quantity = int(quantity)
+
+                assign_amenity(
+                    room=room,
+                    amenity_id=amenity_id,
+                    quantity=quantity,
+                )
+
+                messages.success(
+                    request,
+                    "Amenity added to room.",
+                )
+
+            except (
+                ValidationError,
+                ValueError,
+            ) as e:
+
+                messages.error(
+                    request,
+                    str(e),
+                )
+
+        elif action == "remove":
+
+            room_amenity_id = request.POST.get(
+                "room_amenity_id",
+            )
+
+            try:
+
+                remove_amenity(
+                    room=room,
+                    room_amenity_id=room_amenity_id,
+                )
+
+                messages.success(
+                    request,
+                    "Amenity removed from room.",
+                )
+
+            except ValidationError as e:
+
+                messages.error(
+                    request,
+                    str(e),
+                )
+
+        return redirect(
+            request.path,
+        )
+
+    return render(
+        request,
+        "rooms/room_amenities.html",
+        {
+            "room": room,
+            "available_amenities": available_amenities,
+        },
     )
 
 @user_passes_test(manager_admin_or_director)

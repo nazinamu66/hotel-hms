@@ -1,0 +1,211 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Room {{ room.room_number }} — Amenities
+{% endblock %}
+
+{% block header %}
+<h2>Room {{ room.room_number }} — Amenities</h2>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+
+    <h3>Room Information</h3>
+
+    <p>
+        <strong>Room:</strong>
+        {{ room.room_number }}
+    </p>
+
+    <p>
+        <strong>Category:</strong>
+        {{ room.category.name }}
+    </p>
+
+    <p>
+        <strong>Status:</strong>
+        {{ room.get_status_display }}
+    </p>
+
+</div>
+
+<br>
+
+<div class="card">
+
+    <h3>Configured Amenities</h3>
+
+    <table width="100%" cellpadding="10">
+
+        <thead>
+            <tr>
+                <th>Amenity</th>
+                <th>Quantity</th>
+                <th>Condition</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+            {% for room_amenity in room.room_amenities.all %}
+
+                <tr>
+
+                    <td>
+                        <strong>
+                            {{ room_amenity.amenity.name }}
+                        </strong>
+                    </td>
+
+                    <td>
+                        {{ room_amenity.quantity }}
+                    </td>
+
+                    <td>
+                        {{ room_amenity.get_status_display }}
+                    </td>
+
+                    <td>
+
+                        <form
+                            method="post"
+                            style="display:inline;"
+                        >
+
+                            {% csrf_token %}
+
+                            <input
+                                type="hidden"
+                                name="action"
+                                value="remove"
+                            >
+
+                            <input
+                                type="hidden"
+                                name="room_amenity_id"
+                                value="{{ room_amenity.id }}"
+                            >
+
+                            <button
+                                type="submit"
+                                class="btn btn-secondary"
+                            >
+                                Remove
+                            </button>
+
+                        </form>
+
+                    </td>
+
+                </tr>
+
+            {% empty %}
+
+                <tr>
+                    <td colspan="4">
+                        No amenities configured for this room.
+                    </td>
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+<br>
+
+<div class="card">
+
+    <h3>Add Amenity</h3>
+
+    {% if available_amenities %}
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <input
+                type="hidden"
+                name="action"
+                value="add"
+            >
+
+            <label>
+                Amenity
+            </label>
+
+            <br>
+
+            <select
+                name="amenity"
+                required
+            >
+
+                <option value="">
+                    -- Select Amenity --
+                </option>
+
+                {% for amenity in available_amenities %}
+
+                    <option value="{{ amenity.id }}">
+                        {{ amenity.name }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+            <br><br>
+
+            <label>
+                Quantity
+            </label>
+
+            <br>
+
+            <input
+                type="number"
+                name="quantity"
+                value="1"
+                min="1"
+                required
+            >
+
+            <br><br>
+
+            <button
+                type="submit"
+                class="btn btn-primary"
+            >
+                Add Amenity
+            </button>
+
+        </form>
+
+    {% else %}
+
+        <p>
+            All active amenities are already assigned
+            to this room.
+        </p>
+
+    {% endif %}
+
+</div>
+
+<br>
+
+<a
+    href="{% url 'room_detail' room.id %}"
+    class="btn btn-secondary"
+>
+    Back to Room
+</a>
+
+{% endblock %}
