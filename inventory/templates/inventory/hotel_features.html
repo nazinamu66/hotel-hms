@@ -8,30 +8,110 @@
 
 <div class="card">
 
-<form method="post">
-{% csrf_token %}
+<form method="get" style="margin-bottom:25px;">
 
-{% for key,label in features.items %}
+    <label>
+        <strong>Hotel</strong>
+    </label>
 
-<label>
-<input type="checkbox"
-       name="features"
-       value="{{ key }}"
-       {% if key in active_features %}checked{% endif %}>
+    <select
+        name="hotel"
+        onchange="this.form.submit()"
+        required
+    >
 
-{{ label }}
+        <option value="">
+            — Select Hotel —
+        </option>
 
-</label>
+        {% for h in hotels %}
 
-<br>
+        <option
+            value="{{ h.id }}"
+            {% if hotel and hotel.id == h.id %}selected{% endif %}
+        >
+            {{ h.name }}
+            {% if h.location %}
+                — {{ h.location }}
+            {% endif %}
+        </option>
 
-{% endfor %}
+        {% endfor %}
 
-<br>
+    </select>
 
-<button class="btn btn-primary">Save Features</button>
+    <noscript>
+        <button
+            type="submit"
+            class="btn btn-secondary"
+        >
+            Load Hotel
+        </button>
+    </noscript>
 
 </form>
+
+
+{% if hotel %}
+
+    <h3>
+        {{ hotel.name }}
+    </h3>
+
+    {% if hotel.location %}
+        <p>{{ hotel.location }}</p>
+    {% endif %}
+
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        {% for key,label in features.items %}
+
+        <label style="display:block; margin-bottom:10px;">
+
+            <input
+                type="checkbox"
+                name="features"
+                value="{{ key }}"
+                {% if key in active_features %}checked{% endif %}
+            >
+
+            {{ label }}
+
+        </label>
+
+        {% endfor %}
+
+        <br>
+
+        <button
+            type="submit"
+            class="btn btn-primary"
+        >
+            Save Features
+        </button>
+
+    </form>
+
+{% else %}
+
+    {% if hotels %}
+
+        <p>
+            Select a hotel above to configure its features.
+        </p>
+
+    {% else %}
+
+        <p>
+            No hotels are available for configuration.
+        </p>
+
+    {% endif %}
+
+{% endif %}
 
 </div>
 

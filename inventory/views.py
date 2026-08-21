@@ -9,6 +9,7 @@ from .models import Supplier, PurchaseOrder, PurchaseItem, Department, LowStockR
 from .forms import SupplierForm, PurchaseOrderForm, PurchaseItemForm,ProductForm
 from .permissions import is_admin, is_manager, is_store
 from inventory.models import transfer_stock
+from accounts.services.access import get_accessible_hotels
 from kitchen.forms import (
     PreparedFoodForm,
     RecipeItemForm,
@@ -136,40 +137,103 @@ def product_create(request):
         {"form": form}
     )
 
-@role_required("DIRECTOR")
+@role_required("ADMIN", "DIRECTOR")
 def hotel_feature_setup(request):
 
-    hotel = request.user.hotel
+    hotels = (
+        get_accessible_hotels(
+            request.user,
+        )
+        .filter(
+            is_active=True,
+        )
+        .order_by(
+            "name",
+        )
+    )
 
-    features = dict(HotelFeature.FEATURE_CHOICES)
+    features = dict(
+        HotelFeature.FEATURE_CHOICES
+    )
+
+    hotel_id = request.POST.get(
+        "hotel",
+    ) if request.method == "POST" else request.GET.get(
+        "hotel",
+    )
+
+    hotel = None
+
+    if hotel_id:
+        hotel = get_object_or_404(
+            hotels,
+            pk=hotel_id,
+        )
+
+    elif hotels.count() == 1:
+        hotel = hotels.first()
 
     if request.method == "POST":
 
-        selected = request.POST.getlist("features")
-
-        HotelFeature.objects.filter(hotel=hotel).delete()
-
-        for f in selected:
-            HotelFeature.objects.create(
-                hotel=hotel,
-                feature=f
+        if not hotel:
+            messages.error(
+                request,
+                "Please select a hotel.",
             )
 
-        messages.success(request, "Hotel features updated.")
+            return redirect(
+                "inventory:hotel_feature_setup",
+            )
 
-        return redirect("owner_dashboard")
+        selected = request.POST.getlist(
+            "features",
+        )
 
-    active_features = HotelFeature.objects.filter(
-        hotel=hotel
-    ).values_list("feature", flat=True)
+        HotelFeature.objects.filter(
+            hotel=hotel,
+        ).delete()
+
+        HotelFeature.objects.bulk_create(
+            [
+                HotelFeature(
+                    hotel=hotel,
+                    feature=feature,
+                )
+                for feature in selected
+            ]
+        )
+
+        messages.success(
+            request,
+            f"Hotel features updated for {hotel.name}.",
+        )
+
+        return redirect(
+            f"{request.path}?hotel={hotel.pk}",
+        )
+
+    active_features = set()
+
+    if hotel:
+        active_features = set(
+            HotelFeature.objects.filter(
+                hotel=hotel,
+                is_active=True,
+            ).values_list(
+                "feature",
+                flat=True,
+            )
+        )
 
     return render(
         request,
         "inventory/hotel_features.html",
         {
+            "hotels": hotels,
+            "hotel": hotel,
             "features": features,
-            "active_features": active_features
-        }
+            "active_features": active_features,
+        },
     )
 
 # @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
