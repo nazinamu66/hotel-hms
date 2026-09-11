@@ -144,7 +144,11 @@ class Folio(models.Model):
         charge = Charge.objects.create(
             folio=self,
             description=f"Room charge – {today}",
-            department=Department.objects.get(name__iexact="Frontdesk"),
+            department=Department.objects.get(
+                hotel=self.room.hotel,
+                department_type="FRONTDESK",
+                is_active=True,
+            ),
             amount=Decimal(rate.price_per_night),
             reference=f"ROOM-{self.room.room_number}-{today}"
         )

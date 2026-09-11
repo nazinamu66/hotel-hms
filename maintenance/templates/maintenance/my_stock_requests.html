@@ -1,0 +1,110 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+My Maintenance Stock Requests
+{% endblock %}
+
+{% block content %}
+
+<h2>My Maintenance Stock Requests</h2>
+
+<table
+    style="
+        width:100%;
+        border-collapse:collapse;
+    "
+>
+
+<thead>
+
+<tr>
+    <th style="text-align:left; padding:8px;">
+        Product
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Quantity
+    </th>
+
+    <th style="text-align:left; padding:8px;">
+        Status
+    </th>
+
+    <th style="text-align:left; padding:8px;">
+        Requested
+    </th>
+
+    <th style="text-align:left; padding:8px;">
+        Purchase Order
+    </th>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for req in requests %}
+
+<tr style="border-top:1px solid #ddd;">
+
+    <td style="padding:8px;">
+        {{ req.product.name }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        {{ req.requested_quantity }}
+        {{ req.product.base_unit }}
+    </td>
+
+    <td style="padding:8px;">
+        {{ req.get_status_display }}
+    </td>
+
+    <td style="padding:8px;">
+        {{ req.created_at|date:"Y-m-d H:i" }}
+    </td>
+
+    <td style="padding:8px;">
+
+        {% if req.purchase_order %}
+
+            <a href="{% url 'inventory:po_detail' req.purchase_order.pk %}">
+                PO #{{ req.purchase_order.id }}
+            </a>
+
+        {% else %}
+
+            —
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td
+        colspan="5"
+        style="padding:15px;"
+    >
+        You have no maintenance stock requests.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<hr>
+
+<a href="{% url 'maintenance_request_stock' %}">
+    ➕ Request Stock
+</a>
+
+{% endblock %}

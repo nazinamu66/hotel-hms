@@ -1,0 +1,149 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Laundry Linen Requests
+{% endblock %}
+
+{% block content %}
+
+<h2>Laundry Linen Requests</h2>
+
+<p style="color:#666;">
+    Housekeeping requests for clean linen from Laundry.
+</p>
+
+<div
+    class="card"
+    style="
+        background:white;
+        border:1px solid #ddd;
+        padding:20px;
+    "
+>
+
+<table style="width:100%; border-collapse:collapse;">
+
+    <thead>
+        <tr>
+            <th style="padding:10px;text-align:left;">ID</th>
+            <th style="padding:10px;text-align:left;">Linen</th>
+            <th style="padding:10px;text-align:left;">Requested By</th>
+            <th style="padding:10px;text-align:center;">Requested</th>
+            <th style="padding:10px;text-align:center;">Fulfilled</th>
+            <th style="padding:10px;text-align:center;">Remaining</th>
+            <th style="padding:10px;text-align:center;">Status</th>
+            <th style="padding:10px;text-align:center;">Action</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+        {% for linen_request in requests %}
+
+        <tr style="border-top:1px solid #eee;">
+
+            <td style="padding:10px;">
+                #{{ linen_request.id }}
+            </td>
+
+            <td style="padding:10px;">
+                <strong>
+                    {{ linen_request.linen_item.product.name }}
+                </strong>
+                <br>
+                <small>
+                    {{ linen_request.linen_item.product.sku }}
+                </small>
+            </td>
+
+            <td style="padding:10px;">
+                {{ linen_request.requested_by.username }}
+            </td>
+
+            <td style="padding:10px;text-align:center;">
+                {{ linen_request.quantity }}
+            </td>
+
+            <td style="padding:10px;text-align:center;">
+                {{ linen_request.fulfilled_quantity }}
+            </td>
+
+            <td style="padding:10px;text-align:center;">
+                {{ linen_request.remaining_quantity }}
+            </td>
+
+            <td style="padding:10px;text-align:center;">
+                {{ linen_request.get_status_display }}
+            </td>
+
+            <td style="padding:10px;text-align:center;">
+
+                {% if linen_request.status == "PENDING" %}
+
+                <form
+                    method="post"
+                    action="{% url 'laundry:approve_linen_request' linen_request.id %}"
+                    style="display:inline;"
+                >
+
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        Approve
+                    </button>
+
+                </form>
+
+                {% elif linen_request.status == "APPROVED" or linen_request.status == "PARTIAL" %}
+
+                    <a
+                        href="{% url 'laundry:fulfill_linen_request' linen_request.id %}"
+                        class="btn btn-primary"
+                    >
+                        Fulfill
+                    </a>
+
+                {% else %}
+
+                    <span style="color:#777;">
+                        —
+                    </span>
+
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+        {% empty %}
+
+        <tr>
+            <td
+                colspan="8"
+                style="padding:30px;text-align:center;color:#777;"
+            >
+                No Laundry linen requests found.
+            </td>
+        </tr>
+
+        {% endfor %}
+
+    </tbody>
+
+</table>
+
+</div>
+
+<br>
+
+<a
+    href="{% url 'laundry:dashboard' %}"
+    class="btn btn-secondary"
+>
+    Laundry Dashboard
+</a>
+
+{% endblock %}

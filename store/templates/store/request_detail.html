@@ -25,11 +25,33 @@
 </p>
 {% endif %}
 
-{% if request_obj.status == "APPROVED" and request_obj.purchase_order.status == "PAID" %}
-  <hr>
-  <a href="{% url 'inventory:po_receive_store' request_obj.purchase_order.pk %}">
+{% if request_obj.status == "APPROVED" and request_obj.purchase_order %}
+
+<hr>
+
+<p style="color:green;">
+    ✅ Approved. Purchase Order
+    #{{ request_obj.purchase_order.id }}
+    is being processed.
+</p>
+
+<p>
+    <strong>PO Status:</strong>
+    {{ request_obj.purchase_order.get_status_display }}
+    <br>
+
+    <strong>Payment Status:</strong>
+    {{ request_obj.purchase_order.get_payment_status_display }}
+</p>
+
+{% if request_obj.purchase_order.status == "APPROVED" %}
+
+<a href="{% url 'inventory:po_receive' request_obj.purchase_order.pk %}">
     📦 Receive Goods
-  </a>
+</a>
+
+{% endif %}
+
 {% endif %}
 
 

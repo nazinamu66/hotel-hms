@@ -1,0 +1,174 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Issue Linen
+{% endblock %}
+
+{% block content %}
+
+<h2>Issue Linen</h2>
+
+<p style="color:#666;">
+    Issue clean linen from the Linen Store to a Housekeeping staff member.
+</p>
+
+<div
+    class="card"
+    style="
+        max-width:700px;
+        padding:25px;
+        background:white;
+        border:1px solid #ddd;
+    "
+>
+
+<form method="post">
+
+{% csrf_token %}
+
+<!-- ========================= -->
+<!-- LINEN ITEM -->
+<!-- ========================= -->
+
+<label>
+    <strong>Linen Item</strong>
+</label>
+
+<br>
+
+<select
+    name="linen_item"
+    required
+    style="width:100%;padding:10px;"
+>
+
+    <option value="">
+        Select linen item
+    </option>
+
+    {% for linen_item in linen_items %}
+
+        <option value="{{ linen_item.id }}">
+            {{ linen_item.product.name }}
+            — {{ linen_item.product.sku }}
+        </option>
+
+    {% endfor %}
+
+</select>
+
+<br><br>
+
+<!-- ========================= -->
+<!-- HOUSEKEEPING STAFF -->
+<!-- ========================= -->
+
+<label>
+    <strong>Issued To</strong>
+</label>
+
+<br>
+
+<select
+    name="issued_to"
+    required
+    style="width:100%;padding:10px;"
+>
+
+    <option value="">
+        Select Housekeeping staff
+    </option>
+
+    {% for staff in housekeeping_staff %}
+
+        <option value="{{ staff.id }}">
+            {{ staff.get_full_name|default:staff.username }}
+            — {{ staff.username }}
+        </option>
+
+    {% endfor %}
+
+</select>
+
+<br><br>
+
+<!-- ========================= -->
+<!-- QUANTITY -->
+<!-- ========================= -->
+
+<label>
+    <strong>Quantity</strong>
+</label>
+
+<br>
+
+<input
+    type="number"
+    name="quantity"
+    min="1"
+    step="1"
+    required
+    style="width:100%;padding:10px;"
+>
+
+<br><br>
+
+<!-- ========================= -->
+<!-- REFERENCE -->
+<!-- ========================= -->
+
+<label>
+    <strong>Reference</strong>
+</label>
+
+<br>
+
+<input
+    type="text"
+    name="reference"
+    maxlength="100"
+    placeholder="Optional issue reference"
+    style="width:100%;padding:10px;"
+>
+
+<br><br>
+
+<!-- ========================= -->
+<!-- NOTE -->
+<!-- ========================= -->
+
+<label>
+    <strong>Note</strong>
+</label>
+
+<br>
+
+<textarea
+    name="note"
+    rows="4"
+    placeholder="Optional note..."
+    style="width:100%;padding:10px;"
+></textarea>
+
+<br><br>
+
+<button
+    type="submit"
+    class="btn btn-primary"
+>
+    Issue Linen
+</button>
+
+<a
+    href="{% url 'linen_dashboard' %}"
+    class="btn btn-secondary"
+    style="margin-left:10px;"
+>
+    Cancel
+</a>
+
+</form>
+
+</div>
+
+{% endblock %}

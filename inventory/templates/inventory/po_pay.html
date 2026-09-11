@@ -1,37 +1,160 @@
 {% extends "base/base.html" %}
 
+{% block title %}
+Pay Purchase Order #{{ po.id }}
+{% endblock %}
+
 {% block content %}
-<h2>Approve & Pay Purchase Order #{{ po.id }}</h2>
+
+<h2>
+    Pay Purchase Order #{{ po.id }}
+</h2>
 
 <p>
-  <strong>Supplier:</strong> {{ po.supplier }}<br>
-  <strong>Status:</strong> {{ po.status }}
+    <strong>Supplier:</strong>
+    {{ po.supplier }}
 </p>
 
-<h3>Items</h3>
-<ul>
-  {% for item in po.items.all %}
-    <li>
-      {{ item.product.name }} –
-      {{ item.purchase_quantity }} × {{ item.unit_cost }}
-    </li>
-  {% endfor %}
-</ul>
+<p>
+    <strong>PO Status:</strong>
+    {{ po.get_status_display }}
+</p>
+
+<p>
+    <strong>Payment Status:</strong>
+    {{ po.get_payment_status_display }}
+</p>
+
+<hr>
+
+<h3>Purchase Details</h3>
+
+<table style="width:100%; border-collapse:collapse;">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="text-align:left; padding:8px;">
+        Product
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Quantity
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Unit Cost
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Total
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for item in po.items.all %}
+
+<tr style="border-top:1px solid #ddd;">
+
+    <td style="padding:8px;">
+        {{ item.product.name }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        {{ item.purchase_quantity }}
+        {{ item.product.purchase_unit }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        ₦{{ item.unit_cost|floatformat:2 }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        ₦{{ item.total_cost|floatformat:2 }}
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<hr>
+
+<h3>Payment</h3>
+
+<p>
+    <strong>Total Purchase Value:</strong>
+    ₦{{ total|floatformat:2 }}
+</p>
 
 <form method="post">
-  {% csrf_token %}
 
-  <label>
-    Payment Reference (optional):
-    <input type="text" name="payment_reference">
-  </label>
+    {% csrf_token %}
 
-  <br><br>
+    <p>
 
-  <button type="submit">
-    💰 Approve & Mark as Paid
-  </button>
+        <label for="payment_account">
+            Payment Account
+        </label>
+
+        <br>
+
+        <select
+            name="payment_account"
+            id="payment_account"
+            required
+        >
+
+            <option value="">
+                -- Select Bank / Cash Account --
+            </option>
+
+            {% for account in payment_accounts %}
+
+            <option value="{{ account.id }}">
+                {{ account.code }} - {{ account.name }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <label for="payment_reference">
+            Payment Reference
+        </label>
+
+        <br>
+
+        <input
+            type="text"
+            name="payment_reference"
+            id="payment_reference"
+            maxlength="100"
+            placeholder="Bank transfer / cheque / receipt reference"
+        >
+
+    </p>
+
+    <button type="submit">
+        💰 Pay ₦{{ total|floatformat:2 }}
+    </button>
+
+    <a href="{% url 'inventory:po_detail' po.pk %}">
+        Cancel
+    </a>
+
 </form>
 
-<a href="{% url 'inventory:po_detail' po.pk %}">⬅ Back</a>
 {% endblock %}

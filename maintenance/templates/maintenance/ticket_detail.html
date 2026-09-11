@@ -1,0 +1,377 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Maintenance Work Order #{{ ticket.id }}
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    Maintenance Work Order #{{ ticket.id }}
+</h2>
+
+<hr>
+
+<p>
+    <strong>Room:</strong>
+    {{ ticket.room.room_number }}
+</p>
+
+<p>
+    <strong>Status:</strong>
+    {{ ticket.status }}
+</p>
+
+<p>
+    <strong>Priority:</strong>
+    {{ ticket.priority }}
+</p>
+
+<p>
+    <strong>Reported By:</strong>
+    {{ ticket.reported_by }}
+</p>
+
+<p>
+    <strong>Reported:</strong>
+    {{ ticket.created_at|date:"Y-m-d H:i" }}
+</p>
+
+{% if ticket.assigned_to %}
+
+<p>
+    <strong>Assigned To:</strong>
+    {{ ticket.assigned_to }}
+</p>
+
+{% else %}
+
+<p>
+    <strong>Assigned To:</strong>
+    Not assigned
+</p>
+
+{% endif %}
+
+
+<hr>
+
+<h3>Problem</h3>
+
+<div style="
+    border:1px solid #ddd;
+    padding:15px;
+    margin-bottom:25px;
+">
+
+    {{ ticket.description|linebreaks }}
+
+</div>
+
+
+<!-- ===================================================== -->
+<!-- WORK NOTES -->
+<!-- ===================================================== -->
+
+<h3>Work Notes</h3>
+
+{% for note in ticket.work_notes.all %}
+
+<div style="
+    border:1px solid #ddd;
+    padding:12px;
+    margin-bottom:10px;
+">
+
+    <strong>
+        {{ note.created_by }}
+    </strong>
+
+    <small>
+        {{ note.created_at|date:"Y-m-d H:i" }}
+    </small>
+
+    <br><br>
+
+    {{ note.note|linebreaks }}
+
+</div>
+
+{% empty %}
+
+<p>
+    No work notes have been recorded yet.
+</p>
+
+{% endfor %}
+
+
+{% if request.user.role == "MAINTENANCE" %}
+    {% if ticket.assigned_to_id == request.user.id %}
+        {% if ticket.status == "IN_PROGRESS" %}
+
+<hr>
+
+<h3>Add Work Note</h3>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <textarea
+        name="note"
+        required
+        style="
+            width:500px;
+            height:120px;
+        "
+        placeholder="Describe the work performed..."
+    ></textarea>
+
+    <br><br>
+
+    <button type="submit">
+        Add Work Note
+    </button>
+
+</form>
+
+        {% endif %}
+    {% endif %}
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- LABOUR -->
+<!-- ===================================================== -->
+
+<hr>
+
+<h3>Labour</h3>
+
+{% for labour in ticket.labour_entries.all %}
+
+<div style="
+    border:1px solid #ddd;
+    padding:12px;
+    margin-bottom:10px;
+">
+
+    <strong>
+        {{ labour.get_labour_type_display }}
+    </strong>
+
+    <br>
+
+    {% if labour.labour_type == "INTERNAL" %}
+
+        Technician:
+        {{ labour.technician }}
+
+    {% elif labour.labour_type == "OUTSOURCED" %}
+
+        Contractor:
+        {{ labour.supplier }}
+
+    {% endif %}
+
+    <br>
+
+    Description:
+
+    {{ labour.description|linebreaks }}
+
+    <strong>
+        Amount:
+        ₦{{ labour.amount|floatformat:2 }}
+    </strong>
+
+    <br>
+
+    <small>
+        Added by {{ labour.created_by }}
+        on {{ labour.created_at|date:"Y-m-d H:i" }}
+    </small>
+
+</div>
+
+{% empty %}
+
+<p>
+    No labour recorded yet.
+</p>
+
+{% endfor %}
+
+
+{% if ticket.status == "IN_PROGRESS" %}
+
+<a
+    href="{% url 'maintenance_add_labour' ticket.id %}"
+>
+    <button type="button">
+        Add Labour
+    </button>
+</a>
+
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- MATERIALS -->
+<!-- ===================================================== -->
+
+<hr>
+
+<h3>Materials</h3>
+
+{% for material in ticket.material_entries.all %}
+
+<div style="
+    border:1px solid #ddd;
+    padding:12px;
+    margin-bottom:10px;
+">
+
+    <strong>
+        {{ material.product.name }}
+    </strong>
+
+    <br>
+
+    Source:
+    {{ material.get_source_display }}
+
+    <br>
+
+    Quantity:
+    {{ material.quantity }}
+    {{ material.product.base_unit }}
+
+    <br>
+
+    Unit Cost:
+    ₦{{ material.unit_cost|floatformat:2 }}
+
+    <br>
+
+    Total:
+    <strong>
+        ₦{{ material.total_cost|floatformat:2 }}
+    </strong>
+
+    {% if material.description %}
+
+    <br><br>
+
+    {{ material.description|linebreaks }}
+
+    {% endif %}
+
+    <br>
+
+    <small>
+        Added by {{ material.created_by }}
+        on {{ material.created_at|date:"Y-m-d H:i" }}
+    </small>
+
+</div>
+
+{% empty %}
+
+<p>
+    No materials have been recorded.
+</p>
+
+{% endfor %}
+
+
+{% if request.user.role == "MAINTENANCE" %}
+    {% if ticket.assigned_to_id == request.user.id %}
+        {% if ticket.status == "IN_PROGRESS" %}
+
+<a
+    href="{% url 'maintenance_add_material' ticket.id %}"
+>
+    <button type="button">
+        Add Material
+    </button>
+</a>
+
+        {% endif %}
+    {% endif %}
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- COST SUMMARY -->
+<!-- ===================================================== -->
+
+<hr>
+
+<h3>Maintenance Cost Summary</h3>
+
+<div style="
+    border:2px solid #333;
+    padding:18px;
+    margin-bottom:25px;
+">
+
+    <p>
+        <strong>
+            Materials:
+        </strong>
+
+        ₦{{ ticket.material_total|floatformat:2 }}
+    </p>
+
+    <p>
+        <strong>
+            Labour:
+        </strong>
+
+        ₦{{ ticket.labour_total|floatformat:2 }}
+    </p>
+
+    <hr>
+
+    <p style="font-size:20px;">
+
+        <strong>
+            Total Maintenance Cost:
+        </strong>
+
+        ₦{{ ticket.total_maintenance_cost|floatformat:2 }}
+
+    </p>
+
+</div>
+
+
+<!-- ===================================================== -->
+<!-- COMPLETE WORK ORDER -->
+<!-- ===================================================== -->
+
+{% if request.user.role == "MAINTENANCE" %}
+    {% if ticket.assigned_to_id == request.user.id %}
+        {% if ticket.status == "IN_PROGRESS" %}
+
+<a
+    href="{% url 'maintenance_resolve_ticket' ticket.id %}"
+>
+    <button type="button">
+        Complete Work Order
+    </button>
+</a>
+
+        {% endif %}
+    {% endif %}
+{% endif %}
+
+<br><br>
+
+<a href="{% url 'maintenance_dashboard' %}">
+    ← Back to Maintenance
+</a>
+
+{% endblock %}

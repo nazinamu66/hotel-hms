@@ -1,6 +1,8 @@
 {% extends "base/base.html" %}
 
-{% block title %}Housekeeping{% endblock %}
+{% block title %}
+Housekeeping Dashboard
+{% endblock %}
 
 {% block header %}
 <h2>Housekeeping Dashboard</h2>
@@ -8,141 +10,604 @@
 
 {% block content %}
 
-{% if rooms %}
+<!-- ===================================================== -->
+<!-- SUMMARY -->
+<!-- ===================================================== -->
 
-    <div style="
-        display:grid;
-        grid-template-columns:repeat(auto-fill,220px);
-        gap:15px;
-    ">
+<h3>Today's Overview</h3>
 
-        {% for room in rooms %}
+<div style="
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:15px;
+    margin-bottom:25px;
+">
 
-            <div style="
-                padding:15px;
-                border-radius:8px;
-                background:#f5f5f5;
-            ">
+    <div class="card" style="padding:15px;">
+        <strong>Dirty Rooms</strong>
+        <h2>{{ dirty_room_count }}</h2>
+    </div>
 
-                <strong>
-                    Room {{ room.room_number }}
-                </strong>
+    <div class="card" style="padding:15px;">
+        <strong>Assigned</strong>
+        <h2>{{ assigned_count }}</h2>
+    </div>
 
-                <br>
+    <div class="card" style="padding:15px;">
+        <strong>In Progress</strong>
+        <h2>{{ in_progress_count }}</h2>
+    </div>
 
-                <small>
-                    {{ room.get_status_display }}
-                </small>
+    <div class="card" style="padding:15px;">
+        <strong>Inspection</strong>
+        <h2>{{ inspection_count }}</h2>
+    </div>
 
-                {% with assignment=room.active_cleaning_assignments.0 %}
+    <div class="card" style="padding:15px;">
+        <strong>Cleaned Today</strong>
+        <h2>{{ cleaned_today_count }}</h2>
+    </div>
 
-                    {% if assignment %}
+    <div class="card" style="padding:15px;">
+        <strong>Low Stock</strong>
+        <h2>{{ low_stock_items|length }}</h2>
+    </div>
 
-                        <hr>
+    <div class="card" style="padding:15px;">
+        <strong>Lost & Found</strong>
+        <h2>{{ lost_found_count }}</h2>
+    </div>
 
-                        <strong>
-                            Cleaning:
-                        </strong>
+</div>
 
-                        <br>
 
-                        <small>
-                            {{ assignment.get_status_display }}
-                        </small>
+<!-- ===================================================== -->
+<!-- CLEANING QUEUE -->
+<!-- ===================================================== -->
 
-                        <br>
+<h3>Cleaning Queue</h3>
 
-                        {% if assignment.assigned_to %}
-                            <small>
-                                Assigned to:
-                                {{ assignment.assigned_to.username }}
-                            </small>
-                        {% endif %}
+{% if active_assignments %}
 
-                        <br><br>
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:25px;
+">
 
-                        {% if assignment.status == "ASSIGNED" %}
+<thead style="background:#eee;">
 
-                            {% if assignment.assigned_to == request.user %}
+<tr>
 
-                                <a href="{% url 'housekeeping_start_cleaning' room.id %}">
-                                    <button style="width:100%;">
-                                        Start Cleaning
-                                    </button>
-                                </a>
+    <th style="padding:10px;">
+        Room
+    </th>
 
-                            {% else %}
+    <th>
+        Hotel
+    </th>
 
-                                <small>
-                                    Waiting for assigned housekeeper.
-                                </small>
+    <th>
+        Room Status
+    </th>
 
-                            {% endif %}
+    <th>
+        Housekeeper
+    </th>
 
-                        {% elif assignment.status == "IN_PROGRESS" %}
+    <th>
+        Cleaning Status
+    </th>
 
-                            {% if assignment.assigned_to == request.user %}
+    <th>
+        Action
+    </th>
 
-                                <a href="{% url 'housekeeping_finish_cleaning' room.id %}">
-                                    <button style="width:100%;">
-                                        Finish Cleaning
-                                    </button>
-                                </a>
+</tr>
 
-                            {% endif %}
+</thead>
 
-                        {% elif assignment.status == "INSPECTION" %}
+<tbody>
 
-                            {% if request.user.is_department_head or request.user.role == "MANAGER" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+{% for assignment in active_assignments %}
 
-                                <a href="{% url 'housekeeping_approve_cleaning' room.id %}">
-                                    <button style="width:100%;">
-                                        Approve Cleaning
-                                    </button>
-                                </a>
+<tr style="border-bottom:1px solid #ddd;">
 
-                            {% else %}
+    <td style="padding:10px;">
+        <strong>
+            Room {{ assignment.room.room_number }}
+        </strong>
+    </td>
 
-                                <small>
-                                    Waiting for inspection.
-                                </small>
+    <td>
+        {{ assignment.room.hotel.name }}
+    </td>
 
-                            {% endif %}
+    <td>
+        {{ assignment.room.get_status_display }}
+    </td>
 
-                        {% endif %}
+    <td>
+        {{ assignment.assigned_to.username }}
+    </td>
 
-                    {% else %}
+    <td>
+        {{ assignment.get_status_display }}
+    </td>
 
-                        <br><br>
+    <td>
 
-                        <a href="{% url 'housekeeping_assign_room' room.id %}">
-                            <button style="width:100%;">
-                                Assign
-                            </button>
-                        </a>
+        {% if assignment.status == "ASSIGNED" %}
 
-                    {% endif %}
+            {% if assignment.assigned_to == request.user %}
 
-                {% endwith %}
-
-                <br>
-
-                <a href="{% url 'maintenance_create_ticket' room.id %}">
-                    <button style="width:100%;margin-top:5px;">
-                        Report Issue
-                    </button>
+                <a href="{% url 'housekeeping_start_cleaning' assignment.room.id %}">
+                    Start
                 </a>
 
-            </div>
+            {% else %}
 
-        {% endfor %}
+                Waiting
 
-    </div>
+            {% endif %}
+
+        {% elif assignment.status == "IN_PROGRESS" %}
+
+            {% if assignment.assigned_to == request.user %}
+
+                <a href="{% url 'housekeeping_cleaning_materials' assignment.id %}">
+                    Materials
+                </a>
+
+                |
+
+                <a href="{% url 'housekeeping_cleaning_linen' assignment.id %}">
+                    Linen Checklist
+                </a>
+
+                |
+
+                <a href="{% url 'housekeeping_finish_cleaning' assignment.room.id %}">
+                    Finish
+                </a>
+
+            {% else %}
+
+                In Progress
+
+            {% endif %}
+
+        {% elif assignment.status == "INSPECTION" %}
+
+            {% if request.user.is_department_head or request.user.role == "MANAGER" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+
+                <a href="{% url 'housekeeping_approve_cleaning' assignment.room.id %}">
+                    Approve
+                </a>
+
+            {% else %}
+
+                Waiting Inspection
+
+            {% endif %}
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
 
 {% else %}
 
-    <p>No rooms require cleaning 🎉</p>
+<p>
+    No active cleaning assignments.
+</p>
 
 {% endif %}
+
+
+<!-- ===================================================== -->
+<!-- DIRTY ROOMS -->
+<!-- ===================================================== -->
+
+<h3>Rooms Requiring Cleaning</h3>
+
+{% if dirty_rooms %}
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:25px;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">
+        Room
+    </th>
+
+    <th>
+        Hotel
+    </th>
+
+    <th>
+        Status
+    </th>
+
+    <th>
+        Action
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for room in dirty_rooms %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        <strong>
+            Room {{ room.room_number }}
+        </strong>
+    </td>
+
+    <td>
+        {{ room.hotel.name }}
+    </td>
+
+    <td>
+        {{ room.get_status_display }}
+    </td>
+
+    <td>
+
+        {% if request.user.is_department_head or request.user.role == "MANAGER" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+
+            <a href="{% url 'housekeeping_assign_room' room.id %}">
+                Assign
+            </a>
+
+        {% else %}
+
+            Awaiting assignment
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    ✓ No rooms currently require cleaning.
+</p>
+
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- TODAY'S CLEANING -->
+<!-- ===================================================== -->
+
+<h3>Today's Cleaning Activity</h3>
+
+{% if cleaned_today %}
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:25px;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">
+        Time
+    </th>
+
+    <th>
+        Room
+    </th>
+
+    <th>
+        Hotel
+    </th>
+
+    <th>
+        Cleaned By
+    </th>
+
+    <th>
+        Previous Status
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for log in cleaned_today|slice:":20" %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        {{ log.cleaned_at|date:"H:i" }}
+    </td>
+
+    <td>
+        Room {{ log.room.room_number }}
+    </td>
+
+    <td>
+        {{ log.room.hotel.name }}
+    </td>
+
+    <td>
+        {{ log.cleaned_by }}
+    </td>
+
+    <td>
+        {{ log.previous_status }}
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    No rooms have been cleaned today yet.
+</p>
+
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- LOW STOCK -->
+<!-- ===================================================== -->
+
+<h3>Housekeeping Stock Alerts</h3>
+
+{% if low_stock_items %}
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:25px;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">
+        Product
+    </th>
+
+    <th>
+        Hotel
+    </th>
+
+    <th>
+        Current
+    </th>
+
+    <th>
+        Reorder Level
+    </th>
+
+    <th>
+        Unit
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for stock in low_stock_items %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        {{ stock.product.name }}
+    </td>
+
+    <td>
+        {{ stock.department.hotel.name }}
+    </td>
+
+    <td>
+        {{ stock.quantity }}
+    </td>
+
+    <td>
+        {{ stock.product.reorder_level }}
+    </td>
+
+    <td>
+        {{ stock.product.base_unit }}
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    ✓ No Housekeeping stock is currently at reorder level.
+</p>
+
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- MATERIAL USAGE -->
+<!-- ===================================================== -->
+
+<h3>Today's Cleaning Material Usage</h3>
+
+{% if materials_used_today %}
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:25px;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">
+        Material
+    </th>
+
+    <th>
+        Quantity Used
+    </th>
+
+    <th>
+        Unit
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for material in materials_used_today %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        {{ material.product__name }}
+    </td>
+
+    <td>
+        {{ material.total_quantity }}
+    </td>
+
+    <td>
+        {{ material.product__base_unit }}
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    No cleaning materials have been recorded today.
+</p>
+
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- LOST & FOUND -->
+<!-- ===================================================== -->
+
+<h3>Lost & Found</h3>
+
+<p>
+    <strong>{{ lost_found_count }}</strong>
+    item{{ lost_found_count|pluralize }}
+    currently awaiting claim.
+</p>
+
+<p>
+    <strong>{{ lost_found_today_count }}</strong>
+    item{{ lost_found_today_count|pluralize }}
+    recorded today.
+</p>
+
+<a href="{% url 'housekeeping_lost_found' %}">
+    Open Lost & Found
+</a>
+
+&nbsp; | &nbsp;
+
+<a href="{% url 'housekeeping_lost_found_create' %}">
+    Record Found Item
+</a>
+
+
+<!-- ===================================================== -->
+<!-- QUICK ACTIONS -->
+<!-- ===================================================== -->
+
+<hr>
+
+<h3>Housekeeping</h3>
+
+<p>
+
+    <a href="{% url 'housekeeping_cleaning_history' %}">
+        Cleaning History
+    </a>
+
+    &nbsp; | &nbsp;
+
+    <a href="{% url 'housekeeping_request_stock' %}">
+        Request Stock
+    </a>
+    &nbsp; | &nbsp;
+
+    <a href="{% url 'housekeeping_stock_requests' %}">
+        My Stock Requests
+    </a>
+
+    &nbsp; | &nbsp;
+
+    <a href="{% url 'housekeeping_incoming_pos' %}">
+        Incoming Deliveries
+    </a>
+
+    &nbsp; | &nbsp;
+
+    <a href="{% url 'housekeeping_lost_found' %}">
+        Lost & Found
+    </a>
+
+</p>
 
 {% endblock %}

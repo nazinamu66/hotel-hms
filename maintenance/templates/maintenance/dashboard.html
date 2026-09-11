@@ -1,75 +1,476 @@
 {% extends "base/base.html" %}
 
-{% block title %}Maintenance Dashboard{% endblock %}
+{% block title %}
+Maintenance Dashboard
+{% endblock %}
 
 {% block content %}
 
-<h2>Maintenance Tickets</h2>
+<h2>Maintenance Dashboard</h2>
 
-<table style="width:100%; border-collapse:collapse;">
+<p>
+    Maintenance operations overview.
+</p>
 
-<thead style="background:#eee;">
-<tr>
+<hr>
 
-<th style="padding:10px;">Room</th>
-<th>Description</th>
-<th>Priority</th>
-<th>Status</th>
-<th>Reported By</th>
-<th>Action</th>
-<th>Date</th>
+<!-- ===================================================== -->
+<!-- KPI CARDS -->
+<!-- ===================================================== -->
 
-</tr>
-</thead>
+<div style="
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:15px;
+    margin-bottom:25px;
+">
 
-<tbody>
+    <div style="
+        border:1px solid #ddd;
+        padding:20px;
+        border-radius:6px;
+    ">
+        <div>Open Tickets</div>
+        <strong style="font-size:28px;">
+            {{ open_count }}
+        </strong>
+    </div>
 
-{% for ticket in tickets %}
+    <div style="
+        border:1px solid #ddd;
+        padding:20px;
+        border-radius:6px;
+    ">
+        <div>In Progress</div>
+        <strong style="font-size:28px;">
+            {{ in_progress_count }}
+        </strong>
+    </div>
 
-<tr style="border-bottom:1px solid #ddd;">
+    <div style="
+        border:1px solid #ddd;
+        padding:20px;
+        border-radius:6px;
+    ">
+        <div>High Priority</div>
+        <strong style="font-size:28px;">
+            {{ high_priority_count }}
+        </strong>
+    </div>
 
-<td style="padding:10px;">
-Room {{ ticket.room.room_number }}
-</td>
+    <div style="
+        border:1px solid #ddd;
+        padding:20px;
+        border-radius:6px;
+    ">
+        <div>Completed This Month</div>
+        <strong style="font-size:28px;">
+            {{ completed_this_month }}
+        </strong>
+    </div>
 
-<td>
-{{ ticket.description }}
-</td>
+</div>
 
-<td>
-{{ ticket.priority }}
-</td>
 
-<td>
-{{ ticket.status }}
-</td>
+<!-- ===================================================== -->
+<!-- MAIN CONTENT -->
+<!-- ===================================================== -->
 
-<td>
-{{ ticket.reported_by }}
-</td>
+<div style="
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:25px;
+">
 
-<td>
-<a href="{% url 'maintenance_resolve_ticket' ticket.id %}">
-<button>Resolve</button>
-</a>
-</td>
+    <!-- ACTIVE WORK ORDERS -->
 
-<td>
-{{ ticket.created_at|date:"Y-m-d H:i" }}
-</td>
+    <div>
 
-</tr>
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+        ">
 
-{% empty %}
+            <h3>Active Work Orders</h3>
 
-<tr>
-<td colspan="6">No maintenance tickets.</td>
-</tr>
+            <a href="{% url 'maintenance_create_ticket_room' %}">
+                + Create Ticket
+            </a>
 
-{% endfor %}
+        </div>
 
-</tbody>
+        <table style="
+            width:100%;
+            border-collapse:collapse;
+        ">
+
+            <thead style="background:#eee;">
+
+                <tr>
+                    <th style="padding:10px;">Room</th>
+                    <th>Problem</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Assigned To</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for ticket in active_tickets %}
+
+                <tr style="
+                    border-bottom:1px solid #ddd;
+                ">
+
+                    <td style="padding:10px;">
+
+                        <a href="{% url 'maintenance_ticket_detail' ticket.id %}">
+                            Room {{ ticket.room.room_number }}
+                        </a>
+
+                    </td>
+
+                    <td>
+                        {{ ticket.description|truncatechars:60 }}
+                    </td>
+
+                    <td>
+                        {{ ticket.get_priority_display }}
+                    </td>
+
+                    <td>
+                        {{ ticket.get_status_display }}
+                    </td>
+
+                    <td>
+
+                        {% if ticket.assigned_to %}
+                            {{ ticket.assigned_to }}
+                        {% else %}
+                            —
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+                {% empty %}
+
+                <tr>
+
+                    <td
+                        colspan="5"
+                        style="
+                            padding:20px;
+                            text-align:center;
+                        "
+                    >
+                        No active maintenance work orders.
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+    <!-- COST SUMMARY -->
+
+    <div>
+
+        <h3>Maintenance Cost</h3>
+
+        <p>
+            <strong>This Month</strong>
+        </p>
+
+        <div style="
+            border:1px solid #ddd;
+            padding:20px;
+            border-radius:6px;
+        ">
+
+            <div>
+                Materials:
+                <strong>
+                    ₦{{ material_cost|floatformat:2 }}
+                </strong>
+            </div>
+
+            <br>
+
+            <div>
+                Labour:
+                <strong>
+                    ₦{{ labour_cost|floatformat:2 }}
+                </strong>
+            </div>
+
+            <br>
+
+            <div>
+                Outsourced:
+                <strong>
+                    ₦{{ outsourced_labour_cost|floatformat:2 }}
+                </strong>
+            </div>
+
+            <hr>
+
+            <div style="font-size:20px;">
+
+                Total:
+                <strong>
+                    ₦{{ total_maintenance_cost|floatformat:2 }}
+                </strong>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ===================================================== -->
+<!-- PREVENTIVE MAINTENANCE -->
+<!-- ===================================================== -->
+
+<hr style="margin-top:30px;">
+
+<div style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+">
+
+    <h3 style="margin:0;">
+        Preventive Maintenance
+    </h3>
+
+    <a href="{% url 'maintenance_schedules' %}">
+        View All Schedules →
+    </a>
+
+</div>
+
+<div style="
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:15px;
+    margin-bottom:20px;
+">
+
+    <div style="
+        border:1px solid #ddd;
+        padding:15px;
+        border-radius:6px;
+    ">
+        <div>Overdue</div>
+        <strong style="font-size:24px;">
+            {{ preventive_overdue }}
+        </strong>
+    </div>
+
+    <div style="
+        border:1px solid #ddd;
+        padding:15px;
+        border-radius:6px;
+    ">
+        <div>Due Today</div>
+        <strong style="font-size:24px;">
+            {{ preventive_due_today }}
+        </strong>
+    </div>
+
+    <div style="
+        border:1px solid #ddd;
+        padding:15px;
+        border-radius:6px;
+    ">
+        <div>Due Within 7 Days</div>
+        <strong style="font-size:24px;">
+            {{ preventive_upcoming }}
+        </strong>
+    </div>
+
+</div>
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+">
+
+    <thead style="background:#eee;">
+
+        <tr>
+            <th style="padding:10px;">Asset</th>
+            <th>Room</th>
+            <th>Maintenance</th>
+            <th>Due Date</th>
+            <th>Action</th>
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+        {% for schedule in preventive_schedules %}
+
+        <tr style="
+            border-bottom:1px solid #ddd;
+        ">
+
+            <td style="padding:10px;">
+                {{ schedule.asset.name }}
+            </td>
+
+            <td>
+                {% if schedule.asset.room %}
+                    Room {{ schedule.asset.room.room_number }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+
+            <td>
+                {{ schedule.name }}
+            </td>
+
+            <td>
+                {{ schedule.next_due_date }}
+            </td>
+
+            <td>
+
+                {% if schedule.next_due_date <= today %}
+
+                    <a href="{% url 'maintenance_schedule_work_order' schedule.id %}">
+                        <button type="button">
+                            Create Work Order
+                        </button>
+                    </a>
+
+                {% else %}
+
+                    —
+                    
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+        {% empty %}
+
+        <tr>
+
+            <td
+                colspan="5"
+                style="
+                    padding:20px;
+                    text-align:center;
+                "
+            >
+                No preventive maintenance due within 7 days.
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+    </tbody>
 
 </table>
+
+
+<!-- ===================================================== -->
+<!-- QUICK ACTIONS -->
+<!-- ===================================================== -->
+
+<hr style="margin-top:30px;">
+
+<h3>Quick Actions</h3>
+
+<div style="
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+">
+
+    <a href="{% url 'maintenance_create_ticket_room' %}">
+        <button type="button">
+            + Create Ticket
+        </button>
+    </a>
+
+    <a href="{% url 'maintenance_work_orders' %}">
+        <button type="button">
+            Work Orders
+        </button>
+    </a>
+
+    <a href="{% url 'maintenance_work_history' %}">
+        <button type="button">
+            Work History
+        </button>
+    </a>
+
+    <a href="{% url 'maintenance_stock' %}">
+        <button type="button">
+            Maintenance Stock
+        </button>
+    </a>
+
+    <a href="{% url 'maintenance_stock_movements' %}">
+        <button type="button">
+            Stock Movements
+        </button>
+    </a>
+
+    <a href="{% url 'maintenance_request_stock' %}">
+        <button type="button">
+            Request Stock
+        </button>
+    </a>
+
+    <a href="{% url 'maintenance_stock_requests' %}">
+        <button type="button">
+            My Stock Requests
+        </button>
+    </a>
+    <a href="{% url 'maintenance_suppliers' %}">
+        <button type="button">
+            Maintenance Suppliers
+        </button>
+    </a>
+
+    <a href="{% url 'maintenance_assets' %}">
+        <button type="button">
+            Maintenance Assets
+        </button>
+    </a>
+    <a href="{% url 'maintenance_products' %}">
+        <button type="button">
+            Maintenance Products
+        </button>
+    </a>
+
+    <a href="{% url 'maintenance_schedules' %}">
+        <button type="button">
+            Preventive Maintenance
+        </button>
+    </a>
+
+</div>
 
 {% endblock %}

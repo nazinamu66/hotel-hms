@@ -1,0 +1,178 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+{% if service %}
+    Edit Laundry Item
+{% else %}
+    Add Laundry Item
+{% endif %}
+{% endblock %}
+
+{% block header %}
+<h2>
+    {% if service %}
+        Edit Laundry Item
+    {% else %}
+        Add Laundry Item
+    {% endif %}
+</h2>
+{% endblock %}
+
+{% block content %}
+
+<h3>
+    {% if service %}
+        Edit Laundry Service
+    {% else %}
+        New Laundry Service
+    {% endif %}
+</h3>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+        <div class="card" style="padding:15px; margin-bottom:20px;">
+            {{ form.non_field_errors }}
+        </div>
+    {% endif %}
+
+    {% if not selected_hotel %}
+
+        <div style="margin-bottom:15px;">
+
+            <label for="hotel">
+                <strong>Hotel</strong>
+            </label>
+
+            <br>
+
+            <select
+                name="hotel"
+                id="hotel"
+                required
+                style="padding:8px; min-width:300px;"
+            >
+
+                <option value="">
+                    Select hotel
+                </option>
+
+                {% for hotel in hotels %}
+
+                    <option
+                        value="{{ hotel.id }}"
+                        {% if hotel.id == selected_hotel.id %}selected{% endif %}
+                    >
+                        {{ hotel.name }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+    {% else %}
+
+        <div style="
+            padding:10px;
+            background:#f5f5f5;
+            margin-bottom:20px;
+        ">
+            <strong>Hotel:</strong>
+            {{ selected_hotel.name }}
+        </div>
+
+        <input
+            type="hidden"
+            name="hotel"
+            value="{{ selected_hotel.id }}"
+        >
+
+    {% endif %}
+
+
+    <div style="margin-bottom:15px;">
+
+        <label for="{{ form.name.id_for_label }}">
+            <strong>Item Name</strong>
+        </label>
+
+        <br>
+
+        {{ form.name }}
+
+        {% for error in form.name.errors %}
+            <div>{{ error }}</div>
+        {% endfor %}
+
+    </div>
+
+
+    <div style="margin-bottom:15px;">
+
+        <label for="{{ form.code.id_for_label }}">
+            <strong>Code</strong>
+        </label>
+
+        <br>
+
+        {{ form.code }}
+
+        {% for error in form.code.errors %}
+            <div>{{ error }}</div>
+        {% endfor %}
+
+    </div>
+
+
+    <div style="margin-bottom:15px;">
+
+        <label for="{{ form.unit_price.id_for_label }}">
+            <strong>Unit Price (₦)</strong>
+        </label>
+
+        <br>
+
+        {{ form.unit_price }}
+
+        {% for error in form.unit_price.errors %}
+            <div>{{ error }}</div>
+        {% endfor %}
+
+    </div>
+
+
+    <div style="margin-bottom:20px;">
+
+        <label>
+            {{ form.is_active }}
+            <strong>Active</strong>
+        </label>
+
+        {% for error in form.is_active.errors %}
+            <div>{{ error }}</div>
+        {% endfor %}
+
+    </div>
+
+
+    <button type="submit" style="padding:10px 18px;">
+        {% if service %}
+            Save Changes
+        {% else %}
+            Add Laundry Item
+        {% endif %}
+    </button>
+
+    &nbsp;
+
+    <a href="{% url 'laundry:service_list' %}">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}

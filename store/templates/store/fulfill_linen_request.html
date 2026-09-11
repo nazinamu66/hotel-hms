@@ -1,0 +1,108 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Fulfill Linen Request
+{% endblock %}
+
+{% block content %}
+
+<h2>Fulfill Linen Request #{{ linen_request.id }}</h2>
+
+<p style="color:#666;">
+    Issue new, unused linen from the Linen Store to Housekeeping.
+</p>
+
+<div
+    class="card"
+    style="
+        max-width:700px;
+        padding:25px;
+        background:white;
+        border:1px solid #ddd;
+    "
+>
+
+    <p>
+        <strong>Linen:</strong>
+        {{ linen_request.linen_item.product.name }}
+    </p>
+
+    <p>
+        <strong>SKU:</strong>
+        {{ linen_request.linen_item.product.sku }}
+    </p>
+
+    <p>
+        <strong>Requested By:</strong>
+        {{ linen_request.requested_by.username }}
+    </p>
+
+    <p>
+        <strong>Requested:</strong>
+        {{ linen_request.quantity }}
+    </p>
+
+    <p>
+        <strong>Already Fulfilled:</strong>
+        {{ linen_request.fulfilled_quantity }}
+    </p>
+
+    <hr>
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <label>
+            <strong>Quantity to Fulfill</strong>
+        </label>
+
+        <br>
+
+        <input
+            type="number"
+            name="quantity"
+            min="1"
+            max="{{ linen_request.quantity }}"
+            value="{{ linen_request.quantity }}"
+            required
+            style="width:100%;padding:10px;"
+        >
+
+        <br><br>
+
+        <label>
+            <strong>Note</strong>
+        </label>
+
+        <br>
+
+        <textarea
+            name="note"
+            rows="4"
+            style="width:100%;padding:10px;"
+            placeholder="Optional note..."
+        ></textarea>
+
+        <br><br>
+
+        <button
+            type="submit"
+            class="btn btn-primary"
+        >
+            Fulfill Request
+        </button>
+
+        <a
+            href="{% url 'store_linen_requests' %}"
+            class="btn btn-secondary"
+            style="margin-left:10px;"
+        >
+            Cancel
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}

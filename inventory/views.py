@@ -2,19 +2,34 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from core.utils import get_user_hotels
 from accounts.decorators import role_required
-from .models import Supplier, PurchaseOrder, PurchaseItem, Department, LowStockRequest,StockMovement,Stock,Product,HotelFeature
+from decimal import Decimal, InvalidOperation
+from .services.setup_hotel import setup_new_hotel
+from .models import (
+    Supplier,
+    PurchaseOrder,
+    PurchaseItem,
+    Department,
+    LowStockRequest,
+    StockMovement,
+    Stock,
+    Product,
+    HotelFeature,
+    Hotel,
+)
 from .forms import SupplierForm, PurchaseOrderForm, PurchaseItemForm,ProductForm
 from .permissions import is_admin, is_manager, is_store
 from inventory.models import transfer_stock
+from accounting.models import Account
 from accounts.services.access import get_accessible_hotels
 from kitchen.forms import (
     PreparedFoodForm,
     RecipeItemForm,
 
 )
+
 from restaurant.models import MenuItem
 
 
@@ -29,32 +44,113 @@ from kitchen.models import (
 @role_required("ADMIN", "DIRECTOR")
 def supplier_list(request):
 
-    suppliers = Supplier.objects.all()
+    accessible_hotels = (
+        get_accessible_hotels(
+            request.user,
+        )
+        .filter(
+            is_active=True,
+        )
+        .order_by("name")
+    )
+
+    suppliers = (
+        Supplier.objects
+        .filter(
+            hotel__in=accessible_hotels,
+        )
+        .select_related("hotel")
+        .order_by("hotel__name", "name")
+    )
 
     return render(
         request,
         "inventory/supplier_list.html",
-        {"suppliers": suppliers}
+        {
+            "suppliers": suppliers,
+            "hotels": accessible_hotels,
+        },
     )
-
 
 @role_required("ADMIN", "DIRECTOR")
 def supplier_create(request):
 
-    form = SupplierForm(request.POST or None)
+    accessible_hotels = (
+        get_accessible_hotels(
+            request.user,
+        )
+        .filter(
+            is_active=True,
+        )
+        .order_by("name")
+    )
+
+    hotel_id = (
+        request.POST.get("hotel")
+        if request.method == "POST"
+        else request.GET.get("hotel")
+    )
+
+    hotel = None
+
+    if hotel_id:
+        hotel = get_object_or_404(
+            accessible_hotels,
+            pk=hotel_id,
+        )
+
+    elif accessible_hotels.count() == 1:
+        hotel = accessible_hotels.first()
+
+    if request.method == "POST" and not hotel:
+
+        messages.error(
+            request,
+            "Please select a hotel.",
+        )
+
+        return redirect(
+            request.path,
+        )
+
+    form = SupplierForm(
+        request.POST or None,
+    )
 
     if form.is_valid():
-        form.save()
-        messages.success(request, "Supplier created successfully.")
-        return redirect("inventory:supplier_list")
+
+        supplier = form.save(
+            commit=False,
+        )
+
+        # ----------------------------------------------------
+        # Server-side hotel ownership
+        # ----------------------------------------------------
+
+        supplier.hotel = hotel
+
+        supplier.save()
+
+        messages.success(
+            request,
+            "Supplier created successfully.",
+        )
+
+        return redirect(
+            "inventory:supplier_list",
+        )
 
     return render(
         request,
         "inventory/supplier_form.html",
-        {"form": form}
+        {
+            "form": form,
+            "hotels": accessible_hotels,
+            "selected_hotel": hotel,
+        },
     )
 
-@role_required("DIRECTOR")
+@role_required("DIRECTOR", "ADMIN")
 def product_list(request):
 
     product_type = request.GET.get("type")
@@ -81,42 +177,100 @@ def product_list(request):
 from django.db import IntegrityError
 
 
-@role_required("DIRECTOR")
+@role_required("DIRECTOR", "ADMIN")
 def product_create(request):
 
     from restaurant.models import MenuItem
 
-    form = ProductForm(request.POST or None)
+    # --------------------------------------------------------
+    # Hotels this Director is allowed to manage
+    # --------------------------------------------------------
 
-    print("FORM VALID:", form.is_valid())
-    print("FORM ERRORS:", form.errors)
+    hotels = (
+        get_accessible_hotels(
+            request.user,
+        )
+        .filter(
+            is_active=True,
+        )
+        .order_by("name")
+    )
+
+    # --------------------------------------------------------
+    # Determine selected hotel
+    # --------------------------------------------------------
+
+    hotel_id = (
+        request.POST.get("hotel")
+        if request.method == "POST"
+        else request.GET.get("hotel")
+    )
+
+    hotel = None
+
+    if hotel_id:
+        hotel = get_object_or_404(
+            hotels,
+            pk=hotel_id,
+        )
+
+    elif hotels.count() == 1:
+        hotel = hotels.first()
+
+    # --------------------------------------------------------
+    # Hotel is required
+    # --------------------------------------------------------
+
+    if request.method == "POST" and not hotel:
+
+        messages.error(
+            request,
+            "Please select a hotel.",
+        )
+
+        return redirect(
+            request.path,
+        )
+
+    # --------------------------------------------------------
+    # Product form
+    # --------------------------------------------------------
+
+    form = ProductForm(
+        request.POST or None,
+        hotel=hotel,
+    )
 
     if form.is_valid():
 
         product = form.save(commit=False)
 
-        print("CLEANED DATA:", form.cleaned_data)
+        # ----------------------------------------------------
+        # Server-side ownership
+        # ----------------------------------------------------
 
-        print("COST PRICE AFTER SET:", product.cost_price)
+        product.hotel = hotel
 
+        # ----------------------------------------------------
         # FOOD rules
+        # ----------------------------------------------------
+
         if product.product_type == "FOOD":
+
             product.base_unit = "portion"
             product.purchase_unit = "portion"
             product.unit_multiplier = 1
             product.cost_price = 0
             product.usage_type = "RESALE"
 
-        try:
-            product.save()
-            print("PRODUCT SAVED ✅")
-
-        except Exception as e:
-            print("SAVE ERROR:", e)
+        product.save()
 
         form.save_m2m()
 
-        # 🔥 AUTO CREATE MENU ITEM
+        # ----------------------------------------------------
+        # Auto-create MenuItem for resale products
+        # ----------------------------------------------------
+
         if product.usage_type == "RESALE":
 
             MenuItem.objects.get_or_create(
@@ -125,16 +279,26 @@ def product_create(request):
                     "name": product.name,
                     "price": product.price or 0,
                     "is_active": True,
-                }
+                },
             )
 
-        messages.success(request, "Product created successfully.")
-        return redirect("inventory:product_list")
+        messages.success(
+            request,
+            "Product created successfully.",
+        )
+
+        return redirect(
+            "inventory:product_list",
+        )
 
     return render(
         request,
         "inventory/product_form.html",
-        {"form": form}
+        {
+            "form": form,
+            "hotels": hotels,
+            "selected_hotel": hotel,
+        },
     )
 
 @role_required("ADMIN", "DIRECTOR")
@@ -236,49 +400,420 @@ def hotel_feature_setup(request):
         },
     )
 
-# @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
-# @transaction.atomic
-# def prepared_food_create(request):
+# =========================
+# HOTEL & DEPARTMENT SETUP
+# =========================
 
-#     form = PreparedFoodForm(request.POST or None)
+@role_required("ADMIN", "DIRECTOR")
+def hotel_list(request):
 
-#     if form.is_valid():
-#         food = form.save(commit=False)
+    hotels = (
+        get_accessible_hotels(request.user)
+        .order_by("name")
+    )
 
-#         # enforce system rules
-#         food.product_type = "FOOD"
-#         food.base_unit = "portion"
-#         food.purchase_unit = "portion"
-#         food.unit_multiplier = 1
+    return render(
+        request,
+        "inventory/hotel_list.html",
+        {
+            "hotels": hotels,
+        },
+    )
 
-#         food.save()
 
-#         # auto create menu item
-#         from restaurant.models import MenuItem
+@role_required("ADMIN", "DIRECTOR")
+@transaction.atomic
+def hotel_create(request):
 
-#         MenuItem.objects.get_or_create(
-#             product=food,
-#             defaults={
-#                 "name": food.name,
-#                 "price": 0,
-#                 "category": "FOOD",
-#                 "is_active": True
-#             }
-#         )
+    if request.method == "POST":
 
-#         messages.success(
-#             request,
-#             f"{food.name} created. Now add its recipe."
-#         )
+        name = request.POST.get(
+            "name",
+            "",
+        ).strip()
 
-#         return redirect("kitchen_food_list")
+        location = request.POST.get(
+            "location",
+            "",
+        ).strip()
 
-#     return render(
-#         request,
-#         "inventory/setup/foods/create.html",
-#         {"form": form}
-#     )
+        if not name:
+            messages.error(
+                request,
+                "Hotel name is required.",
+            )
+            return redirect(request.path)
 
+        if Hotel.objects.filter(
+            name__iexact=name,
+        ).exists():
+
+            messages.error(
+                request,
+                "A hotel with this name already exists.",
+            )
+            return redirect(request.path)
+
+        # -------------------------------------------------
+        # Determine organization
+        # -------------------------------------------------
+
+        if request.user.role == "DIRECTOR":
+
+            if not request.user.organization_id:
+                raise PermissionDenied(
+                    "Director is not assigned to an organization."
+                )
+
+            organization = request.user.organization
+
+        elif request.user.role == "ADMIN":
+
+            # A platform ADMIN creating a hotel must belong
+            # to an organization first.
+            if not request.user.organization_id:
+                raise PermissionDenied(
+                    "Administrator must be assigned to an organization before creating a hotel."
+                )
+
+            organization = request.user.organization
+
+        else:
+            raise PermissionDenied
+
+        hotel = Hotel.objects.create(
+            organization=organization,
+            name=name,
+            location=location,
+        )
+
+        setup_new_hotel(hotel)
+
+        messages.success(
+            request,
+            f"Hotel '{hotel.name}' created and initialized successfully.",
+        )
+
+        return redirect(
+            "inventory:hotel_list",
+        )
+
+    return render(
+        request,
+        "inventory/hotel_form.html",
+    )
+
+
+@role_required("ADMIN", "DIRECTOR")
+def department_list(request):
+
+    hotels = get_accessible_hotels(
+        request.user,
+    )
+
+    departments = (
+        Department.objects
+        .filter(
+            hotel__in=hotels,
+        )
+        .select_related(
+            "hotel",
+        )
+        .order_by(
+            "hotel__name",
+            "name",
+        )
+    )
+
+    return render(
+        request,
+        "inventory/department_list.html",
+        {
+            "departments": departments,
+        },
+    )
+
+
+@role_required("ADMIN", "DIRECTOR")
+def department_create(request):
+
+    hotels = (
+        get_accessible_hotels(
+            request.user,
+        )
+        .filter(
+            is_active=True,
+        )
+        .order_by(
+            "name",
+        )
+    )
+
+    valid_types = {
+        value
+        for value, label in Department.DEPARTMENT_TYPES
+    }
+
+    if request.method == "POST":
+
+        hotel_id = request.POST.get(
+            "hotel",
+        )
+
+        code = request.POST.get(
+            "code",
+            "",
+        ).strip().upper()
+
+        name = request.POST.get(
+            "name",
+            "",
+        ).strip()
+
+        dept_type = request.POST.get(
+            "department_type",
+            "",
+        ).strip()
+
+        is_active = request.POST.get(
+            "is_active",
+            "on",
+        ) == "on"
+
+        if not hotel_id or not code or not name or not dept_type:
+
+            messages.error(
+                request,
+                "Hotel, department code, name and type are required.",
+            )
+
+            return redirect(
+                request.path,
+            )
+
+        hotel = get_object_or_404(
+            hotels,
+            pk=hotel_id,
+        )
+
+        if dept_type not in valid_types:
+
+            messages.error(
+                request,
+                "Invalid department type selected.",
+            )
+
+            return redirect(
+                request.path,
+            )
+
+        if Department.objects.filter(
+            hotel=hotel,
+            code=code,
+        ).exists():
+
+            messages.error(
+                request,
+                f"A department with code '{code}' already exists in "
+                f"{hotel.name}.",
+            )
+
+            return redirect(
+                request.path,
+            )
+
+        if Department.objects.filter(
+            hotel=hotel,
+            name__iexact=name,
+        ).exists():
+
+            messages.error(
+                request,
+                f"A department named '{name}' already exists in "
+                f"{hotel.name}.",
+            )
+
+            return redirect(
+                request.path,
+            )
+
+        Department.objects.create(
+            hotel=hotel,
+            code=code,
+            name=name,
+            department_type=dept_type,
+            is_active=is_active,
+        )
+
+        messages.success(
+            request,
+            "Department created successfully.",
+        )
+
+        return redirect(
+            "inventory:department_list",
+        )
+
+    return render(
+        request,
+        "inventory/department_form.html",
+        {
+            "hotels": hotels,
+            "types": Department.DEPARTMENT_TYPES,
+        },
+    )
+
+
+@role_required("ADMIN", "DIRECTOR")
+def department_edit(
+    request,
+    dept_id,
+):
+
+    hotels = (
+        get_accessible_hotels(
+            request.user,
+        )
+        .filter(
+            is_active=True,
+        )
+        .order_by(
+            "name",
+        )
+    )
+
+    dept = get_object_or_404(
+        Department.objects.select_related(
+            "hotel",
+        ),
+        id=dept_id,
+        hotel__in=get_accessible_hotels(
+            request.user,
+        ),
+    )
+
+    valid_types = {
+        value
+        for value, label in Department.DEPARTMENT_TYPES
+    }
+
+    if request.method == "POST":
+
+        hotel_id = request.POST.get(
+            "hotel",
+        )
+
+        code = request.POST.get(
+            "code",
+            "",
+        ).strip().upper()
+
+        name = request.POST.get(
+            "name",
+            "",
+        ).strip()
+
+        dept_type = request.POST.get(
+            "department_type",
+            "",
+        ).strip()
+
+        is_active = request.POST.get(
+            "is_active",
+        ) == "on"
+
+        if not hotel_id or not code or not name or not dept_type:
+
+            messages.error(
+                request,
+                "Hotel, department code, name and type are required.",
+            )
+
+            return redirect(
+                "inventory:department_edit",
+                dept_id=dept.pk,
+            )
+
+        hotel = get_object_or_404(
+            hotels,
+            pk=hotel_id,
+        )
+
+        if dept_type not in valid_types:
+
+            messages.error(
+                request,
+                "Invalid department type selected.",
+            )
+
+            return redirect(
+                "inventory:department_edit",
+                dept_id=dept.pk,
+            )
+
+        if Department.objects.filter(
+            hotel=hotel,
+            code=code,
+        ).exclude(
+            pk=dept.pk,
+        ).exists():
+
+            messages.error(
+                request,
+                f"A department with code '{code}' already exists in "
+                f"{hotel.name}.",
+            )
+
+            return redirect(
+                "inventory:department_edit",
+                dept_id=dept.pk,
+            )
+
+        if Department.objects.filter(
+            hotel=hotel,
+            name__iexact=name,
+        ).exclude(
+            pk=dept.pk,
+        ).exists():
+
+            messages.error(
+                request,
+                f"A department named '{name}' already exists in "
+                f"{hotel.name}.",
+            )
+
+            return redirect(
+                "inventory:department_edit",
+                dept_id=dept.pk,
+            )
+
+        dept.hotel = hotel
+        dept.code = code
+        dept.name = name
+        dept.department_type = dept_type
+        dept.is_active = is_active
+
+        dept.save()
+
+        messages.success(
+            request,
+            "Department updated successfully.",
+        )
+
+        return redirect(
+            "inventory:department_list",
+        )
+
+    return render(
+        request,
+        "inventory/department_form.html",
+        {
+            "dept": dept,
+            "hotels": hotels,
+            "types": Department.DEPARTMENT_TYPES,
+            "edit_mode": True,
+        },
+    )
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 def recipe_edit(request, food_id):
@@ -368,153 +903,435 @@ def recipe_item_add(request, recipe_id):
 # PURCHASE ORDERS
 # =========================
 
-@role_required("STORE", "MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT")
+@role_required(
+    "STORE",
+    "MANAGER",
+    "ADMIN",
+    "DIRECTOR",
+    "ACCOUNTANT",
+)
 def po_list(request):
 
     hotels = get_user_hotels(request.user)
 
-    qs = PurchaseOrder.objects.select_related("supplier", "department")
+    qs = (
+        PurchaseOrder.objects
+        .select_related(
+            "supplier",
+            "department",
+        )
+        .order_by("-created_at")
+    )
 
     if request.user.role == "STORE":
+
         qs = qs.filter(
             department=request.user.department,
-            status__in=["PAID", "RECEIVED"]
+            status__in=[
+                "APPROVED",
+                "RECEIVED",
+            ],
         )
 
     else:
-        if hotels.exists():
-            qs = qs.filter(department__hotel__in=hotels)
-        else:
-            qs = qs.none()
 
-    return render(request, "inventory/po_list.html", {"pos": qs})
-
-@role_required("MANAGER", "ADMIN", "DIRECTOR")
-def po_create(request):
-    form = PurchaseOrderForm(request.POST or None)
-
-    if form.is_valid():
-        po = form.save(commit=False)
-        po.created_by = request.user
-        po.status = "DRAFT"
-
-        # 🔒 ENFORCE STORE AS RECEIVING DEPARTMENT
-        hotel = get_user_hotels(request.user)
-
-        po.department = Department.objects.get(
-            hotel=hotel,
-            department_type="STORE"
+        qs = qs.filter(
+            department__hotel__in=hotels,
         )
 
-        po.save()
-        messages.success(request, "Draft Purchase Order created.")
-        return redirect("inventory:po_detail", pk=po.pk)
+    return render(
+        request,
+        "inventory/po_list.html",
+        {"pos": qs},
+    )
 
-    return render(request, "inventory/po_form.html", {"form": form})
-
-
-@role_required("STORE", "MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT")
-def po_detail(request, pk):
+@role_required(
+    "MANAGER",
+    "ADMIN",
+    "DIRECTOR",
+)
+def po_create(request):
 
     hotels = get_user_hotels(request.user)
 
-    po = get_object_or_404(PurchaseOrder, pk=pk)
+    hotel = hotels.first()
 
-    # 🔒 Multi-hotel security
-    if hotels and not hotels.filter(id=po.department.hotel_id).exists():
-        raise PermissionDenied
+    if not hotel:
+        raise PermissionDenied(
+            "No hotel is associated with this account."
+        )
 
-    # 🔒 Store restriction
-    if request.user.role == "STORE" and po.status not in ["PAID", "RECEIVED"]:
-        raise PermissionDenied
+    store = get_object_or_404(
+        Department,
+        hotel=hotel,
+        department_type="STORE",
+        is_active=True,
+    )
 
-    item_form = PurchaseItemForm(request.POST or None)
+    form = PurchaseOrderForm(
+        request.POST or None,
+    )
+
+    if form.is_valid():
+
+        po = form.save(
+            commit=False
+        )
+
+        po.created_by = request.user
+        po.department = store
+        po.status = "DRAFT"
+        po.payment_status = "UNPAID"
+
+        po.save()
+
+        messages.success(
+            request,
+            "Draft Purchase Order created.",
+        )
+
+        return redirect(
+            "inventory:po_detail",
+            pk=po.pk,
+        )
+
+    return render(
+        request,
+        "inventory/po_form.html",
+        {"form": form},
+    )
+
+
+@role_required(
+    "STORE",
+    "MANAGER",
+    "ADMIN",
+    "DIRECTOR",
+    "ACCOUNTANT",
+    "MAINTENANCE"
+)
+def po_detail(request, pk):
+
+    accessible_hotels = get_accessible_hotels(
+        request.user,
+    )
+
+    po = get_object_or_404(
+        PurchaseOrder.objects.select_related(
+            "supplier",
+            "department__hotel",
+            "created_by",
+            "approved_by",
+            "paid_by",
+        ),
+        pk=pk,
+        department__hotel__in=accessible_hotels,
+    )
+
+    # --------------------------------------------------------
+    # STORE restriction
+    # --------------------------------------------------------
+
+    if request.user.role == "STORE":
+
+        if po.department_id != request.user.department_id:
+            raise PermissionDenied
+
+        if po.status not in (
+            "APPROVED",
+            "RECEIVED",
+        ):
+            raise PermissionDenied
+
+    # --------------------------------------------------------
+    # Item form
+    # --------------------------------------------------------
+
+    item_form = PurchaseItemForm(
+        request.POST or None,
+    )
+
+    # --------------------------------------------------------
+    # Add item to DRAFT PO
+    # --------------------------------------------------------
 
     if request.method == "POST" and po.status == "DRAFT":
-        if not (is_admin(request.user) or is_manager(request.user)):
+
+        if request.user.role not in (
+            "MANAGER",
+            "ADMIN",
+            "DIRECTOR",
+        ):
             raise PermissionDenied
 
         if item_form.is_valid():
-            item = item_form.save(commit=False)
+
+            item = item_form.save(
+                commit=False,
+            )
+
             item.purchase_order = po
             item.save()
 
-            messages.success(request, "Item added.")
-            return redirect("inventory:po_detail", pk=pk)
+            messages.success(
+                request,
+                "Item added.",
+            )
+
+            return redirect(
+                "inventory:po_detail",
+                pk=po.pk,
+            )
+
+    # --------------------------------------------------------
+    # Back navigation
+    # --------------------------------------------------------
+
+    if request.user.role == "MAINTENANCE":
+        back_url = "maintenance_stock_requests"
+        back_label = "← Back to Maintenance Stock Requests"
+
+    else:
+        back_url = "inventory:po_list"
+        back_label = "← Back to Purchase Orders"
 
     return render(
         request,
         "inventory/po_detail.html",
         {
             "po": po,
-            "item_form": item_form
-        }
+            "item_form": item_form,
+            "back_url": back_url,
+            "back_label": back_label,
+        },
     )
-
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 def po_submit(request, pk):
-    hotel = get_user_hotels(request.user)
 
-    po = get_object_or_404(PurchaseOrder, pk=pk, status="DRAFT")
-
-    if hotel and po.department.hotel != hotel:
-        raise PermissionDenied
-
-    if not po.items.exists():
-        messages.error(request, "Add at least one item.")
-        return redirect("inventory:po_detail", pk=pk)
-
-    po.status = "SUBMITTED"
-    po.save(update_fields=["status"])
-
-    messages.success(request, "Purchase Order submitted for payment.")
-    return redirect("inventory:po_detail", pk=pk)
-
-
-@role_required("MANAGER", "ADMIN", "DIRECTOR")
-@transaction.atomic
-def po_finalize(request, pk):
     hotels = get_user_hotels(request.user)
 
     po = get_object_or_404(
         PurchaseOrder,
         pk=pk,
         status="DRAFT",
-        department__hotel__in=hotels
+        department__hotel__in=hotels,
     )
-    
-    items = po.items.select_related("product")
+
+    if not po.items.exists():
+        messages.error(
+            request,
+            "Add at least one item.",
+        )
+        return redirect(
+            "inventory:po_detail",
+            pk=pk,
+        )
+
+    if not po.supplier_id:
+        messages.error(
+            request,
+            "A supplier must be selected before "
+            "the Purchase Order can be submitted.",
+        )
+        return redirect(
+            "inventory:po_detail",
+            pk=pk,
+        )
+
+    po.status = "SUBMITTED"
+
+    po.save(
+        update_fields=["status"]
+    )
+
+    messages.success(
+        request,
+        "Purchase Order submitted for approval.",
+    )
+
+    return redirect(
+        "inventory:po_detail",
+        pk=pk,
+    )
+@role_required("DIRECTOR")
+@transaction.atomic
+def po_approve(request, pk):
+
+    hotels = get_user_hotels(request.user)
+
+    po = get_object_or_404(
+        PurchaseOrder.objects.select_related(
+            "supplier",
+            "department__hotel",
+        ),
+        pk=pk,
+        status="SUBMITTED",
+        department__hotel__in=hotels,
+    )
+
+    if not po.supplier_id:
+        messages.error(
+            request,
+            "A supplier is required before approval.",
+        )
+        return redirect(
+            "inventory:po_detail",
+            pk=pk,
+        )
+
+    if not po.items.exists():
+        messages.error(
+            request,
+            "Purchase Order has no items.",
+        )
+        return redirect(
+            "inventory:po_detail",
+            pk=pk,
+        )
 
     if request.method == "POST":
+
+        po.status = "APPROVED"
+        po.approved_by = request.user
+        po.approved_at = timezone.now()
+
+        po.save(
+            update_fields=[
+                "status",
+                "approved_by",
+                "approved_at",
+            ]
+        )
+
+        messages.success(
+            request,
+            f"Purchase Order #{po.id} approved.",
+        )
+
+        return redirect(
+            "inventory:po_detail",
+            pk=po.pk,
+        )
+
+    return render(
+        request,
+        "inventory/po_approve.html",
+        {
+            "po": po,
+        },
+    )
+
+@role_required("MANAGER", "ADMIN", "DIRECTOR")
+@transaction.atomic
+def po_finalize(request, pk):
+
+    hotels = get_user_hotels(request.user)
+
+    po = get_object_or_404(
+        PurchaseOrder,
+        pk=pk,
+        status="DRAFT",
+        department__hotel__in=hotels,
+    )
+
+    items = po.items.select_related("product")
+
+    # --------------------------------------------------------
+    # POST
+    # --------------------------------------------------------
+
+    if request.method == "POST":
+
         supplier_id = request.POST.get("supplier")
 
         if not supplier_id:
-            messages.error(request, "Supplier is required.")
+            messages.error(
+                request,
+                "Supplier is required.",
+            )
             return redirect(request.path)
 
-        po.supplier = get_object_or_404(Supplier, id=supplier_id)
+        po.supplier = get_object_or_404(
+            Supplier,
+            id=supplier_id,
+            hotel=po.department.hotel,
+        )
 
         for item in items:
-            qty = int(request.POST.get(f"qty_{item.id}", 0))
-            cost = request.POST.get(f"cost_{item.id}", 0)
+
+            qty = int(
+                request.POST.get(
+                    f"qty_{item.id}",
+                    0,
+                )
+            )
+
+            cost = request.POST.get(
+                f"cost_{item.id}",
+                "0",
+            )
 
             if qty <= 0:
+
                 item.delete()
+
             else:
+
                 item.purchase_quantity = qty
                 item.unit_cost = cost
-                item.save(update_fields=["purchase_quantity", "unit_cost"])
+
+                item.save(
+                    update_fields=[
+                        "purchase_quantity",
+                        "unit_cost",
+                    ]
+                )
+
+        # ----------------------------------------------------
+        # Make sure at least one item remains
+        # ----------------------------------------------------
 
         if not po.items.exists():
-            messages.error(request, "PO must contain at least one item.")
+
+            messages.error(
+                request,
+                "PO must contain at least one item.",
+            )
+
             return redirect(request.path)
 
-        po.status = "SUBMITTED"
-        po.save(update_fields=["status", "supplier"])  # 🔑 FIX
+        # ----------------------------------------------------
+        # FINALIZE
+        #
+        # DRAFT → SUBMITTED
+        # ----------------------------------------------------
 
-        messages.success(request, "Purchase Order submitted for payment.")
-        return redirect("inventory:po_detail", pk=po.pk)
+        po.status = "SUBMITTED"
+
+        po.save(
+            update_fields=[
+                "supplier",
+                "status",
+            ]
+        )
+
+        messages.success(
+            request,
+            (
+                "Purchase Order finalized and submitted "
+                "for Director approval."
+            ),
+        )
+
+        return redirect(
+            "inventory:po_detail",
+            pk=po.pk,
+        )
+
+    # --------------------------------------------------------
+    # GET
+    # --------------------------------------------------------
 
     return render(
         request,
@@ -522,134 +1339,557 @@ def po_finalize(request, pk):
         {
             "po": po,
             "items": items,
-            "suppliers": Supplier.objects.all(),
-        }
+            "suppliers": Supplier.objects.filter(
+                hotel=po.department.hotel,
+            ),        
+            },
     )
-
 
 @role_required("ACCOUNTANT", "DIRECTOR", "ADMIN")
 @transaction.atomic
 def po_pay(request, pk):
+
     hotels = get_user_hotels(request.user)
 
     po = get_object_or_404(
-        PurchaseOrder,
+        PurchaseOrder.objects.select_related(
+            "supplier",
+            "department__hotel",
+        ),
         pk=pk,
-        status="SUBMITTED",
-        department__hotel__in=hotels
+        status__in=["APPROVED", "RECEIVED"],
+        department__hotel__in=hotels,
     )
-    
+    hotel = po.department.hotel
+
+    total = sum(
+        (
+            item.purchase_quantity * item.unit_cost
+            for item in po.items.all()
+        ),
+        Decimal("0.00"),
+    )
+
     if request.method == "POST":
-        po.status = "PAID"
+
+        payment_account_id = request.POST.get(
+            "payment_account"
+        )
+
+        payment_reference = (
+            request.POST.get(
+                "payment_reference",
+                "",
+            )
+            .strip()
+        )
+
+        payment_account = get_object_or_404(
+            Account,
+            pk=payment_account_id,
+            hotel=hotel,
+            is_active=True,
+            allow_posting=True,
+        )
+
+        try:
+
+            from accounting.services.postings.supplier_payment import (
+                post_supplier_payment,
+            )
+
+            post_supplier_payment(
+                po=po,
+                payment_account=payment_account,
+                amount=total,
+                user=request.user,
+                reference=(
+                    payment_reference
+                    or f"PO-PAY-{po.id}"
+                ),
+            )
+
+        except ValidationError as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
+            return redirect(
+                "inventory:po_pay",
+                pk=po.pk,
+            )
+
+        po.payment_status = "PAID"
         po.paid_by = request.user
         po.paid_at = timezone.now()
-        po.save(update_fields=["status", "paid_by", "paid_at"])
+        po.payment_reference = payment_reference
 
-        messages.success(request, f"PO #{po.id} marked as PAID.")
-        return redirect("inventory:po_detail", pk=po.pk)
+        po.save(
+            update_fields=[
+                "payment_status",
+                "paid_by",
+                "paid_at",
+                "payment_reference",
+            ]
+        )
 
-    return render(request, "inventory/po_pay.html", {"po": po})
+        messages.success(
+            request,
+            f"PO #{po.id} paid successfully.",
+        )
 
+        return redirect(
+            "inventory:po_detail",
+            pk=po.pk,
+        )
 
-
-@role_required("STORE")
-@transaction.atomic
-def po_receive_store(request, pk):
-
-    print(">>> ENTERING po_receive_store VIEW", pk)
-
-    store = request.user.department
-    hotel = store.hotel
-
-    po = get_object_or_404(
-        PurchaseOrder,
-        pk=pk,
-        department=store
+    payment_accounts = (
+        Account.objects
+        .filter(
+            hotel=hotel,
+            account_type__in=[
+                "cash",
+                "bank",
+            ],
+            is_active=True,
+            allow_posting=True,
+        )
+        .order_by("code")
     )
-
-    # 🔒 Prevent double receiving
-    if po.status != "PAID":
-        messages.error(request, "This PO cannot be received.")
-        return redirect("store_dashboard")
-
-    if request.method == "POST":
-
-        # 1️⃣ Receive goods into STORE
-        po.receive(request.user)
-
-        # 2️⃣ If PO originated from a request
-        source_request = getattr(po, "source_request", None)
-
-        if source_request:
-
-            destination = source_request.department
-
-            # 🔒 Cross-hotel protection
-            if destination.hotel_id != hotel.id:
-                raise PermissionDenied("Cross-hotel stock movement blocked.")
-
-            # 🚨 Only transfer if destination is NOT the store
-            if destination != store:
-
-                for item in po.items.select_related("product"):
-
-                    transfer_stock(
-                        product=item.product,
-                        from_department=store,
-                        to_department=destination,
-                        quantity=item.base_quantity,
-                        user=request.user,
-                        reference=f"ING-REQ-{source_request.id}"
-                    )
-
-            # mark request fulfilled
-            source_request.mark_fulfilled()
-
-        messages.success(request, f"PO #{po.id} received successfully.")
-        return redirect("store_dashboard")
 
     return render(
         request,
-        "inventory/po_receive_store.html",
-        {"po": po}
+        "inventory/po_pay.html",
+        {
+            "po": po,
+            "total": total,
+            "payment_accounts": payment_accounts,
+        },
     )
 
+@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING")
+@transaction.atomic
+def po_receive(request, pk):
+
+    department = request.user.department
+
+    if not department:
+        raise PermissionDenied(
+            "You are not assigned to a department."
+        )
+
+    po = get_object_or_404(
+        PurchaseOrder.objects.select_related(
+            "supplier",
+            "department__hotel",
+        ),
+        pk=pk,
+        department=department,
+        status="APPROVED",
+    )
+
+    # ---------------------------------------------------------
+    # RECEIVE PURCHASE ORDER
+    # ---------------------------------------------------------
+
+    if request.method == "POST":
+
+        try:
+
+            po.receive(
+                request.user,
+            )
+
+        except ValidationError as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
+            return redirect(
+                "inventory:po_receive",
+                pk=po.pk,
+            )
+
+        messages.success(
+            request,
+            f"Purchase Order #{po.id} received successfully.",
+        )
+
+        # -----------------------------------------------------
+        # Department-specific destination
+        # -----------------------------------------------------
+
+        if department.department_type == "HOUSEKEEPING":
+
+            return redirect(
+                "housekeeping_incoming_pos",
+            )
+
+        elif department.department_type == "MAINTENANCE":
+
+            return redirect(
+                "maintenance_incoming_pos",
+            )
+
+        elif department.department_type == "STORE":
+
+            return redirect(
+                "store_dashboard",
+            )
+
+        raise PermissionDenied(
+            "This department does not have a valid "
+            "stock receiving destination."
+        )
+
+    # ---------------------------------------------------------
+    # GET — SHOW RECEIVING PAGE
+    # ---------------------------------------------------------
+
+    return render(
+        request,
+        "inventory/po_receive.html",
+        {
+            "po": po,
+        },
+    )
 # =========================
 # STORE INBOX
 # =========================
 
-@role_required("STORE")
-def store_incoming_pos(request):
-    pos = PurchaseOrder.objects.filter(
-        department=request.user.department,
-        status="PAID"
-    ).select_related("supplier").order_by("paid_at")
+@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING")
+def department_incoming_pos(request):
 
-    return render(request, "store/incoming_pos.html", {"pos": pos})
+    department = request.user.department
 
+    if not department:
+        raise PermissionDenied(
+            "You are not assigned to a department."
+        )
+
+    pos = (
+        PurchaseOrder.objects
+        .filter(
+            department=department,
+            status="APPROVED",
+        )
+        .select_related("supplier")
+        .prefetch_related("items__product")
+        .order_by("approved_at", "id")
+    )
+
+    if department.department_type == "HOUSEKEEPING":
+
+        back_url = "housekeeping_dashboard"
+        back_label = "Back to Housekeeping"
+
+    elif department.department_type == "MAINTENANCE":
+
+        back_url = "maintenance_dashboard"
+        back_label = "Back to Maintenance"
+
+    elif department.department_type == "STORE":
+
+        back_url = "store_dashboard"
+        back_label = "Back to Store"
+
+    else:
+
+        raise PermissionDenied(
+            "This department does not use the operational stock receiving workflow."
+        )
+
+    return render(
+        request,
+        "inventory/incoming_pos.html",
+        {
+            "department": department,
+            "pos": pos,
+            "back_url": back_url,
+            "back_label": back_label,
+        },
+    )
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 def manager_stock_requests(request):
+
+    hotels = get_accessible_hotels(request.user)
+
     requests = (
         LowStockRequest.objects
-        .filter(status="PENDING")
-        .select_related("product", "department", "requested_by")
+        .filter(
+            status="PENDING",
+            department__hotel__in=hotels,
+        )
+        .select_related(
+            "product",
+            "department",
+            "requested_by",
+        )
         .order_by("-created_at")
     )
 
     return render(
         request,
         "inventory/manager/stock_requests.html",
-        {"requests": requests}
+        {
+            "requests": requests,
+        },
+    )
+# =========================
+# DEPARTMENT STOCK REQUESTS
+# =========================
+
+@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING")
+def department_request_stock(request):
+
+    department = request.user.department
+
+    if not department:
+        raise PermissionDenied(
+            "You are not assigned to a department."
+        )
+
+    if department.department_type not in (
+        "MAINTENANCE",
+        "HOUSEKEEPING",
+    ):
+        raise PermissionDenied(
+            "This department does not use the operational stock request workflow."
+        )
+
+    products = (
+        Product.objects
+        .filter(
+            hotel=department.hotel,
+            departments=department,
+            is_active=True,
+            usage_type="INTERNAL",
+        )
+        .order_by("name")
+        .distinct()
+    )
+
+    stock_map = {
+        stock.product_id: stock.quantity
+        for stock in Stock.objects.filter(
+            department=department
+        )
+    }
+
+    if request.method == "POST":
+
+        product_id = request.POST.get(
+            "product_id",
+            "",
+        ).strip()
+
+        if not product_id:
+            messages.error(
+                request,
+                "Please select a product.",
+            )
+            return redirect(request.path)
+
+        try:
+            quantity = int(
+                request.POST.get(
+                    "quantity",
+                    0,
+                )
+            )
+        except (TypeError, ValueError):
+            quantity = 0
+
+        product = get_object_or_404(
+            products,
+            pk=product_id,
+        )
+
+        if quantity <= 0:
+            messages.error(
+                request,
+                "Quantity must be greater than zero.",
+            )
+            return redirect(request.path)
+
+        fulfillment_type = request.POST.get(
+            "fulfillment_type",
+            ""
+        ).strip()
+
+        if fulfillment_type not in (
+            "STORE",
+            "PURCHASE",
+        ):
+            messages.error(
+                request,
+                "Please select how this request should be fulfilled.",
+            )
+            return redirect(request.path)
+
+        LowStockRequest.objects.create(
+            product=product,
+            department=department,
+            requested_quantity=quantity,
+            fulfillment_type=fulfillment_type,
+            requested_by=request.user,
+        )
+
+        messages.success(
+            request,
+            "Stock request submitted successfully.",
+        )
+
+        return redirect(request.path)
+
+    if department.department_type == "HOUSEKEEPING":
+        requests_url = "housekeeping_stock_requests"
+
+    elif department.department_type == "MAINTENANCE":
+        requests_url = "maintenance_stock_requests"
+
+    elif department.department_type == "STORE":
+        requests_url = "store_requests"
+
+    else:
+        raise PermissionDenied(
+            "This department does not have a valid stock request destination."
+        )
+
+    return render(
+        request,
+        "inventory/department_request_stock.html",
+        {
+            "department": department,
+            "products": products,
+            "stock_map": stock_map,
+            "requests_url": requests_url,
+        },
+    )
+
+
+@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING")
+def department_stock_requests(request):
+
+    department = request.user.department
+
+    if not department:
+        raise PermissionDenied(
+            "You are not assigned to a department."
+        )
+
+    if department.department_type not in (
+        "MAINTENANCE",
+        "HOUSEKEEPING",
+    ):
+        raise PermissionDenied(
+            "This department does not use the operational stock request workflow."
+        )
+
+    date_from = request.GET.get("from")
+    date_to = request.GET.get("to")
+    sort = request.GET.get("sort", "-date")
+
+    allowed_sorts = {
+        "date": "created_at",
+        "-date": "-created_at",
+        "product": "product__name",
+        "-product": "-product__name",
+        "status": "status",
+        "-status": "-status",
+        "quantity": "requested_quantity",
+        "-quantity": "-requested_quantity",
+    }
+
+    order_by = allowed_sorts.get(
+        sort,
+        "-created_at",
+    )
+
+    requests = (
+        LowStockRequest.objects
+        .filter(
+            department=department,
+            requested_by=request.user,
+        )
+        .select_related(
+            "product",
+            "purchase_order",
+        )
+        .prefetch_related(
+            "transfers",
+        )
+    )
+
+    if date_from and date_to:
+        requests = requests.filter(
+            created_at__date__range=[
+                date_from,
+                date_to,
+            ]
+        )
+
+    requests = requests.order_by(order_by)
+    for req in requests:
+
+        if req.fulfillment_type == "STORE":
+
+            req.total_issued = sum(
+                t.quantity
+                for t in req.transfers.all()
+            )
+
+            req.remaining_quantity = max(
+                req.requested_quantity - req.total_issued,
+                0,
+            )
+
+        else:
+
+            req.total_issued = None
+            req.remaining_quantity = None
+
+    if department.department_type == "HOUSEKEEPING":
+        request_stock_url = "housekeeping_request_stock"
+        back_url = "housekeeping_dashboard"
+        back_label = "Back to Housekeeping"
+
+    else:
+        request_stock_url = "maintenance_request_stock"
+        back_url = "maintenance_dashboard"
+        back_label = "Back to Maintenance"
+
+    return render(
+        request,
+        "inventory/department_stock_requests.html",
+        {
+            "department": department,
+            "requests": requests,
+            "date_from": date_from,
+            "date_to": date_to,
+            "current_sort": sort,
+            "request_stock_url": request_stock_url,
+            "back_url": back_url,
+            "back_label": back_label,
+        },
     )
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 @transaction.atomic
 def review_stock_request(request, pk):
+
+    hotels = get_accessible_hotels(request.user)
+
     req = get_object_or_404(
         LowStockRequest,
         pk=pk,
-        status="PENDING"
+        status="PENDING",
+        department__hotel__in=hotels,
     )
 
     if request.method == "POST":
@@ -716,33 +1956,32 @@ def review_stock_request(request, pk):
         {"request_obj": req}
     )
 
-@role_required("STORE")
-def incoming_delivery_detail(request, pk):
-    po = get_object_or_404(
-        PurchaseOrder,
-        pk=pk,
-        department=request.user.department,
-        status__in=["PAID", "RECEIVED"]
-    )
 
-    return render(
-        request,
-        "store/incoming_delivery_detail.html",
-        {"po": po}
-    )
-
-@role_required("DIRECTOR")
+@role_required("DIRECTOR", "ADMIN")
 def product_edit(request, pk):
 
-    product = get_object_or_404(Product, pk=pk)
+    from restaurant.models import MenuItem
 
-    form = ProductForm(request.POST or None, instance=product)
+    accessible_hotels = get_accessible_hotels(
+        request.user,
+    )
 
+    product = get_object_or_404(
+        Product.objects.select_related("hotel"),
+        pk=pk,
+        hotel__in=accessible_hotels,
+    )
+
+    form = ProductForm(
+        request.POST or None,
+        instance=product,
+        hotel=product.hotel,
+    )
 
     if form.is_valid():
+
         product = form.save()
 
-        # 🔥 sync MenuItem
         if product.usage_type == "RESALE":
 
             menu_item, created = MenuItem.objects.get_or_create(
@@ -751,7 +1990,7 @@ def product_edit(request, pk):
                     "name": product.name,
                     "price": product.price or 0,
                     "is_active": True,
-                }
+                },
             )
 
             if not created:
@@ -760,26 +1999,50 @@ def product_edit(request, pk):
                 menu_item.is_active = True
                 menu_item.save()
 
-        messages.success(request, "Product updated.")
-        return redirect("inventory:product_list")
+        messages.success(
+            request,
+            "Product updated.",
+        )
+
+        return redirect(
+            "inventory:product_list",
+        )
 
     return render(
         request,
         "inventory/product_form.html",
         {
             "form": form,
-            "product": product
-        }
+            "product": product,
+            "hotels": accessible_hotels,
+            "selected_hotel": product.hotel,
+        },
     )
 
-@role_required("DIRECTOR")
+@role_required("DIRECTOR", "ADMIN")
 def product_delete(request, pk):
 
-    product = get_object_or_404(Product, pk=pk)
+    accessible_hotels = get_accessible_hotels(
+        request.user,
+    )
+
+    product = get_object_or_404(
+        Product,
+        pk=pk,
+        hotel__in=accessible_hotels,
+    )
 
     product.is_active = False
-    product.save(update_fields=["is_active"])
 
-    messages.success(request, "Product archived.")
+    product.save(
+        update_fields=["is_active"],
+    )
 
-    return redirect("inventory:product_list")
+    messages.success(
+        request,
+        "Product archived.",
+    )
+
+    return redirect(
+        "inventory:product_list",
+    )

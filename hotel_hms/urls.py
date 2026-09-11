@@ -36,11 +36,9 @@ urlpatterns = [
     path("maintenance/",include("maintenance.urls")),
     path("accounting/", include("accounting.urls")),
     path("wifi/",include("wifi.urls"),),
+    path("laundry/", include("laundry.urls")),
+    path("linen/",include("linen.urls"),),
     
-
-
-
-
 
 
 ]

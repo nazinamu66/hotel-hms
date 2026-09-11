@@ -1,0 +1,116 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Request New Linen
+{% endblock %}
+
+{% block content %}
+
+<h2>Request New Linen</h2>
+
+<p style="color:#666;">
+    Request additional clean, unused linen from the Linen Store.
+</p>
+
+<p style="color:#a00;">
+    <strong>Important:</strong>
+    This request is for new/unused linen only.
+    Linen already in Housekeeping circulation must go through the
+    normal Housekeeping → Laundry → Housekeeping cycle.
+</p>
+
+<div
+    class="card"
+    style="
+        max-width:700px;
+        padding:25px;
+        background:white;
+        border:1px solid #ddd;
+    "
+>
+
+<form method="post">
+
+{% csrf_token %}
+
+<label>
+    <strong>Linen Item</strong>
+</label>
+
+<br>
+
+<select
+    name="linen_item"
+    required
+    style="width:100%;padding:10px;"
+>
+
+    <option value="">
+        Select linen item
+    </option>
+
+    {% for linen_item in linen_items %}
+
+        <option value="{{ linen_item.id }}">
+            {{ linen_item.product.name }}
+            — {{ linen_item.product.sku }}
+        </option>
+
+    {% endfor %}
+
+</select>
+
+<br><br>
+
+<label>
+    <strong>Quantity</strong>
+</label>
+
+<br>
+
+<input
+    type="number"
+    name="quantity"
+    min="1"
+    step="1"
+    required
+    style="width:100%;padding:10px;"
+>
+
+<br><br>
+
+<label>
+    <strong>Note</strong>
+</label>
+
+<br>
+
+<textarea
+    name="note"
+    rows="4"
+    placeholder="Why is additional new linen required? (optional)"
+    style="width:100%;padding:10px;"
+></textarea>
+
+<br><br>
+
+<button
+    type="submit"
+    class="btn btn-primary"
+>
+    Submit Linen Request
+</button>
+
+<a
+    href="{% url 'housekeeping_linen_requests' %}"
+    class="btn btn-secondary"
+    style="margin-left:10px;"
+>
+    My Linen Requests
+</a>
+
+</form>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,70 @@
+{% extends "base/base.html" %}
+
+{% block title %}Create Maintenance Ticket{% endblock %}
+
+{% block content %}
+
+<h2>Create Maintenance Ticket</h2>
+
+<p>Select the room requiring maintenance.</p>
+
+<table style="width:100%; border-collapse:collapse;">
+
+<thead style="background:#eee;">
+<tr>
+    <th style="padding:10px;">Room</th>
+    <th>Category</th>
+    <th>Status</th>
+    <th>Action</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for room in rooms %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+<td style="padding:10px;">
+    Room {{ room.room_number }}
+</td>
+
+<td>
+    {{ room.category }}
+</td>
+
+<td>
+    {{ room.get_status_display }}
+</td>
+
+<td>
+    <a href="{% url 'maintenance_create_ticket' room.id %}">
+        <button type="button">
+            Create Ticket
+        </button>
+    </a>
+</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+<td colspan="4">
+    No rooms found.
+</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<br>
+
+<a href="{% url 'maintenance_dashboard' %}">
+    ← Back to Maintenance
+</a>
+
+{% endblock %}

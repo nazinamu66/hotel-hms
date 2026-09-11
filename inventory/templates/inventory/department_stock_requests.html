@@ -1,0 +1,237 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+My Stock Requests — {{ department.name }}
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    My Stock Requests — {{ department.name }}
+</h2>
+
+<form method="get" style="margin-bottom:15px;">
+
+    From:
+    <input
+        type="date"
+        name="from"
+        value="{{ date_from }}"
+    >
+
+    To:
+    <input
+        type="date"
+        name="to"
+        value="{{ date_to }}"
+    >
+
+    <button type="submit">
+        Filter
+    </button>
+
+</form>
+
+<p>
+    <a href="{% url request_stock_url %}">
+        ➕ New Stock Request
+    </a>
+
+</p>
+
+<table
+    style="
+        width:100%;
+        border-collapse:collapse;
+    "
+>
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:8px;">
+        ID
+    </th>
+
+    <th style="text-align:left; padding:8px;">
+        Product
+    </th>
+
+    <th style="padding:8px;">
+        Requested
+    </th>
+
+    <th style="padding:8px;">
+        Fulfillment
+    </th>
+
+    <th style="padding:8px;">
+        Issued
+    </th>
+
+    <th style="padding:8px;">
+        Remaining
+    </th>
+
+    <th style="padding:8px;">
+        Status
+    </th>
+
+    <th style="padding:8px;">
+        Date
+    </th>
+
+    <th style="padding:8px;">
+        PO
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for r in requests %}
+
+<tr style="border-top:1px solid #ddd;">
+
+    <td style="padding:8px;">
+        {{ r.id }}
+    </td>
+
+    <td style="padding:8px;">
+        {{ r.product.name }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        {{ r.requested_quantity }}
+        {{ r.product.base_unit }}
+    </td>
+
+    <td style="padding:8px; text-align:center;">
+
+        {% if r.fulfillment_type == "STORE" %}
+
+            🏪 Store
+
+        {% elif r.fulfillment_type == "PURCHASE" %}
+
+            🛒 Purchase
+
+        {% else %}
+
+            {{ r.fulfillment_type }}
+
+        {% endif %}
+
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+
+        {% if r.fulfillment_type == "STORE" %}
+
+            {{ r.total_issued }}
+            {{ r.product.base_unit }}
+
+        {% else %}
+
+            —
+
+        {% endif %}
+
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+
+        {% if r.fulfillment_type == "STORE" %}
+
+            {{ r.remaining_quantity }}
+            {{ r.product.base_unit }}
+
+        {% else %}
+
+            —
+
+        {% endif %}
+
+    </td>
+
+    <td style="padding:8px; text-align:center;">
+
+        {% if r.status == "PENDING" %}
+
+            🟠 Pending
+
+        {% elif r.status == "APPROVED" %}
+
+            🟢 Approved
+
+        {% elif r.status == "PARTIALLY_FULFILLED" %}
+
+            🟡 Partially Fulfilled
+
+        {% elif r.status == "FULFILLED" %}
+
+            ✅ Fulfilled
+
+        {% elif r.status == "REJECTED" %}
+
+            🔴 Rejected
+
+        {% else %}
+
+            {{ r.get_status_display }}
+
+        {% endif %}
+
+    </td>
+
+    <td style="padding:8px;">
+        {{ r.created_at|date:"Y-m-d H:i" }}
+    </td>
+
+    <td style="padding:8px; text-align:center;">
+
+        {% if r.purchase_order %}
+
+            <a href="{% url 'inventory:po_detail' r.purchase_order.pk %}">
+                PO #{{ r.purchase_order.id }}
+            </a>
+
+        {% else %}
+
+            —
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td
+        colspan="9"
+        style="padding:15px;"
+    >
+        No stock requests yet.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<hr>
+
+<a href="{% url back_url %}">
+    ← {{ back_label }}
+</a>
+
+{% endblock %}

@@ -1,0 +1,325 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<h2>Department Stock Requests</h2>
+
+<p>
+    Operational stock requests from Housekeeping and Maintenance.
+</p>
+
+<hr>
+
+<form method="get" style="margin-bottom:20px;">
+
+    <input
+        type="text"
+        name="search"
+        value="{{ search }}"
+        placeholder="Search ID, product or department"
+        style="width:260px;"
+    >
+
+    <select name="status">
+
+        <option value="">
+            All Statuses
+        </option>
+
+        <option
+            value="PENDING"
+            {% if status_filter == "PENDING" %}selected{% endif %}
+        >
+            Pending
+        </option>
+
+        <option
+            value="PARTIALLY_FULFILLED"
+            {% if status_filter == "PARTIALLY_FULFILLED" %}selected{% endif %}
+        >
+            Partially Fulfilled
+        </option>
+
+        <option
+            value="FULFILLED"
+            {% if status_filter == "FULFILLED" %}selected{% endif %}
+        >
+            Fulfilled
+        </option>
+
+        <option
+            value="APPROVED"
+            {% if status_filter == "APPROVED" %}selected{% endif %}
+        >
+            Approved
+        </option>
+
+        <option
+            value="REJECTED"
+            {% if status_filter == "REJECTED" %}selected{% endif %}
+        >
+            Rejected
+        </option>
+
+    </select>
+
+    <select name="department">
+
+        <option value="">
+            All Departments
+        </option>
+
+        <option
+            value="HOUSEKEEPING"
+            {% if department_filter == "HOUSEKEEPING" %}selected{% endif %}
+        >
+            Housekeeping
+        </option>
+
+        <option
+            value="MAINTENANCE"
+            {% if department_filter == "MAINTENANCE" %}selected{% endif %}
+        >
+            Maintenance
+        </option>
+
+    </select>
+
+    From:
+
+    <input
+        type="date"
+        name="from"
+        value="{{ date_from }}"
+    >
+
+    To:
+
+    <input
+        type="date"
+        name="to"
+        value="{{ date_to }}"
+    >
+
+    <select name="sort">
+
+        <option
+            value="newest"
+            {% if sort == "newest" %}selected{% endif %}
+        >
+            Newest First
+        </option>
+
+        <option
+            value="oldest"
+            {% if sort == "oldest" %}selected{% endif %}
+        >
+            Oldest First
+        </option>
+
+        <option
+            value="product"
+            {% if sort == "product" %}selected{% endif %}
+        >
+            Product A–Z
+        </option>
+
+        <option
+            value="-product"
+            {% if sort == "-product" %}selected{% endif %}
+        >
+            Product Z–A
+        </option>
+
+        <option
+            value="department"
+            {% if sort == "department" %}selected{% endif %}
+        >
+            Department A–Z
+        </option>
+
+        <option
+            value="-department"
+            {% if sort == "-department" %}selected{% endif %}
+        >
+            Department Z–A
+        </option>
+
+        <option
+            value="status"
+            {% if sort == "status" %}selected{% endif %}
+        >
+            Status A–Z
+        </option>
+
+        <option
+            value="-status"
+            {% if sort == "-status" %}selected{% endif %}
+        >
+            Status Z–A
+        </option>
+
+        <option
+            value="quantity"
+            {% if sort == "quantity" %}selected{% endif %}
+        >
+            Quantity Low–High
+        </option>
+
+        <option
+            value="-quantity"
+            {% if sort == "-quantity" %}selected{% endif %}
+        >
+            Quantity High–Low
+        </option>
+
+    </select>
+
+    <button type="submit">
+        Filter
+    </button>
+
+    <a href="{% url 'store_stock_requests' %}">
+        Reset
+    </a>
+
+</form>
+
+<hr>
+
+{% if requests %}
+
+<table
+    border="1"
+    cellpadding="8"
+    width="100%"
+    style="background:white; border-collapse:collapse;"
+>
+
+    <thead>
+        <tr>
+            <th>Request</th>
+            <th>Department</th>
+            <th>Product</th>
+            <th>Requested</th>
+            <th>Issued</th>
+            <th>Remaining</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+    {% for req in requests %}
+
+        <tr>
+
+            <td>
+                #{{ req.id }}
+            </td>
+
+            <td>
+                {{ req.department.name }}
+            </td>
+
+            <td>
+                {{ req.product.name }}
+            </td>
+
+            <td>
+                {{ req.requested_quantity }}
+                {{ req.product.base_unit }}
+            </td>
+
+            <td>
+                {{ req.total_issued }}
+                {{ req.product.base_unit }}
+            </td>
+
+            <td>
+                {{ req.remaining_quantity }}
+                {{ req.product.base_unit }}
+            </td>
+
+            <td>
+
+                {% if req.status == "PENDING" %}
+
+                    🟠 PENDING
+
+                {% elif req.status == "PARTIALLY_FULFILLED" %}
+
+                    🟡 PARTIALLY FULFILLED
+
+                {% elif req.status == "FULFILLED" %}
+
+                    ✅ FULFILLED
+
+                {% elif req.status == "APPROVED" %}
+
+                    🟢 APPROVED
+
+                {% elif req.status == "REJECTED" %}
+
+                    🔴 REJECTED
+
+                {% else %}
+
+                    {{ req.get_status_display }}
+
+                {% endif %}
+
+            </td>
+
+            <td>
+
+                {% if req.status == "PENDING" or req.status == "PARTIALLY_FULFILLED" %}
+
+                    {% if req.remaining_quantity > 0 %}
+
+                        <a href="{% url 'store_issue_stock_request' req.pk %}">
+                            Issue Stock
+                        </a>
+
+                    {% else %}
+
+                        ✔ Fulfilled
+
+                    {% endif %}
+
+                {% elif req.status == "FULFILLED" %}
+
+                    —
+
+                {% else %}
+
+                    —
+
+                {% endif %}
+
+            </td>
+
+        </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    No store stock requests found.
+</p>
+
+{% endif %}
+
+<hr>
+
+<a href="{% url 'store_dashboard' %}">
+    ← Back to Store
+</a>
+
+{% endblock %}

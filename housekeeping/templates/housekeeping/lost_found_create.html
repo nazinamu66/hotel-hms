@@ -4,11 +4,28 @@
 
 {% block content %}
 
-<h2>Record Lost Item</h2>
+<h2>Record Lost & Found Item</h2>
 
 <form method="post">
 
 {% csrf_token %}
+
+<label>Hotel</label>
+<br>
+
+<select name="hotel" required>
+
+    <option value="">-- Select Hotel --</option>
+
+    {% for hotel in hotels %}
+        <option value="{{ hotel.id }}">
+            {{ hotel.name }}
+        </option>
+    {% endfor %}
+
+</select>
+
+<br><br>
 
 <label>Room</label>
 <br>

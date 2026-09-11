@@ -1,0 +1,406 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Guest Laundry Order #{{ order.id }}
+{% endblock %}
+
+{% block header %}
+<h2>Guest Laundry Order #{{ order.id }}</h2>
+{% endblock %}
+
+{% block content %}
+
+<div class="card" style="padding:20px; margin-bottom:20px;">
+
+    <h3>Customer</h3>
+
+    <p>
+        <strong>Name:</strong>
+        {% if order.folio.guest %}
+            {{ order.folio.guest.full_name }}
+        {% else %}
+            {{ order.customer_name|default:"Walk-in Customer" }}
+        {% endif %}
+    </p>
+
+    {% if order.customer_phone %}
+    <p>
+        <strong>Phone:</strong>
+        {{ order.customer_phone }}
+    </p>
+    {% endif %}
+
+    <p>
+        <strong>Customer Type:</strong>
+        {% if order.folio.room %}
+            Room Guest
+        {% else %}
+            Walk-in
+        {% endif %}
+    </p>
+
+    <p>
+        <strong>Room:</strong>
+        {% if order.folio.room %}
+            {{ order.folio.room.room_number }}
+        {% else %}
+            Walk-in
+        {% endif %}
+    </p>
+
+    <p>
+        <strong>Folio:</strong>
+        #{{ folio.id }}
+    </p>
+
+</div>
+
+
+<div class="card" style="padding:20px; margin-bottom:20px;">
+
+    <h3>Order Information</h3>
+
+    <p>
+        <strong>Status:</strong>
+        {{ order.get_status_display }}
+    </p>
+
+    <p>
+        <strong>Created By:</strong>
+        {{ order.created_by.username }}
+    </p>
+
+    <p>
+        <strong>Created:</strong>
+        {{ order.created_at|date:"Y-m-d H:i" }}
+    </p>
+
+    {% if order.note %}
+    <p>
+        <strong>Note:</strong>
+        {{ order.note }}
+    </p>
+    {% endif %}
+
+</div>
+
+
+<div class="card" style="padding:20px; margin-bottom:20px;">
+
+    <h3>Items</h3>
+
+    <table style="width:100%; border-collapse:collapse;">
+
+        <thead style="background:#eee;">
+            <tr>
+                <th style="padding:10px; text-align:left;">Item</th>
+                <th style="padding:10px; text-align:right;">Qty</th>
+                <th style="padding:10px; text-align:right;">Unit Price</th>
+                <th style="padding:10px; text-align:right;">Amount</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        {% for item in order.items.all %}
+
+        <tr style="border-bottom:1px solid #ddd;">
+
+            <td style="padding:10px;">
+                {{ item.description }}
+            </td>
+
+            <td style="padding:10px; text-align:right;">
+                {{ item.quantity }}
+            </td>
+
+            <td style="padding:10px; text-align:right;">
+                ₦{{ item.unit_price|floatformat:2 }}
+            </td>
+
+            <td style="padding:10px; text-align:right;">
+                ₦{{ item.amount|floatformat:2 }}
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+        </tbody>
+
+        <tfoot>
+            <tr>
+                <th colspan="3" style="padding:10px; text-align:right;">
+                    Order Total
+                </th>
+                <th style="padding:10px; text-align:right;">
+                    ₦{{ order.total_amount|floatformat:2 }}
+                </th>
+            </tr>
+        </tfoot>
+
+    </table>
+
+</div>
+
+
+<div class="card" style="padding:20px; margin-bottom:20px;">
+
+    <h3>Order Timeline</h3>
+
+    <table style="width:100%; border-collapse:collapse;">
+
+        <tbody>
+
+            <tr style="border-bottom:1px solid #ddd;">
+                <td style="padding:10px;">
+                    <strong>Created</strong>
+                </td>
+                <td style="padding:10px;">
+                    {{ order.created_at|date:"Y-m-d H:i" }}
+                </td>
+            </tr>
+
+            <tr style="border-bottom:1px solid #ddd;">
+                <td style="padding:10px;">
+                    <strong>Received</strong>
+                </td>
+                <td style="padding:10px;">
+                    {% if order.received_at %}
+                        {{ order.received_at|date:"Y-m-d H:i" }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+
+            <tr style="border-bottom:1px solid #ddd;">
+                <td style="padding:10px;">
+                    <strong>Processing Started</strong>
+                </td>
+                <td style="padding:10px;">
+                    {% if order.processing_at %}
+                        {{ order.processing_at|date:"Y-m-d H:i" }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+
+            <tr style="border-bottom:1px solid #ddd;">
+                <td style="padding:10px;">
+                    <strong>Ready</strong>
+                </td>
+                <td style="padding:10px;">
+                    {% if order.ready_at %}
+                        {{ order.ready_at|date:"Y-m-d H:i" }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+
+            <tr>
+                <td style="padding:10px;">
+                    <strong>Delivered</strong>
+                </td>
+                <td style="padding:10px;">
+                    {% if order.delivered_at %}
+                        {{ order.delivered_at|date:"Y-m-d H:i" }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td style="padding:10px;">
+                    <strong>Cancelled</strong>
+                </td>
+                <td style="padding:10px;">
+                    {% if order.cancelled_at %}
+                        {{ order.cancelled_at|date:"Y-m-d H:i" }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+
+        </tbody>
+
+    </table>
+
+</div>
+
+
+<div class="card" style="padding:20px; margin-bottom:20px;">
+
+    <h3>Billing</h3>
+
+    {% if order.billing_charge %}
+
+        <p>
+            <strong>Charge:</strong>
+            {{ order.billing_charge.description }}
+        </p>
+
+        <p>
+            <strong>Department:</strong>
+            {{ order.billing_charge.department.name }}
+        </p>
+
+        <p>
+            <strong>Amount:</strong>
+            ₦{{ order.billing_charge.amount|floatformat:2 }}
+        </p>
+
+        <p>
+            <strong>Reference:</strong>
+            {{ order.billing_charge.reference|default:"—" }}
+        </p>
+
+        <p>
+            <strong>Charged:</strong>
+            {{ order.billing_charge.created_at|date:"Y-m-d H:i" }}
+        </p>
+
+    {% else %}
+
+        <p>No billing charge has been created yet.</p>
+
+    {% endif %}
+
+</div>
+
+
+<div class="card" style="padding:20px; margin-bottom:20px;">
+
+    <h3>Payments</h3>
+
+    {% if payments %}
+
+    <table style="width:100%; border-collapse:collapse;">
+
+        <thead style="background:#eee;">
+            <tr>
+                <th style="padding:10px; text-align:left;">Date</th>
+                <th style="padding:10px; text-align:left;">Method</th>
+                <th style="padding:10px; text-align:right;">Amount</th>
+                <th style="padding:10px; text-align:left;">Reference</th>
+                <th style="padding:10px; text-align:left;">Collected By</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        {% for payment in payments %}
+
+        <tr style="border-bottom:1px solid #ddd;">
+
+            <td style="padding:10px;">
+                {{ payment.collected_at|date:"Y-m-d H:i" }}
+            </td>
+
+            <td style="padding:10px;">
+                {{ payment.get_method_display }}
+            </td>
+
+            <td style="padding:10px; text-align:right;">
+                ₦{{ payment.amount|floatformat:2 }}
+            </td>
+
+            <td style="padding:10px;">
+                {{ payment.reference|default:"—" }}
+            </td>
+
+            <td style="padding:10px;">
+                {% if payment.collected_by %}
+                    {{ payment.collected_by.username }}
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+        </tbody>
+
+    </table>
+
+    {% else %}
+
+        <p>No payments recorded.</p>
+
+    {% endif %}
+
+</div>
+
+
+<div class="card" style="padding:20px; margin-bottom:20px;">
+
+    <h3>Folio Financial Summary</h3>
+
+    <p>
+        <strong>Total Charges:</strong>
+        ₦{{ folio.total_charges|floatformat:2 }}
+    </p>
+
+    <p>
+        <strong>Total Payments:</strong>
+        ₦{{ folio.total_payments|floatformat:2 }}
+    </p>
+
+    <p>
+        <strong>Outstanding Balance:</strong>
+        ₦{{ balance|floatformat:2 }}
+    </p>
+
+</div>
+
+
+<div style="margin-top:20px;">
+
+    {% if order.status == "DELIVERED" and order.billing_charge %}
+
+        <a
+            href="{% url 'laundry:guest_laundry_receipt' order.id %}"
+            target="_blank"
+            style="
+                display:inline-block;
+                padding:10px 16px;
+                background:#198754;
+                color:white;
+                text-decoration:none;
+                border-radius:4px;
+                margin-right:10px;
+            "
+        >
+            🧾 Print A4 Receipt
+        </a>
+
+        <a
+            href="{% url 'laundry:guest_laundry_receipt_thermal' order.id %}"
+            target="_blank"
+            style="
+                display:inline-block;
+                padding:10px 16px;
+                background:#6c757d;
+                color:white;
+                text-decoration:none;
+                border-radius:4px;
+                margin-right:10px;
+            "
+        >
+            🧾 Print 80mm Receipt
+        </a>
+
+    {% endif %}
+
+    <a href="{% url 'laundry:guest_laundry' %}">
+        ← Back to Guest Laundry
+    </a>
+
+</div>
+
+{% endblock %}

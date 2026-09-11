@@ -1,0 +1,165 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+    {% if edit_mode %}
+        Edit Department
+    {% else %}
+        Create Department
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    {% if edit_mode %}
+        Edit Department
+    {% else %}
+        Create Department
+    {% endif %}
+</h2>
+
+<div class="card">
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <!-- HOTEL -->
+        <label for="hotel">
+            Hotel
+        </label>
+
+        <select
+            id="hotel"
+            name="hotel"
+            required
+        >
+            <option value="">
+                -- Select Hotel --
+            </option>
+
+            {% for hotel in hotels %}
+                <option
+                    value="{{ hotel.id }}"
+                    {% if dept and dept.hotel_id == hotel.id %}
+                        selected
+                    {% endif %}
+                >
+                    {{ hotel.name }}
+                    {% if hotel.location %}
+                        — {{ hotel.location }}
+                    {% endif %}
+                </option>
+            {% endfor %}
+        </select>
+
+        <br><br>
+
+        <!-- DEPARTMENT CODE -->
+        <label for="code">
+            Department Code
+        </label>
+
+        <input
+            id="code"
+            type="text"
+            name="code"
+            value="{{ dept.code|default:'' }}"
+            placeholder="e.g. FD, HK, KIT, ACC"
+            maxlength="10"
+            required
+        >
+
+        <small>
+            Short unique code for this department within the hotel.
+        </small>
+
+        <br><br>
+
+        <!-- DEPARTMENT NAME -->
+        <label for="name">
+            Department Name
+        </label>
+
+        <input
+            id="name"
+            type="text"
+            name="name"
+            value="{{ dept.name|default:'' }}"
+            placeholder="e.g. Front Desk, Kitchen, Accounting"
+            maxlength="100"
+            required
+        >
+
+        <br><br>
+
+        <!-- DEPARTMENT TYPE -->
+        <label for="department_type">
+            Department Type
+        </label>
+
+        <select
+            id="department_type"
+            name="department_type"
+            required
+        >
+            <option value="">
+                -- Select Type --
+            </option>
+
+            {% for value, label in types %}
+                <option
+                    value="{{ value }}"
+                    {% if dept and dept.department_type == value %}
+                        selected
+                    {% endif %}
+                >
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <br><br>
+
+        <!-- STATUS -->
+        <label>
+            <input
+                type="checkbox"
+                name="is_active"
+                {% if not edit_mode or dept.is_active %}
+                    checked
+                {% endif %}
+            >
+
+            Active Department
+        </label>
+
+        <br><br>
+
+        <!-- ACTIONS -->
+        <div style="display:flex; gap:10px;">
+
+            <button
+                class="btn btn-primary"
+                type="submit"
+            >
+                {% if edit_mode %}
+                    Update Department
+                {% else %}
+                    Create Department
+                {% endif %}
+            </button>
+
+            <a
+                href="{% url 'inventory:department_list' %}"
+                class="btn btn-secondary"
+            >
+                Cancel
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

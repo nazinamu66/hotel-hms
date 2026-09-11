@@ -1,0 +1,113 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Add Maintenance Asset
+{% endblock %}
+
+{% block content %}
+
+<h2>Add Maintenance Asset</h2>
+
+<hr>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <p>
+        <label>
+            Asset Name
+        </label>
+        <br>
+
+        <input
+            type="text"
+            name="name"
+            required
+            placeholder="e.g. Room 101 Split AC"
+        >
+    </p>
+
+    <p>
+        <label>
+            Asset Type
+        </label>
+        <br>
+
+        <input
+            type="text"
+            name="asset_type"
+            placeholder="e.g. Air Conditioner"
+        >
+    </p>
+
+    <p>
+        <label>
+            Room / Location
+        </label>
+        <br>
+
+        <select name="room">
+
+            <option value="">
+                Hotel / Common Area
+            </option>
+
+            {% for room in rooms %}
+
+            <option value="{{ room.id }}">
+                Room {{ room.room_number }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <p>
+        <label>
+            Manufacturer
+        </label>
+        <br>
+
+        <input
+            type="text"
+            name="manufacturer"
+        >
+    </p>
+
+    <p>
+        <label>
+            Model Number
+        </label>
+        <br>
+
+        <input
+            type="text"
+            name="model_number"
+        >
+    </p>
+
+    <p>
+        <label>
+            Serial Number
+        </label>
+        <br>
+
+        <input
+            type="text"
+            name="serial_number"
+        >
+    </p>
+
+    <button type="submit">
+        Create Asset
+    </button>
+
+    <a href="{% url 'maintenance_assets' %}">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}

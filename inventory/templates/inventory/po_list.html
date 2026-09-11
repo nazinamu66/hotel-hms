@@ -1,35 +1,125 @@
 {% extends "base/base.html" %}
 
+{% block title %}
+Purchase Orders
+{% endblock %}
+
 {% block content %}
+
 <h2>Purchase Orders</h2>
 
-<a href="{% url 'inventory:po_create' %}">➕ New Purchase Order</a>
+<p>
+    Manage supplier purchases, approvals, payments and goods received.
+</p>
 
-<table border="1" cellpadding="8" style="margin-top:10px;">
-  <tr>
-    <th>ID</th>
-    <th>Supplier</th>
-    <th>Department</th>
-    <th>Status</th>
-    <th>Created</th>
+<hr>
+
+<a href="{% url 'inventory:po_create' %}">
+    ➕ New Purchase Order
+</a>
+
+<br><br>
+
+<table
+    style="
+        width:100%;
+        border-collapse:collapse;
+    "
+>
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px; text-align:left;">
+        PO
+    </th>
+
+    <th style="text-align:left;">
+        Supplier
+    </th>
+
+    <th style="text-align:left;">
+        Department
+    </th>
+
+    <th style="text-align:left;">
+        Status
+    </th>
+
+    <th style="text-align:left;">
+        Payment
+    </th>
+
+    <th style="text-align:left;">
+        Created
+    </th>
+
     <th></th>
-  </tr>
 
-  {% for po in pos %}
-  <tr>
-    <td>{{ po.id }}</td>
-    <td>{{ po.supplier }}</td>
-    <td>{{ po.department }}</td>
-    <td>{{ po.status }}</td>
-    <td>{{ po.created_at|date:"Y-m-d" }}</td>
-    <td>
-      <a href="{% url 'inventory:po_detail' po.pk %}">View</a>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for po in pos %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        <strong>#{{ po.id }}</strong>
     </td>
-  </tr>
-  {% empty %}
-  <tr>
-    <td colspan="6">No purchase orders found.</td>
-  </tr>
-  {% endfor %}
+
+    <td>
+        {% if po.supplier %}
+            {{ po.supplier }}
+        {% else %}
+            —
+        {% endif %}
+    </td>
+
+    <td>
+        {{ po.department }}
+    </td>
+
+    <td>
+        {{ po.get_status_display }}
+    </td>
+
+    <td>
+        {{ po.get_payment_status_display }}
+    </td>
+
+    <td>
+        {{ po.created_at|date:"Y-m-d" }}
+    </td>
+
+    <td>
+        <a href="{% url 'inventory:po_detail' po.pk %}">
+            View
+        </a>
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td
+        colspan="7"
+        style="padding:20px; text-align:center;"
+    >
+        No purchase orders found.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
 </table>
+
 {% endblock %}

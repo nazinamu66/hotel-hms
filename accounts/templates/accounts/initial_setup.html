@@ -1,0 +1,77 @@
+{% extends "base/base.html" %}
+
+{% block title %}Initial Setup{% endblock %}
+
+{% block content %}
+
+<h2>Initial Business Setup</h2>
+
+<p>
+    Welcome. Let's set up your organization and first hotel.
+</p>
+
+<div class="card">
+
+<form method="post">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+        <div class="alert error">
+            {{ form.non_field_errors }}
+        </div>
+    {% endif %}
+
+    <label>
+        Organization Name
+    </label>
+
+    {{ form.organization_name }}
+
+    {% if form.organization_name.errors %}
+        <div class="alert error">
+            {{ form.organization_name.errors }}
+        </div>
+    {% endif %}
+
+    <br><br>
+
+    <label>
+        First Hotel Name
+    </label>
+
+    {{ form.hotel_name }}
+
+    {% if form.hotel_name.errors %}
+        <div class="alert error">
+            {{ form.hotel_name.errors }}
+        </div>
+    {% endif %}
+
+    <br><br>
+
+    <label>
+        Hotel Location
+    </label>
+
+    {{ form.hotel_location }}
+
+    {% if form.hotel_location.errors %}
+        <div class="alert error">
+            {{ form.hotel_location.errors }}
+        </div>
+    {% endif %}
+
+    <br><br>
+
+    <button
+        type="submit"
+        class="btn btn-primary"
+    >
+        Create Organization & Hotel
+    </button>
+
+</form>
+
+</div>
+
+{% endblock %}

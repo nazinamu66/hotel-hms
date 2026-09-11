@@ -1,0 +1,144 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Receive Linen
+{% endblock %}
+
+{% block content %}
+
+<h2>Receive Linen</h2>
+
+<p style="color:#666;">
+    Record new or unused linen entering the Linen Store.
+</p>
+
+<div
+    class="card"
+    style="
+        max-width:700px;
+        padding:25px;
+        background:white;
+        border:1px solid #ddd;
+    "
+>
+
+<form method="post">
+
+{% csrf_token %}
+
+<!-- ========================= -->
+<!-- LINEN ITEM -->
+<!-- ========================= -->
+
+<label>
+    <strong>Linen Item</strong>
+</label>
+
+<br>
+
+<select
+    name="linen_item"
+    required
+    style="width:100%;padding:10px;"
+>
+
+    <option value="">
+        Select linen item
+    </option>
+
+    {% for linen_item in linen_items %}
+
+        <option value="{{ linen_item.id }}">
+            {{ linen_item.product.name }}
+            — {{ linen_item.product.sku }}
+            {% if linen_item.product.hotel %}
+                — {{ linen_item.product.hotel.name }}
+            {% endif %}
+        </option>
+
+    {% endfor %}
+
+</select>
+
+<br><br>
+
+<!-- ========================= -->
+<!-- QUANTITY -->
+<!-- ========================= -->
+
+<label>
+    <strong>Quantity</strong>
+</label>
+
+<br>
+
+<input
+    type="number"
+    name="quantity"
+    min="1"
+    step="1"
+    required
+    style="width:100%;padding:10px;"
+>
+
+<br><br>
+
+<!-- ========================= -->
+<!-- REFERENCE -->
+<!-- ========================= -->
+
+<label>
+    <strong>Reference</strong>
+</label>
+
+<br>
+
+<input
+    type="text"
+    name="reference"
+    maxlength="100"
+    placeholder="PO number, delivery note, opening stock reference..."
+    style="width:100%;padding:10px;"
+>
+
+<br><br>
+
+<!-- ========================= -->
+<!-- NOTE -->
+<!-- ========================= -->
+
+<label>
+    <strong>Note</strong>
+</label>
+
+<br>
+
+<textarea
+    name="note"
+    rows="4"
+    placeholder="Optional note..."
+    style="width:100%;padding:10px;"
+></textarea>
+
+<br><br>
+
+<button
+    type="submit"
+    class="btn btn-primary"
+>
+    Receive Linen
+</button>
+
+<a
+    href="{% url 'linen_dashboard' %}"
+    class="btn btn-secondary"
+    style="margin-left:10px;"
+>
+    Cancel
+</a>
+
+</form>
+
+</div>
+
+{% endblock %}

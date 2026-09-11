@@ -1,0 +1,166 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Maintenance Products
+{% endblock %}
+
+{% block content %}
+
+<div style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+">
+
+    <div>
+        <h2 style="margin:0;">
+            Maintenance Products
+        </h2>
+
+        <p style="margin:5px 0 0;">
+            Products available for Maintenance operations.
+        </p>
+    </div>
+
+    <a
+        href="{% url 'maintenance_product_create' %}"
+        class="btn btn-primary"
+    >
+        + Add Maintenance Product
+    </a>
+
+</div>
+
+<hr>
+
+<table
+    style="
+        width:100%;
+        border-collapse:collapse;
+    "
+>
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">
+        Product
+    </th>
+
+    <th>
+        SKU
+    </th>
+
+    {% if request.user.role == "DIRECTOR" or request.user.role == "ADMIN" %}
+    <th>
+        Hotel
+    </th>
+    {% endif %}
+
+    <th>
+        Type
+    </th>
+
+    <th>
+        Unit
+    </th>
+
+    <th>
+        Purchase Unit
+    </th>
+
+    <th>
+        Unit Cost
+    </th>
+
+    <th>
+        Reorder Level
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for product in products %}
+
+<tr style="
+    border-bottom:1px solid #ddd;
+">
+
+    <td style="padding:10px;">
+
+        <strong>
+            {{ product.name }}
+        </strong>
+
+    </td>
+
+    <td>
+        {{ product.sku }}
+    </td>
+
+    {% if request.user.role == "DIRECTOR" or request.user.role == "ADMIN" %}
+    <td>
+        {{ product.hotel.name }}
+    </td>
+    {% endif %}
+
+    <td>
+        {{ product.get_product_type_display }}
+    </td>
+
+    <td>
+        {{ product.base_unit }}
+    </td>
+
+    <td>
+        {% if product.purchase_unit %}
+            {{ product.purchase_unit }}
+        {% else %}
+            —
+        {% endif %}
+    </td>
+
+    <td>
+        ₦{{ product.cost_price|floatformat:2 }}
+    </td>
+
+    <td>
+        {{ product.reorder_level }}
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td
+        colspan="8"
+        style="
+            padding:25px;
+            text-align:center;
+        "
+    >
+        No Maintenance products have been created yet.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<br>
+
+<a href="{% url 'maintenance_dashboard' %}">
+    ← Back to Maintenance Dashboard
+</a>
+
+{% endblock %}

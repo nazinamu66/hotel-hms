@@ -1,104 +1,476 @@
 {% extends "base/base.html" %}
 
-{% block title %}Create User{% endblock %}
+{% block title %}
+    {% if edit_mode %}Edit User{% else %}Create User{% endif %}
+{% endblock %}
 
 {% block content %}
 
-<h2>Create User</h2>
+<h2>
+    {% if edit_mode %}Edit User{% else %}Create User{% endif %}
+</h2>
 
 <div class="card">
 
-<form method="post">
-    {% csrf_token %}
-
-    <!-- USERNAME -->
-    <label>Username</label>
-    {{ form.username }}
-
-    {% if form.username.errors %}
+    {% if form.non_field_errors %}
         <div class="alert error">
-            {{ form.username.errors }}
+            {{ form.non_field_errors }}
         </div>
     {% endif %}
 
-    <br><br>
+    <form method="post">
+        {% csrf_token %}
 
-    <!-- EMAIL -->
-    <label>Email</label>
-    {{ form.email }}
+        <!-- ===================================================== -->
+        <!-- USERNAME -->
+        <!-- ===================================================== -->
 
-    {% if form.email.errors %}
-        <div class="alert error">
-            {{ form.email.errors }}
+        <label>Username</label>
+        {{ form.username }}
+
+        {% if form.username.errors %}
+            <div class="alert error">
+                {{ form.username.errors }}
+            </div>
+        {% endif %}
+
+        <br><br>
+
+
+        <!-- ===================================================== -->
+        <!-- EMAIL -->
+        <!-- ===================================================== -->
+
+        <label>Email</label>
+        {{ form.email }}
+
+        {% if form.email.errors %}
+            <div class="alert error">
+                {{ form.email.errors }}
+            </div>
+        {% endif %}
+
+        <br><br>
+
+
+        <!-- ===================================================== -->
+        <!-- ROLE -->
+        <!-- ===================================================== -->
+
+        <label>Role</label>
+        {{ form.role }}
+
+        {% if form.role.errors %}
+            <div class="alert error">
+                {{ form.role.errors }}
+            </div>
+        {% endif %}
+
+        <br><br>
+
+
+        <!-- ===================================================== -->
+        <!-- ORGANIZATION -->
+        <!-- ===================================================== -->
+
+        <div id="organization-field">
+
+            <label>Organization</label>
+            {{ form.organization }}
+
+            {% if form.organization.errors %}
+                <div class="alert error">
+                    {{ form.organization.errors }}
+                </div>
+            {% endif %}
+
         </div>
-    {% endif %}
 
-    <br><br>
+        <br><br>
 
-    <!-- ROLE -->
-    <label>Role</label>
-    {{ form.role }}
 
-    <br><br>
+        <!-- ===================================================== -->
+        <!-- HOTEL -->
+        <!-- ===================================================== -->
 
-    <!-- HOTEL -->
-    <label>Hotel</label>
-    {{ form.hotel }}
+        <div id="hotel-field">
 
-    {% if form.hotel.errors %}
-        <div class="alert error">
-            {{ form.hotel.errors }}
+            <label>Hotel</label>
+            {{ form.hotel }}
+
+            {% if form.hotel.errors %}
+                <div class="alert error">
+                    {{ form.hotel.errors }}
+                </div>
+            {% endif %}
+
         </div>
-    {% endif %}
 
-    <br><br>
+        <br><br>
 
-    <!-- DEPARTMENT -->
-    <label>Department</label>
-    {{ form.department }}
 
-    {% if form.department.errors %}
-        <div class="alert error">
-            {{ form.department.errors }}
+        <!-- ===================================================== -->
+        <!-- ASSIGNED HOTELS -->
+        <!-- ===================================================== -->
+
+        <div id="assigned-hotels-field">
+
+            <label>
+                Assigned Hotels
+            </label>
+
+            <p style="margin-top:4px; color:#666;">
+                Select all hotels this General Manager will manage.
+            </p>
+
+            {{ form.assigned_hotels }}
+
+            {% if form.assigned_hotels.errors %}
+                <div class="alert error">
+                    {{ form.assigned_hotels.errors }}
+                </div>
+            {% endif %}
+
         </div>
-    {% endif %}
 
-    <br><br>
+        <br><br>
 
-    <!-- HEAD OF DEPARTMENT -->
-    <label>Head of Department</label>
-    {{ form.is_department_head }}
 
-    {% if form.is_department_head.errors %}
-    <div class="alert error">
-    {{ form.is_department_head.errors }}
-    </div>
-    {% endif %}
+        <!-- ===================================================== -->
+        <!-- DEPARTMENT -->
+        <!-- ===================================================== -->
 
-    <br><br>
+        <div id="department-field">
 
-    <!-- PASSWORD -->
-    <label>Password</label>
-    {{ form.password }}
+            <label>Department</label>
 
-    {% if form.password.errors %}
-        <div class="alert error">
-            {{ form.password.errors }}
+            <select
+                name="department"
+                id="id_department"
+            >
+
+                <option value="">
+                    -- Select Department --
+                </option>
+
+                {% for department in form.department.field.queryset %}
+
+                    <option
+                        value="{{ department.id }}"
+                        data-hotel="{{ department.hotel_id }}"
+                        {% if form.department.value|stringformat:"s" == department.id|stringformat:"s" %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ department.hotel.name }}
+                        — {{ department.name }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+            {% if form.department.errors %}
+                <div class="alert error">
+                    {{ form.department.errors }}
+                </div>
+            {% endif %}
+
         </div>
-    {% endif %}
 
-    <br><br>
+        <br><br>
 
-    <button class="btn btn-primary" type="submit">
-        Create User
-    </button>
 
-    <a href="{% url 'accounts_users' %}" class="btn btn-secondary">
-        Cancel
-    </a>
+        <!-- ===================================================== -->
+        <!-- HEAD OF DEPARTMENT -->
+        <!-- ===================================================== -->
 
-</form>
+        <div id="department-head-field">
+
+            <label>
+                {{ form.is_department_head }}
+                Head of Department
+            </label>
+
+            {% if form.is_department_head.errors %}
+                <div class="alert error">
+                    {{ form.is_department_head.errors }}
+                </div>
+            {% endif %}
+
+        </div>
+
+        <br><br>
+
+
+        <!-- ===================================================== -->
+        <!-- PASSWORD -->
+        <!-- ===================================================== -->
+
+        <label>
+            {{ form.password.label }}
+        </label>
+
+        {{ form.password }}
+
+        {% if form.password.help_text %}
+            <small>
+                {{ form.password.help_text }}
+            </small>
+        {% endif %}
+
+        {% if form.password.errors %}
+            <div class="alert error">
+                {{ form.password.errors }}
+            </div>
+        {% endif %}
+
+        <br><br>
+
+
+        <!-- ===================================================== -->
+        <!-- ACTIONS -->
+        <!-- ===================================================== -->
+
+        <button
+            class="btn btn-primary"
+            type="submit"
+        >
+            {% if edit_mode %}
+                Update User
+            {% else %}
+                Create User
+            {% endif %}
+        </button>
+
+        <a
+            href="{% url 'accounts_users' %}"
+            class="btn btn-secondary"
+        >
+            Cancel
+        </a>
+
+    </form>
 
 </div>
+
+
+<!-- ============================================================= -->
+<!-- ROLE-BASED FORM LOGIC -->
+<!-- ============================================================= -->
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const role = document.getElementById("id_role");
+
+    const organizationField =
+        document.getElementById("organization-field");
+
+    const hotelField =
+        document.getElementById("hotel-field");
+
+    const assignedHotelsField =
+        document.getElementById("assigned-hotels-field");
+
+    const departmentField =
+        document.getElementById("department-field");
+
+    const departmentHeadField =
+        document.getElementById("department-head-field");
+
+    const organizationSelect =
+        document.getElementById("id_organization");
+
+    const hotelSelect =
+        document.getElementById("id_hotel");
+
+    const departmentSelect =
+        document.getElementById("id_department");
+
+
+    function hide(element) {
+
+        if (element) {
+            element.style.display = "none";
+        }
+
+    }
+
+
+    function show(element) {
+
+        if (element) {
+            element.style.display = "block";
+        }
+
+    }
+
+
+    function updateDepartmentOptions() {
+
+        if (!departmentSelect) {
+            return;
+        }
+
+        const selectedHotel =
+            hotelSelect ? hotelSelect.value : "";
+
+        const options =
+            departmentSelect.querySelectorAll(
+                "option[data-hotel]"
+            );
+
+        options.forEach(function (option) {
+
+            if (
+                !selectedHotel ||
+                option.dataset.hotel === selectedHotel
+            ) {
+
+                option.style.display = "";
+
+            } else {
+
+                option.style.display = "none";
+
+                if (option.selected) {
+                    departmentSelect.value = "";
+                }
+
+            }
+
+        });
+
+    }
+
+
+    function updateForm() {
+
+        const selectedRole = role.value;
+
+
+        // -----------------------------------------------------
+        // Hide everything first
+        // -----------------------------------------------------
+
+        hide(organizationField);
+        hide(hotelField);
+        hide(assignedHotelsField);
+        hide(departmentField);
+        hide(departmentHeadField);
+
+
+        // -----------------------------------------------------
+        // DIRECTOR
+        // GENERAL MANAGER
+        // CHIEF ACCOUNTANT
+        // -----------------------------------------------------
+
+        if (
+            selectedRole === "DIRECTOR" ||
+            selectedRole === "GENERAL_MANAGER" ||
+            selectedRole === "CHIEF_ACCOUNTANT"
+        ) {
+
+            show(organizationField);
+
+        }
+
+
+        // -----------------------------------------------------
+        // GENERAL MANAGER
+        // -----------------------------------------------------
+
+        if (
+            selectedRole === "GENERAL_MANAGER"
+        ) {
+
+            show(assignedHotelsField);
+
+        }
+
+
+        // -----------------------------------------------------
+        // MANAGER
+        // ACCOUNTANT
+        // -----------------------------------------------------
+
+        if (
+            selectedRole === "MANAGER" ||
+            selectedRole === "ACCOUNTANT"
+        ) {
+
+            show(hotelField);
+
+        }
+
+
+        // -----------------------------------------------------
+        // OPERATIONAL STAFF
+        // -----------------------------------------------------
+
+        const operationalRoles = [
+            "FRONTDESK",
+            "RESTAURANT",
+            "STORE",
+            "KITCHEN",
+            "HOUSEKEEPING",
+            "LAUNDRY",
+            "GYM"
+        ];
+
+
+        if (
+            operationalRoles.includes(
+                selectedRole
+            )
+        ) {
+
+            // Hotel is determined automatically
+            // from the selected department.
+            hide(hotelField);
+
+            show(departmentField);
+            show(departmentHeadField);
+
+            updateDepartmentOptions();
+
+        }
+
+    }
+
+
+    // ---------------------------------------------------------
+    // EVENTS
+    // ---------------------------------------------------------
+
+    role.addEventListener(
+        "change",
+        updateForm
+    );
+
+
+    if (hotelSelect) {
+
+        hotelSelect.addEventListener(
+            "change",
+            updateDepartmentOptions
+        );
+
+    }
+
+
+    // ---------------------------------------------------------
+    // INITIAL STATE
+    // ---------------------------------------------------------
+
+    updateForm();
+    updateDepartmentOptions();
+
+});
+
+</script>
 
 {% endblock %}

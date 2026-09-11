@@ -1,16 +1,15 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
-from django.core.exceptions import PermissionDenied
-from accounts.models import User
-from housekeeping.models import (
-    CleaningAssignment,
-)
+
+from inventory.models import Department
+from housekeeping.models import CleaningAssignment
+
 from .common import (
     validate_assigner,
     get_housekeeper,
-    validate_room_requires_cleaning
+    validate_room_requires_cleaning,
 )
-    
+
 
 def validate_room_assignment(room):
 
@@ -19,6 +18,7 @@ def validate_room_assignment(room):
         status__in=[
             "ASSIGNED",
             "IN_PROGRESS",
+            "INSPECTION",
         ],
     ).exists()
 
@@ -48,21 +48,38 @@ def assign_room(
     housekeeper_id,
 ):
 
+    housekeeping_department = (
+        Department.objects
+        .filter(
+            hotel=room.hotel,
+            department_type="HOUSEKEEPING",
+            is_active=True,
+        )
+        .first()
+    )
+
+    if not housekeeping_department:
+        raise ValidationError(
+            "This hotel does not have an active "
+            "Housekeeping department."
+        )
+
     validate_assigner(
         assigned_by,
+        housekeeping_department,
     )
 
     validate_room_requires_cleaning(
         room,
     )
 
-    housekeeper = get_housekeeper(
-        assigned_by.department,
-        housekeeper_id,
-    )
-
     validate_room_assignment(
         room,
+    )
+
+    housekeeper = get_housekeeper(
+        housekeeping_department,
+        housekeeper_id,
     )
 
     assignment = create_assignment(

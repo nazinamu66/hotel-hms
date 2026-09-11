@@ -13,7 +13,7 @@ def post_inventory_receipt(po):
 
     for item in po.items.all():
         total_value += (
-            item.base_quantity * item.unit_cost
+            item.purchase_quantity * item.unit_cost
         )
 
     if total_value <= 0:

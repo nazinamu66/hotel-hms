@@ -3,7 +3,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.text import slugify
-
+from decimal import Decimal
 
 
 
@@ -167,7 +167,6 @@ class Department(models.Model):
 
     code = models.CharField(
         max_length=10,
-        unique=False,
     )
 
     name = models.CharField(max_length=100)
@@ -180,8 +179,26 @@ class Department(models.Model):
     )
 
     is_active = models.BooleanField(default=True)
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "code"],
+                name="unique_department_code_per_hotel",
+            ),
+            models.UniqueConstraint(
+                fields=["hotel", "name"],
+                name="unique_department_name_per_hotel",
+            ),
+        ]
+        ordering = ["hotel__name", "name"]
 
 class Supplier(models.Model):
+
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.PROTECT,
+        related_name="suppliers",
+    )
 
     name = models.CharField(max_length=150)
     phone = models.CharField(max_length=30, blank=True)
@@ -228,13 +245,21 @@ class Product(models.Model):
     # -----------------------------
     # BASIC INFO
     # -----------------------------
-    name = models.CharField(max_length=150, unique=True)
-    sku = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=150)
+
+    sku = models.CharField(
+        max_length=50,
+    )
+
     barcode = models.CharField(
         max_length=50,
         blank=True,
         null=True,
-        unique=True
+    )
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.PROTECT,
+        related_name="products",
     )
 
     # -----------------------------
@@ -315,6 +340,21 @@ class Product(models.Model):
     class Meta:
         ordering = ["name"]
 
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "name"],
+                name="unique_hotel_product_name",
+            ),
+            models.UniqueConstraint(
+                fields=["hotel", "sku"],
+                name="unique_hotel_product_sku",
+            ),
+            models.UniqueConstraint(
+                fields=["hotel", "barcode"],
+                name="unique_hotel_product_barcode",
+            ),
+        ]
+
     # -----------------------------
     # VALIDATION
     # -----------------------------
@@ -393,6 +433,12 @@ class Product(models.Model):
         Only consumable + resale affect stock
         """
         return self.usage_type in ["CONSUMABLE", "RESALE"]
+    def is_operational_stock_item(self):
+        """
+        INTERNAL products are hotel operating supplies
+        consumed by departments rather than sold through POS.
+        """
+        return self.usage_type == "INTERNAL"
     def to_base_unit(self, quantity):
         """
         Convert purchase unit → base unit
@@ -459,44 +505,90 @@ class Stock(models.Model):
 # =========================
 
 class PurchaseOrder(models.Model):
+
     STATUS_CHOICES = (
         ("DRAFT", "Draft"),
         ("SUBMITTED", "Submitted"),
         ("APPROVED", "Approved"),
-        ("PAID", "Paid"),
         ("RECEIVED", "Received"),
         ("REJECTED", "Rejected"),
+    )
+
+    PAYMENT_STATUS_CHOICES = (
+        ("UNPAID", "Unpaid"),
+        ("PARTIAL", "Partially Paid"),
+        ("PAID", "Paid"),
     )
 
     supplier = models.ForeignKey(
         Supplier,
         on_delete=models.PROTECT,
         null=True,
-        blank=True
+        blank=True,
     )
 
-    department = models.ForeignKey(Department, on_delete=models.PROTECT)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="DRAFT")
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.PROTECT,
+    )
 
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="DRAFT",
+    )
+
+    payment_status = models.CharField(
+        max_length=20,
+        choices=PAYMENT_STATUS_CHOICES,
+        default="UNPAID",
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+
     approved_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name="approved_pos"
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_pos",
     )
+
     paid_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name="paid_pos"
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="paid_pos",
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    approved_at = models.DateTimeField(null=True, blank=True)
-    paid_at = models.DateTimeField(null=True, blank=True)
-    received_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
 
-    payment_reference = models.CharField(max_length=100, blank=True)
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
 
+    paid_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    received_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    payment_reference = models.CharField(
+        max_length=100,
+        blank=True,
+    )
 
     @transaction.atomic
     def receive(self, user):
@@ -508,8 +600,10 @@ class PurchaseOrder(models.Model):
         if self.status == "RECEIVED":
             raise ValidationError("Purchase order already received.")
 
-        if self.status != "PAID":
-            raise ValidationError("Only PAID purchase orders can be received.")
+        if self.status not in ("APPROVED",):
+            raise ValidationError(
+                "Only approved purchase orders can be received."
+            )
 
         for item in self.items.select_related("product"):
 
@@ -538,6 +632,10 @@ class PurchaseItem(models.Model):
     unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
 
     @property
+    def total_cost(self):
+        return self.purchase_quantity * self.unit_cost
+
+    @property
     def base_quantity(self):
         return self.purchase_quantity * self.product.unit_multiplier
 
@@ -563,7 +661,10 @@ class StockMovement(models.Model):
         on_delete=models.SET_NULL, null=True, blank=True
     )
 
-    quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
     movement_type = models.CharField(max_length=10, choices=MOVEMENT_TYPE)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -581,32 +682,91 @@ class StockMovement(models.Model):
 # =========================
 
 @transaction.atomic
-def transfer_stock(product, from_department, to_department, quantity, user, reference=""):
+def transfer_stock(
+    product,
+    from_department,
+    to_department,
+    quantity,
+    user,
+    reference="",
+):
+    """
+    Transfer stock between departments.
+
+    IMPORTANT:
+    quantity is always expressed in the product's BASE UNIT.
+
+    Example:
+        Detergent:
+            purchase unit = carton
+            base unit = litre
+            multiplier = 20
+
+        Transferring 5 litres means:
+            quantity=5
+
+        NOT:
+            quantity=5 cartons
+    """
+
+    if quantity <= 0:
+        raise ValidationError(
+            "Quantity must be greater than zero."
+        )
+
     if from_department == to_department:
-        raise ValidationError("Source and destination cannot be the same.")
-    
+        raise ValidationError(
+            "Source and destination cannot be the same."
+        )
+
     if from_department.hotel_id != to_department.hotel_id:
-        raise ValidationError("Cross-hotel transfers are not allowed.")
+        raise ValidationError(
+            "Cross-hotel transfers are not allowed."
+        )
 
-    from_stock = Stock.objects.select_for_update().filter(
-        product=product,
-        department=from_department
-    ).first()
+    from_stock = (
+        Stock.objects
+        .select_for_update()
+        .filter(
+            product=product,
+            department=from_department,
+        )
+        .first()
+    )
 
-    if not from_stock or from_stock.quantity < quantity:
-        raise ValidationError("Insufficient stock.")
+    if not from_stock:
+        raise ValidationError(
+            f"No stock record exists for {product.name} "
+            f"in {from_department.name}."
+        )
 
-    to_stock, _ = Stock.objects.select_for_update().get_or_create(
-        product=product,
-        department=to_department,
-        defaults={"quantity": 0}
+    if from_stock.quantity < quantity:
+        raise ValidationError(
+            f"Insufficient stock for {product.name}."
+        )
+
+    to_stock, _ = (
+        Stock.objects
+        .select_for_update()
+        .get_or_create(
+            product=product,
+            department=to_department,
+            defaults={
+                "quantity": 0,
+            },
+        )
     )
 
     from_stock.quantity -= quantity
     to_stock.quantity += quantity
 
-    from_stock.save()
-    to_stock.save()
+    from_stock.save(
+        update_fields=["quantity"]
+    )
+
+    to_stock.save(
+        update_fields=["quantity"]
+    )
 
     StockMovement.objects.create(
         product=product,
@@ -615,26 +775,59 @@ def transfer_stock(product, from_department, to_department, quantity, user, refe
         quantity=quantity,
         movement_type="TRANSFER",
         created_by=user,
-        reference=reference
+        reference=reference,
     )
 
 
 class StockTransfer(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.PROTECT)
-    from_department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name="transfer_out")
-    to_department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name="transfer_in")
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT
+    )
+
+    from_department = models.ForeignKey(
+        Department,
+        on_delete=models.PROTECT,
+        related_name="transfer_out"
+    )
+
+    to_department = models.ForeignKey(
+        Department,
+        on_delete=models.PROTECT,
+        related_name="transfer_in"
+    )
+
     quantity = models.PositiveIntegerField()
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    note = models.TextField(blank=True)
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    note = models.TextField(
+        blank=True
+    )
 
     ingredient_request_item = models.ForeignKey(
-    "kitchen.IngredientRestockItem",
-    on_delete=models.SET_NULL,
-    null=True,
-    blank=True,
-    related_name="transfers"
-)
+        "kitchen.IngredientRestockItem",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="transfers"
+    )
+
+    stock_request = models.ForeignKey(
+        "LowStockRequest",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="transfers",
+    )
 
     def execute(self):
         transfer_stock(
@@ -657,20 +850,58 @@ class StockTransfer(models.Model):
 
 
 @transaction.atomic
-def stock_out(product, department, quantity, user, reason="", reference=""):
+def stock_out(
+    product,
+    department,
+    quantity,
+    user,
+    reason="",
+    reference="",
+):
+    """
+    Remove stock from a department.
+
+    IMPORTANT:
+    quantity is always expressed in the product's BASE UNIT.
+
+    Example:
+        Detergent base unit = litre
+
+        quantity=3
+        means 3 litres.
+    """
+
     if quantity <= 0:
-        raise ValidationError("Quantity must be greater than zero.")
+        raise ValidationError(
+            "Quantity must be greater than zero."
+        )
 
-    stock = Stock.objects.select_for_update().filter(
-        product=product,
-        department=department
-    ).first()
+    stock = (
+        Stock.objects
+        .select_for_update()
+        .filter(
+            product=product,
+            department=department,
+        )
+        .first()
+    )
 
-    if not stock or stock.quantity < quantity:
-        raise ValidationError("Insufficient stock.")
+    if not stock:
+        raise ValidationError(
+            f"No stock record exists for {product.name} "
+            f"in {department.name}."
+        )
+
+    if stock.quantity < quantity:
+        raise ValidationError(
+            f"Insufficient stock for {product.name}."
+        )
 
     stock.quantity -= quantity
-    stock.save()
+
+    stock.save(
+        update_fields=["quantity"]
+    )
 
     StockMovement.objects.create(
         product=product,
@@ -678,34 +909,56 @@ def stock_out(product, department, quantity, user, reason="", reference=""):
         quantity=quantity,
         movement_type="OUT",
         created_by=user,
-        reference=reference or reason
+        reference=reference or reason,
     )
 
 @transaction.atomic
-def stock_in(product, department, quantity, user, reason="", reference=""):
+def stock_in(
+    product,
+    department,
+    quantity,
+    user,
+    reason="",
+    reference="",
+):
 
     if quantity <= 0:
-        raise ValidationError("Quantity must be greater than zero.")
+        raise ValidationError(
+            "Quantity must be greater than zero."
+        )
 
     stock, _ = Stock.objects.select_for_update().get_or_create(
         product=product,
         department=department,
-        defaults={"quantity": 0}
+        defaults={"quantity": 0},
     )
 
-    # ✅ FIXED
-    base_qty = product.to_base_unit(quantity)
+    base_qty = product.to_base_unit(
+        quantity,
+    )
 
     stock.quantity += base_qty
-    stock.save(update_fields=["quantity"])
+
+    stock.save(
+        update_fields=[
+            "quantity",
+        ]
+    )
+
+    print(
+        "DEBUG STOCK IN:",
+        "quantity=", quantity,
+        "base_qty=", base_qty,
+        "multiplier=", product.unit_multiplier,
+    )
 
     StockMovement.objects.create(
         product=product,
         to_department=department,
-        quantity=quantity,  # keep original for traceability
+        quantity=base_qty,
         movement_type="IN",
         created_by=user,
-        reference=reference or reason
+        reference=reference or reason,
     )
 
 class StockOut(models.Model):
@@ -732,33 +985,76 @@ class StockOut(models.Model):
 # =========================
 
 class LowStockRequest(models.Model):
+
+    FULFILLMENT_CHOICES = (
+        ("STORE", "From Store"),
+        ("PURCHASE", "Purchase"),
+    )
+
     STATUS_CHOICES = (
         ("PENDING", "Pending"),
         ("APPROVED", "Approved"),
+        ("PARTIALLY_FULFILLED", "Partially Fulfilled"),
         ("FULFILLED", "Fulfilled"),
         ("REJECTED", "Rejected"),
     )
 
-    product = models.ForeignKey(Product, on_delete=models.PROTECT)
-    department = models.ForeignKey(Department, on_delete=models.PROTECT)
-    requested_quantity = models.PositiveIntegerField()
-
-    requested_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL,
-        null=True, related_name="stock_requests"
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT
     )
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
-    manager_note = models.TextField(blank=True)
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.PROTECT
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    reviewed_at = models.DateTimeField(null=True, blank=True)
+    requested_quantity = models.PositiveIntegerField()
+
+    fulfillment_type = models.CharField(
+        max_length=10,
+        choices=FULFILLMENT_CHOICES,
+        default="STORE",
+    )
+
+    requested_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="stock_requests"
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="PENDING"
+    )
+
+    # Kept for compatibility with the existing
+    # PO / manager workflow.
+    manager_note = models.TextField(
+        blank=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    # Kept for the existing PO workflow.
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
     reviewed_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="reviewed_stock_requests"
     )
 
+    # Existing PO capability remains intact.
     purchase_order = models.OneToOneField(
         PurchaseOrder,
         on_delete=models.SET_NULL,
@@ -766,15 +1062,58 @@ class LowStockRequest(models.Model):
         blank=True,
         related_name="source_request"
     )
-    
+
+    def update_fulfillment_status(self):
+        """
+        Update Store fulfillment status based on the quantity
+        transferred against this request.
+
+        Only STORE requests use StockTransfer-based fulfillment.
+        PURCHASE requests continue through the existing PO workflow.
+        """
+
+        if self.fulfillment_type != "STORE":
+            return
+
+        total_issued = sum(
+            Decimal(t.quantity)
+            for t in StockTransfer.objects.filter(
+                stock_request=self
+            )
+        )
+
+        requested = Decimal(
+            self.requested_quantity
+        )
+
+        if total_issued <= 0:
+            new_status = "PENDING"
+
+        elif total_issued < requested:
+            new_status = "PARTIALLY_FULFILLED"
+
+        else:
+            new_status = "FULFILLED"
+
+        if self.status != new_status:
+            self.status = new_status
+            self.save(
+                update_fields=["status"]
+            )
+
     def mark_fulfilled(self):
         self.status = "FULFILLED"
-        self.save(update_fields=["status"])
+
+        self.save(
+            update_fields=["status"]
+        )
 
     def __str__(self):
-        return f"{self.product} ({self.requested_quantity}) - {self.status}"
-    
-
+        return (
+            f"{self.product} "
+            f"({self.requested_quantity}) "
+            f"- {self.status}"
+        )
 class StockAdjustment(models.Model):
 
     ADJUSTMENT_TYPE = (

@@ -1,73 +1,464 @@
 {% extends "base/base.html" %}
 
+{% block title %}
+Purchase Order #{{ po.id }}
+{% endblock %}
+
 {% block content %}
-<h2>Purchase Order #{{ po.id }}</h2>
+
+<h2>
+    Purchase Order #{{ po.id }}
+</h2>
 
 <p>
-  <strong>Status:</strong> {{ po.status }} <br>
-  <strong>Supplier:</strong> {{ po.supplier }} <br>
-  <strong>Department:</strong> {{ po.department }}
+    Manage this purchase order through preparation,
+    approval, payment and receipt.
 </p>
 
 <hr>
 
+<!-- ===================================================== -->
+<!-- PO INFORMATION -->
+<!-- ===================================================== -->
+
+<h3>Purchase Order Information</h3>
+
+<table style="border-collapse:collapse;">
+
+<tr>
+    <td style="padding:6px 20px 6px 0;">
+        <strong>Status</strong>
+    </td>
+    <td>
+        {{ po.get_status_display }}
+    </td>
+</tr>
+
+<tr>
+    <td style="padding:6px 20px 6px 0;">
+        <strong>Payment Status</strong>
+    </td>
+    <td>
+        {{ po.get_payment_status_display }}
+    </td>
+</tr>
+
+<tr>
+    <td style="padding:6px 20px 6px 0;">
+        <strong>Supplier</strong>
+    </td>
+    <td>
+        {% if po.supplier %}
+            {{ po.supplier }}
+        {% else %}
+            —
+        {% endif %}
+    </td>
+</tr>
+
+<tr>
+    <td style="padding:6px 20px 6px 0;">
+        <strong>Receiving Department</strong>
+    </td>
+    <td>
+        {{ po.department }}
+    </td>
+</tr>
+
+<tr>
+    <td style="padding:6px 20px 6px 0;">
+        <strong>Created By</strong>
+    </td>
+    <td>
+        {{ po.created_by }}
+    </td>
+</tr>
+
+<tr>
+    <td style="padding:6px 20px 6px 0;">
+        <strong>Created</strong>
+    </td>
+    <td>
+        {{ po.created_at|date:"Y-m-d H:i" }}
+    </td>
+</tr>
+
+{% if po.approved_by %}
+
+<tr>
+    <td style="padding:6px 20px 6px 0;">
+        <strong>Approved By</strong>
+    </td>
+    <td>
+        {{ po.approved_by }}
+    </td>
+</tr>
+
+<tr>
+    <td style="padding:6px 20px 6px 0;">
+        <strong>Approved At</strong>
+    </td>
+    <td>
+        {{ po.approved_at|date:"Y-m-d H:i" }}
+    </td>
+</tr>
+
+{% endif %}
+
+{% if po.paid_by %}
+
+<tr>
+    <td style="padding:6px 20px 6px 0;">
+        <strong>Paid By</strong>
+    </td>
+    <td>
+        {{ po.paid_by }}
+    </td>
+</tr>
+
+<tr>
+    <td style="padding:6px 20px 6px 0;">
+        <strong>Paid At</strong>
+    </td>
+    <td>
+        {{ po.paid_at|date:"Y-m-d H:i" }}
+    </td>
+</tr>
+
+{% endif %}
+
+{% if po.payment_reference %}
+
+<tr>
+    <td style="padding:6px 20px 6px 0;">
+        <strong>Payment Reference</strong>
+    </td>
+    <td>
+        {{ po.payment_reference }}
+    </td>
+</tr>
+
+{% endif %}
+
+{% if po.received_at %}
+
+<tr>
+    <td style="padding:6px 20px 6px 0;">
+        <strong>Received At</strong>
+    </td>
+    <td>
+        {{ po.received_at|date:"Y-m-d H:i" }}
+    </td>
+</tr>
+
+{% endif %}
+
+</table>
+
+
+<!-- ===================================================== -->
+<!-- ITEMS -->
+<!-- ===================================================== -->
+
+<hr>
+
 <h3>Items</h3>
-<ul>
-  {% for item in po.items.all %}
-    <li>
-      {{ item.product }} –
-      {{ item.purchase_quantity }} {{ item.product.purchase_unit }}
-      ({{ item.base_quantity }} {{ item.product.base_unit }})
-    </li>
-  {% empty %}
-    <li>No items added yet.</li>
-  {% endfor %}
-</ul>
 
-{# ===================== DRAFT ONLY ===================== #}
+<table
+    style="
+        width:100%;
+        border-collapse:collapse;
+    "
+>
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="text-align:left; padding:8px;">
+        Product
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Purchase Qty
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Base Qty
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Unit Cost
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Total
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for item in po.items.all %}
+
+<tr style="border-top:1px solid #ddd;">
+
+    <td style="padding:8px;">
+        {{ item.product.name }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        {{ item.purchase_quantity }}
+        {{ item.product.purchase_unit }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        {{ item.base_quantity }}
+        {{ item.product.base_unit }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        ₦{{ item.unit_cost|floatformat:2 }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        ₦{{ item.total_cost|floatformat:2 }}
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td colspan="5" style="padding:15px;">
+        No items added yet.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+
+<!-- ===================================================== -->
+<!-- DRAFT -->
+<!-- ===================================================== -->
+
 {% if po.status == "DRAFT" %}
-  <hr>
-  <h4>Add Item</h4>
-  <form method="post">
+    {% if request.user.role == "MANAGER" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+
+<hr>
+
+<h3>Draft Purchase Order</h3>
+
+<p>
+    This purchase order is still being prepared.
+    Add or edit the items and supplier before submitting it
+    for management approval.
+</p>
+
+<p>
+
+    <a href="{% url 'inventory:po_finalize' po.pk %}">
+        <button type="button">
+            ✏️ Finalize Purchase Order
+        </button>
+    </a>
+
+</p>
+
+<h4>Add Item</h4>
+
+<form method="post">
+
     {% csrf_token %}
+
     {{ item_form.as_p }}
-    <button>Add Item</button>
-  </form>
 
-  <hr>
-  <a href="{% url 'inventory:po_finalize' po.pk %}">
-    ✏️ Finalize Purchase Order
-  </a>
+    <button type="submit">
+        Add Item
+    </button>
+
+</form>
+
+{% endif %}
 {% endif %}
 
-{# ===================== SUBMITTED ONLY ===================== #}
-{% if po.status == "SUBMITTED" and request.user.role == "ACCOUNTANT" %}
-  <hr>
-  <a href="{% url 'inventory:po_pay' po.pk %}">
-    💰 Approve & Pay
-  </a>
+
+<!-- ===================================================== -->
+<!-- SUBMITTED -->
+<!-- ===================================================== -->
+
+{% if po.status == "SUBMITTED" %}
+
+<hr>
+
+<h3>Awaiting Approval</h3>
+
+<p>
+    This purchase order has been submitted for management
+    approval.
+</p>
+
+{% if request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+
+<a href="{% url 'inventory:po_approve' po.pk %}">
+    <button type="button">
+        ✅ Approve Purchase Order
+    </button>
+</a>
+
+{% else %}
+
+<p>
+    Awaiting management approval.
+</p>
+
 {% endif %}
 
-{% if po.status == "SUBMITTED" and request.user.role == "DIRECTOR" %}
-  <hr>
-  <a href="{% url 'inventory:po_pay' po.pk %}">
-    💰 Approve & Pay
-  </a>
 {% endif %}
 
-{% if po.status == "SUBMITTED" and request.user.role == "ADMIN" %}
-  <hr>
-  <a href="{% url 'inventory:po_pay' po.pk %}">
-    💰 Approve & Pay
-  </a>
+
+<!-- ===================================================== -->
+<!-- APPROVED -->
+<!-- ===================================================== -->
+
+{% if po.status == "APPROVED" %}
+
+<hr>
+
+<h3>Approved</h3>
+
+<p>
+    This purchase order has been approved and is ready
+    for supplier payment and/or goods receipt.
+</p>
+
+
+<!-- PAYMENT -->
+
+{% if po.payment_status != "PAID" %}
+
+{% if request.user.role == "ACCOUNTANT" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+
+<p>
+
+    <a href="{% url 'inventory:po_pay' po.pk %}">
+        <button type="button">
+            💰 Pay Supplier
+        </button>
+    </a>
+
+</p>
+
 {% endif %}
 
-{# ===================== PAID ONLY ===================== #}
-{% if po.status == "PAID" and request.user.role == "STORE" %}
-  <hr>
-  <a href="{% url 'inventory:po_receive_store' po.pk %}">
-    📦 Receive Goods
-  </a>
+{% else %}
+
+<p>
+    <strong>
+        ✓ Supplier fully paid
+    </strong>
+</p>
+
 {% endif %}
+
+
+<!-- RECEIVING -->
+
+{% if request.user.role == "STORE" %}
+
+<hr>
+
+<a href="{% url 'inventory:po_receive' po.pk %}">
+    <button type="button">
+        📦 Receive Goods
+    </button>
+</a>
+
+{% endif %}
+
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- RECEIVED -->
+<!-- ===================================================== -->
+
+{% if po.status == "RECEIVED" %}
+
+<hr>
+
+<h3>Goods Received</h3>
+
+<p>
+    The goods have been received into Store.
+</p>
+
+
+{% if po.payment_status == "PAID" %}
+
+<p>
+    <strong>
+        ✓ Supplier fully paid
+    </strong>
+</p>
+
+{% else %}
+
+<p>
+    <strong>
+        Payment outstanding
+    </strong>
+</p>
+
+{% if request.user.role == "ACCOUNTANT" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+
+<a href="{% url 'inventory:po_pay' po.pk %}">
+    <button type="button">
+        💰 Pay Supplier
+    </button>
+</a>
+
+{% endif %}
+
+{% endif %}
+
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- REJECTED -->
+<!-- ===================================================== -->
+
+{% if po.status == "REJECTED" %}
+
+<hr>
+
+<h3>Purchase Order Rejected</h3>
+
+<p>
+    This purchase order was rejected and cannot proceed.
+</p>
+
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- BACK -->
+<!-- ===================================================== -->
+
+
+<hr>
+
+<a href="{% url back_url %}">
+    {{ back_label }}
+</a>
 
 {% endblock %}

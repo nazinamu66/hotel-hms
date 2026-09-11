@@ -1,0 +1,157 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Fulfill Laundry Request
+{% endblock %}
+
+{% block content %}
+
+<h2>Fulfill Laundry Request #{{ linen_request.id }}</h2>
+
+<p style="color:#666;">
+    Issue clean linen from Laundry to Housekeeping.
+</p>
+
+<div
+    class="card"
+    style="
+        max-width:800px;
+        padding:25px;
+        background:white;
+        border:1px solid #ddd;
+    "
+>
+
+    <h3>
+        {{ linen_request.linen_item.product.name }}
+    </h3>
+
+    <p>
+        <strong>SKU:</strong>
+        {{ linen_request.linen_item.product.sku }}
+    </p>
+
+    <p>
+        <strong>Requested by:</strong>
+        {{ linen_request.requested_by.username }}
+    </p>
+
+    <hr>
+
+    <p>
+        <strong>Requested:</strong>
+        {{ linen_request.quantity }}
+    </p>
+
+    <p>
+        <strong>Already fulfilled:</strong>
+        {{ linen_request.fulfilled_quantity }}
+    </p>
+
+    <p>
+        <strong>Remaining:</strong>
+        {{ remaining_quantity }}
+    </p>
+
+    <p style="color:#176b2c;font-size:18px;">
+        <strong>Clean Laundry Stock Available:</strong>
+        {{ clean_balance }}
+    </p>
+
+    {% if linen_request.note %}
+        <p>
+            <strong>Housekeeping Note:</strong><br>
+            {{ linen_request.note }}
+        </p>
+    {% endif %}
+
+    <hr>
+
+    {% if remaining_quantity > 0 and clean_balance > 0 %}
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <label>
+            <strong>Quantity to Fulfill</strong>
+        </label>
+
+        <br>
+
+        <input
+            type="number"
+            name="quantity"
+            min="1"
+            max="{{ remaining_quantity }}"
+            value="{{ remaining_quantity }}"
+            required
+            style="width:100%;padding:10px;"
+        >
+
+        <br><br>
+
+        <label>
+            <strong>Note</strong>
+        </label>
+
+        <br>
+
+        <textarea
+            name="note"
+            rows="4"
+            placeholder="Optional fulfillment note"
+            style="width:100%;padding:10px;"
+        ></textarea>
+
+        <br><br>
+
+        <button
+            type="submit"
+            class="btn btn-primary"
+        >
+            Confirm Fulfillment
+        </button>
+
+        <a
+            href="{% url 'laundry:linen_requests' %}"
+            class="btn btn-secondary"
+            style="margin-left:10px;"
+        >
+            Back to Requests
+        </a>
+
+    </form>
+
+    {% else %}
+
+        <div
+            style="
+                padding:15px;
+                background:#fff3cd;
+                border:1px solid #ffeeba;
+            "
+        >
+            This request cannot currently be fulfilled.
+
+            {% if remaining_quantity <= 0 %}
+                The request has no remaining quantity.
+            {% elif clean_balance <= 0 %}
+                There is currently no clean linen available in Laundry.
+            {% endif %}
+        </div>
+
+        <br>
+
+        <a
+            href="{% url 'laundry:linen_requests' %}"
+            class="btn btn-secondary"
+        >
+            Back to Requests
+        </a>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

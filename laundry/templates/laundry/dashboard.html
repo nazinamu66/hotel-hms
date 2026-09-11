@@ -1,0 +1,389 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Laundry Dashboard
+{% endblock %}
+
+{% block header %}
+<h2>Laundry Dashboard</h2>
+{% endblock %}
+
+{% block content %}
+
+<!-- ===================================================== -->
+<!-- LAUNDRY OPERATIONS -->
+<!-- ===================================================== -->
+
+<h3>Laundry Operations</h3>
+
+<div style="
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:15px;
+    margin-bottom:30px;
+">
+
+    <div class="card" style="padding:15px;">
+        <strong>Hotel Linen Requests</strong>
+
+        <p style="margin:10px 0;">
+            Review, approve and fulfill linen requests from Housekeeping.
+        </p>
+
+        <a href="{% url 'laundry:linen_requests' %}">
+            Open Linen Requests →
+        </a>
+    </div>
+
+
+    <div class="card" style="padding:15px;">
+        <strong>Process Dirty Linen</strong>
+
+        <p style="margin:10px 0;">
+            Process dirty linen and return it to clean Laundry stock.
+        </p>
+
+        <a href="{% url 'laundry:process_linen' %}">
+            Open Processing →
+        </a>
+    </div>
+
+
+    <div class="card" style="padding:15px;">
+        <strong>Pending Receipts</strong>
+
+        <p style="margin:10px 0;">
+            Confirm linen physically received from Housekeeping.
+        </p>
+
+        {% if pending_receipt_count %}
+            <a href="#pending-receipts">
+                Review {{ pending_receipt_count }} Pending Receipt{{ pending_receipt_count|pluralize }} →
+            </a>
+        {% else %}
+            <span>No pending receipts</span>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- ===================================================== -->
+<!-- SUMMARY -->
+<!-- ===================================================== -->
+
+<h3>Laundry Overview</h3>
+
+<div style="
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:15px;
+    margin-bottom:25px;
+">
+
+    <div class="card" style="padding:15px;">
+        <strong>Clean Linen</strong>
+        <h2>{{ total_clean }}</h2>
+    </div>
+
+    <div class="card" style="padding:15px;">
+        <strong>Dirty Linen</strong>
+        <h2>{{ total_dirty }}</h2>
+    </div>
+
+    <div class="card" style="padding:15px;">
+        <strong>Total Linen</strong>
+        <h2>{{ total_linen }}</h2>
+    </div>
+
+    <div class="card" style="padding:15px;">
+        <strong>Pending Receipts</strong>
+        <h2>{{ pending_receipt_count }}</h2>
+    </div>
+
+</div>
+
+
+<!-- ===================================================== -->
+<!-- LINEN BALANCES -->
+<!-- ===================================================== -->
+
+<h3>Laundry Linen Balance</h3>
+
+{% if laundry_balances %}
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:25px;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">
+        Linen Item
+    </th>
+
+    <th>
+        Clean
+    </th>
+
+    <th>
+        Dirty
+    </th>
+
+    <th>
+        Total
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for row in laundry_balances %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        <strong>
+            {{ row.item.product.name }}
+        </strong>
+    </td>
+
+    <td>
+        {{ row.clean_quantity }}
+    </td>
+
+    <td>
+        {{ row.dirty_quantity }}
+
+        {% if row.dirty_quantity > 0 %}
+            <br>
+            <a href="{% url 'laundry:process_linen' %}">
+                Process →
+            </a>
+        {% endif %}
+    </td>
+
+    <td>
+        {{ row.total_quantity }}
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    No linen is currently recorded in Laundry.
+</p>
+
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- PENDING RECEIPTS -->
+<!-- ===================================================== -->
+
+<h3 id="pending-receipts">Pending Linen Receipts</h3>
+
+{% if pending_receipts %}
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:25px;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">
+        Linen
+    </th>
+
+    <th>
+        Returned By
+    </th>
+
+    <th>
+        Hotel
+    </th>
+
+    <th>
+        Declared Clean
+    </th>
+
+    <th>
+        Declared Dirty
+    </th>
+
+    <th>
+        Date
+    </th>
+
+    <th>
+        Action
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for receipt in pending_receipts %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        <strong>
+            <a href="{% url 'laundry:receipt_detail' receipt.id %}">
+                {{ receipt.linen_item.product.name }}
+            </a>
+        </strong>
+    </td>
+
+    <td>
+        {{ receipt.returned_by.username }}
+    </td>
+
+    <td>
+        {{ receipt.returned_by.hotel.name }}
+    </td>
+
+    <td>
+        {{ receipt.declared_clean_quantity }}
+    </td>
+
+    <td>
+        {{ receipt.declared_dirty_quantity }}
+    </td>
+
+    <td>
+        {{ receipt.created_at|date:"Y-m-d H:i" }}
+    </td>
+    <td>
+        <a href="{% url 'laundry:receipt_detail' receipt.id %}">
+            Review
+        </a>
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    No pending linen receipts.
+</p>
+
+{% endif %}
+
+
+<!-- ===================================================== -->
+<!-- RECENT ACTIVITY -->
+<!-- ===================================================== -->
+
+<h3>Recent Laundry Activity</h3>
+
+{% if recent_transactions %}
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">
+        Date
+    </th>
+
+    <th>
+        Linen
+    </th>
+
+    <th>
+        Event
+    </th>
+
+    <th>
+        Quantity
+    </th>
+
+    <th>
+        Condition
+    </th>
+
+    <th>
+        Performed By
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for transaction in recent_transactions %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        {{ transaction.created_at|date:"Y-m-d H:i" }}
+    </td>
+
+    <td>
+        {{ transaction.linen_item.product.name }}
+    </td>
+
+    <td>
+        {{ transaction.get_event_type_display }}
+    </td>
+
+    <td>
+        {{ transaction.quantity }}
+    </td>
+
+    <td>
+        {{ transaction.condition }}
+    </td>
+
+    <td>
+        {{ transaction.performed_by.username }}
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    No recent Laundry activity.
+</p>
+
+{% endif %}
+
+{% endblock %}

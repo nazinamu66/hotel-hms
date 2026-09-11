@@ -1,0 +1,156 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Preventive Maintenance
+{% endblock %}
+
+{% block content %}
+
+<div style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+">
+
+    <h2 style="margin:0;">
+        Preventive Maintenance
+    </h2>
+
+    {% if user.role in "MANAGER ADMIN DIRECTOR" or user.role == "MAINTENANCE" and user.is_department_head %}
+        <a href="{% url 'maintenance_schedule_create' %}">
+            <button type="button">
+                + Add Schedule
+            </button>
+        </a>
+    {% endif %}
+
+</div>
+
+<hr>
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">Asset</th>
+    <th>Maintenance Task</th>
+    <th>Location</th>
+    <th>Interval</th>
+    <th>Next Due</th>
+    <th>Status</th>
+    <th>Action</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for schedule in schedules %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        <strong>
+            {{ schedule.asset.name }}
+        </strong>
+    </td>
+
+    <td>
+        {{ schedule.name }}
+    </td>
+
+    <td>
+
+        {% if schedule.asset.room %}
+            Room {{ schedule.asset.room.room_number }}
+        {% else %}
+            Hotel / Common Area
+        {% endif %}
+
+    </td>
+
+    <td>
+        Every {{ schedule.interval_days }} days
+    </td>
+
+    <td>
+        {{ schedule.next_due_date|date:"Y-m-d" }}
+    </td>
+
+    <td>
+
+        {% if schedule.schedule_status == "OVERDUE" %}
+
+            <strong>
+                OVERDUE
+            </strong>
+
+        {% elif schedule.schedule_status == "DUE TODAY" %}
+
+            <strong>
+                DUE TODAY
+            </strong>
+
+        {% else %}
+
+            Scheduled
+
+        {% endif %}
+
+    </td>
+    <td>
+
+        {% if schedule.schedule_status == "OVERDUE" or schedule.schedule_status == "DUE TODAY" %}
+
+            <a href="{% url 'maintenance_schedule_work_order' schedule.id %}">
+                <button type="button">
+                    Create Work Order
+                </button>
+            </a>
+
+        {% else %}
+
+            —
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td
+        colspan="7"
+        style="
+            padding:20px;
+            text-align:center;
+        "
+    >
+        No preventive maintenance schedules have been created.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<br>
+
+<a href="{% url 'maintenance_dashboard' %}">
+    ← Back to Maintenance Dashboard
+</a>
+
+{% endblock %}

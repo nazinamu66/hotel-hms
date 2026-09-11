@@ -1,0 +1,102 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+My Linen Requests
+{% endblock %}
+
+{% block content %}
+
+<h2>My Linen Requests</h2>
+
+<p style="color:#666;">
+    Requests for new, unused linen submitted to the Linen Store.
+</p>
+
+<div style="margin-bottom:20px;">
+
+    <a
+        href="{% url 'housekeeping_request_new_linen' %}"
+        class="btn btn-primary"
+    >
+        + Request New Linen
+    </a>
+
+</div>
+
+<table class="table">
+
+<thead>
+
+<tr>
+    <th>ID</th>
+    <th>Linen</th>
+    <th>Requested</th>
+    <th>Fulfilled</th>
+    <th>Remaining</th>
+    <th>Date</th>
+    <th>Status</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for req in linen_requests %}
+
+<tr>
+
+    <td>
+        #{{ req.id }}
+    </td>
+
+    <td>
+        <strong>
+            {{ req.linen_item.product.name }}
+        </strong>
+
+        <br>
+
+        <small>
+            {{ req.linen_item.product.sku }}
+        </small>
+    </td>
+
+    <td>
+        {{ req.quantity }}
+    </td>
+
+    <td>
+        {{ req.fulfilled_quantity }}
+    </td>
+
+    <td>
+        {{ req.remaining_quantity }}
+    </td>
+
+    <td>
+        {{ req.created_at|date:"d M Y H:i" }}
+    </td>
+
+    <td>
+        {{ req.get_status_display }}
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td colspan="7">
+        You have not submitted any linen requests.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

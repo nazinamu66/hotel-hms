@@ -1,0 +1,205 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Cleaning Materials — Room {{ assignment.room.room_number }}
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    Cleaning Materials
+</h2>
+
+<p>
+    <strong>Room:</strong>
+    {{ assignment.room.room_number }}
+</p>
+
+<p>
+    <strong>Assignment:</strong>
+    {{ assignment.assigned_to }}
+</p>
+
+<p>
+    Record the actual Housekeeping materials used during this cleaning.
+    Quantities must be entered in the product's base unit.
+</p>
+
+<hr>
+
+<h3>Record Material Used</h3>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <p>
+        <label>
+            Product
+        </label>
+        <br>
+
+        <select name="product_id" required>
+
+            <option value="">
+                Select material
+            </option>
+
+            {% for product in products %}
+
+                <option value="{{ product.id }}">
+                    {{ product.name }}
+                    — {{ product.base_unit }}
+                </option>
+
+            {% empty %}
+
+                <option value="">
+                    No Housekeeping materials available
+                </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <p>
+        <label>
+            Quantity
+        </label>
+        <br>
+
+        <input
+            type="number"
+            name="quantity"
+            step="0.01"
+            min="0.01"
+            required
+        >
+    </p>
+
+    <p>
+        <label>
+            Notes
+        </label>
+        <br>
+
+        <textarea
+            name="notes"
+            rows="3"
+            cols="50"
+        ></textarea>
+    </p>
+
+    <button
+        type="submit"
+        class="btn btn-primary"
+    >
+        Record Material
+    </button>
+
+</form>
+
+<hr>
+
+<h3>
+    Materials Already Recorded
+</h3>
+
+<table
+    style="
+        width:100%;
+        border-collapse:collapse;
+    "
+>
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:8px;">
+        Product
+    </th>
+
+    <th>
+        Quantity
+    </th>
+
+    <th>
+        Unit
+    </th>
+
+    <th>
+        Recorded By
+    </th>
+
+    <th>
+        Date
+    </th>
+
+    <th>
+        Notes
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for usage in usages %}
+
+<tr style="border-top:1px solid #ddd;">
+
+    <td style="padding:8px;">
+        {{ usage.product.name }}
+    </td>
+
+    <td style="padding:8px;">
+        {{ usage.quantity }}
+    </td>
+
+    <td style="padding:8px;">
+        {{ usage.product.base_unit }}
+    </td>
+
+    <td style="padding:8px;">
+        {{ usage.recorded_by }}
+    </td>
+
+    <td style="padding:8px;">
+        {{ usage.recorded_at|date:"Y-m-d H:i" }}
+    </td>
+
+    <td style="padding:8px;">
+        {{ usage.notes|default:"—" }}
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td
+        colspan="6"
+        style="padding:15px;text-align:center;"
+    >
+        No materials recorded yet.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<br>
+
+<a href="{% url 'housekeeping_dashboard' %}">
+    ← Back to Housekeeping
+</a>
+
+{% endblock %}

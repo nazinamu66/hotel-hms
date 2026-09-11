@@ -1,0 +1,193 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Add Maintenance Product
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    Add Maintenance Product
+</h2>
+
+<p>
+    Create a product for use by the Maintenance department.
+</p>
+
+<div style="
+    max-width:750px;
+    padding:20px;
+    background:white;
+    border:1px solid #ddd;
+    border-radius:6px;
+">
+
+<form method="post">
+
+{% csrf_token %}
+
+{{ form.non_field_errors }}
+
+<h4>Basic Information</h4>
+
+<label>
+    Name
+</label>
+
+{{ form.name }}
+{{ form.name.errors }}
+
+<br><br>
+
+<label>
+    SKU
+</label>
+
+{{ form.sku }}
+{{ form.sku.errors }}
+
+<br><br>
+
+<label>
+    Barcode
+</label>
+
+{{ form.barcode }}
+{{ form.barcode.errors }}
+
+<br><br>
+
+
+<h4>Classification</h4>
+
+<label>
+    Product Type
+</label>
+
+{{ form.product_type }}
+{{ form.product_type.errors }}
+
+<br><br>
+
+<label>
+    Usage Type
+</label>
+
+{{ form.usage_type }}
+
+<small style="color:gray;">
+    Maintenance products are Internal Use products.
+</small>
+
+<br><br>
+
+<label>
+    Supply Source
+</label>
+
+{{ form.supply_source }}
+{{ form.supply_source.errors }}
+
+<br><br>
+
+
+<h4>Units</h4>
+
+<label>
+    Base Unit
+</label>
+
+{{ form.base_unit }}
+{{ form.base_unit.errors }}
+
+<br><br>
+
+<label>
+    Purchase Unit
+</label>
+
+{{ form.purchase_unit }}
+{{ form.purchase_unit.errors }}
+
+<br><br>
+
+<label>
+    Unit Multiplier
+</label>
+
+{{ form.unit_multiplier }}
+{{ form.unit_multiplier.errors }}
+
+<br><br>
+
+
+<h4>Pricing</h4>
+
+<label>
+    Purchase Cost
+</label>
+
+{{ form.purchase_cost }}
+{{ form.purchase_cost.errors }}
+
+<br><br>
+
+<label>
+    Selling Price
+</label>
+
+{{ form.price }}
+{{ form.price.errors }}
+
+<br><br>
+
+
+<h4>Stock Control</h4>
+
+<label>
+    Reorder Level
+</label>
+
+{{ form.reorder_level }}
+{{ form.reorder_level.errors }}
+
+<br><br>
+
+
+<h4>Department</h4>
+
+<p>
+    <strong>
+        Maintenance
+    </strong>
+</p>
+
+<p style="color:gray;">
+    This product will automatically be assigned to the
+    Maintenance department of {{ hotel.name }}.
+</p>
+
+{{ form.departments }}
+
+<br><br>
+
+
+<button
+    type="submit"
+    class="btn btn-primary"
+>
+    Create Maintenance Product
+</button>
+
+<a
+    href="{% url 'maintenance_products' %}"
+    class="btn btn-secondary"
+>
+    Cancel
+</a>
+
+</form>
+
+</div>
+
+{% endblock %}

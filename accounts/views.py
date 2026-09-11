@@ -5,21 +5,12 @@ from django.urls import reverse_lazy
 from django.contrib.auth import logout
 from accounts.decorators import role_required
 from django.shortcuts import render
-from django.db.models import Sum, Count
-from decimal import Decimal
-from inventory.models import LowStockRequest, PurchaseItem, PurchaseOrder
 from django.contrib import messages
-from restaurant.models import POSOrder
-from billing.models import Folio, Payment
-from django.utils import timezone
 from core.utils import get_user_hotels
-from reports.utils import today_range
 from django.shortcuts import get_object_or_404
-from accounts.services.manager_reports import build_manager_daily_report
+from django.core.exceptions import PermissionDenied
 from .forms import UserCreateForm
-from django.contrib import messages
 from django.shortcuts import redirect
-from inventory.models import Department
 from accounts.services.manager_reports import (
     build_manager_daily_report,
     get_today_restaurant_orders,
@@ -29,6 +20,17 @@ from accounts.services.manager_reports import (
 
 from django.contrib.auth import get_user_model
 User = get_user_model()
+
+from django.core.exceptions import ValidationError
+
+from .forms import (
+    UserCreateForm,
+    InitialOrganizationSetupForm,
+)
+
+from accounts.services.organization import (
+    create_organization_for_admin,
+)
 
 
 class CustomLoginView(LoginView):
@@ -42,6 +44,62 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
+@login_required
+def initial_setup(request):
+
+    if request.user.role != "ADMIN":
+        raise PermissionDenied
+
+    if request.user.organization_id:
+        return redirect("hotel_dashboard")
+
+    form = InitialOrganizationSetupForm(
+        request.POST or None,
+    )
+
+    if request.method == "POST" and form.is_valid():
+
+        try:
+
+            create_organization_for_admin(
+                admin=request.user,
+                organization_name=form.cleaned_data[
+                    "organization_name"
+                ],
+                hotel_name=form.cleaned_data[
+                    "hotel_name"
+                ],
+                hotel_location=form.cleaned_data[
+                    "hotel_location"
+                ],
+            )
+
+        except ValidationError as e:
+
+            form.add_error(
+                None,
+                e.message,
+            )
+
+        else:
+
+            messages.success(
+                request,
+                "Organization and first hotel created successfully.",
+            )
+
+            return redirect(
+                "hotel_dashboard",
+            )
+
+    return render(
+        request,
+        "accounts/initial_setup.html",
+        {
+            "form": form,
+        },
+    )
+
 
 @login_required
 def role_redirect(request):
@@ -49,7 +107,14 @@ def role_redirect(request):
     role = request.user.role
 
     # Executive / management dashboard
-    if role in ["DIRECTOR", "MANAGER", "ADMIN", "ACCOUNTANT"]:
+    if role == "ADMIN":
+
+        if not request.user.organization_id:
+            return redirect("initial_setup")
+
+        return redirect("hotel_dashboard")
+
+    if role in ["DIRECTOR", "MANAGER", "ACCOUNTANT"]:
         return redirect("hotel_dashboard")
 
     if role == "FRONTDESK":
@@ -66,6 +131,12 @@ def role_redirect(request):
     
     if role == "HOUSEKEEPING":
         return redirect("/housekeeping/")
+    
+    if role == "MAINTENANCE":
+        return redirect("/maintenance/")
+    
+    if role == "LAUNDRY":
+        return redirect("/laundry/")
 
     return redirect("login")
 
@@ -111,14 +182,32 @@ def manager_payments_today(request):
         {"payments": payments}
     )
 
+def get_manageable_users(actor):
+
+    if actor.role == "ADMIN":
+        return User.objects.all()
+
+    if actor.role == "DIRECTOR":
+        return User.objects.filter(
+            organization_id=actor.organization_id,
+        )
+
+    return User.objects.none()
 
 
 @role_required("ADMIN", "DIRECTOR")
 def user_list(request):
 
     users = (
-        User.objects
-        .select_related("department")
+        get_manageable_users(request.user)
+        .select_related(
+            "organization",
+            "hotel",
+            "department",
+        )
+        .prefetch_related(
+            "assigned_hotels",
+        )
         .order_by("username")
     )
 
@@ -132,29 +221,34 @@ def user_list(request):
 @role_required("ADMIN", "DIRECTOR")
 def user_create(request):
 
-    hotel = request.user.hotel
-
-    form = UserCreateForm(request.POST or None)
-
-    # Restrict department selection for non-directors
-    if request.user.role != "DIRECTOR":
-        form.fields["department"].queryset = Department.objects.filter(
-            hotel=hotel
-        )
+    form = UserCreateForm(
+        request.POST or None,
+        actor=request.user,
+    )
 
     if form.is_valid():
 
-        user = form.save(commit=False)
+        try:
 
-        # Ensure hotel is inherited from department
-        if user.department:
-            user.hotel = user.department.hotel
+            user = form.save()
 
-        user.save()
+        except ValidationError as e:
 
-        messages.success(request, "User created successfully.")
+            form.add_error(
+                None,
+                e.message,
+            )
 
-        return redirect("accounts_users")
+        else:
+
+            messages.success(
+                request,
+                "User created successfully.",
+            )
+
+            return redirect(
+                "accounts_users"
+            )
 
     return render(
         request,
@@ -167,31 +261,46 @@ def user_create(request):
 @role_required("ADMIN", "DIRECTOR")
 def user_edit(request, user_id):
 
-    user_obj = get_object_or_404(User, id=user_id)
+    user_obj = get_object_or_404(
+        get_manageable_users(request.user),
+        id=user_id,
+    )
 
     form = UserCreateForm(
         request.POST or None,
-        instance=user_obj
+        instance=user_obj,
+        actor=request.user,
     )
 
     if form.is_valid():
 
-        user = form.save(commit=False)
+        try:
 
-        if user.department:
-            user.hotel = user.department.hotel
+            user = form.save()
 
-        user.save()
+        except ValidationError as e:
 
-        messages.success(request, "User updated successfully.")
+            form.add_error(
+                None,
+                e.message,
+            )
 
-        return redirect("accounts_users")
+        else:
+
+            messages.success(
+                request,
+                "User updated successfully.",
+            )
+
+            return redirect(
+                "accounts_users"
+            )
 
     return render(
         request,
         "accounts/user_form.html",
         {
             "form": form,
-            "edit_mode": True
+            "edit_mode": True,
         }
     )

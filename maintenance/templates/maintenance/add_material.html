@@ -1,0 +1,161 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Add Material - Maintenance #{{ ticket.id }}
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    Add Maintenance Material
+</h2>
+
+<p>
+    <strong>Work Order:</strong>
+    #{{ ticket.id }}
+</p>
+
+<p>
+    <strong>Room:</strong>
+    {{ ticket.room.room_number }}
+</p>
+
+<hr>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <p>
+
+        <label for="product">
+            <strong>Material</strong>
+        </label>
+
+        <br>
+
+        <select
+            name="product"
+            id="product"
+            required
+            onchange="updateStock()"
+        >
+
+            <option value="">
+                Select material
+            </option>
+
+            {% for row in product_rows %}
+
+            <option
+                value="{{ row.product.id }}"
+                data-stock="{{ row.stock }}"
+                data-unit="{{ row.product.base_unit }}"
+            >
+                {{ row.product.name }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <strong>Available:</strong>
+
+        <span id="available_stock">
+            —
+        </span>
+
+        <span id="available_unit">
+        </span>
+
+    </p>
+
+    <p>
+
+        <label for="quantity">
+            <strong>Quantity Used</strong>
+        </label>
+
+        <br>
+
+        <input
+            type="number"
+            name="quantity"
+            id="quantity"
+            min="0.01"
+            step="0.01"
+            required
+        >
+
+        <span id="unit"></span>
+
+    </p>
+
+    <p>
+
+        <label for="description">
+            <strong>Description</strong>
+        </label>
+
+        <br>
+
+        <textarea
+            name="description"
+            id="description"
+            style="width:500px;height:100px;"
+            placeholder="Describe how the material was used..."
+        ></textarea>
+
+    </p>
+
+    <button type="submit">
+        Consume Material
+    </button>
+
+    <a
+        href="{% url 'maintenance_ticket_detail' ticket.id %}"
+    >
+        Cancel
+    </a>
+
+</form>
+
+<script>
+
+function updateStock() {
+
+    const select =
+        document.getElementById("product");
+
+    const option =
+        select.options[select.selectedIndex];
+
+    const stock =
+        option.dataset.stock;
+
+    const unit =
+        option.dataset.unit;
+
+    document.getElementById(
+        "available_stock"
+    ).textContent =
+        stock || "0";
+
+    document.getElementById(
+        "available_unit"
+    ).textContent =
+        unit || "";
+
+    document.getElementById(
+        "unit"
+    ).textContent =
+        unit || "";
+}
+
+</script>
+
+{% endblock %}

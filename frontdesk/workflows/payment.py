@@ -1,11 +1,9 @@
-from decimal import Decimal
-
 from django.db import transaction
 from django.core.exceptions import ValidationError
+
 from billing.models import Payment
-from frontdesk.workflows.common import (
-    get_active_folio,
-)
+from frontdesk.workflows.common import get_active_folio
+
 
 def validate_payment(
     folio,
@@ -13,7 +11,6 @@ def validate_payment(
     method,
     reference,
 ):
-
     if amount <= 0:
         raise ValidationError(
             "Invalid payment amount."
@@ -41,7 +38,6 @@ def create_payment(
     note,
     user,
 ):
-
     return Payment.objects.create(
         folio=folio,
         amount=amount,
@@ -53,7 +49,6 @@ def create_payment(
 
 
 def post_payment_to_accounting(payment):
-
     from accounting.services.postings.payment import (
         post_payment,
     )
@@ -62,17 +57,14 @@ def post_payment_to_accounting(payment):
 
 
 @transaction.atomic
-def take_payment(
-    room,
+def take_payment_for_folio(
+    folio,
     user,
     amount,
     method,
     reference="",
     note="",
 ):
-
-    folio = get_active_folio(room)
-
     validate_payment(
         folio,
         amount,
@@ -92,3 +84,24 @@ def take_payment(
     post_payment_to_accounting(payment)
 
     return payment
+
+
+@transaction.atomic
+def take_payment(
+    room,
+    user,
+    amount,
+    method,
+    reference="",
+    note="",
+):
+    folio = get_active_folio(room)
+
+    return take_payment_for_folio(
+        folio=folio,
+        user=user,
+        amount=amount,
+        method=method,
+        reference=reference,
+        note=note,
+    )

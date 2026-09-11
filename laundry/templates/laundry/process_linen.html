@@ -1,0 +1,202 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Process Dirty Linen
+{% endblock %}
+
+{% block content %}
+
+<h2>Process Dirty Linen</h2>
+
+<p style="color:#666;">
+    Convert dirty linen in Laundry into clean linen after processing.
+</p>
+
+<div
+    class="card"
+    style="
+        max-width:900px;
+        padding:25px;
+        background:white;
+        border:1px solid #ddd;
+    "
+>
+
+    <h3>Current Dirty Linen</h3>
+
+    {% if linen_rows %}
+
+        <table style="width:100%;border-collapse:collapse;">
+
+            <thead>
+                <tr>
+                    <th style="padding:10px;text-align:left;">
+                        Linen
+                    </th>
+
+                    <th style="padding:10px;text-align:center;">
+                        Dirty
+                    </th>
+
+                    <th style="padding:10px;text-align:center;">
+                        Clean
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for row in linen_rows %}
+
+                <tr style="border-top:1px solid #eee;">
+
+                    <td style="padding:10px;">
+                        <strong>
+                            {{ row.item.product.name }}
+                        </strong>
+                        <br>
+                        <small>
+                            {{ row.item.product.sku }}
+                        </small>
+                    </td>
+
+                    <td
+                        style="
+                            padding:10px;
+                            text-align:center;
+                            color:#a00;
+                            font-weight:bold;
+                        "
+                    >
+                        {{ row.dirty_quantity }}
+                    </td>
+
+                    <td
+                        style="
+                            padding:10px;
+                            text-align:center;
+                        "
+                    >
+                        {{ row.clean_quantity }}
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    {% else %}
+
+        <p style="padding:20px;color:#777;">
+            There is currently no dirty linen available for processing.
+        </p>
+
+    {% endif %}
+
+    <hr style="margin:25px 0;">
+
+    <h3>Process Linen</h3>
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <label>
+            <strong>Linen Item</strong>
+        </label>
+
+        <br>
+
+        <select
+            name="linen_item"
+            required
+            style="width:100%;padding:10px;"
+        >
+
+            <option value="">
+                Select linen item
+            </option>
+
+            {% for row in linen_rows %}
+
+                <option value="{{ row.item.id }}">
+                    {{ row.item.product.name }}
+                    — Dirty available: {{ row.dirty_quantity }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <br><br>
+
+        <label>
+            <strong>Quantity to Process</strong>
+        </label>
+
+        <br>
+
+        <input
+            type="number"
+            name="quantity"
+            min="1"
+            step="1"
+            required
+            style="width:100%;padding:10px;"
+        >
+
+        <br><br>
+
+        <label>
+            <strong>Reference</strong>
+        </label>
+
+        <br>
+
+        <input
+            type="text"
+            name="reference"
+            placeholder="Optional batch / machine reference"
+            style="width:100%;padding:10px;"
+        >
+
+        <br><br>
+
+        <label>
+            <strong>Note</strong>
+        </label>
+
+        <br>
+
+        <textarea
+            name="note"
+            rows="4"
+            placeholder="Optional processing note"
+            style="width:100%;padding:10px;"
+        ></textarea>
+
+        <br><br>
+
+        <button
+            type="submit"
+            class="btn btn-primary"
+        >
+            Process Linen
+        </button>
+
+        <a
+            href="{% url 'laundry:dashboard' %}"
+            class="btn btn-secondary"
+            style="margin-left:10px;"
+        >
+            Laundry Dashboard
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}

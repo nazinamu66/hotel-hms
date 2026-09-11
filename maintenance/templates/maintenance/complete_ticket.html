@@ -1,0 +1,204 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Complete Maintenance Work Order #{{ ticket.id }}
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    Complete Maintenance Work Order #{{ ticket.id }}
+</h2>
+
+<hr>
+
+<p>
+    <strong>Room:</strong>
+    {{ ticket.room.room_number }}
+</p>
+
+<p>
+    <strong>Priority:</strong>
+    {{ ticket.priority }}
+</p>
+
+<p>
+    <strong>Problem:</strong>
+    {{ ticket.description }}
+</p>
+
+
+<!-- ===================================================== -->
+<!-- COST SUMMARY -->
+<!-- ===================================================== -->
+
+<hr>
+
+<h3>
+    Maintenance Cost Summary
+</h3>
+
+<div style="
+    border:2px solid #333;
+    padding:20px;
+    margin-bottom:25px;
+">
+
+    <p>
+        <strong>
+            Materials:
+        </strong>
+
+        ₦{{ material_total|floatformat:2 }}
+    </p>
+
+    <p>
+        <strong>
+            Labour:
+        </strong>
+
+        ₦{{ labour_total|floatformat:2 }}
+    </p>
+
+    <hr>
+
+    <p style="font-size:20px;">
+        <strong>
+            Total Maintenance Cost:
+        </strong>
+
+        ₦{{ total_maintenance_cost|floatformat:2 }}
+    </p>
+
+</div>
+
+
+<!-- ===================================================== -->
+<!-- COMPLETION FORM -->
+<!-- ===================================================== -->
+
+<form method="post">
+
+    {% csrf_token %}
+
+
+    <!-- ------------------------------------------------- -->
+    <!-- WORK PERFORMED -->
+    <!-- ------------------------------------------------- -->
+
+    <h3>
+        Work Performed
+    </h3>
+
+    <textarea
+        name="resolution_note"
+        required
+        style="
+            width:600px;
+            height:150px;
+        "
+        placeholder="Describe what was done to resolve the problem..."
+    ></textarea>
+
+
+    <br><br>
+
+
+    <!-- ------------------------------------------------- -->
+    <!-- COMPLETION OUTCOME -->
+    <!-- ------------------------------------------------- -->
+
+    <h3>
+        Completion Outcome
+    </h3>
+
+    <p>
+        What should happen to the room after this
+        maintenance work is completed?
+    </p>
+
+
+    <label>
+        <input
+            type="radio"
+            name="completion_outcome"
+            value="ROOM_READY"
+            required
+        >
+
+        <strong>
+            Room Ready
+        </strong>
+
+        <br>
+
+        Room is repaired and ready for normal operation.
+    </label>
+
+
+    <br><br>
+
+
+    <label>
+        <input
+            type="radio"
+            name="completion_outcome"
+            value="HOUSEKEEPING_REQUIRED"
+        >
+
+        <strong>
+            Housekeeping Required
+        </strong>
+
+        <br>
+
+        Maintenance is complete, but housekeeping must
+        prepare the room before it can be used.
+    </label>
+
+
+    <br><br>
+
+
+    <label>
+        <input
+            type="radio"
+            name="completion_outcome"
+            value="NOT_APPLICABLE"
+        >
+
+        <strong>
+            Room Not Affected
+        </strong>
+
+        <br>
+
+        The maintenance work did not affect the room's
+        operational status.
+    </label>
+
+
+    <br><br><br>
+
+
+    <!-- ------------------------------------------------- -->
+    <!-- ACTIONS -->
+    <!-- ------------------------------------------------- -->
+
+    <button type="submit">
+        Complete Work Order
+    </button>
+
+    &nbsp;
+
+    <a
+        href="{% url 'maintenance_ticket_detail' ticket.id %}"
+    >
+        <button type="button">
+            Cancel
+        </button>
+    </a>
+
+</form>
+
+{% endblock %}

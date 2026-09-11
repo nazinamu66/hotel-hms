@@ -1,0 +1,275 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+{{ page_title }}
+{% endblock %}
+
+{% block content %}
+
+<div style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+">
+
+    <h2 style="margin:0;">
+        {{ page_title }}
+    </h2>
+
+    <a href="{% url 'maintenance_create_ticket_room' %}">
+        <button type="button">
+            + Create Maintenance Ticket
+        </button>
+    </a>
+
+</div>
+
+<hr>
+
+<form method="get" style="
+    display:flex;
+    gap:15px;
+    flex-wrap:wrap;
+    align-items:end;
+    margin-bottom:20px;
+">
+
+    <div>
+        <label>Status</label><br>
+
+        <select name="status">
+
+            <option value="">
+                All Active
+            </option>
+
+            <option
+                value="OPEN"
+                {% if status_filter == "OPEN" %}selected{% endif %}
+            >
+                Open
+            </option>
+
+            <option
+                value="IN_PROGRESS"
+                {% if status_filter == "IN_PROGRESS" %}selected{% endif %}
+            >
+                In Progress
+            </option>
+
+        </select>
+    </div>
+
+
+    <div>
+        <label>Priority</label><br>
+
+        <select name="priority">
+
+            <option value="">
+                All Priorities
+            </option>
+
+            <option
+                value="HIGH"
+                {% if priority_filter == "HIGH" %}selected{% endif %}
+            >
+                High
+            </option>
+
+            <option
+                value="MEDIUM"
+                {% if priority_filter == "MEDIUM" %}selected{% endif %}
+            >
+                Medium
+            </option>
+
+            <option
+                value="LOW"
+                {% if priority_filter == "LOW" %}selected{% endif %}
+            >
+                Low
+            </option>
+
+        </select>
+    </div>
+
+
+    <div>
+        <label>Assignment</label><br>
+
+        <select name="assigned">
+
+            <option value="">
+                Everyone
+            </option>
+
+            {% if user.role == "MAINTENANCE" %}
+
+                <option
+                    value="ME"
+                    {% if assigned_filter == "ME" %}selected{% endif %}
+                >
+                    My Work Orders
+                </option>
+
+            {% endif %}
+
+            <option
+                value="UNASSIGNED"
+                {% if assigned_filter == "UNASSIGNED" %}selected{% endif %}
+            >
+                Unassigned
+            </option>
+
+        </select>
+    </div>
+
+
+    <div>
+        <label>Room</label><br>
+
+        <input
+            type="text"
+            name="room"
+            value="{{ room_filter }}"
+            placeholder="Room number"
+        >
+    </div>
+
+
+    <div>
+
+        <button type="submit">
+            Filter
+        </button>
+
+        <a href="{% url 'maintenance_work_orders' %}">
+            Clear
+        </a>
+
+    </div>
+
+</form>
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">Room</th>
+    <th>Description</th>
+    <th>Priority</th>
+    <th>Status</th>
+    <th>Reported By</th>
+    <th>Assigned To</th>
+    <th>Date</th>
+    <th>Action</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for ticket in tickets %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+
+        <a href="{% url 'maintenance_ticket_detail' ticket.id %}">
+            Room {{ ticket.room.room_number }}
+        </a>
+
+    </td>
+
+    <td>
+
+        <a href="{% url 'maintenance_ticket_detail' ticket.id %}">
+            {{ ticket.description }}
+        </a>
+
+    </td>
+
+    <td>
+        {{ ticket.get_priority_display }}
+    </td>
+
+    <td>
+        {{ ticket.get_status_display }}
+    </td>
+
+    <td>
+        {{ ticket.reported_by }}
+    </td>
+
+    <td>
+
+        {% if ticket.assigned_to %}
+            {{ ticket.assigned_to }}
+        {% else %}
+            —
+        {% endif %}
+
+    </td>
+
+    <td>
+        {{ ticket.created_at|date:"Y-m-d H:i" }}
+    </td>
+
+    <td>
+
+        {% if ticket.status == "OPEN" %}
+
+            <a href="{% url 'maintenance_start_ticket' ticket.id %}">
+                <button type="button">
+                    Start
+                </button>
+            </a>
+
+        {% else %}
+
+            <a href="{% url 'maintenance_ticket_detail' ticket.id %}">
+                <button type="button">
+                    Open
+                </button>
+            </a>
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td
+        colspan="8"
+        style="padding:20px; text-align:center;"
+    >
+        No active maintenance work orders.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<br>
+
+<a href="{% url 'maintenance_dashboard' %}">
+    ← Back to Maintenance Dashboard
+</a>
+
+{% endblock %}

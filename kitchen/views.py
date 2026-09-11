@@ -140,7 +140,7 @@ def kitchen_ingredient_request_create(request):
     )
 
 
-@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
+@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR","ACCOUNTANT" )
 @transaction.atomic
 def kitchen_ingredient_request_detail(request, pk):
     req = get_object_or_404(IngredientRestockRequest, pk=pk)
@@ -275,7 +275,7 @@ def direct_purchase_pay(request, pk):
     )
 
 
-@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
+@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR","ACCOUNTANT")
 def direct_purchase_list(request):
     qs = DirectPurchase.objects.select_related(
         "supplier", "requested_by"
@@ -643,7 +643,8 @@ def direct_purchase_receive(request, pk):
     return redirect("kitchen_dashboard")
 
 
-@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
+@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT")
+
 def direct_purchase_detail(request, pk):
     dp = get_object_or_404(
         DirectPurchase.objects

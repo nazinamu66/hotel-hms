@@ -581,6 +581,8 @@ def change_room(request, room_id):
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def take_payment(request, room_id):
 
+    from decimal import Decimal, InvalidOperation
+
     from frontdesk.workflows.payment import (
         take_payment as process_payment,
     )
@@ -591,17 +593,29 @@ def take_payment(request, room_id):
         hotel=request.user.department.hotel,
     )
 
+    folio = Folio.get_active_room_folio(room)
+
     if request.method == "POST":
 
-        amount = Decimal(
-            request.POST.get("amount", "0")
-        )
-
-        method = request.POST.get("method")
-        reference = request.POST.get("reference", "")
-        note = request.POST.get("note", "")
-
         try:
+            amount = Decimal(
+                request.POST.get("amount", "0")
+            )
+
+            method = request.POST.get(
+                "method",
+                "",
+            ).strip().upper()
+
+            reference = request.POST.get(
+                "reference",
+                "",
+            ).strip()
+
+            note = request.POST.get(
+                "note",
+                "",
+            ).strip()
 
             process_payment(
                 room=room,
@@ -612,7 +626,11 @@ def take_payment(request, room_id):
                 note=note,
             )
 
-        except ValidationError as e:
+        except (
+            ValidationError,
+            InvalidOperation,
+            ValueError,
+        ) as e:
 
             messages.error(
                 request,
@@ -639,7 +657,6 @@ def take_payment(request, room_id):
             "frontdesk_active_stay",
             room.id,
         )
-    folio = Folio.get_active_room_folio(room)
 
     return render(
         request,
@@ -647,7 +664,8 @@ def take_payment(request, room_id):
         {
             "room": room,
             "folio": folio,
-        }
+            "balance": folio.balance,
+        },
     )
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")

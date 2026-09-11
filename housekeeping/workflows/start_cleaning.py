@@ -12,7 +12,10 @@ def get_assignment(room):
     Return the active cleaning assignment for the room.
     """
 
-    assignment = get_active_assignment(room)
+    assignment = get_active_assignment(
+        room,
+        status="ASSIGNED",
+    )
 
     if not assignment:
         raise ValidationError(

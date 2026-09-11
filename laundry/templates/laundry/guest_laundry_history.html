@@ -1,0 +1,339 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Guest Laundry History
+{% endblock %}
+
+{% block header %}
+<h2>Guest Laundry History</h2>
+{% endblock %}
+
+{% block content %}
+
+<div class="card" style="padding:20px; margin-bottom:20px;">
+
+    <h3>Search &amp; Filters</h3>
+
+    <form method="get">
+
+        <div style="
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+            gap:15px;
+            align-items:end;
+        ">
+
+            <div>
+                <label>
+                    <strong>Customer Name</strong>
+                </label>
+                <br>
+                <input
+                    type="text"
+                    name="customer"
+                    value="{{ customer }}"
+                    placeholder="Guest or walk-in name"
+                    style="width:100%; box-sizing:border-box;"
+                >
+            </div>
+
+            <div>
+                <label>
+                    <strong>From Date</strong>
+                </label>
+                <br>
+                <input
+                    type="date"
+                    name="date_from"
+                    value="{{ date_from }}"
+                    style="width:100%; box-sizing:border-box;"
+                >
+            </div>
+
+            <div>
+                <label>
+                    <strong>To Date</strong>
+                </label>
+                <br>
+                <input
+                    type="date"
+                    name="date_to"
+                    value="{{ date_to }}"
+                    style="width:100%; box-sizing:border-box;"
+                >
+            </div>
+
+            <div>
+                <label>
+                    <strong>Customer Type</strong>
+                </label>
+                <br>
+                <select
+                    name="customer_type"
+                    style="width:100%; box-sizing:border-box;"
+                >
+                    <option value=""
+                        {% if not customer_type %}selected{% endif %}>
+                        All
+                    </option>
+
+                    <option value="ROOM"
+                        {% if customer_type == "ROOM" %}selected{% endif %}>
+                        Room Guest
+                    </option>
+
+                    <option value="WALKIN"
+                        {% if customer_type == "WALKIN" %}selected{% endif %}>
+                        Walk-in
+                    </option>
+                </select>
+            </div>
+
+            <div>
+                <label>
+                    <strong>Status</strong>
+                </label>
+                <br>
+                <select
+                    name="status"
+                    style="width:100%; box-sizing:border-box;"
+                >
+                    <option value=""
+                        {% if not status %}selected{% endif %}>
+                        All
+                    </option>
+
+                    <option value="NEW"
+                        {% if status == "NEW" %}selected{% endif %}>
+                        New
+                    </option>
+
+                    <option value="RECEIVED"
+                        {% if status == "RECEIVED" %}selected{% endif %}>
+                        Received
+                    </option>
+
+                    <option value="PROCESSING"
+                        {% if status == "PROCESSING" %}selected{% endif %}>
+                        Processing
+                    </option>
+
+                    <option value="READY"
+                        {% if status == "READY" %}selected{% endif %}>
+                        Ready
+                    </option>
+
+                    <option value="DELIVERED"
+                        {% if status == "DELIVERED" %}selected{% endif %}>
+                        Delivered
+                    </option>
+
+                    <option value="CANCELLED"
+                        {% if status == "CANCELLED" %}selected{% endif %}>
+                        Cancelled
+                    </option>
+                </select>
+            </div>
+
+            <div>
+                <button type="submit">
+                    🔎 Search
+                </button>
+
+                <a href="{% url 'laundry:guest_laundry_history' %}">
+                    Clear
+                </a>
+            </div>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<div class="card" style="padding:20px;">
+
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:15px;
+    ">
+
+        <h3 style="margin:0;">
+            Order History
+        </h3>
+
+        <a href="{% url 'laundry:guest_laundry_new' %}">
+            + New Guest Laundry Order
+        </a>
+
+    </div>
+
+
+    {% if orders %}
+
+    <div style="overflow-x:auto;">
+
+        <table style="
+            width:100%;
+            border-collapse:collapse;
+        ">
+
+            <thead style="background:#eee;">
+
+                <tr>
+
+                    <th style="padding:10px; text-align:left;">
+                        Order
+                    </th>
+
+                    <th style="padding:10px; text-align:left;">
+                        Customer
+                    </th>
+
+                    <th style="padding:10px; text-align:left;">
+                        Type
+                    </th>
+
+                    <th style="padding:10px; text-align:left;">
+                        Room
+                    </th>
+
+                    <th style="padding:10px; text-align:right;">
+                        Total
+                    </th>
+
+                    <th style="padding:10px; text-align:left;">
+                        Status
+                    </th>
+
+                    <th style="padding:10px; text-align:left;">
+                        Created
+                    </th>
+
+                    <th style="padding:10px; text-align:left;">
+                        Action
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+            {% for order in orders %}
+
+            <tr style="border-bottom:1px solid #ddd;">
+
+                <td style="padding:10px;">
+
+                    <strong>
+                        <a href="{% url 'laundry:guest_laundry_detail' order.id %}">
+                            #{{ order.id }}
+                        </a>
+                    </strong>
+
+                </td>
+
+
+                <td style="padding:10px;">
+
+                    {% if order.folio.guest %}
+
+                        {{ order.folio.guest.full_name }}
+
+                    {% else %}
+
+                        {{ order.customer_name|default:"Walk-in Customer" }}
+
+                    {% endif %}
+
+                </td>
+
+
+                <td style="padding:10px;">
+
+                    {% if order.folio.folio_type == "ROOM" %}
+                        Room Guest
+                    {% else %}
+                        Walk-in
+                    {% endif %}
+
+                </td>
+
+
+                <td style="padding:10px;">
+
+                    {% if order.folio.room %}
+                        {{ order.folio.room.room_number }}
+                    {% else %}
+                        Walk-in
+                    {% endif %}
+
+                </td>
+
+
+                <td style="
+                    padding:10px;
+                    text-align:right;
+                ">
+
+                    ₦{{ order.total_amount|floatformat:2 }}
+
+                </td>
+
+
+                <td style="padding:10px;">
+
+                    {{ order.get_status_display }}
+
+                </td>
+
+
+                <td style="padding:10px;">
+
+                    {{ order.created_at|date:"Y-m-d H:i" }}
+
+                </td>
+
+
+                <td style="padding:10px;">
+
+                    <a href="{% url 'laundry:guest_laundry_detail' order.id %}">
+                        View
+                    </a>
+
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    {% else %}
+
+        <p>
+            No Guest Laundry orders match the selected filters.
+        </p>
+
+    {% endif %}
+
+</div>
+
+
+<div style="margin-top:20px;">
+
+    <a href="{% url 'laundry:guest_laundry' %}">
+        ← Back to Guest Laundry
+    </a>
+
+</div>
+
+{% endblock %}

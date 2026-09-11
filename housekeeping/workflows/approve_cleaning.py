@@ -1,7 +1,8 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
-
+from accounts.services.access import can_manage_department
+from inventory.models import Department
 from housekeeping.workflows.common import (
     get_active_assignment,
 )
@@ -9,7 +10,10 @@ from housekeeping.workflows.common import (
 
 def get_assignment(room):
 
-    assignment = get_active_assignment(room)
+    assignment = get_active_assignment(
+        room,
+        status="INSPECTION",
+    )
 
     if not assignment:
         raise ValidationError(
@@ -19,18 +23,18 @@ def get_assignment(room):
     return assignment
 
 
-def validate_inspector(user):
+def validate_inspector(
+    user,
+    department,
+):
 
-    if (
-        not user.is_department_head
-        and user.role not in [
-            "MANAGER",
-            "ADMIN",
-            "DIRECTOR",
-        ]
+    if not can_manage_department(
+        user,
+        department,
     ):
         raise PermissionDenied(
-            "Only a supervisor can approve room cleaning."
+            "You do not have permission to inspect "
+            "Housekeeping work."
         )
 
 
@@ -88,8 +92,25 @@ def approve_cleaning(
     user,
 ):
 
+    department = (
+        Department.objects
+        .filter(
+            hotel=room.hotel,
+            department_type="HOUSEKEEPING",
+            is_active=True,
+        )
+        .first()
+    )
+
+    if not department:
+        raise ValidationError(
+            "This hotel does not have an active "
+            "Housekeeping department."
+        )
+
     validate_inspector(
         user,
+        department,
     )
 
     assignment = get_assignment(

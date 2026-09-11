@@ -1,92 +1,396 @@
 {% extends "base/base.html" %}
+
 {% block content %}
 
-<h2>Stock Movement Log</h2>
+<h2>
+    Stock Movement Log
+</h2>
 
-<form method="get" style="margin-bottom:15px; display:flex; gap:15px; flex-wrap:wrap;">
-    
-    From:
-    <input type="date" name="from" value="{{ date_from }}">
+<p>
+    Complete stock movement history for the Store.
+</p>
 
-    To:
-    <input type="date" name="to" value="{{ date_to }}">
+<hr>
 
-    Type:
-    <select name="type">
-        <option value="">All</option>
-        <option value="IN" {% if movement_type == "IN" %}selected{% endif %}>IN</option>
-        <option value="OUT" {% if movement_type == "OUT" %}selected{% endif %}>OUT</option>
-        <option value="TRANSFER" {% if movement_type == "TRANSFER" %}selected{% endif %}>TRANSFER</option>
-    </select>
+<!-- ===================================================== -->
+<!-- FILTERS -->
+<!-- ===================================================== -->
 
-    <button type="submit">Filter</button>
+<form
+    method="get"
+    style="
+        margin-bottom:20px;
+        display:flex;
+        gap:12px;
+        align-items:end;
+        flex-wrap:wrap;
+    "
+>
+
+    <div>
+        <label for="movement_search">
+            Search
+        </label>
+        <br>
+
+        <input
+            type="text"
+            id="movement_search"
+            name="search"
+            value="{{ search }}"
+            placeholder="Product, SKU, reference, department..."
+            style="min-width:280px;"
+        >
+    </div>
+
+    <div>
+        <label for="movement_type">
+            Type
+        </label>
+        <br>
+
+        <select
+            id="movement_type"
+            name="type"
+        >
+
+            <option
+                value=""
+                {% if not movement_type %}selected{% endif %}
+            >
+                All Types
+            </option>
+
+            <option
+                value="IN"
+                {% if movement_type == "IN" %}selected{% endif %}
+            >
+                Stock In
+            </option>
+
+            <option
+                value="OUT"
+                {% if movement_type == "OUT" %}selected{% endif %}
+            >
+                Stock Out
+            </option>
+
+            <option
+                value="TRANSFER"
+                {% if movement_type == "TRANSFER" %}selected{% endif %}
+            >
+                Transfer
+            </option>
+
+        </select>
+    </div>
+
+    <div>
+        <label for="date_from">
+            From
+        </label>
+        <br>
+
+        <input
+            type="date"
+            id="date_from"
+            name="from"
+            value="{{ date_from }}"
+        >
+    </div>
+
+    <div>
+        <label for="date_to">
+            To
+        </label>
+        <br>
+
+        <input
+            type="date"
+            id="date_to"
+            name="to"
+            value="{{ date_to }}"
+        >
+    </div>
+
+    <div>
+        <label for="movement_sort">
+            Sort
+        </label>
+        <br>
+
+        <select
+            id="movement_sort"
+            name="sort"
+        >
+
+            <option
+                value="-date"
+                {% if current_sort == "-date" %}selected{% endif %}
+            >
+                Newest First
+            </option>
+
+            <option
+                value="date"
+                {% if current_sort == "date" %}selected{% endif %}
+            >
+                Oldest First
+            </option>
+
+            <option
+                value="product"
+                {% if current_sort == "product" %}selected{% endif %}
+            >
+                Product A–Z
+            </option>
+
+            <option
+                value="-product"
+                {% if current_sort == "-product" %}selected{% endif %}
+            >
+                Product Z–A
+            </option>
+
+            <option
+                value="-quantity"
+                {% if current_sort == "-quantity" %}selected{% endif %}
+            >
+                Quantity High–Low
+            </option>
+
+            <option
+                value="quantity"
+                {% if current_sort == "quantity" %}selected{% endif %}
+            >
+                Quantity Low–High
+            </option>
+
+            <option
+                value="type"
+                {% if current_sort == "type" %}selected{% endif %}
+            >
+                Movement Type A–Z
+            </option>
+
+            <option
+                value="-type"
+                {% if current_sort == "-type" %}selected{% endif %}
+            >
+                Movement Type Z–A
+            </option>
+
+        </select>
+    </div>
+
+    <div>
+        <button type="submit">
+            Filter
+        </button>
+    </div>
+
+    <div>
+        <a href="{% url 'store_movement_log' %}">
+            Reset
+        </a>
+    </div>
+
 </form>
 
-<table class="table">
-  <tr>
-  <th>
-    <a href="?sort={% if current_sort == 'date' %}-date{% else %}date{% endif %}">
-      Date
-    </a>
-  </th>
+<hr>
 
-  <th>
-    <a href="?sort={% if current_sort == 'product' %}-product{% else %}product{% endif %}">
-      Product
-    </a>
-  </th>
+<!-- ===================================================== -->
+<!-- MOVEMENT TABLE -->
+<!-- ===================================================== -->
 
-  <th>
-    <a href="?sort={% if current_sort == 'type' %}-type{% else %}type{% endif %}">
-      Type
-    </a>
-  </th>
+{% if movements %}
 
-  <th>From</th>
-  <th>To</th>
+<table
+    style="
+        width:100%;
+        border-collapse:collapse;
+    "
+>
 
-  <th>
-    <a href="?sort={% if current_sort == 'quantity' %}-quantity{% else %}quantity{% endif %}">
-      Qty
-    </a>
-  </th>
+<thead style="background:#eee;">
 
-  <th>By</th>
-  <th>Ref</th>
-</tr>
-
-  {% for m in movements %}
 <tr>
-  <td>{{ m.created_at|date:"Y-m-d H:i" }}</td>
-  <td>{{ m.product.name }}</td>
-  <td>{{ m.get_movement_type_display }}</td>
-  <td>{{ m.from_department|default:"—" }}</td>
-  <td>{{ m.to_department|default:"—" }}</td>
-  <td>{{ m.quantity }}</td>
-  <td>{{ m.created_by|default:"System" }}</td>
 
-  <td>
-    {% if m.movement_type == "TRANSFER" %}
-      <a href="{% url 'store_transfer_detail' m.reference|cut:'TRANSFER-' %}">
-        {{ m.reference }}
-      </a>
+    <th style="text-align:left; padding:8px;">
+        Date
+    </th>
 
-    {% elif m.movement_type == "IN" %}
-      <a href="{% url 'inventory:incoming_delivery_detail' m.reference|cut:'PO-' %}">
-        View Delivery
-      </a>
+    <th style="text-align:left; padding:8px;">
+        Product
+    </th>
 
-    {% else %}
-      {{ m.reference }}
-    {% endif %}
-  </td>
+    <th style="text-align:left; padding:8px;">
+        Type
+    </th>
+
+    <th style="text-align:left; padding:8px;">
+        From
+    </th>
+
+    <th style="text-align:left; padding:8px;">
+        To
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Quantity
+    </th>
+
+    <th style="text-align:left; padding:8px;">
+        By
+    </th>
+
+    <th style="text-align:left; padding:8px;">
+        Reference
+    </th>
+
 </tr>
+
+</thead>
+
+<tbody>
+
+{% for movement in movements %}
+
+<tr style="border-top:1px solid #ddd;">
+
+    <td style="padding:8px;">
+        {{ movement.created_at|date:"Y-m-d H:i" }}
+    </td>
+
+    <td style="padding:8px;">
+
+        <strong>
+            {{ movement.product.name }}
+        </strong>
+
+        {% if movement.product.sku %}
+
+            <br>
+
+            <small>
+                {{ movement.product.sku }}
+            </small>
+
+        {% endif %}
+
+    </td>
+
+    <td style="padding:8px;">
+
+        {% if movement.movement_type == "IN" %}
+
+            🟢 Stock In
+
+        {% elif movement.movement_type == "OUT" %}
+
+            🔴 Stock Out
+
+        {% elif movement.movement_type == "TRANSFER" %}
+
+            🔄 Transfer
+
+        {% else %}
+
+            {{ movement.get_movement_type_display }}
+
+        {% endif %}
+
+    </td>
+
+    <td style="padding:8px;">
+
+        {% if movement.from_department %}
+            {{ movement.from_department.name }}
+        {% else %}
+            —
+        {% endif %}
+
+    </td>
+
+    <td style="padding:8px;">
+
+        {% if movement.to_department %}
+            {{ movement.to_department.name }}
+        {% else %}
+            —
+        {% endif %}
+
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+
+        {{ movement.quantity }}
+        {{ movement.product.base_unit }}
+
+    </td>
+
+    <td style="padding:8px;">
+
+        {{ movement.created_by|default:"System" }}
+
+    </td>
+
+    <td style="padding:8px;">
+
+        {% if movement.movement_type == "TRANSFER" %}
+
+            <a
+                href="{% url 'store_transfer_detail' movement.reference|cut:'TRANSFER-' %}"
+            >
+                {{ movement.reference }}
+            </a>
+
+        {% elif movement.movement_type == "IN" and movement.reference|slice:":3" == "PO-" %}
+
+            <a
+                href="{% url 'inventory:po_detail' movement.reference|cut:'PO-' %}"
+            >
+                {{ movement.reference }}
+            </a>
+
+        {% else %}
+
+            {{ movement.reference|default:"—" }}
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
 {% empty %}
+
 <tr>
-  <td colspan="8">No stock movements recorded.</td>
+
+    <td
+        colspan="8"
+        style="
+            padding:20px;
+            text-align:center;
+        "
+    >
+        No stock movements match your filters.
+    </td>
+
 </tr>
+
 {% endfor %}
 
+</tbody>
+
 </table>
+
+{% else %}
+
+<p>
+    No stock movements match your filters.
+</p>
+
+{% endif %}
 
 {% endblock %}

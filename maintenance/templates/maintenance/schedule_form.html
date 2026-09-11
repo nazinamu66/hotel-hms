@@ -1,0 +1,115 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Add Preventive Maintenance Schedule
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    Add Preventive Maintenance Schedule
+</h2>
+
+<hr>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <p>
+
+        <label>
+            Asset
+        </label>
+
+        <br>
+
+        <select
+            name="asset"
+            required
+        >
+
+            <option value="">
+                Select Asset
+            </option>
+
+            {% for asset in assets %}
+
+                <option value="{{ asset.id }}">
+
+                    {{ asset.name }}
+
+                    {% if asset.room %}
+                        — Room {{ asset.room.room_number }}
+                    {% endif %}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <label>
+            Maintenance Task
+        </label>
+
+        <br>
+
+        <input
+            type="text"
+            name="name"
+            required
+            placeholder="e.g. AC Servicing"
+        >
+
+    </p>
+
+    <p>
+
+        <label>
+            Interval (days)
+        </label>
+
+        <br>
+
+        <input
+            type="number"
+            name="interval_days"
+            min="1"
+            required
+            placeholder="90"
+        >
+
+    </p>
+
+    <p>
+
+        <label>
+            Next Due Date
+        </label>
+
+        <br>
+
+        <input
+            type="date"
+            name="next_due_date"
+            required
+        >
+
+    </p>
+
+    <button type="submit">
+        Create Schedule
+    </button>
+
+    <a href="{% url 'maintenance_schedules' %}">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}

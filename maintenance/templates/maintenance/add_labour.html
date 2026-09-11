@@ -1,0 +1,212 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Add Labour - Maintenance #{{ ticket.id }}
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    Add Labour
+</h2>
+
+<p>
+    <strong>Work Order:</strong>
+    #{{ ticket.id }}
+</p>
+
+<p>
+    <strong>Room:</strong>
+    {{ ticket.room.room_number }}
+</p>
+
+<hr>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <p>
+        <label>
+            <strong>Labour Type</strong>
+        </label>
+        <br>
+
+        <select
+            name="labour_type"
+            id="labour_type"
+            required
+            onchange="toggleLabourFields()"
+        >
+
+            <option value="">
+                Select labour type
+            </option>
+
+            <option value="INTERNAL">
+                Internal
+            </option>
+
+            <option value="OUTSOURCED">
+                Outsourced
+            </option>
+
+        </select>
+    </p>
+
+
+    <div id="technician_field">
+
+        <label>
+            <strong>Technician</strong>
+        </label>
+
+        <br>
+
+        <select name="technician">
+
+            <option value="">
+                Select technician
+            </option>
+
+            {% for technician in technicians %}
+
+            <option value="{{ technician.id }}">
+                {{ technician.username }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </div>
+
+
+    <div
+        id="supplier_field"
+        style="display:none;"
+    >
+
+        <label>
+            <strong>Supplier / Contractor</strong>
+        </label>
+
+        <br>
+
+        <select name="supplier">
+
+            <option value="">
+                Select supplier
+            </option>
+
+            {% for supplier in suppliers %}
+
+            <option value="{{ supplier.id }}">
+                {{ supplier.name }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+    </div>
+
+
+    <br>
+
+    <p>
+
+        <label>
+            <strong>Description</strong>
+        </label>
+
+        <br>
+
+        <textarea
+            name="description"
+            required
+            style="width:500px;height:120px;"
+            placeholder="Describe the labour performed..."
+        ></textarea>
+
+    </p>
+
+
+    <p>
+
+        <label>
+            <strong>Amount</strong>
+        </label>
+
+        <br>
+
+        <input
+            type="number"
+            name="amount"
+            min="0"
+            step="0.01"
+            value="0"
+            required
+        >
+
+    </p>
+
+
+    <button type="submit">
+        Add Labour
+    </button>
+
+    <a
+        href="{% url 'maintenance_ticket_detail' ticket.id %}"
+    >
+        Cancel
+    </a>
+
+</form>
+
+
+<script>
+
+function toggleLabourFields() {
+
+    const type =
+        document.getElementById(
+            "labour_type"
+        ).value;
+
+    const technician =
+        document.getElementById(
+            "technician_field"
+        );
+
+    const supplier =
+        document.getElementById(
+            "supplier_field"
+        );
+
+    if (type === "INTERNAL") {
+
+        technician.style.display = "block";
+        supplier.style.display = "none";
+
+    }
+    else if (type === "OUTSOURCED") {
+
+        technician.style.display = "none";
+        supplier.style.display = "block";
+
+    }
+    else {
+
+        technician.style.display = "none";
+        supplier.style.display = "none";
+
+    }
+
+}
+
+toggleLabourFields();
+
+</script>
+
+{% endblock %}

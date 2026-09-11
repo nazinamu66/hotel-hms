@@ -1,0 +1,159 @@
+{% extends "base/base.html" %}
+{% load store_extras %}
+
+{% block title %}
+Request Stock — {{ department.name }}
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    Request Stock — {{ department.name }}
+</h2>
+
+<p>
+    Request operational stock for your department.
+</p>
+
+<hr>
+
+<table
+    style="
+        width:100%;
+        border-collapse:collapse;
+    "
+>
+
+<thead style="background:#eee;">
+
+<tr>
+    <th style="text-align:left; padding:8px;">
+        Product
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Available
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Request Quantity
+    </th>
+
+    <th style="padding:8px;">
+        Fulfillment
+    </th>
+
+    <th style="padding:8px;">
+        Action
+    </th>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for product in products %}
+
+<tr style="border-top:1px solid #ddd;">
+
+    <td style="padding:8px;">
+        {{ product.name }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+
+        {% with qty=stock_map|get_item:product.id %}
+
+            {{ qty|default:0 }}
+            {{ product.base_unit }}
+
+        {% endwith %}
+
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <input
+                type="hidden"
+                name="product_id"
+                value="{{ product.id }}"
+            >
+
+            <input
+                type="number"
+                name="quantity"
+                min="1"
+                required
+                style="width:100px;"
+            >
+
+    </td>
+
+            <td style="padding:8px; text-align:center;">
+
+            <label>
+                <input
+                    type="radio"
+                    name="fulfillment_type"
+                    value="STORE"
+                    checked
+                >
+                Store
+            </label>
+
+            <br>
+
+            <label>
+                <input
+                    type="radio"
+                    name="fulfillment_type"
+                    value="PURCHASE"
+                >
+                Purchase
+            </label>
+
+        </td>
+
+        <td style="padding:8px; text-align:center;">
+
+                <button type="submit">
+                    Request
+                </button>
+
+            </form>
+
+        </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td
+        colspan="5"
+        style="padding:15px;"
+    >
+        No operational stock products are currently
+        authorized for {{ department.name }}.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<hr>
+
+<a href="{% url requests_url %}">
+    View My Stock Requests
+</a>
+
+{% endblock %}

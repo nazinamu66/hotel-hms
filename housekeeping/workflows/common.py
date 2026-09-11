@@ -1,19 +1,10 @@
-from django.core.exceptions import ValidationError
-from accounts.models import User
-
-"""
-Shared helper functions for Housekeeping workflows.
-
-Only reusable retrieval, validation, permission
-checks and utility functions belong here.
-"""
-
 from django.core.exceptions import (
     ValidationError,
     PermissionDenied,
 )
 
 from accounts.models import User
+from accounts.services.access import can_manage_department
 from housekeeping.models import CleaningAssignment
 
 
@@ -31,21 +22,22 @@ def validate_room_requires_cleaning(room):
         )
 
 
-def validate_assigner(user):
+def validate_assigner(
+    user,
+    department,
+):
     """
-    Only department heads, managers and admins
-    may assign cleaning work.
+    Ensure the user is allowed to manage the
+    specified department.
     """
 
-    if (
-        not user.is_department_head
-        and user.role not in [
-            "MANAGER",
-            "ADMIN",
-        ]
+    if not can_manage_department(
+        user,
+        department,
     ):
         raise PermissionDenied(
-            "Only the department head can assign rooms."
+            "You do not have permission to assign "
+            "work for this department."
         )
 
 
@@ -54,30 +46,54 @@ def get_housekeeper(
     user_id,
 ):
     """
-    Return a valid housekeeper.
+    Return a valid active housekeeper
+    belonging to the specified department.
     """
 
-    return User.objects.get(
-        id=user_id,
-        role="HOUSEKEEPING",
-        department=department,
-        is_active=True,
-    )
+    try:
+
+        return User.objects.get(
+            id=user_id,
+            role="HOUSEKEEPING",
+            department=department,
+            is_active=True,
+        )
+
+    except User.DoesNotExist:
+
+        raise ValidationError(
+            "Selected housekeeper is not valid for this department."
+        )
 
 
-def get_active_assignment(room):
+def get_active_assignment(
+    room,
+    status=None,
+):
     """
-    Return the current active cleaning assignment
-    for a room.
+    Return the current cleaning assignment for a room.
+
+    If a status is supplied, only an assignment in that
+    workflow state is returned.
     """
 
     assignments = CleaningAssignment.objects.filter(
         room_id=room.id,
-        status__in=[
-            "ASSIGNED",
-            "IN_PROGRESS",
-            "INSPECTION",
-        ],
     )
 
-    return assignments.first()
+    if status:
+        assignments = assignments.filter(
+            status=status,
+        )
+    else:
+        assignments = assignments.filter(
+            status__in=[
+                "ASSIGNED",
+                "IN_PROGRESS",
+                "INSPECTION",
+            ],
+        )
+
+    return assignments.order_by(
+        "-id",
+    ).first()

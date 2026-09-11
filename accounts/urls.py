@@ -21,5 +21,6 @@ urlpatterns = [
     path("manager/room-activity/", manager_room_activity_today),
     path("manager/payments/", manager_payments_today),
     path("users/<int:user_id>/edit/",user_edit,name="accounts_user_edit"),
+    path("setup/",views.initial_setup,name="initial_setup",),
 
 ]

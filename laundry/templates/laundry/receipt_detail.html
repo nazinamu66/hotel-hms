@@ -1,0 +1,276 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Laundry Receipt
+{% endblock %}
+
+{% block header %}
+<h2>Laundry Receipt</h2>
+{% endblock %}
+
+{% block content %}
+
+<h3>Receipt Details</h3>
+
+<div class="card" style="
+    padding:20px;
+    margin-bottom:25px;
+">
+
+    <p>
+        <strong>Linen:</strong>
+        {{ receipt.linen_item.product.name }}
+    </p>
+
+    <p>
+        <strong>Returned By:</strong>
+        {{ receipt.returned_by.username }}
+    </p>
+
+    <p>
+        <strong>Hotel:</strong>
+        {{ receipt.returned_by.hotel.name }}
+    </p>
+
+    <p>
+        <strong>Date:</strong>
+        {{ receipt.created_at|date:"Y-m-d H:i" }}
+    </p>
+
+    <p>
+        <strong>Status:</strong>
+        {{ receipt.get_status_display }}
+    </p>
+
+    {% if receipt.reference %}
+        <p>
+            <strong>Reference:</strong>
+            {{ receipt.reference }}
+        </p>
+    {% endif %}
+
+    {% if receipt.note %}
+        <p>
+            <strong>Note:</strong>
+            {{ receipt.note }}
+        </p>
+    {% endif %}
+
+</div>
+
+
+<h3>Housekeeping Declaration</h3>
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:25px;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+    <th style="padding:10px;">Condition</th>
+    <th>Declared Quantity</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr style="border-bottom:1px solid #ddd;">
+    <td style="padding:10px;">Clean</td>
+    <td>{{ receipt.declared_clean_quantity }}</td>
+</tr>
+
+<tr style="border-bottom:1px solid #ddd;">
+    <td style="padding:10px;">Dirty</td>
+    <td>{{ receipt.declared_dirty_quantity }}</td>
+</tr>
+
+<tr style="border-bottom:1px solid #ddd;">
+    <td style="padding:10px;">
+        <strong>Total</strong>
+    </td>
+    <td>
+        <strong>{{ receipt.declared_total }}</strong>
+    </td>
+</tr>
+
+</tbody>
+
+</table>
+
+
+{% if receipt.status == "PENDING" %}
+
+<h3>Confirm Physical Receipt</h3>
+
+<form method="post"
+      action="{% url 'laundry:receive_receipt' receipt.id %}">
+
+    {% csrf_token %}
+
+    <div style="
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+        gap:15px;
+        margin-bottom:20px;
+    ">
+
+        <div class="card" style="padding:15px;">
+
+            <label for="received_clean_quantity">
+                <strong>Clean Actually Received</strong>
+            </label>
+
+            <input
+                type="number"
+                id="received_clean_quantity"
+                name="received_clean_quantity"
+                min="0"
+                max="{{ receipt.declared_clean_quantity }}"
+                value="{{ receipt.declared_clean_quantity }}"
+                style="
+                    width:100%;
+                    padding:8px;
+                    margin-top:8px;
+                "
+            >
+
+        </div>
+
+
+        <div class="card" style="padding:15px;">
+
+            <label for="received_dirty_quantity">
+                <strong>Dirty Actually Received</strong>
+            </label>
+
+            <input
+                type="number"
+                id="received_dirty_quantity"
+                name="received_dirty_quantity"
+                min="0"
+                max="{{ receipt.declared_dirty_quantity }}"
+                value="{{ receipt.declared_dirty_quantity }}"
+                style="
+                    width:100%;
+                    padding:8px;
+                    margin-top:8px;
+                "
+            >
+
+        </div>
+
+    </div>
+
+
+    <div style="margin-bottom:20px;">
+
+        <label for="note">
+            <strong>Note</strong>
+        </label>
+
+        <br>
+
+        <textarea
+            id="note"
+            name="note"
+            rows="4"
+            style="
+                width:100%;
+                padding:8px;
+                margin-top:8px;
+            "
+        ></textarea>
+
+    </div>
+
+
+    <button type="submit">
+        Confirm Receipt
+    </button>
+
+    &nbsp;
+
+    <a href="{% url 'laundry:dashboard' %}">
+        Cancel
+    </a>
+
+</form>
+
+{% else %}
+
+<h3>Receipt Confirmation</h3>
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:25px;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+    <th style="padding:10px;">Condition</th>
+    <th>Declared</th>
+    <th>Received</th>
+    <th>Difference</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr style="border-bottom:1px solid #ddd;">
+    <td style="padding:10px;">Clean</td>
+    <td>{{ receipt.declared_clean_quantity }}</td>
+    <td>{{ receipt.received_clean_quantity }}</td>
+    <td>{{ receipt.clean_discrepancy }}</td>
+</tr>
+
+<tr style="border-bottom:1px solid #ddd;">
+    <td style="padding:10px;">Dirty</td>
+    <td>{{ receipt.declared_dirty_quantity }}</td>
+    <td>{{ receipt.received_dirty_quantity }}</td>
+    <td>{{ receipt.dirty_discrepancy }}</td>
+</tr>
+
+</tbody>
+
+</table>
+
+{% if receipt.has_discrepancy %}
+
+<p>
+    <strong>Discrepancy recorded.</strong>
+</p>
+
+{% else %}
+
+<p>
+    Receipt matches the Housekeeping declaration.
+</p>
+
+{% endif %}
+
+<p>
+    <strong>Received By:</strong>
+    {{ receipt.received_by.username }}
+</p>
+
+{% if receipt.received_at %}
+<p>
+    <strong>Received At:</strong>
+    {{ receipt.received_at|date:"Y-m-d H:i" }}
+</p>
+{% endif %}
+
+<a href="{% url 'laundry:dashboard' %}">
+    Back to Laundry Dashboard
+</a>
+
+{% endif %}
+
+{% endblock %}

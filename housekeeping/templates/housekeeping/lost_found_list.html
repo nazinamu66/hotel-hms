@@ -17,6 +17,7 @@
 <thead style="background:#eee;">
 <tr>
 <th>Date</th>
+<th>Hotel</th>
 <th>Room</th>
 <th>Description</th>
 <th>Found By</th>
@@ -33,6 +34,10 @@
 <td>{{ item.found_at|date:"Y-m-d H:i" }}</td>
 
 <td>
+    {{ item.hotel.name }}
+</td>
+
+<td>
 {% if item.room %}
 Room {{ item.room.room_number }}
 {% else %}
@@ -44,14 +49,62 @@ Room {{ item.room.room_number }}
 
 <td>{{ item.found_by }}</td>
 
-<td>{{ item.status }}</td>
+<td>
+
+    {{ item.get_status_display }}
+
+    {% if item.status == "FOUND" %}
+
+        <br><br>
+
+        <a href="{% url 'housekeeping_lost_found_claim' item.id %}">
+            <button type="button">
+                Claim
+            </button>
+        </a>
+
+        <form
+            method="post"
+            action="{% url 'housekeeping_lost_found_dispose' item.id %}"
+            style="display:inline;"
+        >
+
+            {% csrf_token %}
+
+            <button
+                type="submit"
+                onclick="return confirm('Are you sure you want to dispose of this item?');"
+            >
+                Dispose
+            </button>
+
+        </form>
+
+    {% elif item.status == "CLAIMED" %}
+
+        <br>
+
+        <small>
+            Claimed by: {{ item.claimed_by }}
+        </small>
+
+        {% if item.claimed_at %}
+            <br>
+            <small>
+                {{ item.claimed_at|date:"Y-m-d H:i" }}
+            </small>
+        {% endif %}
+
+    {% endif %}
+
+</td>
 
 </tr>
 
 {% empty %}
 
 <tr>
-<td colspan="5">No items recorded.</td>
+<td colspan="6">No items recorded.</td>
 </tr>
 
 {% endfor %}

@@ -1,0 +1,131 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Maintenance Assets
+{% endblock %}
+
+{% block content %}
+
+<div style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+">
+
+    <h2 style="margin:0;">
+        Maintenance Assets
+    </h2>
+
+    {% if user.role in "MANAGER ADMIN DIRECTOR" %}
+        <a href="{% url 'maintenance_asset_create' %}">
+            <button type="button">
+                + Add Asset
+            </button>
+        </a>
+    {% endif %}
+
+</div>
+
+<hr>
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">Asset</th>
+    <th>Type</th>
+    <th>Location</th>
+    <th>Manufacturer</th>
+    <th>Model</th>
+    <th>Serial Number</th>
+    <th>Status</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for asset in assets %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        <strong>
+            {{ asset.name }}
+        </strong>
+    </td>
+
+    <td>
+        {{ asset.asset_type|default:"—" }}
+    </td>
+
+    <td>
+
+        {% if asset.room %}
+            Room {{ asset.room.room_number }}
+        {% else %}
+            Hotel / Common Area
+        {% endif %}
+
+    </td>
+
+    <td>
+        {{ asset.manufacturer|default:"—" }}
+    </td>
+
+    <td>
+        {{ asset.model_number|default:"—" }}
+    </td>
+
+    <td>
+        {{ asset.serial_number|default:"—" }}
+    </td>
+
+    <td>
+
+        {% if asset.is_active %}
+            Active
+        {% else %}
+            Inactive
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td
+        colspan="7"
+        style="
+            padding:20px;
+            text-align:center;
+        "
+    >
+        No maintenance assets have been registered.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<br>
+
+<a href="{% url 'maintenance_dashboard' %}">
+    ← Back to Maintenance Dashboard
+</a>
+
+{% endblock %}

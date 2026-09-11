@@ -6,22 +6,103 @@
 
 <h2>Add Supplier</h2>
 
-<div class="card">
+<div class="card" style="max-width:750px;padding:20px;">
 
 <form method="post">
 
 {% csrf_token %}
 
-{{ form.as_p }}
+<!-- ===================== -->
+<!-- HOTEL -->
+<!-- ===================== -->
 
-<br>
+<h4>Hotel</h4>
 
-<button class="btn btn-primary" type="submit">
-Save Supplier
+{% if hotels|length > 1 %}
+
+    <label for="id_hotel">
+        Hotel
+    </label>
+
+    <select
+        name="hotel"
+        id="id_hotel"
+        required
+    >
+
+        <option value="">
+            Select hotel
+        </option>
+
+        {% for hotel in hotels %}
+
+            <option
+                value="{{ hotel.id }}"
+                {% if selected_hotel and selected_hotel.id == hotel.id %}
+                    selected
+                {% endif %}
+            >
+                {{ hotel.name }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+
+    <small style="color:gray;">
+        Select the hotel that owns this supplier.
+    </small>
+
+{% elif selected_hotel %}
+
+    <p>
+        <strong>
+            {{ selected_hotel.name }}
+        </strong>
+    </p>
+
+{% endif %}
+
+<br><br>
+
+<!-- ===================== -->
+<!-- SUPPLIER DETAILS -->
+<!-- ===================== -->
+
+<h4>Supplier Details</h4>
+
+<label>Name</label>
+{{ form.name }}
+
+<br><br>
+
+<label>Phone</label>
+{{ form.phone }}
+
+<br><br>
+
+<label>Email</label>
+{{ form.email }}
+
+<br><br>
+
+<label>Address</label>
+{{ form.address }}
+
+<br><br>
+
+<button
+    class="btn btn-primary"
+    type="submit"
+>
+    Save Supplier
 </button>
 
-<a href="{% url 'inventory:supplier_list' %}" class="btn btn-secondary">
-Cancel
+<a
+    href="{% url 'inventory:supplier_list' %}"
+    class="btn btn-secondary"
+>
+    Cancel
 </a>
 
 </form>

@@ -1,0 +1,315 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+New Guest Laundry Order
+{% endblock %}
+
+{% block header %}
+<h2>New Guest Laundry Order</h2>
+{% endblock %}
+
+{% block content %}
+
+<h3>Order Details</h3>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <div class="card" style="padding:20px; margin-bottom:25px;">
+
+        <!-- CUSTOMER TYPE -->
+
+        <div style="margin-bottom:20px;">
+
+            <label>
+                <strong>Customer Type</strong>
+            </label>
+
+            <br>
+
+            <label style="margin-right:20px;">
+                <input
+                    type="radio"
+                    name="customer_type"
+                    value="ROOM"
+                    id="customer_type_room"
+                    checked
+                >
+                Hotel Guest
+            </label>
+
+            <label>
+                <input
+                    type="radio"
+                    name="customer_type"
+                    value="WALKIN"
+                    id="customer_type_walkin"
+                >
+                Walk-in Customer
+            </label>
+
+        </div>
+
+
+        <!-- HOTEL GUEST -->
+
+        <div
+            id="room_customer_section"
+            style="margin-bottom:15px;"
+        >
+
+            <label for="folio">
+                <strong>Guest / Room</strong>
+            </label>
+
+            <br>
+
+            <select
+                name="folio"
+                id="folio"
+                required
+                style="padding:8px; min-width:350px;"
+            >
+
+                <option value="">
+                    Select guest / room
+                </option>
+
+                {% for folio in active_folios %}
+
+                    <option value="{{ folio.id }}">
+
+                        {{ folio.guest.full_name }}
+                        — Room {{ folio.room.room_number }}
+                        — Folio #{{ folio.id }}
+
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+
+        <!-- WALK-IN CUSTOMER -->
+
+        <div
+            id="walkin_customer_section"
+            style="display:none; margin-bottom:15px;"
+        >
+
+            <div style="margin-bottom:15px;">
+
+                <label for="customer_name">
+                    <strong>Customer Name</strong>
+                </label>
+
+                <br>
+
+                <input
+                    type="text"
+                    name="customer_name"
+                    id="customer_name"
+                    maxlength="150"
+                    placeholder="e.g. Ibrahim Musa"
+                    style="padding:8px; width:350px;"
+                >
+
+            </div>
+
+
+            <div>
+
+                <label for="customer_phone">
+                    <strong>Phone</strong>
+                </label>
+
+                <br>
+
+                <input
+                    type="text"
+                    name="customer_phone"
+                    id="customer_phone"
+                    maxlength="50"
+                    placeholder="e.g. 08012345678"
+                    style="padding:8px; width:250px;"
+                >
+
+            </div>
+
+        </div>
+
+
+        <!-- LAUNDRY ITEM -->
+
+        <div style="margin-bottom:15px;">
+
+            <label for="description">
+                <strong>Laundry Item</strong>
+            </label>
+
+            <br>
+
+            <input
+                type="text"
+                name="description"
+                id="description"
+                maxlength="150"
+                required
+                placeholder="e.g. Shirt, Trousers, Suit"
+                style="padding:8px; width:350px;"
+            >
+
+        </div>
+
+
+        <!-- QUANTITY -->
+
+        <div style="margin-bottom:15px;">
+
+            <label for="quantity">
+                <strong>Quantity</strong>
+            </label>
+
+            <br>
+
+            <input
+                type="number"
+                name="quantity"
+                id="quantity"
+                min="1"
+                required
+                style="padding:8px; width:120px;"
+            >
+
+        </div>
+
+
+        <!-- UNIT PRICE -->
+
+        <div style="margin-bottom:15px;">
+
+            <label for="unit_price">
+                <strong>Unit Price (₦)</strong>
+            </label>
+
+            <br>
+
+            <input
+                type="number"
+                name="unit_price"
+                id="unit_price"
+                min="0"
+                step="0.01"
+                required
+                style="padding:8px; width:160px;"
+            >
+
+        </div>
+
+
+        <!-- NOTE -->
+
+        <div style="margin-bottom:15px;">
+
+            <label for="note">
+                <strong>Note</strong>
+            </label>
+
+            <br>
+
+            <textarea
+                name="note"
+                id="note"
+                rows="4"
+                style="width:500px; max-width:100%; padding:8px;"
+                placeholder="Optional note"
+            ></textarea>
+
+        </div>
+
+    </div>
+
+
+    <button
+        type="submit"
+        style="padding:10px 18px;"
+    >
+        Create Guest Laundry Order
+    </button>
+
+    &nbsp;
+
+    <a href="{% url 'laundry:guest_laundry' %}">
+        Cancel
+    </a>
+
+</form>
+
+
+<script>
+
+    const roomRadio = document.getElementById(
+        "customer_type_room"
+    );
+
+    const walkinRadio = document.getElementById(
+        "customer_type_walkin"
+    );
+
+    const roomSection = document.getElementById(
+        "room_customer_section"
+    );
+
+    const walkinSection = document.getElementById(
+        "walkin_customer_section"
+    );
+
+    const folioField = document.getElementById(
+        "folio"
+    );
+
+    const customerNameField = document.getElementById(
+        "customer_name"
+    );
+
+
+    function updateCustomerType() {
+
+        if (walkinRadio.checked) {
+
+            roomSection.style.display = "none";
+            walkinSection.style.display = "block";
+
+            folioField.required = false;
+            customerNameField.required = true;
+
+        } else {
+
+            roomSection.style.display = "block";
+            walkinSection.style.display = "none";
+
+            folioField.required = true;
+            customerNameField.required = false;
+        }
+    }
+
+
+    roomRadio.addEventListener(
+        "change",
+        updateCustomerType
+    );
+
+    walkinRadio.addEventListener(
+        "change",
+        updateCustomerType
+    );
+
+
+    updateCustomerType();
+
+</script>
+
+{% endblock %}

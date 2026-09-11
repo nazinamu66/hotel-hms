@@ -1,0 +1,103 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Incoming Deliveries
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    Incoming Deliveries
+</h2>
+
+<p>
+    Approved purchase orders awaiting delivery to
+    <strong>{{ department.name }}</strong>.
+</p>
+
+<hr>
+
+{% if pos %}
+
+<table style="width:100%; border-collapse:collapse;">
+
+    <thead style="background:#eee;">
+
+        <tr>
+            <th style="text-align:left; padding:8px;">
+                PO #
+            </th>
+
+            <th style="text-align:left; padding:8px;">
+                Supplier
+            </th>
+
+            <th style="text-align:left; padding:8px;">
+                Approved
+            </th>
+
+            <th style="text-align:center; padding:8px;">
+                Payment
+            </th>
+
+            <th style="text-align:center; padding:8px;">
+                Action
+            </th>
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+    {% for po in pos %}
+
+        <tr style="border-top:1px solid #ddd;">
+
+            <td style="padding:8px;">
+                #{{ po.id }}
+            </td>
+
+            <td style="padding:8px;">
+                {{ po.supplier|default:"—" }}
+            </td>
+
+            <td style="padding:8px;">
+                {{ po.approved_at|date:"Y-m-d H:i" }}
+            </td>
+
+            <td style="padding:8px; text-align:center;">
+                {{ po.get_payment_status_display }}
+            </td>
+
+            <td style="padding:8px; text-align:center;">
+
+                <a href="{% url 'inventory:po_receive' po.pk %}">
+                    📦 Receive Goods
+                </a>
+
+            </td>
+
+        </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    There are no approved purchase orders awaiting delivery
+    to {{ department.name }}.
+</p>
+
+{% endif %}
+
+<hr>
+
+<a href="{% url back_url %}">
+    ← {{ back_label }}
+</a>
+
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Linen Requests
+{% endblock %}
+
+{% block content %}
+
+<h2>Linen Requests</h2>
+
+<p style="color:#666;">
+    Requests from Housekeeping for new, unused linen from the Linen Store.
+</p>
+
+<hr>
+
+<form method="get" style="margin-bottom:20px;">
+
+    <input
+        type="text"
+        name="search"
+        value="{{ search }}"
+        placeholder="Search ID, linen or staff"
+        style="width:260px;"
+    >
+
+    <select name="status">
+
+        <option value="">
+            All Statuses
+        </option>
+
+        <option
+            value="PENDING"
+            {% if status_filter == "PENDING" %}selected{% endif %}
+        >
+            Pending
+        </option>
+
+        <option
+            value="PARTIAL"
+            {% if status_filter == "PARTIAL" %}selected{% endif %}
+        >
+            Partially Fulfilled
+        </option>
+
+        <option
+            value="FULFILLED"
+            {% if status_filter == "FULFILLED" %}selected{% endif %}
+        >
+            Fulfilled
+        </option>
+
+        <option
+            value="REJECTED"
+            {% if status_filter == "REJECTED" %}selected{% endif %}
+        >
+            Rejected
+        </option>
+
+    </select>
+
+    <button type="submit">
+        Filter
+    </button>
+
+</form>
+
+<table class="table">
+
+<thead>
+
+<tr>
+    <th>ID</th>
+    <th>Linen</th>
+    <th>Requested</th>
+    <th>Fulfilled</th>
+    <th>Remaining</th>
+    <th>Requested By</th>
+    <th>Date</th>
+    <th>Status</th>
+    <th>Action</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for req in linen_requests %}
+
+<tr>
+
+    <td>
+        #{{ req.id }}
+    </td>
+
+    <td>
+        <strong>
+            {{ req.linen_item.product.name }}
+        </strong>
+
+        <br>
+
+        <small>
+            {{ req.linen_item.product.sku }}
+        </small>
+    </td>
+
+    <td>
+        {{ req.quantity }}
+    </td>
+
+    <td>
+        {{ req.fulfilled_quantity }}
+    </td>
+
+    <td>
+        {{ req.remaining_quantity }}
+    </td>
+
+    <td>
+        {{ req.requested_by.username }}
+    </td>
+
+    <td>
+        {{ req.created_at|date:"d M Y H:i" }}
+    </td>
+
+    <td>
+        {{ req.get_status_display }}
+    </td>
+
+    <td>
+
+        {% if req.status == "PENDING" or req.status == "PARTIAL" %}
+
+            <a
+                href="{% url 'store_fulfill_linen_request' req.id %}"
+                class="btn btn-primary"
+            >
+                Fulfill
+            </a>
+
+        {% else %}
+
+            —
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td colspan="9">
+        No linen requests found.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}

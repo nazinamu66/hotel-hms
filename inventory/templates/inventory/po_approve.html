@@ -1,0 +1,60 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<h2>
+    Approve Purchase Order #{{ po.id }}
+</h2>
+
+<hr>
+
+<p>
+    <strong>Supplier:</strong>
+    {{ po.supplier }}
+</p>
+
+<p>
+    <strong>Department:</strong>
+    {{ po.department }}
+</p>
+
+<p>
+    <strong>Status:</strong>
+    {{ po.status }}
+</p>
+
+<h3>Items</h3>
+
+<ul>
+{% for item in po.items.all %}
+    <li>
+        {{ item.product.name }}
+        —
+        {{ item.purchase_quantity }}
+        × ₦{{ item.unit_cost|floatformat:2 }}
+    </li>
+{% endfor %}
+</ul>
+
+<hr>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <p>
+        Are you sure you want to approve this
+        Purchase Order?
+    </p>
+
+    <button type="submit">
+        Approve Purchase Order
+    </button>
+
+    <a href="{% url 'inventory:po_detail' po.pk %}">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}

@@ -23,6 +23,7 @@ OPERATIONAL_ROLES = {
     "STORE",
     "KITCHEN",
     "HOUSEKEEPING",
+    "MAINTENANCE",
     "LAUNDRY",
     "GYM",
 }
@@ -188,3 +189,119 @@ def user_can_access_department(
         return user.department_id == department.pk
 
     return True
+# =========================================================
+# DEPARTMENT HEAD ACCESS
+# =========================================================
+
+
+def is_department_head(user):
+    """
+    Return True only when the user is an operational
+    department head with a valid department assignment.
+    """
+
+    if not user or not user.is_authenticated:
+        return False
+
+    if user.role not in OPERATIONAL_ROLES:
+        return False
+
+    return bool(
+        user.is_department_head
+        and user.department_id
+    )
+
+
+def can_manage_department(
+    user,
+    department,
+):
+    """
+    Check whether the user has management authority
+    over a specific department.
+
+    Department Heads may manage only their own department.
+    Organizational/hotel management roles may access
+    departments within their permitted scope.
+    """
+
+    if not user or not user.is_authenticated:
+        return False
+
+    if not department:
+        return False
+
+    # -----------------------------------------------------
+    # ADMIN
+    # -----------------------------------------------------
+
+    if user.role == "ADMIN":
+        return True
+
+    # -----------------------------------------------------
+    # ORGANIZATION / HOTEL MANAGEMENT
+    # -----------------------------------------------------
+
+    if user.role in {
+        "DIRECTOR",
+        "GENERAL_MANAGER",
+        "MANAGER",
+    }:
+        return user_can_access_department(
+            user,
+            department,
+        )
+
+    # -----------------------------------------------------
+    # DEPARTMENT HEAD
+    # -----------------------------------------------------
+
+    if is_department_head(user):
+        return user.department_id == department.pk
+
+    # -----------------------------------------------------
+    # EVERYONE ELSE
+    # -----------------------------------------------------
+
+    return False
+
+
+def get_manageable_departments(user):
+    """
+    Return departments the user is allowed to manage.
+    """
+
+    if not user or not user.is_authenticated:
+        return Department.objects.none()
+
+    # -----------------------------------------------------
+    # ADMIN
+    # -----------------------------------------------------
+
+    if user.role == "ADMIN":
+        return Department.objects.filter(
+            is_active=True,
+        )
+
+    # -----------------------------------------------------
+    # DIRECTOR / GENERAL MANAGER / MANAGER
+    # -----------------------------------------------------
+
+    if user.role in {
+        "DIRECTOR",
+        "GENERAL_MANAGER",
+        "MANAGER",
+    }:
+        return get_accessible_departments(user)
+
+    # -----------------------------------------------------
+    # DEPARTMENT HEAD
+    # -----------------------------------------------------
+
+    if is_department_head(user):
+        return Department.objects.filter(
+            pk=user.department_id,
+            is_active=True,
+        )
+
+    return Department.objects.none()

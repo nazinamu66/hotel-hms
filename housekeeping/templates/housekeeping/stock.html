@@ -1,0 +1,134 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Housekeeping Stock
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    Housekeeping Stock
+</h2>
+
+<p>
+    Current operational stock assigned to Housekeeping.
+</p>
+
+<hr>
+
+{% if stock_items %}
+
+<table
+    style="
+        width:100%;
+        border-collapse:collapse;
+    "
+>
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="text-align:left; padding:8px;">
+        Hotel
+    </th>
+
+    <th style="text-align:left; padding:8px;">
+        Product
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Quantity
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Unit
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Unit Cost
+    </th>
+
+    <th style="text-align:right; padding:8px;">
+        Stock Value
+    </th>
+
+    <th style="text-align:center; padding:8px;">
+        Status
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for stock in stock_items %}
+
+<tr style="border-top:1px solid #ddd;">
+
+    <td style="padding:8px;">
+        {{ stock.department.hotel.name }}
+    </td>
+
+    <td style="padding:8px;">
+        {{ stock.product.name }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        {{ stock.quantity }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        {{ stock.product.base_unit }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        {{ stock.product.cost_price }}
+    </td>
+
+    <td style="padding:8px; text-align:right;">
+        {{ stock.stock_value }}
+    </td>
+
+    <td style="padding:8px; text-align:center;">
+
+        {% if stock.stock_status == "OUT OF STOCK" %}
+
+            🔴 OUT OF STOCK
+
+        {% elif stock.stock_status == "LOW STOCK" %}
+
+            🟠 LOW STOCK
+
+        {% else %}
+
+            🟢 OK
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    No Housekeeping stock has been assigned yet.
+</p>
+
+{% endif %}
+
+<hr>
+
+<a href="{% url 'housekeeping_dashboard' %}">
+    ← Back to Housekeeping
+</a>
+
+{% endblock %}

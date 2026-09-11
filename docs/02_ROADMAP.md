@@ -51,3 +51,17 @@ Day 23: Deployment build
 Day 24: Full UAT
 Day 25: Bug fix / release candidate
 Day 26: V1 release
+
+GUEST LAUNDRY
+
+1. Cost / Price List                    ← NEXT
+2. Payment at Laundry
+3. Payment at Frontdesk
+4. Order Detail / Transaction History
+5. Cancellation
+6. Receipt / billing visibility
+7. Permissions & audit verification
+8. Full Room Guest E2E
+9. Full Walk-in E2E
+10. Dashboard/report polish
+11. Mark Laundry COMPLETE

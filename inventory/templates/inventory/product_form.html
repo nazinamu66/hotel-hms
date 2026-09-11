@@ -16,8 +16,60 @@
 {% csrf_token %}
 
 <!-- ===================== -->
+<!-- HOTEL -->
+<!-- ===================== -->
+
+<h4>Hotel</h4>
+
+{% if hotels|length > 1 and not product %}
+
+    <label>Hotel</label>
+
+    <select name="hotel" required>
+
+        <option value="">
+            Select hotel
+        </option>
+
+        {% for hotel in hotels %}
+
+            <option
+                value="{{ hotel.id }}"
+                {% if selected_hotel and selected_hotel.id == hotel.id %}
+                    selected
+                {% endif %}
+            >
+                {{ hotel.name }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+
+    <small style="color:gray;">
+        Select the hotel that owns this product.
+    </small>
+
+{% elif selected_hotel %}
+
+    <p>
+        <strong>{{ selected_hotel.name }}</strong>
+    </p>
+
+{% elif product %}
+
+    <p>
+        <strong>{{ product.hotel.name }}</strong>
+    </p>
+
+{% endif %}
+
+<br>
+
+<!-- ===================== -->
 <!-- BASIC INFO -->
 <!-- ===================== -->
+
 <h4>Basic Info</h4>
 
 <label>Name</label>
@@ -38,6 +90,7 @@
 <!-- ===================== -->
 <!-- CLASSIFICATION -->
 <!-- ===================== -->
+
 <h4>Classification</h4>
 
 <label>Product Type</label>
@@ -65,6 +118,7 @@
 <!-- ===================== -->
 <!-- UNITS -->
 <!-- ===================== -->
+
 <h4>Units</h4>
 
 <label>Base Unit</label>
@@ -85,6 +139,7 @@
 <!-- ===================== -->
 <!-- PRICING -->
 <!-- ===================== -->
+
 <h4>Pricing</h4>
 
 <label>Selling Price</label>
@@ -100,6 +155,7 @@
 <!-- ===================== -->
 <!-- CONTROL -->
 <!-- ===================== -->
+
 <h4>Control</h4>
 
 <label>Reorder Level</label>
@@ -115,6 +171,7 @@
 <!-- ===================== -->
 <!-- ACTIONS -->
 <!-- ===================== -->
+
 <button class="btn btn-primary">
     {% if product %}Update Product{% else %}Create Product{% endif %}
 </button>

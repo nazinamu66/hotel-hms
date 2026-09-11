@@ -1,0 +1,321 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Guest Laundry
+{% endblock %}
+
+{% block header %}
+<h2>Guest Laundry</h2>
+{% endblock %}
+
+{% block content %}
+
+<h3>Guest Laundry Operations</h3>
+
+<div style="
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:15px;
+    margin-bottom:30px;
+">
+
+    <div class="card" style="padding:15px;">
+        <strong>Guest Laundry</strong>
+
+        <p style="margin:10px 0;">
+            Receive, process and deliver laundry for hotel guests.
+        </p>
+
+        <a href="{% url 'laundry:guest_laundry_new' %}">
+            + New Guest Laundry Order →
+        </a>
+        <br><br>
+
+        <a href="{% url 'laundry:guest_laundry_history' %}">
+            📋 View Order History →
+        </a>
+    </div>
+
+</div>
+
+
+<h3>Active Guest Folios</h3>
+
+{% if active_folios %}
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:30px;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+    <th style="padding:10px;">Guest</th>
+    <th>Room</th>
+    <th>Folio</th>
+    <th>Status</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for folio in active_folios %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        <strong>
+            {{ folio.guest.full_name }}
+        </strong>
+    </td>
+
+    <td>
+        {{ folio.room.room_number }}
+    </td>
+
+    <td>
+        #{{ folio.id }}
+    </td>
+
+    <td>
+        Active
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    No active guest room folios are available.
+</p>
+
+{% endif %}
+
+
+<h3>Guest Laundry Orders</h3>
+
+{% if orders %}
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">
+        Order
+    </th>
+
+    <th>
+        Guest
+    </th>
+
+    <th>
+        Room
+    </th>
+
+    <th>
+        Items
+    </th>
+
+    <th>
+        Total
+    </th>
+
+    <th>
+        Status
+    </th>
+
+    <th>
+        Created
+    </th>
+
+    <th>
+        Action
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for order in orders %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        <strong>
+            <a href="{% url 'laundry:guest_laundry_detail' order.id %}">
+                #{{ order.id }}
+            </a>
+        </strong>
+    </td>
+
+    <td>
+        {% if order.folio.guest %}
+            {{ order.folio.guest.full_name }}
+        {% else %}
+            {{ order.customer_name|default:"Walk-in Customer" }}
+        {% endif %}
+    </td>
+
+    <td>
+        {% if order.folio.room %}
+            {{ order.folio.room.room_number }}
+        {% else %}
+            Walk-in
+        {% endif %}
+    </td>
+
+    <td>
+
+        {% for item in order.items.all %}
+
+            {{ item.description }} × {{ item.quantity }}
+
+            {% if not forloop.last %}
+                <br>
+            {% endif %}
+
+        {% endfor %}
+
+    </td>
+
+    <td>
+        ₦{{ order.total_amount|floatformat:2 }}
+    </td>
+
+    <td>
+        {{ order.get_status_display }}
+    </td>
+
+    <td>
+        {{ order.created_at|date:"Y-m-d H:i" }}
+    </td>
+
+    <td>
+        {% if order.status == "NEW" %}
+
+            <form
+                method="post"
+                action="{% url 'laundry:guest_laundry_receive' order.id %}"
+                style="display:inline;"
+            >
+                {% csrf_token %}
+                <button type="submit">
+                    Receive
+                </button>
+            </form>
+            <form
+                method="post"
+                action="{% url 'laundry:guest_laundry_cancel' order.id %}"
+                style="display:inline;"
+                onsubmit="return confirm('Cancel Guest Laundry order #{{ order.id }}?');"
+            >
+                {% csrf_token %}
+                <button type="submit">
+                    Cancel
+                </button>
+            </form>
+
+        {% elif order.status == "RECEIVED" %}
+
+            <form
+                method="post"
+                action="{% url 'laundry:guest_laundry_process' order.id %}"
+                style="display:inline;"
+            >
+                {% csrf_token %}
+                <button type="submit">
+                    Start Processing
+                </button>
+            </form>
+
+            <form
+                method="post"
+                action="{% url 'laundry:guest_laundry_cancel' order.id %}"
+                style="display:inline;"
+                onsubmit="return confirm('Cancel Guest Laundry order #{{ order.id }}?');"
+            >
+                {% csrf_token %}
+                <button type="submit">
+                    Cancel
+                </button>
+            </form>
+
+        {% elif order.status == "PROCESSING" %}
+
+            <form
+                method="post"
+                action="{% url 'laundry:guest_laundry_ready' order.id %}"
+                style="display:inline;"
+            >
+                {% csrf_token %}
+                <button type="submit">
+                    Mark Ready
+                </button>
+            </form>
+
+        {% elif order.status == "READY" %}
+
+            <form
+                method="post"
+                action="{% url 'laundry:guest_laundry_deliver' order.id %}"
+                style="display:inline;"
+            >
+                {% csrf_token %}
+                <button type="submit">
+                    Deliver &amp; Charge
+                </button>
+            </form>
+
+        {% elif order.status == "DELIVERED" %}
+
+        {% if order.billing_charge_id and order.folio.balance > 0 %}
+            <a href="{% url 'laundry:guest_laundry_payment' order.id %}">
+                Pay
+            </a>
+        {% elif order.billing_charge_id %}
+            Paid
+        {% else %}
+            —
+        {% endif %}
+
+        {% else %}
+
+            —
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    No Guest Laundry orders have been created.
+</p>
+
+{% endif %}
+
+{% endblock %}

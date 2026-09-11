@@ -1,6 +1,8 @@
 from django.db import models
 from django.conf import settings
 from rooms.models import Room
+from django.utils import timezone
+from inventory.models import Hotel, Product
 
 
 class CleaningLog(models.Model):
@@ -92,8 +94,47 @@ class CleaningAssignment(models.Model):
 
     def __str__(self):
         return f"Room {self.room.room_number} → {self.assigned_to}"
+
+class CleaningMaterialUsage(models.Model):
+
+    assignment = models.ForeignKey(
+        CleaningAssignment,
+        on_delete=models.PROTECT,
+        related_name="material_usages",
+    )
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+    )
+
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    notes = models.TextField(
+        blank=True,
+    )
+
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="cleaning_material_usages",
+    )
+
+    recorded_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    def __str__(self):
+        return (
+            f"Room {self.assignment.room.room_number} - "
+            f"{self.product.name} - "
+            f"{self.quantity}"
+        )
     
-from django.utils import timezone
 
 class LostFoundItem(models.Model):
 
@@ -103,11 +144,18 @@ class LostFoundItem(models.Model):
         ("DISPOSED", "Disposed"),
     )
 
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.PROTECT,
+        related_name="lost_found_items",
+    )
+
     room = models.ForeignKey(
         Room,
         on_delete=models.SET_NULL,
         null=True,
-        blank=True
+        blank=True,
+        related_name="lost_found_items",
     )
 
     description = models.TextField()
@@ -116,26 +164,28 @@ class LostFoundItem(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
-        related_name="found_items"
+        related_name="found_items",
     )
 
-    found_at = models.DateTimeField(default=timezone.now)
+    found_at = models.DateTimeField(
+        default=timezone.now,
+    )
 
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default="FOUND"
+        default="FOUND",
     )
 
     claimed_by = models.CharField(
         max_length=200,
-        blank=True
+        blank=True,
     )
 
     claimed_at = models.DateTimeField(
         null=True,
-        blank=True
+        blank=True,
     )
 
     def __str__(self):
-        return f"Lost Item - Room {self.room}"
+        return f"Lost Item - {self.hotel.name} - Room {self.room}"

@@ -1,0 +1,68 @@
+{% extends "base/base.html" %}
+
+{% block title %}Claim Lost & Found Item{% endblock %}
+
+{% block content %}
+
+<h2>Claim Lost & Found Item</h2>
+
+<div class="card">
+
+    <p>
+        <strong>Hotel:</strong>
+        {{ item.hotel.name }}
+    </p>
+
+    <p>
+        <strong>Room:</strong>
+        {% if item.room %}
+            Room {{ item.room.room_number }}
+        {% else %}
+            Unknown / Public Area
+        {% endif %}
+    </p>
+
+    <p>
+        <strong>Item:</strong>
+        {{ item.description }}
+    </p>
+
+    <p>
+        <strong>Found By:</strong>
+        {{ item.found_by }}
+    </p>
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <label>Claimant Name</label>
+
+        <input
+            type="text"
+            name="claimant"
+            required
+            maxlength="200"
+        >
+
+        <br><br>
+
+        <button
+            class="btn btn-primary"
+            type="submit"
+        >
+            Confirm Claim
+        </button>
+
+        <a
+            href="{% url 'housekeeping_lost_found' %}"
+            class="btn btn-secondary"
+        >
+            Cancel
+        </a>
+
+    </form>
+
+</div>
+
+{% endblock %}

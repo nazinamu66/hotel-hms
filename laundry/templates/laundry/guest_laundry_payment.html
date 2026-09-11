@@ -1,0 +1,175 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Guest Laundry Payment
+{% endblock %}
+
+{% block header %}
+<h2>Guest Laundry Payment</h2>
+{% endblock %}
+
+{% block content %}
+
+<h3>Payment Details</h3>
+
+<div class="card" style="
+    padding:20px;
+    margin-bottom:25px;
+">
+
+    <p>
+        <strong>Order:</strong>
+        #{{ order.id }}
+    </p>
+
+    <p>
+        <strong>Customer:</strong>
+        {% if order.folio.guest %}
+            {{ order.folio.guest.full_name }}
+        {% else %}
+            {{ order.customer_name|default:"Walk-in Customer" }}
+        {% endif %}
+    </p>
+
+    {% if order.folio.room %}
+    <p>
+        <strong>Room:</strong>
+        {{ order.folio.room.room_number }}
+    </p>
+    {% endif %}
+
+    <p>
+        <strong>Order Total:</strong>
+        ₦{{ order.total_amount|floatformat:2 }}
+    </p>
+
+    <p>
+        <strong>Outstanding Folio Balance:</strong>
+        ₦{{ balance|floatformat:2 }}
+    </p>
+
+</div>
+
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <div class="card" style="
+        padding:20px;
+        margin-bottom:25px;
+    ">
+
+        <div style="margin-bottom:15px;">
+
+            <label for="amount">
+                <strong>Payment Amount (₦)</strong>
+            </label>
+
+            <br>
+
+            <input
+                type="number"
+                id="amount"
+                name="amount"
+                min="0.01"
+                max="{{ balance }}"
+                step="0.01"
+                value="{{ balance }}"
+                required
+                style="
+                    padding:8px;
+                    width:180px;
+                "
+            >
+
+        </div>
+
+
+        <div style="margin-bottom:15px;">
+
+            <label for="method">
+                <strong>Payment Method</strong>
+            </label>
+
+            <br>
+
+            <select
+                name="method"
+                id="method"
+                required
+                style="
+                    padding:8px;
+                    width:220px;
+                "
+            >
+                <option value="CASH">Cash</option>
+                <option value="POS">POS</option>
+                <option value="TRANSFER">Bank Transfer</option>
+            </select>
+
+        </div>
+
+
+        <div style="margin-bottom:15px;">
+
+            <label for="reference">
+                <strong>Reference</strong>
+            </label>
+
+            <br>
+
+            <input
+                type="text"
+                name="reference"
+                id="reference"
+                maxlength="100"
+                placeholder="Required for POS / Bank Transfer"
+                style="
+                    padding:8px;
+                    width:350px;
+                    max-width:100%;
+                "
+            >
+
+        </div>
+
+
+        <div style="margin-bottom:15px;">
+
+            <label for="note">
+                <strong>Note</strong>
+            </label>
+
+            <br>
+
+            <textarea
+                name="note"
+                id="note"
+                rows="4"
+                style="
+                    width:500px;
+                    max-width:100%;
+                    padding:8px;
+                "
+                placeholder="Optional note"
+            ></textarea>
+
+        </div>
+
+    </div>
+
+
+    <button type="submit">
+        Record Payment
+    </button>
+
+    &nbsp;
+
+    <a href="{% url 'laundry:guest_laundry' %}">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}

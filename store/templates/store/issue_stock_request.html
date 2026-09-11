@@ -1,0 +1,90 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<h2>Issue Stock Request #{{ stock_request.id }}</h2>
+
+<hr>
+
+<p>
+    <strong>Department:</strong>
+    {{ stock_request.department.name }}
+</p>
+
+<p>
+    <strong>Product:</strong>
+    {{ stock_request.product.name }}
+</p>
+
+<p>
+    <strong>Requested:</strong>
+    {{ stock_request.requested_quantity }}
+    {{ stock_request.product.base_unit }}
+</p>
+
+<p>
+    <strong>Already Issued:</strong>
+    {{ total_issued }}
+    {{ stock_request.product.base_unit }}
+</p>
+
+<p>
+    <strong>Remaining:</strong>
+    {{ remaining_quantity }}
+    {{ stock_request.product.base_unit }}
+</p>
+
+<p>
+    <strong>Store Available:</strong>
+    {{ available_quantity }}
+    {{ stock_request.product.base_unit }}
+</p>
+
+<hr>
+
+{% if available_quantity > 0 and remaining_quantity > 0 %}
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <label>
+        <strong>Quantity to Issue</strong>
+    </label>
+
+    <br>
+
+    <input
+        type="number"
+        name="quantity"
+        min="1"
+        max="{{ remaining_quantity }}"
+        step="1"
+        required
+    >
+
+    {{ stock_request.product.base_unit }}
+
+    <br><br>
+
+    <button type="submit">
+        Issue Stock
+    </button>
+
+</form>
+
+{% else %}
+
+<p>
+    No stock can currently be issued.
+</p>
+
+{% endif %}
+
+<hr>
+
+<a href="{% url 'store_stock_requests' %}">
+    ← Back to Department Requests
+</a>
+
+{% endblock %}

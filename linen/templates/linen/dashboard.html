@@ -1,0 +1,263 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Linen Management
+{% endblock %}
+
+{% block content %}
+
+<h2>Linen Management</h2>
+
+<p>
+    Linen circulation and inventory overview.
+</p>
+<div style="margin:20px 0;">
+
+    <a
+        href="{% url 'linen_receive' %}"
+        class="btn btn-primary"
+    >
+        + Receive Linen
+    </a>
+    <a
+    href="{% url 'linen_issue' %}"
+    class="btn btn-primary"
+    style="margin-left:10px;"
+>
+    Issue Linen
+</a>
+
+</div>
+
+
+<hr>
+
+<h3>Overview</h3>
+
+<table
+    style="
+        width:100%;
+        border-collapse:collapse;
+        margin-bottom:25px;
+    "
+>
+
+<tr style="background:#eee;">
+
+    <th style="padding:10px;">
+        Owned
+    </th>
+
+    <th style="padding:10px;">
+        In Store
+    </th>
+
+    <th style="padding:10px;">
+        Housekeeping
+    </th>
+
+    <th style="padding:10px;">
+        Laundry
+    </th>
+
+    <th style="padding:10px;">
+        Damaged
+    </th>
+
+    <th style="padding:10px;">
+        Lost
+    </th>
+
+    <th style="padding:10px;">
+        Written Off
+    </th>
+
+</tr>
+
+<tr style="text-align:center;">
+
+    <td style="padding:12px;">
+        {{ totals.owned }}
+    </td>
+
+    <td style="padding:12px;">
+        {{ totals.store }}
+    </td>
+
+    <td style="padding:12px;">
+        {{ totals.housekeeping }}
+    </td>
+
+    <td style="padding:12px;">
+        {{ totals.laundry }}
+    </td>
+
+    <td style="padding:12px;">
+        {{ totals.damaged }}
+    </td>
+
+    <td style="padding:12px;">
+        {{ totals.lost }}
+    </td>
+
+    <td style="padding:12px;">
+        {{ totals.written_off }}
+    </td>
+
+</tr>
+
+</table>
+
+
+<h3>Linen Catalogue</h3>
+
+<table
+    style="
+        width:100%;
+        border-collapse:collapse;
+    "
+>
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px; text-align:left;">
+        Linen
+    </th>
+
+    <th style="padding:10px; text-align:left;">
+        SKU
+    </th>
+
+    <th style="padding:10px;">
+        Par
+    </th>
+
+    <th style="padding:10px;">
+        Minimum
+    </th>
+
+    <th style="padding:10px;">
+        Store
+    </th>
+
+    <th style="padding:10px;">
+        Housekeeping
+    </th>
+
+    <th style="padding:10px;">
+        Laundry
+    </th>
+
+    <th style="padding:10px;">
+        Owned
+    </th>
+
+    <th style="padding:10px;">
+        Status
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for row in linen_rows %}
+
+<tr style="border-top:1px solid #ddd;">
+
+    <td style="padding:10px;">
+        <strong>
+            {{ row.linen_item.product.name }}
+        </strong>
+    </td>
+
+    <td style="padding:10px;">
+        {{ row.linen_item.product.sku }}
+    </td>
+
+    <td style="padding:10px; text-align:center;">
+        {{ row.linen_item.par_level }}
+    </td>
+
+    <td style="padding:10px; text-align:center;">
+        {{ row.linen_item.minimum_level }}
+    </td>
+
+    <td style="padding:10px; text-align:center;">
+        {{ row.summary.store }}
+    </td>
+
+    <td style="padding:10px; text-align:center;">
+        {{ row.summary.housekeeping }}
+    </td>
+
+    <td style="padding:10px; text-align:center;">
+        {{ row.summary.laundry }}
+    </td>
+
+    <td style="padding:10px; text-align:center;">
+        {{ row.summary.owned }}
+    </td>
+
+    <td style="padding:10px; text-align:center;">
+
+        {% if row.below_minimum %}
+
+            <strong style="color:red;">
+                Below Minimum
+            </strong>
+
+        {% elif row.below_par %}
+
+            <strong style="color:#b36b00;">
+                Below Par
+            </strong>
+
+        {% else %}
+
+            <strong style="color:green;">
+                OK
+            </strong>
+
+        {% endif %}
+
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td
+        colspan="9"
+        style="
+            padding:20px;
+            text-align:center;
+        "
+    >
+        No linen items have been configured yet.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<hr>
+
+<div style="margin-top:20px;">
+
+    <a href="{% url 'inventory:product_list' %}">
+        Inventory Products
+    </a>
+
+</div>
+
+{% endblock %}

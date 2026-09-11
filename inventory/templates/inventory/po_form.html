@@ -1,12 +1,36 @@
 {% extends "base/base.html" %}
 
+{% block title %}
+Create Purchase Order
+{% endblock %}
+
 {% block content %}
+
 <h2>Create Purchase Order</h2>
 
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
+<p>
+    Create a new purchase order. Supplier, quantities and prices
+    will be finalized before submission for approval.
+</p>
 
-  <button type="submit">Create PO</button>
+<hr>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    {{ form.as_p }}
+
+    <br>
+
+    <button type="submit">
+        Create Purchase Order
+    </button>
+
+    <a href="{% url 'inventory:po_list' %}">
+        Cancel
+    </a>
+
 </form>
+
 {% endblock %}

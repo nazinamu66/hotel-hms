@@ -1,0 +1,81 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Request Maintenance Stock
+{% endblock %}
+
+{% block content %}
+
+<h2>Request Maintenance Stock</h2>
+
+<p>
+    <strong>Department:</strong>
+    {{ maintenance_department.name }}
+</p>
+
+<hr>
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <p>
+        <label for="product">
+            Product
+        </label>
+
+        <br>
+
+        <select
+            name="product_id"
+            id="product"
+            required
+        >
+
+            <option value="">
+                -- Select Product --
+            </option>
+
+            {% for product in products %}
+
+                <option value="{{ product.id }}">
+                    {{ product.name }}
+                    — Current Stock:
+                    {{ product.current_stock }}
+                    {{ product.base_unit }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <p>
+        <label for="quantity">
+            Quantity Required
+        </label>
+
+        <br>
+
+        <input
+            type="number"
+            name="quantity"
+            id="quantity"
+            min="1"
+            required
+        >
+    </p>
+
+    <button type="submit">
+        📦 Submit Stock Request
+    </button>
+
+</form>
+
+<hr>
+
+<a href="{% url 'maintenance_my_stock_requests' %}">
+    View My Stock Requests
+</a>
+
+{% endblock %}

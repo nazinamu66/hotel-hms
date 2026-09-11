@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>
+        Laundry Receipt – Order #{{ order.id }}
+    </title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            font-size: 14px;
+            color: #222;
+        }
+
+        h1, h2, h3 {
+            margin-bottom: 5px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .header img {
+            max-height: 75px;
+            max-width: 150px;
+        }
+
+        .header-details h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .muted {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .receipt-title {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+
+        th {
+            background: #f4f4f4;
+            text-align: left;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .no-border td {
+            border: none;
+            padding: 4px;
+        }
+
+        .total-row td {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .status {
+            font-weight: bold;
+        }
+
+        .paid {
+            font-weight: bold;
+        }
+
+        .balance {
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .actions {
+            margin-bottom: 20px;
+        }
+
+        @media print {
+            .actions {
+                display: none;
+            }
+
+            body {
+                margin: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="actions">
+    <button onclick="window.print()">Print Receipt</button>
+    <button onclick="window.history.back()">Back</button>
+</div>
+
+<!-- ================= BUSINESS HEADER ================= -->
+
+<div class="header">
+
+    {% if business.logo %}
+        <img
+            src="{{ business.logo.url }}"
+            alt="Logo"
+        >
+    {% endif %}
+
+    <div class="header-details">
+
+        <h1>
+            {{ business.name|default:"Hotel Management System" }}
+        </h1>
+
+        {% if business.address %}
+            <div class="muted">
+                {{ business.address }}
+            </div>
+        {% endif %}
+
+        {% if business.phone %}
+            <div class="muted">
+                Phone: {{ business.phone }}
+            </div>
+        {% endif %}
+
+        {% if business.email %}
+            <div class="muted">
+                Email: {{ business.email }}
+            </div>
+        {% endif %}
+
+        {% if business.website %}
+            <div class="muted">
+                {{ business.website }}
+            </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+<!-- ================= RECEIPT TITLE ================= -->
+
+<div class="receipt-title">
+
+    <h2>LAUNDRY RECEIPT</h2>
+
+    <div>
+        Order #{{ order.id }}
+    </div>
+
+</div>
+
+<hr>
+
+<!-- ================= CUSTOMER DETAILS ================= -->
+
+<table class="no-border">
+
+    <tr>
+
+        <td>
+            <strong>Customer:</strong>
+
+            {% if order.folio.guest %}
+                {{ order.folio.guest.full_name }}
+            {% else %}
+                {{ order.customer_name|default:"Walk-in Customer" }}
+            {% endif %}
+
+            <br>
+
+            <strong>Phone:</strong>
+
+            {% if order.folio.guest %}
+                {{ order.folio.guest.phone|default:"—" }}
+            {% else %}
+                {{ order.customer_phone|default:"—" }}
+            {% endif %}
+
+        </td>
+
+        <td class="right">
+
+            <strong>Order #:</strong>
+            {{ order.id }}
+
+            <br>
+
+            <strong>Date:</strong>
+            {{ order.created_at|date:"Y-m-d H:i" }}
+
+            <br>
+
+            <strong>Customer Type:</strong>
+
+            {% if order.folio.folio_type == "ROOM" %}
+                Room Guest
+            {% else %}
+                Walk-in
+            {% endif %}
+
+            <br>
+
+            <strong>Room:</strong>
+
+            {% if order.folio.room %}
+                {{ order.folio.room.room_number }}
+            {% else %}
+                Walk-in
+            {% endif %}
+
+        </td>
+
+    </tr>
+
+</table>
+
+<hr>
+
+<!-- ================= ITEMS ================= -->
+
+<h3>Services</h3>
+
+<table>
+
+    <thead>
+
+        <tr>
+            <th>Service</th>
+            <th class="right">Qty</th>
+            <th class="right">Unit Price</th>
+            <th class="right">Amount</th>
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+        {% for item in order.items.all %}
+
+        <tr>
+
+            <td>
+                {{ item.description }}
+            </td>
+
+            <td class="right">
+                {{ item.quantity }}
+            </td>
+
+            <td class="right">
+                {{ business.currency|default:"₦" }}{{ item.unit_price|floatformat:2 }}
+            </td>
+
+            <td class="right">
+                {{ business.currency|default:"₦" }}{{ item.amount|floatformat:2 }}
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+        <tr class="total-row">
+
+            <td colspan="3" class="right">
+                Total
+            </td>
+
+            <td class="right">
+                {{ business.currency|default:"₦" }}{{ order.total_amount|floatformat:2 }}
+            </td>
+
+        </tr>
+
+    </tbody>
+
+</table>
+
+<!-- ================= PAYMENT ================= -->
+
+<h3>Payment</h3>
+
+{% if payments %}
+
+<table>
+
+    <thead>
+
+        <tr>
+            <th>Date</th>
+            <th>Method</th>
+            <th>Reference</th>
+            <th class="right">Amount</th>
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+        {% for payment in payments %}
+
+        <tr>
+
+            <td>
+                {{ payment.collected_at|date:"Y-m-d H:i" }}
+            </td>
+
+            <td>
+                {{ payment.get_method_display }}
+            </td>
+
+            <td>
+                {{ payment.reference|default:"—" }}
+            </td>
+
+            <td class="right">
+                {{ business.currency|default:"₦" }}{{ payment.amount|floatformat:2 }}
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+    </tbody>
+
+</table>
+
+{% else %}
+
+<p>
+    No payment recorded.
+</p>
+
+{% endif %}
+
+<!-- ================= SUMMARY ================= -->
+
+<table>
+
+    <tr>
+
+        <td>
+            <strong>Order Total</strong>
+        </td>
+
+        <td class="right">
+            {{ business.currency|default:"₦" }}{{ order.total_amount|floatformat:2 }}
+        </td>
+
+    </tr>
+
+    <tr>
+
+        <td>
+            <strong>Folio Balance</strong>
+        </td>
+
+        <td class="right balance">
+            {{ business.currency|default:"₦" }}{{ balance|floatformat:2 }}
+        </td>
+
+    </tr>
+
+</table>
+
+<!-- ================= PAYMENT STATUS ================= -->
+
+{% if order.billing_charge_id %}
+
+    {% if balance <= 0 %}
+
+        <p class="paid">
+            PAID
+        </p>
+
+    {% else %}
+
+        <p class="status">
+            PAYMENT OUTSTANDING
+        </p>
+
+    {% endif %}
+
+{% else %}
+
+    <p class="status">
+        NOT CHARGED
+    </p>
+
+{% endif %}
+
+<div class="footer">
+
+    <p>
+        Thank you for using our Laundry Service.
+    </p>
+
+    <p>
+        Order #{{ order.id }}
+    </p>
+
+</div>
+
+</body>
+</html>

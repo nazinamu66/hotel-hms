@@ -1,61 +1,136 @@
 {% extends "base/base.html" %}
 
+{% block title %}
+Finalize Purchase Order #{{ po.id }}
+{% endblock %}
+
 {% block content %}
-<h2>Finalize Purchase Order #{{ po.id }}</h2>
+
+<h2>
+    Finalize Purchase Order #{{ po.id }}
+</h2>
+
+<p>
+    Select the supplier and confirm the quantities and prices
+    before submitting this purchase order for approval.
+</p>
+
+<hr>
 
 <form method="post">
-  {% csrf_token %}
 
-  <label>
-    Supplier:
+    {% csrf_token %}
+
+    <h3>Supplier</h3>
+
     <select name="supplier" required>
-<option value="{{ s.id }}" {% if po.supplier_id == s.id %}selected{% endif %}>
-  {{ s.name }}
-</option>
-      {% for s in suppliers %}
-        <option value="{{ s.id }}">{{ s.name }}</option>
-      {% endfor %}
+
+        <option value="">
+            -- Select Supplier --
+        </option>
+
+        {% for s in suppliers %}
+
+        <option
+            value="{{ s.id }}"
+            {% if po.supplier_id == s.id %}
+                selected
+            {% endif %}
+        >
+            {{ s.name }}
+        </option>
+
+        {% endfor %}
+
     </select>
-  </label>
 
-  <hr>
 
-  <table class="table">
+    <hr>
+
+    <h3>Items</h3>
+
+    <table
+        style="
+            width:100%;
+            border-collapse:collapse;
+        "
+    >
+
+    <thead style="background:#eee;">
+
     <tr>
-      <th>Product</th>
-      <th>Quantity</th>
-      <th>Unit Cost</th>
+
+        <th style="text-align:left; padding:8px;">
+            Product
+        </th>
+
+        <th style="text-align:right; padding:8px;">
+            Quantity
+        </th>
+
+        <th style="text-align:right; padding:8px;">
+            Unit Cost
+        </th>
+
     </tr>
+
+    </thead>
+
+    <tbody>
 
     {% for item in items %}
-    <tr>
-      <td>{{ item.product.name }}</td>
-      <td>
-        <input
-          type="number"
-          name="qty_{{ item.id }}"
-          value="{{ item.purchase_quantity }}"
-          min="0"
-        >
-      </td>
-      <td>
-        <input
-          type="number"
-          step="0.01"
-          name="cost_{{ item.id }}"
-          value="{{ item.unit_cost }}"
-        >
-      </td>
+
+    <tr style="border-top:1px solid #ddd;">
+
+        <td style="padding:8px;">
+            {{ item.product.name }}
+        </td>
+
+        <td style="padding:8px; text-align:right;">
+
+            <input
+                type="number"
+                name="qty_{{ item.id }}"
+                value="{{ item.purchase_quantity }}"
+                min="0"
+                required
+            >
+
+            {{ item.product.purchase_unit }}
+
+        </td>
+
+        <td style="padding:8px; text-align:right;">
+
+            <input
+                type="number"
+                name="cost_{{ item.id }}"
+                value="{{ item.unit_cost }}"
+                min="0"
+                step="0.01"
+                required
+            >
+
+        </td>
+
     </tr>
+
     {% endfor %}
-  </table>
 
-  <br>
+    </tbody>
 
-  <button type="submit">
-    📤 Submit for Payment Approval
-  </button>
+    </table>
+
+    <br>
+
+    <button type="submit">
+        📤 Save & Finalize
+    </button>
+
+    <a href="{% url 'inventory:po_detail' po.pk %}">
+        Cancel
+    </a>
+
 </form>
 
-<a href="{% url 'inventory:po_detail' po.pk %}">⬅ Back to PO</a>
 {% endblock %}

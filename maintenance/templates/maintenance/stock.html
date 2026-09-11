@@ -1,0 +1,196 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Maintenance Stores
+{% endblock %}
+
+{% block content %}
+
+<h2>Maintenance Stores</h2>
+
+<p>
+    Current stock held by Maintenance departments.
+</p>
+
+<hr>
+
+{% regroup stock_items by department.hotel as hotel_groups %}
+
+{% for hotel_group in hotel_groups %}
+
+    <h3 style="margin-top:25px;">
+        {{ hotel_group.grouper.name }}
+    </h3>
+
+    <p>
+        <strong>Department:</strong>
+        Maintenance (MNT)
+    </p>
+
+    <table style="
+        width:100%;
+        border-collapse:collapse;
+        margin-bottom:25px;
+    ">
+
+    <thead style="background:#eee;">
+
+    <tr>
+
+        <th style="padding:10px;">
+            Product
+        </th>
+
+        <th>
+            SKU
+        </th>
+
+        <th>
+            Current Stock
+        </th>
+
+        <th>
+            Unit
+        </th>
+
+        <th>
+            Reorder Level
+        </th>
+
+        <th>
+            Unit Cost
+        </th>
+
+        <th>
+            Stock Value
+        </th>
+
+        <th>
+            Status
+        </th>
+
+    </tr>
+
+    </thead>
+
+    <tbody>
+
+    {% for stock in hotel_group.list %}
+
+    <tr style="border-bottom:1px solid #ddd;">
+
+        <td style="padding:10px;">
+            <strong>
+                {{ stock.product.name }}
+            </strong>
+        </td>
+
+        <td>
+            {{ stock.product.sku }}
+        </td>
+
+        <td>
+            {{ stock.quantity|floatformat:2 }}
+        </td>
+
+        <td>
+            {{ stock.product.base_unit }}
+        </td>
+
+        <td>
+            {{ stock.product.reorder_level }}
+        </td>
+
+        <td>
+            ₦{{ stock.product.cost_price|floatformat:2 }}
+        </td>
+
+        <td>
+            ₦{{ stock.stock_value|floatformat:2 }}
+        </td>
+
+        <td>
+
+            {% if stock.stock_status == "OUT OF STOCK" %}
+
+                <strong>
+                    OUT OF STOCK
+                </strong>
+
+            {% elif stock.stock_status == "LOW STOCK" %}
+
+                <strong>
+                    LOW STOCK
+                </strong>
+
+            {% else %}
+
+                OK
+
+            {% endif %}
+
+        </td>
+
+    </tr>
+
+    {% empty %}
+
+    <tr>
+
+        <td
+            colspan="8"
+            style="
+                padding:20px;
+                text-align:center;
+            "
+        >
+            No stock is currently held by Maintenance.
+        </td>
+
+    </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+    </table>
+
+{% empty %}
+
+    <p>
+        No Maintenance Store has been configured for the
+        accessible hotels.
+    </p>
+
+{% endfor %}
+
+<hr>
+
+<div style="
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:20px;
+">
+
+    <a href="{% url 'maintenance_request_stock' %}">
+        <button type="button">
+            Request Stock
+        </button>
+    </a>
+
+    <a href="{% url 'maintenance_stock_movements' %}">
+        <button type="button">
+            Stock Movements
+        </button>
+    </a>
+
+    <a href="{% url 'maintenance_dashboard' %}">
+        <button type="button">
+            ← Maintenance Dashboard
+        </button>
+    </a>
+
+</div>
+
+{% endblock %}

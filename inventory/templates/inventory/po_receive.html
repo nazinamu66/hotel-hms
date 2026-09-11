@@ -1,0 +1,158 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Receive Purchase Order #{{ po.id }}
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    Receive Purchase Order #{{ po.id }}
+</h2>
+
+<p>
+    <strong>Receiving Department:</strong>
+    {{ po.department.name }}
+</p>
+
+<p>
+    <strong>Supplier:</strong>
+    {{ po.supplier|default:"—" }}
+</p>
+
+<p>
+    <strong>PO Status:</strong>
+    {{ po.get_status_display }}
+</p>
+
+<p>
+    <strong>Payment Status:</strong>
+    {{ po.get_payment_status_display }}
+</p>
+
+<hr>
+
+<h3>
+    Goods to Receive
+</h3>
+
+<table style="width:100%; border-collapse:collapse;">
+
+    <thead style="background:#eee;">
+
+        <tr>
+
+            <th style="text-align:left; padding:8px;">
+                Product
+            </th>
+
+            <th style="text-align:right; padding:8px;">
+                Purchase Qty
+            </th>
+
+            <th style="text-align:right; padding:8px;">
+                Base Qty
+            </th>
+
+            <th style="text-align:right; padding:8px;">
+                Unit Cost
+            </th>
+
+            <th style="text-align:right; padding:8px;">
+                Total
+            </th>
+
+        </tr>
+
+    </thead>
+
+    <tbody>
+
+    {% for item in po.items.all %}
+
+        <tr style="border-top:1px solid #ddd;">
+
+            <td style="padding:8px;">
+                {{ item.product.name }}
+            </td>
+
+            <td style="padding:8px; text-align:right;">
+                {{ item.purchase_quantity }}
+                {{ item.product.purchase_unit }}
+            </td>
+
+            <td style="padding:8px; text-align:right;">
+                {{ item.base_quantity }}
+                {{ item.product.base_unit }}
+            </td>
+
+            <td style="padding:8px; text-align:right;">
+                ₦{{ item.unit_cost|floatformat:2 }}
+            </td>
+
+            <td style="padding:8px; text-align:right;">
+                ₦{{ item.total_cost|floatformat:2 }}
+            </td>
+
+        </tr>
+
+    {% endfor %}
+
+    </tbody>
+
+</table>
+
+<hr>
+
+<div style="
+    padding:15px;
+    border:1px solid #ddd;
+    margin-bottom:20px;
+">
+
+    <strong>
+        Receiving this PO will add the goods to:
+    </strong>
+
+    <br><br>
+
+    {{ po.department.name }}
+
+</div>
+
+{% if po.payment_status == "PAID" %}
+
+<p>
+    ✓ Supplier has already been fully paid.
+</p>
+
+{% else %}
+
+<p>
+    <strong>
+        Payment is currently {{ po.get_payment_status_display|lower }}.
+    </strong>
+</p>
+
+<p>
+    Goods may still be received. Payment does not have to
+    occur before receiving.
+</p>
+
+{% endif %}
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <button type="submit">
+        📦 Confirm Goods Received
+    </button>
+
+    <a href="{% url 'inventory:department_incoming_pos' %}">
+        Cancel
+    </a>
+
+</form>
+
+{% endblock %}

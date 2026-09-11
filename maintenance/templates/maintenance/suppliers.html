@@ -1,0 +1,136 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Maintenance Suppliers
+{% endblock %}
+
+{% block content %}
+
+<div style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+">
+
+    <div>
+
+        <h2 style="margin:0;">
+            Maintenance Suppliers
+        </h2>
+
+        <p style="margin:5px 0 0;">
+            Suppliers available to Maintenance.
+        </p>
+
+    </div>
+
+    <a
+        href="{% url 'maintenance_supplier_create' %}"
+        class="btn btn-primary"
+    >
+        + Add Supplier
+    </a>
+
+</div>
+
+<hr>
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    <th style="padding:10px;">
+        Supplier
+    </th>
+
+    {% if request.user.role == "DIRECTOR" or request.user.role == "ADMIN" %}
+    <th>
+        Hotel
+    </th>
+    {% endif %}
+
+    <th>
+        Phone
+    </th>
+
+    <th>
+        Email
+    </th>
+
+    <th>
+        Address
+    </th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for supplier in suppliers %}
+
+<tr style="
+    border-bottom:1px solid #ddd;
+">
+
+    <td style="padding:10px;">
+        <strong>
+            {{ supplier.name }}
+        </strong>
+    </td>
+
+    {% if request.user.role == "DIRECTOR" or request.user.role == "ADMIN" %}
+    <td>
+        {{ supplier.hotel.name }}
+    </td>
+    {% endif %}
+
+    <td>
+        {{ supplier.phone|default:"—" }}
+    </td>
+
+    <td>
+        {{ supplier.email|default:"—" }}
+    </td>
+
+    <td>
+        {{ supplier.address|default:"—" }}
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+
+    <td
+        colspan="5"
+        style="
+            padding:25px;
+            text-align:center;
+        "
+    >
+        No Maintenance suppliers have been created yet.
+    </td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+<br>
+
+<a href="{% url 'maintenance_dashboard' %}">
+    ← Back to Maintenance Dashboard
+</a>
+
+{% endblock %}

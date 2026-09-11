@@ -1,0 +1,167 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Laundry Price List
+{% endblock %}
+
+{% block header %}
+<h2>Laundry Price List</h2>
+{% endblock %}
+
+{% block content %}
+
+<h3>Laundry Services</h3>
+
+<div style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+">
+
+    <p style="margin:0;">
+        Manage the laundry services and prices used for Guest Laundry orders.
+    </p>
+
+    {% if can_manage_services %}
+        <a href="{% url 'laundry:service_create' %}">
+            + Add Laundry Item
+        </a>
+    {% endif %}
+
+</div>
+
+{% if services %}
+
+<table style="
+    width:100%;
+    border-collapse:collapse;
+">
+
+<thead style="background:#eee;">
+
+<tr>
+
+    {% if hotels|length > 1 %}
+        <th style="padding:10px;">Hotel</th>
+    {% endif %}
+
+    <th style="padding:10px;">Item</th>
+    <th>Code</th>
+    <th>Unit Price</th>
+    <th>Status</th>
+
+    {% if can_manage_services %}
+        <th>Action</th>
+    {% endif %}
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for service in services %}
+
+<tr style="border-bottom:1px solid #ddd;">
+
+    {% if hotels|length > 1 %}
+        <td style="padding:10px;">
+            {{ service.hotel.name }}
+        </td>
+    {% endif %}
+
+    <td style="padding:10px;">
+        <strong>
+            {{ service.name }}
+        </strong>
+    </td>
+
+    <td>
+        {{ service.code }}
+    </td>
+
+    <td>
+        ₦{{ service.unit_price|floatformat:2 }}
+    </td>
+
+    <td>
+        {% if service.is_active %}
+            Active
+        {% else %}
+            Inactive
+        {% endif %}
+    </td>
+
+        {% if can_manage_services %}
+
+        <td>
+
+            <a href="{% url 'laundry:service_edit' service.id %}">
+                Edit
+            </a>
+
+            {% if service.is_active %}
+
+                &nbsp;|&nbsp;
+
+                <form
+                    method="post"
+                    action="{% url 'laundry:service_archive' service.id %}"
+                    style="display:inline;"
+                >
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        onclick="return confirm('Archive {{ service.name }}?');"
+                    >
+                        Archive
+                    </button>
+
+                </form>
+
+            {% endif %}
+
+        </td>
+
+    {% endif %}
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<div class="card" style="padding:20px;">
+
+    <strong>No laundry services have been added yet.</strong>
+
+        {% if can_manage_services %}
+
+        <p>
+            Add items such as Shirt, Trousers, Suit, Jumper, Boda or Babba Riga
+            to create the hotel's laundry price list.
+        </p>
+
+        <a href="{% url 'laundry:service_create' %}">
+            + Add First Laundry Item
+        </a>
+
+    {% else %}
+
+        <p>
+            No laundry services have been configured yet.
+        </p>
+
+    {% endif %}
+
+</div>
+
+{% endif %}
+
+{% endblock %}

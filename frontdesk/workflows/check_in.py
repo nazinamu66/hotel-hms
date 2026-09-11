@@ -1,6 +1,6 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
-from datetime import datetime, time
+from datetime import datetime, date, time
 from django.utils import timezone
 from billing.models import (
     Guest,
@@ -18,6 +18,36 @@ def validate_check_in(room):
             "Room is already occupied."
         )
 
+def normalize_expected_checkout(expected_checkout):
+    """
+    Convert checkout input into a datetime/date value
+    that the folio workflow can safely use.
+    """
+
+    if not expected_checkout:
+        return None
+
+    if isinstance(expected_checkout, datetime):
+        return expected_checkout
+
+    if isinstance(expected_checkout, date):
+        return expected_checkout
+
+    if isinstance(expected_checkout, str):
+        try:
+            return datetime.strptime(
+                expected_checkout,
+                "%Y-%m-%d",
+            ).date()
+
+        except ValueError:
+            raise ValidationError(
+                "Invalid expected checkout date."
+            )
+
+    raise ValidationError(
+        "Invalid expected checkout date."
+    )
 
 def get_or_create_guest(room, data):
 
@@ -159,6 +189,10 @@ def check_in_guest(
         expected_checkout = data.get(
             "expected_checkout"
         )
+
+    expected_checkout = normalize_expected_checkout(
+        expected_checkout
+    )
 
     folio = create_folio(
         room,

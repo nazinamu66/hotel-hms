@@ -1,0 +1,96 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+Linen Movements
+{% endblock %}
+
+{% block content %}
+
+<h2>Linen Movements</h2>
+
+<p style="color:#666;">
+    History of hotel linen movement.
+</p>
+
+<table class="table">
+
+<thead>
+<tr>
+    <th>Date</th>
+    <th>Linen</th>
+    <th>Quantity</th>
+    <th>Movement</th>
+    <th>From</th>
+    <th>To</th>
+    <th>Performed By</th>
+    <th>Reference</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for movement in movements %}
+
+<tr>
+
+    <td>
+        {{ movement.created_at|date:"d M Y H:i" }}
+    </td>
+
+    <td>
+        {{ movement.linen_item.product.name }}
+    </td>
+
+    <td>
+        {{ movement.quantity }}
+    </td>
+
+    <td>
+        {{ movement.get_event_type_display }}
+    </td>
+
+    <td>
+        {% if movement.from_location %}
+            {{ movement.get_from_location_display }}
+        {% else %}
+            —
+        {% endif %}
+    </td>
+
+    <td>
+        {% if movement.to_location %}
+            {{ movement.get_to_location_display }}
+        {% else %}
+            —
+        {% endif %}
+    </td>
+
+    <td>
+        {% if movement.performed_by %}
+            {{ movement.performed_by.username }}
+        {% else %}
+            —
+        {% endif %}
+    </td>
+
+    <td>
+        {{ movement.reference|default:"—" }}
+    </td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+    <td colspan="8">
+        No linen movements recorded.
+    </td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}
