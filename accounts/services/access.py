@@ -26,6 +26,7 @@ OPERATIONAL_ROLES = {
     "MAINTENANCE",
     "LAUNDRY",
     "GYM",
+    "BOUTIQUE",
 }
 
 
@@ -305,3 +306,126 @@ def get_manageable_departments(user):
         )
 
     return Department.objects.none()
+
+# =========================================================
+# PRODUCT MASTER ACCESS
+# =========================================================
+
+
+def can_view_product_master(user):
+    """
+    Return True when the user may access the Product Master.
+    """
+
+    if not user or not user.is_authenticated:
+        return False
+
+    return user.role in {
+        "ADMIN",
+        "DIRECTOR",
+        "GENERAL_MANAGER",
+        "MANAGER",
+        "CHIEF_ACCOUNTANT",
+        "ACCOUNTANT",
+    } or is_department_head(user)
+
+
+def can_create_product(user, department):
+    """
+    Return True when the user may create a product
+    for the specified department.
+    """
+
+    if not user or not user.is_authenticated:
+        return False
+
+    if not department:
+        return False
+
+    # Management may create products within their scope.
+    if user.role in {
+        "ADMIN",
+        "DIRECTOR",
+        "GENERAL_MANAGER",
+        "MANAGER",
+    }:
+        return can_manage_department(
+            user,
+            department,
+        )
+
+    # Department heads may create products only
+    # for their own department.
+    if is_department_head(user):
+        return (
+            user.department_id
+            == department.pk
+        )
+
+    return False
+
+
+def can_edit_product(user, product):
+    """
+    Return True when the user may edit a product.
+    """
+
+    if not user or not user.is_authenticated:
+        return False
+
+    if not product:
+        return False
+
+    # Product must belong to a hotel the user can access.
+    if not user_can_access_hotel(
+        user,
+        product.hotel,
+    ):
+        return False
+
+    # Department heads may edit only products
+    # assigned to their own department.
+    if is_department_head(user):
+        return product.departments.filter(
+            pk=user.department_id,
+        ).exists()
+
+    # Management may edit products in their hotel scope.
+    return user.role in {
+        "ADMIN",
+        "DIRECTOR",
+        "GENERAL_MANAGER",
+        "MANAGER",
+    }
+
+
+def can_archive_product(user, product):
+    """
+    Return True when the user may archive a product.
+    """
+
+    if not user or not user.is_authenticated:
+        return False
+
+    if not product:
+        return False
+
+    if not user_can_access_hotel(
+        user,
+        product.hotel,
+    ):
+        return False
+
+    # Department heads may archive only products
+    # belonging to their own department.
+    if is_department_head(user):
+        return product.departments.filter(
+            pk=user.department_id,
+        ).exists()
+
+    return user.role in {
+        "ADMIN",
+        "DIRECTOR",
+        "GENERAL_MANAGER",
+        "MANAGER",
+    }

@@ -33,6 +33,7 @@ class User(AbstractUser):
         ("HOUSEKEEPING", "Housekeeping"),
         ("LAUNDRY", "Laundry Staff"),
         ("GYM", "Gym Staff"),
+        ("BOUTIQUE", "Boutique Staff"),
     )
 
     role = models.CharField(
@@ -151,6 +152,9 @@ class User(AbstractUser):
     @property
     def is_gym(self):
         return self.role == "GYM"
+    @property
+    def is_boutique(self):
+        return self.role == "BOUTIQUE"
 
     # =========================================================
     # ROLE GROUPS
@@ -182,6 +186,7 @@ class User(AbstractUser):
             "HOUSEKEEPING",
             "LAUNDRY",
             "GYM",
+            "BOUTIQUE",
         }
 
     # =========================================================
@@ -285,6 +290,7 @@ class User(AbstractUser):
             "MAINTENANCE",
             "LAUNDRY",
             "GYM",
+            "BOUTIQUE",
         }:
 
             if not self.department:

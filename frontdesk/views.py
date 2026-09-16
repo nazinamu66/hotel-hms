@@ -125,15 +125,22 @@ def build_invoice_context(folio):
     guest = folio.guest
     payments = folio.payments.all().order_by("collected_at")
 
-    charges_by_department = defaultdict(list)
-    department_totals = defaultdict(Decimal)
+    charges_by_department = defaultdict(
+        lambda: {
+            "charges": [],
+            "subtotal": Decimal("0.00"),
+        }
+    )
 
     for charge in folio.charges.select_related("department"):
         dept = charge.department.name
-        charges_by_department[dept].append(charge)
-        department_totals[dept] += charge.amount
 
-    business = BusinessProfile.objects.first()
+        charges_by_department[dept]["charges"].append(charge)
+        charges_by_department[dept]["subtotal"] += charge.amount
+
+    business = BusinessProfile.objects.filter(
+        hotel_id=folio.hotel_id
+    ).first()
 
     return {
         "business": business,
@@ -142,7 +149,6 @@ def build_invoice_context(folio):
         "guest": guest,
         "payments": payments,
         "charges_by_department": dict(charges_by_department),
-        "department_totals": dict(department_totals),
         "total_charges": folio.total_charges,
         "total_payments": folio.total_payments,
         "balance": folio.balance,

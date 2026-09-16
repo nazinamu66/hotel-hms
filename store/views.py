@@ -92,6 +92,7 @@ def store_stock_requests(request):
             department__department_type__in=[
                 "HOUSEKEEPING",
                 "MAINTENANCE",
+                "LAUNDRY",
             ],
             fulfillment_type="STORE",
         )
@@ -165,6 +166,7 @@ def store_stock_requests(request):
     if department_type in (
         "HOUSEKEEPING",
         "MAINTENANCE",
+        "LAUNDRY",
     ):
 
         requests = requests.filter(
@@ -288,6 +290,7 @@ def store_issue_stock_request(request, pk):
         department__department_type__in=[
             "HOUSEKEEPING",
             "MAINTENANCE",
+            "LAUNDRY",
         ],
         status__in=[
             "PENDING",

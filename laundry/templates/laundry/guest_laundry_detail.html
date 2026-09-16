@@ -358,6 +358,92 @@ Guest Laundry Order #{{ order.id }}
 
 </div>
 
+<div class="card" style="padding:20px; margin-bottom:20px;">
+
+    <h3>Materials Used</h3>
+
+    {% if materials_used %}
+
+        <table style="width:100%; border-collapse:collapse;">
+
+            <thead style="background:#eee;">
+                <tr>
+                    <th style="padding:10px; text-align:left;">
+                        Material
+                    </th>
+                    <th style="padding:10px; text-align:right;">
+                        Quantity
+                    </th>
+                    <th style="padding:10px; text-align:left;">
+                        Recorded
+                    </th>
+                    <th style="padding:10px; text-align:left;">
+                        Recorded By
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for material in materials_used %}
+
+                <tr style="border-bottom:1px solid #ddd;">
+
+                    <td style="padding:10px;">
+                        {{ material.product.name }}
+                    </td>
+
+                    <td style="padding:10px; text-align:right;">
+                        {{ material.quantity }}
+                        {{ material.unit }}
+                    </td>
+
+                    <td style="padding:10px;">
+                        {{ material.recorded_at|date:"Y-m-d H:i" }}
+                    </td>
+
+                    <td style="padding:10px;">
+                        {% if material.recorded_by %}
+                            {{ material.recorded_by.username }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    {% else %}
+
+        <p>No materials have been recorded yet.</p>
+
+    {% endif %}
+
+
+    {% if order.status == "PROCESSING" %}
+
+        <div style="margin-top:20px;">
+
+            <p>
+                This order is currently being processed.
+                Record any additional materials used before
+                marking the order ready.
+            </p>
+
+            <a href="{% url 'laundry:guest_laundry_materials' order.id %}">
+                🧪 Record Materials Used
+            </a>
+
+        </div>
+
+    {% endif %}
+
+</div>
 
 <div style="margin-top:20px;">
 

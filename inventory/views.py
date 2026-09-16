@@ -23,10 +23,19 @@ from .forms import SupplierForm, PurchaseOrderForm, PurchaseItemForm,ProductForm
 from .permissions import is_admin, is_manager, is_store
 from inventory.models import transfer_stock
 from accounting.models import Account
-from accounts.services.access import get_accessible_hotels
 from kitchen.forms import (
     PreparedFoodForm,
     RecipeItemForm,
+
+)
+
+from accounts.services.access import (
+    get_accessible_hotels,
+    can_view_product_master,
+    can_create_product,
+    can_edit_product,
+    can_archive_product,
+    is_department_head,
 
 )
 
@@ -150,22 +159,51 @@ def supplier_create(request):
         },
     )
 
-@role_required("DIRECTOR", "ADMIN")
 def product_list(request):
+
+    if not can_view_product_master(request.user):
+        raise PermissionDenied
 
     product_type = request.GET.get("type")
 
-    products = Product.objects.filter(is_active=True)
+    accessible_hotels = get_accessible_hotels(
+        request.user,
+    ).filter(
+        is_active=True,
+    )
+
+    products = Product.objects.filter(
+        hotel__in=accessible_hotels,
+        is_active=True,
+    )
+
+    # Department heads see only products
+    # associated with their department.
+    if is_department_head(request.user):
+        products = products.filter(
+            departments=request.user.department_id,
+        )
 
     if product_type:
-        products = products.filter(product_type=product_type)
+        products = products.filter(
+            product_type=product_type,
+        )
 
-    # products = products.order_by("name")
-    products = products.order_by("product_type", "name")
+    products = products.order_by(
+        "product_type",
+        "name",
+    )
+
     context = {
         "products": products,
         "product_types": Product.PRODUCT_TYPE,
-        "selected_type": product_type
+        "selected_type": product_type,
+        "can_manage_products": request.user.role in {
+            "ADMIN",
+            "DIRECTOR",
+            "GENERAL_MANAGER",
+            "MANAGER",
+        } or is_department_head(request.user),
     }
 
     return render(
@@ -177,7 +215,6 @@ def product_list(request):
 from django.db import IntegrityError
 
 
-@role_required("DIRECTOR", "ADMIN")
 def product_create(request):
 
     from restaurant.models import MenuItem
@@ -195,6 +232,8 @@ def product_create(request):
         )
         .order_by("name")
     )
+    if not can_view_product_master(request.user):
+        raise PermissionDenied
 
     # --------------------------------------------------------
     # Determine selected hotel
@@ -241,9 +280,32 @@ def product_create(request):
         hotel=hotel,
     )
 
+    if is_department_head(request.user):
+        form.fields["departments"].queryset = (
+            form.fields["departments"].queryset.filter(
+                pk=request.user.department_id,
+            )
+        )
+
     if form.is_valid():
 
         product = form.save(commit=False)
+
+        selected_departments = form.cleaned_data.get(
+            "departments"
+        )
+
+        if not selected_departments:
+            raise ValidationError(
+                "At least one department must be selected."
+            )
+
+        for department in selected_departments:
+            if not can_create_product(
+                request.user,
+                department,
+            ):
+                raise PermissionDenied
 
         # ----------------------------------------------------
         # Server-side ownership
@@ -1623,6 +1685,7 @@ def manager_stock_requests(request):
         LowStockRequest.objects
         .filter(
             status="PENDING",
+            fulfillment_type="PURCHASE",
             department__hotel__in=hotels,
         )
         .select_related(
@@ -1644,7 +1707,7 @@ def manager_stock_requests(request):
 # DEPARTMENT STOCK REQUESTS
 # =========================
 
-@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING")
+@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING", "LAUNDRY")
 def department_request_stock(request):
 
     department = request.user.department
@@ -1657,6 +1720,7 @@ def department_request_stock(request):
     if department.department_type not in (
         "MAINTENANCE",
         "HOUSEKEEPING",
+        "LAUNDRY"
     ):
         raise PermissionDenied(
             "This department does not use the operational stock request workflow."
@@ -1753,6 +1817,9 @@ def department_request_stock(request):
     elif department.department_type == "MAINTENANCE":
         requests_url = "maintenance_stock_requests"
 
+    elif department.department_type == "LAUNDRY":
+        requests_url = "laundry:laundry_stock_requests"
+
     elif department.department_type == "STORE":
         requests_url = "store_requests"
 
@@ -1773,7 +1840,7 @@ def department_request_stock(request):
     )
 
 
-@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING")
+@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING", "LAUNDRY", )
 def department_stock_requests(request):
 
     department = request.user.department
@@ -1786,6 +1853,8 @@ def department_stock_requests(request):
     if department.department_type not in (
         "MAINTENANCE",
         "HOUSEKEEPING",
+        "LAUNDRY",
+        
     ):
         raise PermissionDenied(
             "This department does not use the operational stock request workflow."
@@ -1859,10 +1928,20 @@ def department_stock_requests(request):
         back_url = "housekeeping_dashboard"
         back_label = "Back to Housekeeping"
 
-    else:
+    elif department.department_type == "MAINTENANCE":
         request_stock_url = "maintenance_request_stock"
         back_url = "maintenance_dashboard"
         back_label = "Back to Maintenance"
+
+    elif department.department_type == "LAUNDRY":
+        request_stock_url = "laundry:laundry_request_stock"
+        back_url = "laundry:dashboard"
+        back_label = "Back to Laundry"
+
+    else:
+        raise PermissionDenied(
+            "This department does not use the operational stock request workflow."
+        )
 
     return render(
         request,
@@ -1889,6 +1968,7 @@ def review_stock_request(request, pk):
         LowStockRequest,
         pk=pk,
         status="PENDING",
+        fulfillment_type="PURCHASE",
         department__hotel__in=hotels,
     )
 
@@ -1957,7 +2037,6 @@ def review_stock_request(request, pk):
     )
 
 
-@role_required("DIRECTOR", "ADMIN")
 def product_edit(request, pk):
 
     from restaurant.models import MenuItem
@@ -1972,13 +2051,42 @@ def product_edit(request, pk):
         hotel__in=accessible_hotels,
     )
 
+    if not can_edit_product(
+        request.user,
+        product,
+    ):
+        raise PermissionDenied
+
     form = ProductForm(
         request.POST or None,
         instance=product,
         hotel=product.hotel,
     )
 
+    if is_department_head(request.user):
+        form.fields["departments"].queryset = (
+            form.fields["departments"].queryset.filter(
+                pk=request.user.department_id,
+            )
+        )
+
     if form.is_valid():
+
+        selected_departments = form.cleaned_data.get(
+            "departments"
+        )
+
+        if not selected_departments:
+            raise ValidationError(
+                "At least one department must be selected."
+            )
+
+        for department in selected_departments:
+            if not can_create_product(
+                request.user,
+                department,
+            ):
+                raise PermissionDenied
 
         product = form.save()
 
@@ -2019,7 +2127,6 @@ def product_edit(request, pk):
         },
     )
 
-@role_required("DIRECTOR", "ADMIN")
 def product_delete(request, pk):
 
     accessible_hotels = get_accessible_hotels(
@@ -2031,6 +2138,12 @@ def product_delete(request, pk):
         pk=pk,
         hotel__in=accessible_hotels,
     )
+
+    if not can_archive_product(
+        request.user,
+        product,
+    ):
+        raise PermissionDenied
 
     product.is_active = False
 

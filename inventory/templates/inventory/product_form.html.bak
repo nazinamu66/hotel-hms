@@ -1,0 +1,186 @@
+{% extends "base/base.html" %}
+
+{% block title %}
+    {% if product %}Edit Product{% else %}Create Product{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<h2>
+    {% if product %}Edit Product{% else %}Create Product{% endif %}
+</h2>
+
+<div class="card" style="max-width:750px;padding:20px;background:white;border:1px solid #ddd;">
+
+<form method="post">
+{% csrf_token %}
+
+<!-- ===================== -->
+<!-- HOTEL -->
+<!-- ===================== -->
+
+<h4>Hotel</h4>
+
+{% if hotels|length > 1 and not product %}
+
+    <label>Hotel</label>
+
+    <select name="hotel" required>
+
+        <option value="">
+            Select hotel
+        </option>
+
+        {% for hotel in hotels %}
+
+            <option
+                value="{{ hotel.id }}"
+                {% if selected_hotel and selected_hotel.id == hotel.id %}
+                    selected
+                {% endif %}
+            >
+                {{ hotel.name }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+
+    <small style="color:gray;">
+        Select the hotel that owns this product.
+    </small>
+
+{% elif selected_hotel %}
+
+    <p>
+        <strong>{{ selected_hotel.name }}</strong>
+    </p>
+
+{% elif product %}
+
+    <p>
+        <strong>{{ product.hotel.name }}</strong>
+    </p>
+
+{% endif %}
+
+<br>
+
+<!-- ===================== -->
+<!-- BASIC INFO -->
+<!-- ===================== -->
+
+<h4>Basic Info</h4>
+
+<label>Name</label>
+{{ form.name }}
+
+<br><br>
+
+<label>SKU</label>
+{{ form.sku }}
+
+<br><br>
+
+<label>Barcode</label>
+{{ form.barcode }}
+
+<br><br>
+
+<!-- ===================== -->
+<!-- CLASSIFICATION -->
+<!-- ===================== -->
+
+<h4>Classification</h4>
+
+<label>Product Type</label>
+{{ form.product_type }}
+
+<br><br>
+
+<label>Usage Type</label>
+{{ form.usage_type }}
+
+<small style="color:gray;">
+    Consumable → Used internally (sugar, soap)<br>
+    Resale → Sold (drinks, boutique)<br>
+    Internal → Operational use (cleaning)<br>
+    Asset → Reusable (towels, bedsheets)
+</small>
+
+<br><br>
+
+<label>Supply Source</label>
+{{ form.supply_source }}
+
+<br><br>
+
+<!-- ===================== -->
+<!-- UNITS -->
+<!-- ===================== -->
+
+<h4>Units</h4>
+
+<label>Base Unit</label>
+{{ form.base_unit }}
+
+<br><br>
+
+<label>Purchase Unit</label>
+{{ form.purchase_unit }}
+
+<br><br>
+
+<label>Unit Multiplier</label>
+{{ form.unit_multiplier }}
+
+<br><br>
+
+<!-- ===================== -->
+<!-- PRICING -->
+<!-- ===================== -->
+
+<h4>Pricing</h4>
+
+<label>Selling Price</label>
+{{ form.price }}
+
+<br><br>
+
+<label>Purchase Cost (per carton/bag)</label>
+{{ form.purchase_cost }}
+
+<br><br>
+
+<!-- ===================== -->
+<!-- CONTROL -->
+<!-- ===================== -->
+
+<h4>Control</h4>
+
+<label>Reorder Level</label>
+{{ form.reorder_level }}
+
+<br><br>
+
+<label>Departments</label>
+{{ form.departments }}
+
+<br><br>
+
+<!-- ===================== -->
+<!-- ACTIONS -->
+<!-- ===================== -->
+
+<button class="btn btn-primary">
+    {% if product %}Update Product{% else %}Create Product{% endif %}
+</button>
+
+<a href="{% url 'inventory:product_list' %}" class="btn btn-secondary">
+    Cancel
+</a>
+
+</form>
+</div>
+
+{% endblock %}

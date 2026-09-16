@@ -1,77 +1,414 @@
 {% extends "base/base.html" %}
 
-{% block title %}Initial Setup{% endblock %}
-
 {% block content %}
 
-<h2>Initial Business Setup</h2>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
 
-<p>
-    Welcome. Let's set up your organization and first hotel.
-</p>
+            <!-- STEP HEADER -->
+            <div class="mb-4">
 
-<div class="card">
+                <div class="text-muted small mb-2">
+                    Hotel Setup · Step {{ step }} of {{ total_steps }}
+                </div>
 
-<form method="post">
-    {% csrf_token %}
+                {% if step == 1 %}
 
-    {% if form.non_field_errors %}
-        <div class="alert error">
-            {{ form.non_field_errors }}
+                    <h1 class="h3 mb-2">
+                        Organization
+                    </h1>
+
+                    <p class="text-muted">
+                        Let's start by setting up your organization.
+                    </p>
+
+                {% elif step == 2 %}
+
+                    <h1 class="h3 mb-2">
+                        Hotel Profile
+                    </h1>
+
+                    <p class="text-muted">
+                        Enter the details for your hotel.
+                    </p>
+
+                {% elif step == 3 %}
+
+                    <h1 class="h3 mb-2">
+                        Hotel Features
+                    </h1>
+
+                    <p class="text-muted">
+                        Select the features and services this hotel will use.
+                    </p>
+
+                {% elif step == 4 %}
+
+                    <h1 class="h3 mb-2">
+                        Departments
+                    </h1>
+
+                    <p class="text-muted">
+                        These standard departments will be created automatically.
+                    </p>
+
+                {% elif step == 5 %}
+
+                    <h1 class="h3 mb-2">
+                        Accounting
+                    </h1>
+
+                    <p class="text-muted">
+                        Your hotel's default accounting structure will be created automatically.
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- FORM CARD -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+
+                    <form
+                        method="post"
+                        enctype="multipart/form-data"
+                    >
+
+                        {% csrf_token %}
+
+
+                        <!-- NON-FIELD ERRORS -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+
+
+                        <!-- STEP 4 — DEPARTMENTS -->
+                        {% if step == 4 %}
+
+                            <div class="mb-4">
+
+                                <h5 class="mb-3">
+                                    Departments that will be created
+                                </h5>
+
+                                <div class="row">
+
+                                    {% for department in departments %}
+
+                                        <div class="col-md-6 mb-2">
+
+                                            <div class="border rounded p-2 bg-light">
+                                                {{ department }}
+                                            </div>
+
+                                        </div>
+
+                                    {% endfor %}
+
+                                </div>
+
+                            </div>
+
+
+                            {% for field in form %}
+
+                                <div class="mb-3">
+
+                                    {{ field }}
+
+                                    <label
+                                        for="{{ field.id_for_label }}"
+                                        class="ms-2"
+                                    >
+                                        {{ field.label }}
+                                    </label>
+
+                                    {% if field.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endif %}
+
+                                </div>
+
+                            {% endfor %}
+
+
+                        <!-- STEP 5 — ACCOUNTING -->
+                        {% elif step == 5 %}
+
+                            <div class="mb-4">
+
+                                <h5 class="mb-3">
+                                    Automatic Accounting Setup
+                                </h5>
+
+                                <div class="alert alert-info">
+
+                                    <p class="mb-2">
+                                        When you create the hotel, the system will automatically:
+                                    </p>
+
+                                    <ul class="mb-0">
+
+                                        <li>
+                                            Create the default Chart of Accounts.
+                                        </li>
+
+                                        <li>
+                                            Create the first business day.
+                                        </li>
+
+                                        <li>
+                                            Create the initial accounting period.
+                                        </li>
+
+                                    </ul>
+
+                                </div>
+
+                            </div>
+
+
+                            {% for field in form %}
+
+                                <div class="mb-3">
+
+                                    {{ field }}
+
+                                    <label
+                                        for="{{ field.id_for_label }}"
+                                        class="ms-2"
+                                    >
+                                        {{ field.label }}
+                                    </label>
+
+                                    {% if field.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endif %}
+
+                                </div>
+
+                            {% endfor %}
+                        {% elif step == 6 %}
+
+    <div class="mb-4">
+
+        <h5 class="mb-3">
+            Organization
+        </h5>
+
+        <div class="border rounded p-3 bg-light">
+            <strong>Organization Name:</strong>
+            {{ setup_data.organization.organization_name }}
         </div>
-    {% endif %}
 
-    <label>
-        Organization Name
-    </label>
+    </div>
 
-    {{ form.organization_name }}
 
-    {% if form.organization_name.errors %}
-        <div class="alert error">
-            {{ form.organization_name.errors }}
+    <div class="mb-4">
+
+        <h5 class="mb-3">
+            Hotel
+        </h5>
+
+        <div class="border rounded p-3 bg-light">
+
+            <div class="mb-2">
+                <strong>Hotel Name:</strong>
+                {{ setup_data.hotel.hotel_name }}
+            </div>
+
+            <div class="mb-2">
+                <strong>Address:</strong>
+                {{ setup_data.hotel.address }}
+            </div>
+
+            <div class="mb-2">
+                <strong>City:</strong>
+                {{ setup_data.hotel.city }}
+            </div>
+
+            <div class="mb-2">
+                <strong>State:</strong>
+                {{ setup_data.hotel.state }}
+            </div>
+
+            <div class="mb-2">
+                <strong>Country:</strong>
+                {{ setup_data.hotel.country }}
+            </div>
+
+            <div class="mb-2">
+                <strong>Phone:</strong>
+                {{ setup_data.hotel.phone }}
+            </div>
+
+            {% if setup_data.hotel.email %}
+                <div class="mb-2">
+                    <strong>Email:</strong>
+                    {{ setup_data.hotel.email }}
+                </div>
+            {% endif %}
+
+            {% if setup_data.hotel.website %}
+                <div class="mb-2">
+                    <strong>Website:</strong>
+                    {{ setup_data.hotel.website }}
+                </div>
+            {% endif %}
+
+            {% if setup_data.hotel.tax_number %}
+                <div class="mb-2">
+                    <strong>Tax / Registration Number:</strong>
+                    {{ setup_data.hotel.tax_number }}
+                </div>
+            {% endif %}
+
+            <div>
+                <strong>Currency:</strong>
+                {{ setup_data.hotel.currency }}
+            </div>
+
         </div>
-    {% endif %}
 
-    <br><br>
+    </div>
 
-    <label>
-        First Hotel Name
-    </label>
 
-    {{ form.hotel_name }}
+    <div class="mb-4">
 
-    {% if form.hotel_name.errors %}
-        <div class="alert error">
-            {{ form.hotel_name.errors }}
+        <h5 class="mb-3">
+            Enabled Features
+        </h5>
+
+        <div class="border rounded p-3 bg-light">
+
+            {% for code, label in form.fields.confirm.widget.choices %}
+                {% comment %}
+                No feature choices are rendered here.
+                The selected feature codes are converted
+                below in the view context in a later polish pass.
+                {% endcomment %}
+            {% endfor %}
+
+            <ul class="mb-0">
+                {% for feature in selected_feature_labels %}
+                    <li>{{ feature }}</li>
+                {% endfor %}
+            </ul>
+
         </div>
-    {% endif %}
 
-    <br><br>
+    </div>
 
-    <label>
-        Hotel Location
-    </label>
 
-    {{ form.hotel_location }}
+    <div class="alert alert-warning">
+        <strong>Ready to create the hotel?</strong>
 
-    {% if form.hotel_location.errors %}
-        <div class="alert error">
-            {{ form.hotel_location.errors }}
+        <p class="mb-0 mt-2">
+            The system will create the hotel, business profile,
+            selected features, standard departments, and default
+            accounting structure automatically.
+        </p>
+    </div>
+
+
+    {% for field in form %}
+
+        <div class="mb-3">
+
+            {{ field }}
+
+            <label
+                for="{{ field.id_for_label }}"
+                class="ms-2"
+            >
+                {{ field.label }}
+            </label>
+
+            {% if field.errors %}
+                <div class="text-danger small mt-1">
+                    {{ field.errors }}
+                </div>
+            {% endif %}
+
         </div>
-    {% endif %}
 
-    <br><br>
+    {% endfor %}
 
-    <button
-        type="submit"
-        class="btn btn-primary"
-    >
-        Create Organization & Hotel
-    </button>
+                        <!-- STEPS 1–3 -->
+                        {% else %}
 
-</form>
+                            {% for field in form %}
 
+                                <div class="mb-3">
+
+                                    {{ field.label_tag }}
+
+                                    {{ field }}
+
+                                    {% if field.help_text %}
+                                        <div class="form-text">
+                                            {{ field.help_text }}
+                                        </div>
+                                    {% endif %}
+
+                                    {% if field.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ field.errors }}
+                                        </div>
+                                    {% endif %}
+
+                                </div>
+
+                            {% endfor %}
+
+                        {% endif %}
+
+
+                        <!-- NAVIGATION -->
+                        <div class="d-flex justify-content-between mt-4">
+
+                            {% if step > 1 %}
+
+                                <a
+                                    href="{% url 'initial_setup' %}?step={{ step|add:'-1' }}"
+                                    class="btn btn-outline-secondary"
+                                >
+                                    Back
+                                </a>
+
+                            {% else %}
+
+                                <div></div>
+
+                            {% endif %}
+
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                            >
+                                Continue
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
 </div>
 
 {% endblock %}

@@ -415,3 +415,177 @@ class GuestLaundryItem(models.Model):
             f"{self.description} × "
             f"{self.quantity}"
         )
+
+class LaundryProcessing(models.Model):
+
+    PROCESSING_TYPE_CHOICES = (
+        ("HOTEL_LINEN", "Hotel Linen"),
+        ("GUEST_LAUNDRY", "Guest Laundry"),
+    )
+
+    hotel = models.ForeignKey(
+        "inventory.Hotel",
+        on_delete=models.PROTECT,
+        related_name="laundry_processings",
+    )
+
+    processing_type = models.CharField(
+        max_length=20,
+        choices=PROCESSING_TYPE_CHOICES,
+    )
+
+    linen_item = models.ForeignKey(
+        "linen.LinenItem",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="laundry_processings",
+    )
+
+    guest_order = models.ForeignKey(
+        "laundry.GuestLaundryOrder",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="laundry_processings",
+    )
+
+    linen_transaction = models.OneToOneField(
+        "linen.LinenTransaction",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="laundry_processing",
+    )
+
+    performed_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.PROTECT,
+        related_name="laundry_processings_performed",
+    )
+
+    reference = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    note = models.TextField(
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def clean(self):
+        if self.processing_type == "HOTEL_LINEN":
+            if not self.linen_item:
+                raise ValidationError(
+                    "Hotel Linen processing requires a linen item."
+                )
+
+            if self.guest_order:
+                raise ValidationError(
+                    "Hotel Linen processing cannot have a Guest Laundry order."
+                )
+
+            if self.linen_item.product.hotel_id != self.hotel_id:
+                raise ValidationError(
+                    "Linen item must belong to the same hotel."
+                )
+
+        elif self.processing_type == "GUEST_LAUNDRY":
+            if not self.guest_order:
+                raise ValidationError(
+                    "Guest Laundry processing requires a Guest Laundry order."
+                )
+
+            if self.linen_item:
+                raise ValidationError(
+                    "Guest Laundry processing cannot have a linen item."
+                )
+
+            if self.guest_order.folio.hotel_id != self.hotel_id:
+                raise ValidationError(
+                    "Guest Laundry order must belong to the same hotel."
+                )
+
+        else:
+            raise ValidationError(
+                "Invalid Laundry processing type."
+            )
+
+    def __str__(self):
+        if self.processing_type == "HOTEL_LINEN":
+            subject = self.linen_item
+        else:
+            subject = self.guest_order
+
+        return (
+            f"Laundry Processing #{self.id} - "
+            f"{subject}"
+        )
+
+
+class LaundryProcessingMaterial(models.Model):
+
+    processing = models.ForeignKey(
+        LaundryProcessing,
+        on_delete=models.CASCADE,
+        related_name="materials",
+    )
+
+    product = models.ForeignKey(
+        "inventory.Product",
+        on_delete=models.PROTECT,
+        related_name="laundry_processing_materials",
+    )
+
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    total_cost = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+    )
+
+    movement = models.OneToOneField(
+        "inventory.StockMovement",
+        on_delete=models.PROTECT,
+        related_name="laundry_processing_material",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = ["id"]
+
+    def clean(self):
+        if self.quantity <= 0:
+            raise ValidationError(
+                "Material quantity must be greater than zero."
+            )
+
+        if self.total_cost < 0:
+            raise ValidationError(
+                "Material total cost cannot be negative."
+            )
+
+        if self.product.usage_type != "INTERNAL":
+            raise ValidationError(
+                "Only INTERNAL products can be used as Laundry materials."
+            )
+
+    def __str__(self):
+        return (
+            f"{self.processing} - "
+            f"{self.product} - "
+            f"{self.quantity}"
+        )

@@ -82,9 +82,11 @@ My Stock Requests — {{ department.name }}
         Date
     </th>
 
-    <th style="padding:8px;">
-        PO
-    </th>
+    {% if department.department_type != "LAUNDRY" %}
+        <th style="padding:8px;">
+            PO
+        </th>
+    {% endif %}
 
 </tr>
 
@@ -191,21 +193,23 @@ My Stock Requests — {{ department.name }}
         {{ r.created_at|date:"Y-m-d H:i" }}
     </td>
 
-    <td style="padding:8px; text-align:center;">
+    {% if department.department_type != "LAUNDRY" %}
+        <td style="padding:8px; text-align:center;">
 
-        {% if r.purchase_order %}
+            {% if r.purchase_order %}
 
-            <a href="{% url 'inventory:po_detail' r.purchase_order.pk %}">
-                PO #{{ r.purchase_order.id }}
-            </a>
+                <a href="{% url 'inventory:po_detail' r.purchase_order.pk %}">
+                    PO #{{ r.purchase_order.id }}
+                </a>
 
-        {% else %}
+            {% else %}
 
-            —
+                —
 
-        {% endif %}
+            {% endif %}
 
-    </td>
+        </td>
+    {% endif %}
 
 </tr>
 
@@ -214,7 +218,7 @@ My Stock Requests — {{ department.name }}
 <tr>
 
     <td
-        colspan="9"
+        colspan="{% if department.department_type == 'LAUNDRY' %}8{% else %}9{% endif %}"
         style="padding:15px;"
     >
         No stock requests yet.

@@ -258,10 +258,22 @@ Guest Laundry
 
         {% elif order.status == "PROCESSING" %}
 
+            <a
+                href="{% url 'laundry:guest_laundry_materials' order.id %}"
+                style="
+                    display:inline-block;
+                    padding:8px 12px;
+                    margin-right:6px;
+                "
+            >
+                Process Materials
+            </a>
+
             <form
                 method="post"
                 action="{% url 'laundry:guest_laundry_ready' order.id %}"
                 style="display:inline;"
+                onsubmit="return confirm('Mark Guest Laundry order #{{ order.id }} as ready?');"
             >
                 {% csrf_token %}
                 <button type="submit">

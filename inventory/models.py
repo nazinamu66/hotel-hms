@@ -100,6 +100,7 @@ class Hotel(models.Model):
 class HotelFeature(models.Model):
 
     FEATURE_CHOICES = (
+        ("FRONTDESK", "Front Desk"),
         ("RESTAURANT", "Restaurant"),
         ("KITCHEN", "Kitchen"),
         ("STORE", "Store"),
@@ -177,6 +178,8 @@ class Department(models.Model):
         max_length=30,
         choices=DEPARTMENT_TYPES,
     )
+    def __str__(self):
+        return self.name
 
     is_active = models.BooleanField(default=True)
     class Meta:
@@ -504,6 +507,84 @@ class Stock(models.Model):
 # PURCHASE ORDERS
 # =========================
 
+class StockCostLayer(models.Model):
+    """
+    Cost layer for inventory held by a specific department.
+
+    Quantity is always expressed in the product's BASE UNIT.
+    Layers are consumed FIFO so inventory consumption uses the
+    actual historical acquisition cost.
+    """
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        related_name="cost_layers",
+    )
+
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.PROTECT,
+        related_name="stock_cost_layers",
+    )
+
+    purchase_item = models.ForeignKey(
+        "PurchaseItem",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="cost_layers",
+    )
+
+    quantity_received = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    quantity_remaining = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    unit_cost = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        help_text="Cost per product base unit.",
+    )
+
+    is_opening_balance = models.BooleanField(
+        default=False,
+        help_text="True when this layer represents stock that existed before cost-layer tracking.",
+    )
+
+    received_at = models.DateTimeField(
+        default=timezone.now,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = ["received_at", "id"]
+        indexes = [
+            models.Index(
+                fields=[
+                    "product",
+                    "department",
+                    "quantity_remaining",
+                    "received_at",
+                ]
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.product} - "
+            f"{self.department} - "
+            f"{self.quantity_remaining} @ {self.unit_cost}"
+        )
+
 class PurchaseOrder(models.Model):
 
     STATUS_CHOICES = (
@@ -607,6 +688,9 @@ class PurchaseOrder(models.Model):
 
         for item in self.items.select_related("product"):
 
+            # -----------------------------------------
+            # Receive physical stock
+            # -----------------------------------------
             stock_in(
                 product=item.product,
                 department=self.department,
@@ -615,11 +699,40 @@ class PurchaseOrder(models.Model):
                 reference=f"PO-{self.id}",
             )
 
+            # -----------------------------------------
+            # Create historical inventory cost layer
+            #
+            # PurchaseItem.unit_cost is the cost per
+            # PURCHASE UNIT.
+            #
+            # Stock is stored in BASE UNITS.
+            # -----------------------------------------
+            base_quantity = item.base_quantity
+
+            if base_quantity <= 0:
+                raise ValidationError(
+                    f"Invalid base quantity for {item.product.name}."
+                )
+
+            unit_cost = (
+                Decimal(item.unit_cost)
+                / Decimal(item.product.unit_multiplier or 1)
+            )
+
+            StockCostLayer.objects.create(
+                product=item.product,
+                department=self.department,
+                purchase_item=item,
+                quantity_received=base_quantity,
+                quantity_remaining=base_quantity,
+                unit_cost=unit_cost,
+                is_opening_balance=False,
+            )
+
         self.status = "RECEIVED"
         self.received_at = timezone.now()
         self.save(update_fields=["status", "received_at"])
 
-        # ✅ FIXED
         post_inventory_receipt(self)
 
 
@@ -676,6 +789,53 @@ class StockMovement(models.Model):
     def __str__(self):
         return f"{self.movement_type} - {self.product}"
 
+class StockMovementCostAllocation(models.Model):
+    """
+    Records the FIFO cost allocation behind a stock movement.
+
+    One StockMovement may consume multiple FIFO cost layers.
+    Quantity is always expressed in the product's BASE UNIT.
+    """
+
+    movement = models.ForeignKey(
+        StockMovement,
+        on_delete=models.CASCADE,
+        related_name="cost_allocations",
+    )
+
+    cost_layer = models.ForeignKey(
+        StockCostLayer,
+        on_delete=models.PROTECT,
+        related_name="movement_allocations",
+    )
+
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    unit_cost = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+    )
+
+    total_cost = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return (
+            f"{self.movement} - "
+            f"{self.quantity} @ {self.unit_cost}"
+        )
 
 # =========================
 # TRANSFERS & STOCK OUT
@@ -693,21 +853,13 @@ def transfer_stock(
     """
     Transfer stock between departments.
 
-    IMPORTANT:
-    quantity is always expressed in the product's BASE UNIT.
+    Quantity is always expressed in the product's BASE UNIT.
 
-    Example:
-        Detergent:
-            purchase unit = carton
-            base unit = litre
-            multiplier = 20
-
-        Transferring 5 litres means:
-            quantity=5
-
-        NOT:
-            quantity=5 cartons
+    Physical stock and historical FIFO cost layers are moved
+    atomically.
     """
+
+    from inventory.workflows.cost_layers import transfer_cost_layers
 
     if quantity <= 0:
         raise ValidationError(
@@ -751,11 +903,27 @@ def transfer_stock(
         .get_or_create(
             product=product,
             department=to_department,
-            defaults={
-                "quantity": 0,
-            },
+            defaults={"quantity": 0},
         )
     )
+
+    # --------------------------------------------------
+    # Move historical FIFO cost FIRST.
+    #
+    # If this fails, the entire transaction rolls back
+    # and physical stock remains untouched.
+    # --------------------------------------------------
+
+    allocations = transfer_cost_layers(
+        product=product,
+        from_department=from_department,
+        to_department=to_department,
+        quantity=quantity,
+    )
+
+    # --------------------------------------------------
+    # Move physical stock
+    # --------------------------------------------------
 
     from_stock.quantity -= quantity
     to_stock.quantity += quantity
@@ -768,6 +936,10 @@ def transfer_stock(
         update_fields=["quantity"]
     )
 
+    # --------------------------------------------------
+    # Record physical movement
+    # --------------------------------------------------
+
     StockMovement.objects.create(
         product=product,
         from_department=from_department,
@@ -777,6 +949,8 @@ def transfer_stock(
         created_by=user,
         reference=reference,
     )
+
+    return allocations
 
 
 class StockTransfer(models.Model):
@@ -861,15 +1035,21 @@ def stock_out(
     """
     Remove stock from a department.
 
-    IMPORTANT:
-    quantity is always expressed in the product's BASE UNIT.
+    Quantity is always expressed in the product's BASE UNIT.
 
-    Example:
-        Detergent base unit = litre
+    Physical stock and FIFO cost layers are consumed atomically.
+    Each FIFO allocation is recorded against the resulting
+    StockMovement for audit purposes.
 
-        quantity=3
-        means 3 litres.
+    Returns:
+        {
+            "movement": StockMovement,
+            "allocations": [...],
+            "total_cost": Decimal(...),
+        }
     """
+
+    from inventory.workflows.cost_layers import consume_cost_layers
 
     if quantity <= 0:
         raise ValidationError(
@@ -897,13 +1077,31 @@ def stock_out(
             f"Insufficient stock for {product.name}."
         )
 
+    # --------------------------------------------------
+    # Determine and consume FIFO cost layers.
+    # --------------------------------------------------
+
+    cost_result = consume_cost_layers(
+        product=product,
+        department=department,
+        quantity=quantity,
+    )
+
+    # --------------------------------------------------
+    # Deduct physical stock.
+    # --------------------------------------------------
+
     stock.quantity -= quantity
 
     stock.save(
         update_fields=["quantity"]
     )
 
-    StockMovement.objects.create(
+    # --------------------------------------------------
+    # Create the physical movement.
+    # --------------------------------------------------
+
+    movement = StockMovement.objects.create(
         product=product,
         from_department=department,
         quantity=quantity,
@@ -911,6 +1109,27 @@ def stock_out(
         created_by=user,
         reference=reference or reason,
     )
+
+    # --------------------------------------------------
+    # Record exactly which FIFO layers supplied this
+    # movement.
+    # --------------------------------------------------
+
+
+    for allocation in cost_result["allocations"]:
+        StockMovementCostAllocation.objects.create(
+            movement=movement,
+            cost_layer=allocation["layer"],
+            quantity=allocation["quantity"],
+            unit_cost=allocation["unit_cost"],
+            total_cost=allocation["total_cost"],
+        )
+
+    return {
+        "movement": movement,
+        "allocations": cost_result["allocations"],
+        "total_cost": cost_result["total_cost"],
+    }
 
 @transaction.atomic
 def stock_in(

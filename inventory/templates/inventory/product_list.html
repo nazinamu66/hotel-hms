@@ -6,11 +6,14 @@
 
 <h2>Products</h2>
 
+{% if can_manage_products %}
 <div style="margin-bottom:15px;">
-<a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
-Add Product
-</a>
+    <a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
+        Add Product
+    </a>
 </div>
+{% endif %}
+
 <form method="get" style="margin-bottom:20px;">
 
 <label>Filter by type:</label>
@@ -58,8 +61,12 @@ Add Product
 <td>{{ product.get_supply_source_display }}</td>
 <td>{{ product.reorder_level }}</td>
 <td>
-<a href="{% url 'inventory:product_edit' product.id %}">Edit</a> |
-<a href="{% url 'inventory:product_delete' product.id %}">Archive</a>
+    {% if can_manage_products %}
+        <a href="{% url 'inventory:product_edit' product.id %}">Edit</a> |
+        <a href="{% url 'inventory:product_delete' product.id %}">Archive</a>
+    {% else %}
+        View only
+    {% endif %}
 </td>
 </tr>
 

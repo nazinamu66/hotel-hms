@@ -1,4 +1,8 @@
 from django.urls import path
+from inventory.views import (
+    department_request_stock,
+    department_stock_requests,
+)
 
 from . import views
 
@@ -123,5 +127,28 @@ urlpatterns = [
         "receipts/<int:receipt_id>/receive/",
         views.receive_receipt,
         name="receive_receipt",
+    ),
+
+    path(
+        "stock/",
+        views.laundry_stock,
+        name="stock",
+    ),
+
+    path(
+        "guest-laundry/<int:order_id>/materials/",
+        views.guest_laundry_materials,
+        name="guest_laundry_materials",
+    ),
+    
+    path(
+        "stock/request/",
+        department_request_stock,
+        name="laundry_request_stock",
+    ),
+    path(
+        "stock/requests/",
+        department_stock_requests,
+        name="laundry_stock_requests",
     ),
 ]

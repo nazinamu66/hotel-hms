@@ -82,7 +82,8 @@ def consume_stock(
         quantity,
     )
 
-    stock_out(
+    
+    return stock_out(
         product=product,
         department=department,
         quantity=quantity,

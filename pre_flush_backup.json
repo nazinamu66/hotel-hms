@@ -1,0 +1,4739 @@
+[
+{
+  "model": "sessions.session",
+  "pk": "78v3x0uk87xzcvplibkg5ox26a37l263",
+  "fields": {
+    "session_data": ".eJxVjLEOAiEQRP-F2hAE4cDS3m8gy-4ipwaS464y_ruSXKHdZN6beYkI21ri1nmJM4mz0OLw2yXAB9cB6A711iS2ui5zkkORO-3y2oifl939OyjQy3c9mVNiB-jT5I4KQyCVNQSwGZ0hjZQpZEtovbJknHXIkDyMQJADi_cHA9k5NQ:1x2Frx:lMQ5ybpg3Tzwx36t6hhOE6Wr0T7PqQKq1WXc7v6Juts",
+    "expire_date": "2026-09-17T22:25:17.908Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "binzp59w9bfg5jy68gxzdq5qbw81y4xt",
+  "fields": {
+    "session_data": ".eJxVjDsOwjAQBe_iGllZfwMlfc5g7a5tHEC2FCcV4u4QKQW0b2beSwTc1hK2npYwR3ERoMXpdyTkR6o7iXestya51XWZSe6KPGiXU4vpeT3cv4OCvXxrM1gH3tMIMCDjmTVlx5SNSconj5wdWB6zU6A9UbTMOVpQjpVlQCveHwxxOII:1x5XhD:z2PEDFMoHjg0gWJoy9oXgcP6peKTXiPOoHJ7S5OVnQ4",
+    "expire_date": "2026-09-27T00:03:47.268Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "em50twki1j2uybg3sg0634jwhtxc814a",
+  "fields": {
+    "session_data": ".eJxVjMsOwiAQRf-FtSFQHgWX7v0GMsyAVA0kpV0Z_11JutDtOefeFwuwbyXsPa1hIXZm0rDTL4yAj1SHoTvUW-PY6rYukY-EH7bza6P0vBzt30GBXsbao4iaMHp0k9FJ-xm9MiTAamsBtCKZnCDjJ2VnqSNQzuCkNeC-KLP3BxETOBE:1x56ho:hRFoUpawk4KhO7o8oz6gkIRZ40mppvDxZ0krcJAV8I0",
+    "expire_date": "2026-09-25T19:14:36.371Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "isrvj9djbu7i5ydzheg653c1m07afg56",
+  "fields": {
+    "session_data": ".eJxVjEEOwiAQRe_C2hAsZWBcuu8ZyMAMUjVtUtqV8e7apAvd_vfef6lI21rj1mSJI6uL6tXpd0uUHzLtgO803Wad52ldxqR3RR-06WFmeV4P9--gUqvfGn2x3kjIvQVAwALWZZN9QEjJklAuDIWc6wwjEAfqEdiKAJ4JuqDeH-BKN_0:1x4nu7:sWGMnVDyLqg_J3roFh2U1uyncBK-V06BCesEJTNFfao",
+    "expire_date": "2026-09-24T23:10:03.533Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "t6vmpe0f693ntptp2qmcxx6wjjzagyrr",
+  "fields": {
+    "session_data": ".eJxVjDsOwjAQBe_iGlms_0tJzxksf9Y4gGwpTirE3UmkFNC-mXlv5sO6VL8Omv2U2YWBYqffMYb0pLaT_Ajt3nnqbZmnyHeFH3TwW8_0uh7u30ENo261kdZqpyGhNq4YAKToJIKUoIUihcqSNYDyjEqiw5hTKFnApoZSSLDPF72vNt0:1x2Ftd:uGWGnuEegHjjMnxMIrevSOTFY6pWlNXY-GD9xQ93PoI",
+    "expire_date": "2026-09-17T22:27:01.898Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "w00yw7q0th78vv2d0jzsvejtqgeiye7m",
+  "fields": {
+    "session_data": ".eJxVjMsOwiAQRf-FtSFQHgWX7v0GMsyAVA0kpV0Z_11JutDtOefeFwuwbyXsPa1hIXZm0rDTL4yAj1SHoTvUW-PY6rYukY-EH7bza6P0vBzt30GBXsbao4iaMHp0k9FJ-xm9MiTAamsBtCKZnCDjJ2VnqSNQzuCkNeC-KLP3BxETOBE:1x4nhX:5s5BsrN4oTgGXqlXhjjn9NiqgoPPQB7gIMnPjy86leU",
+    "expire_date": "2026-09-24T22:57:03.327Z"
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$870000$3GjALg8KrVHYmQgR0MMtJo$MC5BINQGJBi8dWFNKliClAmsn2O6phDWLjWRRm7LqPY=",
+    "last_login": "2026-09-12T23:57:04.259Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "nazinamu66@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-08-20T20:49:11.937Z",
+    "role": "ADMIN",
+    "organization": 1,
+    "hotel": null,
+    "department": null,
+    "is_department_head": false,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$870000$GocBjsz5D1stoDe8teR1V4$j4q59geeRlvzxWZNJEgXcjrzpr0yD3LiPbvVCCPKcJU=",
+    "last_login": "2026-09-08T20:52:07.944Z",
+    "is_superuser": false,
+    "username": "hk_test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-21T21:46:38.673Z",
+    "role": "HOUSEKEEPING",
+    "organization": 1,
+    "hotel": 1,
+    "department": 2,
+    "is_department_head": false,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 3,
+  "fields": {
+    "password": "pbkdf2_sha256$870000$8RMwS9xaZ5P4CZ0ktahcXu$vvakf0zFYQzWBGpWPfGH7ETgY/tWWsanMi4YDrTjyxQ=",
+    "last_login": "2026-09-12T23:56:18.788Z",
+    "is_superuser": false,
+    "username": "hk_head_test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-21T21:49:56.151Z",
+    "role": "HOUSEKEEPING",
+    "organization": 1,
+    "hotel": 1,
+    "department": 2,
+    "is_department_head": true,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 4,
+  "fields": {
+    "password": "pbkdf2_sha256$870000$OMdhetSQMhnmOl0fbCTBSa$/c5njoBTCOEzqkuPoe0yBQK1NCk+acpzNRznT7+ZA3Q=",
+    "last_login": "2026-09-12T23:59:01.924Z",
+    "is_superuser": false,
+    "username": "manager_test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-21T21:55:36.830Z",
+    "role": "MANAGER",
+    "organization": 1,
+    "hotel": 1,
+    "department": null,
+    "is_department_head": false,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 5,
+  "fields": {
+    "password": "pbkdf2_sha256$870000$FlOh6SZEqYcVrjbNqazAqR$bUrbeCck0lsYrirNN/WdWGGPxH5ja7KEu0zD9BP07xg=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "gm_test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-21T21:57:35.671Z",
+    "role": "GENERAL_MANAGER",
+    "organization": 1,
+    "hotel": null,
+    "department": null,
+    "is_department_head": false,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": [
+      1
+    ]
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 6,
+  "fields": {
+    "password": "pbkdf2_sha256$870000$wd3c7mACWr4Ky8x5lenMK8$pfMZYn9J/08Nxz+n7bu2tR0rfi5spxdcplNwDt+3wAA=",
+    "last_login": "2026-09-13T00:01:29.267Z",
+    "is_superuser": false,
+    "username": "director_test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-21T22:23:21.888Z",
+    "role": "DIRECTOR",
+    "organization": 1,
+    "hotel": null,
+    "department": null,
+    "is_department_head": false,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 7,
+  "fields": {
+    "password": "",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "kitchen_test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-24T22:01:40.084Z",
+    "role": "KITCHEN",
+    "organization": null,
+    "hotel": 1,
+    "department": 4,
+    "is_department_head": false,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 8,
+  "fields": {
+    "password": "",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "store_test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-24T22:01:40.125Z",
+    "role": "STORE",
+    "organization": null,
+    "hotel": 1,
+    "department": 5,
+    "is_department_head": false,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 9,
+  "fields": {
+    "password": "",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "accountant_test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-24T22:01:40.166Z",
+    "role": "ACCOUNTANT",
+    "organization": null,
+    "hotel": 1,
+    "department": 8,
+    "is_department_head": false,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 10,
+  "fields": {
+    "password": "pbkdf2_sha256$870000$QoESX4LxctSCnpoitWHegd$1jjUuBbDxBiX9zRaDdMzZDxOTRYDCVC/V4p8kMQdzRU=",
+    "last_login": "2026-08-27T11:56:34.681Z",
+    "is_superuser": false,
+    "username": "Accountant",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-24T22:35:51.297Z",
+    "role": "ACCOUNTANT",
+    "organization": 1,
+    "hotel": 1,
+    "department": null,
+    "is_department_head": false,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 11,
+  "fields": {
+    "password": "pbkdf2_sha256$870000$BOG5jZ1B8vOO3gok8XYWiD$1pCrSxLxXfebxjde5PImy7WVy3QT2QDnhWIIPgLet6Q=",
+    "last_login": "2026-08-31T18:20:35.736Z",
+    "is_superuser": false,
+    "username": "maintenance_test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-25T13:29:06.358Z",
+    "role": "MAINTENANCE",
+    "organization": 1,
+    "hotel": 1,
+    "department": 11,
+    "is_department_head": true,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 12,
+  "fields": {
+    "password": "pbkdf2_sha256$870000$reEw3lqZHFr7R5BQCTD1qv$eNftS/ZU5dEWoFPolQeUoBsm75wiBd8o5m9h/xvvNlE=",
+    "last_login": "2026-09-11T20:48:37.188Z",
+    "is_superuser": false,
+    "username": "frontdesk_test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-25T22:53:50.637Z",
+    "role": "FRONTDESK",
+    "organization": 1,
+    "hotel": 1,
+    "department": 1,
+    "is_department_head": false,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 13,
+  "fields": {
+    "password": "pbkdf2_sha256$870000$jsPuwXjDKYGokjfvc5O2Rr$vSFHAqeSk9VXUwNToeDAX0nvuGwJbTKYMydxMEPgHKQ=",
+    "last_login": "2026-09-13T00:03:47.265Z",
+    "is_superuser": false,
+    "username": "Maiunguwa",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-26T18:53:35.459Z",
+    "role": "STORE",
+    "organization": 1,
+    "hotel": 1,
+    "department": 5,
+    "is_department_head": false,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 14,
+  "fields": {
+    "password": "pbkdf2_sha256$870000$OTZo288EE4BpcBODEcqjkt$Uo3YS+/eJCliRbmM79YugDgN71ZMpy2g9r4jionCZCk=",
+    "last_login": "2026-09-03T22:27:01.894Z",
+    "is_superuser": false,
+    "username": "laundry_test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-09-03T22:26:51.423Z",
+    "role": "LAUNDRY",
+    "organization": null,
+    "hotel": 1,
+    "department": 6,
+    "is_department_head": false,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 15,
+  "fields": {
+    "password": "pbkdf2_sha256$870000$n9coaad11ICNmZLpbcxYAF$PMvX+L9BI2uhrGWvIdI8CC1+08ljpf6gP2zt4H7QpUw=",
+    "last_login": "2026-09-12T22:59:50.165Z",
+    "is_superuser": false,
+    "username": "Shuaibu",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-09-03T22:31:39.954Z",
+    "role": "LAUNDRY",
+    "organization": 1,
+    "hotel": 1,
+    "department": 6,
+    "is_department_head": true,
+    "phone": null,
+    "groups": [],
+    "user_permissions": [],
+    "assigned_hotels": []
+  }
+},
+{
+  "model": "inventory.organization",
+  "pk": 1,
+  "fields": {
+    "name": "CITY CENTER HOTELS LTD",
+    "slug": "city-center-hotels-ltd",
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.607Z"
+  }
+},
+{
+  "model": "inventory.hotel",
+  "pk": 1,
+  "fields": {
+    "organization": 1,
+    "name": "CITY CENTER HOTELS KANO",
+    "slug": "city-center-hotels-kano",
+    "location": "FARM CENTER",
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.608Z"
+  }
+},
+{
+  "model": "inventory.hotelfeature",
+  "pk": 1,
+  "fields": {
+    "hotel": 1,
+    "feature": "RESTAURANT",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.hotelfeature",
+  "pk": 2,
+  "fields": {
+    "hotel": 1,
+    "feature": "KITCHEN",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.hotelfeature",
+  "pk": 3,
+  "fields": {
+    "hotel": 1,
+    "feature": "STORE",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.hotelfeature",
+  "pk": 4,
+  "fields": {
+    "hotel": 1,
+    "feature": "HOUSEKEEPING",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.hotelfeature",
+  "pk": 5,
+  "fields": {
+    "hotel": 1,
+    "feature": "SPA",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.hotelfeature",
+  "pk": 6,
+  "fields": {
+    "hotel": 1,
+    "feature": "WIFI",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 1,
+  "fields": {
+    "hotel": 1,
+    "code": "FD",
+    "name": "Front Desk",
+    "slug": "",
+    "department_type": "FRONTDESK",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 2,
+  "fields": {
+    "hotel": 1,
+    "code": "HK",
+    "name": "Housekeeping",
+    "slug": "",
+    "department_type": "HOUSEKEEPING",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 3,
+  "fields": {
+    "hotel": 1,
+    "code": "RST",
+    "name": "Restaurant",
+    "slug": "",
+    "department_type": "RESTAURANT",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 4,
+  "fields": {
+    "hotel": 1,
+    "code": "KIT",
+    "name": "Kitchen",
+    "slug": "",
+    "department_type": "KITCHEN",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 5,
+  "fields": {
+    "hotel": 1,
+    "code": "STR",
+    "name": "Store",
+    "slug": "",
+    "department_type": "STORE",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 6,
+  "fields": {
+    "hotel": 1,
+    "code": "LDY",
+    "name": "Laundry",
+    "slug": "",
+    "department_type": "LAUNDRY",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 7,
+  "fields": {
+    "hotel": 1,
+    "code": "GYM",
+    "name": "Gym",
+    "slug": "",
+    "department_type": "GYM",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 8,
+  "fields": {
+    "hotel": 1,
+    "code": "ACC",
+    "name": "Accounting",
+    "slug": "",
+    "department_type": "ACCOUNTING",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 9,
+  "fields": {
+    "hotel": 1,
+    "code": "ADM",
+    "name": "Administration",
+    "slug": "",
+    "department_type": "ADMINISTRATION",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 10,
+  "fields": {
+    "hotel": 1,
+    "code": "HR",
+    "name": "Human Resources",
+    "slug": "",
+    "department_type": "HUMAN_RESOURCES",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 11,
+  "fields": {
+    "hotel": 1,
+    "code": "MNT",
+    "name": "Maintenance",
+    "slug": "",
+    "department_type": "MAINTENANCE",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 12,
+  "fields": {
+    "hotel": 1,
+    "code": "SEC",
+    "name": "Security",
+    "slug": "",
+    "department_type": "SECURITY",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.department",
+  "pk": 13,
+  "fields": {
+    "hotel": 1,
+    "code": "IT",
+    "name": "Information Technology",
+    "slug": "",
+    "department_type": "IT",
+    "is_active": true
+  }
+},
+{
+  "model": "inventory.supplier",
+  "pk": 1,
+  "fields": {
+    "hotel": 1,
+    "name": "Umaima Balarabe Ibrahim",
+    "phone": "08031165185",
+    "email": "",
+    "address": "No 20 Beirut Road Kano",
+    "created_at": "2026-08-25T12:22:07.863Z"
+  }
+},
+{
+  "model": "inventory.product",
+  "pk": 3,
+  "fields": {
+    "name": "Notification Test Detergent",
+    "sku": "NOTIFY-TEST-DET-001",
+    "barcode": "notify-test-det-001",
+    "hotel": 1,
+    "product_type": "HOUSEKEEPING",
+    "usage_type": "INTERNAL",
+    "supply_source": "STORE",
+    "base_unit": "litre",
+    "purchase_unit": "carton",
+    "purchase_cost": "10000.00",
+    "unit_multiplier": 20,
+    "price": "0.00",
+    "cost_price": "500.00",
+    "reorder_level": 5,
+    "is_active": true,
+    "created_at": "2026-08-24T22:05:15.229Z",
+    "departments": [
+      2,
+      6,
+      11,
+      5
+    ]
+  }
+},
+{
+  "model": "inventory.product",
+  "pk": 4,
+  "fields": {
+    "name": "Notification Test Tomato",
+    "sku": "NOTIFY-TEST-TOMATO-001",
+    "barcode": "notify-test-tomato-001",
+    "hotel": 1,
+    "product_type": "RAW",
+    "usage_type": "CONSUMABLE",
+    "supply_source": "STORE",
+    "base_unit": "kg",
+    "purchase_unit": "kg",
+    "purchase_cost": "1000.00",
+    "unit_multiplier": 1,
+    "price": "0.00",
+    "cost_price": "1000.00",
+    "reorder_level": 0,
+    "is_active": true,
+    "created_at": "2026-08-25T12:17:24.940Z",
+    "departments": []
+  }
+},
+{
+  "model": "inventory.product",
+  "pk": 5,
+  "fields": {
+    "name": "Ac Capacitor 35Uf",
+    "sku": "MNT-AC-CAP-35",
+    "barcode": "mnt-ac-cap-35",
+    "hotel": 1,
+    "product_type": "HOUSEKEEPING",
+    "usage_type": "INTERNAL",
+    "supply_source": "STORE",
+    "base_unit": "pc",
+    "purchase_unit": "box",
+    "purchase_cost": "15000.00",
+    "unit_multiplier": 10,
+    "price": "0.00",
+    "cost_price": "1500.00",
+    "reorder_level": 3,
+    "is_active": true,
+    "created_at": "2026-08-28T23:17:17.881Z",
+    "departments": [
+      11
+    ]
+  }
+},
+{
+  "model": "inventory.product",
+  "pk": 6,
+  "fields": {
+    "name": "Bedsheet",
+    "sku": "LIN-BED-001",
+    "barcode": "lin-bed-001",
+    "hotel": 1,
+    "product_type": "HOUSEKEEPING",
+    "usage_type": "ASSET",
+    "supply_source": "STORE",
+    "base_unit": "pcs",
+    "purchase_unit": "pcs",
+    "purchase_cost": "0.00",
+    "unit_multiplier": 1,
+    "price": "0.00",
+    "cost_price": "0.00",
+    "reorder_level": 0,
+    "is_active": true,
+    "created_at": "2026-08-31T18:26:53.364Z",
+    "departments": []
+  }
+},
+{
+  "model": "inventory.stock",
+  "pk": 2,
+  "fields": {
+    "product": 3,
+    "department": 11,
+    "quantity": "1388.00",
+    "reorder_level": 5
+  }
+},
+{
+  "model": "inventory.stock",
+  "pk": 3,
+  "fields": {
+    "product": 3,
+    "department": 5,
+    "quantity": "1095.00",
+    "reorder_level": 5
+  }
+},
+{
+  "model": "inventory.stock",
+  "pk": 4,
+  "fields": {
+    "product": 5,
+    "department": 11,
+    "quantity": "50.00",
+    "reorder_level": 5
+  }
+},
+{
+  "model": "inventory.stock",
+  "pk": 5,
+  "fields": {
+    "product": 3,
+    "department": 2,
+    "quantity": "189.90",
+    "reorder_level": 5
+  }
+},
+{
+  "model": "inventory.stock",
+  "pk": 6,
+  "fields": {
+    "product": 3,
+    "department": 6,
+    "quantity": "13.00",
+    "reorder_level": 5
+  }
+},
+{
+  "model": "inventory.stockcostlayer",
+  "pk": 1,
+  "fields": {
+    "product": 3,
+    "department": 5,
+    "purchase_item": 11,
+    "quantity_received": "20.00",
+    "quantity_remaining": "20.00",
+    "unit_cost": "600.0000",
+    "is_opening_balance": false,
+    "received_at": "2026-09-13T00:04:00.853Z",
+    "created_at": "2026-09-13T00:04:00.854Z"
+  }
+},
+{
+  "model": "inventory.purchaseorder",
+  "pk": 1,
+  "fields": {
+    "supplier": null,
+    "department": 5,
+    "status": "SUBMITTED",
+    "payment_status": "UNPAID",
+    "created_by": 4,
+    "approved_by": null,
+    "paid_by": null,
+    "created_at": "2026-08-24T22:09:25.264Z",
+    "approved_at": null,
+    "paid_at": null,
+    "received_at": null,
+    "payment_reference": ""
+  }
+},
+{
+  "model": "inventory.purchaseorder",
+  "pk": 2,
+  "fields": {
+    "supplier": 1,
+    "department": 5,
+    "status": "PAID",
+    "payment_status": "UNPAID",
+    "created_by": 4,
+    "approved_by": null,
+    "paid_by": 10,
+    "created_at": "2026-08-26T18:54:23.104Z",
+    "approved_at": null,
+    "paid_at": "2026-08-26T19:57:35.147Z",
+    "received_at": null,
+    "payment_reference": "TEST-PO2-PAY"
+  }
+},
+{
+  "model": "inventory.purchaseorder",
+  "pk": 3,
+  "fields": {
+    "supplier": 1,
+    "department": 5,
+    "status": "RECEIVED",
+    "payment_status": "UNPAID",
+    "created_by": 4,
+    "approved_by": 6,
+    "paid_by": null,
+    "created_at": "2026-08-27T10:53:57.728Z",
+    "approved_at": "2026-08-27T11:53:30.939Z",
+    "paid_at": null,
+    "received_at": "2026-08-27T11:54:45.737Z",
+    "payment_reference": ""
+  }
+},
+{
+  "model": "inventory.purchaseorder",
+  "pk": 4,
+  "fields": {
+    "supplier": 1,
+    "department": 11,
+    "status": "RECEIVED",
+    "payment_status": "UNPAID",
+    "created_by": 4,
+    "approved_by": 6,
+    "paid_by": null,
+    "created_at": "2026-08-27T17:18:15.086Z",
+    "approved_at": "2026-08-27T17:20:18.503Z",
+    "paid_at": null,
+    "received_at": "2026-08-27T17:22:22.361Z",
+    "payment_reference": ""
+  }
+},
+{
+  "model": "inventory.purchaseorder",
+  "pk": 5,
+  "fields": {
+    "supplier": 1,
+    "department": 5,
+    "status": "RECEIVED",
+    "payment_status": "UNPAID",
+    "created_by": 4,
+    "approved_by": 6,
+    "paid_by": null,
+    "created_at": "2026-08-27T21:48:50.594Z",
+    "approved_at": "2026-08-27T21:50:19.989Z",
+    "paid_at": null,
+    "received_at": "2026-08-27T21:51:33.421Z",
+    "payment_reference": ""
+  }
+},
+{
+  "model": "inventory.purchaseorder",
+  "pk": 6,
+  "fields": {
+    "supplier": 1,
+    "department": 11,
+    "status": "RECEIVED",
+    "payment_status": "UNPAID",
+    "created_by": 4,
+    "approved_by": 6,
+    "paid_by": null,
+    "created_at": "2026-08-27T22:01:40.381Z",
+    "approved_at": "2026-08-27T22:03:31.308Z",
+    "paid_at": null,
+    "received_at": "2026-08-27T22:06:06.981Z",
+    "payment_reference": ""
+  }
+},
+{
+  "model": "inventory.purchaseorder",
+  "pk": 7,
+  "fields": {
+    "supplier": 1,
+    "department": 11,
+    "status": "RECEIVED",
+    "payment_status": "UNPAID",
+    "created_by": 4,
+    "approved_by": 6,
+    "paid_by": null,
+    "created_at": "2026-08-29T11:58:27.829Z",
+    "approved_at": "2026-08-29T12:06:03.437Z",
+    "paid_at": null,
+    "received_at": "2026-08-29T12:07:06.797Z",
+    "payment_reference": ""
+  }
+},
+{
+  "model": "inventory.purchaseorder",
+  "pk": 8,
+  "fields": {
+    "supplier": 1,
+    "department": 2,
+    "status": "RECEIVED",
+    "payment_status": "UNPAID",
+    "created_by": 4,
+    "approved_by": 6,
+    "paid_by": null,
+    "created_at": "2026-08-29T17:21:53.165Z",
+    "approved_at": "2026-08-29T17:22:45.975Z",
+    "paid_at": null,
+    "received_at": "2026-08-29T21:12:50.648Z",
+    "payment_reference": ""
+  }
+},
+{
+  "model": "inventory.purchaseorder",
+  "pk": 9,
+  "fields": {
+    "supplier": 1,
+    "department": 2,
+    "status": "RECEIVED",
+    "payment_status": "UNPAID",
+    "created_by": 4,
+    "approved_by": 6,
+    "paid_by": null,
+    "created_at": "2026-08-31T11:44:49.666Z",
+    "approved_at": "2026-08-31T11:46:40.961Z",
+    "paid_at": null,
+    "received_at": "2026-08-31T11:46:56.700Z",
+    "payment_reference": ""
+  }
+},
+{
+  "model": "inventory.purchaseorder",
+  "pk": 10,
+  "fields": {
+    "supplier": null,
+    "department": 6,
+    "status": "DRAFT",
+    "payment_status": "UNPAID",
+    "created_by": 4,
+    "approved_by": null,
+    "paid_by": null,
+    "created_at": "2026-09-11T23:28:26.099Z",
+    "approved_at": null,
+    "paid_at": null,
+    "received_at": null,
+    "payment_reference": ""
+  }
+},
+{
+  "model": "inventory.purchaseorder",
+  "pk": 11,
+  "fields": {
+    "supplier": 1,
+    "department": 6,
+    "status": "SUBMITTED",
+    "payment_status": "UNPAID",
+    "created_by": 4,
+    "approved_by": null,
+    "paid_by": null,
+    "created_at": "2026-09-11T23:28:37.774Z",
+    "approved_at": null,
+    "paid_at": null,
+    "received_at": null,
+    "payment_reference": ""
+  }
+},
+{
+  "model": "inventory.purchaseorder",
+  "pk": 12,
+  "fields": {
+    "supplier": 1,
+    "department": 5,
+    "status": "RECEIVED",
+    "payment_status": "UNPAID",
+    "created_by": 4,
+    "approved_by": 6,
+    "paid_by": null,
+    "created_at": "2026-09-12T23:59:35.817Z",
+    "approved_at": "2026-09-13T00:01:44.548Z",
+    "paid_at": null,
+    "received_at": "2026-09-13T00:04:00.855Z",
+    "payment_reference": ""
+  }
+},
+{
+  "model": "inventory.purchaseitem",
+  "pk": 1,
+  "fields": {
+    "purchase_order": 2,
+    "product": 3,
+    "purchase_quantity": 100,
+    "unit_cost": "500.00"
+  }
+},
+{
+  "model": "inventory.purchaseitem",
+  "pk": 2,
+  "fields": {
+    "purchase_order": 3,
+    "product": 3,
+    "purchase_quantity": 50,
+    "unit_cost": "500.00"
+  }
+},
+{
+  "model": "inventory.purchaseitem",
+  "pk": 3,
+  "fields": {
+    "purchase_order": 4,
+    "product": 3,
+    "purchase_quantity": 50,
+    "unit_cost": "0.00"
+  }
+},
+{
+  "model": "inventory.purchaseitem",
+  "pk": 4,
+  "fields": {
+    "purchase_order": 5,
+    "product": 3,
+    "purchase_quantity": 5,
+    "unit_cost": "500.00"
+  }
+},
+{
+  "model": "inventory.purchaseitem",
+  "pk": 5,
+  "fields": {
+    "purchase_order": 6,
+    "product": 3,
+    "purchase_quantity": 10,
+    "unit_cost": "500.00"
+  }
+},
+{
+  "model": "inventory.purchaseitem",
+  "pk": 6,
+  "fields": {
+    "purchase_order": 7,
+    "product": 5,
+    "purchase_quantity": 5,
+    "unit_cost": "1000.00"
+  }
+},
+{
+  "model": "inventory.purchaseitem",
+  "pk": 7,
+  "fields": {
+    "purchase_order": 8,
+    "product": 3,
+    "purchase_quantity": 2,
+    "unit_cost": "499.86"
+  }
+},
+{
+  "model": "inventory.purchaseitem",
+  "pk": 8,
+  "fields": {
+    "purchase_order": 9,
+    "product": 3,
+    "purchase_quantity": 7,
+    "unit_cost": "500.00"
+  }
+},
+{
+  "model": "inventory.purchaseitem",
+  "pk": 9,
+  "fields": {
+    "purchase_order": 10,
+    "product": 3,
+    "purchase_quantity": 1,
+    "unit_cost": "0.00"
+  }
+},
+{
+  "model": "inventory.purchaseitem",
+  "pk": 10,
+  "fields": {
+    "purchase_order": 11,
+    "product": 3,
+    "purchase_quantity": 1,
+    "unit_cost": "0.00"
+  }
+},
+{
+  "model": "inventory.purchaseitem",
+  "pk": 11,
+  "fields": {
+    "purchase_order": 12,
+    "product": 3,
+    "purchase_quantity": 1,
+    "unit_cost": "12000.00"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 6,
+  "fields": {
+    "product": 3,
+    "from_department": null,
+    "to_department": 11,
+    "quantity": "200.00",
+    "movement_type": "IN",
+    "created_by": 11,
+    "created_at": "2026-08-26T12:25:14.879Z",
+    "reference": "TEST-MAINTENANCE-STOCK"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 7,
+  "fields": {
+    "product": 3,
+    "from_department": 11,
+    "to_department": null,
+    "quantity": "2.00",
+    "movement_type": "OUT",
+    "created_by": 11,
+    "created_at": "2026-08-26T12:27:02.491Z",
+    "reference": "MAINT-7"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 8,
+  "fields": {
+    "product": 3,
+    "from_department": 11,
+    "to_department": null,
+    "quantity": "4.00",
+    "movement_type": "OUT",
+    "created_by": 11,
+    "created_at": "2026-08-26T12:48:24.057Z",
+    "reference": "MAINT-7"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 9,
+  "fields": {
+    "product": 3,
+    "from_department": 11,
+    "to_department": null,
+    "quantity": "4.00",
+    "movement_type": "OUT",
+    "created_by": 11,
+    "created_at": "2026-08-26T16:22:47.586Z",
+    "reference": "MAINT-8"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 10,
+  "fields": {
+    "product": 3,
+    "from_department": null,
+    "to_department": 5,
+    "quantity": "1000.00",
+    "movement_type": "IN",
+    "created_by": 13,
+    "created_at": "2026-08-27T11:54:45.735Z",
+    "reference": "PO-3"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 11,
+  "fields": {
+    "product": 3,
+    "from_department": null,
+    "to_department": 11,
+    "quantity": "1000.00",
+    "movement_type": "IN",
+    "created_by": 11,
+    "created_at": "2026-08-27T17:22:22.360Z",
+    "reference": "PO-4"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 12,
+  "fields": {
+    "product": 3,
+    "from_department": null,
+    "to_department": 5,
+    "quantity": "100.00",
+    "movement_type": "IN",
+    "created_by": 13,
+    "created_at": "2026-08-27T21:51:33.419Z",
+    "reference": "PO-5"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 13,
+  "fields": {
+    "product": 3,
+    "from_department": null,
+    "to_department": 11,
+    "quantity": "200.00",
+    "movement_type": "IN",
+    "created_by": 11,
+    "created_at": "2026-08-27T22:06:06.980Z",
+    "reference": "PO-6"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 14,
+  "fields": {
+    "product": 3,
+    "from_department": 11,
+    "to_department": null,
+    "quantity": "2.00",
+    "movement_type": "OUT",
+    "created_by": 11,
+    "created_at": "2026-08-28T11:52:09.071Z",
+    "reference": "MAINT-8"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 15,
+  "fields": {
+    "product": 5,
+    "from_department": null,
+    "to_department": 11,
+    "quantity": "50.00",
+    "movement_type": "IN",
+    "created_by": 11,
+    "created_at": "2026-08-29T12:07:06.795Z",
+    "reference": "PO-7"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 16,
+  "fields": {
+    "product": 3,
+    "from_department": null,
+    "to_department": 2,
+    "quantity": "40.00",
+    "movement_type": "IN",
+    "created_by": 2,
+    "created_at": "2026-08-29T21:12:50.646Z",
+    "reference": "PO-8"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 17,
+  "fields": {
+    "product": 3,
+    "from_department": 2,
+    "to_department": null,
+    "quantity": "0.00",
+    "movement_type": "OUT",
+    "created_by": 2,
+    "created_at": "2026-08-29T21:13:18.501Z",
+    "reference": "CLEAN-2"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 18,
+  "fields": {
+    "product": 3,
+    "from_department": 2,
+    "to_department": null,
+    "quantity": "0.60",
+    "movement_type": "OUT",
+    "created_by": 2,
+    "created_at": "2026-08-29T23:03:25.031Z",
+    "reference": "CLEAN-2"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 19,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": "2.00",
+    "movement_type": "TRANSFER",
+    "created_by": 13,
+    "created_at": "2026-08-30T14:14:42.806Z",
+    "reference": "TRANSFER-1"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 20,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": "1.00",
+    "movement_type": "TRANSFER",
+    "created_by": 13,
+    "created_at": "2026-08-30T14:43:43.057Z",
+    "reference": "TRANSFER-2"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 21,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": "1.00",
+    "movement_type": "TRANSFER",
+    "created_by": 13,
+    "created_at": "2026-08-30T23:11:00.085Z",
+    "reference": "TRANSFER-3"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 22,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": "2.00",
+    "movement_type": "TRANSFER",
+    "created_by": 13,
+    "created_at": "2026-08-30T23:15:38.859Z",
+    "reference": "TRANSFER-4"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 23,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": "2.00",
+    "movement_type": "TRANSFER",
+    "created_by": 13,
+    "created_at": "2026-08-30T23:16:23.952Z",
+    "reference": "TRANSFER-5"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 24,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": "3.00",
+    "movement_type": "TRANSFER",
+    "created_by": 13,
+    "created_at": "2026-08-31T11:43:58.476Z",
+    "reference": "TRANSFER-6"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 25,
+  "fields": {
+    "product": 3,
+    "from_department": null,
+    "to_department": 2,
+    "quantity": "140.00",
+    "movement_type": "IN",
+    "created_by": 3,
+    "created_at": "2026-08-31T11:46:56.699Z",
+    "reference": "PO-9"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 26,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": "1.00",
+    "movement_type": "TRANSFER",
+    "created_by": 13,
+    "created_at": "2026-08-31T14:26:36.621Z",
+    "reference": "TRANSFER-7"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 27,
+  "fields": {
+    "product": 3,
+    "from_department": 2,
+    "to_department": null,
+    "quantity": "1.00",
+    "movement_type": "OUT",
+    "created_by": 2,
+    "created_at": "2026-09-04T17:04:17.844Z",
+    "reference": "CLEAN-4"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 28,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 6,
+    "quantity": "10.00",
+    "movement_type": "TRANSFER",
+    "created_by": 13,
+    "created_at": "2026-09-11T23:30:18.304Z",
+    "reference": "TRANSFER-8"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 29,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 6,
+    "quantity": "1.00",
+    "movement_type": "TRANSFER",
+    "created_by": 13,
+    "created_at": "2026-09-12T12:30:06.909Z",
+    "reference": "TRANSFER-9"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 30,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 6,
+    "quantity": "2.00",
+    "movement_type": "TRANSFER",
+    "created_by": 13,
+    "created_at": "2026-09-12T22:47:41.478Z",
+    "reference": "TRANSFER-10"
+  }
+},
+{
+  "model": "inventory.stockmovement",
+  "pk": 31,
+  "fields": {
+    "product": 3,
+    "from_department": null,
+    "to_department": 5,
+    "quantity": "20.00",
+    "movement_type": "IN",
+    "created_by": 13,
+    "created_at": "2026-09-13T00:04:00.852Z",
+    "reference": "PO-12"
+  }
+},
+{
+  "model": "inventory.stocktransfer",
+  "pk": 1,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": 2,
+    "created_by": 13,
+    "created_at": "2026-08-30T14:14:42.803Z",
+    "note": "Fulfillment of stock request #10",
+    "ingredient_request_item": null,
+    "stock_request": 10
+  }
+},
+{
+  "model": "inventory.stocktransfer",
+  "pk": 2,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": 1,
+    "created_by": 13,
+    "created_at": "2026-08-30T14:43:43.052Z",
+    "note": "Fulfillment of stock request #10",
+    "ingredient_request_item": null,
+    "stock_request": 10
+  }
+},
+{
+  "model": "inventory.stocktransfer",
+  "pk": 3,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": 1,
+    "created_by": 13,
+    "created_at": "2026-08-30T23:11:00.081Z",
+    "note": "Fulfillment of stock request #9",
+    "ingredient_request_item": null,
+    "stock_request": 9
+  }
+},
+{
+  "model": "inventory.stocktransfer",
+  "pk": 4,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": 2,
+    "created_by": 13,
+    "created_at": "2026-08-30T23:15:38.856Z",
+    "note": "Fulfillment of stock request #13",
+    "ingredient_request_item": null,
+    "stock_request": 13
+  }
+},
+{
+  "model": "inventory.stocktransfer",
+  "pk": 5,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": 2,
+    "created_by": 13,
+    "created_at": "2026-08-30T23:16:23.948Z",
+    "note": "Fulfillment of stock request #13",
+    "ingredient_request_item": null,
+    "stock_request": 13
+  }
+},
+{
+  "model": "inventory.stocktransfer",
+  "pk": 6,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": 3,
+    "created_by": 13,
+    "created_at": "2026-08-31T11:43:58.472Z",
+    "note": "Fulfillment of stock request #14",
+    "ingredient_request_item": null,
+    "stock_request": 14
+  }
+},
+{
+  "model": "inventory.stocktransfer",
+  "pk": 7,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 2,
+    "quantity": 1,
+    "created_by": 13,
+    "created_at": "2026-08-31T14:26:36.616Z",
+    "note": "Fulfillment of stock request #16",
+    "ingredient_request_item": null,
+    "stock_request": 16
+  }
+},
+{
+  "model": "inventory.stocktransfer",
+  "pk": 8,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 6,
+    "quantity": 10,
+    "created_by": 13,
+    "created_at": "2026-09-11T23:30:18.299Z",
+    "note": "",
+    "ingredient_request_item": null,
+    "stock_request": null
+  }
+},
+{
+  "model": "inventory.stocktransfer",
+  "pk": 9,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 6,
+    "quantity": 1,
+    "created_by": 13,
+    "created_at": "2026-09-12T12:30:06.905Z",
+    "note": "Fulfillment of stock request #18",
+    "ingredient_request_item": null,
+    "stock_request": 18
+  }
+},
+{
+  "model": "inventory.stocktransfer",
+  "pk": 10,
+  "fields": {
+    "product": 3,
+    "from_department": 5,
+    "to_department": 6,
+    "quantity": 2,
+    "created_by": 13,
+    "created_at": "2026-09-12T22:47:41.474Z",
+    "note": "Fulfillment of stock request #19",
+    "ingredient_request_item": null,
+    "stock_request": 19
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 1,
+  "fields": {
+    "product": 3,
+    "department": 5,
+    "requested_quantity": 5,
+    "fulfillment_type": "STORE",
+    "requested_by": 4,
+    "status": "PENDING",
+    "manager_note": "",
+    "created_at": "2026-08-24T22:05:15.246Z",
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "purchase_order": null
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 2,
+  "fields": {
+    "product": 3,
+    "department": 5,
+    "requested_quantity": 100,
+    "fulfillment_type": "STORE",
+    "requested_by": 13,
+    "status": "APPROVED",
+    "manager_note": "",
+    "created_at": "2026-08-26T18:53:58.242Z",
+    "reviewed_at": "2026-08-26T18:54:23.106Z",
+    "reviewed_by": 4,
+    "purchase_order": 2
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 3,
+  "fields": {
+    "product": 3,
+    "department": 5,
+    "requested_quantity": 50,
+    "fulfillment_type": "STORE",
+    "requested_by": 13,
+    "status": "FULFILLED",
+    "manager_note": "",
+    "created_at": "2026-08-27T10:53:10.513Z",
+    "reviewed_at": "2026-08-27T10:53:57.732Z",
+    "reviewed_by": 4,
+    "purchase_order": 3
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 4,
+  "fields": {
+    "product": 3,
+    "department": 11,
+    "requested_quantity": 50,
+    "fulfillment_type": "STORE",
+    "requested_by": 11,
+    "status": "APPROVED",
+    "manager_note": "",
+    "created_at": "2026-08-27T16:31:38.755Z",
+    "reviewed_at": "2026-08-27T17:18:15.089Z",
+    "reviewed_by": 4,
+    "purchase_order": 4
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 5,
+  "fields": {
+    "product": 3,
+    "department": 5,
+    "requested_quantity": 5,
+    "fulfillment_type": "STORE",
+    "requested_by": 13,
+    "status": "APPROVED",
+    "manager_note": "",
+    "created_at": "2026-08-27T21:47:21.932Z",
+    "reviewed_at": "2026-08-27T21:48:50.596Z",
+    "reviewed_by": 4,
+    "purchase_order": 5
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 6,
+  "fields": {
+    "product": 3,
+    "department": 11,
+    "requested_quantity": 10,
+    "fulfillment_type": "STORE",
+    "requested_by": 11,
+    "status": "APPROVED",
+    "manager_note": "",
+    "created_at": "2026-08-27T22:00:44.735Z",
+    "reviewed_at": "2026-08-27T22:01:40.383Z",
+    "reviewed_by": 4,
+    "purchase_order": 6
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 7,
+  "fields": {
+    "product": 5,
+    "department": 11,
+    "requested_quantity": 5,
+    "fulfillment_type": "STORE",
+    "requested_by": 11,
+    "status": "APPROVED",
+    "manager_note": "",
+    "created_at": "2026-08-29T11:58:04.207Z",
+    "reviewed_at": "2026-08-29T11:58:27.833Z",
+    "reviewed_by": 4,
+    "purchase_order": 7
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 8,
+  "fields": {
+    "product": 3,
+    "department": 2,
+    "requested_quantity": 2,
+    "fulfillment_type": "STORE",
+    "requested_by": 3,
+    "status": "APPROVED",
+    "manager_note": "",
+    "created_at": "2026-08-29T17:21:26.605Z",
+    "reviewed_at": "2026-08-29T17:21:53.168Z",
+    "reviewed_by": 4,
+    "purchase_order": 8
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 9,
+  "fields": {
+    "product": 3,
+    "department": 2,
+    "requested_quantity": 1,
+    "fulfillment_type": "STORE",
+    "requested_by": 2,
+    "status": "FULFILLED",
+    "manager_note": "",
+    "created_at": "2026-08-29T22:28:36.876Z",
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "purchase_order": null
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 10,
+  "fields": {
+    "product": 3,
+    "department": 2,
+    "requested_quantity": 3,
+    "fulfillment_type": "STORE",
+    "requested_by": 3,
+    "status": "FULFILLED",
+    "manager_note": "",
+    "created_at": "2026-08-30T14:11:33.497Z",
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "purchase_order": null
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 11,
+  "fields": {
+    "product": 3,
+    "department": 2,
+    "requested_quantity": 1,
+    "fulfillment_type": "PURCHASE",
+    "requested_by": 3,
+    "status": "PENDING",
+    "manager_note": "",
+    "created_at": "2026-08-30T18:32:47.804Z",
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "purchase_order": null
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 12,
+  "fields": {
+    "product": 3,
+    "department": 2,
+    "requested_quantity": 1,
+    "fulfillment_type": "PURCHASE",
+    "requested_by": 3,
+    "status": "PENDING",
+    "manager_note": "",
+    "created_at": "2026-08-30T23:08:41.017Z",
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "purchase_order": null
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 13,
+  "fields": {
+    "product": 3,
+    "department": 2,
+    "requested_quantity": 4,
+    "fulfillment_type": "STORE",
+    "requested_by": 3,
+    "status": "FULFILLED",
+    "manager_note": "",
+    "created_at": "2026-08-30T23:15:15.800Z",
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "purchase_order": null
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 14,
+  "fields": {
+    "product": 3,
+    "department": 2,
+    "requested_quantity": 3,
+    "fulfillment_type": "STORE",
+    "requested_by": 3,
+    "status": "FULFILLED",
+    "manager_note": "",
+    "created_at": "2026-08-31T10:13:01.796Z",
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "purchase_order": null
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 15,
+  "fields": {
+    "product": 3,
+    "department": 2,
+    "requested_quantity": 7,
+    "fulfillment_type": "PURCHASE",
+    "requested_by": 3,
+    "status": "APPROVED",
+    "manager_note": "",
+    "created_at": "2026-08-31T10:13:10.406Z",
+    "reviewed_at": "2026-08-31T11:44:49.668Z",
+    "reviewed_by": 4,
+    "purchase_order": 9
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 16,
+  "fields": {
+    "product": 3,
+    "department": 2,
+    "requested_quantity": 2,
+    "fulfillment_type": "STORE",
+    "requested_by": 3,
+    "status": "PARTIALLY_FULFILLED",
+    "manager_note": "",
+    "created_at": "2026-08-31T13:15:48.328Z",
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "purchase_order": null
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 17,
+  "fields": {
+    "product": 3,
+    "department": 6,
+    "requested_quantity": 1,
+    "fulfillment_type": "PURCHASE",
+    "requested_by": 15,
+    "status": "APPROVED",
+    "manager_note": "",
+    "created_at": "2026-09-11T22:54:39.281Z",
+    "reviewed_at": "2026-09-11T23:28:26.104Z",
+    "reviewed_by": 4,
+    "purchase_order": 10
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 18,
+  "fields": {
+    "product": 3,
+    "department": 6,
+    "requested_quantity": 1,
+    "fulfillment_type": "STORE",
+    "requested_by": 15,
+    "status": "FULFILLED",
+    "manager_note": "",
+    "created_at": "2026-09-11T22:54:46.106Z",
+    "reviewed_at": "2026-09-11T23:28:37.776Z",
+    "reviewed_by": 4,
+    "purchase_order": 11
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 19,
+  "fields": {
+    "product": 3,
+    "department": 6,
+    "requested_quantity": 2,
+    "fulfillment_type": "STORE",
+    "requested_by": 15,
+    "status": "FULFILLED",
+    "manager_note": "",
+    "created_at": "2026-09-12T12:34:44.819Z",
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "purchase_order": null
+  }
+},
+{
+  "model": "inventory.lowstockrequest",
+  "pk": 20,
+  "fields": {
+    "product": 3,
+    "department": 6,
+    "requested_quantity": 3,
+    "fulfillment_type": "STORE",
+    "requested_by": 15,
+    "status": "PENDING",
+    "manager_note": "",
+    "created_at": "2026-09-12T23:00:01.961Z",
+    "reviewed_at": null,
+    "reviewed_by": null,
+    "purchase_order": null
+  }
+},
+{
+  "model": "billing.guest",
+  "pk": 1,
+  "fields": {
+    "hotel": 1,
+    "first_name": "Nazifi Balarabe",
+    "last_name": "Ibrahim",
+    "phone": "08031165185",
+    "email": "nazinamu66@yahoo.com",
+    "nationality": "Nigeria",
+    "id_number": "009786A6",
+    "created_at": "2026-08-25T23:07:03.128Z"
+  }
+},
+{
+  "model": "billing.guest",
+  "pk": 2,
+  "fields": {
+    "hotel": 1,
+    "first_name": "Walk-in",
+    "last_name": "Laundry Test",
+    "phone": "08000000000",
+    "email": "",
+    "nationality": "",
+    "id_number": "",
+    "created_at": "2026-09-09T17:35:32.185Z"
+  }
+},
+{
+  "model": "billing.folio",
+  "pk": 1,
+  "fields": {
+    "folio_type": "ROOM",
+    "hotel": 1,
+    "room": 1,
+    "last_room_charge_date": "2026-08-25",
+    "guest": 1,
+    "check_in_at": "2026-08-25T23:07:03.133Z",
+    "check_out_at": "2026-08-29T13:17:04.423Z",
+    "is_closed": true,
+    "created_at": "2026-08-25T23:07:03.133Z"
+  }
+},
+{
+  "model": "billing.folio",
+  "pk": 2,
+  "fields": {
+    "folio_type": "ROOM",
+    "hotel": 1,
+    "room": 1,
+    "last_room_charge_date": "2026-09-08",
+    "guest": 1,
+    "check_in_at": "2026-09-08T20:53:47.756Z",
+    "check_out_at": "2026-09-10T00:00:00Z",
+    "is_closed": false,
+    "created_at": "2026-09-08T20:53:47.756Z"
+  }
+},
+{
+  "model": "billing.folio",
+  "pk": 3,
+  "fields": {
+    "folio_type": "WALKIN",
+    "hotel": 1,
+    "room": null,
+    "last_room_charge_date": null,
+    "guest": 2,
+    "check_in_at": "2026-09-09T17:35:45.334Z",
+    "check_out_at": null,
+    "is_closed": false,
+    "created_at": "2026-09-09T17:35:45.335Z"
+  }
+},
+{
+  "model": "billing.folio",
+  "pk": 4,
+  "fields": {
+    "folio_type": "WALKIN",
+    "hotel": 1,
+    "room": null,
+    "last_room_charge_date": null,
+    "guest": null,
+    "check_in_at": "2026-09-10T16:06:33.942Z",
+    "check_out_at": null,
+    "is_closed": false,
+    "created_at": "2026-09-10T16:06:33.943Z"
+  }
+},
+{
+  "model": "billing.folio",
+  "pk": 5,
+  "fields": {
+    "folio_type": "WALKIN",
+    "hotel": 1,
+    "room": null,
+    "last_room_charge_date": null,
+    "guest": null,
+    "check_in_at": "2026-09-10T16:55:42.950Z",
+    "check_out_at": null,
+    "is_closed": false,
+    "created_at": "2026-09-10T16:55:42.950Z"
+  }
+},
+{
+  "model": "billing.folio",
+  "pk": 6,
+  "fields": {
+    "folio_type": "WALKIN",
+    "hotel": 1,
+    "room": null,
+    "last_room_charge_date": null,
+    "guest": null,
+    "check_in_at": "2026-09-11T15:09:27.951Z",
+    "check_out_at": null,
+    "is_closed": false,
+    "created_at": "2026-09-11T15:09:27.952Z"
+  }
+},
+{
+  "model": "billing.folio",
+  "pk": 7,
+  "fields": {
+    "folio_type": "WALKIN",
+    "hotel": 1,
+    "room": null,
+    "last_room_charge_date": null,
+    "guest": null,
+    "check_in_at": "2026-09-11T21:17:49.103Z",
+    "check_out_at": null,
+    "is_closed": false,
+    "created_at": "2026-09-11T21:17:49.103Z"
+  }
+},
+{
+  "model": "billing.charge",
+  "pk": 1,
+  "fields": {
+    "folio": 1,
+    "description": "Room charge – 2026-08-25",
+    "department": 1,
+    "amount": "50000.00",
+    "reference": "ROOM-101-2026-08-25",
+    "created_at": "2026-08-25T23:07:03.136Z"
+  }
+},
+{
+  "model": "billing.charge",
+  "pk": 2,
+  "fields": {
+    "folio": 2,
+    "description": "Room charge – 2026-09-08",
+    "department": 1,
+    "amount": "50000.00",
+    "reference": "ROOM-101-2026-09-08",
+    "created_at": "2026-09-08T20:53:47.760Z"
+  }
+},
+{
+  "model": "billing.charge",
+  "pk": 3,
+  "fields": {
+    "folio": 2,
+    "description": "Guest Laundry Order #1",
+    "department": 6,
+    "amount": "3000.00",
+    "reference": "LAUNDRY-1",
+    "created_at": "2026-09-08T22:25:06.019Z"
+  }
+},
+{
+  "model": "billing.charge",
+  "pk": 4,
+  "fields": {
+    "folio": 2,
+    "description": "Guest Laundry Order #3",
+    "department": 6,
+    "amount": "4000.00",
+    "reference": "LAUNDRY-3",
+    "created_at": "2026-09-08T23:08:59.438Z"
+  }
+},
+{
+  "model": "billing.charge",
+  "pk": 5,
+  "fields": {
+    "folio": 3,
+    "description": "Guest Laundry Order #4",
+    "department": 6,
+    "amount": "3000.00",
+    "reference": "LAUNDRY-4",
+    "created_at": "2026-09-09T17:40:11.827Z"
+  }
+},
+{
+  "model": "billing.charge",
+  "pk": 6,
+  "fields": {
+    "folio": 4,
+    "description": "Guest Laundry Order #5",
+    "department": 6,
+    "amount": "3000.00",
+    "reference": "LAUNDRY-5",
+    "created_at": "2026-09-10T16:33:08.589Z"
+  }
+},
+{
+  "model": "billing.charge",
+  "pk": 7,
+  "fields": {
+    "folio": 5,
+    "description": "Guest Laundry Order #7",
+    "department": 6,
+    "amount": "3000.00",
+    "reference": "LAUNDRY-7",
+    "created_at": "2026-09-10T20:41:23.752Z"
+  }
+},
+{
+  "model": "billing.charge",
+  "pk": 8,
+  "fields": {
+    "folio": 2,
+    "description": "Guest Laundry Order #9",
+    "department": 6,
+    "amount": "3000.00",
+    "reference": "LAUNDRY-9",
+    "created_at": "2026-09-11T19:28:08.570Z"
+  }
+},
+{
+  "model": "billing.charge",
+  "pk": 9,
+  "fields": {
+    "folio": 7,
+    "description": "Guest Laundry Order #10",
+    "department": 6,
+    "amount": "2000.00",
+    "reference": "LAUNDRY-10",
+    "created_at": "2026-09-11T21:18:15.351Z"
+  }
+},
+{
+  "model": "billing.payment",
+  "pk": 1,
+  "fields": {
+    "folio": 1,
+    "amount": "50000.00",
+    "method": "CASH",
+    "reference": "",
+    "note": "",
+    "collected_by": 12,
+    "collected_at": "2026-08-29T13:16:59.856Z"
+  }
+},
+{
+  "model": "billing.payment",
+  "pk": 2,
+  "fields": {
+    "folio": 3,
+    "amount": "3000.00",
+    "method": "POS",
+    "reference": "Moniepoint Frontdesk",
+    "note": "",
+    "collected_by": 15,
+    "collected_at": "2026-09-11T13:10:08.806Z"
+  }
+},
+{
+  "model": "billing.payment",
+  "pk": 3,
+  "fields": {
+    "folio": 2,
+    "amount": "30000.00",
+    "method": "CASH",
+    "reference": "",
+    "note": "",
+    "collected_by": 12,
+    "collected_at": "2026-09-11T13:34:50.409Z"
+  }
+},
+{
+  "model": "billing.payment",
+  "pk": 4,
+  "fields": {
+    "folio": 2,
+    "amount": "27000.00",
+    "method": "POS",
+    "reference": "Moniepoint Frontdesk",
+    "note": "",
+    "collected_by": 12,
+    "collected_at": "2026-09-11T13:35:39.694Z"
+  }
+},
+{
+  "model": "billing.payment",
+  "pk": 5,
+  "fields": {
+    "folio": 7,
+    "amount": "2000.00",
+    "method": "CASH",
+    "reference": "",
+    "note": "",
+    "collected_by": 15,
+    "collected_at": "2026-09-11T21:18:29.558Z"
+  }
+},
+{
+  "model": "kitchen.ingredientrestockrequest",
+  "pk": 1,
+  "fields": {
+    "requested_by": 7,
+    "status": "PENDING",
+    "note": "NOTIFICATION TEST - Kitchen approval",
+    "approved_by": null,
+    "received_at": null,
+    "created_at": "2026-08-24T22:02:53.932Z"
+  }
+},
+{
+  "model": "kitchen.ingredientrestockrequest",
+  "pk": 2,
+  "fields": {
+    "requested_by": 7,
+    "status": "APPROVED",
+    "note": "",
+    "approved_by": 4,
+    "received_at": null,
+    "created_at": "2026-08-25T12:17:37.482Z"
+  }
+},
+{
+  "model": "kitchen.ingredientrestockitem",
+  "pk": 1,
+  "fields": {
+    "request": 2,
+    "ingredient": 4,
+    "quantity": "5.000",
+    "source": "DIRECT"
+  }
+},
+{
+  "model": "kitchen.directpurchase",
+  "pk": 1,
+  "fields": {
+    "ingredient_request": 2,
+    "supplier": 1,
+    "requested_by": 7,
+    "approved_by": 4,
+    "paid_by": 10,
+    "total_cost": "25000.00",
+    "status": "PAID",
+    "note": "",
+    "payment_reference": "Transfer",
+    "created_at": "2026-08-25T12:22:40.626Z",
+    "approved_at": "2026-08-25T12:22:40.626Z",
+    "paid_at": "2026-08-25T12:38:06.310Z",
+    "received_at": null
+  }
+},
+{
+  "model": "kitchen.directpurchaseitem",
+  "pk": 1,
+  "fields": {
+    "purchase": 1,
+    "product": 4,
+    "quantity": "5.000",
+    "unit_cost": "5000.00"
+  }
+},
+{
+  "model": "rooms.roomcategory",
+  "pk": 1,
+  "fields": {
+    "name": "Standard",
+    "description": "Standard test room",
+    "is_active": true
+  }
+},
+{
+  "model": "rooms.room",
+  "pk": 1,
+  "fields": {
+    "hotel": 1,
+    "room_number": "101",
+    "category": 1,
+    "building": null,
+    "floor": null,
+    "status": "OCCUPIED"
+  }
+},
+{
+  "model": "rooms.roomrate",
+  "pk": 1,
+  "fields": {
+    "category": 1,
+    "price_per_night": "50000.00",
+    "currency": "NGN",
+    "is_active": true,
+    "created_at": "2026-08-25T23:00:24.159Z",
+    "updated_at": "2026-08-25T23:00:24.159Z"
+  }
+},
+{
+  "model": "housekeeping.cleaningassignment",
+  "pk": 1,
+  "fields": {
+    "room": 1,
+    "assigned_to": 2,
+    "assigned_by": 4,
+    "status": "DONE",
+    "notes": "",
+    "assigned_at": "2026-08-23T15:41:25.116Z",
+    "started_at": "2026-08-23T15:43:45.001Z",
+    "completed_at": "2026-08-23T15:45:23.125Z",
+    "inspected_at": "2026-08-23T15:47:29.547Z",
+    "inspected_by": 3
+  }
+},
+{
+  "model": "housekeeping.cleaningassignment",
+  "pk": 2,
+  "fields": {
+    "room": 1,
+    "assigned_to": 2,
+    "assigned_by": 3,
+    "status": "DONE",
+    "notes": "",
+    "assigned_at": "2026-08-29T13:52:15.642Z",
+    "started_at": "2026-08-29T13:54:09.999Z",
+    "completed_at": null,
+    "inspected_at": null,
+    "inspected_by": null
+  }
+},
+{
+  "model": "housekeeping.cleaningassignment",
+  "pk": 3,
+  "fields": {
+    "room": 1,
+    "assigned_to": 2,
+    "assigned_by": 2,
+    "status": "INSPECTION",
+    "notes": "",
+    "assigned_at": "2026-09-01T13:26:30.736Z",
+    "started_at": null,
+    "completed_at": "2026-09-01T15:44:35.752Z",
+    "inspected_at": null,
+    "inspected_by": null
+  }
+},
+{
+  "model": "housekeeping.cleaningassignment",
+  "pk": 4,
+  "fields": {
+    "room": 1,
+    "assigned_to": 2,
+    "assigned_by": 1,
+    "status": "DONE",
+    "notes": "",
+    "assigned_at": "2026-09-02T21:43:59.400Z",
+    "started_at": null,
+    "completed_at": "2026-09-06T22:54:10.145Z",
+    "inspected_at": "2026-09-08T20:52:43.109Z",
+    "inspected_by": 3
+  }
+},
+{
+  "model": "housekeeping.cleaningmaterialusage",
+  "pk": 1,
+  "fields": {
+    "assignment": 2,
+    "product": 3,
+    "quantity": "0.50",
+    "notes": "",
+    "recorded_by": 2,
+    "recorded_at": "2026-08-29T21:13:18.503Z"
+  }
+},
+{
+  "model": "housekeeping.cleaningmaterialusage",
+  "pk": 2,
+  "fields": {
+    "assignment": 2,
+    "product": 3,
+    "quantity": "0.60",
+    "notes": "",
+    "recorded_by": 2,
+    "recorded_at": "2026-08-29T23:03:25.032Z"
+  }
+},
+{
+  "model": "housekeeping.cleaningmaterialusage",
+  "pk": 3,
+  "fields": {
+    "assignment": 4,
+    "product": 3,
+    "quantity": "1.00",
+    "notes": "",
+    "recorded_by": 2,
+    "recorded_at": "2026-09-04T17:04:17.846Z"
+  }
+},
+{
+  "model": "housekeeping.lostfounditem",
+  "pk": 1,
+  "fields": {
+    "hotel": 1,
+    "room": 1,
+    "description": "Black Wallet with 10 Billion USD in it:)",
+    "found_by": 3,
+    "found_at": "2026-08-23T16:43:56.414Z",
+    "status": "CLAIMED",
+    "claimed_by": "Mai kudin",
+    "claimed_at": "2026-08-23T16:44:41.372Z"
+  }
+},
+{
+  "model": "housekeeping.lostfounditem",
+  "pk": 2,
+  "fields": {
+    "hotel": 1,
+    "room": null,
+    "description": "A bucket of Money",
+    "found_by": 3,
+    "found_at": "2026-08-23T16:45:22.759Z",
+    "status": "DISPOSED",
+    "claimed_by": "",
+    "claimed_at": null
+  }
+},
+{
+  "model": "maintenance.maintenanceticket",
+  "pk": 1,
+  "fields": {
+    "room": 1,
+    "schedule": null,
+    "description": "NOTIFICATION TEST - Air conditioner issue",
+    "reported_by": 2,
+    "assigned_to": 11,
+    "room_status_before_maintenance": null,
+    "priority": "HIGH",
+    "status": "RESOLVED",
+    "created_at": "2026-08-25T13:44:42.545Z",
+    "resolved_at": "2026-08-25T20:15:12.738Z",
+    "resolution_note": "",
+    "completion_outcome": ""
+  }
+},
+{
+  "model": "maintenance.maintenanceticket",
+  "pk": 2,
+  "fields": {
+    "room": 1,
+    "schedule": null,
+    "description": "NOTIFICATION TEST - Pending maintenance ticket",
+    "reported_by": 2,
+    "assigned_to": 11,
+    "room_status_before_maintenance": null,
+    "priority": "MEDIUM",
+    "status": "RESOLVED",
+    "created_at": "2026-08-25T19:52:39.578Z",
+    "resolved_at": "2026-08-25T21:39:11.053Z",
+    "resolution_note": "It was very scary, I thought it will never be habitable again but because my friend CHATGPT is an amazing employee, he fixed it.",
+    "completion_outcome": "HOUSEKEEPING_REQUIRED"
+  }
+},
+{
+  "model": "maintenance.maintenanceticket",
+  "pk": 3,
+  "fields": {
+    "room": 1,
+    "schedule": null,
+    "description": "TEST 3 - Maintenance completion on vacant room",
+    "reported_by": 2,
+    "assigned_to": 11,
+    "room_status_before_maintenance": "AVAILABLE",
+    "priority": "HIGH",
+    "status": "RESOLVED",
+    "created_at": "2026-08-25T22:09:42.676Z",
+    "resolved_at": "2026-08-25T22:11:12.487Z",
+    "resolution_note": "We did it buddy",
+    "completion_outcome": "ROOM_READY"
+  }
+},
+{
+  "model": "maintenance.maintenanceticket",
+  "pk": 4,
+  "fields": {
+    "room": 1,
+    "schedule": null,
+    "description": "TEST 3 - Maintenance completion on vacant room",
+    "reported_by": 2,
+    "assigned_to": 11,
+    "room_status_before_maintenance": "AVAILABLE",
+    "priority": "HIGH",
+    "status": "RESOLVED",
+    "created_at": "2026-08-25T22:40:25.577Z",
+    "resolved_at": "2026-08-25T22:44:31.778Z",
+    "resolution_note": "Repaired and tested the reported fault. Room is ready for use.",
+    "completion_outcome": "ROOM_READY"
+  }
+},
+{
+  "model": "maintenance.maintenanceticket",
+  "pk": 6,
+  "fields": {
+    "room": 1,
+    "schedule": null,
+    "description": "Faulty AC",
+    "reported_by": 11,
+    "assigned_to": 11,
+    "room_status_before_maintenance": "OCCUPIED",
+    "priority": "MEDIUM",
+    "status": "RESOLVED",
+    "created_at": "2026-08-25T23:31:05.309Z",
+    "resolved_at": "2026-08-26T10:36:23.914Z",
+    "resolution_note": "Air conditioner repaired and tested successfully. Room is ready for use.",
+    "completion_outcome": "ROOM_READY"
+  }
+},
+{
+  "model": "maintenance.maintenanceticket",
+  "pk": 7,
+  "fields": {
+    "room": 1,
+    "schedule": null,
+    "description": "Faulty AC",
+    "reported_by": 11,
+    "assigned_to": 11,
+    "room_status_before_maintenance": "OCCUPIED",
+    "priority": "MEDIUM",
+    "status": "RESOLVED",
+    "created_at": "2026-08-25T23:34:48.096Z",
+    "resolved_at": "2026-08-26T16:16:28.968Z",
+    "resolution_note": "E",
+    "completion_outcome": "ROOM_READY"
+  }
+},
+{
+  "model": "maintenance.maintenanceticket",
+  "pk": 8,
+  "fields": {
+    "room": 1,
+    "schedule": null,
+    "description": "An",
+    "reported_by": 11,
+    "assigned_to": 11,
+    "room_status_before_maintenance": "OCCUPIED",
+    "priority": "MEDIUM",
+    "status": "RESOLVED",
+    "created_at": "2026-08-26T16:21:55.060Z",
+    "resolved_at": "2026-08-29T13:16:31.052Z",
+    "resolution_note": "Done",
+    "completion_outcome": "ROOM_READY"
+  }
+},
+{
+  "model": "maintenance.maintenanceticket",
+  "pk": 9,
+  "fields": {
+    "room": 1,
+    "schedule": 1,
+    "description": "Preventive maintenance: Servicing — Room 101 Split AC",
+    "reported_by": 11,
+    "assigned_to": 11,
+    "room_status_before_maintenance": null,
+    "priority": "MEDIUM",
+    "status": "RESOLVED",
+    "created_at": "2026-08-28T18:24:07.882Z",
+    "resolved_at": "2026-08-28T18:35:33.476Z",
+    "resolution_note": "Yep Done",
+    "completion_outcome": "NOT_APPLICABLE"
+  }
+},
+{
+  "model": "maintenance.maintenanceworknote",
+  "pk": 1,
+  "fields": {
+    "ticket": 2,
+    "created_by": 11,
+    "note": "Working on it Sir",
+    "created_at": "2026-08-25T21:16:56.461Z"
+  }
+},
+{
+  "model": "maintenance.maintenanceworknote",
+  "pk": 2,
+  "fields": {
+    "ticket": 6,
+    "created_by": 11,
+    "note": "Repaired and tested the air conditioner.",
+    "created_at": "2026-08-26T10:35:56.057Z"
+  }
+},
+{
+  "model": "maintenance.maintenanceworknote",
+  "pk": 3,
+  "fields": {
+    "ticket": 7,
+    "created_by": 11,
+    "note": "Ana tayi Ana tayi",
+    "created_at": "2026-08-26T14:13:30.229Z"
+  }
+},
+{
+  "model": "maintenance.maintenanceworknote",
+  "pk": 4,
+  "fields": {
+    "ticket": 7,
+    "created_by": 11,
+    "note": "Na je na ga matsalar",
+    "created_at": "2026-08-26T14:24:10.267Z"
+  }
+},
+{
+  "model": "maintenance.maintenanceworknote",
+  "pk": 5,
+  "fields": {
+    "ticket": 8,
+    "created_by": 11,
+    "note": "Na ka sa gane wa",
+    "created_at": "2026-08-26T16:22:07.232Z"
+  }
+},
+{
+  "model": "maintenance.maintenancelabour",
+  "pk": 1,
+  "fields": {
+    "ticket": 7,
+    "labour_type": "INTERNAL",
+    "technician": 11,
+    "supplier": null,
+    "description": "Ana tayi Captain",
+    "amount": "0.00",
+    "created_by": 11,
+    "created_at": "2026-08-26T11:27:41.884Z"
+  }
+},
+{
+  "model": "maintenance.maintenancelabour",
+  "pk": 2,
+  "fields": {
+    "ticket": 7,
+    "labour_type": "OUTSOURCED",
+    "technician": null,
+    "supplier": 1,
+    "description": "Sai an biya ta in dai Umais ce Yaseen",
+    "amount": "10000.00",
+    "created_by": 11,
+    "created_at": "2026-08-26T11:28:18.827Z"
+  }
+},
+{
+  "model": "maintenance.maintenancelabour",
+  "pk": 3,
+  "fields": {
+    "ticket": 8,
+    "labour_type": "INTERNAL",
+    "technician": 11,
+    "supplier": null,
+    "description": "An wahala amma dai yayi",
+    "amount": "0.00",
+    "created_by": 11,
+    "created_at": "2026-08-26T16:22:26.599Z"
+  }
+},
+{
+  "model": "maintenance.maintenancelabour",
+  "pk": 4,
+  "fields": {
+    "ticket": 8,
+    "labour_type": "OUTSOURCED",
+    "technician": null,
+    "supplier": 1,
+    "description": "Ana tayi muna ji muna gani",
+    "amount": "10000.00",
+    "created_by": 11,
+    "created_at": "2026-08-28T13:03:35.378Z"
+  }
+},
+{
+  "model": "maintenance.maintenancematerial",
+  "pk": 1,
+  "fields": {
+    "ticket": 7,
+    "product": 3,
+    "source": "STORE",
+    "quantity": "2.00",
+    "unit_cost": "500.00",
+    "supplier": null,
+    "description": "Used during maintenance repair test.",
+    "created_by": 11,
+    "created_at": "2026-08-26T12:27:02.492Z"
+  }
+},
+{
+  "model": "maintenance.maintenancematerial",
+  "pk": 2,
+  "fields": {
+    "ticket": 7,
+    "product": 3,
+    "source": "STORE",
+    "quantity": "4.00",
+    "unit_cost": "500.00",
+    "supplier": null,
+    "description": "Maqal Maqal Maqal",
+    "created_by": 11,
+    "created_at": "2026-08-26T12:48:24.058Z"
+  }
+},
+{
+  "model": "maintenance.maintenancematerial",
+  "pk": 3,
+  "fields": {
+    "ticket": 8,
+    "product": 3,
+    "source": "STORE",
+    "quantity": "4.00",
+    "unit_cost": "500.00",
+    "supplier": null,
+    "description": "",
+    "created_by": 11,
+    "created_at": "2026-08-26T16:22:47.588Z"
+  }
+},
+{
+  "model": "maintenance.maintenancematerial",
+  "pk": 4,
+  "fields": {
+    "ticket": 8,
+    "product": 3,
+    "source": "STORE",
+    "quantity": "2.00",
+    "unit_cost": "500.00",
+    "supplier": null,
+    "description": "Accounting integration test",
+    "created_by": 11,
+    "created_at": "2026-08-28T11:52:09.075Z"
+  }
+},
+{
+  "model": "maintenance.maintenanceasset",
+  "pk": 1,
+  "fields": {
+    "hotel": 1,
+    "room": 1,
+    "name": "Room 101 Split AC",
+    "asset_type": "AC",
+    "serial_number": "1F1ZAN",
+    "manufacturer": "Huawei",
+    "model_number": "CAPO8",
+    "is_active": true,
+    "created_at": "2026-08-28T15:25:57.445Z"
+  }
+},
+{
+  "model": "maintenance.maintenanceschedule",
+  "pk": 1,
+  "fields": {
+    "asset": 1,
+    "name": "Servicing",
+    "interval_days": 90,
+    "next_due_date": "2026-11-26",
+    "is_active": true,
+    "created_at": "2026-08-28T15:54:21.274Z"
+  }
+},
+{
+  "model": "linen.linenitem",
+  "pk": 1,
+  "fields": {
+    "product": 6,
+    "par_level": 100,
+    "minimum_level": 50,
+    "is_active": true,
+    "created_at": "2026-08-31T18:27:28.291Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 1,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 100,
+    "condition": "CLEAN",
+    "event_type": "RECEIVED",
+    "from_location": "",
+    "to_location": "STORE",
+    "performed_by": 1,
+    "reference": "",
+    "note": "",
+    "created_at": "2026-08-31T18:43:47.977Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 2,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 20,
+    "condition": "CLEAN",
+    "event_type": "ISSUED",
+    "from_location": "STORE",
+    "to_location": "HOUSEKEEPING",
+    "performed_by": 1,
+    "reference": "",
+    "note": "",
+    "created_at": "2026-08-31T20:32:18.637Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 5,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 20,
+    "condition": "CLEAN",
+    "event_type": "ISSUED",
+    "from_location": "STORE",
+    "to_location": "HOUSEKEEPING",
+    "performed_by": 8,
+    "reference": "LINEN-REQ-1",
+    "note": "Test Store fulfillment",
+    "created_at": "2026-08-31T21:26:36.400Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 6,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 10,
+    "condition": "CLEAN",
+    "event_type": "ISSUED",
+    "from_location": "STORE",
+    "to_location": "HOUSEKEEPING",
+    "performed_by": 13,
+    "reference": "LINEN-REQ-2",
+    "note": "",
+    "created_at": "2026-08-31T22:33:19.137Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 10,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 5,
+    "condition": "CLEAN",
+    "event_type": "RECEIVED",
+    "from_location": "",
+    "to_location": "STORE",
+    "performed_by": 2,
+    "reference": "TEST-LAUNDRY-001",
+    "note": "Controlled housekeeping custody test",
+    "created_at": "2026-09-01T21:16:03.502Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 11,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 5,
+    "condition": "CLEAN",
+    "event_type": "ISSUED",
+    "from_location": "STORE",
+    "to_location": "HOUSEKEEPING",
+    "performed_by": 2,
+    "reference": "LINEN-REQ-3",
+    "note": "Laundry circulation test",
+    "created_at": "2026-09-02T11:35:57.416Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 12,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 2,
+    "condition": "CLEAN",
+    "event_type": "SENT_TO_LAUNDRY",
+    "from_location": "HOUSEKEEPING",
+    "to_location": "LAUNDRY",
+    "performed_by": 2,
+    "reference": "HK-RETURN-TEST-001",
+    "note": "Laundry circulation test",
+    "created_at": "2026-09-02T11:36:42.915Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 13,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 2,
+    "condition": "CLEAN",
+    "event_type": "RECEIVED_AT_LAUNDRY",
+    "from_location": "HOUSEKEEPING",
+    "to_location": "LAUNDRY",
+    "performed_by": 1,
+    "reference": "HK-RETURN-TEST-001",
+    "note": "Laundry circulation test - confirmed",
+    "created_at": "2026-09-02T11:41:00.616Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 14,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 2,
+    "condition": "DIRTY",
+    "event_type": "SENT_TO_LAUNDRY",
+    "from_location": "HOUSEKEEPING",
+    "to_location": "LAUNDRY",
+    "performed_by": 2,
+    "reference": "TEST-END-SHIFT-001",
+    "note": "Rollback integration test",
+    "created_at": "2026-09-02T21:46:49.832Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 15,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 2,
+    "condition": "DIRTY",
+    "event_type": "RECEIVED_AT_LAUNDRY",
+    "from_location": "",
+    "to_location": "",
+    "performed_by": 1,
+    "reference": "TEST-RECEIPT-001",
+    "note": "Confirmed during rollback integration test",
+    "created_at": "2026-09-02T21:49:01.684Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 16,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 2,
+    "condition": "CLEAN",
+    "event_type": "PROCESSED",
+    "from_location": "LAUNDRY",
+    "to_location": "LAUNDRY",
+    "performed_by": 1,
+    "reference": "TEST-PROCESS-001",
+    "note": "Rollback integration test",
+    "created_at": "2026-09-02T21:50:09.911Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 17,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 1,
+    "condition": "CLEAN",
+    "event_type": "SENT_TO_LAUNDRY",
+    "from_location": "HOUSEKEEPING",
+    "to_location": "LAUNDRY",
+    "performed_by": 2,
+    "reference": "TEST-RECEIPT-UI-001",
+    "note": "Browser receipt workflow test",
+    "created_at": "2026-09-04T12:51:40.869Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 18,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 1,
+    "condition": "CLEAN",
+    "event_type": "RECEIVED_AT_LAUNDRY",
+    "from_location": "",
+    "to_location": "",
+    "performed_by": 15,
+    "reference": "TEST-RECEIPT-UI-001",
+    "note": "Browser receipt workflow test",
+    "created_at": "2026-09-04T13:09:29.965Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 20,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 1,
+    "condition": "CLEAN",
+    "event_type": "ISSUED_FROM_LAUNDRY",
+    "from_location": "LAUNDRY",
+    "to_location": "HOUSEKEEPING",
+    "performed_by": 15,
+    "reference": "LINEN-REQ-5",
+    "note": "",
+    "created_at": "2026-09-04T15:53:11.107Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 21,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 2,
+    "condition": "DIRTY",
+    "event_type": "SENT_TO_LAUNDRY",
+    "from_location": "HOUSEKEEPING",
+    "to_location": "LAUNDRY",
+    "performed_by": 2,
+    "reference": "",
+    "note": "",
+    "created_at": "2026-09-06T22:56:15.371Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 22,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 2,
+    "condition": "DIRTY",
+    "event_type": "RECEIVED_AT_LAUNDRY",
+    "from_location": "",
+    "to_location": "",
+    "performed_by": 15,
+    "reference": "HK-RETURN-2026-09-06",
+    "note": "Reconciled with existing SENT_TO_LAUNDRY transaction #21.",
+    "created_at": "2026-09-08T19:54:15.457Z"
+  }
+},
+{
+  "model": "linen.linentransaction",
+  "pk": 23,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 2,
+    "condition": "CLEAN",
+    "event_type": "PROCESSED",
+    "from_location": "LAUNDRY",
+    "to_location": "LAUNDRY",
+    "performed_by": 15,
+    "reference": "",
+    "note": "",
+    "created_at": "2026-09-08T20:17:22.216Z"
+  }
+},
+{
+  "model": "linen.linenissue",
+  "pk": 1,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 20,
+    "issued_to": 3,
+    "issued_by": 1,
+    "source": "STORE",
+    "issued_at": "2026-08-31T20:32:18.639Z",
+    "reference": "",
+    "note": ""
+  }
+},
+{
+  "model": "linen.linenissue",
+  "pk": 2,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 10,
+    "issued_to": 3,
+    "issued_by": 13,
+    "source": "STORE",
+    "issued_at": "2026-08-31T22:33:19.138Z",
+    "reference": "LINEN-REQ-2",
+    "note": ""
+  }
+},
+{
+  "model": "linen.linenissue",
+  "pk": 3,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 5,
+    "issued_to": 2,
+    "issued_by": 2,
+    "source": "STORE",
+    "issued_at": "2026-09-02T11:35:57.422Z",
+    "reference": "LINEN-REQ-3",
+    "note": "Laundry circulation test"
+  }
+},
+{
+  "model": "linen.linenissue",
+  "pk": 4,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 1,
+    "issued_to": 2,
+    "issued_by": 15,
+    "source": "LAUNDRY",
+    "issued_at": "2026-09-04T15:53:11.112Z",
+    "reference": "LINEN-REQ-5",
+    "note": ""
+  }
+},
+{
+  "model": "linen.linenrequest",
+  "pk": 1,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 20,
+    "request_type": "STORE",
+    "requested_by": 2,
+    "status": "FULFILLED",
+    "approved_by": null,
+    "fulfilled_quantity": 20,
+    "approved_at": null,
+    "fulfilled_at": "2026-08-31T21:26:36.402Z",
+    "note": "Test request from Housekeeping",
+    "created_at": "2026-08-31T21:21:14.796Z"
+  }
+},
+{
+  "model": "linen.linenrequest",
+  "pk": 2,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 30,
+    "request_type": "STORE",
+    "requested_by": 3,
+    "status": "PARTIAL",
+    "approved_by": null,
+    "fulfilled_quantity": 10,
+    "approved_at": null,
+    "fulfilled_at": null,
+    "note": "",
+    "created_at": "2026-08-31T22:29:54.214Z"
+  }
+},
+{
+  "model": "linen.linenrequest",
+  "pk": 3,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 5,
+    "request_type": "STORE",
+    "requested_by": 2,
+    "status": "FULFILLED",
+    "approved_by": null,
+    "fulfilled_quantity": 5,
+    "approved_at": null,
+    "fulfilled_at": "2026-09-02T11:35:57.423Z",
+    "note": "",
+    "created_at": "2026-09-02T11:35:57.394Z"
+  }
+},
+{
+  "model": "linen.linenrequest",
+  "pk": 4,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 1,
+    "request_type": "LAUNDRY",
+    "requested_by": 2,
+    "status": "PENDING",
+    "approved_by": null,
+    "fulfilled_quantity": 0,
+    "approved_at": null,
+    "fulfilled_at": null,
+    "note": "",
+    "created_at": "2026-09-04T13:33:41.779Z"
+  }
+},
+{
+  "model": "linen.linenrequest",
+  "pk": 5,
+  "fields": {
+    "linen_item": 1,
+    "quantity": 1,
+    "request_type": "LAUNDRY",
+    "requested_by": 2,
+    "status": "FULFILLED",
+    "approved_by": 15,
+    "fulfilled_quantity": 1,
+    "approved_at": "2026-09-04T15:48:05.988Z",
+    "fulfilled_at": "2026-09-04T15:53:11.114Z",
+    "note": "For Room 101",
+    "created_at": "2026-09-04T14:48:12.827Z"
+  }
+},
+{
+  "model": "linen.roomlinenrequirement",
+  "pk": 1,
+  "fields": {
+    "category": 1,
+    "linen_item": 1,
+    "quantity": 1
+  }
+},
+{
+  "model": "linen.roomlinenstate",
+  "pk": 1,
+  "fields": {
+    "room": 1,
+    "linen_item": 1,
+    "quantity": 0,
+    "updated_at": "2026-09-06T22:54:10.145Z"
+  }
+},
+{
+  "model": "linen.cleaninglinencheck",
+  "pk": 2,
+  "fields": {
+    "assignment": 3,
+    "linen_item": 1,
+    "expected_quantity": 1,
+    "found_quantity": 1,
+    "dirty_collected_quantity": 0,
+    "clean_issued_quantity": 2,
+    "final_quantity": 2,
+    "note": "",
+    "created_at": "2026-09-01T15:34:09.149Z"
+  }
+},
+{
+  "model": "linen.cleaninglinencheck",
+  "pk": 3,
+  "fields": {
+    "assignment": 4,
+    "linen_item": 1,
+    "expected_quantity": 2,
+    "found_quantity": 2,
+    "dirty_collected_quantity": 2,
+    "clean_issued_quantity": 0,
+    "final_quantity": 0,
+    "note": "",
+    "created_at": "2026-09-02T21:44:48.483Z"
+  }
+},
+{
+  "model": "linen.linencustody",
+  "pk": 1,
+  "fields": {
+    "linen_item": 1,
+    "user": 2,
+    "clean_quantity": 1,
+    "dirty_quantity": 0,
+    "updated_at": "2026-09-06T22:56:15.373Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 1,
+  "fields": {
+    "hotel": 1,
+    "code": "1000",
+    "name": "Cash",
+    "description": "",
+    "slug": "cash",
+    "account_type": "cash",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "cash",
+    "allow_manual_entries": false,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.624Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 2,
+  "fields": {
+    "hotel": 1,
+    "code": "1010",
+    "name": "Bank Accounts",
+    "description": "",
+    "slug": "bank-accounts",
+    "account_type": "bank",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "bank_control",
+    "allow_manual_entries": false,
+    "is_system": true,
+    "allow_posting": false,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.626Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 3,
+  "fields": {
+    "hotel": 1,
+    "code": "1020",
+    "name": "POS Clearing",
+    "description": "",
+    "slug": "pos-clearing",
+    "account_type": "current_asset",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "pos_clearing",
+    "allow_manual_entries": false,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.627Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 4,
+  "fields": {
+    "hotel": 1,
+    "code": "1100",
+    "name": "Accounts Receivable",
+    "description": "",
+    "slug": "accounts-receivable",
+    "account_type": "current_asset",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "accounts_receivable",
+    "allow_manual_entries": false,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.628Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 5,
+  "fields": {
+    "hotel": 1,
+    "code": "1200",
+    "name": "Inventory Asset",
+    "description": "",
+    "slug": "inventory-asset",
+    "account_type": "inventory",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "inventory_asset",
+    "allow_manual_entries": false,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.630Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 6,
+  "fields": {
+    "hotel": 1,
+    "code": "1210",
+    "name": "Finished Goods Inventory",
+    "description": "",
+    "slug": "finished-goods-inventory",
+    "account_type": "inventory",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "finished_goods_inventory",
+    "allow_manual_entries": false,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.631Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 7,
+  "fields": {
+    "hotel": 1,
+    "code": "2000",
+    "name": "Accounts Payable",
+    "description": "",
+    "slug": "accounts-payable",
+    "account_type": "current_liability",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "accounts_payable",
+    "allow_manual_entries": false,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.632Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 8,
+  "fields": {
+    "hotel": 1,
+    "code": "2100",
+    "name": "Guest Deposits",
+    "description": "",
+    "slug": "guest-deposits",
+    "account_type": "current_liability",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "guest_deposits",
+    "allow_manual_entries": false,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.634Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 9,
+  "fields": {
+    "hotel": 1,
+    "code": "3000",
+    "name": "Owner Capital",
+    "description": "",
+    "slug": "owner-capital",
+    "account_type": "equity",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "owner_capital",
+    "allow_manual_entries": true,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.635Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 10,
+  "fields": {
+    "hotel": 1,
+    "code": "3001",
+    "name": "Retained Earnings",
+    "description": "",
+    "slug": "retained-earnings",
+    "account_type": "equity",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "retained_earnings",
+    "allow_manual_entries": false,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.636Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 11,
+  "fields": {
+    "hotel": 1,
+    "code": "4000",
+    "name": "Room Revenue",
+    "description": "",
+    "slug": "room-revenue",
+    "account_type": "income",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "room_revenue",
+    "allow_manual_entries": false,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.638Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 12,
+  "fields": {
+    "hotel": 1,
+    "code": "4100",
+    "name": "Restaurant Revenue",
+    "description": "",
+    "slug": "restaurant-revenue",
+    "account_type": "income",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "restaurant_revenue",
+    "allow_manual_entries": false,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.639Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 13,
+  "fields": {
+    "hotel": 1,
+    "code": "4200",
+    "name": "Other Revenue",
+    "description": "",
+    "slug": "other-revenue",
+    "account_type": "other_income",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "other_revenue",
+    "allow_manual_entries": true,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.640Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 14,
+  "fields": {
+    "hotel": 1,
+    "code": "5000",
+    "name": "Cost of Goods Sold",
+    "description": "",
+    "slug": "cost-of-goods-sold",
+    "account_type": "cogs",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "cost_of_goods_sold",
+    "allow_manual_entries": false,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.641Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 15,
+  "fields": {
+    "hotel": 1,
+    "code": "5001",
+    "name": "Spoilage Expense",
+    "description": "",
+    "slug": "spoilage-expense",
+    "account_type": "expense",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "spoilage_expense",
+    "allow_manual_entries": true,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.642Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 16,
+  "fields": {
+    "hotel": 1,
+    "code": "5100",
+    "name": "Maintenance Expense",
+    "description": "",
+    "slug": "maintenance-expense",
+    "account_type": "expense",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "maintenance_expense",
+    "allow_manual_entries": true,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.643Z"
+  }
+},
+{
+  "model": "accounting.account",
+  "pk": 17,
+  "fields": {
+    "hotel": 1,
+    "code": "5200",
+    "name": "Utilities Expense",
+    "description": "",
+    "slug": "utilities-expense",
+    "account_type": "expense",
+    "parent": null,
+    "opening_balance": "0.00",
+    "system_key": "utilities_expense",
+    "allow_manual_entries": true,
+    "is_system": true,
+    "allow_posting": true,
+    "display_order": 0,
+    "is_active": true,
+    "created_at": "2026-08-20T21:16:26.645Z"
+  }
+},
+{
+  "model": "accounting.accountingperiod",
+  "pk": 1,
+  "fields": {
+    "hotel": 1,
+    "start_date": "2026-08-01",
+    "end_date": "2026-08-20",
+    "is_closed": false,
+    "closed_at": null
+  }
+},
+{
+  "model": "accounting.businessday",
+  "pk": 1,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "is_closed": false,
+    "opened_at": "2026-08-20T21:16:26.647Z",
+    "closed_at": null
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 1,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Room charge folio #1",
+    "reference": "ROOM-101",
+    "entry_type": "NORMAL",
+    "created_by": 12,
+    "business_day": 1,
+    "created_at": "2026-08-25T23:07:03.143Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 2,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Payment for Purchase Order #2",
+    "reference": "TEST-PO2-PAY",
+    "entry_type": "PURCHASE",
+    "created_by": 10,
+    "business_day": 1,
+    "created_at": "2026-08-26T19:57:35.142Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 3,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Inventory received PO #3",
+    "reference": "PO-3",
+    "entry_type": "PURCHASE",
+    "created_by": 4,
+    "business_day": 1,
+    "created_at": "2026-08-27T11:54:45.745Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 4,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Inventory received PO #5",
+    "reference": "PO-5",
+    "entry_type": "PURCHASE",
+    "created_by": 4,
+    "business_day": 1,
+    "created_at": "2026-08-27T21:51:33.431Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 5,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Inventory received PO #6",
+    "reference": "PO-6",
+    "entry_type": "PURCHASE",
+    "created_by": 4,
+    "business_day": 1,
+    "created_at": "2026-08-27T22:06:06.989Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 6,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Maintenance material consumed for Ticket #8",
+    "reference": "MAINT-8-MAT-4",
+    "entry_type": "MAINTENANCE",
+    "created_by": 11,
+    "business_day": 1,
+    "created_at": "2026-08-28T11:52:09.085Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 7,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Outsourced maintenance labour for Ticket #8",
+    "reference": "MAINT-8-LAB-4",
+    "entry_type": "MAINTENANCE",
+    "created_by": 11,
+    "business_day": 1,
+    "created_at": "2026-08-28T13:03:35.388Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 8,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Inventory received PO #7",
+    "reference": "PO-7",
+    "entry_type": "PURCHASE",
+    "created_by": 4,
+    "business_day": 1,
+    "created_at": "2026-08-29T12:07:06.806Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 9,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Guest payment",
+    "reference": "PAY-1",
+    "entry_type": "NORMAL",
+    "created_by": 12,
+    "business_day": 1,
+    "created_at": "2026-08-29T13:16:59.862Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 10,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Inventory received PO #8",
+    "reference": "PO-8",
+    "entry_type": "PURCHASE",
+    "created_by": 4,
+    "business_day": 1,
+    "created_at": "2026-08-29T21:12:50.656Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 11,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Inventory received PO #9",
+    "reference": "PO-9",
+    "entry_type": "PURCHASE",
+    "created_by": 4,
+    "business_day": 1,
+    "created_at": "2026-08-31T11:46:56.706Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 12,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Guest payment",
+    "reference": "PAY-2",
+    "entry_type": "NORMAL",
+    "created_by": 15,
+    "business_day": 1,
+    "created_at": "2026-09-11T13:10:08.814Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 13,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Guest payment",
+    "reference": "PAY-3",
+    "entry_type": "NORMAL",
+    "created_by": 12,
+    "business_day": 1,
+    "created_at": "2026-09-11T13:34:50.415Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 14,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Guest payment",
+    "reference": "PAY-4",
+    "entry_type": "NORMAL",
+    "created_by": 12,
+    "business_day": 1,
+    "created_at": "2026-09-11T13:35:39.699Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 15,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Guest payment",
+    "reference": "PAY-5",
+    "entry_type": "NORMAL",
+    "created_by": 15,
+    "business_day": 1,
+    "created_at": "2026-09-11T21:18:29.564Z"
+  }
+},
+{
+  "model": "accounting.journalentry",
+  "pk": 16,
+  "fields": {
+    "hotel": 1,
+    "date": "2026-08-20",
+    "description": "Inventory received PO #12",
+    "reference": "PO-12",
+    "entry_type": "PURCHASE",
+    "created_by": 4,
+    "business_day": 1,
+    "created_at": "2026-09-13T00:04:00.864Z"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 1,
+  "fields": {
+    "journal": 1,
+    "account": 4,
+    "debit": "50000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 2,
+  "fields": {
+    "journal": 1,
+    "account": 11,
+    "debit": "0.00",
+    "credit": "50000.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 3,
+  "fields": {
+    "journal": 2,
+    "account": 7,
+    "debit": "50000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 4,
+  "fields": {
+    "journal": 2,
+    "account": 1,
+    "debit": "0.00",
+    "credit": "50000.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 5,
+  "fields": {
+    "journal": 3,
+    "account": 5,
+    "debit": "25000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 6,
+  "fields": {
+    "journal": 3,
+    "account": 7,
+    "debit": "0.00",
+    "credit": "25000.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 7,
+  "fields": {
+    "journal": 4,
+    "account": 5,
+    "debit": "2500.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 8,
+  "fields": {
+    "journal": 4,
+    "account": 7,
+    "debit": "0.00",
+    "credit": "2500.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 9,
+  "fields": {
+    "journal": 5,
+    "account": 5,
+    "debit": "5000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 10,
+  "fields": {
+    "journal": 5,
+    "account": 7,
+    "debit": "0.00",
+    "credit": "5000.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 11,
+  "fields": {
+    "journal": 6,
+    "account": 16,
+    "debit": "1000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 12,
+  "fields": {
+    "journal": 6,
+    "account": 5,
+    "debit": "0.00",
+    "credit": "1000.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 13,
+  "fields": {
+    "journal": 7,
+    "account": 16,
+    "debit": "10000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 14,
+  "fields": {
+    "journal": 7,
+    "account": 7,
+    "debit": "0.00",
+    "credit": "10000.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 15,
+  "fields": {
+    "journal": 8,
+    "account": 5,
+    "debit": "5000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 16,
+  "fields": {
+    "journal": 8,
+    "account": 7,
+    "debit": "0.00",
+    "credit": "5000.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 17,
+  "fields": {
+    "journal": 9,
+    "account": 1,
+    "debit": "50000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 18,
+  "fields": {
+    "journal": 9,
+    "account": 4,
+    "debit": "0.00",
+    "credit": "50000.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 19,
+  "fields": {
+    "journal": 10,
+    "account": 5,
+    "debit": "999.72",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 20,
+  "fields": {
+    "journal": 10,
+    "account": 7,
+    "debit": "0.00",
+    "credit": "999.72"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 21,
+  "fields": {
+    "journal": 11,
+    "account": 5,
+    "debit": "3500.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 22,
+  "fields": {
+    "journal": 11,
+    "account": 7,
+    "debit": "0.00",
+    "credit": "3500.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 23,
+  "fields": {
+    "journal": 12,
+    "account": 1,
+    "debit": "3000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 24,
+  "fields": {
+    "journal": 12,
+    "account": 4,
+    "debit": "0.00",
+    "credit": "3000.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 25,
+  "fields": {
+    "journal": 13,
+    "account": 1,
+    "debit": "30000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 26,
+  "fields": {
+    "journal": 13,
+    "account": 4,
+    "debit": "0.00",
+    "credit": "30000.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 27,
+  "fields": {
+    "journal": 14,
+    "account": 1,
+    "debit": "27000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 28,
+  "fields": {
+    "journal": 14,
+    "account": 4,
+    "debit": "0.00",
+    "credit": "27000.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 29,
+  "fields": {
+    "journal": 15,
+    "account": 1,
+    "debit": "2000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 30,
+  "fields": {
+    "journal": 15,
+    "account": 4,
+    "debit": "0.00",
+    "credit": "2000.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 31,
+  "fields": {
+    "journal": 16,
+    "account": 5,
+    "debit": "12000.00",
+    "credit": "0.00"
+  }
+},
+{
+  "model": "accounting.journalline",
+  "pk": 32,
+  "fields": {
+    "journal": 16,
+    "account": 7,
+    "debit": "0.00",
+    "credit": "12000.00"
+  }
+},
+{
+  "model": "accounting.supplierledger",
+  "pk": 1,
+  "fields": {
+    "supplier": 1,
+    "journal_entry": 2,
+    "amount": "50000.00",
+    "entry_type": "debit",
+    "created_at": "2026-08-26T19:57:35.146Z"
+  }
+},
+{
+  "model": "accounting.supplierledger",
+  "pk": 2,
+  "fields": {
+    "supplier": 1,
+    "journal_entry": 7,
+    "amount": "10000.00",
+    "entry_type": "credit",
+    "created_at": "2026-08-28T13:03:35.392Z"
+  }
+},
+{
+  "model": "laundry.laundryreceipt",
+  "pk": 1,
+  "fields": {
+    "linen_item": 1,
+    "returned_by": 2,
+    "received_by": 1,
+    "declared_clean_quantity": 2,
+    "declared_dirty_quantity": 0,
+    "received_clean_quantity": 2,
+    "received_dirty_quantity": 0,
+    "status": "RECEIVED",
+    "reference": "HK-RETURN-TEST-001",
+    "note": "Laundry circulation test - confirmed",
+    "received_at": "2026-09-02T11:41:00.616Z",
+    "created_at": "2026-09-02T11:38:52.376Z"
+  }
+},
+{
+  "model": "laundry.laundryreceipt",
+  "pk": 2,
+  "fields": {
+    "linen_item": 1,
+    "returned_by": 2,
+    "received_by": 1,
+    "declared_clean_quantity": 0,
+    "declared_dirty_quantity": 2,
+    "received_clean_quantity": 0,
+    "received_dirty_quantity": 2,
+    "status": "RECEIVED",
+    "reference": "TEST-RECEIPT-001",
+    "note": "Confirmed during rollback integration test",
+    "received_at": "2026-09-02T21:49:01.684Z",
+    "created_at": "2026-09-02T21:48:10.151Z"
+  }
+},
+{
+  "model": "laundry.laundryreceipt",
+  "pk": 3,
+  "fields": {
+    "linen_item": 1,
+    "returned_by": 2,
+    "received_by": 15,
+    "declared_clean_quantity": 1,
+    "declared_dirty_quantity": 0,
+    "received_clean_quantity": 1,
+    "received_dirty_quantity": 0,
+    "status": "RECEIVED",
+    "reference": "TEST-RECEIPT-UI-001",
+    "note": "Browser receipt workflow test",
+    "received_at": "2026-09-04T13:09:29.964Z",
+    "created_at": "2026-09-04T12:51:50.338Z"
+  }
+},
+{
+  "model": "laundry.laundryreceipt",
+  "pk": 4,
+  "fields": {
+    "linen_item": 1,
+    "returned_by": 2,
+    "received_by": 15,
+    "declared_clean_quantity": 0,
+    "declared_dirty_quantity": 2,
+    "received_clean_quantity": 0,
+    "received_dirty_quantity": 2,
+    "status": "RECEIVED",
+    "reference": "HK-RETURN-2026-09-06",
+    "note": "Reconciled with existing SENT_TO_LAUNDRY transaction #21.",
+    "received_at": "2026-09-08T19:54:15.457Z",
+    "created_at": "2026-09-08T19:46:14.138Z"
+  }
+},
+{
+  "model": "laundry.laundryservice",
+  "pk": 2,
+  "fields": {
+    "hotel": 1,
+    "name": "Babba Riga",
+    "code": "BRG",
+    "unit_price": "2000.00",
+    "is_active": false,
+    "created_at": "2026-09-10T23:20:51.157Z",
+    "updated_at": "2026-09-10T23:20:51.157Z"
+  }
+},
+{
+  "model": "laundry.laundryservice",
+  "pk": 3,
+  "fields": {
+    "hotel": 1,
+    "name": "Shirt",
+    "code": "SRT",
+    "unit_price": "1000.00",
+    "is_active": true,
+    "created_at": "2026-09-10T23:21:34.419Z",
+    "updated_at": "2026-09-10T23:21:34.419Z"
+  }
+},
+{
+  "model": "laundry.guestlaundryorder",
+  "pk": 1,
+  "fields": {
+    "folio": 2,
+    "status": "DELIVERED",
+    "billing_charge": 3,
+    "total_amount": "3000.00",
+    "note": "Backend Guest Laundry test",
+    "created_by": 14,
+    "created_at": "2026-09-08T20:56:18.776Z",
+    "received_at": "2026-09-08T22:10:55.126Z",
+    "processing_at": "2026-09-08T22:22:51.894Z",
+    "ready_at": "2026-09-08T22:23:49.150Z",
+    "delivered_at": "2026-09-08T22:25:06.022Z",
+    "customer_name": "",
+    "customer_phone": "",
+    "cancelled_at": null
+  }
+},
+{
+  "model": "laundry.guestlaundryorder",
+  "pk": 2,
+  "fields": {
+    "folio": 2,
+    "status": "CANCELLED",
+    "billing_charge": null,
+    "total_amount": "3000.00",
+    "note": "Browser creation backend test",
+    "created_by": 14,
+    "created_at": "2026-09-08T22:43:23.829Z",
+    "received_at": "2026-09-11T15:07:40.914Z",
+    "processing_at": null,
+    "ready_at": null,
+    "delivered_at": null,
+    "customer_name": "",
+    "customer_phone": "",
+    "cancelled_at": "2026-09-11T15:07:54.630Z"
+  }
+},
+{
+  "model": "laundry.guestlaundryorder",
+  "pk": 3,
+  "fields": {
+    "folio": 2,
+    "status": "DELIVERED",
+    "billing_charge": 4,
+    "total_amount": "4000.00",
+    "note": "Browser UI test",
+    "created_by": 15,
+    "created_at": "2026-09-08T22:45:53.394Z",
+    "received_at": "2026-09-08T22:52:25.159Z",
+    "processing_at": "2026-09-08T22:58:56.179Z",
+    "ready_at": "2026-09-08T23:04:46.010Z",
+    "delivered_at": "2026-09-08T23:08:59.439Z",
+    "customer_name": "",
+    "customer_phone": "",
+    "cancelled_at": null
+  }
+},
+{
+  "model": "laundry.guestlaundryorder",
+  "pk": 4,
+  "fields": {
+    "folio": 3,
+    "status": "DELIVERED",
+    "billing_charge": 5,
+    "total_amount": "3000.00",
+    "note": "Walk-in Laundry backend test",
+    "created_by": 14,
+    "created_at": "2026-09-09T17:39:11.600Z",
+    "received_at": "2026-09-09T17:40:11.789Z",
+    "processing_at": "2026-09-09T17:40:11.796Z",
+    "ready_at": "2026-09-09T17:40:11.806Z",
+    "delivered_at": "2026-09-09T17:40:11.829Z",
+    "customer_name": "",
+    "customer_phone": "",
+    "cancelled_at": null
+  }
+},
+{
+  "model": "laundry.guestlaundryorder",
+  "pk": 5,
+  "fields": {
+    "folio": 4,
+    "status": "DELIVERED",
+    "billing_charge": 6,
+    "total_amount": "3000.00",
+    "note": "Backend named walk-in test",
+    "created_by": 15,
+    "created_at": "2026-09-10T16:30:29.462Z",
+    "received_at": "2026-09-10T16:32:24.153Z",
+    "processing_at": "2026-09-10T16:32:24.159Z",
+    "ready_at": "2026-09-10T16:32:24.707Z",
+    "delivered_at": "2026-09-10T16:33:08.591Z",
+    "customer_name": "Ibrahim Musa",
+    "customer_phone": "08012345678",
+    "cancelled_at": null
+  }
+},
+{
+  "model": "laundry.guestlaundryorder",
+  "pk": 6,
+  "fields": {
+    "folio": 2,
+    "status": "CANCELLED",
+    "billing_charge": null,
+    "total_amount": "3000.00",
+    "note": "",
+    "created_by": 15,
+    "created_at": "2026-09-10T16:50:36.097Z",
+    "received_at": null,
+    "processing_at": null,
+    "ready_at": null,
+    "delivered_at": null,
+    "customer_name": "",
+    "customer_phone": "",
+    "cancelled_at": "2026-09-11T15:07:17.144Z"
+  }
+},
+{
+  "model": "laundry.guestlaundryorder",
+  "pk": 7,
+  "fields": {
+    "folio": 5,
+    "status": "DELIVERED",
+    "billing_charge": 7,
+    "total_amount": "3000.00",
+    "note": "Browser walk-in E2E test",
+    "created_by": 15,
+    "created_at": "2026-09-10T16:55:42.954Z",
+    "received_at": "2026-09-10T17:09:02.373Z",
+    "processing_at": "2026-09-10T20:40:40.047Z",
+    "ready_at": "2026-09-10T20:41:06.013Z",
+    "delivered_at": "2026-09-10T20:41:23.753Z",
+    "customer_name": "Browser Walk-in Test",
+    "customer_phone": "08099999999",
+    "cancelled_at": null
+  }
+},
+{
+  "model": "laundry.guestlaundryorder",
+  "pk": 8,
+  "fields": {
+    "folio": 6,
+    "status": "PROCESSING",
+    "billing_charge": null,
+    "total_amount": "3000.00",
+    "note": "",
+    "created_by": 15,
+    "created_at": "2026-09-11T15:09:27.956Z",
+    "received_at": "2026-09-11T15:09:30.823Z",
+    "processing_at": "2026-09-11T15:09:32.685Z",
+    "ready_at": null,
+    "delivered_at": null,
+    "customer_name": "Browser Walk-in Test",
+    "customer_phone": "08099999999",
+    "cancelled_at": null
+  }
+},
+{
+  "model": "laundry.guestlaundryorder",
+  "pk": 9,
+  "fields": {
+    "folio": 2,
+    "status": "DELIVERED",
+    "billing_charge": 8,
+    "total_amount": "3000.00",
+    "note": "",
+    "created_by": 15,
+    "created_at": "2026-09-11T19:23:03.151Z",
+    "received_at": "2026-09-11T19:26:10.346Z",
+    "processing_at": "2026-09-11T19:27:03.354Z",
+    "ready_at": "2026-09-11T19:27:35.509Z",
+    "delivered_at": "2026-09-11T19:28:08.572Z",
+    "customer_name": "",
+    "customer_phone": "",
+    "cancelled_at": null
+  }
+},
+{
+  "model": "laundry.guestlaundryorder",
+  "pk": 10,
+  "fields": {
+    "folio": 7,
+    "status": "DELIVERED",
+    "billing_charge": 9,
+    "total_amount": "2000.00",
+    "note": "",
+    "created_by": 15,
+    "created_at": "2026-09-11T21:17:49.106Z",
+    "received_at": "2026-09-11T21:17:58.606Z",
+    "processing_at": "2026-09-11T21:18:04.120Z",
+    "ready_at": "2026-09-11T21:18:10.439Z",
+    "delivered_at": "2026-09-11T21:18:15.352Z",
+    "customer_name": "Ibrahima Dan Musa",
+    "customer_phone": "08099999999",
+    "cancelled_at": null
+  }
+},
+{
+  "model": "laundry.guestlaundryitem",
+  "pk": 1,
+  "fields": {
+    "order": 1,
+    "service": null,
+    "description": "Bedsheet",
+    "quantity": 2,
+    "unit_price": "1500.00",
+    "amount": "3000.00",
+    "created_at": "2026-09-08T20:56:18.801Z"
+  }
+},
+{
+  "model": "laundry.guestlaundryitem",
+  "pk": 2,
+  "fields": {
+    "order": 2,
+    "service": null,
+    "description": "Shirt",
+    "quantity": 3,
+    "unit_price": "1000.00",
+    "amount": "3000.00",
+    "created_at": "2026-09-08T22:43:23.835Z"
+  }
+},
+{
+  "model": "laundry.guestlaundryitem",
+  "pk": 3,
+  "fields": {
+    "order": 3,
+    "service": null,
+    "description": "Trousers",
+    "quantity": 2,
+    "unit_price": "2000.00",
+    "amount": "4000.00",
+    "created_at": "2026-09-08T22:45:53.395Z"
+  }
+},
+{
+  "model": "laundry.guestlaundryitem",
+  "pk": 4,
+  "fields": {
+    "order": 4,
+    "service": null,
+    "description": "White Shirt",
+    "quantity": 2,
+    "unit_price": "1500.00",
+    "amount": "3000.00",
+    "created_at": "2026-09-09T17:39:11.607Z"
+  }
+},
+{
+  "model": "laundry.guestlaundryitem",
+  "pk": 5,
+  "fields": {
+    "order": 5,
+    "service": null,
+    "description": "White Shirt",
+    "quantity": 2,
+    "unit_price": "1500.00",
+    "amount": "3000.00",
+    "created_at": "2026-09-10T16:30:29.466Z"
+  }
+},
+{
+  "model": "laundry.guestlaundryitem",
+  "pk": 6,
+  "fields": {
+    "order": 6,
+    "service": null,
+    "description": "Suit",
+    "quantity": 1,
+    "unit_price": "3000.00",
+    "amount": "3000.00",
+    "created_at": "2026-09-10T16:50:36.099Z"
+  }
+},
+{
+  "model": "laundry.guestlaundryitem",
+  "pk": 7,
+  "fields": {
+    "order": 7,
+    "service": null,
+    "description": "Browser Test Shirt",
+    "quantity": 2,
+    "unit_price": "1500.00",
+    "amount": "3000.00",
+    "created_at": "2026-09-10T16:55:42.956Z"
+  }
+},
+{
+  "model": "laundry.guestlaundryitem",
+  "pk": 8,
+  "fields": {
+    "order": 8,
+    "service": null,
+    "description": "Trousers",
+    "quantity": 2,
+    "unit_price": "1500.00",
+    "amount": "3000.00",
+    "created_at": "2026-09-11T15:09:27.958Z"
+  }
+},
+{
+  "model": "laundry.guestlaundryitem",
+  "pk": 9,
+  "fields": {
+    "order": 9,
+    "service": null,
+    "description": "Room 101 Test Shirt",
+    "quantity": 2,
+    "unit_price": "1500.00",
+    "amount": "3000.00",
+    "created_at": "2026-09-11T19:23:03.155Z"
+  }
+},
+{
+  "model": "laundry.guestlaundryitem",
+  "pk": 10,
+  "fields": {
+    "order": 10,
+    "service": null,
+    "description": "Trousers",
+    "quantity": 2,
+    "unit_price": "1000.00",
+    "amount": "2000.00",
+    "created_at": "2026-09-11T21:17:49.108Z"
+  }
+}
+]

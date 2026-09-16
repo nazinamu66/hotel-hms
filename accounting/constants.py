@@ -59,6 +59,8 @@ SPOILAGE_EXPENSE = "spoilage_expense"
 
 MAINTENANCE_EXPENSE = "maintenance_expense"
 
+LAUNDRY_EXPENSE = "laundry_expense"
+
 UTILITIES_EXPENSE = "utilities_expense"
 
 
@@ -148,6 +150,16 @@ DEFAULT_ACCOUNTS = [
         "is_system": True,
         "allow_posting": True,
         "allow_manual_entries": False,
+    },
+
+    {
+        "code": "5150",
+        "name": "Laundry Expense",
+        "system_key": LAUNDRY_EXPENSE,
+        "type": EXPENSE,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": True,
     },
 
     # --------------------------

@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from inventory.models import HotelFeature
 
 from inventory.models import (
     Organization,
@@ -10,22 +11,113 @@ from inventory.models import (
 User = get_user_model()
 
 
-class InitialOrganizationSetupForm(forms.Form):
+class InitialOrganizationForm(forms.Form):
 
     organization_name = forms.CharField(
         max_length=150,
         label="Organization Name",
     )
 
+
+class InitialHotelProfileForm(forms.Form):
+
     hotel_name = forms.CharField(
         max_length=150,
-        label="First Hotel Name",
+        label="Hotel Name",
     )
 
-    hotel_location = forms.CharField(
-        max_length=150,
+    address = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3}),
+        label="Address",
+    )
+
+    city = forms.CharField(
+        max_length=100,
+        label="City",
+    )
+
+    state = forms.CharField(
+        max_length=100,
+        label="State",
+    )
+
+    country = forms.CharField(
+        max_length=100,
+        label="Country",
+        initial="Nigeria",
+    )
+
+    phone = forms.CharField(
+        max_length=50,
+        label="Phone",
+    )
+
+    email = forms.EmailField(
         required=False,
-        label="Hotel Location",
+        label="Email",
+    )
+
+    website = forms.URLField(
+        required=False,
+        label="Website",
+    )
+
+    logo = forms.ImageField(
+        required=False,
+        label="Logo",
+    )
+
+    tax_number = forms.CharField(
+        max_length=50,
+        required=False,
+        label="Tax / Registration Number",
+    )
+
+    currency = forms.CharField(
+        max_length=10,
+        initial="₦",
+        label="Currency",
+    )
+
+
+class InitialFeaturesForm(forms.Form):
+
+    features = forms.MultipleChoiceField(
+        choices=HotelFeature.FEATURE_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label="Hotel Features",
+    )
+
+
+class InitialDepartmentsForm(forms.Form):
+    """
+    Departments are created automatically.
+    This form exists only so Screen 4 has
+    a consistent wizard step.
+    """
+
+    confirm = forms.BooleanField(
+        required=True,
+        label="I understand that these standard departments will be created automatically.",
+    )
+
+
+class InitialAccountingForm(forms.Form):
+    """
+    Accounting structure is created automatically.
+    """
+
+    confirm = forms.BooleanField(
+        required=True,
+        label="I understand that the default accounting structure will be created automatically.",
+    )
+
+
+class InitialSetupReviewForm(forms.Form):
+    confirm = forms.BooleanField(
+        required=True,
+        label="I confirm that the setup information is correct.",
     )
 
 
@@ -291,6 +383,7 @@ class UserCreateForm(forms.ModelForm):
             "HOUSEKEEPING",
             "LAUNDRY",
             "GYM",
+            "BOUTIQUE",
         }
 
         if role in operational_roles:
@@ -434,6 +527,7 @@ class UserCreateForm(forms.ModelForm):
             "HOUSEKEEPING",
             "LAUNDRY",
             "GYM",
+            "BOUTIQUE",
         }:
 
             department = (

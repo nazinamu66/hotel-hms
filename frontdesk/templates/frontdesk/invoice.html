@@ -69,20 +69,20 @@
 
 <!-- ================= HEADER ================= -->
 <div class="header">
-    {% if business_profile.logo %}
-        <img src="{{ business_profile.logo.url }}" alt="Logo">
+    {% if business.logo %}
+        <img src="{{ business.logo.url }}" alt="Logo">
     {% endif %}
 
     <div class="header-details">
-        <h2>{{ business_profile.name|default:"Hotel Management System" }}</h2>
-        {% if business_profile.address %}
-            <div class="muted">{{ business_profile.address }}</div>
+        <h2>{{ business.name|default:"Hotel Management System" }}</h2>
+        {% if business.address %}
+            <div class="muted">{{ business.address }}</div>
         {% endif %}
-        {% if business_profile.phone %}
-            <div class="muted">Phone: {{ business_profile.phone }}</div>
+        {% if business.phone %}
+            <div class="muted">Phone: {{ business.phone }}</div>
         {% endif %}
-        {% if business_profile.email %}
-            <div class="muted">Email: {{ business_profile.email }}</div>
+        {% if business.email %}
+            <div class="muted">Email: {{ business.email }}</div>
         {% endif %}
     </div>
 </div>
@@ -125,7 +125,7 @@
 {% endfor %}
 <tr>
     <th class="right">Subtotal</th>
-    <th class="right">₦{{ data.total }}</th>
+    <th class="right">₦{{ data.subtotal }}</th>
 </tr>
 </table>
 {% endfor %}

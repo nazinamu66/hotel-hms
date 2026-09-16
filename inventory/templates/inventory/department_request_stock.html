@@ -73,7 +73,54 @@ Request Stock — {{ department.name }}
 
     <td style="padding:8px; text-align:right;">
 
-        <form method="post">
+        <input
+            form="stock-request-{{ product.id }}"
+            type="number"
+            name="quantity"
+            min="1"
+            required
+            style="width:100px;"
+        >
+
+    </td>
+
+    <td style="padding:8px; text-align:center;">
+
+        <label>
+            <input
+                form="stock-request-{{ product.id }}"
+                type="radio"
+                name="fulfillment_type"
+                value="STORE"
+                checked
+            >
+            Store
+        </label>
+
+        {% if department.department_type != "LAUNDRY" %}
+
+            <br>
+
+            <label>
+                <input
+                    form="stock-request-{{ product.id }}"
+                    type="radio"
+                    name="fulfillment_type"
+                    value="PURCHASE"
+                >
+                Purchase
+            </label>
+
+        {% endif %}
+
+    </td>
+
+    <td style="padding:8px; text-align:center;">
+
+        <form
+            id="stock-request-{{ product.id }}"
+            method="post"
+        >
 
             {% csrf_token %}
 
@@ -83,50 +130,13 @@ Request Stock — {{ department.name }}
                 value="{{ product.id }}"
             >
 
-            <input
-                type="number"
-                name="quantity"
-                min="1"
-                required
-                style="width:100px;"
-            >
+            <button type="submit">
+                Request
+            </button>
+
+        </form>
 
     </td>
-
-            <td style="padding:8px; text-align:center;">
-
-            <label>
-                <input
-                    type="radio"
-                    name="fulfillment_type"
-                    value="STORE"
-                    checked
-                >
-                Store
-            </label>
-
-            <br>
-
-            <label>
-                <input
-                    type="radio"
-                    name="fulfillment_type"
-                    value="PURCHASE"
-                >
-                Purchase
-            </label>
-
-        </td>
-
-        <td style="padding:8px; text-align:center;">
-
-                <button type="submit">
-                    Request
-                </button>
-
-            </form>
-
-        </td>
 
 </tr>
 

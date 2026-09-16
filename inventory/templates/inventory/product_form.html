@@ -6,181 +6,1280 @@
 
 {% block content %}
 
-<h2>
-    {% if product %}Edit Product{% else %}Create Product{% endif %}
-</h2>
+<style>
+    .product-page {
+        max-width: 1050px;
+        margin: 0 auto;
+        padding-bottom: 100px;
+    }
 
-<div class="card" style="max-width:750px;padding:20px;background:white;border:1px solid #ddd;">
+    .product-header {
+        margin-bottom: 24px;
+    }
 
-<form method="post">
-{% csrf_token %}
+    .product-header h2 {
+        margin: 0 0 6px;
+        font-size: 30px;
+        font-weight: 700;
+        color: #263238;
+    }
 
-<!-- ===================== -->
-<!-- HOTEL -->
-<!-- ===================== -->
+    .product-header p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-<h4>Hotel</h4>
+    .product-card {
+        background: #fff;
+        border: 1px solid #e1e5e9;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 18px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
 
-{% if hotels|length > 1 and not product %}
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
 
-    <label>Hotel</label>
+    .section-number {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #eef4ff;
+        color: #2563eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
 
-    <select name="hotel" required>
+    .section-header h3 {
+        margin: 0;
+        font-size: 18px;
+        color: #263238;
+    }
 
-        <option value="">
-            Select hotel
-        </option>
+    .section-description {
+        margin: -12px 0 20px 44px;
+        color: #6b7280;
+        font-size: 13px;
+    }
 
-        {% for hotel in hotels %}
+    .field-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+    }
 
-            <option
-                value="{{ hotel.id }}"
-                {% if selected_hotel and selected_hotel.id == hotel.id %}
-                    selected
-                {% endif %}
+    .field-grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .field {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .field.full {
+        grid-column: 1 / -1;
+    }
+
+    .field label {
+        font-weight: 600;
+        font-size: 13px;
+        color: #374151;
+        margin-bottom: 7px;
+    }
+
+    .field input,
+    .field select {
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 42px;
+        padding: 9px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 7px;
+        background: #fff;
+        color: #1f2937;
+        font-size: 14px;
+        outline: none;
+        transition: border-color .15s, box-shadow .15s;
+    }
+
+    .field input:focus,
+    .field select:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, .10);
+    }
+
+    .field-help {
+        margin-top: 6px;
+        font-size: 12px;
+        color: #6b7280;
+        line-height: 1.45;
+    }
+
+    .hotel-box {
+        padding: 13px 15px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    .hotel-select {
+        margin-bottom: 20px;
+    }
+
+    /* Product type cards */
+
+    .product-type-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .type-option {
+        position: relative;
+    }
+
+    .type-option input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .type-card {
+        display: block;
+        min-height: 92px;
+        padding: 14px;
+        border: 1px solid #d9dee5;
+        border-radius: 10px;
+        background: #fff;
+        cursor: pointer;
+        transition: all .15s ease;
+    }
+
+    .type-card:hover {
+        border-color: #9db7e8;
+        transform: translateY(-1px);
+    }
+
+    .type-option input:checked + .type-card {
+        border-color: #2563eb;
+        background: #eff6ff;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, .10);
+    }
+
+    .type-icon {
+        font-size: 22px;
+        display: block;
+        margin-bottom: 7px;
+    }
+
+    .type-name {
+        display: block;
+        font-weight: 700;
+        font-size: 13px;
+        color: #263238;
+    }
+
+    .type-description {
+        display: block;
+        margin-top: 4px;
+        font-size: 11px;
+        line-height: 1.35;
+        color: #6b7280;
+    }
+
+    /* Info panels */
+
+    .info-panel {
+        margin-top: 15px;
+        padding: 13px 15px;
+        border-radius: 8px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .info-panel strong {
+        color: #1f2937;
+    }
+
+    /* Departments */
+
+    .department-box {
+        padding: 15px;
+        border: 1px solid #d9dee5;
+        border-radius: 9px;
+        background: #fafafa;
+    }
+
+    .department-box ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px 18px;
+    }
+
+    .department-box li {
+        padding: 7px 0;
+    }
+
+    .department-box label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .department-box input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Calculated value */
+
+    .calculated-box {
+        margin-top: 15px;
+        padding: 14px 16px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .calculated-label {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 3px;
+    }
+
+    .calculated-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #263238;
+    }
+
+    /* Errors */
+
+    .error-list {
+        margin: 5px 0 0;
+        padding: 0;
+        list-style: none;
+        color: #b91c1c;
+        font-size: 12px;
+    }
+
+    .form-error-summary {
+        margin-bottom: 18px;
+        padding: 13px 15px;
+        border-radius: 8px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+        font-size: 13px;
+    }
+
+    /* Sticky actions */
+
+    .form-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 20;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 15px 0;
+        margin-top: 10px;
+        background: linear-gradient(
+            to bottom,
+            rgba(245, 247, 250, 0),
+            rgba(245, 247, 250, .96) 25%
+        );
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 9px 18px;
+        border-radius: 7px;
+        text-decoration: none;
+        border: 1px solid transparent;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    .btn-primary {
+        background: #2563eb;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1d4ed8;
+    }
+
+    .btn-secondary {
+        background: white;
+        color: #374151;
+        border-color: #d1d5db;
+    }
+
+    .btn-secondary:hover {
+        background: #f9fafb;
+    }
+
+    .hidden-field {
+        display: none !important;
+    }
+
+    @media (max-width: 850px) {
+        .product-type-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .field-grid,
+        .field-grid.three {
+            grid-template-columns: 1fr;
+        }
+
+        .department-box ul {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 560px) {
+        .product-page {
+            padding: 0 10px 100px;
+        }
+
+        .product-card {
+            padding: 18px;
+        }
+
+        .product-type-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .department-box ul {
+            grid-template-columns: 1fr;
+        }
+
+        .form-actions {
+            justify-content: stretch;
+        }
+
+        .form-actions .btn {
+            flex: 1;
+        }
+    }
+</style>
+
+<div class="product-page">
+
+    <div class="product-header">
+        <h2>
+            {% if product %}Edit Product{% else %}Create Product{% endif %}
+        </h2>
+
+        <p>
+            {% if product %}
+                Update the product information and inventory settings.
+            {% else %}
+                Add a product to the hotel's central product catalogue.
+            {% endif %}
+        </p>
+    </div>
+
+    {% if form.non_field_errors %}
+        <div class="form-error-summary">
+            <strong>Please correct the following:</strong>
+            {{ form.non_field_errors }}
+        </div>
+    {% endif %}
+
+    <form method="post" id="product-form">
+        {% csrf_token %}
+
+        <!-- ================================================= -->
+        <!-- HOTEL -->
+        <!-- ================================================= -->
+
+        <div class="product-card">
+            <div class="section-header">
+                <div class="section-number">1</div>
+                <h3>Hotel</h3>
+            </div>
+
+            {% if hotels|length > 1 and not product %}
+
+                <div class="field hotel-select">
+                    <label for="hotel">Hotel</label>
+
+                    <select name="hotel" id="hotel" required>
+                        <option value="">Select hotel</option>
+
+                        {% for hotel in hotels %}
+                            <option
+                                value="{{ hotel.id }}"
+                                {% if selected_hotel and selected_hotel.id == hotel.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ hotel.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+
+                    <div class="field-help">
+                        Select the hotel that owns this product.
+                    </div>
+                </div>
+
+            {% elif selected_hotel %}
+
+                <div class="hotel-box">
+                    {{ selected_hotel.name }}
+                </div>
+
+            {% elif product %}
+
+                <div class="hotel-box">
+                    {{ product.hotel.name }}
+                </div>
+
+            {% endif %}
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- IDENTITY -->
+        <!-- ================================================= -->
+
+        <div class="product-card">
+            <div class="section-header">
+                <div class="section-number">2</div>
+                <h3>Product Identity</h3>
+            </div>
+
+            <p class="section-description">
+                Enter the information staff will use to identify this product.
+            </p>
+
+            <div class="field-grid">
+
+                <div class="field">
+                    <label for="{{ form.name.id_for_label }}">
+                        Product Name *
+                    </label>
+
+                    {{ form.name }}
+
+                    {{ form.name.errors }}
+                </div>
+
+                <div class="field">
+                    <label for="{{ form.sku.id_for_label }}">
+                        SKU *
+                    </label>
+
+                    {{ form.sku }}
+
+                    {{ form.sku.errors }}
+
+                    <div class="field-help">
+                        Your internal product code.
+                    </div>
+                </div>
+
+                <div class="field full">
+                    <label for="{{ form.barcode.id_for_label }}">
+                        Barcode
+                    </label>
+
+                    {{ form.barcode }}
+
+                    {{ form.barcode.errors }}
+
+                    <div class="field-help">
+                        Optional. Use this if the product has a barcode.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- PRODUCT TYPE -->
+        <!-- ================================================= -->
+
+        <div class="product-card">
+            <div class="section-header">
+                <div class="section-number">3</div>
+                <h3>Product Type</h3>
+            </div>
+
+            <p class="section-description">
+                Choose what kind of product this is. This determines how
+                the product behaves in inventory.
+            </p>
+
+            <div class="product-type-grid">
+
+                {% for value,label in form.product_type.field.choices %}
+
+                    <div class="type-option">
+
+                        <input
+                            type="radio"
+                            name="product_type"
+                            id="product-type-{{ value }}"
+                            value="{{ value }}"
+                            {% if form.product_type.value == value %}
+                                checked
+                            {% endif %}
+                        >
+
+                        <label
+                            class="type-card"
+                            for="product-type-{{ value }}"
+                        >
+
+                            {% if value == "RAW" %}
+                                <span class="type-icon">🥬</span>
+                                <span class="type-name">Raw Material</span>
+                                <span class="type-description">
+                                    Ingredients used in production.
+                                </span>
+
+                            {% elif value == "FOOD" %}
+                                <span class="type-icon">🍽️</span>
+                                <span class="type-name">Prepared Food</span>
+                                <span class="type-description">
+                                    Food produced by the kitchen.
+                                </span>
+
+                            {% elif value == "DRINK" %}
+                                <span class="type-icon">🥤</span>
+                                <span class="type-name">Beverage</span>
+                                <span class="type-description">
+                                    Drinks sold through restaurant/POS.
+                                </span>
+
+                            {% elif value == "HOUSEKEEPING" %}
+                                <span class="type-icon">🧹</span>
+                                <span class="type-name">Housekeeping</span>
+                                <span class="type-description">
+                                    Room and cleaning supplies.
+                                </span>
+
+                            {% elif value == "LAUNDRY" %}
+                                <span class="type-icon">🧺</span>
+                                <span class="type-name">Laundry</span>
+                                <span class="type-description">
+                                    Laundry supplies and consumables.
+                                </span>
+
+                            {% elif value == "BOUTIQUE" %}
+                                <span class="type-icon">🛍️</span>
+                                <span class="type-name">Boutique</span>
+                                <span class="type-description">
+                                    Merchandise sold by the boutique.
+                                </span>
+
+                            {% elif value == "SERVICE" %}
+                                <span class="type-icon">🛠️</span>
+                                <span class="type-name">Service</span>
+                                <span class="type-description">
+                                    A service rather than a physical stock item.
+                                </span>
+                            {% endif %}
+
+                        </label>
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+            {{ form.product_type.errors }}
+
+            <div class="info-panel" id="product-type-help"></div>
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- CLASSIFICATION -->
+        <!-- ================================================= -->
+
+        <div class="product-card">
+            <div class="section-header">
+                <div class="section-number">4</div>
+                <h3>Classification</h3>
+            </div>
+
+            <p class="section-description">
+                Define how the product is used and where it comes from.
+            </p>
+
+            <div class="field-grid">
+
+                <div class="field" id="usage-field">
+                    <label for="{{ form.usage_type.id_for_label }}">
+                        Usage Type
+                    </label>
+
+                    {{ form.usage_type }}
+
+                    {{ form.usage_type.errors }}
+
+                    <div class="field-help">
+                        Consumable = used up internally.
+                        Resale = sold to guests.
+                        Internal = operational use.
+                        Asset = reusable item.
+                    </div>
+                </div>
+
+                <div class="field" id="supply-source-field">
+                    <label for="{{ form.supply_source.id_for_label }}">
+                        Supply Source
+                    </label>
+
+                    {{ form.supply_source }}
+
+                    {{ form.supply_source.errors }}
+
+                    <div class="field-help">
+                        Choose whether the product normally comes from
+                        Store or is purchased directly.
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="info-panel" id="classification-help"></div>
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- UNITS -->
+        <!-- ================================================= -->
+
+        <div class="product-card" id="units-card">
+            <div class="section-header">
+                <div class="section-number">5</div>
+                <h3>Units & Conversion</h3>
+            </div>
+
+            <p class="section-description">
+                Define how the product is stored internally and how it is purchased.
+            </p>
+
+            <div class="field-grid three">
+
+                <div class="field">
+                    <label for="{{ form.base_unit.id_for_label }}">
+                        Base Unit *
+                    </label>
+
+                    {{ form.base_unit }}
+
+                    {{ form.base_unit.errors }}
+
+                    <div class="field-help">
+                        The unit used for stock quantities.
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="{{ form.purchase_unit.id_for_label }}">
+                        Purchase Unit
+                    </label>
+
+                    {{ form.purchase_unit }}
+
+                    {{ form.purchase_unit.errors }}
+
+                    <div class="field-help">
+                        Example: bag, carton, crate.
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="{{ form.unit_multiplier.id_for_label }}">
+                        Units per Purchase Unit
+                    </label>
+
+                    {{ form.unit_multiplier }}
+
+                    {{ form.unit_multiplier.errors }}
+
+                    <div class="field-help">
+                        Example: 1 bag = 50 kg.
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="info-panel" id="conversion-help">
+                <strong>Conversion:</strong>
+                <span id="conversion-text">
+                    Enter the purchase unit and multiplier to see the conversion.
+                </span>
+            </div>
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- PRICING -->
+        <!-- ================================================= -->
+
+        <div class="product-card" id="pricing-card">
+            <div class="section-header">
+                <div class="section-number">6</div>
+                <h3>Pricing</h3>
+            </div>
+
+            <p class="section-description">
+                Enter purchasing and selling information where applicable.
+            </p>
+
+            <div class="field-grid">
+
+                <div class="field" id="purchase-cost-field">
+                    <label for="{{ form.purchase_cost.id_for_label }}">
+                        Purchase Cost
+                    </label>
+
+                    {{ form.purchase_cost }}
+
+                    {{ form.purchase_cost.errors }}
+
+                    <div class="field-help">
+                        Cost for one purchase unit.
+                    </div>
+                </div>
+
+                <div class="field" id="selling-price-field">
+                    <label for="{{ form.price.id_for_label }}">
+                        Selling Price
+                    </label>
+
+                    {{ form.price }}
+
+                    {{ form.price.errors }}
+
+                    <div class="field-help">
+                        Price charged when the product is sold.
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="calculated-box" id="unit-cost-box">
+                <div class="calculated-label">
+                    Calculated cost per base unit
+                </div>
+
+                <div class="calculated-value" id="unit-cost-value">
+                    —
+                </div>
+            </div>
+
+            <div class="info-panel" id="pricing-help"></div>
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- INVENTORY CONTROL -->
+        <!-- ================================================= -->
+
+        <div class="product-card" id="control-card">
+            <div class="section-header">
+                <div class="section-number">7</div>
+                <h3>Inventory Control</h3>
+            </div>
+
+            <p class="section-description">
+                Set the level at which the hotel should consider replenishing stock.
+            </p>
+
+            <div class="field" style="max-width:320px;">
+                <label for="{{ form.reorder_level.id_for_label }}">
+                    Reorder Level
+                </label>
+
+                {{ form.reorder_level }}
+
+                {{ form.reorder_level.errors }}
+
+                <div class="field-help">
+                    Alert/replenishment threshold expressed in base units.
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- DEPARTMENTS -->
+        <!-- ================================================= -->
+
+        <div class="product-card">
+            <div class="section-header">
+                <div class="section-number">8</div>
+                <h3>Department Assignment</h3>
+            </div>
+
+            <p class="section-description">
+                Select the departments that are allowed to use or request this product.
+            </p>
+
+            <div class="department-box">
+                {{ form.departments }}
+            </div>
+
+            {{ form.departments.errors }}
+
+            <div class="info-panel">
+                <strong>Important:</strong>
+                A product may be assigned to more than one department.
+                Department access is enforced by the system.
+            </div>
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- ACTIONS -->
+        <!-- ================================================= -->
+
+        <div class="form-actions">
+
+            <a
+                href="{% url 'inventory:product_list' %}"
+                class="btn btn-secondary"
             >
-                {{ hotel.name }}
-            </option>
+                Cancel
+            </a>
 
-        {% endfor %}
+            <button
+                type="submit"
+                class="btn btn-primary"
+            >
+                {% if product %}
+                    Update Product
+                {% else %}
+                    Create Product
+                {% endif %}
+            </button>
 
-    </select>
+        </div>
 
-    <small style="color:gray;">
-        Select the hotel that owns this product.
-    </small>
+    </form>
 
-{% elif selected_hotel %}
-
-    <p>
-        <strong>{{ selected_hotel.name }}</strong>
-    </p>
-
-{% elif product %}
-
-    <p>
-        <strong>{{ product.hotel.name }}</strong>
-    </p>
-
-{% endif %}
-
-<br>
-
-<!-- ===================== -->
-<!-- BASIC INFO -->
-<!-- ===================== -->
-
-<h4>Basic Info</h4>
-
-<label>Name</label>
-{{ form.name }}
-
-<br><br>
-
-<label>SKU</label>
-{{ form.sku }}
-
-<br><br>
-
-<label>Barcode</label>
-{{ form.barcode }}
-
-<br><br>
-
-<!-- ===================== -->
-<!-- CLASSIFICATION -->
-<!-- ===================== -->
-
-<h4>Classification</h4>
-
-<label>Product Type</label>
-{{ form.product_type }}
-
-<br><br>
-
-<label>Usage Type</label>
-{{ form.usage_type }}
-
-<small style="color:gray;">
-    Consumable → Used internally (sugar, soap)<br>
-    Resale → Sold (drinks, boutique)<br>
-    Internal → Operational use (cleaning)<br>
-    Asset → Reusable (towels, bedsheets)
-</small>
-
-<br><br>
-
-<label>Supply Source</label>
-{{ form.supply_source }}
-
-<br><br>
-
-<!-- ===================== -->
-<!-- UNITS -->
-<!-- ===================== -->
-
-<h4>Units</h4>
-
-<label>Base Unit</label>
-{{ form.base_unit }}
-
-<br><br>
-
-<label>Purchase Unit</label>
-{{ form.purchase_unit }}
-
-<br><br>
-
-<label>Unit Multiplier</label>
-{{ form.unit_multiplier }}
-
-<br><br>
-
-<!-- ===================== -->
-<!-- PRICING -->
-<!-- ===================== -->
-
-<h4>Pricing</h4>
-
-<label>Selling Price</label>
-{{ form.price }}
-
-<br><br>
-
-<label>Purchase Cost (per carton/bag)</label>
-{{ form.purchase_cost }}
-
-<br><br>
-
-<!-- ===================== -->
-<!-- CONTROL -->
-<!-- ===================== -->
-
-<h4>Control</h4>
-
-<label>Reorder Level</label>
-{{ form.reorder_level }}
-
-<br><br>
-
-<label>Departments</label>
-{{ form.departments }}
-
-<br><br>
-
-<!-- ===================== -->
-<!-- ACTIONS -->
-<!-- ===================== -->
-
-<button class="btn btn-primary">
-    {% if product %}Update Product{% else %}Create Product{% endif %}
-</button>
-
-<a href="{% url 'inventory:product_list' %}" class="btn btn-secondary">
-    Cancel
-</a>
-
-</form>
 </div>
+
+
+<script>
+(function () {
+
+    const form = document.getElementById("product-form");
+
+    if (!form) {
+        return;
+    }
+
+    const typeInputs = form.querySelectorAll(
+        'input[name="product_type"]'
+    );
+
+    const usageField = document.getElementById("usage-field");
+    const usageSelect = document.getElementById(
+        "{{ form.usage_type.id_for_label }}"
+    );
+
+    const supplySourceField = document.getElementById(
+        "supply-source-field"
+    );
+
+    const supplySourceSelect = document.getElementById(
+        "{{ form.supply_source.id_for_label }}"
+    );
+
+    const unitsCard = document.getElementById("units-card");
+
+    const baseUnit = document.getElementById(
+        "{{ form.base_unit.id_for_label }}"
+    );
+
+    const purchaseUnit = document.getElementById(
+        "{{ form.purchase_unit.id_for_label }}"
+    );
+
+    const multiplier = document.getElementById(
+        "{{ form.unit_multiplier.id_for_label }}"
+    );
+
+    const purchaseCost = document.getElementById(
+        "{{ form.purchase_cost.id_for_label }}"
+    );
+
+    const sellingPrice = document.getElementById(
+        "{{ form.price.id_for_label }}"
+    );
+
+    const purchaseCostField = document.getElementById(
+        "purchase-cost-field"
+    );
+
+    const sellingPriceField = document.getElementById(
+        "selling-price-field"
+    );
+
+    const productTypeHelp = document.getElementById(
+        "product-type-help"
+    );
+
+    const classificationHelp = document.getElementById(
+        "classification-help"
+    );
+
+    const pricingHelp = document.getElementById(
+        "pricing-help"
+    );
+
+    const conversionText = document.getElementById(
+        "conversion-text"
+    );
+
+    const unitCostValue = document.getElementById(
+        "unit-cost-value"
+    );
+
+
+    function getProductType() {
+        const selected = form.querySelector(
+            'input[name="product_type"]:checked'
+        );
+
+        return selected ? selected.value : "";
+    }
+
+
+    function setSelectValue(select, value) {
+        if (!select) {
+            return;
+        }
+
+        const option = Array.from(select.options).find(
+            option => option.value === value
+        );
+
+        if (option) {
+            select.value = value;
+        }
+    }
+
+
+    function updateProductTypeUI() {
+
+        const type = getProductType();
+
+        if (type === "RAW") {
+
+            productTypeHelp.innerHTML =
+                "<strong>Raw Material:</strong> " +
+                "An ingredient or material held in stock and normally " +
+                "supplied through the Store.";
+
+            classificationHelp.innerHTML =
+                "Raw materials are normally supplied from Store and " +
+                "must have a positive inventory cost.";
+
+            pricingHelp.innerHTML =
+                "Enter the purchase cost. The system calculates the " +
+                "cost per base unit from the purchase unit conversion.";
+
+            purchaseCostField.classList.remove("hidden-field");
+            sellingPriceField.classList.add("hidden-field");
+
+            if (sellingPrice) {
+                sellingPrice.value = "0";
+            }
+
+            setSelectValue(supplySourceSelect, "STORE");
+
+        } else if (type === "FOOD") {
+
+            productTypeHelp.innerHTML =
+                "<strong>Prepared Food:</strong> " +
+                "Food produced by the Kitchen. Its final cost is derived " +
+                "from the production/recipe process.";
+
+            classificationHelp.innerHTML =
+                "<strong>Prepared food is always a resale item.</strong> " +
+                "The system handles its production cost separately.";
+
+            pricingHelp.innerHTML =
+                "Prepared food does not use a manual purchase cost. " +
+                "Its cost comes from production.";
+
+            purchaseCostField.classList.add("hidden-field");
+            sellingPriceField.classList.remove("hidden-field");
+
+            setSelectValue(usageSelect, "RESALE");
+            setSelectValue(supplySourceSelect, "STORE");
+
+            if (baseUnit && !baseUnit.value) {
+                baseUnit.value = "portion";
+            }
+
+            if (purchaseUnit && !purchaseUnit.value) {
+                purchaseUnit.value = "portion";
+            }
+
+            if (multiplier) {
+                multiplier.value = "1";
+            }
+
+        } else if (type === "DRINK") {
+
+            productTypeHelp.innerHTML =
+                "<strong>Beverage:</strong> " +
+                "A ready-to-sell drink normally handled through restaurant/POS.";
+
+            classificationHelp.innerHTML =
+                "<strong>Beverages are resale items.</strong> " +
+                "Enter both the purchase cost and selling price.";
+
+            pricingHelp.innerHTML =
+                "Purchase cost is used for inventory costing. " +
+                "Selling price is used by the POS.";
+
+            purchaseCostField.classList.remove("hidden-field");
+            sellingPriceField.classList.remove("hidden-field");
+
+            setSelectValue(usageSelect, "RESALE");
+
+        } else if (type === "BOUTIQUE") {
+
+            productTypeHelp.innerHTML =
+                "<strong>Boutique Item:</strong> " +
+                "Merchandise sold through the hotel's boutique.";
+
+            classificationHelp.innerHTML =
+                "<strong>Boutique items are resale products.</strong> " +
+                "Enter purchase and selling prices.";
+
+            pricingHelp.innerHTML =
+                "Purchase cost represents the acquisition cost. " +
+                "Selling price is the amount charged to the customer.";
+
+            purchaseCostField.classList.remove("hidden-field");
+            sellingPriceField.classList.remove("hidden-field");
+
+            setSelectValue(usageSelect, "RESALE");
+
+        } else if (type === "HOUSEKEEPING") {
+
+            productTypeHelp.innerHTML =
+                "<strong>Housekeeping Supply:</strong> " +
+                "Products used by housekeeping for rooms and cleaning operations.";
+
+            classificationHelp.innerHTML =
+                "Choose the appropriate usage type depending on whether " +
+                "the item is consumed, used internally, or treated as an asset.";
+
+            pricingHelp.innerHTML =
+                "Enter the acquisition cost used for inventory valuation.";
+
+            purchaseCostField.classList.remove("hidden-field");
+            sellingPriceField.classList.add("hidden-field");
+
+            if (sellingPrice) {
+                sellingPrice.value = "0";
+            }
+
+        } else if (type === "LAUNDRY") {
+
+            productTypeHelp.innerHTML =
+                "<strong>Laundry Supply:</strong> " +
+                "Products consumed or used by the Laundry department.";
+
+            classificationHelp.innerHTML =
+                "Choose the appropriate usage type for the laundry item.";
+
+            pricingHelp.innerHTML =
+                "Enter the acquisition cost used for inventory valuation.";
+
+            purchaseCostField.classList.remove("hidden-field");
+            sellingPriceField.classList.add("hidden-field");
+
+            if (sellingPrice) {
+                sellingPrice.value = "0";
+            }
+
+        } else if (type === "SERVICE") {
+
+            productTypeHelp.innerHTML =
+                "<strong>Service:</strong> " +
+                "A service entry rather than a physical inventory item.";
+
+            classificationHelp.innerHTML =
+                "Services do not represent normal physical stock movements.";
+
+            pricingHelp.innerHTML =
+                "Enter a selling price when the service is billable. " +
+                "Inventory costing fields may not be applicable.";
+
+            purchaseCostField.classList.add("hidden-field");
+            sellingPriceField.classList.remove("hidden-field");
+
+        } else {
+
+            productTypeHelp.innerHTML =
+                "Select a product type to see how the product will behave.";
+        }
+
+        updateConversion();
+        updateUnitCost();
+    }
+
+
+    function updateConversion() {
+
+        if (!purchaseUnit || !multiplier || !conversionText) {
+            return;
+        }
+
+        const unit = purchaseUnit.value.trim();
+        const value = parseFloat(multiplier.value);
+
+        if (unit && value && value > 0) {
+
+            const base = baseUnit
+                ? baseUnit.value.trim()
+                : "";
+
+            if (base) {
+                conversionText.textContent =
+                    "1 " + unit +
+                    " = " + value +
+                    " " + base + ".";
+            } else {
+                conversionText.textContent =
+                    "1 " + unit +
+                    " = " + value +
+                    " base units.";
+            }
+
+        } else {
+
+            conversionText.textContent =
+                "Enter the purchase unit and multiplier to see the conversion.";
+        }
+    }
+
+
+    function updateUnitCost() {
+
+        if (!unitCostValue) {
+            return;
+        }
+
+        const type = getProductType();
+
+        if (type === "FOOD" || type === "SERVICE") {
+            unitCostValue.textContent = "Calculated by the system";
+            return;
+        }
+
+        const cost = parseFloat(
+            purchaseCost ? purchaseCost.value : ""
+        );
+
+        const units = parseFloat(
+            multiplier ? multiplier.value : ""
+        );
+
+        if (
+            !isNaN(cost) &&
+            !isNaN(units) &&
+            units > 0
+        ) {
+
+            const result = cost / units;
+
+            unitCostValue.textContent =
+                result.toFixed(2);
+
+        } else {
+
+            unitCostValue.textContent = "—";
+        }
+    }
+
+
+    typeInputs.forEach(function (input) {
+        input.addEventListener(
+            "change",
+            updateProductTypeUI
+        );
+    });
+
+
+    [
+        purchaseUnit,
+        multiplier,
+        baseUnit
+    ].forEach(function (field) {
+
+        if (field) {
+            field.addEventListener(
+                "input",
+                updateConversion
+            );
+        }
+    });
+
+
+    [
+        purchaseCost,
+        multiplier
+    ].forEach(function (field) {
+
+        if (field) {
+            field.addEventListener(
+                "input",
+                updateUnitCost
+            );
+        }
+    });
+
+
+    updateProductTypeUI();
+
+})();
+</script>
 
 {% endblock %}

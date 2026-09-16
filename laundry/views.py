@@ -13,11 +13,14 @@ from laundry.models import GuestLaundryOrder
 from accounts.decorators import role_required
 from accounts.services.access import get_accessible_hotels
 from django.db.models import Q
-from inventory.models import Department
-from laundry.services.processing import process_dirty_linen
+from inventory.models import Department, Stock, Product
 from laundry.models import LaundryReceipt
 from linen.models import LinenItem, LinenTransaction
 from linen.services.balances import get_linen_condition_balance
+from laundry.services.processing import (
+    process_dirty_linen,
+    process_laundry,
+)
 
 from accounts.services.access import user_can_access_hotel
 from laundry.services.receiving import confirm_laundry_receipt
@@ -484,6 +487,168 @@ def guest_laundry_process(request, order_id):
     "ADMIN",
     "DIRECTOR",
 )
+def guest_laundry_materials(request, order_id):
+    hotels = get_accessible_hotels(request.user)
+
+    order = get_object_or_404(
+        GuestLaundryOrder.objects.select_related(
+            "folio",
+            "folio__guest",
+            "folio__room",
+        ),
+        id=order_id,
+        folio__hotel__in=hotels,
+    )
+
+    if order.status != "PROCESSING":
+        messages.error(
+            request,
+            "Guest Laundry materials can only be recorded "
+            "while the order is being processed.",
+        )
+        return redirect(
+            "laundry:guest_laundry_detail",
+            order.id,
+        )
+
+    laundry_department = Department.objects.filter(
+        hotel=order.folio.hotel,
+        department_type="LAUNDRY",
+        is_active=True,
+    ).first()
+
+    if laundry_department is None:
+        messages.error(
+            request,
+            "No active Laundry department exists for this hotel.",
+        )
+        return redirect(
+            "laundry:guest_laundry_detail",
+            order.id,
+        )
+
+    products = (
+        Product.objects
+        .filter(
+            hotel=order.folio.hotel,
+            is_active=True,
+            usage_type="INTERNAL",
+            departments=laundry_department,
+        )
+        .distinct()
+        .order_by("name")
+    )
+
+    if request.method == "POST":
+        product_ids = request.POST.getlist("product")
+        quantities = request.POST.getlist("quantity")
+
+        if len(product_ids) != len(quantities):
+            messages.error(
+                request,
+                "Each Laundry material must have a quantity.",
+            )
+            return render(
+                request,
+                "laundry/guest_laundry_materials.html",
+                {
+                    "order": order,
+                    "products": products,
+                },
+            )
+
+        materials = []
+
+        try:
+            for product_id, quantity in zip(
+                product_ids,
+                quantities,
+            ):
+                product_id = product_id.strip()
+                quantity = quantity.strip()
+
+                if not product_id and not quantity:
+                    continue
+
+                if not product_id:
+                    raise ValidationError(
+                        "A Laundry material must be selected."
+                    )
+
+                if not quantity:
+                    raise ValidationError(
+                        "Every Laundry material must have a quantity."
+                    )
+
+                product = products.filter(
+                    id=product_id,
+                ).first()
+
+                if product is None:
+                    raise ValidationError(
+                        "Invalid or unauthorized Laundry material."
+                    )
+
+                materials.append(
+                    {
+                        "product": product,
+                        "quantity": quantity,
+                    }
+                )
+
+            if not materials:
+                raise ValidationError(
+                    "At least one Laundry material is required."
+                )
+
+            result = process_laundry(
+                hotel=order.folio.hotel,
+                processing_type="GUEST_LAUNDRY",
+                user=request.user,
+                guest_order=order,
+                materials=materials,
+                reference=f"LAUNDRY-GUEST-{order.id}",
+                note="Guest Laundry material consumption",
+            )
+
+            messages.success(
+                request,
+                f"Guest Laundry materials recorded successfully. "
+                f"Total material cost: "
+                f"₦{result['total_cost']:,.2f}.",
+            )
+
+            return redirect(
+                "laundry:guest_laundry_detail",
+                order.id,
+            )
+
+        except (
+            ValidationError,
+            ValueError,
+        ) as exc:
+            messages.error(
+                request,
+                "; ".join(exc.messages)
+                if hasattr(exc, "messages")
+                else str(exc),
+            )
+
+    return render(
+        request,
+        "laundry/guest_laundry_materials.html",
+        {
+            "order": order,
+            "products": products,
+        },
+    )
+
+@role_required(
+    "LAUNDRY",
+    "MANAGER",
+    "ADMIN",
+    "DIRECTOR",
+)
 def guest_laundry_ready(request, order_id):
     hotels = get_accessible_hotels(request.user)
 
@@ -728,12 +893,25 @@ def guest_laundry_detail(request, order_id):
             "items",
             "folio__charges",
             "folio__payments",
+            "laundry_processings__materials__product",
         ),
         id=order_id,
         folio__hotel__in=hotels,
     )
 
     folio = order.folio
+
+    materials_used = []
+
+    for processing in order.laundry_processings.all():
+        for material in processing.materials.all():
+            materials_used.append({
+                "product": material.product,
+                "quantity": material.quantity,
+                "unit": material.product.base_unit,
+                "recorded_at": processing.created_at,
+                "recorded_by": processing.performed_by,
+            })
 
     payments = folio.payments.select_related(
         "collected_by"
@@ -752,6 +930,7 @@ def guest_laundry_detail(request, order_id):
             "payments": payments,
             "charges": charges,
             "balance": folio.balance,
+            "materials_used": materials_used,
         },
     )
 
@@ -1088,6 +1267,102 @@ def dashboard(request):
             "pending_receipts": pending_receipts,
             "pending_receipt_count": pending_receipt_count,
             "recent_transactions": recent_transactions,
+        },
+    )
+
+@role_required(
+    "LAUNDRY",
+    "MANAGER",
+    "ADMIN",
+    "DIRECTOR",
+)
+def laundry_stock(request):
+
+    # ---------------------------------------------------------
+    # HOTEL ACCESS
+    # ---------------------------------------------------------
+
+    accessible_hotels = get_accessible_hotels(request.user)
+
+    laundry_departments = (
+        Department.objects
+        .filter(
+            hotel__in=accessible_hotels,
+            department_type="LAUNDRY",
+            is_active=True,
+        )
+        .select_related("hotel")
+        .order_by("hotel__name")
+    )
+
+    # ---------------------------------------------------------
+    # Laundry products
+    # ---------------------------------------------------------
+
+    products = (
+        Product.objects
+        .filter(
+            hotel__in=accessible_hotels,
+            departments__in=laundry_departments,
+            is_active=True,
+            usage_type="INTERNAL",
+        )
+        .order_by(
+            "hotel__name",
+            "name",
+        )
+        .distinct()
+    )
+
+    # ---------------------------------------------------------
+    # Current Laundry stock
+    # ---------------------------------------------------------
+
+    stock_map = {
+        stock.product_id: stock.quantity
+        for stock in Stock.objects.filter(
+            department__in=laundry_departments,
+            product__is_active=True,
+        )
+    }
+
+    stock_items = []
+
+    for product in products:
+
+        quantity = stock_map.get(
+            product.id,
+            0,
+        )
+
+        stock_value = (
+            quantity
+            * product.cost_price
+        )
+
+        if quantity <= 0:
+            stock_status = "OUT OF STOCK"
+
+        elif quantity <= product.reorder_level:
+            stock_status = "LOW STOCK"
+
+        else:
+            stock_status = "OK"
+
+        stock_items.append({
+            "product": product,
+            "quantity": quantity,
+            "stock_value": stock_value,
+            "stock_status": stock_status,
+        })
+
+    return render(
+        request,
+        "laundry/stock.html",
+        {
+            "laundry_departments": laundry_departments,
+            "stock_items": stock_items,
+            "accessible_hotels": accessible_hotels,
         },
     )
 
