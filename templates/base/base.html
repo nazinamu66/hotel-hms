@@ -59,9 +59,19 @@
                 Trial Balance
             </a>
 
+            <a href="{% url 'accounting:cash_deposit' %}">
+                Cash Deposit
+            </a>
+
+            <a href="{% url 'accounting:bank_transfer' %}">
+                Bank Transfer
+            </a>
+
         </div>
 
         {% endif %}
+
+    
 
 
         <!-- ========================= -->
@@ -177,6 +187,12 @@
                 End of Shift
             </a>
 
+            {% if user.department and user.department.department_type == "RESTAURANT" and user.is_department_head %}
+                <a href="{% url 'restaurant_stock_requests' %}">
+                    Stock Requests
+                </a>
+            {% endif %}
+
         </div>
 
         {% endif %}
@@ -218,9 +234,16 @@
                 📊 Production History
             </a>
 
-            <a href="{% url 'kitchen_ingredient_requests' %}">
-                🧾 My Ingredient Requests
-            </a>
+            {% if user.is_department_head %}
+                <a href="{% url 'kitchen_ingredient_requests' %}">
+                    🧾 My Ingredient Requests
+                </a>
+            {% endif %}
+            {% if user.role == "KITCHEN" and user.is_department_head %}
+                <a href="{% url 'inventory:department_incoming_pos' %}">
+                    📦 Incoming Deliveries
+                </a>
+            {% endif %}
 
             {% if user|has_role:"MANAGER,DIRECTOR,ADMIN" %}
 
@@ -613,15 +636,39 @@
                 {% endfor %}
             </a>
 
+            <a href="{% url 'refund_list' %}">
+                Refunds
+
+                {% for action in pending_actions %}
+                    {% if action.type == "REFUNDS" %}
+                        <span class="notification-badge">
+                            {{ action.count }}
+                        </span>
+                    {% endif %}
+                {% endfor %}
+            </a>
+
             {% endif %}
 
             <!-- Accountant/Director/Manager can reach
                  their relevant procurement screens.
                  Actual action permissions remain in views. -->
+                 {% if user|has_role:"MANAGER,ACCOUNTANT,DIRECTOR,ADMIN" %}
+
+                <a href="{% url 'cash_handover_list' %}">
+                    Cash Handovers
+                </a>
+
+                <a href="{% url 'cash_custody_dashboard' %}">
+                    Cash Custody
+                </a>
+
+                {% endif %}
 
         </div>
 
         {% endif %}
+
 
 
         <!-- ========================= -->
@@ -740,6 +787,9 @@
             <a href="{% url 'room_list' %}">
                 Rooms
             </a>
+            <a href="{% url 'amenity_list' %}">
+                Amenities
+            </a>
 
             <a href="/manage/categories/">
                 Room Categories
@@ -749,9 +799,7 @@
                 Buildings
             </a>
 
-            <a href="{% url 'rate_list' %}">
-                Room Rates
-            </a>
+            
 
             <a href="{% url 'floor_list' %}">
                 Floors

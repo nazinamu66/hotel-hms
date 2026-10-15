@@ -15,6 +15,7 @@ from django.db.models import Q
 from accounts.decorators import role_required
 from linen.models import LinenRequest, LinenItem
 from linen.services.workflows import fulfill_store_request
+from accounting.services.journal import record_transaction
 from inventory.models import (
     Stock,
     Department,
@@ -22,6 +23,7 @@ from inventory.models import (
     LowStockRequest,
     PurchaseOrder,
     PurchaseItem,
+    stock_out,
 )
 
 # =========================
@@ -73,6 +75,109 @@ def store_dashboard(request):
         }
     )
 
+# =========================
+# STORE REPLENISHMENT REQUEST
+# =========================
+
+@role_required("STORE")
+@transaction.atomic
+def store_request_stock(request):
+
+    store = request.user.department
+
+    if not store:
+        raise PermissionDenied(
+            "You are not assigned to a department."
+        )
+
+    if store.department_type != "STORE":
+        raise PermissionDenied(
+            "This account is not assigned to the Store department."
+        )
+
+    # Store can request from the products already authorized
+    # for the Store department.
+    products = (
+        Product.objects
+        .filter(
+            hotel=store.hotel,
+            departments=store,
+            is_active=True,
+        )
+        .order_by("name")
+        .distinct()
+    )
+
+    stock_map = {
+        stock.product_id: stock.quantity
+        for stock in Stock.objects.filter(
+            department=store,
+            product__in=products,
+        )
+    }
+
+    if request.method == "POST":
+
+        product_id = request.POST.get(
+            "product_id",
+            "",
+        ).strip()
+
+        if not product_id:
+            messages.error(
+                request,
+                "Please select a product.",
+            )
+            return redirect(request.path)
+
+        try:
+            quantity = int(
+                request.POST.get(
+                    "quantity",
+                    0,
+                )
+            )
+        except (TypeError, ValueError):
+            quantity = 0
+
+        if quantity <= 0:
+            messages.error(
+                request,
+                "Quantity must be greater than zero.",
+            )
+            return redirect(request.path)
+
+        product = get_object_or_404(
+            products,
+            pk=product_id,
+        )
+
+        LowStockRequest.objects.create(
+            product=product,
+            department=store,
+            requested_quantity=quantity,
+            fulfillment_type="PURCHASE",
+            requested_by=request.user,
+        )
+
+        messages.success(
+            request,
+            f"Purchase replenishment request for "
+            f"{product.name} submitted successfully.",
+        )
+
+        return redirect(request.path)
+
+    return render(
+        request,
+        "store/request_low_stock.html",
+        {
+            "store": store,
+            "products": products,
+            "stock_map": stock_map,
+        },
+    )
+
 @role_required("STORE")
 def store_stock_requests(request):
 
@@ -93,6 +198,7 @@ def store_stock_requests(request):
                 "HOUSEKEEPING",
                 "MAINTENANCE",
                 "LAUNDRY",
+                "RESTAURANT"
             ],
             fulfillment_type="STORE",
         )
@@ -167,6 +273,7 @@ def store_stock_requests(request):
         "HOUSEKEEPING",
         "MAINTENANCE",
         "LAUNDRY",
+        "RESTAURANT"
     ):
 
         requests = requests.filter(
@@ -291,6 +398,7 @@ def store_issue_stock_request(request, pk):
             "HOUSEKEEPING",
             "MAINTENANCE",
             "LAUNDRY",
+            "RESTAURANT"
         ],
         status__in=[
             "PENDING",
@@ -435,10 +543,48 @@ def store_issue_stock_request(request, pk):
         )
 
         # -----------------------------------------------------
-        # EXECUTE THROUGH EXISTING INVENTORY ENGINE
+        # EXECUTE FULFILLMENT
         # -----------------------------------------------------
 
-        transfer.execute()
+        is_restaurant_internal = (
+            stock_request.department.department_type == "RESTAURANT"
+            and stock_request.product.is_operational_stock_item()
+        )
+
+        if is_restaurant_internal:
+            # Restaurant INTERNAL supplies are operational consumption.
+            # They leave Store stock, but are NOT added to Restaurant stock.
+            result = stock_out(
+                product=stock_request.product,
+                department=store,
+                quantity=issue_quantity,
+                user=request.user,
+                reason=(
+                    f"Restaurant operational issue for "
+                    f"stock request #{stock_request.id}"
+                ),
+                reference=f"RESTAURANT-INTERNAL-{stock_request.id}",
+            )
+
+            total_cost = result["total_cost"]
+
+            record_transaction(
+                debit_system_key="restaurant_expense",
+                credit_system_key="inventory_asset",
+                amount=total_cost,
+                description=(
+                    f"Restaurant operational stock issue "
+                    f"for request #{stock_request.id}"
+                ),
+                hotel=store.hotel,
+                created_by=request.user,
+                entry_type="NORMAL",
+                reference=f"RESTAURANT-EXPENSE-{stock_request.id}",
+            )
+
+        else:
+            # Existing physical transfer flow remains unchanged.
+            transfer.execute()
 
         # -----------------------------------------------------
         # UPDATE REQUEST STATUS

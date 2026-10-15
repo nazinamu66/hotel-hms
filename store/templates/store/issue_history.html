@@ -1,57 +1,350 @@
 {% extends "base/base.html" %}
+
+{% block title %}
+Store Issue History
+{% endblock %}
+
 {% block content %}
 
-<h2>Store Issue History</h2>
-<form method="get" style="margin-bottom:15px;">
-    From:
-    <input type="date" name="from" value="{{ date_from }}">
-    To:
-    <input type="date" name="to" value="{{ date_to }}">
-    <button type="submit">Filter</button>
-</form>
+<style>
+    .history-page {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
 
-<table border="1" cellpadding="6" width="100%">
-    <tr>
-    <th>
-        <a href="?sort={% if current_sort == 'date' %}-date{% else %}date{% endif %}">
-            Date
-        </a>
-    </th>
-    <th>
-        <a href="?sort={% if current_sort == 'product' %}-product{% else %}product{% endif %}">
-            Product
-        </a>
-    </th>
-    <th>
-        <a href="?sort={% if current_sort == 'quantity' %}-quantity{% else %}quantity{% endif %}">
-            Quantity
-        </a>
-    </th>
-    <th>
-        <a href="?sort={% if current_sort == 'department' %}-department{% else %}department{% endif %}">
-            Issued To
-        </a>
-    </th>
-    <th>
-        <a href="?sort={% if current_sort == 'user' %}-user{% else %}user{% endif %}">
-            Issued By
-        </a>
-    </th>
-</tr>
+    .page-header {
+        margin-bottom: 22px;
+    }
 
-    {% for m in movements %}
-    <tr>
-        <td>{{ m.created_at }}</td>
-        <td>{{ m.product.name }}</td>
-        <td>{{ m.quantity }}</td>
-        <td>{{ m.to_department.name }}</td>
-        <td>{{ m.created_by }}</td>
-    </tr>
-    {% empty %}
-    <tr>
-        <td colspan="5">No issue history.</td>
-    </tr>
-    {% endfor %}
-</table>
+    .page-header h2 {
+        margin: 0 0 6px;
+        font-size: 28px;
+        color: #1f2937;
+    }
+
+    .page-subtitle {
+        margin: 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .filter-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+    }
+
+    .filter-form {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .filter-field {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .filter-field label {
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .filter-field input {
+        padding: 9px 11px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+
+    .filter-btn {
+        border: none;
+        background: #374151;
+        color: #ffffff;
+        padding: 9px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .filter-btn:hover {
+        background: #1f2937;
+    }
+
+    .table-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+    }
+
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .history-table th {
+        padding: 14px 15px;
+        background: #f8fafc;
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+
+    .history-table th a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .history-table th a:hover {
+        color: #4f46e5;
+    }
+
+    .history-table td {
+        padding: 14px 15px;
+        color: #374151;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .history-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .history-table tbody tr:hover {
+        background: #fafafa;
+    }
+
+    .product-name {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .quantity {
+        font-weight: 700;
+    }
+
+    .user-name {
+        color: #4b5563;
+    }
+
+    .empty-state {
+        padding: 50px 20px !important;
+        text-align: center;
+        color: #6b7280;
+    }
+
+    .sort-hint {
+        margin-top: 10px;
+        color: #9ca3af;
+        font-size: 12px;
+    }
+
+    @media (max-width: 850px) {
+        .table-card {
+            overflow-x: auto;
+        }
+
+        .history-table {
+            min-width: 850px;
+        }
+    }
+
+    @media (max-width: 650px) {
+        .filter-form {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .filter-field input,
+        .filter-btn {
+            width: 100%;
+            box-sizing: border-box;
+        }
+    }
+</style>
+
+
+<div class="history-page">
+
+    <div class="page-header">
+
+        <h2>Store Issue History</h2>
+
+        <p class="page-subtitle">
+            Audit trail of stock issued from Store to operational departments.
+        </p>
+
+    </div>
+
+
+    <div class="filter-card">
+
+        <form method="get" class="filter-form">
+
+            <div class="filter-field">
+
+                <label for="date-from">
+                    From
+                </label>
+
+                <input
+                    id="date-from"
+                    type="date"
+                    name="from"
+                    value="{{ date_from }}"
+                >
+
+            </div>
+
+
+            <div class="filter-field">
+
+                <label for="date-to">
+                    To
+                </label>
+
+                <input
+                    id="date-to"
+                    type="date"
+                    name="to"
+                    value="{{ date_to }}"
+                >
+
+            </div>
+
+
+            <button
+                type="submit"
+                class="filter-btn"
+            >
+                Filter
+            </button>
+
+        </form>
+
+        <div class="sort-hint">
+            Click a column heading to change sorting.
+        </div>
+
+    </div>
+
+
+    <div class="table-card">
+
+        <table class="history-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        <a href="?sort={% if current_sort == 'date' %}-date{% else %}date{% endif %}">
+                            Date
+                        </a>
+                    </th>
+
+                    <th>
+                        <a href="?sort={% if current_sort == 'product' %}-product{% else %}product{% endif %}">
+                            Product
+                        </a>
+                    </th>
+
+                    <th>
+                        <a href="?sort={% if current_sort == 'quantity' %}-quantity{% else %}quantity{% endif %}">
+                            Quantity
+                        </a>
+                    </th>
+
+                    <th>
+                        <a href="?sort={% if current_sort == 'department' %}-department{% else %}department{% endif %}">
+                            Issued To
+                        </a>
+                    </th>
+
+                    <th>
+                        <a href="?sort={% if current_sort == 'user' %}-user{% else %}user{% endif %}">
+                            Issued By
+                        </a>
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody>
+
+                {% for m in movements %}
+
+                    <tr>
+
+                        <td style="white-space:nowrap;">
+                            {{ m.created_at|date:"Y-m-d H:i" }}
+                        </td>
+
+                        <td>
+                            <span class="product-name">
+                                {{ m.product.name }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="quantity">
+                                {{ m.quantity }}
+                            </span>
+
+                            <span style="color:#9ca3af; font-size:12px;">
+                                {{ m.product.base_unit }}
+                            </span>
+                        </td>
+
+                        <td>
+                            {{ m.to_department.name }}
+                        </td>
+
+                        <td>
+                            <span class="user-name">
+                                {{ m.created_by }}
+                            </span>
+                        </td>
+
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+
+                        <td
+                            colspan="5"
+                            class="empty-state"
+                        >
+                            No stock issue history found.
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
 
 {% endblock %}

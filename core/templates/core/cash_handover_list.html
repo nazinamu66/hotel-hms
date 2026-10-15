@@ -1,0 +1,188 @@
+{% extends "base/base.html" %}
+
+{% block title %}Cash Handovers{% endblock %}
+
+{% block content %}
+
+<style>
+    .handover-page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 24px 60px;
+    }
+
+    .eyebrow {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
+
+    .title {
+        margin: 0;
+        color: #172033;
+        font-size: 34px;
+        font-weight: 800;
+    }
+
+    .subtitle {
+        margin: 8px 0 28px;
+        color: #64748b;
+    }
+
+    .card {
+        background: #fff;
+        border: 1px solid #e5eaf0;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
+    }
+
+    .handover-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 20px 0;
+        border-bottom: 1px solid #e5eaf0;
+    }
+
+    .handover-row:last-child {
+        border-bottom: 0;
+    }
+
+    .handover-title {
+        font-size: 16px;
+        font-weight: 800;
+        color: #172033;
+        margin-bottom: 6px;
+    }
+
+    .handover-meta {
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.7;
+    }
+
+    .amount {
+        font-size: 20px;
+        font-weight: 800;
+        color: #172033;
+        margin-bottom: 8px;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: #fff7ed;
+        color: #9a3412;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .5px;
+    }
+
+    .btn {
+        display: inline-block;
+        padding: 11px 16px;
+        border-radius: 10px;
+        background: #172033;
+        color: white;
+        text-decoration: none;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .empty {
+        padding: 35px 10px;
+        text-align: center;
+        color: #64748b;
+    }
+
+    @media (max-width: 700px) {
+        .handover-row {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+</style>
+
+<div class="handover-page">
+
+    <div class="eyebrow">CASH CONTROL</div>
+
+    <h1 class="title">Cash Handovers</h1>
+
+    <p class="subtitle">
+        Review and accept physical cash handed to you.
+    </p>
+
+    <div class="card">
+
+        {% for handover in handovers %}
+
+            <div class="handover-row">
+
+                <div>
+
+                    <div class="handover-title">
+                        Handover #{{ handover.id }}
+                        · {{ handover.get_custody_type_display }}
+                    </div>
+
+                    <div class="handover-meta">
+
+                        From:
+                        <strong>
+                            {{ handover.from_user.get_full_name|default:handover.from_user.username }}
+                        </strong>
+                        <br>
+
+                        Department:
+                        {{ handover.department.name }}
+                        <br>
+
+                        Created:
+                        {{ handover.created_at|date:"d M Y, H:i" }}
+
+                    </div>
+
+                    <br>
+
+                    <span class="badge">PENDING ACCEPTANCE</span>
+
+                </div>
+
+                <div>
+
+                    <div class="amount">
+                        ₦{{ handover.sender_count|floatformat:2 }}
+                    </div>
+
+                    <a
+                        href="{% url 'cash_handover_accept' handover.id %}"
+                        class="btn"
+                    >
+                        Count & Accept →
+                    </a>
+
+                </div>
+
+            </div>
+
+        {% empty %}
+
+            <div class="empty">
+                <strong>No pending cash handovers.</strong>
+                <br>
+                You currently have nothing waiting for acceptance.
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}

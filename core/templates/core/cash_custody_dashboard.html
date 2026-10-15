@@ -1,0 +1,121 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px;">
+
+    <div style="margin-bottom:25px;">
+        <h1 style="margin:0;">Cash Custody</h1>
+        <p style="color:#666;margin-top:8px;">
+            Management view of physical cash handovers across your accessible hotels.
+        </p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:30px;">
+
+        <div style="padding:20px;border:1px solid #ddd;border-radius:10px;">
+            <div style="color:#666;">Pending</div>
+            <div style="font-size:28px;font-weight:700;margin-top:8px;">
+                {{ pending_count }}
+            </div>
+        </div>
+
+        <div style="padding:20px;border:1px solid #ddd;border-radius:10px;">
+            <div style="color:#666;">Variances</div>
+            <div style="font-size:28px;font-weight:700;margin-top:8px;">
+                {{ variance_count }}
+            </div>
+        </div>
+
+        <div style="padding:20px;border:1px solid #ddd;border-radius:10px;">
+            <div style="color:#666;">Accepted</div>
+            <div style="font-size:28px;font-weight:700;margin-top:8px;">
+                {{ accepted_count }}
+            </div>
+        </div>
+
+    </div>
+
+    <div style="border:1px solid #ddd;border-radius:10px;overflow:hidden;">
+
+        <div style="padding:18px 20px;border-bottom:1px solid #ddd;">
+            <strong>Cash Handovers</strong>
+        </div>
+
+        {% for handover in handovers %}
+
+            <div style="padding:18px 20px;border-bottom:1px solid #eee;">
+
+                <div style="display:flex;justify-content:space-between;gap:20px;align-items:flex-start;">
+
+                    <div>
+                        <div style="font-weight:700;">
+                            Handover #{{ handover.id }}
+                            · {{ handover.get_custody_type_display }}
+                        </div>
+
+                        <div style="margin-top:8px;color:#666;">
+                            {{ handover.from_user.get_full_name|default:handover.from_user.username }}
+                            →
+                            {{ handover.to_user.get_full_name|default:handover.to_user.username }}
+                        </div>
+
+                        <div style="margin-top:5px;color:#666;">
+                            {{ handover.hotel.name }} · {{ handover.department.name }}
+                        </div>
+
+                        <div style="margin-top:5px;color:#888;">
+                            {{ handover.created_at|date:"d M Y, H:i" }}
+                        </div>
+                    </div>
+
+                    <div style="text-align:right;">
+
+                        {% if handover.status == "VARIANCE" %}
+                            <span style="display:inline-block;padding:5px 10px;border-radius:20px;background:#fff3cd;color:#856404;font-weight:600;">
+                                VARIANCE
+                            </span>
+                        {% elif handover.status == "ACCEPTED" %}
+                            <span style="display:inline-block;padding:5px 10px;border-radius:20px;background:#d1e7dd;color:#0f5132;font-weight:600;">
+                                ACCEPTED
+                            </span>
+                        {% elif handover.status == "PENDING" %}
+                            <span style="display:inline-block;padding:5px 10px;border-radius:20px;background:#cff4fc;color:#055160;font-weight:600;">
+                                PENDING
+                            </span>
+                        {% else %}
+                            <span style="display:inline-block;padding:5px 10px;border-radius:20px;background:#eee;color:#555;font-weight:600;">
+                                {{ handover.status }}
+                            </span>
+                        {% endif %}
+
+                        <div style="margin-top:10px;font-weight:700;">
+                            ₦{{ handover.expected_amount|floatformat:2 }}
+                        </div>
+
+                        <a
+                            href="{% url 'cash_custody_detail' handover.id %}"
+                            style="display:inline-block;margin-top:10px;text-decoration:none;"
+                        >
+                            View Details →
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        {% empty %}
+
+            <div style="padding:30px;text-align:center;color:#666;">
+                No cash custody records found.
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -119,9 +119,24 @@
 </tr>
 {% for c in data.charges %}
 <tr>
-    <td>{{ c.description }}</td>
-    <td class="right">₦{{ c.amount }}</td>
+    <td>
+        {{ c.description }}
+
+        {% if c.amount > 0 %}
+            <br>
+            <a
+                href="{% url 'request_charge_refund' c.id %}"
+            >
+                Request Refund
+            </a>
+        {% endif %}
+    </td>
+
+    <td class="right">
+        ₦{{ c.amount }}
+    </td>
 </tr>
+{% endfor %}
 {% endfor %}
 <tr>
     <th class="right">Subtotal</th>

@@ -1,98 +1,581 @@
 {% extends "base/base.html" %}
+
 {% block content %}
 
-<h2>Request Ingredients</h2>
+<style>
+    .request-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 28px 20px 50px;
+    }
 
-<form method="post">
-  {% csrf_token %}
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
 
-  {{ formset.management_form }}
+    .page-title {
+        margin: 0;
+        font-size: 30px;
+        font-weight: 700;
+        color: #172033;
+    }
 
-  <!-- ========================= -->
-  <!-- INGREDIENT ITEMS TABLE -->
-  <!-- ========================= -->
-  <table border="1" cellpadding="6" width="100%" id="items-table">
-    <thead>
-      <tr>
-        <th>Ingredient</th>
-        <th>Quantity</th>
-        <th>Source</th>
-        <th>Remove</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for form in formset %}
-      <tr class="item-row">
-        <td>{{ form.ingredient }}</td>
-        <td>{{ form.quantity }}</td>
-        <td>{{ form.source }}</td>
-        <td>
-          {% if form.instance.pk %}
-            {{ form.DELETE }}
-          {% else %}
-            <button type="button" onclick="removeRow(this)">✖</button>
-          {% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    .page-subtitle {
+        margin: 7px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-  <!-- ADD ITEM -->
-  <div style="margin-top:10px;">
-    <button type="button" onclick="addRow()">➕ Add another ingredient</button>
-  </div>
+    .header-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
 
-  <hr>
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 10px 16px;
+        border-radius: 9px;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: .15s ease;
+    }
 
-  <!-- ========================= -->
-  <!-- NOTES -->
-  <!-- ========================= -->
-  <fieldset>
-    <legend>Notes</legend>
-  {{ request_form.note.errors }}
-  {{ request_form.note }}
-    <p style="font-size:12px;color:#666;">
-      Optional notes (urgent, market purchase, special quality, etc.)
-    </p>
-  </fieldset>
+    .btn-secondary {
+        background: #fff;
+        color: #374151;
+        border-color: #d9dee7;
+    }
 
-  <br>
+    .btn-secondary:hover {
+        background: #f8fafc;
+    }
 
-  <!-- ========================= -->
-  <!-- ACTIONS -->
-  <!-- ========================= -->
-  <button type="submit">Submit Request</button>
-  <a href="{% url 'kitchen_ingredients' %}">Cancel</a>
+    .btn-primary {
+        background: #1f2937;
+        color: #fff;
+    }
 
-</form>
+    .btn-primary:hover {
+        background: #111827;
+    }
 
-<!-- ========================= -->
-<!-- JAVASCRIPT -->
-<!-- ========================= -->
+    .btn-add {
+        background: #f3f4f6;
+        color: #1f2937;
+        border-color: #d9dee7;
+    }
+
+    .btn-add:hover {
+        background: #e5e7eb;
+    }
+
+    .info-banner {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 15px 17px;
+        margin-bottom: 22px;
+        border: 1px solid #dbe4f0;
+        border-radius: 12px;
+        background: #f8fafc;
+        color: #475569;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .info-icon {
+        font-size: 18px;
+        line-height: 1;
+    }
+
+    .card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, .04);
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 18px 20px;
+        border-bottom: 1px solid #edf0f4;
+    }
+
+    .card-title {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .card-description {
+        margin: 5px 0 0;
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+    }
+
+    .request-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 720px;
+    }
+
+    .request-table th {
+        padding: 13px 16px;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .request-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #f0f2f5;
+        vertical-align: middle;
+    }
+
+    .request-table tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .request-table input,
+    .request-table select,
+    .notes-field {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px 11px;
+        border: 1px solid #d5dbe5;
+        border-radius: 8px;
+        background: #fff;
+        color: #1f2937;
+        font-size: 14px;
+        outline: none;
+    }
+
+    .request-table input:focus,
+    .request-table select:focus,
+    .notes-field:focus {
+        border-color: #64748b;
+        box-shadow: 0 0 0 3px rgba(100, 116, 139, .10);
+    }
+
+    .quantity-field {
+        max-width: 130px;
+    }
+
+    .remove-cell {
+        width: 80px;
+        text-align: center;
+    }
+
+    .remove-row {
+        border: 0;
+        background: transparent;
+        color: #9ca3af;
+        cursor: pointer;
+        font-size: 18px;
+        padding: 6px;
+        border-radius: 7px;
+    }
+
+    .remove-row:hover {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .hidden-delete {
+        display: none !important;
+    }
+
+    .form-errors {
+        margin-top: 6px;
+        color: #dc2626;
+        font-size: 12px;
+    }
+
+    .add-row-area {
+        padding: 15px 20px;
+        border-top: 1px solid #edf0f4;
+        background: #fafbfc;
+    }
+
+    .notes-card {
+        padding: 20px;
+    }
+
+    .field-label {
+        display: block;
+        margin-bottom: 7px;
+        color: #374151;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .notes-field {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    .form-footer {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+        margin-top: 22px;
+    }
+
+    .empty-row {
+        text-align: center;
+        color: #6b7280;
+        padding: 28px !important;
+    }
+
+    @media (max-width: 700px) {
+        .request-page {
+            padding: 20px 12px 40px;
+        }
+
+        .page-header {
+            flex-direction: column;
+        }
+
+        .header-actions {
+            width: 100%;
+        }
+
+        .header-actions .btn {
+            flex: 1;
+        }
+
+        .form-footer {
+            flex-direction: column-reverse;
+        }
+
+        .form-footer .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="request-page">
+
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Request Ingredients</h1>
+            <p class="page-subtitle">
+                Submit an ingredient stock request for manager review and fulfillment.
+            </p>
+        </div>
+
+        <div class="header-actions">
+            <a href="{% url 'kitchen_ingredients' %}" class="btn btn-secondary">
+                ← Back to Ingredients
+            </a>
+        </div>
+    </div>
+
+    <div class="info-banner">
+        <div class="info-icon">ℹ️</div>
+        <div>
+            <strong>Request workflow</strong><br>
+            Submit your request → Manager reviews and approves → Store or the approved
+            purchase workflow fulfills the request.
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {{ formset.management_form }}
+
+        <div class="card">
+
+            <div class="card-header">
+                <h2 class="card-title">Requested Ingredients</h2>
+                <p class="card-description">
+                    Add each ingredient, the required quantity, and the intended source.
+                </p>
+            </div>
+
+            <div class="table-wrap">
+                <table class="request-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%;">Ingredient</th>
+                            <th style="width: 20%;">Quantity</th>
+                            <th style="width: 25%;">Source</th>
+                            <th style="width: 15%; text-align:center;">Remove</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="ingredient-rows">
+
+                        {% for form in formset %}
+                        <tr class="ingredient-row">
+
+                            <td>
+                                {{ form.ingredient }}
+
+                                {% if form.ingredient.errors %}
+                                    <div class="form-errors">
+                                        {{ form.ingredient.errors }}
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <div class="quantity-field">
+                                    {{ form.quantity }}
+                                </div>
+
+                                {% if form.quantity.errors %}
+                                    <div class="form-errors">
+                                        {{ form.quantity.errors }}
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {{ form.source }}
+
+                                {% if form.source.errors %}
+                                    <div class="form-errors">
+                                        {{ form.source.errors }}
+                                    </div>
+                                {% endif %}
+                            </td>
+
+                            <td class="remove-cell">
+                                {{ form.DELETE.as_hidden }}
+
+                                <button
+                                    type="button"
+                                    class="remove-row"
+                                    title="Remove ingredient"
+                                >
+                                    🗑
+                                </button>
+                            </td>
+
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="empty-row">
+                                No ingredient rows available.
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="add-row-area">
+                <button type="button" id="add-row" class="btn btn-add">
+                    ＋ Add Ingredient
+                </button>
+            </div>
+
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Request Notes</h2>
+                <p class="card-description">
+                    Add any useful information for the manager reviewing this request.
+                </p>
+            </div>
+
+            <div class="notes-card">
+                <label class="field-label" for="{{ request_form.note.id_for_label }}">
+                    Notes
+                </label>
+
+                {{ request_form.note }}
+
+                {% if request_form.note.errors %}
+                    <div class="form-errors">
+                        {{ request_form.note.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <a href="{% url 'kitchen_ingredients' %}" class="btn btn-secondary">
+                Cancel
+            </a>
+
+            <button type="submit" class="btn btn-primary">
+                Submit Ingredient Request
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
 <script>
-function addRow() {
-  const table = document.querySelector("#items-table tbody");
-  const totalForms = document.getElementById("id_items-TOTAL_FORMS");
+(function () {
+    const container = document.getElementById("ingredient-rows");
+    const addButton = document.getElementById("add-row");
 
-  const formIndex = parseInt(totalForms.value);
-  const templateRow = table.querySelector(".item-row");
-  const newRow = templateRow.cloneNode(true);
+    if (!container || !addButton) {
+        console.error("Ingredient request form: required elements not found.");
+        return;
+    }
 
-  newRow.querySelectorAll("input, select").forEach(el => {
-    el.name = el.name.replace(/-\d+-/, `-${formIndex}-`);
-    el.id = el.id.replace(/-\d+-/, `-${formIndex}-`);
-    if (el.type !== "hidden") el.value = "";
-    if (el.type === "checkbox") el.checked = false;
-  });
+    // Find Django's TOTAL_FORMS field regardless of the formset prefix.
+    const totalForms = document.querySelector(
+        'input[name$="-TOTAL_FORMS"]'
+    );
 
-  table.appendChild(newRow);
-  totalForms.value = formIndex + 1;
-}
+    if (!totalForms) {
+        console.error("Ingredient request form: TOTAL_FORMS field not found.");
+        return;
+    }
 
-function removeRow(btn) {
-  btn.closest("tr").remove();
-}
+    function getNextIndex() {
+        return parseInt(totalForms.value, 10);
+    }
+
+    function updateFieldIndex(field, oldIndex, newIndex) {
+        if (field.name) {
+            field.name = field.name.replace(
+                new RegExp("-" + oldIndex + "-"),
+                "-" + newIndex + "-"
+            );
+        }
+
+        if (field.id) {
+            field.id = field.id.replace(
+                new RegExp("-" + oldIndex + "-"),
+                "-" + newIndex + "-"
+            );
+        }
+    }
+
+    function clearField(field) {
+        if (field.type === "hidden") {
+            return;
+        }
+
+        if (field.type === "checkbox" || field.type === "radio") {
+            field.checked = false;
+        } else if (field.tagName === "SELECT") {
+            field.selectedIndex = 0;
+        } else {
+            field.value = "";
+        }
+    }
+
+    function clearRow(row) {
+        row.querySelectorAll("input, select, textarea").forEach(function (field) {
+            clearField(field);
+        });
+
+        row.querySelectorAll(".form-errors").forEach(function (error) {
+            error.remove();
+        });
+    }
+
+    // ADD INGREDIENT
+    addButton.addEventListener("click", function () {
+
+        const rows = container.querySelectorAll(".ingredient-row");
+
+        if (!rows.length) {
+            console.error("Ingredient request form: no template row found.");
+            return;
+        }
+
+        const sourceRow = rows[rows.length - 1];
+        const newRow = sourceRow.cloneNode(true);
+
+        const oldIndex = getNextIndex() - 1;
+        const newIndex = getNextIndex();
+
+        newRow.querySelectorAll("input, select, textarea").forEach(function (field) {
+            updateFieldIndex(field, oldIndex, newIndex);
+        });
+
+        clearRow(newRow);
+
+        // Make sure a cloned DELETE field starts empty.
+        const deleteField = newRow.querySelector(
+            'input[name$="-DELETE"]'
+        );
+
+        if (deleteField) {
+            deleteField.value = "";
+        }
+
+        container.appendChild(newRow);
+
+        totalForms.value = newIndex + 1;
+
+        console.log(
+            "Ingredient row added. New TOTAL_FORMS:",
+            totalForms.value
+        );
+    });
+
+    // REMOVE INGREDIENT
+    container.addEventListener("click", function (event) {
+
+        const removeButton = event.target.closest(".remove-row");
+
+        if (!removeButton) {
+            return;
+        }
+
+        const row = removeButton.closest(".ingredient-row");
+
+        if (!row) {
+            return;
+        }
+
+        const rows = container.querySelectorAll(".ingredient-row");
+
+        // If this is the only visible row, simply clear it.
+        if (rows.length === 1) {
+            clearRow(row);
+            return;
+        }
+
+        // Django formsets support DELETE.
+        const deleteField = row.querySelector(
+            'input[name$="-DELETE"]'
+        );
+
+        if (deleteField) {
+            deleteField.value = "on";
+        }
+
+        row.style.display = "none";
+    });
+
+})();
 </script>
 
 {% endblock %}

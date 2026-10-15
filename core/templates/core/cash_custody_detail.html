@@ -1,0 +1,313 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<div style="max-width:1000px;margin:0 auto;padding:30px 20px;">
+
+    <div style="margin-bottom:25px;">
+        <a href="{% url 'cash_custody_dashboard' %}" style="text-decoration:none;">
+            ← Back to Cash Custody
+        </a>
+
+        <h1 style="margin:18px 0 5px;">
+            Cash Handover #{{ handover.id }}
+        </h1>
+
+        <div style="color:#666;">
+            {{ handover.get_custody_type_display }}
+        </div>
+    </div>
+
+
+    <div style="padding:20px;border:1px solid #ddd;border-radius:10px;margin-bottom:20px;">
+
+        <h3 style="margin-top:0;">Handover Information</h3>
+
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;">
+
+            <div>
+                <div style="color:#777;">Hotel</div>
+                <strong>{{ handover.hotel.name }}</strong>
+            </div>
+
+            <div>
+                <div style="color:#777;">Department</div>
+                <strong>{{ handover.department.name }}</strong>
+            </div>
+
+            <div>
+                <div style="color:#777;">From</div>
+                <strong>
+                    {{ handover.from_user.get_full_name|default:handover.from_user.username }}
+                </strong>
+            </div>
+
+            <div>
+                <div style="color:#777;">To</div>
+                <strong>
+                    {{ handover.to_user.get_full_name|default:handover.to_user.username }}
+                </strong>
+            </div>
+
+            <div>
+                <div style="color:#777;">Created</div>
+                <strong>{{ handover.created_at|date:"d M Y, H:i" }}</strong>
+            </div>
+
+            <div>
+                <div style="color:#777;">Status</div>
+                <strong>{{ handover.get_status_display }}</strong>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div style="padding:20px;border:1px solid #ddd;border-radius:10px;margin-bottom:20px;">
+
+        <h3 style="margin-top:0;">Cash Count</h3>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;">
+
+            <div>
+                <div style="color:#777;">Expected Cash</div>
+                <div style="font-size:22px;font-weight:700;">
+                    ₦{{ handover.expected_amount|floatformat:2 }}
+                </div>
+            </div>
+
+            <div>
+                <div style="color:#777;">Sender Count</div>
+                <div style="font-size:22px;font-weight:700;">
+                    ₦{{ handover.sender_count|floatformat:2 }}
+                </div>
+            </div>
+
+            <div>
+                <div style="color:#777;">Recipient Count</div>
+                <div style="font-size:22px;font-weight:700;">
+                    {% if handover.recipient_count is not None %}
+                        ₦{{ handover.recipient_count|floatformat:2 }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div style="padding:20px;border:1px solid #ddd;border-radius:10px;margin-bottom:20px;">
+
+        <h3 style="margin-top:0;">Variance</h3>
+
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;">
+
+            <div>
+                <div style="color:#777;">Sender Variance</div>
+                <div style="font-size:22px;font-weight:700;">
+                    ₦{{ handover.sender_variance|floatformat:2 }}
+                </div>
+                <div style="color:#777;margin-top:5px;">
+                    Expected cash compared with sender's count.
+                </div>
+            </div>
+
+            <div>
+                <div style="color:#777;">Custody Variance</div>
+                <div style="font-size:22px;font-weight:700;">
+                    ₦{{ handover.custody_variance|floatformat:2 }}
+                </div>
+                <div style="color:#777;margin-top:5px;">
+                    Sender's count compared with recipient's count.
+                </div>
+            </div>
+
+        </div>
+
+        {% if handover.variance_note %}
+            <div style="margin-top:25px;padding:15px;background:#f8f9fa;border-radius:8px;">
+                <div style="color:#777;margin-bottom:6px;">Variance Explanation</div>
+                <div>{{ handover.variance_note }}</div>
+            </div>
+        {% endif %}
+
+    </div>
+
+
+    {% if handover.status == "VARIANCE" %}
+
+        <div style="padding:20px;border:2px solid #dc3545;border-radius:10px;margin-bottom:20px;">
+
+            <h3 style="margin-top:0;">Resolve Cash Variance</h3>
+
+            <p style="color:#666;margin-top:0;">
+                Management has reviewed this variance and may record the
+                responsible party as having paid back the outstanding amount.
+                The physical recovery of the money is handled outside the system.
+            </p>
+
+            <form method="post" action="{% url 'cash_custody_resolve' handover.id %}">
+                {% csrf_token %}
+
+                <div style="margin-bottom:18px;">
+                    <label style="display:block;font-weight:600;margin-bottom:7px;">
+                        Responsible Party
+                    </label>
+
+                    <select
+                        name="responsible_user"
+                        required
+                        style="width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;"
+                    >
+                        <option value="">Select responsible party</option>
+
+                        <option value="{{ handover.from_user.id }}">
+                            {{ handover.from_user.get_full_name|default:handover.from_user.username }}
+                            — Sender
+                        </option>
+
+                        <option value="{{ handover.to_user.id }}">
+                            {{ handover.to_user.get_full_name|default:handover.to_user.username }}
+                            — Recipient
+                        </option>
+                    </select>
+                </div>
+
+
+                <div style="margin-bottom:18px;">
+                    <label style="display:block;font-weight:600;margin-bottom:7px;">
+                        Amount Paid Back
+                    </label>
+
+                    <input
+                        type="number"
+                        name="resolution_amount"
+                        value="{{ outstanding_variance|floatformat:2 }}"
+                        min="0.01"
+                        step="0.01"
+                        required
+                        style="width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;"
+                    >
+
+                    <div style="color:#777;font-size:13px;margin-top:5px;">
+                        Outstanding variance must be paid back in full:
+                        ₦{{ outstanding_variance|floatformat:2 }}
+                    </div>
+                </div>
+
+
+                <div style="margin-bottom:18px;">
+                    <label style="display:block;font-weight:600;margin-bottom:7px;">
+                        Resolution Note
+                    </label>
+
+                    <textarea
+                        name="resolution_note"
+                        rows="4"
+                        required
+                        placeholder="Record the management resolution..."
+                        style="width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;"
+                    ></textarea>
+                </div>
+
+
+                <button
+                    type="submit"
+                    style="padding:12px 20px;border:0;border-radius:6px;background:#198754;color:white;font-weight:600;cursor:pointer;"
+                >
+                    Mark Paid Back & Resolve
+                </button>
+
+            </form>
+
+        </div>
+
+    {% elif handover.status == "RESOLVED" %}
+
+        <div style="padding:20px;border:2px solid #198754;border-radius:10px;margin-bottom:20px;">
+
+            <h3 style="margin-top:0;">Variance Resolved</h3>
+
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:18px;">
+
+                <div>
+                    <div style="color:#777;">Responsible Party</div>
+                    <strong>
+                        {{ handover.responsible_user.get_full_name|default:handover.responsible_user.username }}
+                    </strong>
+                </div>
+
+                <div>
+                    <div style="color:#777;">Resolution</div>
+                    <strong>
+                        {{ handover.get_resolution_type_display }}
+                    </strong>
+                </div>
+
+                <div>
+                    <div style="color:#777;">Amount Paid Back</div>
+                    <strong style="font-size:22px;">
+                        ₦{{ handover.resolution_amount|floatformat:2 }}
+                    </strong>
+                </div>
+
+                <div>
+                    <div style="color:#777;">Resolved By</div>
+                    <strong>
+                        {{ handover.resolved_by.get_full_name|default:handover.resolved_by.username }}
+                    </strong>
+                </div>
+
+                <div>
+                    <div style="color:#777;">Resolved At</div>
+                    <strong>
+                        {{ handover.resolved_at|date:"d M Y, H:i" }}
+                    </strong>
+                </div>
+
+            </div>
+
+            {% if handover.resolution_note %}
+                <div style="margin-top:20px;padding:15px;background:#f8f9fa;border-radius:8px;">
+                    <div style="color:#777;margin-bottom:6px;">
+                        Resolution Note
+                    </div>
+                    <div>
+                        {{ handover.resolution_note }}
+                    </div>
+                </div>
+            {% endif %}
+
+        </div>
+
+    {% endif %}
+
+
+    {% if handover.shift %}
+        <div style="padding:20px;border:1px solid #ddd;border-radius:10px;margin-bottom:20px;">
+
+            <h3 style="margin-top:0;">Linked Shift</h3>
+
+            <div>
+                Shift #{{ handover.shift.id }}
+                ·
+                {{ handover.shift.get_status_display }}
+            </div>
+
+        </div>
+    {% endif %}
+
+
+    <div style="margin-top:25px;">
+        <a href="{% url 'cash_custody_dashboard' %}" style="text-decoration:none;">
+            ← Back to Cash Custody
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}

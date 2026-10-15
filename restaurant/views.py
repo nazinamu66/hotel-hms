@@ -10,17 +10,19 @@ from django.shortcuts import get_object_or_404
 from rooms.models import Room
 from billing.models import Folio, Payment
 from datetime import date
-from django.utils.timezone import localdate
 from inventory.models import Department
 from accounts.models import User
 from django.db import models, transaction
-from restaurant.services import get_or_create_shift
 from kitchen.models import KitchenTicketItem,KitchenTicket
 from restaurant.models import Shift
-from django.contrib import messages
-from django.db.models import Sum
+from django.core.exceptions import PermissionDenied
 from django.utils import timezone
-from accounting.services.postings.cogs import post_cogs_for_order
+from django.db.models import OuterRef, Subquery, Sum, DecimalField, Value,Q
+from django.db.models.functions import Coalesce
+from core.models import CashHandover
+from core.services.cash.handover import create_handover
+from accounting.models import BankAccount
+from accounts.services.access import get_accessible_hotels
 
 
 
@@ -37,24 +39,6 @@ from django.contrib.auth.decorators import user_passes_test
 def is_manager(user):
     return user.role in ["MANAGER", "ADMIN"]
 
-
-@user_passes_test(is_manager)
-@require_POST
-def refund_order(request, order_id):
-    order = get_object_or_404(POSOrder, id=order_id)
-
-    reason = request.POST.get("reason", "")
-
-    try:
-        order.refund(user=request.user, reason=reason)
-        messages.success(
-            request,
-            f"Order #{order.id} refunded successfully."
-        )
-    except Exception as e:
-        messages.error(request, str(e))
-
-    return redirect("restaurant_order_detail", order_id=order.id)
 
 
 @role_required("RESTAURANT", "MANAGER", "ADMIN")
@@ -132,13 +116,36 @@ def pos_v2(request):
     restaurant = user.department
 
     # --------------------------------
+    # Pending shift handover guard
+    # --------------------------------
+    pending_shift_handover = CashHandover.objects.filter(
+        to_user=user,
+        custody_type="SHIFT",
+        status="PENDING",
+    ).order_by("-created_at").first()
+
+    if pending_shift_handover:
+        messages.info(
+            request,
+            "You have a pending shift handover. Accept it before starting a new shift."
+        )
+        return redirect("cash_handover_list")
+
+    # --------------------------------
     # Shift guard
     # --------------------------------
-    shift = get_or_create_shift(user)
+    shift = Shift.objects.filter(
+        user=user,
+        department=restaurant,
+        status="OPEN",
+    ).first()
 
-    if shift.status != "OPEN":
-        messages.error(request, "Your shift is closed. Please start a new shift.")
-        return redirect("dashboard")
+    if not shift:
+        messages.info(
+            request,
+            "You do not have an open shift. Please open a shift before using the POS."
+        )
+        return redirect("restaurant_shift_open")
 
     request.session["shift_id"] = shift.id
 
@@ -152,38 +159,56 @@ def pos_v2(request):
     ).first()
 
     if not kitchen:
-        messages.error(request, "Restaurant is not linked to a kitchen.")
+        messages.error(
+            request,
+            "Restaurant is not linked to a kitchen."
+        )
         return redirect("dashboard")
 
     # --------------------------------
-    # Sellable menu items only
+    # FOOD MENU
     # --------------------------------
-    menu_items = (
+    food_items = (
         MenuItem.objects
         .filter(
             is_active=True,
-            product__usage_type="RESALE"   # 🔥 THE REAL LOGIC
+            category="FOOD",
+            product__usage_type="RESALE",
         )
         .select_related("product")
-        .order_by("category", "name")
+        .order_by("name")
     )
 
     # --------------------------------
-    # Restaurant stock (sellable)
+    # DRINK MENU
+    # --------------------------------
+    drink_items = (
+        MenuItem.objects
+        .filter(
+            is_active=True,
+            category="DRINK",
+            product__usage_type="RESALE",
+        )
+        .select_related("product")
+        .order_by("name")
+    )
+
+    # --------------------------------
+    # Restaurant stock
     # --------------------------------
     restaurant_stock_map = {
-        s.product_id: s.quantity
-        for s in Stock.objects.filter(
+        stock.product_id: stock.quantity
+        for stock in Stock.objects.filter(
             department=restaurant
         )
     }
 
     # --------------------------------
-    # Kitchen stock (reference)
+    # Kitchen stock
     # --------------------------------
     kitchen_stock_map = {
-        s.product_id: s.quantity
-        for s in Stock.objects.filter(
+        stock.product_id: stock.quantity
+        for stock in Stock.objects.filter(
             department=kitchen
         )
     }
@@ -191,11 +216,32 @@ def pos_v2(request):
     # --------------------------------
     # Occupied rooms
     # --------------------------------
-    occupied_rooms = Room.objects.filter(
-        hotel=restaurant.hotel,
-        folio__folio_type="ROOM",
-        folio__is_closed=False
-    ).distinct()
+    occupied_rooms = (
+        Room.objects
+        .filter(
+            hotel=restaurant.hotel,
+            folio__folio_type="ROOM",
+            folio__is_closed=False
+        )
+        .distinct()
+    )
+
+    # --------------------------------
+    # Bank accounts
+    # --------------------------------
+    bank_accounts = (
+        BankAccount.objects
+        .filter(
+            hotel=restaurant.hotel,
+            is_active=True,
+            account__is_active=True,
+        )
+        .select_related("account")
+        .order_by(
+            "bank_name",
+            "account_name"
+        )
+    )
 
     # --------------------------------
     # Cart
@@ -214,16 +260,20 @@ def pos_v2(request):
         request,
         "restaurant/pos_v2.html",
         {
-            "menu_items": menu_items,
+            "food_items": food_items,
+            "drink_items": drink_items,
+
             "shift": shift,
             "cart": cart,
             "total": total,
+
             "restaurant_stock_map": restaurant_stock_map,
             "kitchen_stock_map": kitchen_stock_map,
+
             "occupied_rooms": occupied_rooms,
+            "bank_accounts": bank_accounts,
         }
     )
-
 
 @role_required("RESTAURANT")
 def cart_add(request, item_id):
@@ -326,9 +376,18 @@ def cart_update(request, item_id):
 
     menu_item = get_object_or_404(MenuItem, id=item_id)
 
+    if menu_item.product.product_type == "DRINK":
+        stock_department = restaurant
+    else:
+        stock_department = Department.objects.filter(
+            hotel=restaurant.hotel,
+            department_type="KITCHEN",
+            is_active=True,
+        ).first()
+
     stock = Stock.objects.filter(
         product=menu_item.product,
-        department=restaurant
+        department=stock_department,
     ).first()
 
     available_qty = stock.quantity if stock else 0
@@ -373,12 +432,13 @@ def pos_commit(request):
 
     try:
         order = process_pos_order(
-            user=request.user,
-            cart=cart,
-            settlement=request.POST.get("settlement"),
-            payment_method=request.POST.get("payment_method"),
-            room_id=request.POST.get("room")
-        )
+        user=request.user,
+        cart=cart,
+        settlement=request.POST.get("settlement"),
+        payment_method=request.POST.get("payment_method"),
+        room_id=request.POST.get("room"),
+        bank_account_id=request.POST.get("bank_account"),
+    )
 
         request.session.pop("pos_cart", None)
 
@@ -393,21 +453,33 @@ def pos_commit(request):
 
 @role_required("RESTAURANT", "MANAGER", "ADMIN")
 def pos_order_detail(request, order_id):
-
     if request.user.role == "RESTAURANT":
         order = get_object_or_404(
             POSOrder,
             id=order_id,
-            department=request.user.department
+            department=request.user.department,
         )
     else:
         order = get_object_or_404(
             POSOrder,
-            id=order_id
+            id=order_id,
         )
 
-    # 🔥 Get kitchen ticket if it exists
-    ticket = KitchenTicket.objects.filter(order=order).first()
+    ticket = KitchenTicket.objects.filter(
+        order=order
+    ).first()
+
+    from billing.models import RefundRequest
+
+    refund_request = (
+        RefundRequest.objects
+        .filter(
+            source_type="POS_ORDER",
+            pos_order=order,
+        )
+        .order_by("-requested_at")
+        .first()
+    )
 
     return render(
         request,
@@ -415,46 +487,66 @@ def pos_order_detail(request, order_id):
         {
             "order": order,
             "ticket": ticket,
-        }
+            "refund_request": refund_request,
+        },
     )
 
 
 @role_required("RESTAURANT")
+@transaction.atomic
 def close_shift(request):
-
-    from accounting.services.journal import record_transaction
-
     user = request.user
     department = user.department
 
-    shift = Shift.objects.filter(
-        user=user,
-        department=department,
-        status="OPEN"
-    ).first()
+    shift = (
+        Shift.objects
+        .select_for_update()
+        .filter(
+            user=user,
+            department=department,
+            status="OPEN",
+        )
+        .first()
+    )
 
     if not shift:
         messages.error(request, "No open shift found.")
         return redirect("/restaurant/pos-v2/")
 
-    # -----------------------------
+    # --------------------------------------------------
+    # Prevent duplicate pending handovers
+    # --------------------------------------------------
+    pending_handover = (
+        CashHandover.objects
+        .filter(
+            shift=shift,
+            status="PENDING",
+        )
+        .first()
+    )
+
+    # --------------------------------------------------
     # Orders
-    # -----------------------------
+    # --------------------------------------------------
     orders = shift.orders.all()
 
     order_count = orders.count()
 
-    total_sales = orders.aggregate(
-        total=Sum("total_amount")
-    )["total"] or Decimal("0.00")
+    total_sales = (
+        orders
+        .filter(status__in=["CHARGED", "PAID"])
+        .aggregate(total=Sum("total_amount"))
+        ["total"]
+        or Decimal("0.00")
+    )
 
-    # -----------------------------
+    # --------------------------------------------------
     # Payments
-    # -----------------------------
-    payments = Payment.objects.filter(
-        reference__startswith="POS-",
-        collected_by=user,
-        collected_at__gte=shift.opened_at
+    # --------------------------------------------------
+    payments = (
+        Payment.objects
+        .filter(shift=shift)
+        .order_by("-collected_at")
     )
 
     payment_summary = {
@@ -463,60 +555,311 @@ def close_shift(request):
         "TRANSFER": Decimal("0.00"),
     }
 
-    for p in payments:
-        if p.method in payment_summary:
-            payment_summary[p.method] += p.amount
+    for payment in payments:
+        if payment.method in payment_summary:
+            payment_summary[payment.method] += payment.amount
 
-    expected_cash = payment_summary["CASH"]
+    expected_cash = (
+        shift.opening_cash
+        + payment_summary["CASH"]
+    )
 
-    # -----------------------------
-    # Handle POST (closing shift)
-    # -----------------------------
+    # --------------------------------------------------
+    # Recipient options
+    # --------------------------------------------------
+    recipients = (
+        User.objects
+        .filter(
+            is_active=True,
+        )
+        .filter(
+            Q(
+                role="RESTAURANT",
+                department=department,
+            )
+            |
+            Q(
+                role__in=["MANAGER", "ACCOUNTANT"],
+                hotel=department.hotel,
+            )
+        )
+        .exclude(id=user.id)
+        .order_by("role", "username")
+    )
+
+    # --------------------------------------------------
+    # Create cash handover
+    # --------------------------------------------------
     if request.method == "POST":
 
-        counted_cash = Decimal(request.POST.get("counted_cash", "0"))
-
-        # --------------------------------------
-        # ACCOUNTING: MOVE POS → CASH
-        # --------------------------------------
-        if expected_cash > 0:
-            record_transaction(
-                debit_system_key="cash",
-                credit_system_key="pos_clearing",
-                amount=expected_cash,
-                description=f"Restaurant Shift #{shift.id} Closed",
-                hotel=department.hotel,
-                created_by=user,
-                entry_type="NORMAL",
-                reference=f"SHIFT-{shift.id}",
+        if pending_handover:
+            messages.error(
+                request,
+                "This shift already has a pending cash handover."
+            )
+            return redirect(
+                "restaurant_shift_detail",
+                shift_id=shift.id,
             )
 
-        # --------------------------------------
-        # CLOSE SHIFT
-        # --------------------------------------
-        shift.closing_cash = counted_cash
-        shift.closed_at = timezone.now()
-        shift.status = "CLOSED"
-        shift.save()
+        recipient_id = request.POST.get("recipient")
+        sender_count_raw = request.POST.get("sender_count", "").strip()
 
-        request.session.pop("shift_id", None)
+        if not recipient_id:
+            messages.error(
+                request,
+                "Please select the person receiving the cash."
+            )
+            return render(
+                request,
+                "restaurant/close_shift.html",
+                {
+                    "shift": shift,
+                    "order_count": order_count,
+                    "total_sales": total_sales,
+                    "payment_summary": payment_summary,
+                    "expected_cash": expected_cash,
+                    "recipients": recipients,
+                },
+            )
 
-        messages.success(request, "Shift closed successfully.")
+        if not sender_count_raw:
+            messages.error(
+                request,
+                "Please enter the cash amount you counted."
+            )
+            return render(
+                request,
+                "restaurant/close_shift.html",
+                {
+                    "shift": shift,
+                    "order_count": order_count,
+                    "total_sales": total_sales,
+                    "payment_summary": payment_summary,
+                    "expected_cash": expected_cash,
+                    "recipients": recipients,
+                },
+            )
 
-        return redirect("/restaurant/pos-v2/")
+        try:
+            sender_count = Decimal(sender_count_raw)
+        except Exception:
+            messages.error(
+                request,
+                "Please enter a valid cash amount."
+            )
+            return render(
+                request,
+                "restaurant/close_shift.html",
+                {
+                    "shift": shift,
+                    "order_count": order_count,
+                    "total_sales": total_sales,
+                    "payment_summary": payment_summary,
+                    "expected_cash": expected_cash,
+                    "recipients": recipients,
+                },
+            )
 
-    context = {
-        "shift": shift,
-        "order_count": order_count,
-        "total_sales": total_sales,
-        "payment_summary": payment_summary,
-        "expected_cash": expected_cash,
-    }
+        if sender_count < 0:
+            messages.error(
+                request,
+                "Cash counted cannot be negative."
+            )
+            return render(
+                request,
+                "restaurant/close_shift.html",
+                {
+                    "shift": shift,
+                    "order_count": order_count,
+                    "total_sales": total_sales,
+                    "payment_summary": payment_summary,
+                    "expected_cash": expected_cash,
+                    "recipients": recipients,
+                },
+            )
+
+        recipient = get_object_or_404(
+            User,
+            id=recipient_id,
+            is_active=True,
+        )
+
+        if recipient.role == "RESTAURANT":
+            custody_type = "SHIFT"
+        else:
+            custody_type = "CUSTODY"
+
+        try:
+            handover = create_handover(
+            from_user=user,
+            to_user=recipient,
+            department=department,
+            expected_amount=expected_cash,
+            sender_count=sender_count,
+            shift=shift,
+            custody_type=custody_type,
+        )
+        except Exception as e:
+            messages.error(request, str(e))
+            return render(
+                request,
+                "restaurant/close_shift.html",
+                {
+                    "shift": shift,
+                    "order_count": order_count,
+                    "total_sales": total_sales,
+                    "payment_summary": payment_summary,
+                    "expected_cash": expected_cash,
+                    "recipients": recipients,
+                },
+            )
+
+        messages.success(
+            request,
+            f"Cash handover #{handover.id} created. "
+            f"{recipient.get_full_name() or recipient.username} "
+            "must independently count and accept the cash before the shift closes."
+        )
+
+        return redirect(
+            "restaurant_shift_detail",
+            shift_id=shift.id,
+        )
 
     return render(
         request,
         "restaurant/close_shift.html",
-        context
+        {
+            "shift": shift,
+            "order_count": order_count,
+            "total_sales": total_sales,
+            "payment_summary": payment_summary,
+            "expected_cash": expected_cash,
+            "recipients": recipients,
+            "pending_handover": pending_handover,
+        },
+    )
+
+@role_required("RESTAURANT")
+@transaction.atomic
+def open_shift(request):
+    user = request.user
+    department = user.department
+
+    if not department:
+        messages.error(request, "You are not assigned to a department.")
+        return redirect("dashboard")
+
+    # Restaurant only
+    if department.department_type != "RESTAURANT":
+        messages.error(request, "This action is only available to Restaurant staff.")
+        return redirect("dashboard")
+
+    # --------------------------------------------------
+    # Pending shift handover guard
+    # --------------------------------------------------
+    pending_handover = (
+        CashHandover.objects
+        .filter(
+            to_user=user,
+            custody_type="SHIFT",
+            status="PENDING",
+        )
+        .first()
+    )
+
+    if pending_handover:
+        messages.info(
+            request,
+            "You have a pending shift handover. Accept it before opening a shift."
+        )
+        return redirect("cash_handover_list")
+
+    # --------------------------------------------------
+    # User already has an open shift
+    # --------------------------------------------------
+    existing_user_shift = (
+        Shift.objects
+        .filter(
+            user=user,
+            department=department,
+            status="OPEN",
+        )
+        .first()
+    )
+
+    if existing_user_shift:
+        messages.info(request, "You already have an open shift.")
+        return redirect("restaurant_pos")
+
+    # --------------------------------------------------
+    # Restaurant allows only ONE open shift
+    # --------------------------------------------------
+    existing_shift = (
+        Shift.objects
+        .select_related("user")
+        .filter(
+            department=department,
+            status="OPEN",
+        )
+        .first()
+    )
+
+    if existing_shift:
+        messages.error(
+            request,
+            f"Restaurant already has an open shift handled by "
+            f"{existing_shift.user.username}."
+        )
+        return redirect("restaurant_shift_list")
+
+    # --------------------------------------------------
+    # Open shift
+    # --------------------------------------------------
+    if request.method == "POST":
+        opening_cash_raw = request.POST.get("opening_cash", "").strip()
+
+        try:
+            opening_cash = Decimal(opening_cash_raw)
+        except Exception:
+            messages.error(request, "Enter a valid opening cash amount.")
+            return render(
+                request,
+                "restaurant/open_shift.html",
+                {"opening_cash": opening_cash_raw},
+            )
+
+        if opening_cash < 0:
+            messages.error(request, "Opening cash cannot be negative.")
+            return render(
+                request,
+                "restaurant/open_shift.html",
+                {"opening_cash": opening_cash_raw},
+            )
+
+        shift = Shift.objects.create(
+            user=user,
+            department=department,
+            opening_cash=opening_cash,
+            status="OPEN",
+        )
+
+        request.session["shift_id"] = shift.id
+
+        messages.success(
+            request,
+            f"Shift opened successfully with ₦{opening_cash:,.2f} opening cash."
+        )
+
+        return redirect("restaurant_pos")
+
+    return render(
+        request,
+        "restaurant/open_shift.html",
+        {
+            "opening_cash": "0.00",
+        },
     )
 
 @role_required("RESTAURANT")
@@ -550,3 +893,211 @@ def restaurant_select_table(request, table_id):
     request.session["table_id"] = table_id
 
     return redirect("restaurant_pos")
+
+
+@role_required("RESTAURANT", "MANAGER", "DIRECTOR", "ADMIN")
+def shift_list(request):
+    user = request.user
+
+    decimal_field = DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    sales_subquery = (
+        POSOrder.objects
+        .filter(
+            shift_id=OuterRef("pk"),
+            status__in=["CHARGED", "PAID"],
+        )
+        .values("shift_id")
+        .annotate(
+            total=Sum("total_amount")
+        )
+        .values("total")[:1]
+    )
+
+    cash_subquery = (
+        Payment.objects
+        .filter(
+            shift_id=OuterRef("pk"),
+            method="CASH",
+        )
+        .values("shift_id")
+        .annotate(
+            total=Sum("amount")
+        )
+        .values("total")[:1]
+    )
+
+    pos_subquery = (
+        Payment.objects
+        .filter(
+            shift_id=OuterRef("pk"),
+            method="POS",
+        )
+        .values("shift_id")
+        .annotate(
+            total=Sum("amount")
+        )
+        .values("total")[:1]
+    )
+
+    transfer_subquery = (
+        Payment.objects
+        .filter(
+            shift_id=OuterRef("pk"),
+            method="TRANSFER",
+        )
+        .values("shift_id")
+        .annotate(
+            total=Sum("amount")
+        )
+        .values("total")[:1]
+    )
+
+    shifts = (
+        Shift.objects
+        .select_related(
+            "user",
+            "department",
+            "department__hotel",
+        )
+        .annotate(
+            total_sales=Coalesce(
+                Subquery(
+                    sales_subquery,
+                    output_field=decimal_field,
+                ),
+                Value(0, output_field=decimal_field),
+            ),
+            cash_total=Coalesce(
+                Subquery(
+                    cash_subquery,
+                    output_field=decimal_field,
+                ),
+                Value(0, output_field=decimal_field),
+            ),
+            pos_total=Coalesce(
+                Subquery(
+                    pos_subquery,
+                    output_field=decimal_field,
+                ),
+                Value(0, output_field=decimal_field),
+            ),
+            transfer_total=Coalesce(
+                Subquery(
+                    transfer_subquery,
+                    output_field=decimal_field,
+                ),
+                Value(0, output_field=decimal_field),
+            ),
+        )
+    )
+
+    if user.role == "RESTAURANT":
+        shifts = shifts.filter(user=user)
+
+    elif user.role in {"MANAGER", "DIRECTOR", "ADMIN"}:
+        hotels = get_accessible_hotels(user)
+        shifts = shifts.filter(
+            department__hotel__in=hotels
+        )
+
+    else:
+        shifts = Shift.objects.none()
+
+    shifts = shifts.order_by("-opened_at")
+
+    return render(
+        request,
+        "restaurant/shift_list.html",
+        {
+            "shifts": shifts,
+        },
+    )
+
+@role_required("RESTAURANT", "MANAGER", "DIRECTOR", "ADMIN")
+def shift_detail(request, shift_id):
+    user = request.user
+
+    shift = get_object_or_404(
+        Shift.objects.select_related(
+            "user",
+            "department",
+            "department__hotel",
+        ),
+        id=shift_id,
+    )
+
+    if user.role == "RESTAURANT":
+        if shift.user_id != user.id:
+            raise PermissionDenied("You cannot access this shift.")
+
+    elif user.role in {"MANAGER", "DIRECTOR", "ADMIN"}:
+        hotels = get_accessible_hotels(user)
+
+        if not hotels.filter(id=shift.department.hotel_id).exists():
+            raise PermissionDenied("You cannot access this shift.")
+
+    else:
+        raise PermissionDenied("You cannot access this shift.")
+
+    orders = (
+        shift.orders
+        .select_related("created_by", "folio")
+        .prefetch_related("items__menu_item")
+        .order_by("-created_at")
+    )
+
+    payments = (
+        shift.payments
+        .select_related("account", "folio", "collected_by")
+        .order_by("-collected_at")
+    )
+
+    handovers = (
+        shift.cash_handovers
+        .select_related("from_user", "to_user")
+        .order_by("-created_at")
+    )
+
+    sales_orders = orders.filter(
+        status__in=["CHARGED", "PAID"]
+    )
+
+    total_sales = (
+        sales_orders.aggregate(
+            total=Sum("total_amount")
+        )["total"]
+        or Decimal("0.00")
+    )
+
+    payment_summary = {
+        "CASH": Decimal("0.00"),
+        "POS": Decimal("0.00"),
+        "TRANSFER": Decimal("0.00"),
+    }
+
+    for payment in payments:
+        if payment.method in payment_summary:
+            payment_summary[payment.method] += payment.amount
+
+    expected_cash = (
+        shift.opening_cash
+        + payment_summary["CASH"]
+    )
+
+    return render(
+        request,
+        "restaurant/shift_detail.html",
+        {
+            "shift": shift,
+            "orders": orders,
+            "payments": payments,
+            "handovers": handovers,
+            "total_sales": total_sales,
+            "payment_summary": payment_summary,
+            "expected_cash": expected_cash,
+        },
+    )

@@ -1,167 +1,910 @@
 {% extends "base/base.html" %}
+
+{% block title %}Kitchen Board{% endblock %}
+
 {% block content %}
 
-<h2>Kitchen Board</h2>
+<style>
+    .kitchen-page {
+        max-width: 1500px;
+        margin: 0 auto;
+    }
+
+    .kitchen-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+
+    .kitchen-header h1 {
+        margin: 0 0 6px;
+        font-size: 30px;
+        font-weight: 700;
+        color: #273449;
+    }
+
+    .kitchen-header p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 15px;
+    }
+
+    .header-time {
+        color: #6b7280;
+        font-size: 13px;
+        text-align: right;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .summary-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 18px 20px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    .summary-label {
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+    }
+
+    .summary-value {
+        color: #111827;
+        font-size: 28px;
+        font-weight: 700;
+    }
+
+    .board {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        align-items: start;
+    }
+
+    .queue {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .queue-header {
+        padding: 17px 18px;
+        background: #fff;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .queue-title {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: #1f2937;
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .queue-count {
+        min-width: 28px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #f3f4f6;
+        color: #374151;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: center;
+        box-sizing: border-box;
+    }
+
+    .queue-body {
+        padding: 14px;
+    }
+
+    .ticket {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    }
+
+    .ticket:last-child {
+        margin-bottom: 0;
+    }
+
+    .ticket-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .ticket-number {
+        color: #111827;
+        font-size: 17px;
+        font-weight: 700;
+    }
+
+    .ticket-location {
+        margin-top: 3px;
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .ticket-items {
+        margin: 0;
+        padding: 12px 0;
+        list-style: none;
+        border-top: 1px solid #f1f5f9;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .ticket-items li {
+        display: flex;
+        gap: 8px;
+        padding: 4px 0;
+        color: #374151;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .item-quantity {
+        min-width: 24px;
+        color: #111827;
+        font-weight: 700;
+    }
+
+    .ticket-footer {
+        margin-top: 13px;
+    }
+
+    .ticket-action {
+        width: 100%;
+        min-height: 40px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    .start-btn {
+        background: #2563eb;
+        color: #fff;
+    }
+
+    .start-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .ready-btn {
+        background: #f59e0b;
+        color: #fff;
+    }
+
+    .ready-btn:hover {
+        background: #d97706;
+    }
+
+    .served-btn {
+        background: #16a34a;
+        color: #fff;
+    }
+
+    .served-btn:hover {
+        background: #15803d;
+    }
+
+    .eta-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        padding: 9px 11px;
+        border-radius: 7px;
+        background: #f8fafc;
+    }
+
+    .eta-label {
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .timer {
+        color: #111827;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .eta-form {
+        display: flex;
+        gap: 8px;
+    }
+
+    .eta-input {
+        flex: 1;
+        min-width: 0;
+        padding: 10px 11px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 13px;
+        box-sizing: border-box;
+    }
+
+    .eta-input:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .empty-state {
+        padding: 34px 15px;
+        text-align: center;
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .board-note {
+        margin-top: 20px;
+        padding: 13px 15px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 9px;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    @media (max-width: 1050px) {
+        .board {
+            grid-template-columns: 1fr;
+        }
+
+        .summary-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (max-width: 650px) {
+        .kitchen-header {
+            flex-direction: column;
+        }
+
+        .header-time {
+            text-align: left;
+        }
+
+        .summary-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
 <audio id="ticket-sound">
-    <source src="/static/sounds/kitchen-bell.mp3" type="audio/mpeg">
+    <source
+        src="/static/sounds/kitchen-bell.mp3"
+        type="audio/mpeg"
+    >
 </audio>
 
-<div style="display:flex; gap:20px">
 
-<!-- NEW -->
-<div style="flex:1">
-<h3 style="color:red;">NEW</h3>
+<div class="kitchen-page">
 
+    <!-- HEADER -->
 
-{% for ticket in new_tickets %}
+    <div class="kitchen-header">
 
-<div style="border:1px solid #ccc;padding:10px;margin-bottom:10px">
+        <div>
+            <h1>Kitchen Board</h1>
 
-<b>Ticket #{{ ticket.id }}</b><br>
+            <p>
+                Prepare, track and serve today's restaurant orders.
+            </p>
+        </div>
 
-{% if ticket.order.table %}
-Table {{ ticket.order.table.name }}
+        <div class="header-time">
+            Live kitchen queue
+        </div>
 
-{% elif ticket.room %}
-Room {{ ticket.room.room_number }}
-
-{% else %}
-Walk-in
-{% endif %}
-
-<hr>
-
-<ul>
-{% for item in ticket.items.all %}
-<li>{{ item.quantity }} × {{ item.menu_item.name }}</li>
-{% endfor %}
-</ul>
-
-<form method="post" action="{% url 'kitchen_ticket_start' ticket.id %}">
-{% csrf_token %}
-<input type="number" name="eta_minutes" placeholder="ETA" min="1" required style="width:70px">
-<button type="submit">Start</button>
-</form>
-
-</div>
-
-{% empty %}
-<p>No new tickets</p>
-{% endfor %}
-
-</div>
+    </div>
 
 
-<!-- PREPARING -->
-<div style="flex:1">
-<h3 style="color:orange;">PREPARING</h3>
+    <!-- SUMMARY -->
 
-{% for ticket in preparing_tickets %}
+    <div class="summary-grid">
 
-<div style="border:1px solid orange;padding:10px;margin-bottom:10px">
+        <div class="summary-card">
+            <div class="summary-label">
+                New Orders
+            </div>
 
-<b style="font-size:18px;">Ticket #{{ ticket.id }}</b>
-
-{% if ticket.eta_minutes %}
-<p>ETA: {{ ticket.eta_minutes }} min</p>
-<p><span id="timer-{{ ticket.id }}"></span></p>
-{% endif %}
-
-<hr>
-
-<ul>
-{% for item in ticket.items.all %}
-<li>{{ item.quantity }} × {{ item.menu_item.name }}</li>
-{% endfor %}
-</ul>
-
-<a href="{% url 'kitchen_ticket_ready' ticket.id %}">
-<button>Mark Ready</button>
-</a>
-
-</div>
-
-{% empty %}
-<p>No orders cooking</p>
-{% endfor %}
-
-</div>
+            <div class="summary-value">
+                {{ new_tickets|length }}
+            </div>
+        </div>
 
 
-<!-- READY -->
-<div style="flex:1">
-<h3 style="color:green;">READY</h3>
+        <div class="summary-card">
+            <div class="summary-label">
+                Cooking
+            </div>
 
-{% for ticket in ready_tickets %}
+            <div class="summary-value">
+                {{ preparing_tickets|length }}
+            </div>
+        </div>
 
-<div style="border:1px solid green;padding:10px;margin-bottom:10px">
 
-<b>Ticket #{{ ticket.id }}</b>
+        <div class="summary-card">
+            <div class="summary-label">
+                Ready to Serve
+            </div>
 
-<hr>
+            <div class="summary-value">
+                {{ ready_tickets|length }}
+            </div>
+        </div>
 
-<ul>
-{% for item in ticket.items.all %}
-<li>{{ item.quantity }} × {{ item.menu_item.name }}</li>
-{% endfor %}
-</ul>
+    </div>
 
-<a href="{% url 'kitchen_ticket_served' ticket.id %}">
-<button>Served</button>
-</a>
 
-</div>
+    <!-- BOARD -->
 
-{% empty %}
-<p>No ready orders</p>
-{% endfor %}
+    <div class="board">
 
-</div>
+
+        <!-- NEW -->
+
+        <section class="queue">
+
+            <div class="queue-header">
+
+                <div class="queue-title">
+                    New Orders
+
+                    <span class="queue-count">
+                        {{ new_tickets|length }}
+                    </span>
+                </div>
+
+            </div>
+
+
+            <div class="queue-body">
+
+                {% for ticket in new_tickets %}
+
+                    <article class="ticket">
+
+                        <div class="ticket-top">
+
+                            <div>
+
+                                <div class="ticket-number">
+                                    Ticket #{{ ticket.id }}
+                                </div>
+
+                                <div class="ticket-location">
+
+                                    {% if ticket.order.table %}
+                                        Table {{ ticket.order.table.name }}
+
+                                    {% elif ticket.room %}
+                                        Room {{ ticket.room.room_number }}
+
+                                    {% else %}
+                                        Walk-in
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <ul class="ticket-items">
+
+                            {% for item in ticket.items.all %}
+
+                                <li>
+
+                                    <span class="item-quantity">
+                                        {{ item.quantity }} ×
+                                    </span>
+
+                                    <span>
+                                        {{ item.menu_item.name }}
+                                    </span>
+
+                                </li>
+
+                            {% endfor %}
+
+                        </ul>
+
+
+                        <div class="ticket-footer">
+
+                            <form
+                                method="post"
+                                action="{% url 'kitchen_ticket_start' ticket.id %}"
+                                class="eta-form"
+                            >
+
+                                {% csrf_token %}
+
+                                <input
+                                    type="number"
+                                    name="eta_minutes"
+                                    class="eta-input"
+                                    placeholder="ETA in minutes"
+                                    min="1"
+                                    required
+                                >
+
+                                <button
+                                    type="submit"
+                                    class="ticket-action start-btn"
+                                >
+                                    Start Cooking
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </article>
+
+                {% empty %}
+
+                    <div class="empty-state">
+                        No new orders.
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </section>
+
+
+        <!-- PREPARING -->
+
+        <section class="queue">
+
+            <div class="queue-header">
+
+                <div class="queue-title">
+                    Cooking
+
+                    <span class="queue-count">
+                        {{ preparing_tickets|length }}
+                    </span>
+                </div>
+
+            </div>
+
+
+            <div class="queue-body">
+
+                {% for ticket in preparing_tickets %}
+
+                    <article class="ticket">
+
+                        <div class="ticket-top">
+
+                            <div>
+
+                                <div class="ticket-number">
+                                    Ticket #{{ ticket.id }}
+                                </div>
+
+                                <div class="ticket-location">
+
+                                    {% if ticket.order.table %}
+                                        Table {{ ticket.order.table.name }}
+
+                                    {% elif ticket.room %}
+                                        Room {{ ticket.room.room_number }}
+
+                                    {% else %}
+                                        Walk-in
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        {% if ticket.eta_minutes %}
+
+                            <div class="eta-row">
+
+                                <span class="eta-label">
+                                    Estimated time
+                                </span>
+
+                                <span
+                                    class="timer"
+                                    id="timer-{{ ticket.id }}"
+                                    data-ticket-id="{{ ticket.id }}"
+                                    data-minutes="{{ ticket.eta_minutes }}"
+                                >
+                                    {{ ticket.eta_minutes }}:00
+                                </span>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <ul class="ticket-items">
+
+                            {% for item in ticket.items.all %}
+
+                                <li>
+
+                                    <span class="item-quantity">
+                                        {{ item.quantity }} ×
+                                    </span>
+
+                                    <span>
+                                        {{ item.menu_item.name }}
+                                    </span>
+
+                                </li>
+
+                            {% endfor %}
+
+                        </ul>
+
+
+                        <div class="ticket-footer">
+
+                            <form
+                                method="post"
+                                action="{% url 'kitchen_ticket_ready' ticket.id %}"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="ticket-action ready-btn"
+                                >
+                                    Mark Ready
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </article>
+
+                {% empty %}
+
+                    <div class="empty-state">
+                        Nothing currently cooking.
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </section>
+
+
+        <!-- READY -->
+
+        <section class="queue">
+
+            <div class="queue-header">
+
+                <div class="queue-title">
+                    Ready to Serve
+
+                    <span class="queue-count">
+                        {{ ready_tickets|length }}
+                    </span>
+                </div>
+
+            </div>
+
+
+            <div class="queue-body">
+
+                {% for ticket in ready_tickets %}
+
+                    <article class="ticket">
+
+                        <div class="ticket-top">
+
+                            <div>
+
+                                <div class="ticket-number">
+                                    Ticket #{{ ticket.id }}
+                                </div>
+
+                                <div class="ticket-location">
+
+                                    {% if ticket.order.table %}
+                                        Table {{ ticket.order.table.name }}
+
+                                    {% elif ticket.room %}
+                                        Room {{ ticket.room.room_number }}
+
+                                    {% else %}
+                                        Walk-in
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <ul class="ticket-items">
+
+                            {% for item in ticket.items.all %}
+
+                                <li>
+
+                                    <span class="item-quantity">
+                                        {{ item.quantity }} ×
+                                    </span>
+
+                                    <span>
+                                        {{ item.menu_item.name }}
+                                    </span>
+
+                                </li>
+
+                            {% endfor %}
+
+                        </ul>
+
+
+                        <div class="ticket-footer">
+
+                            <form
+                                method="post"
+                                action="{% url 'kitchen_ticket_served' ticket.id %}"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="ticket-action served-btn"
+                                >
+                                    Serve Order
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </article>
+
+                {% empty %}
+
+                    <div class="empty-state">
+                        No orders waiting to be served.
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+    <div class="board-note">
+        The board refreshes automatically so new restaurant orders appear without
+        requiring the kitchen team to manually reload the page.
+    </div>
 
 </div>
 
 
 <script>
-function startTimer(id, minutes) {
+    /*
+     * ============================================================
+     * KITCHEN BOARD
+     * Countdown timers + new ticket notification + auto refresh
+     * ============================================================
+     */
 
-    let seconds = minutes * 60;
+    /*
+     * ------------------------------------------------------------
+     * Countdown timers
+     * ------------------------------------------------------------
+     *
+     * The timer uses a persistent deadline stored in localStorage.
+     *
+     * This is important because the Kitchen Board refreshes every
+     * 8 seconds. Without a persistent deadline, every refresh would
+     * restart the countdown from the original ETA.
+     */
 
-    const el = document.getElementById("timer-" + id);
-    if (!el) return;
+    function formatTime(totalSeconds) {
+        if (totalSeconds <= 0) {
+            return "Time reached";
+        }
 
-    setInterval(function(){
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
 
-        if(seconds <= 0){
-            el.innerHTML = "Ready";
+        return (
+            minutes +
+            ":" +
+            (seconds < 10 ? "0" : "") +
+            seconds
+        );
+    }
+
+
+    function startTimer(element) {
+
+        const ticketId = element.dataset.ticketId;
+        const minutes = parseInt(element.dataset.minutes, 10);
+
+        if (!ticketId || !minutes || minutes <= 0) {
             return;
         }
 
-        seconds--;
+        const storageKey = "kitchen_eta_deadline_" + ticketId;
 
-        let m = Math.floor(seconds / 60);
-        let s = seconds % 60;
+        let deadline = parseInt(
+            localStorage.getItem(storageKey),
+            10
+        );
 
-        el.innerHTML = m + ":" + (s < 10 ? "0" : "") + s;
+        /*
+         * First time we see this ticket:
+         * create the deadline.
+         */
+        if (!deadline || Number.isNaN(deadline)) {
 
-    },1000);
-}
+            deadline =
+                Date.now() +
+                (minutes * 60 * 1000);
 
-{% for ticket in preparing_tickets %}
-{% if ticket.eta_minutes %}
-startTimer({{ ticket.id }}, {{ ticket.eta_minutes }});
-{% endif %}
-{% endfor %}
+            localStorage.setItem(
+                storageKey,
+                deadline
+            );
+        }
 
-const newTickets = {{ new_tickets|length }};
-const previousCount = localStorage.getItem("kitchen_ticket_count");
 
-if (previousCount !== null && newTickets > previousCount) {
-    document.getElementById("ticket-sound").play();
-}
-localStorage.setItem("kitchen_ticket_count", newTickets);
-setTimeout(function(){
-    location.reload();
-}, 8000);
+        function updateTimer() {
+
+            const remainingSeconds = Math.max(
+                0,
+                Math.ceil(
+                    (deadline - Date.now()) / 1000
+                )
+            );
+
+            element.textContent =
+                formatTime(remainingSeconds);
+
+            if (remainingSeconds <= 0) {
+
+                clearInterval(interval);
+
+                element.textContent =
+                    "Time reached";
+            }
+        }
+
+
+        updateTimer();
+
+        const interval = setInterval(
+            updateTimer,
+            1000
+        );
+    }
+
+
+    /*
+     * Find every active timer on the page.
+     *
+     * No Django template tags are needed inside JavaScript.
+     * This also keeps VS Code's JavaScript parser happy.
+     */
+
+    document
+        .querySelectorAll(".timer[data-ticket-id]")
+        .forEach(function (element) {
+
+            startTimer(element);
+
+        });
+
+
+    /*
+     * ------------------------------------------------------------
+     * New ticket notification
+     * ------------------------------------------------------------
+     */
+
+    const newTickets = {{ new_tickets|length }};
+
+    const previousCount =
+        localStorage.getItem(
+            "kitchen_ticket_count"
+        );
+
+    if (
+        previousCount !== null &&
+        newTickets > parseInt(previousCount, 10)
+    ) {
+
+        const sound =
+            document.getElementById("ticket-sound");
+
+        if (sound) {
+
+            sound.play().catch(
+                function () {}
+            );
+
+        }
+    }
+
+
+    localStorage.setItem(
+        "kitchen_ticket_count",
+        newTickets
+    );
+
+
+    /*
+     * ------------------------------------------------------------
+     * Auto refresh
+     * ------------------------------------------------------------
+     *
+     * Keep the 8-second refresh because it allows new restaurant
+     * orders to appear automatically.
+     *
+     * Timer deadlines survive the refresh through localStorage.
+     */
+
+    setTimeout(function () {
+
+        location.reload();
+
+    }, 8000);
 
 </script>
 

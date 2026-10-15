@@ -1,285 +1,1342 @@
 {% extends "base/base.html" %}
 {% load restaurant_extras %}
+
 {% block title %}Restaurant POS{% endblock %}
+
 {% block content %}
 
 <style>
-.menu-btn {
-    width:160px;
-    height:90px;
-    margin:5px;
-    transition:0.2s ease;
+    .pos-page {
+        max-width: 1500px;
+        margin: 0 auto;
+    }
+
+    .pos-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 20px;
+        padding: 20px 24px;
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.05);
+    }
+
+    .pos-title h1 {
+        margin: 0 0 5px;
+        font-size: 28px;
+        color: #1f2937;
+    }
+
+    .pos-title p {
+        margin: 0;
+        color: #6b7280;
+    }
+
+    .shift-card {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 12px 16px;
+        border-radius: 12px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+    }
+
+    .shift-status {
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: #166534;
+        font-weight: 700;
+        font-size: 12px;
+    }
+
+    .shift-info {
+        font-size: 13px;
+        color: #4b5563;
+    }
+
+    .shift-info strong {
+        color: #111827;
+    }
+
+    .pos-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 390px;
+        gap: 20px;
+        align-items: start;
+    }
+
+    .menu-panel,
+    .order-panel {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.05);
+    }
+
+    .menu-panel {
+        padding: 18px;
+        max-height: calc(100vh - 150px);
+        overflow-y: auto;
+        scrollbar-width: thin;
+    }
+    .order-panel {
+        padding: 22px;
+        position: sticky;
+        top: 20px;
+    }
+
+    .section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+
+    .section-heading h2 {
+        margin: 0;
+        font-size: 20px;
+        color: #1f2937;
+    }
+
+    .section-heading span {
+        font-size: 13px;
+        color: #6b7280;
+    }
+
+    .pos-menu-section {
+        margin-bottom: 24px;
+    }
+
+    .menu-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 10px;
+    }
+
+    .menu-btn {
+        min-height: 105px;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid #dbe1e8;
+        background: #ffffff;
+        cursor: pointer;
+        text-align: left;
+        transition: all 0.18s ease;
+    }
+
+    .menu-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 7px 18px rgba(0,0,0,0.09);
+        border-color: #2563eb;
+    }
+
+    .menu-btn:disabled {
+        cursor: not-allowed;
+    }
+
+    .menu-name {
+        display: block;
+        font-weight: 700;
+        font-size: 16px;
+        color: #111827;
+        margin-bottom: 8px;
+    }
+
+    .menu-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
 }
 
-.btn-ok {
-    border:1px solid #ccc;
+.menu-title {
+    margin: 0;
+    font-size: 21px;
+    color: #1f2937;
 }
 
-.btn-low {
-    border:2px solid orange;
+.menu-subtitle {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #6b7280;
 }
 
-.btn-out {
-    opacity:0.4;
-    border:1px solid #ddd;
-    cursor:not-allowed;
+.menu-search-wrap {
+    flex: 0 0 240px;
 }
 
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(255,165,0,0.6); }
-    70% { box-shadow: 0 0 0 6px rgba(255,165,0,0); }
-    100% { box-shadow: 0 0 0 0 rgba(255,165,0,0); }
+.menu-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 13px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #111827;
+    font-size: 14px;
+    outline: none;
 }
 
-.btn-low {
-    animation: pulse 1.5s infinite;
+.menu-search:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
 }
+
+    .menu-price {
+        display: block;
+        font-size: 17px;
+        font-weight: 700;
+        color: #2563eb;
+        margin-bottom: 10px;
+    }
+
+    .stock-label {
+        font-size: 12px;
+        color: #6b7280;
+    }
+
+    .stock-good {
+        border-color: #dbe1e8;
+    }
+
+    .stock-low {
+        border: 2px solid #f59e0b;
+        animation: pulse 1.7s infinite;
+    }
+
+    .stock-out {
+        opacity: 0.45;
+        background: #f9fafb;
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(245,158,11,0.35);
+        }
+        70% {
+            box-shadow: 0 0 0 7px rgba(245,158,11,0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(245,158,11,0);
+        }
+    }
+
+    .order-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+    }
+
+    .order-heading h2 {
+        margin: 0;
+        font-size: 21px;
+    }
+
+    .clear-btn {
+        border: 0;
+        background: #fee2e2;
+        color: #b91c1c;
+        padding: 7px 11px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .empty-cart {
+        padding: 30px 10px;
+        text-align: center;
+        color: #9ca3af;
+        border: 1px dashed #d1d5db;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+
+    .cart-items {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 18px;
+    }
+
+    .cart-item {
+        padding: 12px;
+        border-radius: 11px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+    }
+
+    .cart-item-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 9px;
+    }
+
+    .cart-item-name {
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .cart-line-total {
+        font-weight: 700;
+        color: #111827;
+        white-space: nowrap;
+    }
+
+    .cart-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .quantity-controls {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    .qty-btn {
+        width: 28px;
+        height: 28px;
+        border: 1px solid #d1d5db;
+        background: #ffffff;
+        border-radius: 7px;
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+    .qty-value {
+        min-width: 25px;
+        text-align: center;
+        font-weight: 700;
+    }
+
+    .remove-item {
+        border: 0;
+        background: transparent;
+        color: #dc2626;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .order-total {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 0;
+        border-top: 1px solid #e5e7eb;
+        border-bottom: 1px solid #e5e7eb;
+        margin-bottom: 20px;
+    }
+
+    .order-total span:first-child {
+        color: #4b5563;
+        font-weight: 600;
+    }
+
+    .order-total span:last-child {
+        font-size: 25px;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .settlement-box {
+        margin-top: 15px;
+    }
+
+    .settlement-box h3 {
+        margin: 0 0 12px;
+        font-size: 16px;
+    }
+
+    .settlement-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 9px;
+    }
+
+    .settlement-option {
+        position: relative;
+    }
+
+    .settlement-option input {
+        position: absolute;
+        opacity: 0;
+    }
+
+    .settlement-option label {
+        display: block;
+        padding: 11px;
+        text-align: center;
+        border: 1px solid #d1d5db;
+        border-radius: 9px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
+        background: #ffffff;
+    }
+
+    .settlement-option input:checked + label {
+        border-color: #2563eb;
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .field-group {
+        margin-top: 14px;
+    }
+
+    .field-group label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #374151;
+    }
+
+    .field-group select {
+        width: 100%;
+        padding: 11px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 9px;
+        background: #ffffff;
+        font-size: 14px;
+    }
+
+    .bank-note {
+        margin-top: 6px;
+        font-size: 11px;
+        color: #6b7280;
+    }
+
+    .process-btn {
+        width: 100%;
+        margin-top: 18px;
+        padding: 14px;
+        border: 0;
+        border-radius: 10px;
+        background: #2563eb;
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .process-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .process-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .secondary-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 9px;
+        margin-top: 10px;
+    }
+
+    .secondary-actions a {
+        display: block;
+        padding: 10px;
+        text-align: center;
+        border-radius: 9px;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .orders-link {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .shift-link {
+        background: #fff7ed;
+        color: #c2410c;
+    }
+
+    .message-box {
+        margin-bottom: 15px;
+    }
+
+    .message {
+        padding: 11px 14px;
+        border-radius: 9px;
+        margin-bottom: 7px;
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    @media (max-width: 1050px) {
+        .pos-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .order-panel {
+            position: static;
+        }
+    }
+
+    @media (max-width: 650px) {
+        .pos-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .menu-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
 </style>
 
-<h2>Restaurant POS</h2>
 
-{% if messages %}
-    {% for message in messages %}
-        <div style="color:red;margin-bottom:5px;">
-            {{ message }}
+<div class="pos-page">
+
+    <!-- ========================= -->
+    <!-- HEADER -->
+    <!-- ========================= -->
+
+    <div class="pos-header">
+
+        <div class="pos-title">
+            <h1>Restaurant POS</h1>
+            <p>
+                {{ shift.department.hotel.name }}
+                · {{ shift.department.name }}
+            </p>
         </div>
-    {% endfor %}
-{% endif %}
 
-{% if table %}
-<div style="margin-bottom:10px;">
-    <strong>Table:</strong> {{ table.name }}
-    <a href="{% url 'restaurant_table_list' %}">Change</a>
-</div>
-{% else %}
-<div style="margin-bottom:10px;">
-    <a href="{% url 'restaurant_table_list' %}">Assign Table</a>
-</div>
-{% endif %}
+        <div class="shift-card">
+            <div class="shift-info">
+                <strong>{{ request.user.get_full_name|default:request.user.username }}</strong><br>
+                Shift #{{ shift.id }}
+            </div>
 
-
-<div style="display:flex; gap:20px">
-    
-
-    <!-- MENU -->
-    <div style="width:60%">
-
-        <!-- FOOD -->
-        <h3>Food</h3>
-        {% for item in menu_items %}
-        {% if item.product.product_type == "FOOD" %}
-
-                {% with r_stock=restaurant_stock_map|get_item:item.product.id|default:0 %}
-                {% with k_stock=kitchen_stock_map|get_item:item.product.id|default:0 %}
-
-                <button
-                    onclick="addItem({{ item.id }})"
-                    {% if k_stock <= 0 %}disabled{% endif %}
-                    class="menu-btn
-                    {% if r_stock <= 0 and k_stock <= 0 %}
-                        btn-out
-                    {% elif r_stock <= item.product.reorder_level %}
-                        btn-low
-                    {% else %}
-                        btn-ok
-                    {% endif %}"
-                >
-                    <strong>{{ item.name }}</strong><br>
-                    ₦{{ item.price }}<br>
-                    <br>
-
-                    <small style="color:gray;">
-                    Kitchen available: {{ k_stock }}
-                    </small>
-
-                </button>
-
-                {% endwith %}
-                {% endwith %}
-
-            {% endif %}
-        {% endfor %}
-
-        <hr>
-
-        <!-- DRINKS -->
-        <h3>Drinks</h3>
-        {% for item in menu_items %}
-        {% if item.product.product_type == "DRINK" %}
-
-                {% with r_stock=restaurant_stock_map|get_item:item.product.id|default:0 %}
-                {% with k_stock=kitchen_stock_map|get_item:item.product.id|default:0 %}
-
-                <button
-                    onclick="addItem({{ item.id }})"
-                    {% if r_stock <= 0 %}disabled{% endif %}
-                    class="menu-btn
-                        {% if r_stock <= 0 %}
-                            btn-out
-                        {% elif r_stock <= item.product.reorder_level %}
-                            btn-low
-                        {% else %}
-                            btn-ok
-                        {% endif %}"
-                >
-
-                    <strong>{{ item.name }}</strong><br>
-                    ₦{{ item.price }}<br>
-
-                    <small>
-                        {% if r_stock > 0 %}
-                            Restaurant: {{ r_stock }}
-                        {% else %}
-                            Out of stock
-                        {% endif %}
-                    </small>
-                    <br>
-
-                    <small style="color:gray;">
-                        Kitchen: {{ k_stock }}
-                    </small>
-
-                </button>
-
-                {% endwith %}
-                {% endwith %}
-
-            {% endif %}
-        {% endfor %}
+            <div>
+                <span class="shift-status">OPEN</span>
+            </div>
+        </div>
 
     </div>
 
-    <!-- CART -->
-    <div style="width:40%;border-left:1px solid #ccc;padding-left:15px">
-        <h3>Current Order</h3>
 
-        {% if cart.items %}
-            <ul>
-                {% for key,item in cart.items.items %}
-                    <li>
-                        {{ item.name }} –
-                        <input type="number"
-                               value="{{ item.qty }}"
-                               min="0"
-                               onchange="updateItem('{{ key }}', this.value)"
-                               style="width:50px">
-                        × ₦{{ item.price }}
-                    </li>
-                {% endfor %}
-            </ul>
-
-            <h3>Total: ₦{{ total }}</h3>
-            <button onclick="clearCart()">Clear</button>
-        {% else %}
-            <p>No items</p>
-        {% endif %}
-    </div>
-</div>
-
-
-<!-- SETTLEMENT -->
-<form method="post" action="{% url 'restaurant_pos_commit' %}">
-    {% csrf_token %}
-
-    <h4>Settlement</h4>
-
-    <label>
-        <input type="radio" name="settlement" value="PAY_NOW" checked id="settle-pay">
-        Pay Now
-    </label>
-
-    <label style="margin-left:15px;">
-        <input type="radio" name="settlement" value="ROOM" id="settle-room">
-        Charge to Room
-    </label>
-
-    <!-- PAYMENT METHOD -->
-    <div id="payment-method-box" style="margin-top:10px;">
-        <select name="payment_method" id="payment-method">
-            <option value="CASH">Cash</option>
-            <option value="POS">POS</option>
-            <option value="TRANSFER">Transfer</option>
-        </select>
-    </div>
-
-    <!-- ROOM SELECTOR -->
-    <div id="room-select-container" style="display:none; margin-top:10px;">
-        <select name="room" id="room-select">
-            <option value="">---</option>
-            {% for room in occupied_rooms %}
-                <option value="{{ room.id }}">
-                    Room {{ room.room_number }}
-                </option>
+    {% if messages %}
+        <div class="message-box">
+            {% for message in messages %}
+                <div class="message">
+                    {{ message }}
+                </div>
             {% endfor %}
-        </select>
+        </div>
+    {% endif %}
+
+
+    <!-- ========================= -->
+    <!-- MAIN POS -->
+    <!-- ========================= -->
+
+    <div class="pos-layout">
+
+        <!-- ========================= -->
+        <!-- MENU -->
+        <!-- ========================= -->
+
+        <div class="menu-panel">
+        
+        <div class="menu-toolbar">
+    <div>
+        <h2 class="menu-title">Menu</h2>
+        <span class="menu-subtitle">Select an item to add it to the order</span>
     </div>
 
-    <br>
-    <button type="submit">Submit Order</button>
-    <a href="{% url 'restaurant_shift_close' %}" class="btn btn-danger">
-Close Shift
-</a>
-</form>
+    <div class="menu-search-wrap">
+        <input
+            type="search"
+            id="menu-search"
+            class="menu-search"
+            placeholder="Search menu..."
+            autocomplete="off"
+        >
+    </div>
+</div>
+
+    <!-- FOOD -->
+    <div class="pos-menu-section">
+
+        <div class="section-heading">
+            <h2>Food</h2>
+            <span>Prepared in Kitchen</span>
+        </div>
+
+        <div class="menu-grid">
+
+            {% for item in food_items %}
+
+                {% with k_stock=kitchen_stock_map|get_item:item.product.id|default:0 %}
+
+                   <button
+                        type="button"
+                        data-menu-name="{{ item.name|lower }}"
+                        onclick="addItem({{ item.id }})"
+                        {% if k_stock <= 0 %}disabled{% endif %}
+                        class="menu-btn
+                            {% if k_stock <= 0 %}
+                                stock-out
+                            {% elif k_stock <= item.product.reorder_level %}
+                                stock-low
+                            {% else %}
+                                stock-good
+                            {% endif %}
+                        "
+                    >
+
+                        <span class="menu-name">
+                            {{ item.name }}
+                        </span>
+
+                        <span class="menu-price">
+                            ₦{{ item.price|floatformat:2 }}
+                        </span>
+
+                        <span class="stock-label">
+
+                            {% if k_stock > 0 %}
+                                Kitchen available: {{ k_stock }}
+                            {% else %}
+                                Out of stock
+                            {% endif %}
+
+                        </span>
+
+                    </button>
+
+                {% endwith %}
+
+            {% empty %}
+
+                <p style="color:#6b7280;">
+                    No food items available.
+                </p>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+
+    <!-- DRINKS -->
+    <div class="pos-menu-section">
+
+        <div class="section-heading">
+            <h2>Drinks</h2>
+            <span>Restaurant Stock</span>
+        </div>
+
+        <div class="menu-grid">
+
+            {% for item in drink_items %}
+
+                {% with r_stock=restaurant_stock_map|get_item:item.product.id|default:0 %}
+
+                    <button
+                        type="button"
+                        data-menu-name="{{ item.name|lower }}"
+                        onclick="addItem({{ item.id }})"
+                        {% if r_stock <= 0 %}disabled{% endif %}
+                        class="menu-btn
+                            {% if r_stock <= 0 %}
+                                stock-out
+                            {% elif r_stock <= item.product.reorder_level %}
+                                stock-low
+                            {% else %}
+                                stock-good
+                            {% endif %}
+                        "
+                    >
+
+                        <span class="menu-name">
+                            {{ item.name }}
+                        </span>
+
+                        <span class="menu-price">
+                            ₦{{ item.price|floatformat:2 }}
+                        </span>
+
+                        <span class="stock-label">
+
+                            {% if r_stock > 0 %}
+                                Restaurant available: {{ r_stock }}
+                            {% else %}
+                                Out of stock
+                            {% endif %}
+
+                        </span>
+
+                    </button>
+
+                {% endwith %}
+
+            {% empty %}
+
+                <p style="color:#6b7280;">
+                    No drinks available.
+                </p>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+</div>
+        <!-- ========================= -->
+        <!-- ORDER PANEL -->
+        <!-- ========================= -->
+
+        <div class="order-panel">
+
+            <div class="order-heading">
+
+                <h2>Current Order</h2>
+
+                {% if cart.items %}
+                    <button
+                        type="button"
+                        class="clear-btn"
+                        onclick="clearCart()"
+                    >
+                        Clear
+                    </button>
+                {% endif %}
+
+            </div>
+
+
+            {% if cart.items %}
+
+                <div class="cart-items">
+
+                    {% for key,item in cart.items.items %}
+
+                        <div class="cart-item">
+
+                            <div class="cart-item-top">
+
+                                <span class="cart-item-name">
+                                    {{ item.name }}
+                                </span>
+
+                                <span class="cart-line-total">
+                                    ₦{{ item.price|floatformat:2 }}
+                                </span>
+
+                            </div>
+
+                            <div class="cart-controls">
+
+                                <div class="quantity-controls">
+
+                                    <button
+                                        type="button"
+                                        class="qty-btn"
+                                        data-item-id="{{ key }}"
+                                        data-current-qty="{{ item.qty }}"
+                                        data-change="-1"
+                                        onclick="changeQtyFromButton(this)"
+                                    >
+                                        −
+                                    </button>
+
+                                    <span class="qty-value">
+                                        {{ item.qty }}
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        class="qty-btn"
+                                        data-item-id="{{ key }}"
+                                        data-current-qty="{{ item.qty }}"
+                                        data-change="1"
+                                        onclick="changeQtyFromButton(this)"
+                                    >
+                                        +
+                                    </button>
+
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="remove-item"
+                                    data-item-id="{{ key }}"
+                                    onclick="removeCartItem(this)"
+                                >
+                                    Remove
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <div class="empty-cart">
+                    No items in the current order.
+                    <br>
+                    Select food or drinks to begin.
+                </div>
+
+            {% endif %}
+
+
+            <!-- TOTAL -->
+
+            <div class="order-total">
+
+                <span>Total</span>
+
+                <span>
+                    ₦{{ total|floatformat:2 }}
+                </span>
+
+            </div>
+
+
+            <!-- ========================= -->
+            <!-- SETTLEMENT -->
+            <!-- ========================= -->
+
+            <form
+                method="post"
+                action="{% url 'restaurant_pos_commit' %}"
+                id="pos-form"
+            >
+
+                {% csrf_token %}
+
+                <div class="settlement-box">
+
+                    <h3>Settlement</h3>
+
+                    <div class="settlement-options">
+
+                        <div class="settlement-option">
+
+                            <input
+                                type="radio"
+                                name="settlement"
+                                value="PAY_NOW"
+                                checked
+                                id="settle-pay"
+                            >
+
+                            <label for="settle-pay">
+                                Pay Now
+                            </label>
+
+                        </div>
+
+                        <div class="settlement-option">
+
+                            <input
+                                type="radio"
+                                name="settlement"
+                                value="ROOM"
+                                id="settle-room"
+                            >
+
+                            <label for="settle-room">
+                                Charge Room
+                            </label>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ========================= -->
+                    <!-- PAYMENT METHOD -->
+                    <!-- ========================= -->
+
+                    <div
+                        id="payment-method-container"
+                        class="field-group"
+                    >
+
+                        <label for="payment-method">
+                            Payment Method
+                        </label>
+
+                        <select
+                            name="payment_method"
+                            id="payment-method"
+                        >
+
+                            <option value="CASH">
+                                Cash
+                            </option>
+
+                            <option value="POS">
+                                POS
+                            </option>
+
+                            <option value="TRANSFER">
+                                Bank Transfer
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- ========================= -->
+                    <!-- BANK ACCOUNT -->
+                    <!-- ========================= -->
+
+                    <div
+                        id="bank-account-container"
+                        class="field-group"
+                        style="display:none;"
+                    >
+
+                        <label for="bank-account">
+                            Bank Account
+                        </label>
+
+                        <select
+                            name="bank_account"
+                            id="bank-account"
+                        >
+
+                            <option value="">
+                                Select bank account
+                            </option>
+
+                            {% for bank in bank_accounts %}
+
+                                <option value="{{ bank.id }}">
+
+                                    {{ bank.bank_name }}
+                                    —
+                                    {{ bank.account_name }}
+                                    —
+                                    ****{{ bank.account_number|slice:"-4:" }}
+
+                                </option>
+
+                            {% empty %}
+
+                                <option value="">
+                                    No active bank accounts configured
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                        <div class="bank-note">
+                            Select the actual hotel bank account receiving the payment.
+                        </div>
+
+                    </div>
+
+
+                    <!-- ========================= -->
+                    <!-- ROOM -->
+                    <!-- ========================= -->
+
+                    <div
+                        id="room-container"
+                        class="field-group"
+                        style="display:none;"
+                    >
+
+                        <label for="room-select">
+                            Guest Room
+                        </label>
+
+                        <select
+                            name="room"
+                            id="room-select"
+                        >
+
+                            <option value="">
+                                Select occupied room
+                            </option>
+
+                            {% for room in occupied_rooms %}
+
+                                <option value="{{ room.id }}">
+                                    Room {{ room.room_number }}
+                                </option>
+
+                            {% empty %}
+
+                                <option value="">
+                                    No occupied rooms
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- ========================= -->
+                    <!-- PROCESS -->
+                    <!-- ========================= -->
+
+                    <button
+                        type="submit"
+                        class="process-btn"
+                        id="process-order-btn"
+                        {% if not cart.items %}disabled{% endif %}
+                    >
+                        Process Order
+                    </button>
+
+                </div>
+
+            </form>
+
+
+            <!-- ========================= -->
+            <!-- SECONDARY ACTIONS -->
+            <!-- ========================= -->
+
+            <div class="secondary-actions">
+
+                <a
+                    href="{% url 'restaurant_order_list' %}"
+                    class="orders-link"
+                >
+                    Previous Orders
+                </a>
+
+                <a
+                    href="{% url 'restaurant_shift_list' %}"
+                    class="shift-link"
+                >
+                    Shifts
+                </a>
+
+                <a
+                    href="{% url 'restaurant_shift_close' %}"
+                    class="shift-link"
+                >
+                    End Shift
+                </a>
+
+                <a href="{% url 'cash_handover_list' %}" class="...existing action classes...">
+                    Cash Handovers
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
 
 
 <script>
+
 function addItem(id) {
+
     fetch(`/restaurant/cart/add/${id}/`)
-        .then(res => res.json())
+        .then(response => response.json())
         .then(data => {
+
             if (!data.success) {
-                alert(data.error);
-            } else {
-                location.reload();
+                alert(data.error || "Unable to add item.");
+                return;
             }
+
+            location.reload();
+        })
+        .catch(() => {
+            alert("Unable to add item.");
         });
 }
 
-function updateItem(id, qty) {
+function changeQty(id, qty) {
+
     fetch(`/restaurant/cart/update/${id}/`, {
+
         method: "POST",
-        headers: { "X-CSRFToken": "{{ csrf_token }}" },
-        body: new URLSearchParams({ qty })
+
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+
+        body: new URLSearchParams({
+            qty: qty
+        })
+
     })
-    .then(res => res.json())
+    .then(response => response.json())
     .then(data => {
+
         if (!data.success) {
-            alert(data.error);
-            location.reload();
-        } else {
-            location.reload();
+
+            alert(
+                data.error ||
+                "Unable to update quantity."
+            );
+
+            return;
         }
+
+        location.reload();
+
+    })
+    .catch(() => {
+
+        alert("Unable to update quantity.");
+
     });
 }
 
-function clearCart() {
-    fetch(`/restaurant/cart/clear/`)
-        .then(() => location.reload());
+function changeQtyFromButton(button) {
+    const id = button.dataset.itemId;
+    const currentQty = parseInt(button.dataset.currentQty, 10);
+    const change = parseInt(button.dataset.change, 10);
+
+    changeQty(id, currentQty + change);
 }
+
+function removeCartItem(button) {
+    changeQty(button.dataset.itemId, 0);
+}
+
+
+function clearCart() {
+
+    fetch("/restaurant/cart/clear/")
+        .then(() => {
+            location.reload();
+        })
+        .catch(() => {
+            alert("Unable to clear order.");
+        });
+
+}
+
 
 document.addEventListener("DOMContentLoaded", function () {
 
     const payRadio = document.getElementById("settle-pay");
     const roomRadio = document.getElementById("settle-room");
 
-    const paymentBox = document.getElementById("payment-method-box");
-    const roomBox = document.getElementById("room-select-container");
+    const paymentMethodContainer =
+        document.getElementById(
+            "payment-method-container"
+        );
 
-    function toggleSettlement() {
+    const paymentMethod =
+        document.getElementById(
+            "payment-method"
+        );
+
+    const bankAccountContainer =
+        document.getElementById(
+            "bank-account-container"
+        );
+
+    const bankAccount =
+        document.getElementById(
+            "bank-account"
+        );
+
+    const roomContainer =
+        document.getElementById(
+            "room-container"
+        );
+
+    const roomSelect =
+        document.getElementById(
+            "room-select"
+        );
+
+
+    function updateSettlementUI() {
+
         if (roomRadio.checked) {
-            paymentBox.style.display = "none";
-            roomBox.style.display = "block";
+
+            paymentMethodContainer.style.display = "none";
+            bankAccountContainer.style.display = "none";
+            roomContainer.style.display = "block";
+
+            paymentMethod.required = false;
+            bankAccount.required = false;
+            roomSelect.required = true;
+
         } else {
-            paymentBox.style.display = "block";
-            roomBox.style.display = "none";
+
+            paymentMethodContainer.style.display = "block";
+            roomContainer.style.display = "none";
+
+            roomSelect.required = false;
+
+            updatePaymentUI();
         }
+
     }
 
-    payRadio.addEventListener("change", toggleSettlement);
-    roomRadio.addEventListener("change", toggleSettlement);
 
-    toggleSettlement();
+    function updatePaymentUI() {
+
+        const method = paymentMethod.value;
+
+        if (
+            method === "POS" ||
+            method === "TRANSFER"
+        ) {
+
+            bankAccountContainer.style.display = "block";
+            bankAccount.required = true;
+
+        } else {
+
+            bankAccountContainer.style.display = "none";
+            bankAccount.required = false;
+            bankAccount.value = "";
+
+        }
+
+    }
+
+
+    payRadio.addEventListener(
+        "change",
+        updateSettlementUI
+    );
+
+    roomRadio.addEventListener(
+        "change",
+        updateSettlementUI
+    );
+
+    paymentMethod.addEventListener(
+        "change",
+        updatePaymentUI
+    );
+
+
+    document.getElementById("pos-form")
+        .addEventListener("submit", function (event) {
+
+            if (!document.querySelector(".cart-item")) {
+
+                event.preventDefault();
+
+                alert(
+                    "Please add at least one item to the order."
+                );
+
+                return;
+            }
+
+
+            if (
+                payRadio.checked &&
+                (
+                    paymentMethod.value === "POS" ||
+                    paymentMethod.value === "TRANSFER"
+                ) &&
+                !bankAccount.value
+            ) {
+
+                event.preventDefault();
+
+                alert(
+                    "Please select the bank account receiving the payment."
+                );
+
+                bankAccount.focus();
+
+                return;
+            }
+
+
+            if (
+                roomRadio.checked &&
+                !roomSelect.value
+            ) {
+
+                event.preventDefault();
+
+                alert(
+                    "Please select a guest room."
+                );
+
+                roomSelect.focus();
+
+                return;
+            }
+
+
+            const button =
+                document.getElementById(
+                    "process-order-btn"
+                );
+
+            button.disabled = true;
+            button.innerText = "Processing...";
+
+        });
+
+
+    updateSettlementUI();
+
 });
+
+const menuSearch = document.getElementById("menu-search");
+
+if (menuSearch) {
+    menuSearch.addEventListener("input", function () {
+        const query = this.value.trim().toLowerCase();
+
+        document.querySelectorAll(".pos-menu-section").forEach(section => {
+            let visibleItems = 0;
+
+            section.querySelectorAll(".menu-btn").forEach(button => {
+                const name = button.dataset.menuName || "";
+
+                if (name.includes(query)) {
+                    button.style.display = "";
+                    visibleItems++;
+                } else {
+                    button.style.display = "none";
+                }
+            });
+
+            section.style.display = visibleItems > 0 ? "" : "none";
+        });
+    });
+}
+
 </script>
 
 {% endblock %}

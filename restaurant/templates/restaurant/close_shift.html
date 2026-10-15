@@ -1,80 +1,406 @@
 {% extends "base/base.html" %}
 
-{% block title %}Close Shift{% endblock %}
+{% block title %}End Shift{% endblock %}
 
 {% block content %}
 
-<h2>Close Shift</h2>
+<style>
+    .shift-close-page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 32px 24px 60px;
+    }
 
-<p>
-Shift opened at: <strong>{{ shift.opened_at }}</strong>
-</p>
+    .shift-eyebrow {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
 
-<hr>
+    .shift-title {
+        margin: 0;
+        color: #172033;
+        font-size: 34px;
+        font-weight: 800;
+    }
 
-<h3>Shift Summary</h3>
+    .shift-subtitle {
+        margin: 8px 0 28px;
+        color: #64748b;
+        font-size: 15px;
+    }
 
-<table class="table table-bordered">
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 14px;
+        margin-bottom: 24px;
+    }
 
-<tr>
-<td>Total Orders</td>
-<td>{{ order_count }}</td>
-</tr>
+    .summary-card {
+        background: #fff;
+        border: 1px solid #e5eaf0;
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
+    }
 
-<tr>
-<td>Total Sales</td>
-<td>₦{{ total_sales }}</td>
-</tr>
+    .summary-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
 
-</table>
+    .summary-value {
+        font-size: 22px;
+        font-weight: 800;
+        color: #172033;
+    }
 
-<hr>
+    .section-card {
+        background: #fff;
+        border: 1px solid #e5eaf0;
+        border-radius: 16px;
+        padding: 26px;
+        margin-bottom: 20px;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
+    }
 
-<h3>Payment Breakdown</h3>
+    .section-title {
+        margin: 0 0 6px;
+        color: #172033;
+        font-size: 19px;
+        font-weight: 800;
+    }
 
-<table class="table table-bordered">
+    .section-description {
+        margin: 0 0 22px;
+        color: #64748b;
+        font-size: 14px;
+    }
 
-<tr>
-<td>Cash</td>
-<td>₦{{ payment_summary.CASH }}</td>
-</tr>
+    .reconciliation {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+    }
 
-<tr>
-<td>POS</td>
-<td>₦{{ payment_summary.POS }}</td>
-</tr>
+    .reconciliation-item {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+    }
 
-<tr>
-<td>Transfer</td>
-<td>₦{{ payment_summary.TRANSFER }}</td>
-</tr>
+    .reconciliation-label {
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
 
-</table>
+    .reconciliation-value {
+        color: #172033;
+        font-size: 20px;
+        font-weight: 800;
+    }
 
-<hr>
+    .form-group {
+        margin-bottom: 20px;
+    }
 
-<h3>Cash Reconciliation</h3>
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: #334155;
+        font-size: 13px;
+        font-weight: 700;
+    }
 
-<p>
-Expected Cash: <strong>₦{{ expected_cash }}</strong>
-</p>
+    .form-control {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        background: #fff;
+        color: #172033;
+        font-size: 14px;
+    }
 
-<form method="post">
+    .form-control:focus {
+        outline: none;
+        border-color: #64748b;
+        box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.12);
+    }
 
-{% csrf_token %}
+    .handover-note {
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 13px;
+        line-height: 1.6;
+        margin-bottom: 22px;
+    }
 
-<label>
-Counted Cash
-</label>
+    .actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
 
-<input type="number" step="0.01" name="counted_cash" required>
+    .btn-primary {
+        border: 0;
+        border-radius: 10px;
+        padding: 12px 18px;
+        background: #172033;
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+    }
 
-<br><br>
+    .btn-secondary {
+        display: inline-block;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        padding: 11px 17px;
+        color: #334155;
+        text-decoration: none;
+        font-weight: 700;
+        background: #fff;
+    }
 
-<button class="btn btn-danger">
-Close Shift
-</button>
+    .pending-box {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        color: #9a3412;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
 
-</form>
+    @media (max-width: 1000px) {
+        .summary-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @media (max-width: 800px) {
+        .summary-grid,
+        .reconciliation {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    @media (max-width: 560px) {
+        .summary-grid,
+        .reconciliation {
+            grid-template-columns: 1fr;
+        }
+
+        .shift-close-page {
+            padding: 24px 16px 40px;
+        }
+    }
+</style>
+
+<div class="shift-close-page">
+
+    <div class="shift-eyebrow">RESTAURANT OPERATIONS</div>
+
+    <h1 class="shift-title">End Shift</h1>
+
+    <p class="shift-subtitle">
+        Reconcile your shift and hand physical cash to the next custodian.
+    </p>
+
+    {% if pending_handover %}
+        <div class="pending-box">
+            <strong>Cash handover pending.</strong>
+            Handover #{{ pending_handover.id }} is waiting for
+            {{ pending_handover.to_user.get_full_name|default:pending_handover.to_user.username }}
+            to independently count and accept the cash.
+        </div>
+    {% endif %}
+
+    <div class="summary-grid">
+
+        <div class="summary-card">
+            <div class="summary-label">Shift</div>
+            <div class="summary-value">#{{ shift.id }}</div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-label">Opening Cash</div>
+            <div class="summary-value">
+                ₦{{ shift.opening_cash|floatformat:2 }}
+            </div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-label">Orders</div>
+            <div class="summary-value">{{ order_count }}</div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-label">Total Sales</div>
+            <div class="summary-value">
+                ₦{{ total_sales|floatformat:2 }}
+            </div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-label">Expected Cash</div>
+            <div class="summary-value">
+                ₦{{ expected_cash|floatformat:2 }}
+            </div>
+        </div>
+
+    </div>
+
+    <div class="section-card">
+
+        <h2 class="section-title">Payment Reconciliation</h2>
+
+        <p class="section-description">
+            Payments recorded against this cashier's shift.
+        </p>
+
+        <div class="reconciliation">
+
+            <div class="reconciliation-item">
+                <div class="reconciliation-label">Cash</div>
+                <div class="reconciliation-value">
+                    ₦{{ payment_summary.CASH|floatformat:2 }}
+                </div>
+            </div>
+
+            <div class="reconciliation-item">
+                <div class="reconciliation-label">POS</div>
+                <div class="reconciliation-value">
+                    ₦{{ payment_summary.POS|floatformat:2 }}
+                </div>
+            </div>
+
+            <div class="reconciliation-item">
+                <div class="reconciliation-label">Transfer</div>
+                <div class="reconciliation-value">
+                    ₦{{ payment_summary.TRANSFER|floatformat:2 }}
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="section-card">
+
+        <h2 class="section-title">Cash Handover</h2>
+
+        <p class="section-description">
+            Count the physical cash independently before handing it to the
+            selected recipient. The recipient will perform a second count
+            before accepting custody.
+        </p>
+
+        <div class="handover-note">
+            <strong>
+                Expected physical cash: ₦{{ expected_cash|floatformat:2 }}
+            </strong><br>
+
+            This is your opening cash plus net cash payments recorded during
+            the shift. Count the physical cash yourself and enter the actual
+            amount below. Any difference will be recorded as a variance and
+            must be explained by the recipient.
+        </div>
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <div class="form-group">
+
+                <label class="form-label" for="sender_count">
+                    Your Cash Count
+                </label>
+
+                <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name="sender_count"
+                    id="sender_count"
+                    class="form-control"
+                    placeholder="Enter the amount you counted"
+                    required
+                >
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label" for="recipient">
+                    Hand Cash To
+                </label>
+
+                <select
+                    name="recipient"
+                    id="recipient"
+                    class="form-control"
+                    required
+                >
+
+                    <option value="">
+                        Select recipient
+                    </option>
+
+                    {% for recipient in recipients %}
+
+                        <option value="{{ recipient.id }}">
+                            {{ recipient.get_full_name|default:recipient.username }}
+                            — {{ recipient.get_role_display }}
+                        </option>
+
+                    {% empty %}
+
+                        <option value="" disabled>
+                            No eligible recipients available
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+            <div class="actions">
+
+                <a
+                    href="{% url 'restaurant_shift_detail' shift.id %}"
+                    class="btn-secondary"
+                >
+                    Cancel
+                </a>
+
+                <button
+                    type="submit"
+                    class="btn-primary"
+                    {% if pending_handover %}disabled{% endif %}
+                >
+                    Create Cash Handover →
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
 
 {% endblock %}

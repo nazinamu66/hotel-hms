@@ -1,62 +1,336 @@
 {% extends "base/base.html" %}
+
 {% block content %}
 
-<h2>Recipe: {{ food.name }}</h2>
+<style>
+    .recipe-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 0 48px;
+    }
 
-<table border="1" cellpadding="6">
-  <tr>
-    <th>Ingredient</th>
-    <th>Qty / Portion</th>
-    <th>Control</th>
-    <th>Tolerance %</th>
-    <th></th>
-  </tr>
+    .recipe-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 24px;
+        margin-bottom: 28px;
+    }
 
-  {% for item in items %}
-  <tr>
-    <td>{{ item.ingredient.name }}</td>
-    <td>{{ item.quantity }}</td>
-    <td>{{ item.get_control_mode_display }}</td>
-    <td>
-        {% if item.control_mode == "TOLERANCE" %}
-            {{ item.tolerance_percent }}%
-        {% else %}
-            —
-        {% endif %}
-    </td>
+    .eyebrow {
+        margin: 0 0 8px;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
 
-    <td>
-      <form method="post"
-            action="{% url 'inventory:kitchen_recipe_item_delete' item.id %}"
-            style="display:inline;">
-        {% csrf_token %}
-        <button type="submit"
-                onclick="return confirm('Remove {{ item.ingredient.name }}?')">
-          ❌ Remove
-        </button>
-      </form>
-    </td>
-  </tr>
-  
-  <p><strong>Cost per portion:</strong> {{ recipe.total_cost }}</p>
+    .recipe-header h1 {
+        margin: 0;
+        color: #1e293b;
+        font-size: 32px;
+        line-height: 1.15;
+    }
 
-  {% empty %}
-  <tr>
-    <td colspan="5">No ingredients yet.</td>
-  </tr>
-  {% endfor %}
-</table>
+    .recipe-subtitle {
+        margin: 10px 0 0;
+        color: #64748b;
+        font-size: 16px;
+    }
 
-<br>
+    .header-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
 
-<a href="{% url 'inventory:kitchen_recipe_item_add' recipe.id %}">
-➕ Add Ingredient
-</a>
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 0 18px;
+        border-radius: 9px;
+        text-decoration: none;
+        font-weight: 700;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #334155;
+    }
 
-<br><br>
+    .btn-primary {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #fff;
+    }
 
-<a href="{% url 'kitchen_food_list' %}">
-⬅ Back
-</a>
+    .btn:hover {
+        opacity: .92;
+    }
+
+    .info-card,
+    .ingredients-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, .05);
+        overflow: hidden;
+    }
+
+    .info-card {
+        padding: 20px 24px;
+        margin-bottom: 22px;
+        background: #f8fafc;
+    }
+
+    .info-card strong {
+        color: #334155;
+    }
+
+    .info-card p {
+        margin: 6px 0 0;
+        color: #64748b;
+        line-height: 1.6;
+    }
+
+    .card-header {
+        padding: 22px 24px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .card-header h2 {
+        margin: 0;
+        color: #1e293b;
+        font-size: 20px;
+    }
+
+    .card-header p {
+        margin: 6px 0 0;
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+    }
+
+    .recipe-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .recipe-table th {
+        padding: 14px 20px;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 800;
+        text-align: left;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    .recipe-table td {
+        padding: 17px 20px;
+        border-top: 1px solid #eef2f7;
+        color: #334155;
+        font-size: 15px;
+    }
+
+    .ingredient-name {
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .quantity {
+        font-weight: 700;
+    }
+
+    .unit {
+        color: #64748b;
+        margin-left: 5px;
+    }
+
+    .remove-form {
+        margin: 0;
+    }
+
+    .remove-btn {
+        border: 0;
+        background: transparent;
+        color: #dc2626;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 7px 10px;
+        border-radius: 7px;
+    }
+
+    .remove-btn:hover {
+        background: #fef2f2;
+    }
+
+    .empty-state {
+        padding: 52px 24px;
+        text-align: center;
+        color: #64748b;
+    }
+
+    .empty-icon {
+        font-size: 34px;
+        margin-bottom: 10px;
+    }
+
+    .empty-state strong {
+        display: block;
+        color: #334155;
+        font-size: 17px;
+        margin-bottom: 5px;
+    }
+
+    .bottom-actions {
+        margin-top: 22px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+
+    @media (max-width: 700px) {
+        .recipe-page {
+            padding: 22px 0 36px;
+        }
+
+        .recipe-header {
+            flex-direction: column;
+        }
+
+        .header-actions,
+        .header-actions .btn {
+            width: 100%;
+        }
+
+        .bottom-actions {
+            flex-direction: column-reverse;
+            align-items: stretch;
+        }
+
+        .bottom-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="recipe-page">
+
+    <div class="recipe-header">
+        <div>
+            <p class="eyebrow">Kitchen Setup • Recipe</p>
+            <h1>{{ food.name }}</h1>
+            <p class="recipe-subtitle">
+                Define the ingredients and standard quantity used for one portion.
+            </p>
+        </div>
+
+        <div class="header-actions">
+            <a href="{% url 'inventory:kitchen_recipe_item_add' recipe.id %}"
+               class="btn btn-primary">
+                + Add Ingredient
+            </a>
+        </div>
+    </div>
+
+    <div class="info-card">
+        <strong>Recipe standard</strong>
+        <p>
+            The Head Chef defines the standard ingredient quantity per portion.
+            During production, the kitchen records the actual quantity used.
+            Any difference is retained as a production variance for review.
+        </p>
+    </div>
+
+    <div class="ingredients-card">
+
+        <div class="card-header">
+            <h2>Recipe Ingredients</h2>
+            <p>
+                {{ items|length }} ingredient{{ items|length|pluralize }}
+                configured for {{ food.name }}.
+            </p>
+        </div>
+
+        <div class="table-wrap">
+            <table class="recipe-table">
+                <thead>
+                    <tr>
+                        <th>Ingredient</th>
+                        <th>Standard Qty / Portion</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>
+                            <span class="ingredient-name">
+                                {{ item.ingredient.name }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="quantity">
+                                {{ item.quantity }}
+                            </span>
+                            <span class="unit">
+                                {{ item.ingredient.base_unit }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <form method="post"
+                                  action="{% url 'inventory:kitchen_recipe_item_delete' item.id %}"
+                                  class="remove-form">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="remove-btn"
+                                        onclick="return confirm('Remove {{ item.ingredient.name }} from this recipe?');">
+                                    Remove
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="3">
+                            <div class="empty-state">
+                                <div class="empty-icon">🍲</div>
+                                <strong>No ingredients configured yet</strong>
+                                <span>
+                                    Add the ingredients that make up {{ food.name }}.
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <div class="bottom-actions">
+        <a href="{% url 'kitchen_food_list' %}" class="btn">
+            ← Back to Prepared Foods
+        </a>
+
+        <a href="{% url 'inventory:kitchen_recipe_item_add' recipe.id %}"
+           class="btn btn-primary">
+            + Add Ingredient
+        </a>
+    </div>
+
+</div>
 
 {% endblock %}

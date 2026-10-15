@@ -1,44 +1,348 @@
 {% extends "base/base.html" %}
 {% block content %}
 
-<h2>Production Detail</h2>
+<style>
+    .production-page {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
 
-<p><strong>Food:</strong> {{ batch.recipe.name }}</p>
-<p><strong>Quantity Produced:</strong> {{ batch.quantity_produced }}</p>
-<p><strong>Produced By:</strong> {{ batch.produced_by }}</p>
-<p><strong>Date:</strong> {{ batch.created_at|date:"Y-m-d H:i" }}</p>
+    .page-header {
+        margin-bottom: 28px;
+    }
 
-<hr>
+    .eyebrow {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
 
-<h3>Ingredient Usage</h3>
+    .page-header h1 {
+        margin: 0;
+        font-size: 32px;
+        color: #273449;
+    }
 
-<table border="1" cellpadding="6">
-  <tr>
-    <th>Ingredient</th>
-    <th>Expected</th>
-    <th>Actual</th>
-    <th>Variance</th>
-  </tr>
+    .page-header p {
+        margin: 8px 0 0;
+        color: #64748b;
+        font-size: 16px;
+    }
 
-  {% for usage in batch.ingredient_usages.all %}
-  <tr>
-    <td>{{ usage.ingredient.name }}</td>
-    <td>{{ usage.expected_quantity }}</td>
-    <td>{{ usage.actual_quantity }}</td>
-    <td>
-      {% if usage.variance > 0 %}
-        <span style="color:red;">+{{ usage.variance }}</span>
-      {% elif usage.variance < 0 %}
-        <span style="color:orange;">{{ usage.variance }}</span>
-      {% else %}
-        0
-      {% endif %}
-    </td>
-  </tr>
-  {% endfor %}
-</table>
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
 
-<br>
-<a href="{% url 'kitchen_production_history' %}">⬅ Back</a>
+    .summary-card {
+        background: #ffffff;
+        border: 1px solid #dbe3ee;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    }
+
+    .summary-label {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: .8px;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 9px;
+    }
+
+    .summary-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #273449;
+    }
+
+    .info-card {
+        background: #ffffff;
+        border: 1px solid #dbe3ee;
+        border-radius: 16px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 22px 28px;
+        border-bottom: 1px solid #e5eaf1;
+    }
+
+    .card-header h2 {
+        margin: 0;
+        font-size: 21px;
+        color: #273449;
+    }
+
+    .card-header p {
+        margin: 6px 0 0;
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+    }
+
+    .usage-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .usage-table th {
+        padding: 15px 22px;
+        text-align: left;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: .8px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .usage-table td {
+        padding: 19px 22px;
+        border-top: 1px solid #e8edf3;
+        color: #334155;
+        font-size: 15px;
+    }
+
+    .usage-table tbody tr:hover {
+        background: #fafcff;
+    }
+
+    .ingredient-name {
+        font-weight: 700;
+        color: #273449;
+    }
+
+    .quantity {
+        font-weight: 600;
+        color: #334155;
+    }
+
+    .variance {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .variance-positive {
+        color: #b91c1c;
+        background: #fee2e2;
+    }
+
+    .variance-negative {
+        color: #92400e;
+        background: #fef3c7;
+    }
+
+    .variance-zero {
+        color: #166534;
+        background: #dcfce7;
+    }
+
+    .empty-state {
+        padding: 48px 24px;
+        text-align: center;
+        color: #64748b;
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 16px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        background: #ffffff;
+        color: #334155;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .back-link:hover {
+        background: #f8fafc;
+    }
+
+    @media (max-width: 900px) {
+        .summary-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 600px) {
+        .summary-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .page-header h1 {
+            font-size: 27px;
+        }
+
+        .card-header {
+            padding: 20px;
+        }
+
+        .usage-table th,
+        .usage-table td {
+            padding: 14px 16px;
+        }
+    }
+</style>
+
+<div class="production-page">
+
+    <div class="page-header">
+        <div class="eyebrow">Kitchen Operations • Production Record</div>
+        <h1>{{ batch.recipe.name }}</h1>
+        <p>Production usage and variance record.</p>
+    </div>
+
+    <div class="summary-grid">
+
+        <div class="summary-card">
+            <div class="summary-label">Food</div>
+            <div class="summary-value">{{ batch.recipe.name }}</div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-label">Portions Produced</div>
+            <div class="summary-value">{{ batch.quantity_produced }}</div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-label">Produced By</div>
+            <div class="summary-value">{{ batch.produced_by }}</div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-label">Production Date</div>
+            <div class="summary-value">
+                {{ batch.created_at|date:"d M Y, H:i" }}
+            </div>
+        </div>
+
+    </div>
+
+    <div class="info-card">
+
+        <div class="card-header">
+            <h2>Ingredient Usage</h2>
+            <p>
+                Expected quantities come from the recipe standard.
+                Actual Used records what the kitchen consumed.
+                Variance is retained for production review.
+            </p>
+        </div>
+
+        <div class="table-wrap">
+
+            <table class="usage-table">
+
+                <thead>
+                    <tr>
+                        <th>Ingredient</th>
+                        <th>Expected</th>
+                        <th>Actual Used</th>
+                        <th>Variance</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for usage in batch.ingredient_usages.all %}
+
+                    <tr>
+
+                        <td>
+                            <span class="ingredient-name">
+                                {{ usage.ingredient.name }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="quantity">
+                                {{ usage.expected_quantity }}
+                                {{ usage.ingredient.base_unit }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <span class="quantity">
+                                {{ usage.actual_quantity }}
+                                {{ usage.ingredient.base_unit }}
+                            </span>
+                        </td>
+
+                        <td>
+
+                            {% if usage.variance > 0 %}
+
+                                <span class="variance variance-positive">
+                                    +{{ usage.variance }}
+                                    {{ usage.ingredient.base_unit }}
+                                </span>
+
+                            {% elif usage.variance < 0 %}
+
+                                <span class="variance variance-negative">
+                                    {{ usage.variance }}
+                                    {{ usage.ingredient.base_unit }}
+                                </span>
+
+                            {% else %}
+
+                                <span class="variance variance-zero">
+                                    0
+                                    {{ usage.ingredient.base_unit }}
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+                        <td colspan="4">
+                            <div class="empty-state">
+                                No ingredient usage has been recorded for this production batch.
+                            </div>
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    <a
+        href="{% url 'kitchen_production_history' %}"
+        class="back-link"
+    >
+        ← Back to Production History
+    </a>
+
+</div>
 
 {% endblock %}

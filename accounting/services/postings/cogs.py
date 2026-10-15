@@ -1,41 +1,15 @@
 from decimal import Decimal
+
 from accounting.services.journal import record_transaction
-from inventory.services.costing import get_latest_cost
-
-
-def _get_drink_cost(product):
-    return (
-        product.purchase_cost
-        or product.cost_price
-        or Decimal("0.00")
-    )
-
-
-def _get_food_cost(product, kitchen):
-
-    cost = get_latest_cost(product, kitchen)
-
-    if cost <= 0:
-        raise ValueError(
-            f"No production cost found for {product.name}"
-        )
-
-    return cost
-
-
-def _save_cost_snapshot(item, unit_cost):
-
-    item.cost_at_sale = unit_cost
-    item.save(update_fields=["cost_at_sale"])
 
 
 def post_cogs_for_order(order):
     """
-    Post Cost of Goods Sold for a served POS order.
+    Post COGS using the historical FIFO cost already captured
+    on each POS order item at the time of sale.
 
-    - Drinks credit Inventory Asset.
-    - Food credits Finished Goods Inventory.
-    - Saves historical cost snapshot on every order item.
+    Physical inventory and FIFO consumption happen during
+    POSOrder.charge_order().
     """
 
     hotel = order.department.hotel
@@ -50,33 +24,22 @@ def post_cogs_for_order(order):
         if not product.is_stock_item():
             continue
 
-        # -------------------------
-        # Determine historical cost
-        # -------------------------
-
-        if product.product_type == "DRINK":
-
-            unit_cost = _get_drink_cost(product)
-            drink_cogs += unit_cost * item.quantity
-
-        elif product.product_type == "FOOD":
-
-            unit_cost = _get_food_cost(
-                product,
-                order.department
+        if item.cost_at_sale <= 0:
+            raise ValueError(
+                f"Missing historical cost for {product.name}"
             )
 
-            food_cogs += unit_cost * item.quantity
+        amount = item.cost_at_sale * item.quantity
 
-        else:
-            continue
+        if product.product_type == "DRINK":
+            drink_cogs += amount
 
-        _save_cost_snapshot(item, unit_cost)
+        elif product.product_type == "FOOD":
+            food_cogs += amount
 
     # -------------------------
-    # Drinks
+    # DRINK COGS
     # -------------------------
-
     if drink_cogs > 0:
 
         record_transaction(
@@ -91,9 +54,8 @@ def post_cogs_for_order(order):
         )
 
     # -------------------------
-    # Food
+    # FOOD COGS
     # -------------------------
-
     if food_cogs > 0:
 
         record_transaction(

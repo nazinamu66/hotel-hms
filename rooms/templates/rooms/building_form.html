@@ -4,27 +4,251 @@
 
 {% block content %}
 
-<h2>Add Building</h2>
+<style>
+    .building-page {
+        max-width: 850px;
+        margin: 0 auto;
+    }
 
-<div class="card">
+    .page-heading {
+        margin-bottom: 20px;
+    }
 
-<form method="post">
-    {% csrf_token %}
+    .page-heading h2 {
+        margin: 0;
+        color: #111827;
+    }
 
-    <label>Building Name</label><br>
-    <input type="text" name="name" required>
+    .page-heading p {
+        margin: 6px 0 0;
+        color: #6b7280;
+    }
 
-    <br><br>
+    .form-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.04);
+        padding: 24px;
+    }
 
-    <button class="btn btn-primary" type="submit">
-        Save
-    </button>
+    .form-group {
+        margin-bottom: 20px;
+    }
 
-    <a class="btn btn-secondary" href="{% url 'building_list' %}">
-        Cancel
-    </a>
+    .form-group label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+    }
 
-</form>
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 11px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        font-size: 14px;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,.10);
+    }
+
+    .help-text {
+        display: block;
+        margin-top: 6px;
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    .info-box {
+        padding: 14px 16px;
+        margin-bottom: 22px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        color: #1e40af;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding-top: 8px;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-primary {
+        background: #2563eb;
+        color: #fff;
+    }
+
+    .btn-primary:hover {
+        background: #1d4ed8;
+    }
+
+    .btn-secondary {
+        background: #fff;
+        color: #374151;
+        border-color: #d1d5db;
+    }
+
+    @media (max-width: 650px) {
+        .form-card {
+            padding: 18px;
+        }
+
+        .actions {
+            flex-direction: column-reverse;
+        }
+
+        .actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+
+<div class="building-page">
+
+    <div class="page-heading">
+        <h2>Add Building</h2>
+        <p>
+            Create a building and automatically generate its initial floors.
+        </p>
+    </div>
+
+
+    <div class="form-card">
+
+        <div class="info-box">
+            Enter the number of floors in the building.
+            The system will automatically create Floor 1, Floor 2,
+            and so on. You can rename or add floors afterward.
+        </div>
+
+
+        <form method="post">
+
+            {% csrf_token %}
+
+
+            <div class="form-group">
+
+                <label for="hotel">
+                    Hotel
+                </label>
+
+                <select
+                    id="hotel"
+                    name="hotel"
+                    required
+                >
+
+                    <option value="">
+                        -- Select Hotel --
+                    </option>
+
+                    {% for hotel in hotels %}
+
+                        <option value="{{ hotel.id }}">
+                            {{ hotel.name }}
+                            {% if hotel.location %}
+                                — {{ hotel.location }}
+                            {% endif %}
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="name">
+                    Building Name
+                </label>
+
+                <input
+                    id="name"
+                    type="text"
+                    name="name"
+                    placeholder="e.g. Main Building"
+                    maxlength="100"
+                    required
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="floor_count">
+                    Number of Floors
+                </label>
+
+                <input
+                    id="floor_count"
+                    type="number"
+                    name="floor_count"
+                    min="1"
+                    max="200"
+                    value="1"
+                    required
+                >
+
+                <small class="help-text">
+                    The system will create Floor 1 through the selected number.
+                </small>
+
+            </div>
+
+
+            <div class="actions">
+
+                <a
+                    href="{% url 'building_list' %}"
+                    class="btn btn-secondary"
+                >
+                    Cancel
+                </a>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Create Building
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
 
 </div>
 

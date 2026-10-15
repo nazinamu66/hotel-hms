@@ -3,33 +3,370 @@
 {% block title %}Extend Stay{% endblock %}
 
 {% block header %}
-<h2>Extend Stay – Room {{ room.room_number }}</h2>
+<div>
+    <div style="
+        font-size:13px;
+        font-weight:600;
+        color:#6b7280;
+        text-transform:uppercase;
+        letter-spacing:.04em;
+    ">
+        Front Desk
+    </div>
+
+    <h2 style="margin:5px 0 0;">
+        Extend Stay — Room {{ room.room_number }}
+    </h2>
+</div>
 {% endblock %}
+
 
 {% block content %}
 
-<form method="post">
-{% csrf_token %}
+<div style="
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:24px;
+    margin-bottom:24px;
+">
 
-<p>
-Current Checkout:
-<strong>{{ folio.check_out_at|default:"Not set" }}</strong>
-</p>
+    <!-- CURRENT STAY -->
+    <section class="card">
 
-<label>New Checkout Date</label><br>
+        <div style="
+            font-size:13px;
+            font-weight:600;
+            color:#6b7280;
+            text-transform:uppercase;
+            letter-spacing:.04em;
+        ">
+            Current Stay
+        </div>
 
-<input type="date"
-       name="new_checkout"
-       required>
+        <h3 style="margin:6px 0 20px;">
+            {{ folio.guest.first_name }}
+            {{ folio.guest.last_name }}
+        </h3>
 
-<br><br>
+        <div style="
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:18px;
+        ">
 
-<button type="submit">Extend Stay</button>
+            <div>
+                <div style="font-size:12px;color:#6b7280;">
+                    Room
+                </div>
 
-<a href="{% url 'frontdesk_active_stay' room.id %}">
-Cancel
-</a>
+                <div style="font-weight:600;margin-top:4px;">
+                    {{ room.room_number }}
+                </div>
+            </div>
 
-</form>
+            <div>
+                <div style="font-size:12px;color:#6b7280;">
+                    Category
+                </div>
+
+                <div style="font-weight:600;margin-top:4px;">
+                    {{ room.category.name }}
+                </div>
+            </div>
+
+            <div>
+                <div style="font-size:12px;color:#6b7280;">
+                    Current Checkout
+                </div>
+
+                <div style="font-weight:600;margin-top:4px;">
+                    {{ folio.check_out_at|date:"d M Y, H:i" }}
+                </div>
+            </div>
+
+            <div>
+                <div style="font-size:12px;color:#6b7280;">
+                    Nightly Rate
+                </div>
+
+                <div style="font-weight:600;margin-top:4px;">
+                    ₦{{ room.category.rate.price_per_night|floatformat:2 }}
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- EXTENSION -->
+    <section class="card">
+
+        <div style="
+            font-size:13px;
+            font-weight:600;
+            color:#6b7280;
+            text-transform:uppercase;
+            letter-spacing:.04em;
+        ">
+            Stay Extension
+        </div>
+
+        <h3 style="margin:6px 0 20px;">
+            Select New Checkout
+        </h3>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div>
+
+                <label
+                    for="new_checkout"
+                    style="
+                        display:block;
+                        font-size:13px;
+                        font-weight:600;
+                        color:#374151;
+                        margin-bottom:7px;
+                    "
+                >
+                    New Checkout Date
+                </label>
+
+                <input
+                    type="date"
+                    id="new_checkout"
+                    name="new_checkout"
+                    required
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:12px 13px;
+                        border:1px solid #d1d5db;
+                        border-radius:8px;
+                        font-size:15px;
+                        background:#fff;
+                    "
+                >
+
+            </div>
+
+
+            <!-- CALCULATION -->
+            <div style="
+                margin-top:20px;
+                padding:16px;
+                border-radius:10px;
+                background:#f8fafc;
+                border:1px solid #e5e7eb;
+            ">
+
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    gap:15px;
+                    margin-bottom:10px;
+                ">
+                    <span style="color:#6b7280;">
+                        Additional nights
+                    </span>
+
+                    <strong id="additional-nights">
+                        0
+                    </strong>
+                </div>
+
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    gap:15px;
+                ">
+                    <span style="color:#6b7280;">
+                        Additional room charge
+                    </span>
+
+                    <strong id="additional-charge">
+                        ₦0.00
+                    </strong>
+                </div>
+
+            </div>
+
+
+            <!-- INFORMATION -->
+            <div style="
+                margin-top:16px;
+                padding:14px;
+                border-radius:10px;
+                background:#eff6ff;
+                border:1px solid #bfdbfe;
+                color:#1e40af;
+                font-size:13px;
+                line-height:1.5;
+            ">
+                The additional room nights will be charged to the
+                guest folio immediately. Payment can be made separately.
+            </div>
+
+
+            <!-- ACTIONS -->
+            <div style="
+                display:flex;
+                gap:12px;
+                flex-wrap:wrap;
+                margin-top:22px;
+            ">
+
+                <button
+                    type="submit"
+                    id="extend-button"
+                    style="
+                        padding:11px 18px;
+                        border:0;
+                        border-radius:8px;
+                        background:#2563eb;
+                        color:#fff;
+                        font-weight:600;
+                        cursor:pointer;
+                    "
+                >
+                    Extend Stay
+                </button>
+
+                <a
+                    href="{% url 'frontdesk_active_stay' room.id %}"
+                    style="
+                        text-decoration:none;
+                        padding:11px 18px;
+                        border-radius:8px;
+                        border:1px solid #d1d5db;
+                        background:#fff;
+                        color:#374151;
+                        font-weight:600;
+                    "
+                >
+                    Cancel
+                </a>
+
+            </div>
+
+        </form>
+
+    </section>
+
+</div>
+
+
+<!-- BILLING NOTE -->
+<section class="card">
+
+    <div style="
+        font-size:13px;
+        font-weight:600;
+        color:#6b7280;
+        text-transform:uppercase;
+        letter-spacing:.04em;
+        margin-bottom:6px;
+    ">
+        Billing
+    </div>
+
+    <div style="
+        color:#374151;
+        line-height:1.6;
+        font-size:14px;
+    ">
+        Each additional night is billed at the room's current active
+        nightly rate. Extensions may cover multiple nights in a single
+        operation.
+    </div>
+
+</section>
+
+
+<script>
+(function () {
+
+    const checkoutInput = document.getElementById("new_checkout");
+    const nightsOutput = document.getElementById("additional-nights");
+    const chargeOutput = document.getElementById("additional-charge");
+    const extendButton = document.getElementById("extend-button");
+
+    const nightlyRate = Number(
+        "{{ room.category.rate.price_per_night }}"
+    );
+
+    const currentCheckout = "{{ folio.check_out_at|date:'Y-m-d' }}";
+
+    function getNextDate(dateString) {
+
+        const date = new Date(dateString + "T12:00:00");
+
+        date.setDate(date.getDate() + 1);
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+
+        return `${year}-${month}-${day}`;
+    }
+
+
+    function formatMoney(value) {
+
+        return "₦" + value.toLocaleString(
+            "en-NG",
+            {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }
+        );
+
+    }
+
+
+    if (currentCheckout) {
+        checkoutInput.min = getNextDate(currentCheckout);
+    }
+
+
+    checkoutInput.addEventListener("change", function () {
+
+        if (!this.value || !currentCheckout) {
+            nightsOutput.textContent = "0";
+            chargeOutput.textContent = "₦0.00";
+            return;
+        }
+
+        const current = new Date(
+            currentCheckout + "T12:00:00"
+        );
+
+        const selected = new Date(
+            this.value + "T12:00:00"
+        );
+
+        const millisecondsPerDay = 1000 * 60 * 60 * 24;
+
+        const nights = Math.round(
+            (selected - current) / millisecondsPerDay
+        );
+
+        if (nights <= 0) {
+            nightsOutput.textContent = "0";
+            chargeOutput.textContent = "₦0.00";
+            return;
+        }
+
+        const total = nights * nightlyRate;
+
+        nightsOutput.textContent = nights;
+        chargeOutput.textContent = formatMoney(total);
+
+    });
+
+})();
+</script>
 
 {% endblock %}

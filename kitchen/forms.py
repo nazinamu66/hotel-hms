@@ -66,31 +66,22 @@ class RecipeItemForm(forms.ModelForm):
         fields = [
             "ingredient",
             "quantity",
-            "control_mode",
-            "tolerance_percent",
         ]
 
     def clean(self):
         cleaned = super().clean()
         ingredient = cleaned.get("ingredient")
-        mode = cleaned.get("control_mode")
-        tolerance = cleaned.get("tolerance_percent")
+        quantity = cleaned.get("quantity")
 
-        if cleaned.get("quantity") <= 0:
-            raise forms.ValidationError("Quantity must be greater than 0.")
+        if quantity is None or quantity <= 0:
+            raise forms.ValidationError(
+                "Quantity per portion must be greater than 0."
+            )
 
         if ingredient and ingredient.product_type != "RAW":
             raise forms.ValidationError(
                 "Only RAW products can be used as ingredients."
             )
-
-        if mode == "TOLERANCE":
-            if tolerance is None or tolerance <= 0:
-                raise forms.ValidationError(
-                    "Tolerance percent must be greater than 0."
-                )
-        else:
-            cleaned["tolerance_percent"] = 0
 
         return cleaned
 

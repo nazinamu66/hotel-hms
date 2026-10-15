@@ -8,67 +8,339 @@
     {% endif %}
 {% endblock %}
 
-{% block header %}
-<h2>
-    {% if amenity %}
-        Edit Amenity
-    {% else %}
-        Add Amenity
-    {% endif %}
-</h2>
-{% endblock %}
-
 {% block content %}
 
-<div class="card">
+<style>
+    .amenity-form-page {
+        max-width: 900px;
+        margin: 0 auto;
+    }
 
-    <form method="post">
+    .page-header {
+        margin-bottom: 24px;
+    }
 
-        {% csrf_token %}
+    .page-header h2 {
+        margin: 0;
+        font-size: 28px;
+        color: #1f2937;
+    }
 
-        <label>
-            Amenity Name
-        </label>
+    .page-header p {
+        margin: 6px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-        <br>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        padding: 28px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+        border: 1px solid #e5e7eb;
+    }
 
-        <input
-            type="text"
-            name="name"
-            value="{{ amenity.name|default:'' }}"
-            required
-        >
+    .form-section {
+        margin-bottom: 24px;
+    }
 
-        <br><br>
+    .form-section:last-child {
+        margin-bottom: 0;
+    }
 
-        <label>
-            Description
-        </label>
+    .form-section-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #374151;
+        margin-bottom: 16px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e5e7eb;
+    }
 
-        <br>
+    .form-group {
+        margin-bottom: 18px;
+    }
 
-        <textarea
-            name="description"
-            rows="4"
-        >{{ amenity.description|default:'' }}</textarea>
+    .form-group:last-child {
+        margin-bottom: 0;
+    }
 
-        <br><br>
+    .form-group label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+    }
 
-        <button
-            type="submit"
-            class="btn btn-primary"
-        >
-            Save
-        </button>
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 11px 13px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: white;
+        color: #111827;
+        font-size: 14px;
+        font-family: inherit;
+        transition: 0.2s ease;
+    }
 
-        <a
-            href="{% url 'amenity_list' %}"
-            class="btn btn-secondary"
-        >
-            Cancel
-        </a>
+    .form-group textarea {
+        min-height: 120px;
+        resize: vertical;
+    }
 
-    </form>
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+    }
+
+    .help-text {
+        margin-top: 6px;
+        font-size: 12px;
+        color: #6b7280;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        padding-top: 8px;
+    }
+
+    .save-btn {
+        border: none;
+        padding: 11px 18px;
+        border-radius: 8px;
+        background: #2563eb;
+        color: white;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .save-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .cancel-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 11px 18px;
+        border-radius: 8px;
+        background: #f3f4f6;
+        color: #374151 !important;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .cancel-btn:hover {
+        background: #e5e7eb;
+    }
+
+    .error-message {
+        margin-bottom: 18px;
+        padding: 12px 14px;
+        border-radius: 8px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+        font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+        .form-card {
+            padding: 20px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .save-btn,
+        .cancel-btn {
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+        }
+    }
+</style>
+
+
+<div class="amenity-form-page">
+
+    <!-- Header -->
+    <div class="page-header">
+
+        <h2>
+            {% if amenity %}
+                Edit Amenity
+            {% else %}
+                Add Amenity
+            {% endif %}
+        </h2>
+
+        <p>
+            {% if amenity %}
+                Update the details of this room amenity.
+            {% else %}
+                Add an amenity that can be assigned to rooms in a hotel.
+            {% endif %}
+        </p>
+
+    </div>
+
+
+    <!-- Form -->
+    <div class="form-card">
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="error-message">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+
+        <form method="post">
+
+            {% csrf_token %}
+
+
+            <div class="form-section">
+
+                <div class="form-section-title">
+                    Amenity Details
+                </div>
+
+
+                {% if not amenity %}
+
+                    <div class="form-group">
+
+                        <label for="hotel">
+                            Hotel
+                        </label>
+
+                        <select
+                            id="hotel"
+                            name="hotel"
+                            required
+                        >
+
+                            <option value="">
+                                Select hotel
+                            </option>
+
+                            {% for hotel in hotels %}
+
+                                <option value="{{ hotel.id }}">
+                                    {{ hotel.name }}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                        <div class="help-text">
+                            Select the hotel where this amenity will be available.
+                        </div>
+
+                    </div>
+
+                {% else %}
+
+                    <div class="form-group">
+
+                        <label>
+                            Hotel
+                        </label>
+
+                        <input
+                            type="text"
+                            value="{{ amenity.hotel.name }}"
+                            readonly
+                        >
+
+                        <div class="help-text">
+                            The hotel cannot be changed after the amenity has been created.
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+
+                <div class="form-group">
+
+                    <label for="name">
+                        Amenity Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value="{{ amenity.name|default:'' }}"
+                        placeholder="e.g. Wi-Fi, TV, Mini Bar, Hair Dryer"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="description">
+                        Description
+                    </label>
+
+                    <textarea
+                        id="description"
+                        name="description"
+                        placeholder="Optional description of the amenity..."
+                    >{{ amenity.description|default:'' }}</textarea>
+
+                </div>
+
+            </div>
+
+
+            <!-- Actions -->
+            <div class="form-actions">
+
+                <button
+                    type="submit"
+                    class="save-btn"
+                >
+                    {% if amenity %}
+                        Save Changes
+                    {% else %}
+                        Create Amenity
+                    {% endif %}
+                </button>
+
+                <a
+                    href="{% url 'amenity_list' %}"
+                    class="cancel-btn"
+                >
+                    Cancel
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
 
 </div>
 

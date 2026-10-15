@@ -10,6 +10,7 @@ def validate_payment(
     amount,
     method,
     reference,
+    bank_account=None,
 ):
     if amount <= 0:
         raise ValidationError(
@@ -21,12 +22,32 @@ def validate_payment(
             "Payment exceeds outstanding balance."
         )
 
+    method = (method or "").strip().upper()
+
+    if method not in ["CASH", "POS", "TRANSFER", "DEPOSIT"]:
+        raise ValidationError(
+            "Invalid payment method."
+        )
+
     if (
         method in ["POS", "TRANSFER"]
         and not reference
     ):
         raise ValidationError(
             "Reference is required for this payment method."
+        )
+
+    if (
+        method in ["POS", "TRANSFER"]
+        and not bank_account
+    ):
+        raise ValidationError(
+            "Bank account is required for this payment method."
+        )
+
+    if method == "DEPOSIT" and bank_account:
+        raise ValidationError(
+            "Bank account is not used for guest deposit payments."
         )
 
 
@@ -37,9 +58,16 @@ def create_payment(
     reference,
     note,
     user,
+    bank_account=None,
 ):
+    account = None
+
+    if bank_account is not None:
+        account = bank_account.account
+
     return Payment.objects.create(
         folio=folio,
+        account=account,
         amount=amount,
         method=method,
         reference=reference,
@@ -64,21 +92,26 @@ def take_payment_for_folio(
     method,
     reference="",
     note="",
+    bank_account=None,
 ):
+    method = (method or "").strip().upper()
+
     validate_payment(
-        folio,
-        amount,
-        method,
-        reference,
+        folio=folio,
+        amount=amount,
+        method=method,
+        reference=reference,
+        bank_account=bank_account,
     )
 
     payment = create_payment(
-        folio,
-        amount,
-        method,
-        reference,
-        note,
-        user,
+        folio=folio,
+        amount=amount,
+        method=method,
+        reference=reference,
+        note=note,
+        user=user,
+        bank_account=bank_account,
     )
 
     post_payment_to_accounting(payment)
@@ -94,6 +127,7 @@ def take_payment(
     method,
     reference="",
     note="",
+    bank_account=None,
 ):
     folio = get_active_folio(room)
 
@@ -104,4 +138,5 @@ def take_payment(
         method=method,
         reference=reference,
         note=note,
+        bank_account=bank_account,
     )

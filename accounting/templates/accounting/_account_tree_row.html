@@ -1,29 +1,31 @@
-<tr>
+{% load accounting_extras %}
 
-    <!-- CODE -->
+<tr style="border-top:1px solid #eee;">
 
-    <td>
+    <td style="padding:13px;">
         {{ item.account.code }}
     </td>
 
+    <td style="padding:13px;">
 
-    <!-- ACCOUNT -->
-
-    <td>
-
-        <div class="account-name account-level-{{ item.level }}">
+        <div
+            style="
+                padding-left:{{ item.level }}0px;
+                {% if item.level == 0 %}
+                    font-weight:600;
+                {% endif %}
+            "
+        >
 
             {% if item.level > 0 %}
-
-                <span class="text-muted">
+                <span style="color:#aaa;margin-right:6px;">
                     └─
                 </span>
-
             {% endif %}
-
 
             <a
                 href="{% url 'accounting:ledger' item.account.id %}"
+                style="text-decoration:none;"
             >
                 {{ item.account.name }}
             </a>
@@ -33,28 +35,40 @@
     </td>
 
 
-    <!-- TYPE -->
-
-    <td>
-
+    <td style="padding:13px;">
         {{ item.account.get_account_type_display }}
-
     </td>
 
 
-    <!-- STATUS -->
-
-    <td>
+    <td style="padding:13px;">
 
         {% if item.account.is_system %}
 
-            <span class="badge bg-secondary">
+            <span
+                style="
+                    display:inline-block;
+                    padding:4px 9px;
+                    border-radius:12px;
+                    background:#eee;
+                    color:#555;
+                    font-size:12px;
+                "
+            >
                 System
             </span>
 
         {% else %}
 
-            <span class="badge bg-info">
+            <span
+                style="
+                    display:inline-block;
+                    padding:4px 9px;
+                    border-radius:12px;
+                    background:#e7f1ff;
+                    color:#245;
+                    font-size:12px;
+                "
+            >
                 User
             </span>
 
@@ -63,32 +77,41 @@
     </td>
 
 
-    <!-- BALANCE -->
-
-    <td class="text-end">
-
-        {{ item.account.get_balance|floatformat:2 }}
-
+    <td
+        style="
+            padding:13px;
+            text-align:right;
+            font-weight:600;
+            white-space:nowrap;
+        "
+    >
+        {{ item.account.get_balance|floatformat:2|money }}
     </td>
 
 
-    <!-- ACTIONS -->
-
-    <td class="text-end">
+    <td
+        style="
+            padding:13px;
+            text-align:right;
+            white-space:nowrap;
+        "
+    >
 
         <a
             href="{% url 'accounting:ledger' item.account.id %}"
-            class="btn btn-sm btn-outline-primary"
+            style="
+                text-decoration:none;
+                margin-right:12px;
+            "
         >
             Ledger
         </a>
-
 
         {% if not item.account.is_system %}
 
             <a
                 href="{% url 'accounting:edit_account' item.account.id %}"
-                class="btn btn-sm btn-outline-secondary"
+                style="text-decoration:none;"
             >
                 Edit
             </a>
@@ -99,8 +122,6 @@
 
 </tr>
 
-
-<!-- CHILD ACCOUNTS -->
 
 {% for child in item.children %}
 

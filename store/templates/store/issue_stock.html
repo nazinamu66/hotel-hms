@@ -1,85 +1,401 @@
 {% extends "base/base.html" %}
 
+{% block title %}
+Manual Stock Issue
+{% endblock %}
+
 {% block content %}
-<h2>Manual Stock Issue</h2>
 
-<div style="background:#f8d7da; padding:10px; margin-bottom:20px;">
-    <strong>⚠ Manual Issue</strong><br>
-    Use this only for emergency or non-request transfers.
+<style>
+    .manual-page {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        margin-bottom: 22px;
+    }
+
+    .page-header h2 {
+        margin: 0 0 6px;
+        font-size: 28px;
+        color: #1f2937;
+    }
+
+    .page-subtitle {
+        margin: 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .warning-card {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin-bottom: 22px;
+        color: #9a3412;
+    }
+
+    .warning-card strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #c2410c;
+    }
+
+    .stock-card,
+    .form-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+
+    .stock-card {
+        overflow: hidden;
+        margin-bottom: 22px;
+    }
+
+    .card-header {
+        padding: 16px 18px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .card-header h3 {
+        margin: 0;
+        color: #374151;
+        font-size: 17px;
+    }
+
+    .stock-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .stock-table th {
+        padding: 13px 16px;
+        background: #ffffff;
+        color: #6b7280;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .stock-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #374151;
+    }
+
+    .stock-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .stock-table tbody tr:hover {
+        background: #fafafa;
+    }
+
+    .product-name {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .low-stock {
+        color: #dc2626;
+        font-weight: 700;
+    }
+
+    .normal-stock {
+        color: #374151;
+        font-weight: 600;
+    }
+
+    .empty-state {
+        padding: 30px 16px !important;
+        text-align: center;
+        color: #6b7280;
+    }
+
+    .form-card {
+        padding: 22px;
+        max-width: 650px;
+    }
+
+    .form-card h3 {
+        margin: 0 0 5px;
+        color: #1f2937;
+    }
+
+    .form-description {
+        margin: 0 0 20px;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .form-group {
+        margin-bottom: 17px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: #374151;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .form-group select,
+    .form-group input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #ffffff;
+        font-size: 14px;
+    }
+
+    .form-group select:focus,
+    .form-group input:focus {
+        outline: none;
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
+    }
+
+    .issue-btn {
+        border: none;
+        background: #374151;
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .issue-btn:hover {
+        background: #1f2937;
+    }
+</style>
+
+
+<div class="manual-page">
+
+    <div class="page-header">
+
+        <h2>Manual Stock Issue</h2>
+
+        <p class="page-subtitle">
+            Emergency or non-request stock transfers from Store.
+        </p>
+
+    </div>
+
+
+    <div class="warning-card">
+
+        <strong>⚠ Manual Issue</strong>
+
+        Use this function only for emergency or non-request transfers.
+        Normal departmental requirements should use the Stock Request workflow.
+
+    </div>
+
+
+    <div class="stock-card">
+
+        <div class="card-header">
+            <h3>Current Store Stock</h3>
+        </div>
+
+        <table class="stock-table">
+
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Available</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for stock in stocks %}
+
+                    <tr>
+
+                        <td>
+                            <span class="product-name">
+                                {{ stock.product.name }}
+                            </span>
+                        </td>
+
+                        <td>
+
+                            {% if stock.quantity <= stock.reorder_level %}
+
+                                <span class="low-stock">
+                                    {{ stock.quantity }}
+                                </span>
+
+                            {% else %}
+
+                                <span class="normal-stock">
+                                    {{ stock.quantity }}
+                                </span>
+
+                            {% endif %}
+
+                            {{ stock.product.base_unit }}
+
+                        </td>
+
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+
+                        <td
+                            colspan="2"
+                            class="empty-state"
+                        >
+                            No stock available.
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+    <div class="form-card">
+
+        <h3>Issue Stock</h3>
+
+        <p class="form-description">
+            Record a manual transfer and provide a reason for the issue.
+        </p>
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <div class="form-group">
+
+                <label for="product_id">
+                    Product
+                </label>
+
+                <select
+                    id="product_id"
+                    name="product_id"
+                    required
+                >
+
+                    <option value="">
+                        Select Product
+                    </option>
+
+                    {% for stock in stocks %}
+
+                        {% if stock.quantity > 0 %}
+
+                            <option value="{{ stock.product.id }}">
+                                {{ stock.product.name }}
+                                ({{ stock.quantity }}
+                                {{ stock.product.base_unit }})
+                            </option>
+
+                        {% endif %}
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="department_id">
+                    Issue To
+                </label>
+
+                <select
+                    id="department_id"
+                    name="department_id"
+                    required
+                >
+
+                    <option value="">
+                        Select Department
+                    </option>
+
+                    {% for dept in departments %}
+
+                        <option value="{{ dept.id }}">
+                            {{ dept.name }}
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="quantity">
+                    Quantity
+                </label>
+
+                <input
+                    id="quantity"
+                    type="number"
+                    name="quantity"
+                    min="1"
+                    step="1"
+                    required
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="note">
+                    Reason / Note
+                </label>
+
+                <input
+                    id="note"
+                    type="text"
+                    name="note"
+                    placeholder="Why is this being issued?"
+                >
+
+            </div>
+
+
+            <button
+                type="submit"
+                class="issue-btn"
+            >
+                Issue Stock
+            </button>
+
+        </form>
+
+    </div>
+
 </div>
-
-<!-- ===================== -->
-<!-- CURRENT STOCK TABLE -->
-<!-- ===================== -->
-<h3>Current Store Stock</h3>
-
-<table border="1" cellpadding="8" width="100%" style="margin-bottom:30px;">
-    <tr>
-        <th>Product</th>
-        <th>Available</th>
-    </tr>
-
-    {% for stock in stocks %}
-    <tr>
-        <td>{{ stock.product.name }}</td>
-        <td>
-            {% if stock.quantity <= stock.reorder_level %}
-                <span style="color:red;">{{ stock.quantity }}</span>
-            {% else %}
-                {{ stock.quantity }}
-            {% endif %}
-        </td>
-    </tr>
-    {% empty %}
-    <tr>
-        <td colspan="2">No stock available.</td>
-    </tr>
-    {% endfor %}
-</table>
-
-<!-- ===================== -->
-<!-- MANUAL ISSUE FORM -->
-<!-- ===================== -->
-<h3>Issue Stock</h3>
-
-<form method="post" style="background:white; padding:20px; border:1px solid #ddd; max-width:500px;">
-    {% csrf_token %}
-
-    <div style="margin-bottom:15px;">
-        <label>Product</label><br>
-        <select name="product_id" required>
-            <option value="">Select Product</option>
-            {% for stock in stocks %}
-                {% if stock.quantity > 0 %}
-                <option value="{{ stock.product.id }}">
-                    {{ stock.product.name }} ({{ stock.quantity }})
-                </option>
-                {% endif %}
-            {% endfor %}
-        </select>
-    </div>
-
-    <div style="margin-bottom:15px;">
-        <label>Issue To</label><br>
-        <select name="department_id" required>
-            <option value="">Select Department</option>
-            {% for dept in departments %}
-                <option value="{{ dept.id }}">{{ dept.name }}</option>
-            {% endfor %}
-        </select>
-    </div>
-
-    <div style="margin-bottom:15px;">
-        <label>Quantity</label><br>
-        <input type="number" name="quantity" min="1" required>
-    </div>
-
-    <div style="margin-bottom:15px;">
-        <label>Reason / Note</label><br>
-        <input type="text" name="note" placeholder="Why is this being issued?">
-    </div>
-
-    <button type="submit">Issue Stock</button>
-</form>
 
 {% endblock %}

@@ -168,9 +168,22 @@ class SupplierForm(forms.ModelForm):
         fields = ["name", "phone", "email", "address"]
 
 class PurchaseOrderForm(forms.ModelForm):
+
     class Meta:
         model = PurchaseOrder
         fields = ["supplier", "department"]
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        self.fields["supplier"].queryset = (
+            Supplier.objects
+            .filter(
+                is_active=True,
+            )
+            .order_by("name")
+        )
         
 class PurchaseItemForm(forms.ModelForm):
     class Meta:

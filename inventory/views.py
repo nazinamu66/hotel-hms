@@ -3,7 +3,6 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction
 from django.core.exceptions import PermissionDenied, ValidationError
-from core.utils import get_user_hotels
 from accounts.decorators import role_required
 from decimal import Decimal, InvalidOperation
 from .services.setup_hotel import setup_new_hotel
@@ -28,7 +27,7 @@ from kitchen.forms import (
     RecipeItemForm,
 
 )
-
+from django.db.models import Q
 from accounts.services.access import (
     get_accessible_hotels,
     can_view_product_master,
@@ -78,6 +77,90 @@ def supplier_list(request):
         {
             "suppliers": suppliers,
             "hotels": accessible_hotels,
+        },
+    )
+
+@role_required("ADMIN", "DIRECTOR")
+def supplier_detail(request, pk):
+
+    accessible_hotels = (
+        get_accessible_hotels(
+            request.user,
+        )
+        .filter(
+            is_active=True,
+        )
+    )
+
+    supplier = get_object_or_404(
+        Supplier.objects.select_related("hotel"),
+        pk=pk,
+        hotel__in=accessible_hotels,
+    )
+
+    pos = (
+        PurchaseOrder.objects
+        .filter(
+            supplier=supplier,
+            status__in=[
+                "APPROVED",
+                "RECEIVED",
+            ],
+        )
+        .select_related(
+            "department",
+            "department__hotel",
+        )
+        .prefetch_related(
+            "items__product",
+        )
+        .order_by(
+            "-created_at",
+            "-id",
+        )
+    )
+
+    total_purchases = Decimal("0.00")
+    total_paid = Decimal("0.00")
+    outstanding_balance = Decimal("0.00")
+    partial_orders = 0
+
+    for po in pos:
+
+        po_total = sum(
+            (
+                item.purchase_quantity * item.unit_cost
+                for item in po.items.all()
+            ),
+            Decimal("0.00"),
+        )
+
+        po.calculated_total = po_total
+
+        total_purchases += po_total
+
+        if po.payment_status == "PAID":
+
+            total_paid += po_total
+
+        elif po.payment_status == "UNPAID":
+
+            outstanding_balance += po_total
+
+        elif po.payment_status == "PARTIAL":
+
+            partial_orders += 1
+
+    return render(
+        request,
+        "inventory/supplier_detail.html",
+        {
+            "supplier": supplier,
+            "pos": pos,
+            "total_purchases": total_purchases,
+            "total_paid": total_paid,
+            "outstanding_balance": outstanding_balance,
+            "partial_orders": partial_orders,
         },
     )
 
@@ -158,6 +241,103 @@ def supplier_create(request):
             "selected_hotel": hotel,
         },
     )
+
+@role_required("ADMIN", "DIRECTOR")
+def supplier_edit(request, pk):
+
+    accessible_hotels = (
+        get_accessible_hotels(
+            request.user,
+        )
+        .filter(
+            is_active=True,
+        )
+    )
+
+    supplier = get_object_or_404(
+        Supplier,
+        pk=pk,
+        hotel__in=accessible_hotels,
+    )
+
+    form = SupplierForm(
+        request.POST or None,
+        instance=supplier,
+    )
+
+    if form.is_valid():
+
+        form.save()
+
+        messages.success(
+            request,
+            "Supplier updated successfully.",
+        )
+
+        return redirect(
+            "inventory:supplier_detail",
+            pk=supplier.pk,
+        )
+
+    return render(
+        request,
+        "inventory/supplier_form.html",
+        {
+            "form": form,
+            "supplier": supplier,
+            "hotels": accessible_hotels,
+            "selected_hotel": supplier.hotel,
+            "is_edit": True,
+        },
+    )
+
+
+@role_required("ADMIN", "DIRECTOR")
+@transaction.atomic
+def supplier_archive(request, pk):
+
+    if request.method != "POST":
+        raise PermissionDenied
+
+    accessible_hotels = get_accessible_hotels(
+        request.user,
+    )
+
+    supplier = get_object_or_404(
+        Supplier,
+        pk=pk,
+        hotel__in=accessible_hotels,
+    )
+
+    if supplier.is_active:
+
+        supplier.is_active = False
+        supplier.save(
+            update_fields=["is_active"]
+        )
+
+        messages.success(
+            request,
+            f"Supplier '{supplier.name}' archived.",
+        )
+
+    else:
+
+        supplier.is_active = True
+        supplier.save(
+            update_fields=["is_active"]
+        )
+
+        messages.success(
+            request,
+            f"Supplier '{supplier.name}' restored.",
+        )
+
+    return redirect(
+        "inventory:supplier_detail",
+        pk=supplier.pk,
+    )
+
 
 def product_list(request):
 
@@ -569,18 +749,53 @@ def hotel_create(request):
 @role_required("ADMIN", "DIRECTOR")
 def department_list(request):
 
-    hotels = get_accessible_hotels(
-        request.user,
+    hotels = (
+        get_accessible_hotels(request.user)
+        .filter(is_active=True)
+        .order_by("name")
     )
 
+    departments = Department.objects.filter(
+        hotel__in=get_accessible_hotels(request.user),
+    )
+
+    # ---------------------------------------------------------
+    # FILTERS
+    # ---------------------------------------------------------
+
+    search = request.GET.get("search", "").strip()
+    hotel_id = request.GET.get("hotel", "").strip()
+    department_type = request.GET.get("type", "").strip()
+    status = request.GET.get("status", "").strip()
+
+    if search:
+        departments = departments.filter(
+            Q(name__icontains=search)
+            | Q(code__icontains=search)
+        )
+
+    if hotel_id:
+        departments = departments.filter(
+            hotel_id=hotel_id,
+        )
+
+    if department_type:
+        departments = departments.filter(
+            department_type=department_type,
+        )
+
+    if status == "active":
+        departments = departments.filter(
+            is_active=True,
+        )
+    elif status == "inactive":
+        departments = departments.filter(
+            is_active=False,
+        )
+
     departments = (
-        Department.objects
-        .filter(
-            hotel__in=hotels,
-        )
-        .select_related(
-            "hotel",
-        )
+        departments
+        .select_related("hotel")
         .order_by(
             "hotel__name",
             "name",
@@ -592,9 +807,14 @@ def department_list(request):
         "inventory/department_list.html",
         {
             "departments": departments,
+            "hotels": hotels,
+            "department_types": Department.DEPARTMENT_TYPES,
+            "filter_search": search,
+            "filter_hotel": hotel_id,
+            "filter_type": department_type,
+            "filter_status": status,
         },
     )
-
 
 @role_required("ADMIN", "DIRECTOR")
 def department_create(request):
@@ -876,9 +1096,39 @@ def department_edit(
             "edit_mode": True,
         },
     )
+@role_required("ADMIN", "DIRECTOR")
+def department_toggle_active(request, dept_id):
 
-@role_required("MANAGER", "ADMIN", "DIRECTOR")
+    if request.method != "POST":
+        raise PermissionDenied
+
+    department = get_object_or_404(
+        Department,
+        pk=dept_id,
+        hotel__in=get_accessible_hotels(request.user),
+    )
+
+    department.is_active = not department.is_active
+    department.save(update_fields=["is_active"])
+
+    if department.is_active:
+        messages.success(
+            request,
+            f"Department '{department.name}' has been activated.",
+        )
+    else:
+        messages.success(
+            request,
+            f"Department '{department.name}' has been made inactive.",
+        )
+
+    return redirect("inventory:department_list")
+
+@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
 def recipe_edit(request, food_id):
+
+    if request.user.role == "KITCHEN" and not request.user.is_department_head:
+        raise PermissionDenied("Only the Head Chef can manage recipes.")
 
     food = get_object_or_404(Product, id=food_id)
 
@@ -901,9 +1151,12 @@ def recipe_edit(request, food_id):
         }
     )
 
-@role_required("MANAGER", "ADMIN", "DIRECTOR")
+@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
 @transaction.atomic
 def recipe_item_delete(request, item_id):
+
+    if request.user.role == "KITCHEN" and not request.user.is_department_head:
+        raise PermissionDenied("Only the Head Chef can manage recipes.")
 
     item = get_object_or_404(RecipeItem, id=item_id)
     recipe = item.recipe
@@ -927,8 +1180,12 @@ def recipe_item_delete(request, item_id):
     return redirect("inventory:kitchen_recipe_edit", food_id=recipe.product.id)
 
 
-@role_required("MANAGER", "ADMIN", "DIRECTOR")
+@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
 def recipe_item_add(request, recipe_id):
+
+    if request.user.role == "KITCHEN" and not request.user.is_department_head:
+        raise PermissionDenied("Only the Head Chef can manage recipes.")
+
     recipe = get_object_or_404(Recipe, id=recipe_id)
 
     if recipe.productionbatch_set.exists():
@@ -974,7 +1231,7 @@ def recipe_item_add(request, recipe_id):
 )
 def po_list(request):
 
-    hotels = get_user_hotels(request.user)
+    hotels = get_accessible_hotels(request.user)
 
     qs = (
         PurchaseOrder.objects
@@ -1014,34 +1271,35 @@ def po_list(request):
 )
 def po_create(request):
 
-    hotels = get_user_hotels(request.user)
+    hotels = get_accessible_hotels(request.user)
 
-    hotel = hotels.first()
-
-    if not hotel:
+    if not hotels.exists():
         raise PermissionDenied(
             "No hotel is associated with this account."
         )
-
-    store = get_object_or_404(
-        Department,
-        hotel=hotel,
-        department_type="STORE",
-        is_active=True,
-    )
 
     form = PurchaseOrderForm(
         request.POST or None,
     )
 
+    # Only allow departments belonging to hotels
+    # this user is authorized to access.
+    form.fields["department"].queryset = (
+        Department.objects
+        .filter(
+            hotel__in=hotels,
+            is_active=True,
+        )
+        .order_by("name")
+    )
+
     if form.is_valid():
 
         po = form.save(
-            commit=False
+            commit=False,
         )
 
         po.created_by = request.user
-        po.department = store
         po.status = "DRAFT"
         po.payment_status = "UNPAID"
 
@@ -1060,7 +1318,9 @@ def po_create(request):
     return render(
         request,
         "inventory/po_form.html",
-        {"form": form},
+        {
+            "form": form,
+        },
     )
 
 
@@ -1157,6 +1417,14 @@ def po_detail(request, pk):
         back_url = "inventory:po_list"
         back_label = "← Back to Purchase Orders"
 
+        total = sum(
+        (
+            item.total_cost
+            for item in po.items.all()
+        ),
+        Decimal("0.00"),
+    )
+
     return render(
         request,
         "inventory/po_detail.html",
@@ -1165,13 +1433,14 @@ def po_detail(request, pk):
             "item_form": item_form,
             "back_url": back_url,
             "back_label": back_label,
+            "po_total": total,
         },
     )
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 def po_submit(request, pk):
 
-    hotels = get_user_hotels(request.user)
+    hotels = get_accessible_hotels(request.user)
 
     po = get_object_or_404(
         PurchaseOrder,
@@ -1201,26 +1470,60 @@ def po_submit(request, pk):
             pk=pk,
         )
 
-    po.status = "SUBMITTED"
+    # --------------------------------------------------------
+    # ADMIN / DIRECTOR
+    # Direct approval — no further approval required.
+    # --------------------------------------------------------
 
-    po.save(
-        update_fields=["status"]
-    )
+    if request.user.role in ("ADMIN", "DIRECTOR"):
 
-    messages.success(
-        request,
-        "Purchase Order submitted for approval.",
-    )
+        po.status = "APPROVED"
+        po.approved_by = request.user
+        po.approved_at = timezone.now()
+
+        po.save(
+            update_fields=[
+                "status",
+                "approved_by",
+                "approved_at",
+            ]
+        )
+
+        messages.success(
+            request,
+            f"Purchase Order #{po.id} approved.",
+        )
+
+    # --------------------------------------------------------
+    # MANAGER
+    # Requires Director approval.
+    # --------------------------------------------------------
+
+    else:
+
+        po.status = "SUBMITTED"
+
+        po.save(
+            update_fields=[
+                "status",
+            ]
+        )
+
+        messages.success(
+            request,
+            "Purchase Order submitted for Director approval.",
+        )
 
     return redirect(
         "inventory:po_detail",
         pk=pk,
     )
-@role_required("DIRECTOR")
+
+@role_required("DIRECTOR", "ADMIN")
 @transaction.atomic
 def po_approve(request, pk):
 
-    hotels = get_user_hotels(request.user)
+    hotels = get_accessible_hotels(request.user)
 
     po = get_object_or_404(
         PurchaseOrder.objects.select_related(
@@ -1275,12 +1578,22 @@ def po_approve(request, pk):
             "inventory:po_detail",
             pk=po.pk,
         )
+    
+    total = sum(
+        (
+            item.total_cost
+            for item in po.items.all()
+        ),
+        Decimal("0.00"),
+    )
 
     return render(
         request,
         "inventory/po_approve.html",
         {
             "po": po,
+            "po_total": total,
+
         },
     )
 
@@ -1288,7 +1601,7 @@ def po_approve(request, pk):
 @transaction.atomic
 def po_finalize(request, pk):
 
-    hotels = get_user_hotels(request.user)
+    hotels = get_accessible_hotels(request.user)
 
     po = get_object_or_404(
         PurchaseOrder,
@@ -1318,6 +1631,7 @@ def po_finalize(request, pk):
             Supplier,
             id=supplier_id,
             hotel=po.department.hotel,
+            is_active=True,
         )
 
         for item in items:
@@ -1366,30 +1680,46 @@ def po_finalize(request, pk):
         # ----------------------------------------------------
         # FINALIZE
         #
-        # DRAFT → SUBMITTED
+        # ADMIN / DIRECTOR → AUTO-APPROVED
+        # MANAGER → SUBMITTED FOR DIRECTOR APPROVAL
         # ----------------------------------------------------
 
-        po.status = "SUBMITTED"
+        if request.user.role in ("ADMIN", "DIRECTOR"):
+            po.status = "APPROVED"
+            po.approved_by = request.user
+            po.approved_at = timezone.now()
 
-        po.save(
-            update_fields=[
-                "supplier",
-                "status",
-            ]
-        )
+            po.save(
+                update_fields=[
+                    "supplier",
+                    "status",
+                    "approved_by",
+                    "approved_at",
+                ]
+            )
 
-        messages.success(
-            request,
-            (
-                "Purchase Order finalized and submitted "
-                "for Director approval."
-            ),
-        )
+            messages.success(
+                request,
+                f"Purchase Order #{po.id} finalized and approved.",
+            )
 
-        return redirect(
-            "inventory:po_detail",
-            pk=po.pk,
-        )
+        else:
+            po.status = "SUBMITTED"
+
+            po.save(
+                update_fields=[
+                    "supplier",
+                    "status",
+                ]
+            )
+
+            messages.success(
+                request,
+                (
+                    "Purchase Order finalized and submitted "
+                    "for Director approval."
+                ),
+            )
 
     # --------------------------------------------------------
     # GET
@@ -1411,7 +1741,7 @@ def po_finalize(request, pk):
 @transaction.atomic
 def po_pay(request, pk):
 
-    hotels = get_user_hotels(request.user)
+    hotels = get_accessible_hotels(request.user)
 
     po = get_object_or_404(
         PurchaseOrder.objects.select_related(
@@ -1531,11 +1861,16 @@ def po_pay(request, pk):
         },
     )
 
-@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING")
+@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING", "KITCHEN")
 @transaction.atomic
 def po_receive(request, pk):
 
     department = request.user.department
+
+    if request.user.role == "KITCHEN" and not request.user.is_department_head:
+        raise PermissionDenied(
+            "Only the Head Chef can receive Kitchen deliveries."
+        )
 
     if not department:
         raise PermissionDenied(
@@ -1623,10 +1958,15 @@ def po_receive(request, pk):
 # STORE INBOX
 # =========================
 
-@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING")
+@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING", "KITCHEN")
 def department_incoming_pos(request):
 
     department = request.user.department
+
+    if request.user.role == "KITCHEN" and not request.user.is_department_head:
+        raise PermissionDenied(
+            "Only the Head Chef can access Kitchen incoming deliveries."
+        )
 
     if not department:
         raise PermissionDenied(
@@ -1653,6 +1993,11 @@ def department_incoming_pos(request):
 
         back_url = "maintenance_dashboard"
         back_label = "Back to Maintenance"
+    
+    elif department.department_type == "KITCHEN":
+
+        back_url = "kitchen_dashboard"
+        back_label = "Back to Kitchen"
 
     elif department.department_type == "STORE":
 
@@ -1707,7 +2052,8 @@ def manager_stock_requests(request):
 # DEPARTMENT STOCK REQUESTS
 # =========================
 
-@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING", "LAUNDRY")
+@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING", "LAUNDRY", "RESTAURANT",
+)
 def department_request_stock(request):
 
     department = request.user.department
@@ -1718,9 +2064,11 @@ def department_request_stock(request):
         )
 
     if department.department_type not in (
+        "RESTAURANT",
         "MAINTENANCE",
         "HOUSEKEEPING",
-        "LAUNDRY"
+        "LAUNDRY",
+        "STORE"
     ):
         raise PermissionDenied(
             "This department does not use the operational stock request workflow."
@@ -1732,7 +2080,6 @@ def department_request_stock(request):
             hotel=department.hotel,
             departments=department,
             is_active=True,
-            usage_type="INTERNAL",
         )
         .order_by("name")
         .distinct()
@@ -1781,20 +2128,24 @@ def department_request_stock(request):
             )
             return redirect(request.path)
 
-        fulfillment_type = request.POST.get(
-            "fulfillment_type",
-            ""
-        ).strip()
+        if department.department_type == "RESTAURANT":
 
-        if fulfillment_type not in (
-            "STORE",
-            "PURCHASE",
-        ):
-            messages.error(
-                request,
-                "Please select how this request should be fulfilled.",
-            )
-            return redirect(request.path)
+            fulfillment_type = "STORE"
+        else:
+            fulfillment_type = request.POST.get(
+                "fulfillment_type",
+                ""
+            ).strip()
+
+            if fulfillment_type not in (
+                "STORE",
+                "PURCHASE",
+            ):
+                messages.error(
+                    request,
+                    "Please select how this request should be fulfilled.",
+                )
+                return redirect(request.path)
 
         LowStockRequest.objects.create(
             product=product,
@@ -1822,6 +2173,9 @@ def department_request_stock(request):
 
     elif department.department_type == "STORE":
         requests_url = "store_requests"
+        
+    elif department.department_type == "RESTAURANT":
+        requests_url = "restaurant_stock_requests"
 
     else:
         raise PermissionDenied(
@@ -1840,7 +2194,8 @@ def department_request_stock(request):
     )
 
 
-@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING", "LAUNDRY", )
+@role_required("STORE", "MAINTENANCE", "HOUSEKEEPING", "LAUNDRY",  "RESTAURANT",
+ )
 def department_stock_requests(request):
 
     department = request.user.department
@@ -1854,6 +2209,8 @@ def department_stock_requests(request):
         "MAINTENANCE",
         "HOUSEKEEPING",
         "LAUNDRY",
+        "STORE",
+        "RESTAURANT",
         
     ):
         raise PermissionDenied(
@@ -1927,11 +2284,21 @@ def department_stock_requests(request):
         request_stock_url = "housekeeping_request_stock"
         back_url = "housekeeping_dashboard"
         back_label = "Back to Housekeeping"
+    
+    elif department.department_type == "STORE":
+        request_stock_url = "store_request_low_stock"
+        back_url = "store_dashboard"
+        back_label = "Back to Store"
 
     elif department.department_type == "MAINTENANCE":
         request_stock_url = "maintenance_request_stock"
         back_url = "maintenance_dashboard"
         back_label = "Back to Maintenance"
+    
+    elif department.department_type == "RESTAURANT":
+        request_stock_url = "restaurant_request_stock"
+        back_url = "restaurant_pos_v2"
+        back_label = "Back to Restaurant"
 
     elif department.department_type == "LAUNDRY":
         request_stock_url = "laundry:laundry_request_stock"

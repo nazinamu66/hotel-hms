@@ -1,57 +1,316 @@
 {% extends "base/base.html" %}
 
-{% block title %}Buildings{% endblock %}
+{% block title %}Building Management{% endblock %}
 
 {% block content %}
 
-<h2>Buildings</h2>
+<style>
+    .building-page {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
 
-<div style="margin-bottom:15px;">
-<a href="{% url 'building_create' %}" class="btn btn-primary">
-Add Building
-</a>
+    .page-heading {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:20px;
+        flex-wrap:wrap;
+        margin-bottom:20px;
+    }
+
+    .page-heading h2 {
+        margin:0;
+        color:#111827;
+    }
+
+    .page-heading p {
+        margin:6px 0 0;
+        color:#6b7280;
+    }
+
+    .building-grid {
+        display:grid;
+        grid-template-columns:repeat(3, minmax(0,1fr));
+        gap:18px;
+    }
+
+    .building-card {
+        background:#fff;
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        box-shadow:0 2px 8px rgba(0,0,0,.04);
+        padding:20px;
+    }
+
+    .building-card:hover {
+        box-shadow:0 5px 16px rgba(0,0,0,.07);
+    }
+
+    .building-name {
+        font-size:18px;
+        font-weight:700;
+        color:#111827;
+        margin-bottom:5px;
+    }
+
+    .hotel-name {
+        color:#6b7280;
+        font-size:13px;
+        margin-bottom:16px;
+    }
+
+    .building-meta {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:10px;
+        padding:12px 0;
+        border-top:1px solid #f0f0f0;
+        border-bottom:1px solid #f0f0f0;
+        margin-bottom:16px;
+    }
+
+    .floor-count {
+        font-size:14px;
+        font-weight:600;
+        color:#374151;
+    }
+
+    .status-badge {
+        display:inline-flex;
+        align-items:center;
+        padding:5px 9px;
+        border-radius:999px;
+        font-size:12px;
+        font-weight:700;
+    }
+
+    .status-active {
+        background:#dcfce7;
+        color:#166534;
+    }
+
+    .status-inactive {
+        background:#fee2e2;
+        color:#991b1b;
+    }
+
+    .actions {
+        display:flex;
+        gap:8px;
+        flex-wrap:wrap;
+    }
+
+    .btn {
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:9px 13px;
+        border-radius:8px;
+        border:1px solid transparent;
+        text-decoration:none;
+        font-size:13px;
+        font-weight:600;
+        cursor:pointer;
+    }
+
+    .btn-primary {
+        background:#2563eb;
+        color:#fff;
+    }
+
+    .btn-primary:hover {
+        background:#1d4ed8;
+    }
+
+    .btn-secondary {
+        background:#fff;
+        color:#374151;
+        border-color:#d1d5db;
+    }
+
+    .btn-danger {
+        background:#fef2f2;
+        color:#b91c1c;
+        border-color:#fecaca;
+    }
+
+    .btn-success {
+        background:#f0fdf4;
+        color:#15803d;
+        border-color:#bbf7d0;
+    }
+
+    .empty-state {
+        background:#fff;
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        padding:50px 20px;
+        text-align:center;
+        color:#6b7280;
+    }
+
+    @media (max-width:1050px) {
+        .building-grid {
+            grid-template-columns:repeat(2, minmax(0,1fr));
+        }
+    }
+
+    @media (max-width:650px) {
+        .building-grid {
+            grid-template-columns:1fr;
+        }
+
+        .actions {
+            flex-direction:column;
+        }
+
+        .actions .btn {
+            width:100%;
+        }
+    }
+</style>
+
+
+<div class="building-page">
+
+    <div class="page-heading">
+
+        <div>
+            <h2>Building Management</h2>
+
+            <p>
+                Manage hotel buildings and their floors.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'building_create' %}"
+            class="btn btn-primary"
+        >
+            + Add Building
+        </a>
+
+    </div>
+
+
+    {% if buildings %}
+
+        <div class="building-grid">
+
+            {% for building in buildings %}
+
+                <div class="building-card">
+
+                    <div class="building-name">
+                        {{ building.name }}
+                    </div>
+
+                    <div class="hotel-name">
+                        {{ building.hotel.name }}
+                    </div>
+
+
+                    <div class="building-meta">
+
+                        <span class="floor-count">
+                            {{ building.floors.count }}
+                            {% if building.floors.count == 1 %}
+                                Floor
+                            {% else %}
+                                Floors
+                            {% endif %}
+                        </span>
+
+
+                        {% if building.is_active %}
+
+                            <span class="status-badge status-active">
+                                Active
+                            </span>
+
+                        {% else %}
+
+                            <span class="status-badge status-inactive">
+                                Inactive
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <div class="actions">
+
+                        <a
+                            href="{% url 'building_detail' building.id %}"
+                            class="btn btn-primary"
+                        >
+                            Manage Floors
+                        </a>
+
+
+                        <form
+                            method="post"
+                            action="{% url 'building_toggle' building.id %}"
+                            style="display:inline;"
+                            onsubmit="return confirm('{% if building.is_active %}Make this building inactive?{% else %}Activate this building?{% endif %}');"
+                        >
+
+                            {% csrf_token %}
+
+                            {% if building.is_active %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-danger"
+                                >
+                                    Make Inactive
+                                </button>
+
+                            {% else %}
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-success"
+                                >
+                                    Activate
+                                </button>
+
+                            {% endif %}
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="empty-state">
+
+            <strong>No buildings created yet.</strong>
+
+            <p>
+                Create your first building to begin setting up floors and rooms.
+            </p>
+
+            <a
+                href="{% url 'building_create' %}"
+                class="btn btn-primary"
+            >
+                + Add Building
+            </a>
+
+        </div>
+
+    {% endif %}
+
 </div>
-
-<table class="table">
-
-<thead>
-<tr>
-<th>Name</th>
-<th>Status</th>
-<th>Action</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for b in buildings %}
-<tr>
-<td>{{ b.name }}</td>
-
-<td>
-{% if b.is_active %}
-Active
-{% else %}
-Inactive
-{% endif %}
-</td>
-
-<td>
-<a href="{% url 'building_toggle' b.id %}">
-{% if b.is_active %}Deactivate{% else %}Activate{% endif %}
-</a>
-</td>
-
-</tr>
-
-{% empty %}
-<tr>
-<td colspan="3">No buildings created yet.</td>
-</tr>
-{% endfor %}
-
-</tbody>
-
-</table>
 
 {% endblock %}

@@ -1,163 +1,512 @@
 {% extends "base/base.html" %}
 
-{% block title %}Room Setup{% endblock %}
+{% block title %}
+    {% if room %}Edit Room{% else %}Add Room{% endif %}
+{% endblock %}
 
 {% block content %}
 
-<h2>{% if room %}Edit{% else %}Add{% endif %} Room</h2>
+<style>
+    .room-form-page {
+        max-width: 950px;
+        margin: 0 auto;
+    }
 
-<div class="card">
+    .page-header {
+        margin-bottom: 24px;
+    }
 
-<form method="post">
-{% csrf_token %}
+    .page-header h1 {
+        margin: 0 0 6px;
+        font-size: 30px;
+        font-weight: 700;
+        color: #273449;
+    }
 
-<!-- HOTEL -->
-<label>Hotel</label>
+    .page-header p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 15px;
+    }
 
-<select name="hotel" required>
+    .form-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+        overflow: hidden;
+    }
 
-{% for hotel in hotels %}
+    .form-section {
+        padding: 26px 28px;
+    }
 
-<option
-    value="{{ hotel.id }}"
-    {% if room and room.hotel_id == hotel.id %}
-        selected
-    {% endif %}
->
-    {{ hotel.name }}
-</option>
+    .form-section + .form-section {
+        border-top: 1px solid #eef0f3;
+    }
 
-{% endfor %}
+    .section-heading {
+        margin-bottom: 20px;
+    }
 
-</select>
+    .section-heading h2 {
+        margin: 0 0 5px;
+        font-size: 19px;
+        font-weight: 700;
+        color: #273449;
+    }
 
-<br><br>
+    .section-heading p {
+        margin: 0;
+        font-size: 14px;
+        color: #6b7280;
+    }
 
-<!-- ROOM NUMBER -->
-<label>Room Number</label>
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
 
-<input
-    type="text"
-    name="room_number"
-    value="{{ room.room_number|default:'' }}"
-    required
->
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
 
-<br><br>
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
 
-<!-- CATEGORY -->
-<label>Room Category</label>
+    .form-group label {
+        margin-bottom: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+    }
 
-<select name="category" required>
+    .form-control {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 11px 13px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        color: #1f2937;
+        font-size: 14px;
+        outline: none;
+        transition:
+            border-color 0.15s ease,
+            box-shadow 0.15s ease;
+    }
 
-{% for c in categories %}
+    .form-control:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
 
-<option
-    value="{{ c.id }}"
-    {% if room and room.category_id == c.id %}
-        selected
-    {% endif %}
->
-    {{ c.name }}
-</option>
+    .form-help {
+        margin-top: 6px;
+        font-size: 12px;
+        color: #6b7280;
+        line-height: 1.4;
+    }
 
-{% endfor %}
+    .location-note {
+        margin-top: 18px;
+        padding: 12px 14px;
+        border-radius: 8px;
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.5;
+    }
 
-</select>
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 20px 28px;
+        background: #f9fafb;
+        border-top: 1px solid #eef0f3;
+    }
 
-<br><br>
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 0 18px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid transparent;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
 
-<!-- BUILDING -->
-<label>Building</label>
+    .primary-btn {
+        background: #2563eb;
+        color: #fff !important;
+    }
 
-<select name="building">
+    .primary-btn:hover {
+        background: #1d4ed8;
+    }
 
-<option value="">— None —</option>
+    .secondary-btn {
+        background: #fff;
+        color: #374151 !important;
+        border-color: #d1d5db;
+    }
 
-{% for b in buildings %}
+    .secondary-btn:hover {
+        background: #f3f4f6;
+    }
 
-<option
-    value="{{ b.id }}"
-    {% if room and room.building_id == b.id %}
-        selected
-    {% endif %}
->
-    {{ b.hotel.name }} — {{ b.name }}
-</option>
+    @media (max-width: 700px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
 
-{% endfor %}
+        .form-group.full-width {
+            grid-column: auto;
+        }
 
-</select>
+        .form-section {
+            padding: 22px 20px;
+        }
 
-<br><br>
+        .form-actions {
+            padding: 18px 20px;
+            flex-direction: column-reverse;
+        }
 
-<!-- FLOOR -->
-<label>Floor</label>
+        .action-btn {
+            width: 100%;
+        }
+    }
+</style>
 
-<select name="floor">
+<div class="room-form-page">
 
-<option value="">— None —</option>
+    <div class="page-header">
+        <h1>
+            {% if room %}
+                Edit Room
+            {% else %}
+                Add Room
+            {% endif %}
+        </h1>
 
-{% for f in floors %}
+        <p>
+            {% if room %}
+                Update the room's identity, category, location and operating status.
+            {% else %}
+                Configure a room and assign its category and physical location.
+            {% endif %}
+        </p>
+    </div>
 
-<option
-    value="{{ f.id }}"
-    {% if room and room.floor_id == f.id %}
-        selected
-    {% endif %}
->
-    {{ f.building.hotel.name }}
-    —
-    {{ f.building.name }}
-    —
-    {{ f.name }}
-</option>
 
-{% endfor %}
+    <form method="post" class="form-card">
 
-</select>
+        {% csrf_token %}
 
-<br><br>
 
-<!-- STATUS -->
-<label>Status</label>
+        <!-- ROOM INFORMATION -->
 
-<select name="status">
+        <div class="form-section">
 
-{% for key, label in statuses %}
+            <div class="section-heading">
+                <h2>Room Information</h2>
 
-<option
-    value="{{ key }}"
-    {% if room and room.status == key %}
-        selected
-    {% endif %}
->
-    {{ label }}
-</option>
+                <p>
+                    Define the hotel, room number and accommodation category.
+                </p>
+            </div>
 
-{% endfor %}
 
-</select>
+            <div class="form-grid">
 
-<br><br>
+                <!-- HOTEL -->
 
-<!-- ACTION BUTTONS -->
+                <div class="form-group">
 
-<button
-    type="submit"
-    class="btn btn-primary"
->
-    Save
-</button>
+                    <label for="id_hotel">
+                        Hotel
+                    </label>
 
-<a
-    href="{% url 'room_list' %}"
-    class="btn btn-secondary"
->
-    Cancel
-</a>
+                    <select
+                        id="id_hotel"
+                        name="hotel"
+                        class="form-control"
+                        required
+                    >
 
-</form>
+                        {% for hotel in hotels %}
+
+                            <option
+                                value="{{ hotel.id }}"
+                                {% if room and room.hotel_id == hotel.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ hotel.name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <div class="form-help">
+                        Select the hotel where this room belongs.
+                    </div>
+
+                </div>
+
+
+                <!-- ROOM NUMBER -->
+
+                <div class="form-group">
+
+                    <label for="id_room_number">
+                        Room Number
+                    </label>
+
+                    <input
+                        id="id_room_number"
+                        type="text"
+                        name="room_number"
+                        class="form-control"
+                        value="{{ room.room_number|default:'' }}"
+                        placeholder="Example: 101"
+                        required
+                    >
+
+                    <div class="form-help">
+                        Room numbers must be unique within the selected hotel.
+                    </div>
+
+                </div>
+
+
+                <!-- CATEGORY -->
+
+                <div class="form-group">
+
+                    <label for="id_category">
+                        Room Category
+                    </label>
+
+                    <select
+                        id="id_category"
+                        name="category"
+                        class="form-control"
+                        required
+                    >
+
+                        {% for c in categories %}
+
+                            <option
+                                value="{{ c.id }}"
+                                {% if room and room.category_id == c.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ c.name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <div class="form-help">
+                        The category determines the room type and configured nightly rate.
+                    </div>
+
+                </div>
+
+
+                <!-- STATUS -->
+
+                <div class="form-group">
+
+                    <label for="id_status">
+                        Room Status
+                    </label>
+
+                    <select
+                        id="id_status"
+                        name="status"
+                        class="form-control"
+                    >
+
+                        {% for key, label in statuses %}
+
+                            <option
+                                value="{{ key }}"
+                                {% if room and room.status == key %}
+                                    selected
+                                {% elif not room and key == "AVAILABLE" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <div class="form-help">
+                        Set the current operational status of the room.
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- LOCATION -->
+
+        <div class="form-section">
+
+            <div class="section-heading">
+
+                <h2>Room Location</h2>
+
+                <p>
+                    Assign the room to a building and floor where applicable.
+                </p>
+
+            </div>
+
+
+            <div class="form-grid">
+
+                <!-- BUILDING -->
+
+                <div class="form-group">
+
+                    <label for="id_building">
+                        Building
+                    </label>
+
+                    <select
+                        id="id_building"
+                        name="building"
+                        class="form-control"
+                    >
+
+                        <option value="">
+                            — None —
+                        </option>
+
+                        {% for b in buildings %}
+
+                            <option
+                                value="{{ b.id }}"
+                                {% if room and room.building_id == b.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ b.hotel.name }} — {{ b.name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <div class="form-help">
+                        Select the building containing the room.
+                    </div>
+
+                </div>
+
+
+                <!-- FLOOR -->
+
+                <div class="form-group">
+
+                    <label for="id_floor">
+                        Floor
+                    </label>
+
+                    <select
+                        id="id_floor"
+                        name="floor"
+                        class="form-control"
+                    >
+
+                        <option value="">
+                            — None —
+                        </option>
+
+                        {% for f in floors %}
+
+                            <option
+                                value="{{ f.id }}"
+                                {% if room and room.floor_id == f.id %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ f.building.hotel.name }}
+                                —
+                                {{ f.building.name }}
+                                —
+                                {{ f.name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <div class="form-help">
+                        Select the floor within the chosen building.
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="location-note">
+                Building and floor are optional. If both are selected,
+                the floor must belong to the selected building.
+            </div>
+
+        </div>
+
+
+        <!-- ACTIONS -->
+
+        <div class="form-actions">
+
+            <a
+                href="{% url 'room_list' %}"
+                class="action-btn secondary-btn"
+            >
+                Cancel
+            </a>
+
+            <button
+                type="submit"
+                class="action-btn primary-btn"
+            >
+                {% if room %}
+                    Save Changes
+                {% else %}
+                    Create Room
+                {% endif %}
+            </button>
+
+        </div>
+
+    </form>
 
 </div>
 

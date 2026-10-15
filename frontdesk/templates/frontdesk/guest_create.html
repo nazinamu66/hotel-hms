@@ -4,47 +4,943 @@
 
 {% block content %}
 
-<h2>Create Guest</h2>
+<style>
 
-<form method="post">
-{% csrf_token %}
+    .page-header {
+        margin-bottom: 24px;
+    }
 
-<label>First Name</label><br>
-<input type="text" name="first_name" required>
+    .page-title {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: #1f2937;
+    }
 
-<br><br>
+    .page-subtitle {
+        margin: 6px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-<label>Last Name</label><br>
-<input type="text" name="last_name" required>
+    .guest-card {
+        max-width: 760px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 28px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
 
-<br><br>
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
 
-<label>Phone</label><br>
-<input type="text" name="phone">
+    .form-group {
+        margin-bottom: 4px;
+    }
 
-<br><br>
+    .form-label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #334155;
+    }
 
-<label>Email</label><br>
-<input type="email" name="email">
+    .form-control {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 11px 13px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: white;
+        color: #1e293b;
+        font-size: 14px;
+    }
 
-<br><br>
+    .form-control:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
 
-<label>Nationality</label><br>
-<input type="text" name="nationality">
+    /* =========================
+       ID DOCUMENT
+       ========================= */
 
-<br><br>
+    .id-section {
+        grid-column: 1 / -1;
+        margin-top: 4px;
+        padding-top: 20px;
+        border-top: 1px solid #eef2f7;
+    }
 
-<label>ID / Passport Number</label><br>
-<input type="text" name="id_number">
+    .id-section-title {
+        margin: 0 0 4px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #1e293b;
+    }
 
-<br><br>
+    .id-section-subtitle {
+        margin: 0 0 14px;
+        font-size: 12px;
+        color: #64748b;
+    }
 
-<button type="submit">Create Guest</button>
+    .id-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
 
-<a href="{% url 'frontdesk_guest_search' %}">
-<button type="button">Cancel</button>
-</a>
+    .id-action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 10px 15px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #f8fafc;
+        color: #334155;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+    }
 
-</form>
+    .id-action-btn:hover {
+        background: #f1f5f9;
+    }
+
+    .id-action-btn.primary {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1d4ed8;
+    }
+
+    .id-action-btn.primary:hover {
+        background: #dbeafe;
+    }
+
+    .camera-box {
+        display: none;
+        margin-top: 15px;
+        padding: 15px;
+        border: 1px solid #dbe2ea;
+        border-radius: 10px;
+        background: #f8fafc;
+    }
+
+    .camera-box video {
+        display: block;
+        width: 100%;
+        max-height: 360px;
+        object-fit: contain;
+        background: #0f172a;
+        border-radius: 8px;
+    }
+
+    .camera-controls {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .camera-controls button {
+        padding: 9px 14px;
+        border-radius: 7px;
+        border: 1px solid #cbd5e1;
+        background: white;
+        color: #334155;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .camera-controls .capture-btn {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: white;
+    }
+
+    .camera-controls .capture-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .camera-error {
+        display: none;
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 7px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+        font-size: 13px;
+    }
+
+    .id-preview {
+        display: none;
+        margin-top: 15px;
+    }
+
+    .id-preview img {
+        display: block;
+        width: 100%;
+        max-height: 360px;
+        object-fit: contain;
+        background: #f8fafc;
+        border: 1px solid #dbe2ea;
+        border-radius: 8px;
+    }
+
+    .preview-label {
+        margin-bottom: 7px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #475569;
+    }
+
+    .preview-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .preview-actions button {
+        padding: 8px 13px;
+        border-radius: 7px;
+        border: 1px solid #cbd5e1;
+        background: white;
+        color: #334155;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .document-status {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #64748b;
+    }
+
+    .hidden-file-input {
+        display: none;
+    }
+
+    /* =========================
+       ACTIONS
+       ========================= */
+
+    .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 28px;
+        padding-top: 20px;
+        border-top: 1px solid #eef2f7;
+    }
+
+    .primary-btn {
+        padding: 10px 18px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .primary-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .secondary-btn {
+        padding: 10px 18px;
+        background: #f8fafc;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .secondary-btn:hover {
+        background: #f1f5f9;
+    }
+
+    @media (max-width: 650px) {
+
+        .guest-card {
+            padding: 20px;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .id-section {
+            grid-column: auto;
+        }
+
+        .actions {
+            flex-direction: column;
+        }
+
+        .primary-btn,
+        .secondary-btn {
+            text-align: center;
+        }
+
+    }
+
+</style>
+
+
+<div class="page-header">
+
+    <h1 class="page-title">
+        Create Guest
+    </h1>
+
+    <p class="page-subtitle">
+        Add a new guest profile to City Center Hotels.
+    </p>
+
+</div>
+
+
+<div class="guest-card">
+
+    <form
+        method="post"
+        enctype="multipart/form-data"
+    >
+
+        {% csrf_token %}
+
+        {% if next_page %}
+            <input
+                type="hidden"
+                name="next"
+                value="{{ next_page }}"
+            >
+        {% endif %}
+
+
+        <div class="form-grid">
+
+
+            <!-- FIRST NAME -->
+
+            <div class="form-group">
+
+                <label
+                    for="first_name"
+                    class="form-label"
+                >
+                    First Name
+                </label>
+
+                <input
+                    type="text"
+                    id="first_name"
+                    name="first_name"
+                    class="form-control"
+                    placeholder="Enter first name"
+                    autocomplete="given-name"
+                    required
+                >
+
+            </div>
+
+
+            <!-- LAST NAME -->
+
+            <div class="form-group">
+
+                <label
+                    for="last_name"
+                    class="form-label"
+                >
+                    Last Name
+                </label>
+
+                <input
+                    type="text"
+                    id="last_name"
+                    name="last_name"
+                    class="form-control"
+                    placeholder="Enter last name"
+                    autocomplete="family-name"
+                    required
+                >
+
+            </div>
+
+
+            <!-- PHONE -->
+
+            <div class="form-group">
+
+                <label
+                    for="phone"
+                    class="form-label"
+                >
+                    Phone
+                </label>
+
+                <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    class="form-control"
+                    placeholder="e.g. 08031165185"
+                    autocomplete="tel"
+                >
+
+            </div>
+
+
+            <!-- EMAIL -->
+
+            <div class="form-group">
+
+                <label
+                    for="email"
+                    class="form-label"
+                >
+                    Email
+                </label>
+
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="form-control"
+                    placeholder="guest@example.com"
+                    autocomplete="email"
+                >
+
+            </div>
+
+
+            <!-- NATIONALITY -->
+
+            <div class="form-group">
+
+                <label
+                    for="nationality"
+                    class="form-label"
+                >
+                    Nationality
+                </label>
+
+                <input
+                    type="text"
+                    id="nationality"
+                    name="nationality"
+                    class="form-control"
+                    placeholder="e.g. Nigerian"
+                    autocomplete="country-name"
+                >
+
+            </div>
+
+
+            <!-- ID / PASSPORT NUMBER -->
+
+            <div class="form-group">
+
+                <label
+                    for="id_number"
+                    class="form-label"
+                >
+                    ID / Passport Number
+                </label>
+
+                <input
+                    type="text"
+                    id="id_number"
+                    name="id_number"
+                    class="form-control"
+                    placeholder="Passport or national ID number"
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+            <!-- =========================
+                 ID DOCUMENT
+                 ========================= -->
+
+            <div class="id-section">
+
+                <h3 class="id-section-title">
+                    Identity Document
+                </h3>
+
+                <p class="id-section-subtitle">
+                    Take a photo of the guest's ID or upload an existing image.
+                </p>
+
+
+                <div class="id-actions">
+
+                    <button
+                        type="button"
+                        id="open-camera"
+                        class="id-action-btn primary"
+                    >
+                        📷 Take Photo
+                    </button>
+
+
+                    <button
+                        type="button"
+                        id="upload-id"
+                        class="id-action-btn"
+                    >
+                        📁 Upload Image
+                    </button>
+
+                </div>
+
+
+                <!-- Hidden file input -->
+
+                <input
+                    type="file"
+                    id="id-document"
+                    name="id_document"
+                    class="hidden-file-input"
+                    accept="image/*"
+                >
+
+
+                <!-- CAMERA -->
+
+                <div
+                    id="camera-box"
+                    class="camera-box"
+                >
+
+                    <video
+                        id="camera-video"
+                        autoplay
+                        playsinline
+                    ></video>
+
+
+                    <div class="camera-controls">
+
+                        <button
+                            type="button"
+                            id="capture-photo"
+                            class="capture-btn"
+                        >
+                            📸 Capture
+                        </button>
+
+                        <button
+                            type="button"
+                            id="close-camera"
+                        >
+                            Cancel
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        id="camera-error"
+                        class="camera-error"
+                    ></div>
+
+                </div>
+
+
+                <!-- PREVIEW -->
+
+                <div
+                    id="id-preview"
+                    class="id-preview"
+                >
+
+                    <div class="preview-label">
+                        Document Preview
+                    </div>
+
+                    <img
+                        id="id-preview-image"
+                        src=""
+                        alt="Identity document preview"
+                    >
+
+
+                    <div class="preview-actions">
+
+                        <button
+                            type="button"
+                            id="retake-photo"
+                        >
+                            Retake Photo
+                        </button>
+
+                        <button
+                            type="button"
+                            id="remove-document"
+                        >
+                            Remove
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="document-status"
+                    class="document-status"
+                >
+                    No identity document selected.
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- ACTIONS -->
+
+        <div class="actions">
+
+            <button
+                type="submit"
+                class="primary-btn"
+            >
+                Create Guest
+            </button>
+
+
+            {% if next_page == "reservation" %}
+
+                <a
+                    href="{% url 'frontdesk_create_reservation' %}"
+                    class="secondary-btn"
+                >
+                    Cancel
+                </a>
+
+            {% else %}
+
+                <a
+                    href="{% url 'frontdesk_guest_search' %}"
+                    class="secondary-btn"
+                >
+                    Cancel
+                </a>
+
+            {% endif %}
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const fileInput = document.getElementById("id-document");
+
+    const uploadButton = document.getElementById("upload-id");
+
+    const openCameraButton = document.getElementById("open-camera");
+
+    const cameraBox = document.getElementById("camera-box");
+
+    const video = document.getElementById("camera-video");
+
+    const captureButton = document.getElementById("capture-photo");
+
+    const closeCameraButton = document.getElementById("close-camera");
+
+    const cameraError = document.getElementById("camera-error");
+
+    const previewBox = document.getElementById("id-preview");
+
+    const previewImage = document.getElementById("id-preview-image");
+
+    const retakeButton = document.getElementById("retake-photo");
+
+    const removeButton = document.getElementById("remove-document");
+
+    const documentStatus = document.getElementById("document-status");
+
+    let cameraStream = null;
+
+
+    /*
+     * Open normal file picker.
+     */
+
+    uploadButton.addEventListener("click", function () {
+
+        fileInput.click();
+
+    });
+
+
+    /*
+     * Display a selected/uploaded image.
+     */
+
+    fileInput.addEventListener("change", function () {
+
+        if (!fileInput.files.length) {
+            return;
+        }
+
+        const file = fileInput.files[0];
+
+        if (!file.type.startsWith("image/")) {
+
+            alert("Please select an image file.");
+
+            fileInput.value = "";
+
+            return;
+        }
+
+
+        const imageUrl = URL.createObjectURL(file);
+
+        previewImage.src = imageUrl;
+
+        previewBox.style.display = "block";
+
+        documentStatus.textContent =
+            "Identity document selected: " + file.name;
+
+    });
+
+
+    /*
+     * Start camera.
+     */
+
+    openCameraButton.addEventListener("click", async function () {
+
+        cameraError.style.display = "none";
+        cameraError.textContent = "";
+
+        try {
+
+            if (!navigator.mediaDevices ||
+                !navigator.mediaDevices.getUserMedia) {
+
+                throw new Error(
+                    "Camera access is not supported by this browser."
+                );
+
+            }
+
+
+            cameraStream =
+                await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: {
+                            ideal: "environment"
+                        }
+                    },
+                    audio: false
+                });
+
+
+            video.srcObject = cameraStream;
+
+            cameraBox.style.display = "block";
+
+        }
+
+        catch (error) {
+
+            cameraError.textContent =
+                "Unable to access the camera. " +
+                "Please allow camera permission or use Upload Image.";
+
+            cameraError.style.display = "block";
+
+        }
+
+    });
+
+
+    /*
+     * Capture camera image.
+     */
+
+    captureButton.addEventListener("click", function () {
+
+        if (!cameraStream) {
+            return;
+        }
+
+
+        const canvas = document.createElement("canvas");
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+
+        const context = canvas.getContext("2d");
+
+        context.drawImage(
+            video,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+
+        canvas.toBlob(function (blob) {
+
+            if (!blob) {
+                return;
+            }
+
+
+            const file = new File(
+                [blob],
+                "guest-id-" + Date.now() + ".jpg",
+                {
+                    type: "image/jpeg"
+                }
+            );
+
+
+            /*
+             * Put the captured image into
+             * the actual Django file input.
+             */
+
+            const dataTransfer = new DataTransfer();
+
+            dataTransfer.items.add(file);
+
+            fileInput.files = dataTransfer.files;
+
+
+            /*
+             * Show preview.
+             */
+
+            previewImage.src =
+                URL.createObjectURL(file);
+
+            previewBox.style.display = "block";
+
+            documentStatus.textContent =
+                "Identity document captured successfully.";
+
+
+            stopCamera();
+
+        }, "image/jpeg", 0.90);
+
+    });
+
+
+    /*
+     * Close camera.
+     */
+
+    closeCameraButton.addEventListener("click", function () {
+
+        stopCamera();
+
+    });
+
+
+    /*
+     * Retake.
+     */
+
+    retakeButton.addEventListener("click", function () {
+
+        previewBox.style.display = "none";
+
+        fileInput.value = "";
+
+        openCameraButton.click();
+
+    });
+
+
+    /*
+     * Remove document.
+     */
+
+    removeButton.addEventListener("click", function () {
+
+        fileInput.value = "";
+
+        previewImage.src = "";
+
+        previewBox.style.display = "none";
+
+        documentStatus.textContent =
+            "No identity document selected.";
+
+    });
+
+
+    /*
+     * Stop camera stream.
+     */
+
+    function stopCamera() {
+
+        if (cameraStream) {
+
+            cameraStream
+                .getTracks()
+                .forEach(function (track) {
+                    track.stop();
+                });
+
+            cameraStream = null;
+
+        }
+
+        video.srcObject = null;
+
+        cameraBox.style.display = "none";
+
+    }
+
+
+    /*
+     * Stop camera if page is closed/reloaded.
+     */
+
+    window.addEventListener("beforeunload", function () {
+
+        stopCamera();
+
+    });
+
+});
+
+</script>
 
 {% endblock %}

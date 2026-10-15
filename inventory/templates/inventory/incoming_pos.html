@@ -6,98 +6,467 @@ Incoming Deliveries
 
 {% block content %}
 
-<h2>
-    Incoming Deliveries
-</h2>
+<style>
+    .incoming-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 10px 0 45px;
+    }
 
-<p>
-    Approved purchase orders awaiting delivery to
-    <strong>{{ department.name }}</strong>.
-</p>
+    .incoming-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 26px;
+    }
 
-<hr>
+    .incoming-header h2 {
+        margin: 0 0 7px;
+        color: #293241;
+        font-size: 30px;
+        font-weight: 750;
+    }
 
-{% if pos %}
+    .incoming-header p {
+        margin: 0;
+        color: #667085;
+        font-size: 15px;
+        line-height: 1.6;
+    }
 
-<table style="width:100%; border-collapse:collapse;">
+    .incoming-back {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        padding: 0 15px;
+        border: 1px solid #d0d5dd;
+        border-radius: 9px;
+        background: #fff;
+        color: #344054;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 650;
+        white-space: nowrap;
+    }
 
-    <thead style="background:#eee;">
+    .incoming-back:hover {
+        background: #f8fafc;
+    }
 
-        <tr>
-            <th style="text-align:left; padding:8px;">
-                PO #
-            </th>
+    .incoming-summary {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 22px;
+    }
 
-            <th style="text-align:left; padding:8px;">
-                Supplier
-            </th>
+    .incoming-summary-card {
+        padding: 19px 21px;
+        border: 1px solid #e2e6ed;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 3px 14px rgba(16, 24, 40, .04);
+    }
 
-            <th style="text-align:left; padding:8px;">
-                Approved
-            </th>
+    .incoming-summary-label {
+        margin-bottom: 5px;
+        color: #667085;
+        font-size: 12px;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
 
-            <th style="text-align:center; padding:8px;">
-                Payment
-            </th>
+    .incoming-summary-value {
+        color: #293241;
+        font-size: 25px;
+        font-weight: 750;
+    }
 
-            <th style="text-align:center; padding:8px;">
-                Action
-            </th>
-        </tr>
+    .incoming-card {
+        border: 1px solid #e2e6ed;
+        border-radius: 14px;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 4px 18px rgba(16, 24, 40, .05);
+    }
 
-    </thead>
+    .incoming-card-header {
+        padding: 21px 25px;
+        border-bottom: 1px solid #eaecf0;
+        background: #fafbfc;
+    }
 
-    <tbody>
+    .incoming-card-header h3 {
+        margin: 0 0 5px;
+        color: #293241;
+        font-size: 19px;
+        font-weight: 700;
+    }
 
-    {% for po in pos %}
+    .incoming-card-header p {
+        margin: 0;
+        color: #667085;
+        font-size: 13px;
+    }
 
-        <tr style="border-top:1px solid #ddd;">
+    .incoming-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+    }
 
-            <td style="padding:8px;">
-                #{{ po.id }}
-            </td>
+    .incoming-table {
+        width: 100%;
+        min-width: 720px;
+        border-collapse: collapse;
+    }
 
-            <td style="padding:8px;">
-                {{ po.supplier|default:"—" }}
-            </td>
+    .incoming-table th {
+        padding: 13px 16px;
+        border-bottom: 1px solid #dfe3e8;
+        background: #f8fafc;
+        color: #475467;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: left;
+        text-transform: uppercase;
+        letter-spacing: .035em;
+    }
 
-            <td style="padding:8px;">
-                {{ po.approved_at|date:"Y-m-d H:i" }}
-            </td>
+    .incoming-table th.center,
+    .incoming-table td.center {
+        text-align: center;
+    }
 
-            <td style="padding:8px; text-align:center;">
-                {{ po.get_payment_status_display }}
-            </td>
+    .incoming-table th.right,
+    .incoming-table td.right {
+        text-align: right;
+    }
 
-            <td style="padding:8px; text-align:center;">
+    .incoming-table td {
+        padding: 17px 16px;
+        border-bottom: 1px solid #eaecf0;
+        color: #344054;
+        font-size: 14px;
+        vertical-align: middle;
+    }
 
-                <a href="{% url 'inventory:po_receive' po.pk %}">
-                    📦 Receive Goods
-                </a>
+    .incoming-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
 
-            </td>
+    .incoming-table tbody tr:hover {
+        background: #fafbfc;
+    }
 
-        </tr>
+    .po-number {
+        color: #293241;
+        font-weight: 700;
+    }
 
-    {% endfor %}
+    .supplier-name {
+        color: #293241;
+        font-weight: 600;
+    }
 
-    </tbody>
+    .approved-date {
+        color: #667085;
+        white-space: nowrap;
+    }
 
-</table>
+    .payment-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 29px;
+        padding: 0 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+    }
 
-{% else %}
+    .payment-paid {
+        background: #ecfdf3;
+        color: #027a48;
+    }
 
-<p>
-    There are no approved purchase orders awaiting delivery
-    to {{ department.name }}.
-</p>
+    .payment-unpaid {
+        background: #fef3f2;
+        color: #b42318;
+    }
 
-{% endif %}
+    .payment-partial {
+        background: #fff4e5;
+        color: #9a6700;
+    }
 
-<hr>
+    .receive-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 39px;
+        padding: 0 14px;
+        border-radius: 8px;
+        background: #293241;
+        color: #fff;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
 
-<a href="{% url back_url %}">
-    ← {{ back_label }}
-</a>
+    .receive-button:hover {
+        opacity: .92;
+    }
+
+    .incoming-empty {
+        padding: 55px 25px;
+        text-align: center;
+    }
+
+    .incoming-empty-icon {
+        margin-bottom: 12px;
+        font-size: 32px;
+    }
+
+    .incoming-empty h3 {
+        margin: 0 0 7px;
+        color: #293241;
+        font-size: 18px;
+    }
+
+    .incoming-empty p {
+        margin: 0;
+        color: #667085;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .incoming-footer {
+        margin-top: 20px;
+    }
+
+    @media (max-width: 700px) {
+        .incoming-header {
+            flex-direction: column;
+        }
+
+        .incoming-summary {
+            grid-template-columns: 1fr;
+        }
+
+        .incoming-card-header {
+            padding: 19px;
+        }
+    }
+</style>
+
+
+<div class="incoming-page">
+
+    <!-- HEADER -->
+    <div class="incoming-header">
+
+        <div>
+            <h2>Incoming Deliveries</h2>
+
+            <p>
+                Approved purchase orders awaiting delivery to
+                <strong>{{ department.name }}</strong>.
+            </p>
+        </div>
+
+        <a
+            href="{% url back_url %}"
+            class="incoming-back"
+        >
+            ← {{ back_label }}
+        </a>
+
+    </div>
+
+
+    <!-- SUMMARY -->
+    <div class="incoming-summary">
+
+        <div class="incoming-summary-card">
+
+            <div class="incoming-summary-label">
+                Awaiting Delivery
+            </div>
+
+            <div class="incoming-summary-value">
+                {{ pos|length }}
+            </div>
+
+        </div>
+
+
+        <div class="incoming-summary-card">
+
+            <div class="incoming-summary-label">
+                Receiving Department
+            </div>
+
+            <div class="incoming-summary-value">
+                {{ department.name }}
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ORDERS -->
+    <div class="incoming-card">
+
+        <div class="incoming-card-header">
+
+            <h3>Approved Purchase Orders</h3>
+
+            <p>
+                These orders have been approved and are ready
+                for physical goods receipt.
+            </p>
+
+        </div>
+
+
+        {% if pos %}
+
+            <div class="incoming-table-wrap">
+
+                <table class="incoming-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                PO #
+                            </th>
+
+                            <th>
+                                Supplier
+                            </th>
+
+                            <th>
+                                Approved
+                            </th>
+
+                            <th class="center">
+                                Payment
+                            </th>
+
+                            <th class="center">
+                                Action
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                    {% for po in pos %}
+
+                        <tr>
+
+                            <td>
+                                <span class="po-number">
+                                    #{{ po.id }}
+                                </span>
+                            </td>
+
+
+                            <td>
+                                <span class="supplier-name">
+                                    {{ po.supplier|default:"—" }}
+                                </span>
+                            </td>
+
+
+                            <td>
+                                <span class="approved-date">
+                                    {{ po.approved_at|date:"Y-m-d H:i" }}
+                                </span>
+                            </td>
+
+
+                            <td class="center">
+
+                                <span class="payment-badge
+                                    {% if po.payment_status == 'PAID' %}
+                                        payment-paid
+                                    {% elif po.payment_status == 'PARTIAL' %}
+                                        payment-partial
+                                    {% else %}
+                                        payment-unpaid
+                                    {% endif %}
+                                ">
+                                    {{ po.get_payment_status_display }}
+                                </span>
+
+                            </td>
+
+
+                            <td class="center">
+
+                                <a
+                                    href="{% url 'inventory:po_receive' po.pk %}"
+                                    class="receive-button"
+                                >
+                                    📦 Receive Goods
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="incoming-empty">
+
+                <div class="incoming-empty-icon">
+                    📦
+                </div>
+
+                <h3>
+                    No incoming deliveries
+                </h3>
+
+                <p>
+                    There are currently no approved purchase orders
+                    awaiting delivery to {{ department.name }}.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <div class="incoming-footer">
+
+        <a
+            href="{% url back_url %}"
+            class="incoming-back"
+        >
+            ← {{ back_label }}
+        </a>
+
+    </div>
+
+</div>
 
 {% endblock %}

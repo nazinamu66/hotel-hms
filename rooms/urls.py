@@ -15,11 +15,14 @@ urlpatterns = [
     # Buildings
     path("buildings/", building_list, name="building_list"),
     path("buildings/add/", building_create, name="building_create"),
+    path("buildings/<int:pk>/", views.building_detail, name="building_detail"),
     path("buildings/<int:pk>/toggle/", building_toggle_active, name="building_toggle"),
 
     # Floors
     path("floors/", views.floor_list, name="floor_list"),
     path("floors/add/", views.floor_create, name="floor_create"),
+    path("floors/<int:pk>/edit/", views.floor_edit, name="floor_edit"),
+    path("floors/<int:pk>/toggle/", views.floor_toggle_active, name="floor_toggle_active"),
 
     # Room Categories
     path("categories/", category_list, name="category_list"),
@@ -32,39 +35,11 @@ urlpatterns = [
     path("rooms/<int:pk>/edit/", views.room_edit, name="room_edit"),
     path("rooms/<int:pk>/",room_detail,name="room_detail",),
 
-    # Rates
-    path("rates/", views.rate_list, name="rate_list"),
-    path("rates/create/", views.rate_create, name="rate_create"),
-
 
     # Amenities
-    path(
-        "amenities/",
-        views.amenity_list,
-        name="amenity_list",
-    ),
-
-    path(
-        "amenities/add/",
-        views.amenity_create,
-        name="amenity_create",
-    ),
-
-    path(
-        "amenities/<int:pk>/edit/",
-        views.amenity_edit,
-        name="amenity_edit",
-    ),
-
-    path(
-        "amenities/<int:pk>/toggle/",
-        views.amenity_toggle_active,
-        name="amenity_toggle_active",
-    ),
-
-    path(
-        "rooms/<int:pk>/amenities/",
-        views.room_amenities,
-        name="room_amenities",
-    ),
+    path("amenities/",views.amenity_list,name="amenity_list",),
+    path("amenities/add/",views.amenity_create,name="amenity_create",),
+    path("amenities/<int:pk>/edit/",views.amenity_edit,name="amenity_edit",),
+    path("amenities/<int:pk>/toggle/",views.amenity_toggle_active,name="amenity_toggle_active",),
+    path("rooms/<int:pk>/amenities/",views.room_amenities,name="room_amenities",),
 ]

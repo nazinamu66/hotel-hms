@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from billing.models import FolioRoomHistory
 from frontdesk.workflows.common import (
     get_active_folio,
 )
@@ -77,6 +78,28 @@ def checkout_guest(room, user):
 
     close_folio(folio)
 
+    close_room_history(folio)
+
     update_room_status(room)
 
     return folio
+
+def close_room_history(folio):
+
+    history = (
+        folio.room_history
+        .filter(
+            ended_at__isnull=True,
+        )
+        .order_by("-assigned_at")
+        .first()
+    )
+
+    if history:
+        history.ended_at = folio.check_out_at
+
+        history.save(
+            update_fields=[
+                "ended_at",
+            ]
+        )

@@ -1,101 +1,427 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-Room Categories
-{% endblock %}
+{% block title %}Room Categories & Rates{% endblock %}
 
 {% block content %}
 
-<h2>Room Categories</h2>
+<style>
+    .category-page {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
 
-<div style="margin-bottom:15px;">
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
 
-<a
-    href="{% url 'category_create' %}"
-    class="btn btn-primary"
->
-    Add Category
-</a>
+    .page-header h2 {
+        margin: 0;
+        font-size: 28px;
+        color: #1f2937;
+    }
+
+    .page-header p {
+        margin: 6px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .primary-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 16px;
+        border-radius: 8px;
+        background: #2563eb;
+        color: white !important;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .primary-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .summary-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 18px 20px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    .summary-label {
+        color: #6b7280;
+        font-size: 13px;
+        margin-bottom: 5px;
+    }
+
+    .summary-value {
+        color: #111827;
+        font-size: 24px;
+        font-weight: 700;
+    }
+
+    .table-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    .table-header {
+        padding: 18px 20px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .table-header h3 {
+        margin: 0;
+        font-size: 17px;
+        color: #1f2937;
+    }
+
+    .table-header span {
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .category-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .category-table th {
+        text-align: left;
+        padding: 13px 18px;
+        background: #f9fafb;
+        color: #6b7280;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-weight: 700;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .category-table td {
+        padding: 16px 18px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #374151;
+        font-size: 14px;
+        vertical-align: middle;
+    }
+
+    .category-table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .category-name {
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .description {
+        max-width: 420px;
+        color: #6b7280;
+        line-height: 1.5;
+    }
+
+    .rate {
+        font-weight: 700;
+        color: #111827;
+        white-space: nowrap;
+    }
+
+    .currency {
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .status-active {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-inactive {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 12px;
+        border-radius: 7px;
+        border: 1px solid #d1d5db;
+        background: white;
+        color: #374151 !important;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .action-btn:hover {
+        background: #f3f4f6;
+    }
+
+    .empty-state {
+        padding: 55px 20px;
+        text-align: center;
+    }
+
+    .empty-state-title {
+        color: #374151;
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .empty-state-text {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    @media (max-width: 800px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .summary-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .table-card {
+            overflow-x: auto;
+        }
+
+        .category-table {
+            min-width: 850px;
+        }
+    }
+</style>
+
+
+<div class="category-page">
+
+    <!-- Header -->
+    <div class="page-header">
+
+        <div>
+            <h2>Room Categories & Rates</h2>
+
+            <p>
+                Manage room types and their nightly accommodation rates.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'category_create' %}"
+            class="primary-btn"
+        >
+            + Add Category
+        </a>
+
+    </div>
+
+
+    <!-- Summary -->
+    <div class="summary-grid">
+
+    <div class="summary-card">
+
+        <div class="summary-label">
+            Categories in View
+        </div>
+
+        <div class="summary-value">
+            {{ categories|length }}
+        </div>
+
+    </div>
+
+
+    <div class="summary-card">
+
+        <div class="summary-label">
+            Rate Configuration
+        </div>
+
+        <div class="summary-value">
+            Included
+        </div>
+
+    </div>
 
 </div>
 
-<table class="table">
 
-<thead>
-<tr>
-    <th>Name</th>
-    <th>Description</th>
-    <th>Rate</th>
-    <th>Currency</th>
-    <th>Status</th>
-    <th>Actions</th>
-</tr>
-</thead>
+    <!-- Category Table -->
+    <div class="table-card">
 
-<tbody>
+        <div class="table-header">
 
-{% for c in categories %}
+            <h3>Configured Room Categories</h3>
 
-<tr>
+            <span>
+                {{ categories|length }}
+                result{{ categories|length|pluralize }}
+            </span>
 
-<td>
-    {{ c.name }}
-</td>
+        </div>
 
-<td>
-    {{ c.description|default:"—" }}
-</td>
 
-<td>
-    {% if c.rate %}
-        {{ c.rate.price_per_night }}
-    {% else %}
-        —
-    {% endif %}
-</td>
+        <table class="category-table">
 
-<td>
-    {% if c.rate %}
-        {{ c.rate.currency }}
-    {% else %}
-        —
-    {% endif %}
-</td>
+            <thead>
 
-<td>
-    {% if c.is_active %}
-        Active
-    {% else %}
-        Inactive
-    {% endif %}
-</td>
+                <tr>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Nightly Rate</th>
+                    <th>Currency</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
 
-<td>
+            </thead>
 
-<a
-    href="{% url 'category_edit' c.id %}"
->
-    Edit
-</a>
 
-</td>
+            <tbody>
 
-</tr>
+                {% for c in categories %}
 
-{% empty %}
+                    <tr>
 
-<tr>
+                        <td>
+                            <div class="category-name">
+                                {{ c.name }}
+                            </div>
+                        </td>
 
-<td colspan="6">
-    No categories created yet.
-</td>
 
-</tr>
+                        <td>
+                            <div class="description">
+                                {{ c.description|default:"—" }}
+                            </div>
+                        </td>
 
-{% endfor %}
 
-</tbody>
+                        <td>
 
-</table>
+                            {% if c.rate %}
+                                <span class="rate">
+                                    {{ c.rate.price_per_night|floatformat:2 }}
+                                </span>
+                            {% else %}
+                                —
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            {% if c.rate %}
+                                <span class="currency">
+                                    {{ c.rate.currency }}
+                                </span>
+                            {% else %}
+                                —
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            {% if c.is_active %}
+
+                                <span class="status-badge status-active">
+                                    Active
+                                </span>
+
+                            {% else %}
+
+                                <span class="status-badge status-inactive">
+                                    Inactive
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            <a
+                                href="{% url 'category_edit' c.id %}"
+                                class="action-btn"
+                            >
+                                Edit
+                            </a>
+
+                        </td>
+
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+
+                        <td colspan="6">
+
+                            <div class="empty-state">
+
+                                <div class="empty-state-title">
+                                    No room categories configured
+                                </div>
+
+                                <div class="empty-state-text">
+                                    Create a room category and its nightly rate to begin setting up your rooms.
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
 
 {% endblock %}

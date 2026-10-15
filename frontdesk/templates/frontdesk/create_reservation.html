@@ -4,59 +4,679 @@
 
 {% block content %}
 
-<h2>Create Reservation</h2>
+<style>
 
-<form method="post">
+    .page-header {
+        margin-bottom: 24px;
+    }
 
-{% csrf_token %}
+    .page-title {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: #1f2937;
+    }
 
-<label>Guest</label>
-<select name="guest" required>
+    .page-subtitle {
+        margin: 6px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-<option value="">Select Guest</option>
+    .reservation-card {
+        max-width: 760px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 28px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
 
-{% for g in guests %}
-<option value="{{ g.id }}">
-{{ g.first_name }} {{ g.last_name }} ({{ g.phone }})
-</option>
-{% endfor %}
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
 
-</select>
+    .form-group {
+        margin-bottom: 20px;
+    }
 
-<br><br>
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
 
-<label>Room Category</label>
+    .form-label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #334155;
+    }
 
-<select name="category" required>
+    .form-control {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 11px 13px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: white;
+        color: #1e293b;
+        font-size: 14px;
+    }
 
-<option value="">Select Category</option>
+    .form-control:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
 
-{% for c in categories %}
-<option value="{{ c.id }}">
-{{ c.name }}
-</option>
-{% endfor %}
+    /* =========================
+       GUEST SEARCH
+       ========================= */
 
-</select>
+    .field-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 7px;
+        gap: 10px;
+    }
 
-<br><br>
+    .field-header .form-label {
+        margin: 0;
+    }
 
-<label>Check-in Date</label>
-<input type="date" name="check_in" required>
+    .add-guest-link {
+        font-size: 13px;
+        font-weight: 600;
+        color: #2563eb;
+        text-decoration: none;
+    }
 
-<br><br>
+    .add-guest-link:hover {
+        text-decoration: underline;
+    }
 
-<label>Check-out Date</label>
-<input type="date" name="check_out" required>
+    .guest-picker {
+        position: relative;
+    }
 
-<br><br>
+    .guest-search-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 11px 13px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: white;
+        color: #1e293b;
+        font-size: 14px;
+    }
 
-<button type="submit">Create Reservation</button>
+    .guest-search-input:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
 
-<a href="{% url 'frontdesk_reservations' %}">
-<button type="button">Cancel</button>
-</a>
+    .guest-results {
+        display: none;
+        position: absolute;
+        z-index: 1000;
+        left: 0;
+        right: 0;
+        top: calc(100% + 4px);
+        background: white;
+        border: 1px solid #dbe2ea;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.10);
+        max-height: 280px;
+        overflow-y: auto;
+    }
 
-</form>
+    .guest-result {
+        width: 100%;
+        display: block;
+        text-align: left;
+        border: 0;
+        border-bottom: 1px solid #eef2f7;
+        background: white;
+        padding: 12px 14px;
+        cursor: pointer;
+    }
+
+    .guest-result:last-child {
+        border-bottom: none;
+    }
+
+    .guest-result:hover {
+        background: #f5f8ff;
+    }
+
+    .guest-result strong {
+        display: block;
+        color: #1e293b;
+        font-size: 14px;
+    }
+
+    .guest-result span {
+        display: block;
+        margin-top: 3px;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .guest-no-results {
+        padding: 14px;
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .selected-guest {
+        display: none;
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 7px;
+        color: #166534;
+        font-size: 13px;
+    }
+
+    /* =========================
+       ACTIONS
+       ========================= */
+
+    .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 8px;
+    }
+
+    .primary-btn {
+        padding: 10px 18px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .primary-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .secondary-btn {
+        padding: 10px 18px;
+        background: #f8fafc;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .secondary-btn:hover {
+        background: #f1f5f9;
+    }
+
+    @media (max-width: 650px) {
+
+        .reservation-card {
+            padding: 20px;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .form-group.full-width {
+            grid-column: auto;
+        }
+
+        .actions {
+            flex-direction: column;
+        }
+
+        .primary-btn,
+        .secondary-btn {
+            text-align: center;
+        }
+
+    }
+
+</style>
+
+
+<div class="page-header">
+
+    <h1 class="page-title">
+        Create Reservation
+    </h1>
+
+    <p class="page-subtitle">
+        Schedule a guest stay by selecting the guest, room category and dates.
+    </p>
+
+</div>
+
+
+<div class="reservation-card">
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <div class="form-grid">
+
+
+            <!-- =========================
+                 GUEST
+                 ========================= -->
+
+            <div class="form-group full-width">
+
+                <div class="field-header">
+
+                    <label class="form-label">
+                        Guest
+                    </label>
+
+                    <a
+                        href="{% url 'frontdesk_guest_create' %}?next=reservation"
+                        class="add-guest-link"
+                    >
+                        + Add Guest
+                    </a>
+
+                </div>
+
+
+                <div class="guest-picker">
+
+                    <input
+                        type="text"
+                        id="guest-search"
+                        class="guest-search-input"
+                        placeholder="Search guest by name, phone, email or ID..."
+                        autocomplete="off"
+                    >
+
+
+                    <input
+                        type="hidden"
+                        name="guest"
+                        id="guest-id"
+                        value="{{ selected_guest_id|default:'' }}"
+                    >
+
+
+                    <div
+                        id="guest-results"
+                        class="guest-results"
+                    ></div>
+
+                </div>
+
+
+                <div
+                    id="selected-guest"
+                    class="selected-guest"
+                >
+
+                    {% if selected_guest_id %}
+
+                        {% for g in guests %}
+
+                            {% if selected_guest_id == g.id|stringformat:"s" %}
+
+                                <strong>
+                                    {{ g.full_name }}
+                                </strong>
+
+                                {% if g.phone %}
+                                    — {{ g.phone }}
+                                {% endif %}
+
+                            {% endif %}
+
+                        {% endfor %}
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+            <!-- =========================
+                 ROOM CATEGORY
+                 ========================= -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+                    Room Category
+                </label>
+
+                <select
+                    name="category"
+                    required
+                    class="form-control"
+                >
+
+                    <option value="">
+                        Select Room Category
+                    </option>
+
+                    {% for c in categories %}
+
+                        <option value="{{ c.id }}">
+                            {{ c.name }}
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+            <div class="form-group">
+
+                <label class="form-label">
+                    Number of Rooms
+                </label>
+
+                <input
+                    type="number"
+                    name="number_of_rooms"
+                    value="1"
+                    min="1"
+                    required
+                    class="form-control"
+                >
+
+            </div>
+
+
+            <!-- =========================
+                 CHECK-IN
+                 ========================= -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+                    Check-in Date
+                </label>
+
+                <input
+                    type="date"
+                    name="check_in"
+                    required
+                    class="form-control"
+                >
+
+            </div>
+
+
+            <!-- =========================
+                 CHECK-OUT
+                 ========================= -->
+
+            <div class="form-group">
+
+                <label class="form-label">
+                    Check-out Date
+                </label>
+
+                <input
+                    type="date"
+                    name="check_out"
+                    required
+                    class="form-control"
+                >
+
+            </div>
+
+
+        </div>
+
+
+        <!-- =========================
+             ACTIONS
+             ========================= -->
+
+        <div class="actions">
+
+            <button
+                type="submit"
+                class="primary-btn"
+            >
+                Create Reservation
+            </button>
+
+
+            <a
+                href="{% url 'frontdesk_reservations' %}"
+                class="secondary-btn"
+            >
+                Cancel
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const searchInput = document.getElementById("guest-search");
+    const guestIdInput = document.getElementById("guest-id");
+    const resultsBox = document.getElementById("guest-results");
+    const selectedGuestBox = document.getElementById("selected-guest");
+
+    let searchTimer = null;
+
+
+    /*
+     * If the page was opened after creating a guest,
+     * show the selected guest immediately.
+     */
+    if (guestIdInput.value) {
+
+        const selectedText = selectedGuestBox.textContent.trim();
+
+        if (selectedText) {
+            selectedGuestBox.style.display = "block";
+            searchInput.value = selectedText;
+        }
+
+    }
+
+
+    /*
+     * Search guests
+     */
+    searchInput.addEventListener("input", function () {
+
+        const query = this.value.trim();
+
+        /*
+         * User is changing the search,
+         * so the old selected guest is no longer valid.
+         */
+        guestIdInput.value = "";
+
+        selectedGuestBox.style.display = "none";
+        selectedGuestBox.innerHTML = "";
+
+        clearTimeout(searchTimer);
+
+
+        if (!query) {
+
+            resultsBox.innerHTML = "";
+            resultsBox.style.display = "none";
+
+            return;
+        }
+
+
+        searchTimer = setTimeout(function () {
+
+            fetch(
+                "{% url 'frontdesk_guest_search_api' %}?q="
+                + encodeURIComponent(query)
+            )
+
+            .then(function (response) {
+
+                if (!response.ok) {
+                    throw new Error("Search request failed");
+                }
+
+                return response.json();
+
+            })
+
+            .then(function (data) {
+
+                resultsBox.innerHTML = "";
+
+
+                if (!data.results.length) {
+
+                    resultsBox.innerHTML = `
+                        <div class="guest-no-results">
+                            No guests found
+                        </div>
+                    `;
+
+                    resultsBox.style.display = "block";
+
+                    return;
+                }
+
+
+                data.results.forEach(function (guest) {
+
+                    const item = document.createElement("button");
+
+                    item.type = "button";
+                    item.className = "guest-result";
+
+
+                    const details = [];
+
+                    if (guest.phone) {
+                        details.push(guest.phone);
+                    }
+
+                    if (guest.email) {
+                        details.push(guest.email);
+                    }
+
+                    if (guest.id_number) {
+                        details.push(guest.id_number);
+                    }
+
+
+                    item.innerHTML = `
+                        <strong>${guest.name}</strong>
+
+                        ${
+                            details.length
+                            ? `<span>${details.join(" · ")}</span>`
+                            : ""
+                        }
+                    `;
+
+
+                    item.addEventListener("click", function () {
+
+                        /*
+                         * Store the real database ID.
+                         */
+                        guestIdInput.value = guest.id;
+
+
+                        /*
+                         * Show guest name in the search field.
+                         */
+                        searchInput.value = guest.name;
+
+
+                        /*
+                         * Show selected guest confirmation.
+                         */
+                        selectedGuestBox.innerHTML = `
+                            <strong>${guest.name}</strong>
+                            ${
+                                guest.phone
+                                ? ` — ${guest.phone}`
+                                : ""
+                            }
+                        `;
+
+                        selectedGuestBox.style.display = "block";
+
+
+                        /*
+                         * Close results.
+                         */
+                        resultsBox.innerHTML = "";
+                        resultsBox.style.display = "none";
+
+                    });
+
+
+                    resultsBox.appendChild(item);
+
+                });
+
+
+                resultsBox.style.display = "block";
+
+            })
+
+
+            .catch(function () {
+
+                resultsBox.innerHTML = `
+                    <div class="guest-no-results">
+                        Unable to search guests.
+                    </div>
+                `;
+
+                resultsBox.style.display = "block";
+
+            });
+
+        }, 250);
+
+    });
+
+
+    /*
+     * Close dropdown when clicking elsewhere.
+     */
+    document.addEventListener("click", function (event) {
+
+        if (!event.target.closest(".guest-picker")) {
+
+            resultsBox.style.display = "none";
+
+        }
+
+    });
+
+});
+
+</script>
 
 {% endblock %}

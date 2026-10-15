@@ -1,8 +1,14 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from rooms.models import Room
+
 from frontdesk.workflows.common import (
     get_active_folio,
+)
+from billing.models import (
+    Folio,
+    FolioRoomHistory,
 )
 
 
@@ -24,14 +30,39 @@ def validate_room_change(
     new_room,
 ):
 
+    if folio.room == new_room:
+        raise ValidationError(
+            "Guest is already assigned to this room."
+        )
+
+    active_folio_exists = Folio.objects.filter(
+        room=new_room,
+        hotel=folio.hotel,
+        folio_type="ROOM",
+        is_closed=False,
+    ).exclude(
+        pk=folio.pk,
+    ).exists()
+
+    if active_folio_exists:
+        raise ValidationError(
+            "Selected room already has an active guest stay."
+        )
+
     if new_room.status != "AVAILABLE":
         raise ValidationError(
             "Selected room is not available."
         )
 
-    if folio.room == new_room:
+    rate = getattr(
+        new_room.category,
+        "rate",
+        None,
+    )
+
+    if not rate or not rate.is_active:
         raise ValidationError(
-            "Guest is already assigned to this room."
+            "Selected room does not have an active room rate."
         )
 
 
@@ -53,7 +84,50 @@ def move_folio(
     return old_room
 
 
-def update_old_room(old_room):
+def close_old_room_history(
+    folio,
+):
+
+    history = (
+        folio.room_history
+        .filter(
+            ended_at__isnull=True,
+        )
+        .order_by("-assigned_at")
+        .first()
+    )
+
+    if not history:
+        raise ValidationError(
+            "No active room history was found for this folio."
+        )
+
+    history.ended_at = timezone.now()
+
+    history.save(
+        update_fields=[
+            "ended_at",
+        ]
+    )
+
+
+def create_new_room_history(
+    folio,
+    room,
+    user,
+):
+
+    FolioRoomHistory.objects.create(
+        folio=folio,
+        room=room,
+        reason="ROOM_CHANGE",
+        assigned_by=user,
+    )
+
+
+def update_old_room(
+    old_room,
+):
 
     old_room.status = "VACANT_DIRTY"
 
@@ -64,7 +138,9 @@ def update_old_room(old_room):
     )
 
 
-def update_new_room(new_room):
+def update_new_room(
+    new_room,
+):
 
     new_room.refresh_status()
 
@@ -73,6 +149,7 @@ def update_new_room(new_room):
 def change_guest_room(
     room,
     new_room_id,
+    user,
 ):
 
     folio = get_active_folio(room)
@@ -92,8 +169,22 @@ def change_guest_room(
         new_room,
     )
 
-    update_old_room(old_room)
+    close_old_room_history(
+        folio,
+    )
 
-    update_new_room(new_room)
+    create_new_room_history(
+        folio,
+        new_room,
+        user,
+    )
+
+    update_old_room(
+        old_room,
+    )
+
+    update_new_room(
+        new_room,
+    )
 
     return old_room, new_room

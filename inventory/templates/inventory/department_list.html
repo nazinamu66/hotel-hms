@@ -1,63 +1,579 @@
 {% extends "base/base.html" %}
 
-{% block title %}Departments{% endblock %}
+{% block title %}Department Management{% endblock %}
 
 {% block content %}
 
-<h2>Departments</h2>
+<style>
+    .department-page {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
 
-<div style="margin-bottom:15px;">
-<a class="btn btn-primary" href="{% url 'inventory:department_create' %}">
-+ Add Department
-</a>
+    .page-heading {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:20px;
+        flex-wrap:wrap;
+        margin-bottom:20px;
+    }
+
+    .page-heading h2 {
+        margin:0;
+        color:#111827;
+    }
+
+    .page-heading p {
+        margin:6px 0 0;
+        color:#6b7280;
+    }
+
+    .filter-card,
+    .table-card {
+        background:#fff;
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        box-shadow:0 2px 8px rgba(0,0,0,.04);
+    }
+
+    .filter-card {
+        padding:20px;
+        margin-bottom:20px;
+    }
+
+    .filter-title {
+        font-size:15px;
+        font-weight:700;
+        color:#111827;
+        margin-bottom:14px;
+    }
+
+    .filter-grid {
+        display:grid;
+        grid-template-columns:2fr 1.2fr 1.2fr 1fr auto;
+        gap:12px;
+        align-items:end;
+    }
+
+    .filter-group label {
+        display:block;
+        font-size:13px;
+        font-weight:600;
+        color:#374151;
+        margin-bottom:6px;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width:100%;
+        box-sizing:border-box;
+        padding:10px 12px;
+        border:1px solid #d1d5db;
+        border-radius:8px;
+        background:#fff;
+        font-size:14px;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+        outline:none;
+        border-color:#2563eb;
+        box-shadow:0 0 0 3px rgba(37,99,235,.10);
+    }
+
+    .filter-actions {
+        display:flex;
+        gap:8px;
+    }
+
+    .btn {
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:9px 14px;
+        border-radius:8px;
+        border:1px solid transparent;
+        text-decoration:none;
+        font-size:14px;
+        font-weight:600;
+        cursor:pointer;
+        white-space:nowrap;
+    }
+
+    .btn-primary {
+        background:#2563eb;
+        color:#fff;
+    }
+
+    .btn-primary:hover {
+        background:#1d4ed8;
+    }
+
+    .btn-secondary {
+        background:#fff;
+        color:#374151;
+        border-color:#d1d5db;
+    }
+
+    .btn-secondary:hover {
+        background:#f9fafb;
+    }
+
+    .btn-edit {
+        background:#eff6ff;
+        color:#1d4ed8;
+        border-color:#bfdbfe;
+    }
+
+    .btn-danger {
+        background:#fef2f2;
+        color:#b91c1c;
+        border-color:#fecaca;
+    }
+
+    .btn-success {
+        background:#f0fdf4;
+        color:#15803d;
+        border-color:#bbf7d0;
+    }
+
+    .table-wrapper {
+        overflow-x:auto;
+    }
+
+    .departments-table {
+        width:100%;
+        border-collapse:collapse;
+        min-width:850px;
+    }
+
+    .departments-table th {
+        padding:13px 16px;
+        text-align:left;
+        background:#f9fafb;
+        color:#6b7280;
+        font-size:12px;
+        text-transform:uppercase;
+        letter-spacing:.04em;
+        border-bottom:1px solid #e5e7eb;
+    }
+
+    .departments-table td {
+        padding:15px 16px;
+        border-bottom:1px solid #f0f0f0;
+        vertical-align:middle;
+        font-size:14px;
+    }
+
+    .departments-table tr:last-child td {
+        border-bottom:none;
+    }
+
+    .department-name {
+        font-weight:700;
+        color:#111827;
+    }
+
+    .hotel-name {
+        color:#374151;
+        font-weight:500;
+    }
+
+    .code-badge,
+    .type-badge,
+    .status-badge {
+        display:inline-flex;
+        align-items:center;
+        padding:5px 9px;
+        border-radius:999px;
+        font-size:12px;
+        font-weight:700;
+    }
+
+    .code-badge {
+        background:#f3f4f6;
+        color:#374151;
+        font-family:monospace;
+    }
+
+    .type-badge {
+        background:#f3f4f6;
+        color:#374151;
+    }
+
+    .status-active {
+        background:#dcfce7;
+        color:#166534;
+    }
+
+    .status-inactive {
+        background:#fee2e2;
+        color:#991b1b;
+    }
+
+    .actions {
+        display:flex;
+        gap:7px;
+        flex-wrap:wrap;
+    }
+
+    .empty-state {
+        text-align:center;
+        padding:50px 20px;
+        color:#6b7280;
+    }
+
+    @media (max-width:1050px) {
+        .filter-grid {
+            grid-template-columns:repeat(2,1fr);
+        }
+
+        .filter-actions {
+            grid-column:span 2;
+        }
+    }
+
+    @media (max-width:650px) {
+        .filter-grid {
+            grid-template-columns:1fr;
+        }
+
+        .filter-actions {
+            grid-column:auto;
+        }
+
+        .filter-actions .btn {
+            flex:1;
+        }
+    }
+</style>
+
+
+<div class="department-page">
+
+
+    <!-- PAGE HEADING -->
+
+    <div class="page-heading">
+
+        <div>
+            <h2>Department Management</h2>
+
+            <p>
+                Manage hotel departments, codes, types and status.
+            </p>
+        </div>
+
+        <a
+            class="btn btn-primary"
+            href="{% url 'inventory:department_create' %}"
+        >
+            + Add Department
+        </a>
+
+    </div>
+
+
+    <!-- FILTERS -->
+
+    <div class="filter-card">
+
+        <div class="filter-title">
+            Filter Departments
+        </div>
+
+        <form method="get">
+
+            <div class="filter-grid">
+
+
+                <div class="filter-group">
+
+                    <label for="search">
+                        Search
+                    </label>
+
+                    <input
+                        type="text"
+                        id="search"
+                        name="search"
+                        value="{{ filter_search }}"
+                        placeholder="Department name or code"
+                    >
+
+                </div>
+
+
+                <div class="filter-group">
+
+                    <label for="hotel">
+                        Hotel
+                    </label>
+
+                    <select id="hotel" name="hotel">
+
+                        <option value="">
+                            All Hotels
+                        </option>
+
+                        {% for hotel in hotels %}
+
+                            <option
+                                value="{{ hotel.id }}"
+                                {% if filter_hotel == hotel.id|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ hotel.name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <div class="filter-group">
+
+                    <label for="type">
+                        Department Type
+                    </label>
+
+                    <select id="type" name="type">
+
+                        <option value="">
+                            All Types
+                        </option>
+
+                        {% for value, label in department_types %}
+
+                            <option
+                                value="{{ value }}"
+                                {% if filter_type == value %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ label }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <div class="filter-group">
+
+                    <label for="status">
+                        Status
+                    </label>
+
+                    <select id="status" name="status">
+
+                        <option value="">
+                            All Statuses
+                        </option>
+
+                        <option
+                            value="active"
+                            {% if filter_status == "active" %}
+                                selected
+                            {% endif %}
+                        >
+                            Active
+                        </option>
+
+                        <option
+                            value="inactive"
+                            {% if filter_status == "inactive" %}
+                                selected
+                            {% endif %}
+                        >
+                            Inactive
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="filter-actions">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        Filter
+                    </button>
+
+                    <a
+                        href="{% url 'inventory:department_list' %}"
+                        class="btn btn-secondary"
+                    >
+                        Clear
+                    </a>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+    <!-- DEPARTMENT TABLE -->
+
+    <div class="table-card">
+
+        <div class="table-wrapper">
+
+            <table class="departments-table">
+
+                <thead>
+
+                    <tr>
+                        <th>Hotel</th>
+                        <th>Department</th>
+                        <th>Code</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for dept in departments %}
+
+                        <tr>
+
+                            <td>
+                                <span class="hotel-name">
+                                    {{ dept.hotel.name }}
+                                </span>
+                            </td>
+
+
+                            <td>
+                                <span class="department-name">
+                                    {{ dept.name }}
+                                </span>
+                            </td>
+
+
+                            <td>
+                                <span class="code-badge">
+                                    {{ dept.code }}
+                                </span>
+                            </td>
+
+
+                            <td>
+                                <span class="type-badge">
+                                    {{ dept.get_department_type_display }}
+                                </span>
+                            </td>
+
+
+                            <td>
+
+                                {% if dept.is_active %}
+
+                                    <span class="status-badge status-active">
+                                        Active
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="status-badge status-inactive">
+                                        Inactive
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="actions">
+
+                                    <a
+                                        href="{% url 'inventory:department_edit' dept.id %}"
+                                        class="btn btn-edit"
+                                    >
+                                        Edit
+                                    </a>
+
+
+                                    <form
+                                        method="post"
+                                        action="{% url 'inventory:department_toggle_active' dept.id %}"
+                                        style="display:inline;"
+                                        onsubmit="return confirm('{% if dept.is_active %}Make this department inactive?{% else %}Activate this department?{% endif %}');"
+                                    >
+
+                                        {% csrf_token %}
+
+                                        {% if dept.is_active %}
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-danger"
+                                            >
+                                                Make Inactive
+                                            </button>
+
+                                        {% else %}
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-success"
+                                            >
+                                                Activate
+                                            </button>
+
+                                        {% endif %}
+
+                                    </form>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+
+                    {% empty %}
+
+                        <tr>
+
+                            <td colspan="6">
+
+                                <div class="empty-state">
+                                    No departments match the current filters.
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
 </div>
-
-<table class="table">
-
-<thead>
-<tr>
-<th>Hotel</th>
-<th>Name</th>
-<th>Code</th>
-<th>Type</th>
-<th>Actions</th>
-<th>Status</th>
-
-</tr>
-</thead>
-
-<tbody>
-
-{% for dept in departments %}
-<tr>
-<td>{{ dept.hotel.name }}</td>
-<td>{{ dept.name }}</td>
-<td>{{ dept.code }}</td>
-
-<td>{{ dept.get_department_type_display }}</td>
-
-<td>
-    
-    <a href="{% url 'inventory:department_edit' dept.id %}">
-        Edit
-    </a>
-</td>
-<td>
-{% if dept.is_active %}
-Active
-{% else %}
-Inactive
-{% endif %}
-</td>
-</tr>
-{% empty %}
-<tr>
-<td colspan="4">No departments found</td>
-</tr>
-{% endfor %}
-
-</tbody>
-
-</table>
 
 {% endblock %}

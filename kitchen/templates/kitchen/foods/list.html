@@ -1,33 +1,370 @@
 {% extends "base/base.html" %}
-{% load dict_extras %}
+
 {% block content %}
 
-<h2>Prepared Foods</h2>
+<style>
+    .prepared-page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 10px 0 50px;
+    }
 
-<br><br>
+    .prepared-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 28px;
+    }
 
-<table class="table">
-  <tr>
-    <th>Food</th>
-    <th>Kitchen Stock</th>
-    <th>Actions</th>
-  </tr>
+    .eyebrow {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
 
-  {% for food in foods %}
-  <tr>
-    <td>{{ food.name }}</td>
-    <td>{{ stock_map|get_item:food.id|default:0 }}</td>
-    <td>
-<a href="{% url 'inventory:kitchen_recipe_edit' food.id %}">
-        🧾 Edit Recipe
-      </a>
-    </td>
-  </tr>
-  {% empty %}
-  <tr>
-    <td colspan="3">No prepared foods yet.</td>
-  </tr>
-  {% endfor %}
-</table>
+    .prepared-header h1 {
+        margin: 0;
+        font-size: 32px;
+        color: #273142;
+    }
+
+    .prepared-header p {
+        margin: 8px 0 0;
+        color: #64748b;
+        font-size: 16px;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        margin-bottom: 24px;
+    }
+
+    .summary-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 22px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, .04);
+    }
+
+    .summary-label {
+        font-size: 13px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .summary-value {
+        margin-top: 8px;
+        font-size: 28px;
+        font-weight: 800;
+        color: #273142;
+    }
+
+    .summary-note {
+        margin-top: 4px;
+        font-size: 13px;
+        color: #94a3b8;
+    }
+
+    .foods-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, .05);
+    }
+
+    .card-header {
+        padding: 22px 26px;
+        border-bottom: 1px solid #e8edf3;
+    }
+
+    .card-header h2 {
+        margin: 0;
+        font-size: 20px;
+        color: #273142;
+    }
+
+    .card-header p {
+        margin: 6px 0 0;
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+    }
+
+    .foods-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .foods-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        text-align: left;
+        padding: 15px 22px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .foods-table td {
+        padding: 18px 22px;
+        border-bottom: 1px solid #edf1f5;
+        color: #334155;
+        vertical-align: middle;
+    }
+
+    .foods-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .food-name {
+        font-weight: 700;
+        color: #273142;
+        font-size: 15px;
+    }
+
+    .stock-value {
+        font-weight: 800;
+        color: #273142;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .status-available {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-out {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .recipe-link {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 13px;
+        border-radius: 8px;
+        background: #eff6ff;
+        color: #2563eb;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .recipe-link:hover {
+        background: #dbeafe;
+    }
+
+    .view-only {
+        color: #94a3b8;
+        font-size: 13px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 55px 25px;
+        color: #64748b;
+    }
+
+    .empty-state-icon {
+        font-size: 32px;
+        margin-bottom: 10px;
+    }
+
+    .empty-state strong {
+        display: block;
+        color: #334155;
+        font-size: 16px;
+        margin-bottom: 5px;
+    }
+
+    @media (max-width: 760px) {
+        .prepared-header {
+            flex-direction: column;
+        }
+
+        .prepared-header h1 {
+            font-size: 27px;
+        }
+
+        .summary-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .foods-table th,
+        .foods-table td {
+            padding: 13px 14px;
+        }
+    }
+</style>
+
+<div class="prepared-page">
+
+    <div class="prepared-header">
+        <div>
+            <div class="eyebrow">Kitchen Operations</div>
+            <h1>Prepared Foods</h1>
+            <p>
+                Monitor finished food currently available in the Kitchen.
+            </p>
+        </div>
+    </div>
+
+    <div class="summary-grid">
+
+        <div class="summary-card">
+            <div class="summary-label">Prepared Foods</div>
+            <div class="summary-value">{{ prepared_foods|length }}</div>
+            <div class="summary-note">
+                Active food items assigned to Kitchen
+            </div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-label">Available Foods</div>
+            <div class="summary-value">{{ available_count }}</div>
+            <div class="summary-note">
+                Food items with stock available
+            </div>
+        </div>
+
+        <div class="summary-card">
+            <div class="summary-label">Total Portions</div>
+            <div class="summary-value">{{ total_portions|floatformat:0 }}</div>
+            <div class="summary-note">
+                Finished portions currently in Kitchen
+            </div>
+        </div>
+
+    </div>
+
+    <div class="foods-card">
+
+        <div class="card-header">
+            <h2>Kitchen Food Stock</h2>
+            <p>
+                Prepared food produced by Kitchen and available for restaurant service.
+            </p>
+        </div>
+
+        <div class="table-wrap">
+
+            <table class="foods-table">
+
+                <thead>
+                    <tr>
+                        <th>Food</th>
+                        <th>Kitchen Stock</th>
+                        <th>Status</th>
+                        <th>Recipe</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for item in prepared_foods %}
+
+                    <tr>
+
+                        <td>
+                            <div class="food-name">
+                                {{ item.product.name }}
+                            </div>
+                        </td>
+
+                        <td>
+                            <span class="stock-value">
+                                {{ item.quantity|floatformat:2 }}
+                            </span>
+                            portions
+                        </td>
+
+                        <td>
+
+                            {% if item.status == "AVAILABLE" %}
+                                <span class="status-badge status-available">
+                                    AVAILABLE
+                                </span>
+                            {% else %}
+                                <span class="status-badge status-out">
+                                    OUT OF STOCK
+                                </span>
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            {% if can_edit_recipe %}
+
+                                <a
+                                    class="recipe-link"
+                                    href="{% url 'inventory:kitchen_recipe_edit' item.product.id %}"
+                                >
+                                    🧾 Edit Recipe
+                                </a>
+
+                            {% else %}
+
+                                <span class="view-only">
+                                    Head Chef only
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+                        <td colspan="4">
+
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🍲</div>
+
+                                <strong>No prepared foods yet</strong>
+
+                                No active FOOD products are currently assigned
+                                to this Kitchen.
+
+                            </div>
+
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
 
 {% endblock %}

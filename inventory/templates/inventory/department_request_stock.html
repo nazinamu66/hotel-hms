@@ -7,163 +7,450 @@ Request Stock — {{ department.name }}
 
 {% block content %}
 
-<h2>
-    Request Stock — {{ department.name }}
-</h2>
+<style>
+    .stock-page {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
 
-<p>
-    Request operational stock for your department.
-</p>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
 
-<hr>
+    .page-header h2 {
+        margin: 0 0 6px;
+        font-size: 28px;
+        font-weight: 700;
+        color: #1f2937;
+    }
 
-<table
-    style="
-        width:100%;
-        border-collapse:collapse;
-    "
->
+    .page-subtitle {
+        margin: 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-<thead style="background:#eee;">
+    .header-badge {
+        background: #eef2ff;
+        color: #3730a3;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
 
-<tr>
-    <th style="text-align:left; padding:8px;">
-        Product
-    </th>
+    .info-card {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin-bottom: 22px;
+    }
 
-    <th style="text-align:right; padding:8px;">
-        Available
-    </th>
+    .info-card strong {
+        color: #374151;
+    }
 
-    <th style="text-align:right; padding:8px;">
-        Request Quantity
-    </th>
+    .info-card span {
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-    <th style="padding:8px;">
-        Fulfillment
-    </th>
+    .table-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
 
-    <th style="padding:8px;">
-        Action
-    </th>
-</tr>
+    .stock-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
 
-</thead>
+    .stock-table th {
+        background: #f8fafc;
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        padding: 14px 16px;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
 
-<tbody>
+    .stock-table td {
+        padding: 16px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #374151;
+        vertical-align: middle;
+    }
 
-{% for product in products %}
+    .stock-table tbody tr:last-child td {
+        border-bottom: none;
+    }
 
-<tr style="border-top:1px solid #ddd;">
+    .stock-table tbody tr:hover {
+        background: #fafafa;
+    }
 
-    <td style="padding:8px;">
-        {{ product.name }}
-    </td>
+    .product-name {
+        font-weight: 600;
+        color: #1f2937;
+    }
 
-    <td style="padding:8px; text-align:right;">
+    .product-unit {
+        color: #9ca3af;
+        font-size: 12px;
+        margin-left: 4px;
+    }
 
-        {% with qty=stock_map|get_item:product.id %}
+    .stock-available {
+        font-weight: 600;
+        color: #374151;
+    }
 
-            {{ qty|default:0 }}
-            {{ product.base_unit }}
+    .stock-zero {
+        color: #dc2626;
+        font-weight: 700;
+    }
 
-        {% endwith %}
+    .quantity-input {
+        width: 110px;
+        padding: 9px 11px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        text-align: center;
+        box-sizing: border-box;
+    }
 
-    </td>
+    .quantity-input:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, .12);
+    }
 
-    <td style="padding:8px; text-align:right;">
+    .store-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 11px;
+        border-radius: 999px;
+        background: #ecfdf5;
+        color: #047857;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
 
-        <input
-            form="stock-request-{{ product.id }}"
-            type="number"
-            name="quantity"
-            min="1"
-            required
-            style="width:100px;"
+    .request-btn {
+        border: none;
+        background: #4f46e5;
+        color: #ffffff;
+        padding: 9px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: .15s ease;
+    }
+
+    .request-btn:hover {
+        background: #4338ca;
+        transform: translateY(-1px);
+    }
+
+    .empty-state {
+        padding: 50px 20px !important;
+        text-align: center;
+        color: #6b7280;
+    }
+
+    .empty-state strong {
+        display: block;
+        color: #374151;
+        font-size: 16px;
+        margin-bottom: 6px;
+    }
+
+    .page-footer {
+        margin-top: 20px;
+    }
+
+    .secondary-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #4f46e5;
+        font-weight: 600;
+        text-decoration: none;
+        font-size: 14px;
+    }
+
+    .secondary-link:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 850px) {
+        .page-header {
+            flex-direction: column;
+        }
+
+        .table-card {
+            overflow-x: auto;
+        }
+
+        .stock-table {
+            min-width: 760px;
+        }
+    }
+</style>
+
+<div class="stock-page">
+
+    <div class="page-header">
+
+        <div>
+            <h2>Request Stock</h2>
+
+            <p class="page-subtitle">
+                Request operational stock for
+                <strong>{{ department.name }}</strong>.
+            </p>
+        </div>
+
+        <div class="header-badge">
+            {{ department.name }}
+        </div>
+
+    </div>
+
+
+    {% if department.department_type == "RESTAURANT" %}
+
+        <div class="info-card">
+            <strong>Restaurant stock fulfillment</strong><br>
+            <span>
+                Restaurant requests are fulfilled through the Store.
+                If Store stock is unavailable, Store will handle procurement.
+            </span>
+        </div>
+
+    {% else %}
+
+        <div class="info-card">
+            <strong>Choose how the request should be fulfilled.</strong><br>
+            <span>
+                Store requests can be issued from available stock or routed
+                through the existing procurement workflow where applicable.
+            </span>
+        </div>
+
+    {% endif %}
+
+
+    <div class="table-card">
+
+        <table class="stock-table">
+
+            <thead>
+                <tr>
+
+                    <th style="text-align:left;">
+                        Product
+                    </th>
+
+                    <th style="text-align:right;">
+                        Available
+                    </th>
+
+                    <th style="text-align:center;">
+                        Request Quantity
+                    </th>
+
+                    <th style="text-align:center;">
+                        Fulfillment
+                    </th>
+
+                    <th style="text-align:center;">
+                        Action
+                    </th>
+
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for product in products %}
+
+                    <tr>
+
+                        <td>
+                            <span class="product-name">
+                                {{ product.name }}
+                            </span>
+
+                            <span class="product-unit">
+                                {{ product.base_unit }}
+                            </span>
+                        </td>
+
+
+                        <td style="text-align:right;">
+
+                            {% with qty=stock_map|get_item:product.id %}
+
+                                {% if qty|default:0 > 0 %}
+
+                                    <span class="stock-available">
+                                        {{ qty|default:0 }}
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="stock-zero">
+                                        0
+                                    </span>
+
+                                {% endif %}
+
+                                <span class="product-unit">
+                                    {{ product.base_unit }}
+                                </span>
+
+                            {% endwith %}
+
+                        </td>
+
+
+                        <td style="text-align:center;">
+
+                            <input
+                                form="stock-request-{{ product.id }}"
+                                class="quantity-input"
+                                type="number"
+                                name="quantity"
+                                min="1"
+                                required
+                                placeholder="Qty"
+                            >
+
+                        </td>
+
+
+                        <td style="text-align:center;">
+
+                            {% if department.department_type == "RESTAURANT" %}
+
+                                <span class="store-badge">
+                                    Store
+                                </span>
+
+                            {% else %}
+
+                                <label>
+                                    <input
+                                        form="stock-request-{{ product.id }}"
+                                        type="radio"
+                                        name="fulfillment_type"
+                                        value="STORE"
+                                        checked
+                                    >
+                                    Store
+                                </label>
+
+                                {% if department.department_type != "LAUNDRY" %}
+
+                                    <label style="margin-left:12px;">
+                                        <input
+                                            form="stock-request-{{ product.id }}"
+                                            type="radio"
+                                            name="fulfillment_type"
+                                            value="PURCHASE"
+                                        >
+                                        Purchase
+                                    </label>
+
+                                {% endif %}
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td style="text-align:center;">
+
+                            <form
+                                id="stock-request-{{ product.id }}"
+                                method="post"
+                            >
+
+                                {% csrf_token %}
+
+                                <input
+                                    type="hidden"
+                                    name="product_id"
+                                    value="{{ product.id }}"
+                                >
+
+                                <button
+                                    type="submit"
+                                    class="request-btn"
+                                >
+                                    Request
+                                </button>
+
+                            </form>
+
+                        </td>
+
+                    </tr>
+
+                {% empty %}
+
+                    <tr>
+
+                        <td colspan="5" class="empty-state">
+
+                            <strong>
+                                No stock products available
+                            </strong>
+
+                            No operational stock products are currently
+                            authorized for {{ department.name }}.
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+    <div class="page-footer">
+
+        <a
+            href="{% url requests_url %}"
+            class="secondary-link"
         >
+            View My Stock Requests →
+        </a>
 
-    </td>
+    </div>
 
-    <td style="padding:8px; text-align:center;">
-
-        <label>
-            <input
-                form="stock-request-{{ product.id }}"
-                type="radio"
-                name="fulfillment_type"
-                value="STORE"
-                checked
-            >
-            Store
-        </label>
-
-        {% if department.department_type != "LAUNDRY" %}
-
-            <br>
-
-            <label>
-                <input
-                    form="stock-request-{{ product.id }}"
-                    type="radio"
-                    name="fulfillment_type"
-                    value="PURCHASE"
-                >
-                Purchase
-            </label>
-
-        {% endif %}
-
-    </td>
-
-    <td style="padding:8px; text-align:center;">
-
-        <form
-            id="stock-request-{{ product.id }}"
-            method="post"
-        >
-
-            {% csrf_token %}
-
-            <input
-                type="hidden"
-                name="product_id"
-                value="{{ product.id }}"
-            >
-
-            <button type="submit">
-                Request
-            </button>
-
-        </form>
-
-    </td>
-
-</tr>
-
-{% empty %}
-
-<tr>
-
-    <td
-        colspan="5"
-        style="padding:15px;"
-    >
-        No operational stock products are currently
-        authorized for {{ department.name }}.
-    </td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-<hr>
-
-<a href="{% url requests_url %}">
-    View My Stock Requests
-</a>
+</div>
 
 {% endblock %}

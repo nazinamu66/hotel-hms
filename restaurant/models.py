@@ -1,6 +1,6 @@
 from django.db import models, transaction
 from django.conf import settings
-from inventory.models import Product, Department, stock_out, stock_in
+from inventory.models import Product, Department, stock_out
 from django.utils import timezone
 from inventory.models import Stock,StockMovement
 from kitchen.models import KitchenTicket, KitchenTicketItem
@@ -37,6 +37,15 @@ class MenuItem(models.Model):
         default='DRINK'
     )
     is_active = models.BooleanField(default=True)
+
+    def save(self, *args, **kwargs):
+        if self.product_id:
+            if self.product.product_type == "FOOD":
+                self.category = "FOOD"
+            elif self.product.product_type == "DRINK":
+                self.category = "DRINK"
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name} ({self.category})"
@@ -171,13 +180,23 @@ class POSOrder(models.Model):
 
         restaurant = self.department
 
-        
+        # Resolve the Kitchen for prepared FOOD.
+        kitchen = (
+            Department.objects
+            .filter(
+                hotel=restaurant.hotel,
+                department_type="KITCHEN",
+                is_active=True,
+            )
+            .first()
+        )
+
+        if not kitchen:
+            raise ValidationError("Kitchen department not found.")
 
         # =========================
         # PROCESS ORDER ITEMS
         # =========================
-        cogs_posted = False
-
         for item in self.items.select_related("menu_item__product"):
 
             product = item.menu_item.product
@@ -186,34 +205,40 @@ class POSOrder(models.Model):
             line_total = qty * item.price
             total += line_total
 
+            if not product.is_stock_item():
+                continue
+
+            # Drinks come from Restaurant stock.
+            # Prepared food comes from Kitchen stock.
             if product.product_type == "DRINK":
+                stock_department = restaurant
 
-                stock = Stock.objects.select_for_update().filter(
-                    product=product,
-                    department=restaurant
-                ).first()
+            elif product.product_type == "FOOD":
+                stock_department = kitchen
 
-                if not stock or stock.quantity < qty:
-                    raise ValidationError(
-                        f"Insufficient restaurant stock for {product.name}"
-                    )
+            else:
+                continue
 
-                stock.quantity -= qty
-                stock.save(update_fields=["quantity"])
+            result = stock_out(
+                product=product,
+                department=stock_department,
+                quantity=qty,
+                user=self.created_by,
+                reason="Restaurant POS sale",
+                reference=f"POS-{self.id}",
+            )
 
-                StockMovement.objects.create(
-                    product=product,
-                    from_department=restaurant,
-                    quantity=qty,
-                    movement_type="OUT",
-                    created_by=self.created_by,
-                    reference=f"POS-{self.id}"
-                )
+            # The FIFO engine is now the source of the historical
+            # cost used by COGS.
+            item.cost_at_sale = result["total_cost"] / Decimal(qty)
+            item.save(update_fields=["cost_at_sale"])
+
         # =========================
-        # CREATE KITCHEN TICKET (FOOD ONLY)
+        # CREATE KITCHEN TICKET
         # =========================
         food_items = [
-            item for item in self.items.select_related("menu_item__product")
+            item
+            for item in self.items.select_related("menu_item__product")
             if item.menu_item.product.product_type == "FOOD"
         ]
 
@@ -221,14 +246,18 @@ class POSOrder(models.Model):
 
             ticket = KitchenTicket.objects.create(
                 order=self,
-                room=self.folio.room if self.folio.folio_type == "ROOM" else None
+                room=(
+                    self.folio.room
+                    if self.folio.folio_type == "ROOM"
+                    else None
+                ),
             )
 
             for item in food_items:
                 KitchenTicketItem.objects.create(
                     ticket=ticket,
                     menu_item=item.menu_item,
-                    quantity=item.quantity
+                    quantity=item.quantity,
                 )
 
         # =========================
@@ -239,7 +268,7 @@ class POSOrder(models.Model):
             description=f"Restaurant Order #{self.id}",
             department=self.department,
             amount=total,
-            reference=f"POS-{self.id}"
+            reference=f"POS-{self.id}",
         )
 
         # =========================
@@ -247,13 +276,18 @@ class POSOrder(models.Model):
         # =========================
         self.total_amount = total
         self.status = "CHARGED"
-        self.save(update_fields=["total_amount", "status",])
-
+        self.save(
+            update_fields=[
+                "total_amount",
+                "status",
+            ]
+        )
+        
     # =====================================
     # PAY ORDER
     # =====================================
     @transaction.atomic
-    def pay_order(self, method="CASH"):
+    def pay_order(self, method="CASH", account=None):
 
         if self.status != "CHARGED":
             raise ValidationError("Only CHARGED orders can be paid.")
@@ -264,6 +298,8 @@ class POSOrder(models.Model):
             folio=self.folio,
             amount=self.total_amount,
             method=method,
+            account=account,
+            shift=self.shift,
             collected_by=self.created_by,
             reference=f"POS-{self.id}"
         )
@@ -352,41 +388,46 @@ class Shift(models.Model):
 
     notes = models.TextField(blank=True)
 
-    class Meta:
-        ordering = ["-opened_at"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["user", "department"],
-                condition=Q(status="OPEN"),
-                name="one_open_shift_per_user"
+class Meta:
+    ordering = ["-opened_at"]
+
+
+def close(self, closing_cash):
+
+    self.closing_cash = closing_cash
+    self.closed_at = timezone.now()
+    self.status = "CLOSED"
+
+    self.save()
+
+
+def __str__(self):
+    return f"{self.user} - {self.opened_at}"
+
+
+def save(self, *args, **kwargs):
+    if (
+        not self.pk
+        and self.status == "OPEN"
+        and self.department_id
+        and self.department.department_type == "RESTAURANT"
+    ):
+        existing = (
+            Shift.objects
+            .filter(
+                department=self.department,
+                status="OPEN",
             )
-        ]
+            .exclude(pk=self.pk)
+            .first()
+        )
 
-    def close(self, closing_cash):
+        if existing:
+            raise ValueError(
+                "This Restaurant department already has an open shift."
+            )
 
-        self.closing_cash = closing_cash
-        self.closed_at = timezone.now()
-        self.status = "CLOSED"
-
-        self.save()
-
-    def __str__(self):
-        return f"{self.user} - {self.opened_at}"
-    
-    def save(self, *args, **kwargs):
-
-        if not self.pk and self.status == "OPEN":
-
-            existing = Shift.objects.filter(
-                user=self.user,
-                status="OPEN"
-            ).exists()
-
-            if existing:
-                raise ValueError("User already has an open shift.")
-
-        super().save(*args, **kwargs)
-        
+    super().save(*args, **kwargs)
 
 class RestaurantTable(models.Model):
 

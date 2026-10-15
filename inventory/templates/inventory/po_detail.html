@@ -6,459 +6,1121 @@ Purchase Order #{{ po.id }}
 
 {% block content %}
 
-<h2>
-    Purchase Order #{{ po.id }}
-</h2>
+<style>
+    .po-detail-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 10px 0 45px;
+    }
 
-<p>
-    Manage this purchase order through preparation,
-    approval, payment and receipt.
-</p>
+    /* HEADER */
+    .po-detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 26px;
+    }
 
-<hr>
+    .po-detail-title h2 {
+        margin: 0 0 7px;
+        font-size: 30px;
+        font-weight: 750;
+        color: #293241;
+    }
 
-<!-- ===================================================== -->
-<!-- PO INFORMATION -->
-<!-- ===================================================== -->
+    .po-detail-title p {
+        margin: 0;
+        color: #667085;
+        font-size: 15px;
+        line-height: 1.6;
+    }
 
-<h3>Purchase Order Information</h3>
+    .po-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 42px;
+        padding: 0 15px;
+        border: 1px solid #d0d5dd;
+        border-radius: 9px;
+        background: #fff;
+        color: #344054;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 650;
+        white-space: nowrap;
+    }
 
-<table style="border-collapse:collapse;">
+    .po-back-link:hover {
+        background: #f8fafc;
+    }
 
-<tr>
-    <td style="padding:6px 20px 6px 0;">
-        <strong>Status</strong>
-    </td>
-    <td>
-        {{ po.get_status_display }}
-    </td>
-</tr>
+    /* STATUS */
+    .po-status-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 24px;
+    }
 
-<tr>
-    <td style="padding:6px 20px 6px 0;">
-        <strong>Payment Status</strong>
-    </td>
-    <td>
-        {{ po.get_payment_status_display }}
-    </td>
-</tr>
+    .po-status-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+    }
 
-<tr>
-    <td style="padding:6px 20px 6px 0;">
-        <strong>Supplier</strong>
-    </td>
-    <td>
-        {% if po.supplier %}
-            {{ po.supplier }}
-        {% else %}
-            —
+    .status-draft {
+        background: #f2f4f7;
+        color: #344054;
+    }
+
+    .status-submitted {
+        background: #fff4e5;
+        color: #9a6700;
+    }
+
+    .status-approved {
+        background: #ecfdf3;
+        color: #027a48;
+    }
+
+    .status-received {
+        background: #eff8ff;
+        color: #175cd3;
+    }
+
+    .status-rejected {
+        background: #fef3f2;
+        color: #b42318;
+    }
+
+    .payment-unpaid {
+        background: #fef3f2;
+        color: #b42318;
+    }
+
+    .payment-partial {
+        background: #fff4e5;
+        color: #9a6700;
+    }
+
+    .payment-paid {
+        background: #ecfdf3;
+        color: #027a48;
+    }
+
+    /* CARDS */
+    .po-card {
+        margin-bottom: 22px;
+        border: 1px solid #e2e6ed;
+        border-radius: 14px;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 4px 18px rgba(16, 24, 40, 0.05);
+    }
+
+    .po-card-header {
+        padding: 21px 25px;
+        border-bottom: 1px solid #eaecf0;
+        background: #fafbfc;
+    }
+
+    .po-card-header h3 {
+        margin: 0 0 5px;
+        font-size: 19px;
+        font-weight: 700;
+        color: #293241;
+    }
+
+    .po-card-header p {
+        margin: 0;
+        color: #667085;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .po-card-body {
+        padding: 25px;
+    }
+
+    /* INFORMATION GRID */
+    .po-info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px 28px;
+    }
+
+    .po-info-item {
+        min-width: 0;
+    }
+
+    .po-info-label {
+        margin-bottom: 5px;
+        color: #667085;
+        font-size: 12px;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .po-info-value {
+        color: #293241;
+        font-size: 15px;
+        font-weight: 600;
+        word-break: break-word;
+    }
+
+    .po-info-value.muted {
+        color: #98a2b3;
+        font-weight: 500;
+    }
+
+    /* ITEMS TABLE */
+    .po-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .po-items-table {
+        width: 100%;
+        min-width: 0;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .po-items-table th {
+        box-sizing: border-box;
+        padding: 13px 10px;
+        border-bottom: 1px solid #dfe3e8;
+        background: #f8fafc;
+        color: #475467;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: left;
+        text-transform: uppercase;
+        letter-spacing: 0.035em;
+    }
+
+    .po-items-table th:nth-child(1),
+    .po-items-table td:nth-child(1) {
+        width: 28%;
+    }
+
+    .po-items-table th:nth-child(2),
+    .po-items-table td:nth-child(2) {
+        width: 22%;
+    }
+
+    .po-items-table th:nth-child(3),
+    .po-items-table td:nth-child(3) {
+        width: 18%;
+    }
+
+    .po-items-table th:nth-child(4),
+    .po-items-table td:nth-child(4) {
+        width: 16%;
+    }
+
+    .po-items-table th:nth-child(5),
+    .po-items-table td:nth-child(5) {
+        width: 16%;
+    }
+
+    .po-items-table th.number,
+    .po-items-table td.number {
+        text-align: right;
+    }
+
+    .po-items-table td {
+        box-sizing: border-box;
+        padding: 15px 10px;
+        border-bottom: 1px solid #eaecf0;
+        color: #344054;
+        font-size: 14px;
+        vertical-align: middle;
+    }
+
+    .po-items-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .po-product-name {
+        color: #293241;
+        font-weight: 650;
+    }
+
+    .po-unit {
+        color: #667085;
+        font-size: 12px;
+        margin-left: 4px;
+    }
+
+    .po-total-row {
+        border-top: 2px solid #e4e7ec;
+        background: #fafbfc;
+    }
+
+    .po-total-row td {
+        padding-top: 16px;
+        padding-bottom: 16px;
+        font-weight: 750;
+        color: #293241;
+    }
+
+    .po-empty {
+        padding: 30px 15px !important;
+        text-align: center !important;
+        color: #667085 !important;
+    }
+
+    /* DRAFT / ADD ITEM */
+    .po-draft-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 330px;
+        gap: 24px;
+        align-items: start;
+    }
+
+    .po-draft-message {
+        padding: 18px 19px;
+        border-left: 4px solid #98a2b3;
+        border-radius: 6px;
+        background: #f8fafc;
+        color: #475467;
+        font-size: 14px;
+        line-height: 1.65;
+    }
+
+    .po-add-item {
+        padding: 20px;
+        border: 1px solid #e2e6ed;
+        border-radius: 11px;
+        background: #fff;
+    }
+
+    .po-add-item h4 {
+        margin: 0 0 5px;
+        font-size: 16px;
+        color: #293241;
+    }
+
+    .po-add-item > p {
+        margin: 0 0 17px;
+        color: #667085;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .po-form-field {
+        margin-bottom: 15px;
+    }
+
+    .po-form-field label {
+        display: block;
+        margin-bottom: 7px;
+        color: #344054;
+        font-size: 13px;
+        font-weight: 650;
+    }
+
+    .po-form-field select,
+    .po-form-field input {
+        width: 100%;
+        min-height: 43px;
+        padding: 9px 11px;
+        box-sizing: border-box;
+        border: 1px solid #d0d5dd;
+        border-radius: 8px;
+        background: #fff;
+        color: #1d2939;
+        font-size: 14px;
+    }
+
+    .po-form-field select:focus,
+    .po-form-field input:focus {
+        outline: none;
+        border-color: #667085;
+        box-shadow: 0 0 0 3px rgba(102, 112, 133, 0.12);
+    }
+
+    .po-form-error {
+        margin-top: 5px;
+        color: #b42318;
+        font-size: 12px;
+    }
+
+    .po-add-button {
+        width: 100%;
+        min-height: 43px;
+        border: 0;
+        border-radius: 8px;
+        background: #293241;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .po-add-button:hover {
+        opacity: 0.92;
+    }
+
+    /* ACTIONS */
+    .po-action-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 11px;
+        margin-top: 22px;
+    }
+
+    .po-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 43px;
+        padding: 0 17px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .po-action-primary {
+        background: #293241;
+        color: #fff;
+    }
+
+    .po-action-primary:hover {
+        opacity: 0.92;
+    }
+
+    .po-action-secondary {
+        border: 1px solid #d0d5dd;
+        background: #fff;
+        color: #344054;
+    }
+
+    .po-action-secondary:hover {
+        background: #f8fafc;
+    }
+
+    .po-action-success {
+        background: #087443;
+        color: #fff;
+    }
+
+    .po-action-success:hover {
+        opacity: 0.92;
+    }
+
+    /* WORKFLOW MESSAGES */
+    .po-workflow {
+        padding: 20px 22px;
+    }
+
+    .po-workflow-title {
+        margin: 0 0 7px;
+        color: #293241;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .po-workflow-text {
+        margin: 0;
+        color: #667085;
+        font-size: 14px;
+        line-height: 1.65;
+    }
+
+    .workflow-awaiting {
+        border-left: 4px solid #d9a441;
+        background: #fffbeb;
+    }
+
+    .workflow-approved {
+        border-left: 4px solid #12b76a;
+        background: #f6fef9;
+    }
+
+    .workflow-received {
+        border-left: 4px solid #2e90fa;
+        background: #f5faff;
+    }
+
+    .workflow-rejected {
+        border-left: 4px solid #f04438;
+        background: #fff7f6;
+    }
+
+    .po-workflow-note {
+        margin-top: 13px;
+        color: #475467;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    /* MOBILE */
+    @media (max-width: 850px) {
+        .po-info-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .po-draft-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 650px) {
+        .po-detail-header {
+            flex-direction: column;
+        }
+
+        .po-info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .po-card-body {
+            padding: 19px;
+        }
+
+        .po-card-header {
+            padding: 19px;
+        }
+
+        .po-action {
+            width: 100%;
+        }
+    }
+</style>
+
+
+<div class="po-detail-page">
+
+    <!-- HEADER -->
+    <div class="po-detail-header">
+
+        <div class="po-detail-title">
+            <h2>Purchase Order #{{ po.id }}</h2>
+
+            <p>
+                Manage this purchase order through preparation,
+                approval, payment and receipt.
+            </p>
+        </div>
+
+        <a
+            href="{% url back_url %}"
+            class="po-back-link"
+        >
+            {{ back_label }}
+        </a>
+
+    </div>
+
+
+    <!-- STATUS -->
+    <div class="po-status-strip">
+
+        {% if po.status == "DRAFT" %}
+            <span class="po-status-badge status-draft">
+                Draft
+            </span>
+        {% elif po.status == "SUBMITTED" %}
+            <span class="po-status-badge status-submitted">
+                Awaiting Approval
+            </span>
+        {% elif po.status == "APPROVED" %}
+            <span class="po-status-badge status-approved">
+                Approved
+            </span>
+        {% elif po.status == "RECEIVED" %}
+            <span class="po-status-badge status-received">
+                Received
+            </span>
+        {% elif po.status == "REJECTED" %}
+            <span class="po-status-badge status-rejected">
+                Rejected
+            </span>
         {% endif %}
-    </td>
-</tr>
-
-<tr>
-    <td style="padding:6px 20px 6px 0;">
-        <strong>Receiving Department</strong>
-    </td>
-    <td>
-        {{ po.department }}
-    </td>
-</tr>
-
-<tr>
-    <td style="padding:6px 20px 6px 0;">
-        <strong>Created By</strong>
-    </td>
-    <td>
-        {{ po.created_by }}
-    </td>
-</tr>
-
-<tr>
-    <td style="padding:6px 20px 6px 0;">
-        <strong>Created</strong>
-    </td>
-    <td>
-        {{ po.created_at|date:"Y-m-d H:i" }}
-    </td>
-</tr>
-
-{% if po.approved_by %}
-
-<tr>
-    <td style="padding:6px 20px 6px 0;">
-        <strong>Approved By</strong>
-    </td>
-    <td>
-        {{ po.approved_by }}
-    </td>
-</tr>
-
-<tr>
-    <td style="padding:6px 20px 6px 0;">
-        <strong>Approved At</strong>
-    </td>
-    <td>
-        {{ po.approved_at|date:"Y-m-d H:i" }}
-    </td>
-</tr>
-
-{% endif %}
-
-{% if po.paid_by %}
-
-<tr>
-    <td style="padding:6px 20px 6px 0;">
-        <strong>Paid By</strong>
-    </td>
-    <td>
-        {{ po.paid_by }}
-    </td>
-</tr>
-
-<tr>
-    <td style="padding:6px 20px 6px 0;">
-        <strong>Paid At</strong>
-    </td>
-    <td>
-        {{ po.paid_at|date:"Y-m-d H:i" }}
-    </td>
-</tr>
-
-{% endif %}
-
-{% if po.payment_reference %}
-
-<tr>
-    <td style="padding:6px 20px 6px 0;">
-        <strong>Payment Reference</strong>
-    </td>
-    <td>
-        {{ po.payment_reference }}
-    </td>
-</tr>
-
-{% endif %}
-
-{% if po.received_at %}
 
-<tr>
-    <td style="padding:6px 20px 6px 0;">
-        <strong>Received At</strong>
-    </td>
-    <td>
-        {{ po.received_at|date:"Y-m-d H:i" }}
-    </td>
-</tr>
+        {% if po.payment_status == "UNPAID" %}
+            <span class="po-status-badge payment-unpaid">
+                Unpaid
+            </span>
+        {% elif po.payment_status == "PARTIAL" %}
+            <span class="po-status-badge payment-partial">
+                Partially Paid
+            </span>
+        {% elif po.payment_status == "PAID" %}
+            <span class="po-status-badge payment-paid">
+                Paid
+            </span>
+        {% endif %}
+
+    </div>
+
+
+    <!-- PO INFORMATION -->
+    <div class="po-card">
+
+        <div class="po-card-header">
+            <h3>Purchase Order Information</h3>
+            <p>
+                Supplier, destination and workflow details.
+            </p>
+        </div>
+
+        <div class="po-card-body">
+
+            <div class="po-info-grid">
+
+                <div class="po-info-item">
+                    <div class="po-info-label">
+                        Supplier
+                    </div>
+
+                    <div class="po-info-value {% if not po.supplier %}muted{% endif %}">
+                        {% if po.supplier %}
+                            {{ po.supplier }}
+                        {% else %}
+                            Not selected
+                        {% endif %}
+                    </div>
+                </div>
+
+
+                <div class="po-info-item">
+                    <div class="po-info-label">
+                        Receiving Department
+                    </div>
+
+                    <div class="po-info-value">
+                        {{ po.department }}
+                    </div>
+                </div>
+
+
+                <div class="po-info-item">
+                    <div class="po-info-label">
+                        Created By
+                    </div>
+
+                    <div class="po-info-value">
+                        {{ po.created_by }}
+                    </div>
+                </div>
+
+
+                <div class="po-info-item">
+                    <div class="po-info-label">
+                        Created
+                    </div>
+
+                    <div class="po-info-value">
+                        {{ po.created_at|date:"Y-m-d H:i" }}
+                    </div>
+                </div>
+
+
+                {% if po.approved_by %}
+                    <div class="po-info-item">
+                        <div class="po-info-label">
+                            Approved By
+                        </div>
+
+                        <div class="po-info-value">
+                            {{ po.approved_by }}
+                        </div>
+                    </div>
+
+                    <div class="po-info-item">
+                        <div class="po-info-label">
+                            Approved At
+                        </div>
+
+                        <div class="po-info-value">
+                            {{ po.approved_at|date:"Y-m-d H:i" }}
+                        </div>
+                    </div>
+                {% endif %}
 
-{% endif %}
 
-</table>
+                {% if po.paid_by %}
+                    <div class="po-info-item">
+                        <div class="po-info-label">
+                            Paid By
+                        </div>
 
+                        <div class="po-info-value">
+                            {{ po.paid_by }}
+                        </div>
+                    </div>
+
+                    <div class="po-info-item">
+                        <div class="po-info-label">
+                            Paid At
+                        </div>
 
-<!-- ===================================================== -->
-<!-- ITEMS -->
-<!-- ===================================================== -->
+                        <div class="po-info-value">
+                            {{ po.paid_at|date:"Y-m-d H:i" }}
+                        </div>
+                    </div>
+                {% endif %}
 
-<hr>
+
+                {% if po.payment_reference %}
+                    <div class="po-info-item">
+                        <div class="po-info-label">
+                            Payment Reference
+                        </div>
 
-<h3>Items</h3>
+                        <div class="po-info-value">
+                            {{ po.payment_reference }}
+                        </div>
+                    </div>
+                {% endif %}
 
-<table
-    style="
-        width:100%;
-        border-collapse:collapse;
-    "
->
 
-<thead style="background:#eee;">
+                {% if po.received_at %}
+                    <div class="po-info-item">
+                        <div class="po-info-label">
+                            Received At
+                        </div>
 
-<tr>
+                        <div class="po-info-value">
+                            {{ po.received_at|date:"Y-m-d H:i" }}
+                        </div>
+                    </div>
+                {% endif %}
 
-    <th style="text-align:left; padding:8px;">
-        Product
-    </th>
+            </div>
 
-    <th style="text-align:right; padding:8px;">
-        Purchase Qty
-    </th>
+        </div>
 
-    <th style="text-align:right; padding:8px;">
-        Base Qty
-    </th>
+    </div>
 
-    <th style="text-align:right; padding:8px;">
-        Unit Cost
-    </th>
 
-    <th style="text-align:right; padding:8px;">
-        Total
-    </th>
+    <!-- ITEMS -->
+    <div class="po-card">
 
-</tr>
+        <div class="po-card-header">
+            <h3>Purchase Items</h3>
+            <p>
+                Products, quantities and purchase costs on this order.
+            </p>
+        </div>
 
-</thead>
+        <div class="po-card-body po-table-wrap">
 
-<tbody>
+            <table class="po-items-table">
 
-{% for item in po.items.all %}
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th class="number">Purchase Qty</th>
+                        <th class="number">Base Qty</th>
+                        <th class="number">Unit Cost</th>
+                        <th class="number">Total</th>
+                    </tr>
+                </thead>
 
-<tr style="border-top:1px solid #ddd;">
+                <tbody>
 
-    <td style="padding:8px;">
-        {{ item.product.name }}
-    </td>
+                    {% for item in po.items.all %}
 
-    <td style="padding:8px; text-align:right;">
-        {{ item.purchase_quantity }}
-        {{ item.product.purchase_unit }}
-    </td>
+                        <tr>
 
-    <td style="padding:8px; text-align:right;">
-        {{ item.base_quantity }}
-        {{ item.product.base_unit }}
-    </td>
+                            <td>
+                                <span class="po-product-name">
+                                    {{ item.product.name }}
+                                </span>
+                            </td>
 
-    <td style="padding:8px; text-align:right;">
-        ₦{{ item.unit_cost|floatformat:2 }}
-    </td>
+                            <td class="number">
+                                {{ item.purchase_quantity }}
+                                <span class="po-unit">
+                                    {{ item.product.purchase_unit }}
+                                </span>
+                            </td>
 
-    <td style="padding:8px; text-align:right;">
-        ₦{{ item.total_cost|floatformat:2 }}
-    </td>
+                            <td class="number">
+                                {{ item.base_quantity }}
+                                <span class="po-unit">
+                                    {{ item.product.base_unit }}
+                                </span>
+                            </td>
 
-</tr>
+                            <td class="number">
+                                ₦{{ item.unit_cost|floatformat:2 }}
+                            </td>
 
-{% empty %}
+                            <td class="number">
+                                ₦{{ item.total_cost|floatformat:2 }}
+                            </td>
 
-<tr>
+                        </tr>
 
-    <td colspan="5" style="padding:15px;">
-        No items added yet.
-    </td>
+                    {% empty %}
 
-</tr>
+                        <tr>
+                            <td colspan="5" class="po-empty">
+                                No items have been added to this purchase order yet.
+                            </td>
+                        </tr>
 
-{% endfor %}
+                    {% endfor %}
 
-</tbody>
 
-</table>
+                    {% if po.items.exists %}
 
+                        <tr class="po-total-row">
 
-<!-- ===================================================== -->
-<!-- DRAFT -->
-<!-- ===================================================== -->
+                            <td colspan="4" class="number">
+                                Purchase Order Total
+                            </td>
 
-{% if po.status == "DRAFT" %}
-    {% if request.user.role == "MANAGER" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+                            <td class="number">
+                                ₦{{ po_total|floatformat:2 }}
+                            </td>
 
-<hr>
+                        </tr>
 
-<h3>Draft Purchase Order</h3>
+                    {% endif %}
 
-<p>
-    This purchase order is still being prepared.
-    Add or edit the items and supplier before submitting it
-    for management approval.
-</p>
+                </tbody>
 
-<p>
+            </table>
 
-    <a href="{% url 'inventory:po_finalize' po.pk %}">
-        <button type="button">
-            ✏️ Finalize Purchase Order
-        </button>
-    </a>
+        </div>
 
-</p>
+    </div>
 
-<h4>Add Item</h4>
 
-<form method="post">
+    <!-- DRAFT -->
+    {% if po.status == "DRAFT" %}
 
-    {% csrf_token %}
+        {% if request.user.role == "MANAGER" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
 
-    {{ item_form.as_p }}
+            <div class="po-card">
 
-    <button type="submit">
-        Add Item
-    </button>
+                <div class="po-card-header">
+                    <h3>Prepare Purchase Order</h3>
 
-</form>
+                    <p>
+                        Add the products you intend to purchase before
+                        finalizing this draft.
+                    </p>
+                </div>
 
-{% endif %}
-{% endif %}
+                <div class="po-card-body">
 
+                    <div class="po-draft-layout">
 
-<!-- ===================================================== -->
-<!-- SUBMITTED -->
-<!-- ===================================================== -->
+                        <div>
 
-{% if po.status == "SUBMITTED" %}
+                            <div class="po-draft-message">
+                                This purchase order is still being prepared.
+                                Add all required products, quantities and
+                                purchase costs before finalization.
+                            </div>
 
-<hr>
+                            <div class="po-action-bar">
 
-<h3>Awaiting Approval</h3>
+                                <a
+                                    href="{% url 'inventory:po_finalize' po.pk %}"
+                                    class="po-action po-action-primary"
+                                >
+                                    ✏️ Finalize Purchase Order
+                                </a>
 
-<p>
-    This purchase order has been submitted for management
-    approval.
-</p>
+                            </div>
 
-{% if request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+                        </div>
 
-<a href="{% url 'inventory:po_approve' po.pk %}">
-    <button type="button">
-        ✅ Approve Purchase Order
-    </button>
-</a>
 
-{% else %}
+                        <div class="po-add-item">
 
-<p>
-    Awaiting management approval.
-</p>
+                            <h4>Add Item</h4>
 
-{% endif %}
+                            <p>
+                                Add a product, purchase quantity and unit cost.
+                            </p>
 
-{% endif %}
+                            <form method="post">
 
+                                {% csrf_token %}
 
-<!-- ===================================================== -->
-<!-- APPROVED -->
-<!-- ===================================================== -->
+                                {% if item_form.non_field_errors %}
+                                    <div class="po-form-error">
+                                        {{ item_form.non_field_errors }}
+                                    </div>
+                                {% endif %}
 
-{% if po.status == "APPROVED" %}
 
-<hr>
+                                <div class="po-form-field">
 
-<h3>Approved</h3>
+                                    <label for="{{ item_form.product.id_for_label }}">
+                                        Product
+                                    </label>
 
-<p>
-    This purchase order has been approved and is ready
-    for supplier payment and/or goods receipt.
-</p>
+                                    {{ item_form.product }}
 
+                                    {% if item_form.product.errors %}
+                                        <div class="po-form-error">
+                                            {{ item_form.product.errors }}
+                                        </div>
+                                    {% endif %}
 
-<!-- PAYMENT -->
+                                </div>
 
-{% if po.payment_status != "PAID" %}
 
-{% if request.user.role == "ACCOUNTANT" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+                                <div class="po-form-field">
 
-<p>
+                                    <label for="{{ item_form.purchase_quantity.id_for_label }}">
+                                        Purchase Quantity
+                                    </label>
 
-    <a href="{% url 'inventory:po_pay' po.pk %}">
-        <button type="button">
-            💰 Pay Supplier
-        </button>
-    </a>
+                                    {{ item_form.purchase_quantity }}
 
-</p>
+                                    {% if item_form.purchase_quantity.errors %}
+                                        <div class="po-form-error">
+                                            {{ item_form.purchase_quantity.errors }}
+                                        </div>
+                                    {% endif %}
 
-{% endif %}
+                                </div>
 
-{% else %}
 
-<p>
-    <strong>
-        ✓ Supplier fully paid
-    </strong>
-</p>
+                                <div class="po-form-field">
 
-{% endif %}
+                                    <label for="{{ item_form.unit_cost.id_for_label }}">
+                                        Unit Cost
+                                    </label>
 
+                                    {{ item_form.unit_cost }}
 
-<!-- RECEIVING -->
+                                    {% if item_form.unit_cost.errors %}
+                                        <div class="po-form-error">
+                                            {{ item_form.unit_cost.errors }}
+                                        </div>
+                                    {% endif %}
 
-{% if request.user.role == "STORE" %}
+                                </div>
 
-<hr>
 
-<a href="{% url 'inventory:po_receive' po.pk %}">
-    <button type="button">
-        📦 Receive Goods
-    </button>
-</a>
+                                <button
+                                    type="submit"
+                                    class="po-add-button"
+                                >
+                                    + Add Item
+                                </button>
 
-{% endif %}
+                            </form>
 
-{% endif %}
+                        </div>
 
+                    </div>
 
-<!-- ===================================================== -->
-<!-- RECEIVED -->
-<!-- ===================================================== -->
+                </div>
 
-{% if po.status == "RECEIVED" %}
+            </div>
 
-<hr>
+        {% endif %}
 
-<h3>Goods Received</h3>
+    {% endif %}
 
-<p>
-    The goods have been received into Store.
-</p>
 
+    <!-- SUBMITTED -->
+    {% if po.status == "SUBMITTED" %}
 
-{% if po.payment_status == "PAID" %}
+        <div class="po-card">
 
-<p>
-    <strong>
-        ✓ Supplier fully paid
-    </strong>
-</p>
+            <div class="po-workflow workflow-awaiting">
 
-{% else %}
+                <h3 class="po-workflow-title">
+                    Awaiting Approval
+                </h3>
 
-<p>
-    <strong>
-        Payment outstanding
-    </strong>
-</p>
+                <p class="po-workflow-text">
+                    This purchase order has been submitted for
+                    management approval.
+                </p>
 
-{% if request.user.role == "ACCOUNTANT" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
 
-<a href="{% url 'inventory:po_pay' po.pk %}">
-    <button type="button">
-        💰 Pay Supplier
-    </button>
-</a>
+                {% if request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
 
-{% endif %}
+                    <div class="po-action-bar">
 
-{% endif %}
+                        <a
+                            href="{% url 'inventory:po_approve' po.pk %}"
+                            class="po-action po-action-success"
+                        >
+                            ✓ Approve Purchase Order
+                        </a>
 
-{% endif %}
+                    </div>
 
+                {% else %}
 
-<!-- ===================================================== -->
-<!-- REJECTED -->
-<!-- ===================================================== -->
+                    <div class="po-workflow-note">
+                        Awaiting management approval.
+                    </div>
 
-{% if po.status == "REJECTED" %}
+                {% endif %}
 
-<hr>
+            </div>
 
-<h3>Purchase Order Rejected</h3>
+        </div>
 
-<p>
-    This purchase order was rejected and cannot proceed.
-</p>
+    {% endif %}
 
-{% endif %}
 
+    <!-- APPROVED -->
+    {% if po.status == "APPROVED" %}
 
-<!-- ===================================================== -->
-<!-- BACK -->
-<!-- ===================================================== -->
+        <div class="po-card">
 
+            <div class="po-workflow workflow-approved">
 
-<hr>
+                <h3 class="po-workflow-title">
+                    Purchase Order Approved
+                </h3>
 
-<a href="{% url back_url %}">
-    {{ back_label }}
-</a>
+                <p class="po-workflow-text">
+                    This purchase order has been approved and is ready
+                    for supplier payment and goods receipt.
+                </p>
+
+
+                <!-- PAYMENT -->
+                {% if po.payment_status != "PAID" %}
+
+                    {% if request.user.role == "ACCOUNTANT" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+
+                        <div class="po-action-bar">
+
+                            <a
+                                href="{% url 'inventory:po_pay' po.pk %}"
+                                class="po-action po-action-primary"
+                            >
+                                💰 Pay Supplier
+                            </a>
+
+                        </div>
+
+                    {% endif %}
+
+                {% else %}
+
+                    <div class="po-workflow-note">
+                        ✓ Supplier fully paid
+                    </div>
+
+                {% endif %}
+
+
+                <!-- RECEIVING -->
+                {% if request.user.role == "STORE" %}
+
+                    <div class="po-action-bar">
+
+                        <a
+                            href="{% url 'inventory:po_receive' po.pk %}"
+                            class="po-action po-action-success"
+                        >
+                            📦 Receive Goods
+                        </a>
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- RECEIVED -->
+    {% if po.status == "RECEIVED" %}
+
+        <div class="po-card">
+
+            <div class="po-workflow workflow-received">
+
+                <h3 class="po-workflow-title">
+                    Goods Received
+                </h3>
+
+                <p class="po-workflow-text">
+                    The goods have been received into the
+                    purchase order's receiving department.
+                </p>
+
+
+                {% if po.payment_status == "PAID" %}
+
+                    <div class="po-workflow-note">
+                        ✓ Supplier fully paid
+                    </div>
+
+                {% else %}
+
+                    <div class="po-workflow-note">
+                        Payment outstanding
+                    </div>
+
+                    {% if request.user.role == "ACCOUNTANT" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+
+                        <div class="po-action-bar">
+
+                            <a
+                                href="{% url 'inventory:po_pay' po.pk %}"
+                                class="po-action po-action-primary"
+                            >
+                                💰 Pay Supplier
+                            </a>
+
+                        </div>
+
+                    {% endif %}
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+
+    <!-- REJECTED -->
+    {% if po.status == "REJECTED" %}
+
+        <div class="po-card">
+
+            <div class="po-workflow workflow-rejected">
+
+                <h3 class="po-workflow-title">
+                    Purchase Order Rejected
+                </h3>
+
+                <p class="po-workflow-text">
+                    This purchase order was rejected and cannot proceed.
+                </p>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
 
 {% endblock %}

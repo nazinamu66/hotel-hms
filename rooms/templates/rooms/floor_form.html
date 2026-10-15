@@ -1,60 +1,296 @@
 {% extends "base/base.html" %}
 
-{% block title %}Add Floor{% endblock %}
+{% block title %}
+    {% if edit_mode %}
+        Edit Floor
+    {% else %}
+        Add Floor
+    {% endif %}
+{% endblock %}
 
 {% block content %}
 
-<h2>Add Floor</h2>
+<style>
+    .floor-form-page {
+        max-width: 850px;
+        margin: 0 auto;
+    }
 
-<div class="card">
+    .page-heading {
+        margin-bottom: 20px;
+    }
 
-<form method="post">
+    .page-heading h2 {
+        margin: 0;
+        color: #111827;
+    }
 
-{% csrf_token %}
+    .page-heading p {
+        margin: 6px 0 0;
+        color: #6b7280;
+    }
 
-<label>Building</label><br>
+    .form-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.04);
+    }
 
-<select name="building" required>
+    .field {
+        margin-bottom: 20px;
+    }
 
-{% for b in buildings %}
+    .field label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+    }
 
-<option value="{{ b.id }}">
-{{ b.name }}
-</option>
+    .field input,
+    .field select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 11px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        font-size: 14px;
+    }
 
-{% endfor %}
+    .field input:focus,
+    .field select:focus {
+        outline: none;
+        border-color: #2563eb;
+    }
 
-</select>
+    .readonly-field {
+        padding: 11px 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #f9fafb;
+        color: #374151;
+        font-weight: 600;
+    }
 
-<br><br>
+    .help-text {
+        display: block;
+        margin-top: 6px;
+        color: #6b7280;
+        font-size: 12px;
+    }
 
-<label>Floor Name</label><br>
+    .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding-top: 5px;
+    }
 
-<input type="text"
-       name="name"
-       placeholder="Example: Floor 1 or Ground Floor"
-       required>
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 15px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
 
-<br><br>
+    .btn-primary {
+        background: #2563eb;
+        color: #fff;
+    }
 
-<label>Floor Number</label><br>
+    .btn-primary:hover {
+        background: #1d4ed8;
+    }
 
-<input type="number"
-       name="number"
-       placeholder="Example: 1"
-       required>
+    .btn-secondary {
+        background: #fff;
+        color: #374151;
+        border-color: #d1d5db;
+    }
+</style>
 
-<br><br>
 
-<button class="btn btn-primary">
-Save
-</button>
+<div class="floor-form-page">
 
-<a href="{% url 'floor_list' %}" class="btn btn-secondary">
-Cancel
-</a>
+    <div class="page-heading">
 
-</form>
+        <h2>
+            {% if edit_mode %}
+                Edit Floor
+            {% else %}
+                Add Floor
+            {% endif %}
+        </h2>
+
+        <p>
+            {% if edit_mode %}
+                Update the floor name or floor number.
+            {% else %}
+                Add a floor to a hotel building.
+            {% endif %}
+        </p>
+
+    </div>
+
+
+    <div class="form-card">
+
+        <form method="post">
+
+            {% csrf_token %}
+
+
+            {% if edit_mode %}
+
+                <div class="field">
+
+                    <label>
+                        Building
+                    </label>
+
+                    <div class="readonly-field">
+                        {{ building.name }}
+                        {% if building.hotel %}
+                            — {{ building.hotel.name }}
+                        {% endif %}
+                    </div>
+
+                </div>
+
+            {% else %}
+
+                <div class="field">
+
+                    <label for="building">
+                        Building
+                    </label>
+
+                    <select
+                        id="building"
+                        name="building"
+                        required
+                    >
+
+                        <option value="">
+                            -- Select Building --
+                        </option>
+
+                        {% for b in buildings %}
+
+                            <option
+                                value="{{ b.id }}"
+                                {% if selected_building_id|stringformat:"s" == b.id|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ b.name }}
+                                — {{ b.hotel.name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+            {% endif %}
+
+
+            <div class="field">
+
+                <label for="name">
+                    Floor Name
+                </label>
+
+                <input
+                    id="name"
+                    type="text"
+                    name="name"
+                    value="{{ floor.name|default:'' }}"
+                    placeholder="Example: Floor 1, Ground Floor, Mezzanine"
+                    maxlength="100"
+                    required
+                >
+
+                <span class="help-text">
+                    This is the name guests and staff will see.
+                </span>
+
+            </div>
+
+
+            <div class="field">
+
+                <label for="number">
+                    Floor Number
+                </label>
+
+                <input
+                    id="number"
+                    type="number"
+                    name="number"
+                    value="{{ floor.number|default:'' }}"
+                    placeholder="Example: 1"
+                    min="0"
+                    required
+                >
+
+                <span class="help-text">
+                    Floor numbers must be unique within the building.
+                </span>
+
+            </div>
+
+
+            <div class="actions">
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    {% if edit_mode %}
+                        Update Floor
+                    {% else %}
+                        Create Floor
+                    {% endif %}
+                </button>
+
+
+                {% if edit_mode %}
+
+                    <a
+                        href="{% url 'building_detail' building.id %}"
+                        class="btn btn-secondary"
+                    >
+                        Cancel
+                    </a>
+
+                {% else %}
+
+                    <a
+                        href="{% url 'floor_list' %}"
+                        class="btn btn-secondary"
+                    >
+                        Cancel
+                    </a>
+
+                {% endif %}
+
+            </div>
+
+        </form>
+
+    </div>
 
 </div>
 

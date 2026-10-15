@@ -1304,49 +1304,67 @@ def housekeeping_stock(request):
         )
 
     # ---------------------------------------------------------
-    # Housekeeping stock
+    # Housekeeping products
     # ---------------------------------------------------------
 
-    stock_items = (
-        Stock.objects
-        .select_related(
-            "product",
-            "department",
-            "department__hotel",
-        )
+    products = (
+        Product.objects
         .filter(
-            department__in=housekeeping_departments,
-            product__is_active=True,
-            product__usage_type="INTERNAL",
+            hotel__in=accessible_hotels,
+            departments__in=housekeeping_departments,
+            is_active=True,
+            product_type="HOUSEKEEPING",
         )
         .order_by(
-            "department__hotel__name",
-            "product__name",
+            "hotel__name",
+            "name",
         )
+        .distinct()
     )
 
     # ---------------------------------------------------------
-    # Calculate stock information
+    # Current Housekeeping stock
     # ---------------------------------------------------------
 
-    for stock in stock_items:
+    stock_map = {
+        stock.product_id: stock.quantity
+        for stock in Stock.objects.filter(
+            department__in=housekeeping_departments,
+            product__is_active=True,
+        )
+    }
 
-        stock.stock_value = (
-            stock.quantity
-            * stock.product.cost_price
+    stock_items = []
+
+    for product in products:
+
+        quantity = stock_map.get(
+            product.id,
+            0,
         )
 
-        if stock.quantity <= 0:
+        stock_value = (
+            quantity
+            * product.cost_price
+        )
 
-            stock.stock_status = "OUT OF STOCK"
+        if quantity <= 0:
+            stock_status = "OUT OF STOCK"
 
-        elif stock.quantity <= stock.product.reorder_level:
-
-            stock.stock_status = "LOW STOCK"
+        elif quantity <= product.reorder_level:
+            stock_status = "LOW STOCK"
 
         else:
+            stock_status = "OK"
 
-            stock.stock_status = "OK"
+        stock_items.append(
+            {
+                "product": product,
+                "quantity": quantity,
+                "stock_value": stock_value,
+                "stock_status": stock_status,
+            }
+        )
 
     return render(
         request,

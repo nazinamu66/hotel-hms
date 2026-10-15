@@ -3,166 +3,1124 @@
 {% block title %}Active Stay{% endblock %}
 
 {% block header %}
-<h2>Room {{ room.room_number }} – Active Stay</h2>
+
+<div style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px;
+    flex-wrap:wrap;
+">
+
+    <div>
+
+        <div style="
+            font-size:13px;
+            font-weight:600;
+            color:#6b7280;
+            text-transform:uppercase;
+            letter-spacing:.04em;
+        ">
+            Front Desk · Active Stay
+        </div>
+
+        <div style="
+            display:flex;
+            align-items:center;
+            gap:12px;
+            flex-wrap:wrap;
+            margin-top:5px;
+        ">
+
+            <h2 style="margin:0;">
+                {{ guest.full_name }}
+            </h2>
+
+            <span style="
+                padding:5px 10px;
+                border-radius:999px;
+                background:#dcfce7;
+                color:#166534;
+                font-size:12px;
+                font-weight:700;
+            ">
+                ACTIVE
+            </span>
+
+        </div>
+
+        <div style="
+            margin-top:6px;
+            color:#6b7280;
+            font-size:14px;
+        ">
+            Folio #{{ folio.id }}
+            ·
+            Room {{ room.room_number }}
+            {% if room.category %}
+                · {{ room.category.name }}
+            {% endif %}
+        </div>
+
+    </div>
+
+
+    <div style="
+        text-align:right;
+    ">
+
+        <div style="
+            font-size:12px;
+            color:#6b7280;
+            text-transform:uppercase;
+            font-weight:600;
+            letter-spacing:.04em;
+        ">
+            Current Room
+        </div>
+
+        <div style="
+            margin-top:3px;
+            font-size:24px;
+            font-weight:700;
+        ">
+            Room {{ room.room_number }}
+        </div>
+
+    </div>
+
+</div>
+
 {% endblock %}
+
 
 {% block content %}
 
-<!-- ================= GUEST INFO ================= -->
-<section class="card">
-    <h3>Guest Information</h3>
-    {% if guest %}
-    <p><strong>Name:</strong> {{ guest.first_name }} {{ guest.last_name }}</p>
-    <p><strong>Phone:</strong> {{ guest.phone|default:"—" }}</p>
-    <p><strong>Email:</strong> {{ guest.email|default:"—" }}</p>
-{% else %}
-    <p style="color:red;">
-        Guest information missing — please update.
-    </p>
-{% endif %}
+<!-- GUEST + ROOM OVERVIEW -->
+
+<div style="
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:24px;
+    margin-bottom:24px;
+">
+
+    <!-- GUEST -->
+
+    <section class="card">
+
+        <div style="
+            font-size:13px;
+            font-weight:600;
+            color:#6b7280;
+            text-transform:uppercase;
+            letter-spacing:.04em;
+        ">
+            Guest
+        </div>
+
+        {% if guest %}
+
+            <h3 style="margin:6px 0 18px;">
+                {{ guest.first_name }} {{ guest.last_name }}
+            </h3>
+
+            <div style="display:grid;gap:12px;">
+
+                <div>
+                    <div style="font-size:12px;color:#6b7280;">
+                        Phone
+                    </div>
+                    <div style="font-weight:600;margin-top:3px;">
+                        {{ guest.phone|default:"—" }}
+                    </div>
+                </div>
+
+                <div>
+                    <div style="font-size:12px;color:#6b7280;">
+                        Email
+                    </div>
+                    <div style="font-weight:600;margin-top:3px;">
+                        {{ guest.email|default:"—" }}
+                    </div>
+                </div>
+
+            </div>
+
+        {% else %}
+
+            <div style="
+                margin-top:15px;
+                padding:14px;
+                border-radius:10px;
+                background:#fff7ed;
+                color:#9a3412;
+            ">
+                Guest information missing — please update.
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- ROOM -->
+
+    <section class="card">
+
+        <div style="
+            font-size:13px;
+            font-weight:600;
+            color:#6b7280;
+            text-transform:uppercase;
+            letter-spacing:.04em;
+        ">
+            Room Details
+        </div>
+
+        <h3 style="margin:6px 0 18px;">
+            Room {{ room.room_number }}
+        </h3>
+
+        <div style="
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:16px;
+        ">
+
+            <div>
+                <div style="font-size:12px;color:#6b7280;">
+                    Category
+                </div>
+                <div style="font-weight:600;margin-top:3px;">
+                    {{ room.category.name }}
+                </div>
+            </div>
+
+            <div>
+                <div style="font-size:12px;color:#6b7280;">
+                    Status
+                </div>
+                <div style="font-weight:600;margin-top:3px;">
+                    {{ room.status }}
+                </div>
+            </div>
+
+            <div>
+                <div style="font-size:12px;color:#6b7280;">
+                    Check-in
+                </div>
+                <div style="font-weight:600;margin-top:3px;">
+                    {{ folio.check_in_at }}
+                </div>
+            </div>
+
+            <div>
+                <div style="font-size:12px;color:#6b7280;">
+                    Nights
+                </div>
+                <div style="font-weight:600;margin-top:3px;">
+                    {{ folio.nights }}
+                </div>
+            </div>
+
+        </div>
+
+        <div style="
+            margin-top:20px;
+            padding-top:18px;
+            border-top:1px solid #e5e7eb;
+        ">
+
+            <div style="font-size:12px;color:#6b7280;">
+                Nightly Rate
+            </div>
+
+            <div style="
+                margin-top:4px;
+                font-size:24px;
+                font-weight:700;
+            ">
+                ₦{{ room.category.rate.price_per_night|floatformat:2 }}
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+<!-- ROOM ASSIGNMENT HISTORY -->
+
+<section class="card" style="
+    margin-bottom:24px;
+">
+
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:20px;
+        flex-wrap:wrap;
+        margin-bottom:20px;
+    ">
+
+        <div>
+            <div style="
+                font-size:13px;
+                font-weight:600;
+                color:#6b7280;
+                text-transform:uppercase;
+                letter-spacing:.04em;
+            ">
+                Room History
+            </div>
+
+            <h3 style="
+                margin:5px 0 0;
+            ">
+                Room Assignment History
+            </h3>
+
+            <p style="
+                margin:6px 0 0;
+                color:#6b7280;
+                font-size:14px;
+            ">
+                Every room assigned to this guest during the current stay.
+            </p>
+        </div>
+
+        <div style="
+            padding:8px 12px;
+            border-radius:999px;
+            background:#f3f4f6;
+            color:#374151;
+            font-size:13px;
+            font-weight:600;
+        ">
+            {{ room_history|length }} assignment{{ room_history|length|pluralize }}
+        </div>
+
+    </div>
+
+
+    {% if room_history %}
+
+    <div style="
+        position:relative;
+    ">
+
+        {% for history in room_history %}
+
+        <div style="
+            display:flex;
+            gap:16px;
+            position:relative;
+            padding-bottom:{% if not forloop.last %}22px{% else %}0{% endif %};
+        ">
+
+            <!-- Timeline marker -->
+
+            <div style="
+                width:12px;
+                min-width:12px;
+                height:12px;
+                margin-top:5px;
+                border-radius:50%;
+                background:{% if not history.ended_at %}#15803d{% else %}#6b7280{% endif %};
+                position:relative;
+                z-index:2;
+            "></div>
+
+
+            {% if not forloop.last %}
+
+            <div style="
+                position:absolute;
+                left:5px;
+                top:17px;
+                bottom:0;
+                width:2px;
+                background:#e5e7eb;
+            "></div>
+
+            {% endif %}
+
+
+            <!-- Assignment -->
+
+            <div style="
+                flex:1;
+                padding:15px 17px;
+                border:1px solid #e5e7eb;
+                border-radius:10px;
+                background:{% if not history.ended_at %}#f8fafc{% else %}#fff{% endif %};
+            ">
+
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:flex-start;
+                    gap:15px;
+                    flex-wrap:wrap;
+                ">
+
+                    <div>
+
+                        <div style="
+                            font-size:12px;
+                            font-weight:700;
+                            color:#6b7280;
+                            text-transform:uppercase;
+                            letter-spacing:.04em;
+                        ">
+                            {% if history.reason == "CHECK_IN" %}
+                                Check-in
+                            {% elif history.reason == "ROOM_CHANGE" %}
+                                Room Change
+                            {% else %}
+                                Room Assignment
+                            {% endif %}
+                        </div>
+
+                        <div style="
+                            margin-top:4px;
+                            font-size:20px;
+                            font-weight:700;
+                            color:#111827;
+                        ">
+                            Room {{ history.room.room_number }}
+                        </div>
+
+                        {% if history.room.category %}
+                        <div style="
+                            margin-top:3px;
+                            color:#6b7280;
+                            font-size:14px;
+                        ">
+                            {{ history.room.category.name }}
+                        </div>
+                        {% endif %}
+
+                    </div>
+
+
+                    {% if not history.ended_at %}
+
+                    <span style="
+                        padding:6px 10px;
+                        border-radius:999px;
+                        background:#dcfce7;
+                        color:#166534;
+                        font-size:12px;
+                        font-weight:700;
+                    ">
+                        CURRENT ROOM
+                    </span>
+
+                    {% else %}
+
+                    <span style="
+                        padding:6px 10px;
+                        border-radius:999px;
+                        background:#f3f4f6;
+                        color:#6b7280;
+                        font-size:12px;
+                        font-weight:700;
+                    ">
+                        PREVIOUS ROOM
+                    </span>
+
+                    {% endif %}
+
+                </div>
+
+
+                <div style="
+                    display:grid;
+                    grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+                    gap:14px;
+                    margin-top:16px;
+                    padding-top:14px;
+                    border-top:1px solid #e5e7eb;
+                ">
+
+                    <div>
+
+                        <div style="
+                            font-size:12px;
+                            color:#6b7280;
+                        ">
+                            Assigned
+                        </div>
+
+                        <div style="
+                            margin-top:3px;
+                            font-weight:600;
+                        ">
+                            {{ history.assigned_at|date:"d M Y, H:i" }}
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <div style="
+                            font-size:12px;
+                            color:#6b7280;
+                        ">
+                            {% if history.ended_at %}
+                                Released
+                            {% else %}
+                                Status
+                            {% endif %}
+                        </div>
+
+                        <div style="
+                            margin-top:3px;
+                            font-weight:600;
+                        ">
+                            {% if history.ended_at %}
+                                {{ history.ended_at|date:"d M Y, H:i" }}
+                            {% else %}
+                                Currently assigned
+                            {% endif %}
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <div style="
+                            font-size:12px;
+                            color:#6b7280;
+                        ">
+                            Assigned By
+                        </div>
+
+                        <div style="
+                            margin-top:3px;
+                            font-weight:600;
+                        ">
+                            {% if history.assigned_by %}
+                                {{ history.assigned_by.get_full_name|default:history.assigned_by.username }}
+                            {% else %}
+                                System
+                            {% endif %}
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+    {% else %}
+
+    <div style="
+        padding:24px;
+        text-align:center;
+        color:#6b7280;
+        border:1px dashed #d1d5db;
+        border-radius:10px;
+    ">
+        No room assignment history recorded.
+    </div>
+
+    {% endif %}
 
 </section>
 
-<!-- ================= ROOM INFO ================= -->
-<section class="card">
-    <h3>Room Details</h3>
-    <p><strong>Room:</strong> {{ room.room_number }}</p>
-    <p><strong>Category:</strong> {{ room.category.name }}</p>
-    <p><strong>Status:</strong> {{ room.status }}</p>
-    <p><strong>Check-in:</strong> {{ folio.check_in_at }}</p>
-    <p><strong>Nights:</strong> {{ folio.nights }}</p>
-    <p><strong>Rate:</strong> ₦{{ room.category.rate.price_per_night }}</p>
+
+<!-- FINANCIAL SUMMARY -->
+
+<section class="card" style="
+    margin-bottom:24px;
+">
+
+    <div style="
+        display:grid;
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:20px;
+    ">
+
+        <div>
+
+            <div style="
+                font-size:12px;
+                color:#6b7280;
+            ">
+                Total Charges
+            </div>
+
+            <div style="
+                margin-top:5px;
+                font-size:24px;
+                font-weight:700;
+            ">
+                ₦{{ folio.total_charges|floatformat:2 }}
+            </div>
+
+        </div>
+
+
+        <div>
+
+            <div style="
+                font-size:12px;
+                color:#6b7280;
+            ">
+                Total Payments
+            </div>
+
+            <div style="
+                margin-top:5px;
+                font-size:24px;
+                font-weight:700;
+            ">
+                ₦{{ folio.total_payments|floatformat:2 }}
+            </div>
+
+        </div>
+
+
+        <div style="
+            padding:14px 18px;
+            border-radius:12px;
+            background:#f8fafc;
+            border:1px solid #e5e7eb;
+        ">
+
+            <div style="
+                font-size:12px;
+                color:#6b7280;
+            ">
+                Outstanding Balance
+            </div>
+
+            <div style="
+                margin-top:5px;
+                font-size:28px;
+                font-weight:700;
+            ">
+                ₦{{ folio.balance|floatformat:2 }}
+            </div>
+
+        </div>
+
+    </div>
 
 </section>
 
-<!-- ================= ACTIVITY TIMELINE ================= -->
-<section class="card">
-    <h3>Stay Activity</h3>
+
+<!-- STAY ACTIVITY -->
+
+<section class="card" style="
+    margin-bottom:24px;
+">
+
+    <div style="margin-bottom:18px;">
+
+        <div style="
+            font-size:13px;
+            font-weight:600;
+            color:#6b7280;
+            text-transform:uppercase;
+            letter-spacing:.04em;
+        ">
+            Activity
+        </div>
+
+        <h3 style="margin:5px 0 0;">
+            Stay Activity
+        </h3>
+
+    </div>
+
 
     {% if timeline %}
-        <ul style="list-style:none;padding-left:0;">
+
+        <div>
+
             {% for item in timeline %}
-                <li style="padding:10px 0;border-bottom:1px solid #eee;">
-                    <strong>{{ item.label }}</strong>
-                    <br>
-                    <small>{{ item.time|date:"Y-m-d H:i" }}</small>
-                    <br>
-                    {{ item.description }}
+
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    gap:20px;
+                    padding:15px 0;
+                    border-bottom:1px solid #e5e7eb;
+                ">
+
+                    <div>
+
+                        <div style="
+                            font-weight:700;
+                        ">
+                            {{ item.label }}
+                        </div>
+
+                        <div style="
+                            margin-top:4px;
+                            font-size:12px;
+                            color:#6b7280;
+                        ">
+                            {{ item.time|date:"Y-m-d H:i" }}
+                        </div>
+
+                        <div style="
+                            margin-top:7px;
+                            color:#4b5563;
+                        ">
+                            {{ item.description }}
+                        </div>
+
+                    </div>
+
 
                     {% if item.amount %}
-                        <span style="float:right;
-                            color:{% if item.amount < 0 %}green{% else %}red{% endif %};">
-                            ₦{{ item.amount }}
-                        </span>
+
+                        <div style="
+                            white-space:nowrap;
+                            font-weight:700;
+                            color:{% if item.amount < 0 %}#15803d{% else %}#b91c1c{% endif %};
+                        ">
+                            ₦{{ item.amount|floatformat:2 }}
+                        </div>
+
                     {% endif %}
-                </li>
+
+                </div>
+
             {% endfor %}
-        </ul>
+
+        </div>
+
     {% else %}
-        <p>No activity recorded.</p>
+
+        <div style="
+            padding:24px;
+            text-align:center;
+            color:#6b7280;
+            border:1px dashed #d1d5db;
+            border-radius:10px;
+        ">
+            No activity recorded.
+        </div>
+
     {% endif %}
+
 </section>
 
 
-<!-- ================= CHARGES ================= -->
-<section style="border:1px solid #ccc;padding:15px;margin-bottom:20px;">
-    <h3>Charges</h3>
+<!-- CHARGES -->
+
+<section class="card" style="
+    margin-bottom:24px;
+">
+
+    <div style="margin-bottom:18px;">
+
+        <div style="
+            font-size:13px;
+            font-weight:600;
+            color:#6b7280;
+            text-transform:uppercase;
+            letter-spacing:.04em;
+        ">
+            Charges
+        </div>
+
+        <h3 style="margin:5px 0 0;">
+            Folio Charges
+        </h3>
+
+    </div>
+
 
     {% if charges_by_department %}
+
         {% for dept, data in charges_by_department.items %}
-            <h4>{{ dept }}</h4>
 
-            <table width="100%" border="1" cellpadding="6" cellspacing="0">
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th width="120">Date</th>
-                        <th width="120" align="right">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for c in data.charges %}
-                        <tr>
-                            <td>{{ c.description }}</td>
-                            <td>{{ c.created_at|date:"d M Y H:i" }}</td>
-                            <td align="right">₦{{ c.amount }}</td>
+            <div style="
+                margin-bottom:24px;
+            ">
+
+                <div style="
+                    font-weight:700;
+                    margin-bottom:10px;
+                ">
+                    {{ dept }}
+                </div>
+
+
+                <div style="
+                    overflow-x:auto;
+                    border:1px solid #e5e7eb;
+                    border-radius:10px;
+                ">
+
+                    <table style="
+                        width:100%;
+                        border-collapse:collapse;
+                        min-width:600px;
+                    ">
+
+                        <thead>
+
+                            <tr style="
+                                background:#f8fafc;
+                                text-align:left;
+                            ">
+
+                                <th style="padding:12px 14px;">
+                                    Description
+                                </th>
+
+                                <th style="padding:12px 14px;">
+                                    Date
+                                </th>
+
+                                <th style="
+                                    padding:12px 14px;
+                                    text-align:right;
+                                ">
+                                    Amount
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                        {% for c in data.charges %}
+
+                            <tr style="
+                                border-top:1px solid #e5e7eb;
+                            ">
+
+                                <td style="padding:12px 14px;">
+                                    {{ c.description }}
+                                </td>
+
+                                <td style="padding:12px 14px;">
+                                    {{ c.created_at|date:"d M Y H:i" }}
+                                </td>
+
+                                <td style="
+                                    padding:12px 14px;
+                                    text-align:right;
+                                    font-weight:600;
+                                ">
+                                    ₦{{ c.amount|floatformat:2 }}
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+
+                        <tr style="
+                            border-top:1px solid #e5e7eb;
+                            background:#f8fafc;
+                        ">
+
+                            <th
+                                colspan="2"
+                                style="
+                                    padding:12px 14px;
+                                    text-align:right;
+                                "
+                            >
+                                Subtotal
+                            </th>
+
+                            <th style="
+                                padding:12px 14px;
+                                text-align:right;
+                            ">
+                                ₦{{ data.total|floatformat:2 }}
+                            </th>
+
                         </tr>
-                    {% endfor %}
-                    <tr>
-                        <th colspan="2" align="right">Subtotal</th>
-                        <th align="right">₦{{ data.total }}</th>
-                    </tr>
-                </tbody>
-            </table>
 
-            <br>
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
         {% endfor %}
+
     {% else %}
-        <p>No charges yet.</p>
+
+        <div style="
+            padding:24px;
+            text-align:center;
+            color:#6b7280;
+            border:1px dashed #d1d5db;
+            border-radius:10px;
+        ">
+            No charges yet.
+        </div>
+
     {% endif %}
+
 </section>
 
-<!-- ================= PAYMENTS ================= -->
-<section class="card">
-    <h3>Payments</h3>
+
+<!-- PAYMENTS -->
+
+<section class="card" style="
+    margin-bottom:24px;
+">
+
+    <div style="margin-bottom:18px;">
+
+        <div style="
+            font-size:13px;
+            font-weight:600;
+            color:#6b7280;
+            text-transform:uppercase;
+            letter-spacing:.04em;
+        ">
+            Payments
+        </div>
+
+        <h3 style="margin:5px 0 0;">
+            Payment History
+        </h3>
+
+    </div>
+
 
     {% if payments %}
-        <ul>
-            {% for p in payments %}
-                <li>
-                    {{ p.method }} – ₦{{ p.amount }}
-                    <small>({{ p.collected_at }})</small>
-                </li>
-            {% endfor %}
-        </ul>
+
+        <div style="
+            overflow-x:auto;
+            border:1px solid #e5e7eb;
+            border-radius:10px;
+        ">
+
+            <table style="
+                width:100%;
+                border-collapse:collapse;
+                min-width:600px;
+            ">
+
+                <thead>
+
+                    <tr style="
+                        background:#f8fafc;
+                        text-align:left;
+                    ">
+
+                        <th style="padding:12px 14px;">
+                            Method
+                        </th>
+
+                        <th style="padding:12px 14px;">
+                            Amount
+                        </th>
+
+                        <th style="padding:12px 14px;">
+                            Date
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                {% for p in payments %}
+
+                    <tr style="
+                        border-top:1px solid #e5e7eb;
+                    ">
+
+                        <td style="
+                            padding:12px 14px;
+                            font-weight:600;
+                        ">
+                            {{ p.method }}
+                        </td>
+
+                        <td style="
+                            padding:12px 14px;
+                            font-weight:600;
+                        ">
+                            ₦{{ p.amount|floatformat:2 }}
+                        </td>
+
+                        <td style="padding:12px 14px;">
+                            {{ p.collected_at|date:"d M Y H:i" }}
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
     {% else %}
-        <p>No payments recorded.</p>
+
+        <div style="
+            padding:24px;
+            text-align:center;
+            color:#6b7280;
+            border:1px dashed #d1d5db;
+            border-radius:10px;
+        ">
+            No payments recorded.
+        </div>
+
     {% endif %}
+
 </section>
 
-<!-- ================= SUMMARY ================= -->
-<section class="card highlight">
-    <h3>Financial Summary</h3>
-    <p>Total Charges: ₦{{ folio.total_charges }}</p>
-    <p>Total Payments: ₦{{ folio.total_payments }}</p>
-    <p><strong>Balance: ₦{{ folio.balance }}</strong></p>
-</section>
 
-<!-- ================= ACTIONS ================= -->
-<section style="display:flex; gap:10px; flex-wrap:wrap;">
+<!-- ACTIONS -->
 
-    <a href="{% url 'frontdesk_take_payment' room.id %}">
-        <button>Take Payment</button>
-    </a>
+<section class="card">
 
-    <a href="{% url 'frontdesk_invoice' folio.id %}" target="_blank">
-        <button>View / Print Invoice</button>
-    </a>
-    <a href="{% url 'frontdesk_extend_stay' room.id %}">
-        <button style="background:#3498db;color:white;">
+    <div style="
+        display:flex;
+        gap:12px;
+        flex-wrap:wrap;
+    ">
+
+        <a
+            href="{% url 'frontdesk_take_payment' room.id %}"
+            style="
+                text-decoration:none;
+                padding:11px 17px;
+                border-radius:8px;
+                background:#111827;
+                color:#fff;
+                font-weight:600;
+            "
+        >
+            Take Payment
+        </a>
+
+
+        <a
+            href="{% url 'frontdesk_invoice' folio.id %}"
+            target="_blank"
+            style="
+                text-decoration:none;
+                padding:11px 17px;
+                border-radius:8px;
+                border:1px solid #d1d5db;
+                background:#fff;
+                color:#374151;
+                font-weight:600;
+            "
+        >
+            View / Print Invoice
+        </a>
+
+
+        <a
+            href="{% url 'frontdesk_extend_stay' room.id %}"
+            style="
+                text-decoration:none;
+                padding:11px 17px;
+                border-radius:8px;
+                background:#2563eb;
+                color:#fff;
+                font-weight:600;
+            "
+        >
             Extend Stay
-        </button>
-    </a>
-    <a href="{% url 'frontdesk_change_room' room.id %}">
-    <button style="background:#9b59b6;color:white;">
-        Change Room
-    </button>
-</a>
-    {% if folio.balance == 0 %}
-        <a href="{% url 'frontdesk_checkout' room.id %}">
-            <button style="background:green;color:white;">Checkout</button>
         </a>
-    {% elif can_force_checkout %}
-        <a href="{% url 'frontdesk_checkout' room.id %}">
-            <button style="background:orange;color:white;">
-                Force Checkout
-            </button>
-        </a>
-    {% endif %}
 
-    <a href="{% url 'frontdesk_room_board' %}">
-        <button>Back</button>
-    </a>
+
+        <a
+            href="{% url 'frontdesk_change_room' room.id %}"
+            style="
+                text-decoration:none;
+                padding:11px 17px;
+                border-radius:8px;
+                background:#7c3aed;
+                color:#fff;
+                font-weight:600;
+            "
+        >
+            Change Room
+        </a>
+
+
+        {% if folio.balance == 0 %}
+
+            <a
+                href="{% url 'frontdesk_checkout' room.id %}"
+                style="
+                    text-decoration:none;
+                    padding:11px 17px;
+                    border-radius:8px;
+                    background:#15803d;
+                    color:#fff;
+                    font-weight:600;
+                "
+            >
+                Checkout
+            </a>
+
+        {% elif can_force_checkout %}
+
+            <a
+                href="{% url 'frontdesk_checkout' room.id %}"
+                style="
+                    text-decoration:none;
+                    padding:11px 17px;
+                    border-radius:8px;
+                    background:#ea580c;
+                    color:#fff;
+                    font-weight:600;
+                "
+            >
+                Force Checkout
+            </a>
+
+        {% endif %}
+
+
+        <a
+            href="{% url 'frontdesk_room_board' %}"
+            style="
+                text-decoration:none;
+                padding:11px 17px;
+                border-radius:8px;
+                border:1px solid #d1d5db;
+                background:#fff;
+                color:#374151;
+                font-weight:600;
+            "
+        >
+            Back
+        </a>
+
+    </div>
 
 </section>
 

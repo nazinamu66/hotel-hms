@@ -6,120 +6,450 @@ Purchase Orders
 
 {% block content %}
 
-<h2>Purchase Orders</h2>
+<style>
+    .po-page {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
 
-<p>
-    Manage supplier purchases, approvals, payments and goods received.
-</p>
+    .po-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 24px;
+        margin-bottom: 28px;
+    }
 
-<hr>
+    .po-header h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+        line-height: 1.2;
+        color: #2f3542;
+    }
 
-<a href="{% url 'inventory:po_create' %}">
-    ➕ New Purchase Order
-</a>
+    .po-header p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 15px;
+    }
 
-<br><br>
+    .po-primary-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 18px;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #fff !important;
+        text-decoration: none;
+        font-weight: 600;
+        white-space: nowrap;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
 
-<table
-    style="
-        width:100%;
-        border-collapse:collapse;
-    "
->
+    .po-primary-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+    }
 
-<thead style="background:#eee;">
+    .po-summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
 
-<tr>
+    .po-summary-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 18px 20px;
+    }
 
-    <th style="padding:10px; text-align:left;">
-        PO
-    </th>
+    .po-summary-label {
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 6px;
+    }
 
-    <th style="text-align:left;">
-        Supplier
-    </th>
+    .po-summary-value {
+        font-size: 26px;
+        font-weight: 700;
+        color: #2f3542;
+    }
 
-    <th style="text-align:left;">
-        Department
-    </th>
+    .po-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+    }
 
-    <th style="text-align:left;">
-        Status
-    </th>
+    .po-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px 20px;
+        border-bottom: 1px solid #e5e7eb;
+    }
 
-    <th style="text-align:left;">
-        Payment
-    </th>
+    .po-card-header h2 {
+        margin: 0;
+        font-size: 18px;
+        color: #2f3542;
+    }
 
-    <th style="text-align:left;">
-        Created
-    </th>
+    .po-count {
+        color: #6b7280;
+        font-size: 13px;
+    }
 
-    <th></th>
+    .po-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+    }
 
-</tr>
+    .po-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 780px;
+    }
 
-</thead>
+    .po-table th {
+        padding: 13px 16px;
+        text-align: left;
+        background: #f8fafc;
+        color: #4b5563;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.035em;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
 
-<tbody>
+    .po-table td {
+        padding: 15px 16px;
+        border-bottom: 1px solid #eef0f3;
+        color: #374151;
+        font-size: 14px;
+        vertical-align: middle;
+    }
 
-{% for po in pos %}
+    .po-table tbody tr:last-child td {
+        border-bottom: none;
+    }
 
-<tr style="border-bottom:1px solid #ddd;">
+    .po-table tbody tr:hover {
+        background: #fafbfc;
+    }
 
-    <td style="padding:10px;">
-        <strong>#{{ po.id }}</strong>
-    </td>
+    .po-number {
+        font-weight: 700;
+        color: #1f2937;
+    }
 
-    <td>
-        {% if po.supplier %}
-            {{ po.supplier }}
-        {% else %}
-            —
-        {% endif %}
-    </td>
+    .po-supplier {
+        font-weight: 600;
+        color: #374151;
+    }
 
-    <td>
-        {{ po.department }}
-    </td>
+    .po-muted {
+        color: #9ca3af;
+    }
 
-    <td>
-        {{ po.get_status_display }}
-    </td>
+    .po-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
 
-    <td>
-        {{ po.get_payment_status_display }}
-    </td>
+    .po-status-draft {
+        background: #f3f4f6;
+        color: #4b5563;
+    }
 
-    <td>
-        {{ po.created_at|date:"Y-m-d" }}
-    </td>
+    .po-status-submitted {
+        background: #fff7ed;
+        color: #c2410c;
+    }
 
-    <td>
-        <a href="{% url 'inventory:po_detail' po.pk %}">
-            View
+    .po-status-approved {
+        background: #ecfdf5;
+        color: #047857;
+    }
+
+    .po-status-received {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .po-status-rejected {
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+
+    .po-payment-unpaid {
+        background: #fff7ed;
+        color: #c2410c;
+    }
+
+    .po-payment-paid {
+        background: #ecfdf5;
+        color: #047857;
+    }
+
+    .po-payment-partial {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .po-view-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 7px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 7px;
+        color: #2563eb !important;
+        background: #fff;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .po-view-btn:hover {
+        background: #f8fafc;
+        border-color: #93c5fd;
+    }
+
+    .po-empty {
+        padding: 55px 24px;
+        text-align: center;
+    }
+
+    .po-empty-icon {
+        font-size: 34px;
+        margin-bottom: 12px;
+    }
+
+    .po-empty h3 {
+        margin: 0 0 7px;
+        color: #374151;
+        font-size: 18px;
+    }
+
+    .po-empty p {
+        margin: 0 0 18px;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    @media (max-width: 800px) {
+        .po-header {
+            flex-direction: column;
+        }
+
+        .po-primary-btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .po-summary {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="po-page">
+
+    <div class="po-header">
+        <div>
+            <h1>Purchase Orders</h1>
+            <p>
+                Manage supplier purchases, approvals, payments and goods received.
+            </p>
+        </div>
+
+        <a href="{% url 'inventory:po_create' %}" class="po-primary-btn">
+            <span>＋</span>
+            New Purchase Order
         </a>
-    </td>
+    </div>
 
-</tr>
+    <div class="po-summary">
 
-{% empty %}
+    <div class="po-summary-card">
+        <div class="po-summary-label">Total Orders</div>
+        <div class="po-summary-value">{{ pos|length }}</div>
+    </div>
 
-<tr>
+    <div class="po-summary-card">
+        <div class="po-summary-label">Current View</div>
+        <div class="po-summary-value">All</div>
+    </div>
 
-    <td
-        colspan="7"
-        style="padding:20px; text-align:center;"
-    >
-        No purchase orders found.
-    </td>
+    <div class="po-summary-card">
+        <div class="po-summary-label">Procurement</div>
+        <div class="po-summary-value">Active</div>
+    </div>
 
-</tr>
+</div>
 
-{% endfor %}
+    <div class="po-card">
 
-</tbody>
+        <div class="po-card-header">
+            <h2>Purchase Order Register</h2>
 
-</table>
+            <span class="po-count">
+                {{ pos|length }} order{{ pos|length|pluralize }}
+            </span>
+        </div>
+
+        {% if pos %}
+
+            <div class="po-table-wrap">
+
+                <table class="po-table">
+
+                    <thead>
+                        <tr>
+                            <th>PO</th>
+                            <th>Supplier</th>
+                            <th>Department</th>
+                            <th>Status</th>
+                            <th>Payment</th>
+                            <th>Created</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for po in pos %}
+
+                            <tr>
+
+                                <td>
+                                    <span class="po-number">
+                                        #{{ po.id }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    {% if po.supplier %}
+                                        <span class="po-supplier">
+                                            {{ po.supplier }}
+                                        </span>
+                                    {% else %}
+                                        <span class="po-muted">—</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ po.department }}
+                                </td>
+
+                                <td>
+                                    {% if po.status == "DRAFT" %}
+                                        <span class="po-badge po-status-draft">
+                                            Draft
+                                        </span>
+                                    {% elif po.status == "SUBMITTED" %}
+                                        <span class="po-badge po-status-submitted">
+                                            Submitted
+                                        </span>
+                                    {% elif po.status == "APPROVED" %}
+                                        <span class="po-badge po-status-approved">
+                                            Approved
+                                        </span>
+                                    {% elif po.status == "RECEIVED" %}
+                                        <span class="po-badge po-status-received">
+                                            Received
+                                        </span>
+                                    {% elif po.status == "REJECTED" %}
+                                        <span class="po-badge po-status-rejected">
+                                            Rejected
+                                        </span>
+                                    {% else %}
+                                        <span class="po-badge po-status-draft">
+                                            {{ po.get_status_display }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if po.payment_status == "PAID" %}
+                                        <span class="po-badge po-payment-paid">
+                                            Paid
+                                        </span>
+                                    {% elif po.payment_status == "PARTIAL" %}
+                                        <span class="po-badge po-payment-partial">
+                                            Partial
+                                        </span>
+                                    {% else %}
+                                        <span class="po-badge po-payment-unpaid">
+                                            {{ po.get_payment_status_display }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ po.created_at|date:"d M Y" }}
+                                </td>
+
+                                <td>
+                                    <a
+                                        href="{% url 'inventory:po_detail' po.pk %}"
+                                        class="po-view-btn"
+                                    >
+                                        View →
+                                    </a>
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="po-empty">
+
+                <div class="po-empty-icon">🧾</div>
+
+                <h3>No purchase orders yet</h3>
+
+                <p>
+                    Create a purchase order to begin the procurement process.
+                </p>
+
+                <a
+                    href="{% url 'inventory:po_create' %}"
+                    class="po-primary-btn"
+                >
+                    ＋ Create Purchase Order
+                </a>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
 
 {% endblock %}

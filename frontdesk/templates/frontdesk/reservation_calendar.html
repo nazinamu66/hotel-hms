@@ -4,118 +4,607 @@
 
 {% block content %}
 
-<h2>Reservation Calendar</h2>
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 22px;
+        gap: 20px;
+    }
 
-<!-- FILTERS -->
-<form method="get" style="margin-bottom:20px;">
+    .page-title {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: #1f2937;
+    }
 
-<label>Start Date</label>
-<input type="date" name="start" value="{{ filters.start }}">
+    .page-subtitle {
+        margin: 6px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-<label>Category</label>
-<select name="category">
+    .filter-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 18px;
+        margin-bottom: 18px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
 
-<option value="">All</option>
+    .filters {
+        display: flex;
+        align-items: flex-end;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
 
-{% for c in categories %}
-<option value="{{ c.id }}"
-{% if filters.category == c.id|stringformat:"s" %}selected{% endif %}
->
-{{ c.name }}
-</option>
-{% endfor %}
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
 
-</select>
+    .filter-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #475569;
+    }
 
-<label>Room</label>
-<input type="text" name="room" value="{{ filters.room }}" placeholder="Room number">
+    .filter-control {
+        height: 38px;
+        padding: 7px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        background: white;
+        color: #1e293b;
+        font-size: 13px;
+        box-sizing: border-box;
+    }
 
-<button type="submit">Filter</button>
+    .filter-control:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+    }
 
-<a href="{% url 'frontdesk_reservation_calendar' %}">
-Reset
-</a>
+    .filter-btn {
+        height: 38px;
+        padding: 0 15px;
+        border: none;
+        border-radius: 7px;
+        background: #2563eb;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+    }
 
-</form>
+    .filter-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .reset-link {
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        color: #64748b;
+        font-size: 13px;
+        text-decoration: none;
+        padding: 0 5px;
+    }
+
+    .reset-link:hover {
+        color: #2563eb;
+    }
+
+    .calendar-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+
+    .calendar-nav {
+        display: flex;
+        gap: 8px;
+    }
+
+    .nav-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 13px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        background: white;
+        color: #334155;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .nav-btn:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+    }
+
+    .legend {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .legend-box {
+        width: 13px;
+        height: 13px;
+        border-radius: 3px;
+        border: 1px solid rgba(0,0,0,.08);
+    }
+
+    .legend-available {
+        background: #dcfce7;
+    }
+
+    .legend-reserved {
+        background: #dbeafe;
+    }
+
+    .calendar-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    
+.category-reservations-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.category-reservations-title {
+    margin: 0 0 6px;
+    font-size: 17px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.category-reservations-note {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: #64748b;
+}
+
+.category-reservations-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.category-reservations-table th,
+.category-reservations-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 13px;
+}
+
+.category-reservations-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+}
+
+.guarantee-status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.category-reservations-empty {
+    padding: 14px 0;
+    color: #64748b;
+    font-size: 13px;
+}
 
 
-<!-- NAVIGATION -->
-<div style="margin-bottom:20px;">
+    .calendar-wrapper {
+        overflow-x: auto;
+    }
 
-<a href="?start={{ prev_week|date:'Y-m-d' }}">
-◀ Previous Week
-</a>
+    .calendar-table {
+        width: 100%;
+        min-width: 1100px;
+        border-collapse: collapse;
+    }
 
-|
+    .calendar-table th {
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        border-right: 1px solid #eef2f7;
+        padding: 12px 8px;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        text-align: center;
+    }
 
-<a href="?start={{ next_week|date:'Y-m-d' }}">
-Next Week ▶
-</a>
+    .calendar-table th:first-child {
+        text-align: left;
+        padding-left: 16px;
+        width: 100px;
+    }
+
+    .calendar-table td {
+        border-right: 1px solid #eef2f7;
+        border-bottom: 1px solid #eef2f7;
+        height: 48px;
+        padding: 0;
+        text-align: center;
+    }
+
+    .room-cell {
+        background: #f8fafc;
+        padding-left: 16px !important;
+        text-align: left !important;
+        font-weight: 700;
+        color: #334155;
+        white-space: nowrap;
+    }
+
+    .calendar-cell {
+        position: relative;
+    }
+
+    .available-cell {
+        background: #f0fdf4;
+    }
+
+    .available-cell:hover {
+        background: #dcfce7;
+    }
+
+    .reserved-cell {
+        background: #eff6ff;
+    }
+
+    .reserved-cell:hover {
+        background: #dbeafe;
+    }
+
+    .calendar-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 16px;
+    }
+
+    .add-action {
+        color: #16a34a;
+    }
+
+    .add-action:hover {
+        background: #bbf7d0;
+    }
+
+    .reservation-action {
+        color: #2563eb;
+        font-size: 13px;
+    }
+
+    .reservation-action:hover {
+        background: #bfdbfe;
+    }
+
+    @media (max-width: 700px) {
+        .page-header {
+            flex-direction: column;
+        }
+
+        .filters {
+            align-items: stretch;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
+
+        .filter-control,
+        .filter-btn {
+            width: 100%;
+        }
+
+        .calendar-toolbar {
+            align-items: flex-start;
+            gap: 12px;
+            flex-direction: column;
+        }
+    }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Reservation Calendar</h1>
+        <p class="page-subtitle">
+            View room availability and scheduled reservations.
+        </p>
+    </div>
+</div>
+
+<div class="filter-card">
+
+    <form method="get" class="filters">
+
+        <div class="filter-group">
+            <label class="filter-label">
+                Start Date
+            </label>
+
+            <input
+                type="date"
+                name="start"
+                value="{{ filters.start }}"
+                class="filter-control"
+            >
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">
+                Room Category
+            </label>
+
+            <select
+                name="category"
+                class="filter-control"
+            >
+                <option value="">All Categories</option>
+
+                {% for c in categories %}
+
+                <option
+                    value="{{ c.id }}"
+                    {% if filters.category == c.id|stringformat:"s" %}
+                        selected
+                    {% endif %}
+                >
+                    {{ c.name }}
+                </option>
+
+                {% endfor %}
+
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">
+                Room
+            </label>
+
+            <input
+                type="text"
+                name="room"
+                value="{{ filters.room }}"
+                placeholder="Room number"
+                class="filter-control"
+            >
+        </div>
+
+        <button
+            type="submit"
+            class="filter-btn"
+        >
+            Filter
+        </button>
+
+        <a
+            href="{% url 'frontdesk_reservation_calendar' %}"
+            class="reset-link"
+        >
+            Reset
+        </a>
+
+    </form>
+
+</div>
+
+<div class="calendar-toolbar">
+
+    <div class="calendar-nav">
+
+        <a
+            href="?start={{ prev_week|date:'Y-m-d' }}"
+            class="nav-btn"
+        >
+            ← Previous Week
+        </a>
+
+        <a
+            href="?start={{ next_week|date:'Y-m-d' }}"
+            class="nav-btn"
+        >
+            Next Week →
+        </a>
+
+    </div>
+
+    <div class="legend">
+
+        <div class="legend-item">
+            <span class="legend-box legend-available"></span>
+            Available
+        </div>
+
+        <div class="legend-item">
+            <span class="legend-box legend-reserved"></span>
+            Reserved
+        </div>
+
+    </div>
+
+</div>
+
+<div class="calendar-card">
+
+    <div class="calendar-wrapper">
+
+        <table class="calendar-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>Room</th>
+
+                    {% for d in days %}
+
+                    <th>
+                        {{ d|date:"d M" }}
+                    </th>
+
+                    {% endfor %}
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for row in calendar %}
+
+                <tr>
+
+                    <td class="room-cell">
+                        Room {{ row.room.room_number }}
+                    </td>
+
+                    {% for day in row.days %}
+
+                    {% if day.reservation %}
+
+                    <td class="calendar-cell reserved-cell">
+
+                        <a
+                            href="{% url 'frontdesk_reservation_checkin' day.reservation.id %}"
+                            class="calendar-action reservation-action"
+                            title="Reservation #{{ day.reservation.id }} — Check-in"
+                        >
+                            RES
+                        </a>
+
+                    </td>
+
+                    {% else %}
+
+                    <td class="calendar-cell available-cell">
+
+                        <a
+                            href="{% url 'frontdesk_calendar_create_reservation' %}?room={{ row.room.id }}&date={{ day.date|date:'Y-m-d' }}"
+                            class="calendar-action add-action"
+                            title="Create reservation for Room {{ row.room.room_number }}"
+                        >
+                            +
+                        </a>
+
+                    </td>
+
+                    {% endif %}
+
+                    {% endfor %}
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
 
 </div>
 
 
-<!-- CALENDAR -->
-<table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;">
 
-<thead>
+<div class="category-reservations-card">
+    <h2 class="category-reservations-title">
+        Unassigned Guaranteed Reservations
+    </h2>
 
-<tr>
+    <p class="category-reservations-note">
+        Guaranteed reservations without a specific room assignment.
+        These reservations count against availability for their room category.
+    </p>
 
-<th>Room</th>
+    {% if category_reservations %}
+        <div class="calendar-wrapper">
+            <table class="category-reservations-table">
+                <thead>
+                    <tr>
+                        <th>Reservation</th>
+                        <th>Guest</th>
+                        <th>Room Category</th>
+                        <th>Rooms</th>
+                        <th>Check-in</th>
+                        <th>Check-out</th>
+                        <th>Guarantee</th>
+                    </tr>
+                </thead>
 
-{% for d in days %}
-<th>{{ d|date:"d M" }}</th>
-{% endfor %}
+                <tbody>
+                    {% for reservation in category_reservations %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'frontdesk_reservation_checkin' reservation.id %}">
+                                    #{{ reservation.id }}
+                                </a>
+                            </td>
 
-</tr>
+                            <td>{{ reservation.guest }}</td>
+                            <td>{{ reservation.room_category.name }}</td>
+                            <td>{{ reservation.number_of_rooms }}</td>
+                            <td>{{ reservation.check_in_date|date:"d M Y" }}</td>
+                            <td>{{ reservation.check_out_date|date:"d M Y" }}</td>
 
-</thead>
+                            <td>
+                                <span class="guarantee-status">
+                                    Guaranteed
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="category-reservations-empty">
+            No unassigned guaranteed reservations overlap this calendar period.
+        </p>
+    {% endif %}
+</div>
 
-<tbody>
-
-{% for row in calendar %}
-
-<tr>
-
-<td>
-Room {{ row.room.room_number }}
-</td>
-
-{% for day in row.days %}
-
-<td style="text-align:center;
-{% if day.reservation %}
-background:#ff6b6b;
-{% else %}
-background:#7bed9f;
-{% endif %}
-">
-
-{% if day.reservation %}
-
-<a href="{% url 'frontdesk_reservation_checkin' day.reservation.id %}">
-■
-</a>
-
-{% else %}
-
-<a href="{% url 'frontdesk_calendar_create_reservation' %}?room={{ row.room.id }}&date={{ day.date|date:'Y-m-d' }}">
-+
-</a>
-
-{% endif %}
-
-</td>
-
-{% endfor %}
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
 
 {% endblock %}

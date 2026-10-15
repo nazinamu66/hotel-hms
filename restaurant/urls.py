@@ -1,4 +1,8 @@
 from django.urls import path
+from inventory.views import (
+    department_request_stock,
+    department_stock_requests,
+)
 from .views import (
     pos_v2,
     cart_add,
@@ -7,8 +11,10 @@ from .views import (
     pos_commit,
     pos_order_list,
     pos_order_detail,
-    refund_order,
+    open_shift,
     close_shift,
+    shift_list,
+    shift_detail,
     table_list,
     restaurant_select_table,
 )
@@ -22,10 +28,25 @@ urlpatterns = [
     path("pos/commit/", pos_commit, name="restaurant_pos_commit"),
     path("orders/", pos_order_list, name="restaurant_order_list"),
     path("orders/<int:order_id>/", pos_order_detail, name="restaurant_order_detail"),
-    path("orders/<int:order_id>/refund/",refund_order, name="restaurant_order_refund"),
+    path("shift/open/", open_shift, name="restaurant_shift_open"),
     path("shift/close/", close_shift, name="restaurant_shift_close"),
+    path("shifts/", shift_list, name="restaurant_shift_list"),
+    path("shifts/<int:shift_id>/", shift_detail, name="restaurant_shift_detail"),
     path("tables/", table_list, name="restaurant_table_list"),
     path("tables/<int:table_id>/select/", restaurant_select_table, name="restaurant_select_table"),
+
+    path(
+        "stock/request/",
+        department_request_stock,
+        name="restaurant_request_stock",
+    ),
+    path(
+        "stock/requests/",
+        department_stock_requests,
+        name="restaurant_stock_requests",
+    ),
+
+
 
 
 

@@ -3,10 +3,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import F
+from django.db.models import Q
 from django.utils import timezone
 from django.forms import formset_factory
 from decimal import Decimal
+from accounts.services.access import (
+    get_accessible_hotels,)
+
 from django.core.exceptions import ValidationError
 
 from accounts.decorators import role_required
@@ -60,7 +63,7 @@ def kitchen_ingredient_requests(request):
         {"requests": requests}
     )
 
-@role_required("KITCHEN")
+@role_required("MANAGER", "ADMIN", "DIRECTOR")
 @transaction.atomic
 def direct_purchase_update(request, pk):
     dp = get_object_or_404(
@@ -93,19 +96,71 @@ def manager_ingredient_requests(request):
     requests = (
         IngredientRestockRequest.objects
         .prefetch_related("items__ingredient")
+        .select_related("requested_by")
         .order_by("-created_at")
     )
+
+    # ----------------------------
+    # SEARCH
+    # ----------------------------
+    search = request.GET.get("q", "").strip()
+
+    if search:
+        requests = requests.filter(
+            Q(requested_by__username__icontains=search)
+            | Q(requested_by__first_name__icontains=search)
+            | Q(requested_by__last_name__icontains=search)
+            | Q(items__ingredient__name__icontains=search)
+        ).distinct()
+
+    # ----------------------------
+    # STATUS FILTER
+    # ----------------------------
+    status = request.GET.get("status", "").strip()
+
+    if status:
+        requests = requests.filter(status=status)
+
+    # ----------------------------
+    # SOURCE FILTER
+    # ----------------------------
+    source = request.GET.get("source", "").strip()
+
+    if source:
+        requests = requests.filter(items__source=source).distinct()
+
+    # ----------------------------
+    # SUMMARY COUNTS
+    # ----------------------------
+    all_requests = IngredientRestockRequest.objects.all()
+
+    total_count = all_requests.count()
+    pending_count = all_requests.filter(status="PENDING").count()
+    approved_count = all_requests.filter(status="APPROVED").count()
+    rejected_count = all_requests.filter(status="REJECTED").count()
 
     return render(
         request,
         "kitchen/manager/ingredient_requests.html",
-        {"requests": requests}
+        {
+            "requests": requests,
+            "search": search,
+            "status": status,
+            "source": source,
+            "total_count": total_count,
+            "pending_count": pending_count,
+            "approved_count": approved_count,
+            "rejected_count": rejected_count,
+        },
     )
 
 
 @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
 @transaction.atomic
 def kitchen_ingredient_request_create(request):
+
+    if request.user.role == "KITCHEN" and not request.user.is_department_head:
+        raise PermissionDenied
 
     if request.method == "POST":
         req = IngredientRestockRequest.objects.create(
@@ -149,7 +204,7 @@ def kitchen_ingredient_request_detail(request, pk):
     if request.user.role == "KITCHEN" and req.requested_by != request.user:
         raise PermissionDenied
 
-    is_manager = request.user.role in ["MANAGER", "ADMIN"]
+    is_manager = request.user.role in ["MANAGER", "ADMIN", "DIRECTOR"]
     is_kitchen = request.user.role == "KITCHEN"
 
     # ============================
@@ -421,20 +476,99 @@ def kitchen_dashboard(request):
 
 @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
 def kitchen_ingredients(request):
-    kitchen = Department.objects.filter(
-        department_type="KITCHEN",
-        is_active=True
-    ).first()
+    user = request.user
 
-    stocks = Stock.objects.filter(
-        department=kitchen,
-        product__product_type="RAW"
-    ).select_related("product")
+    # Resolve the relevant Kitchen department
+    if user.role == "KITCHEN":
+        kitchen = user.department
+
+    elif user.department:
+        kitchen = Department.objects.filter(
+            hotel=user.department.hotel,
+            department_type="KITCHEN",
+            is_active=True,
+        ).first()
+
+    else:
+        kitchen = Department.objects.filter(
+            department_type="KITCHEN",
+            is_active=True,
+        ).first()
+
+    if not kitchen:
+        raise PermissionDenied("No active Kitchen department found.")
+
+    # Product Master is the source of which ingredients belong to Kitchen.
+    products = (
+        Product.objects
+        .filter(
+            hotel=kitchen.hotel,
+            product_type="RAW",
+            is_active=True,
+            departments=kitchen,
+        )
+        .order_by("name")
+    )
+
+    # Stock is only the quantity layer.
+    stock_map = {
+        stock.product_id: stock
+        for stock in Stock.objects.filter(
+            department=kitchen,
+            product__in=products,
+        )
+    }
+
+    ingredients = []
+
+    for product in products:
+        stock = stock_map.get(product.id)
+
+        quantity = stock.quantity if stock else 0
+        reorder_level = (
+            stock.reorder_level
+            if stock
+            else product.reorder_level
+        )
+
+        if quantity <= 0:
+            status = "OUT"
+        elif quantity <= reorder_level:
+            status = "LOW"
+        else:
+            status = "OK"
+
+        ingredients.append({
+            "product": product,
+            "stock": stock,
+            "quantity": quantity,
+            "status": status,
+            "reorder_level": reorder_level,
+        })
+
+    available_count = sum(
+        1 for item in ingredients
+        if item["quantity"] > 0
+    )
+
+    can_request = (
+        user.role in ("MANAGER", "ADMIN", "DIRECTOR")
+        or (
+            user.role == "KITCHEN"
+            and user.is_department_head
+        )
+    )
 
     return render(
         request,
         "kitchen/ingredients.html",
-        {"stocks": stocks}
+        {
+            "ingredients": ingredients,
+            "kitchen": kitchen,
+            "can_request": can_request,
+            "available_count": available_count,
+
+        },
     )
 
 @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
@@ -445,34 +579,39 @@ def prepared_food_list(request):
     # -----------------------------
     # Resolve Kitchen Department
     # -----------------------------
-    # user = request.user
-
-# Kitchen staff
     if user.role == "KITCHEN":
         kitchen = user.department
 
-    # Managers / Admin
     elif user.department:
         kitchen = Department.objects.filter(
             hotel=user.department.hotel,
             department_type="KITCHEN",
-            is_active=True
+            is_active=True,
         ).first()
 
-    # Director (no department)
     else:
         kitchen = Department.objects.filter(
             department_type="KITCHEN",
-            is_active=True
+            is_active=True,
         ).first()
 
+    if not kitchen:
+        raise PermissionDenied("No active Kitchen department found.")
+
     # -----------------------------
-    # All prepared foods
+    # Prepared foods for this hotel
+    # and Kitchen department only
     # -----------------------------
-    foods = Product.objects.filter(
-        product_type="FOOD",
-        is_active=True
-    ).order_by("name")
+    foods = (
+        Product.objects
+        .filter(
+            hotel=kitchen.hotel,
+            product_type="FOOD",
+            is_active=True,
+            departments=kitchen,
+        )
+        .order_by("name")
+    )
 
     # -----------------------------
     # Kitchen stock map
@@ -480,119 +619,56 @@ def prepared_food_list(request):
     stock_map = {
         stock.product_id: stock.quantity
         for stock in Stock.objects.filter(
-            department=kitchen
+            department=kitchen,
+            product__in=foods,
         )
     }
 
-    # -----------------------------
-    # Render
-    # -----------------------------
+    prepared_foods = []
+
+    for food in foods:
+        quantity = stock_map.get(food.id, 0)
+
+        if quantity > 0:
+            status = "AVAILABLE"
+        else:
+            status = "OUT"
+
+        prepared_foods.append({
+            "product": food,
+            "quantity": quantity,
+            "status": status,
+        })
+
+    available_count = sum(
+        1 for food in prepared_foods
+        if food["quantity"] > 0
+    )
+
+    total_portions = sum(
+        food["quantity"]
+        for food in prepared_foods
+    )
+
+    can_edit_recipe = (
+        user.role in ("MANAGER", "ADMIN", "DIRECTOR")
+        or (
+            user.role == "KITCHEN"
+            and user.is_department_head
+        )
+    )
+
     return render(
         request,
         "kitchen/foods/list.html",
         {
-            "foods": foods,
-            "stock_map": stock_map,
+            "prepared_foods": prepared_foods,
             "kitchen": kitchen,
-        }
+            "available_count": available_count,
+            "total_portions": total_portions,
+            "can_edit_recipe": can_edit_recipe,
+        },
     )
-
-@role_required("MANAGER", "ADMIN", "DIRECTOR")
-@transaction.atomic
-def manager_ingredient_request_review(request, pk):
-    req = get_object_or_404(
-        IngredientRestockRequest,
-        pk=pk,
-        status="PENDING"
-    )
-
-    if request.method == "GET":
-        return render(
-            request,
-            "kitchen/manager/review_ingredient_request.html",
-            {
-                "request_obj": req,
-                "suppliers": Supplier.objects.all(),
-                "has_direct_items": req.items.filter(source="DIRECT").exists(),
-            }
-        )
-
-    action = request.POST.get("action")
-    note = request.POST.get("manager_note", "").strip()
-
-    # ---------- REJECT ----------
-    if action == "reject":
-        req.status = "REJECTED"
-        req.note = note
-        req.approved_by = request.user
-        req.save(update_fields=["status", "note", "approved_by"])
-
-        messages.info(request, "Ingredient request rejected.")
-        return redirect("manager_ingredient_requests")
-
-    # ---------- APPROVE ----------
-    direct_items = req.items.filter(source="DIRECT")
-
-    # 🔥 IMPORTANT:
-    # STORE items are NOT converted to PurchaseOrder anymore.
-    # Store department will issue stock directly.
-    # We only handle DIRECT items here.
-
-    if direct_items.exists():
-
-        supplier_id = request.POST.get("supplier")
-        if not supplier_id:
-            messages.error(
-                request,
-                "Supplier is required for direct purchase."
-            )
-            return redirect(request.path)
-
-        # Validate ALL costs first
-        costs = {}
-        for item in direct_items:
-            cost = request.POST.get(f"cost_{item.id}")
-            if not cost:
-                messages.error(
-                    request,
-                    f"Unit cost required for {item.ingredient.name}"
-                )
-                return redirect(request.path)
-            costs[item.id] = Decimal(cost)
-
-        supplier = get_object_or_404(Supplier, pk=supplier_id)
-
-        dp = DirectPurchase.objects.create(
-            ingredient_request=req,
-            supplier=supplier,
-            requested_by=req.requested_by,
-            approved_by=request.user,
-            note=note,
-            status="APPROVED"
-        )
-
-        total = Decimal("0.00")
-
-        for item in direct_items:
-            dpi = DirectPurchaseItem.objects.create(
-                purchase=dp,
-                product=item.ingredient,
-                quantity=item.quantity,
-                unit_cost=costs[item.id]
-            )
-            total += dpi.total_cost
-
-        dp.total_cost = total
-        dp.save(update_fields=["total_cost"])
-
-    # 🔥 Mark request approved (for STORE + DIRECT)
-    req.status = "APPROVED"
-    req.note = note
-    req.approved_by = request.user
-    req.save(update_fields=["status", "note", "approved_by"])
-
-    messages.success(request, "Ingredient request approved.")
-    return redirect("manager_ingredient_requests")
 
 
 @role_required("KITCHEN")
@@ -671,13 +747,33 @@ def direct_purchase_detail(request, pk):
 @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
 def production_history(request):
 
+    hotels = get_accessible_hotels(request.user)
+
     batches = (
         ProductionBatch.objects
-        .select_related("recipe", "produced_by")
-        .all()
+        .select_related(
+            "recipe",
+            "recipe__product",
+            "produced_by",
+            "produced_by__department",
+        )
     )
 
+    # Kitchen staff can only see their own production history.
+    if request.user.role == "KITCHEN":
+        batches = batches.filter(
+            produced_by=request.user
+        )
+
+    # Management can only see production belonging to accessible hotels.
+    else:
+        batches = batches.filter(
+            produced_by__department__hotel__in=hotels
+        )
+
+    # -----------------------------
     # Filters
+    # -----------------------------
     date_from = request.GET.get("from")
     date_to = request.GET.get("to")
     recipe_id = request.GET.get("recipe")
@@ -686,44 +782,84 @@ def production_history(request):
     ordering = request.GET.get("sort", "-created_at")
 
     allowed_sort = ["created_at", "-created_at"]
+
     if ordering not in allowed_sort:
         ordering = "-created_at"
 
     if date_from:
-        batches = batches.filter(created_at__date__gte=date_from)
+        batches = batches.filter(
+            created_at__date__gte=date_from
+        )
 
     if date_to:
-        batches = batches.filter(created_at__date__lte=date_to)
+        batches = batches.filter(
+            created_at__date__lte=date_to
+        )
 
     if recipe_id:
-        batches = batches.filter(recipe_id=recipe_id)
+        batches = batches.filter(
+            recipe_id=recipe_id
+        )
 
     if produced_by:
-        batches = batches.filter(produced_by_id=produced_by)
+        batches = batches.filter(
+            produced_by_id=produced_by
+        )
 
     batches = batches.order_by(ordering)
+
+    # -----------------------------
+    # Filter options must follow
+    # the same hotel scope.
+    # -----------------------------
+    recipes = Recipe.objects.filter(
+        is_active=True,
+        product__hotel__in=hotels,
+    ).order_by("name")
+
+    users = User.objects.filter(
+        role="KITCHEN",
+        department__hotel__in=hotels,
+        is_active=True,
+    ).order_by("username")
 
     return render(
         request,
         "kitchen/production/history.html",
         {
             "batches": batches,
-            "recipes": Recipe.objects.filter(is_active=True),
-            "users": User.objects.filter(role__in=["KITCHEN", "MANAGER"]),
+            "recipes": recipes,
+            "users": users,
             "filters": request.GET,
-            "ordering": ordering
+            "ordering": ordering,
         }
     )
 
 @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
 def production_detail(request, pk):
 
+    hotels = get_accessible_hotels(request.user)
+
     batch = get_object_or_404(
         ProductionBatch.objects
-        .select_related("recipe", "produced_by")
-        .prefetch_related("ingredient_usages__ingredient"),
-        pk=pk
+        .select_related(
+            "recipe",
+            "recipe__product",
+            "produced_by",
+            "produced_by__department",
+        )
+        .prefetch_related(
+            "ingredient_usages__ingredient"
+        ),
+        pk=pk,
+        produced_by__department__hotel__in=hotels,
     )
+
+    if (
+        request.user.role == "KITCHEN"
+        and batch.produced_by != request.user
+    ):
+        raise PermissionDenied
 
     return render(
         request,
@@ -764,49 +900,31 @@ def kitchen_ticket_ready(request, ticket_id):
 @transaction.atomic
 def kitchen_ticket_served(request, ticket_id):
 
-    ticket = get_object_or_404(KitchenTicket, id=ticket_id)
-
-    kitchen = request.user.department
+    ticket = get_object_or_404(
+        KitchenTicket.objects.select_related("order"),
+        id=ticket_id,
+    )
 
     if ticket.status == "SERVED":
-        messages.warning(request, "Ticket already served.")
-        return redirect("kitchen_dashboard")
-    
-    for item in ticket.items.select_related("menu_item__product"):
-
-        product = item.menu_item.product
-        qty = item.quantity
-
-        stock = Stock.objects.select_for_update().filter(
-            product=product,
-            department=kitchen
-        ).first()
-
-        if not stock or stock.quantity < qty:
-            messages.error(
-                request,
-                f"Insufficient kitchen stock for {product.name}"
-            )
-            return redirect("kitchen_dashboard")
-
-        stock.quantity -= qty
-        stock.save(update_fields=["quantity"])
-
-        StockMovement.objects.create(
-            product=product,
-            from_department=kitchen,
-            quantity=qty,
-            movement_type="OUT",
-            created_by=request.user,
-            reference=f"KOT-{ticket.id}"
+        messages.warning(
+            request,
+            "Ticket already served."
         )
+        return redirect("kitchen_dashboard")
 
-    from hotel_hms.core.workflows.finalize_order import finalize_order
-    finalize_order(ticket.order)
+    if ticket.status != "READY":
+        messages.warning(
+            request,
+            "Only ready tickets can be served."
+        )
+        return redirect("kitchen_dashboard")
 
     ticket.status = "SERVED"
     ticket.save(update_fields=["status"])
 
-    messages.success(request, "Order served and kitchen stock updated.")
+    messages.success(
+        request,
+        "Order served."
+    )
 
     return redirect("kitchen_dashboard")

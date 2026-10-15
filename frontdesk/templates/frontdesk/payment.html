@@ -1,160 +1,544 @@
 {% extends "base/base.html" %}
 
+{% block title %}Take Payment{% endblock %}
+
 {% block header %}
-<h2>Take Payment – Room {{ room.room_number }}</h2>
+
+<div>
+    <div style="
+        font-size:13px;
+        font-weight:600;
+        color:#6b7280;
+        text-transform:uppercase;
+        letter-spacing:.04em;
+    ">
+        Front Desk
+    </div>
+
+    <h2 style="margin:5px 0 0;">
+        Receive Payment
+    </h2>
+</div>
+
 {% endblock %}
+
 
 {% block content %}
 
-<h3>Payment Details</h3>
-
-<div class="card" style="
-    padding:20px;
-    margin-bottom:25px;
+<div style="
+    display:grid;
+    grid-template-columns:minmax(280px,.75fr) minmax(420px,1.25fr);
+    gap:24px;
+    align-items:start;
 ">
 
-    <p>
-        <strong>Guest:</strong>
-        {{ folio.guest.full_name }}
-    </p>
 
-    <p>
-        <strong>Room:</strong>
-        {{ room.room_number }}
-    </p>
+    <!-- FOLIO SUMMARY -->
 
-    <p>
-        <strong>Folio:</strong>
-        #{{ folio.id }}
-    </p>
+    <section class="card">
 
-    <p>
-        <strong>Outstanding Balance:</strong>
-        ₦{{ balance|floatformat:2 }}
-    </p>
+        <div style="
+            font-size:13px;
+            font-weight:600;
+            color:#6b7280;
+            text-transform:uppercase;
+            letter-spacing:.04em;
+        ">
+            Folio
+        </div>
+
+        <h3 style="margin:6px 0 22px;">
+            Room {{ room.room_number }}
+        </h3>
+
+        <div style="display:grid;gap:17px;">
+
+            <div>
+                <div style="font-size:12px;color:#6b7280;">
+                    Guest
+                </div>
+
+                <div style="margin-top:4px;font-weight:600;">
+                    {{ folio.guest.full_name }}
+                </div>
+            </div>
+
+
+            <div>
+                <div style="font-size:12px;color:#6b7280;">
+                    Folio Number
+                </div>
+
+                <div style="margin-top:4px;font-weight:600;">
+                    #{{ folio.id }}
+                </div>
+            </div>
+
+
+            <!-- OUTSTANDING -->
+
+            <div style="
+                padding:18px;
+                border-radius:12px;
+                background:#f8fafc;
+                border:1px solid #e5e7eb;
+            ">
+
+                <div style="
+                    font-size:12px;
+                    color:#6b7280;
+                ">
+                    Outstanding Balance
+                </div>
+
+                <div style="
+                    margin-top:5px;
+                    font-size:30px;
+                    font-weight:700;
+                ">
+                    ₦{{ balance|floatformat:2 }}
+                </div>
+
+            </div>
+
+
+            <!-- GUEST DEPOSIT -->
+
+            <div style="
+                padding:18px;
+                border-radius:12px;
+                background:#f8fafc;
+                border:1px solid #e5e7eb;
+            ">
+
+                <div style="
+                    font-size:12px;
+                    color:#6b7280;
+                ">
+                    Available Guest Deposit
+                </div>
+
+                <div style="
+                    margin-top:5px;
+                    font-size:24px;
+                    font-weight:700;
+                ">
+                    ₦{{ folio.guest.deposits.first.balance|default:"0.00"|floatformat:2 }}
+                </div>
+
+                <div style="
+                    margin-top:5px;
+                    font-size:12px;
+                    color:#6b7280;
+                ">
+                    Can be applied toward this folio.
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- PAYMENT FORM -->
+
+    <section class="card">
+
+        <div style="margin-bottom:22px;">
+
+            <div style="
+                font-size:13px;
+                font-weight:600;
+                color:#6b7280;
+                text-transform:uppercase;
+                letter-spacing:.04em;
+            ">
+                Settlement
+            </div>
+
+            <h3 style="margin:5px 0 0;">
+                Payment Details
+            </h3>
+
+        </div>
+
+
+        <form method="post">
+
+            {% csrf_token %}
+
+
+            <!-- AMOUNT -->
+
+            <div style="margin-bottom:20px;">
+
+                <label
+                    for="amount"
+                    style="
+                        display:block;
+                        font-weight:600;
+                        margin-bottom:7px;
+                    "
+                >
+                    Payment Amount
+                </label>
+
+                <div style="position:relative;">
+
+                    <span style="
+                        position:absolute;
+                        left:14px;
+                        top:50%;
+                        transform:translateY(-50%);
+                        color:#6b7280;
+                        font-weight:600;
+                    ">
+                        ₦
+                    </span>
+
+                    <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max="{{ balance }}"
+                        name="amount"
+                        id="amount"
+                        value="{{ balance }}"
+                        required
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:13px 14px 13px 38px;
+                            border:1px solid #d1d5db;
+                            border-radius:9px;
+                            font-size:16px;
+                        "
+                    >
+
+                </div>
+
+            </div>
+
+
+            <!-- METHOD -->
+
+            <div style="margin-bottom:20px;">
+
+                <label
+                    for="method"
+                    style="
+                        display:block;
+                        font-weight:600;
+                        margin-bottom:7px;
+                    "
+                >
+                    Payment Method
+                </label>
+
+                <select
+                    name="method"
+                    id="method"
+                    required
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:13px 14px;
+                        border:1px solid #d1d5db;
+                        border-radius:9px;
+                        background:#fff;
+                        font-size:15px;
+                    "
+                >
+
+                    <option value="CASH">
+                        Cash
+                    </option>
+
+                    <option value="POS">
+                        POS
+                    </option>
+
+                    <option value="TRANSFER">
+                        Bank Transfer
+                    </option>
+
+                    <option value="DEPOSIT">
+                        Guest Deposit
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- BANK ACCOUNT -->
+
+            <div
+                id="bank-account-field"
+                style="
+                    margin-bottom:20px;
+                    display:none;
+                "
+            >
+
+                <label
+                    for="bank_account"
+                    style="
+                        display:block;
+                        font-weight:600;
+                        margin-bottom:7px;
+                    "
+                >
+                    Bank Account
+                </label>
+
+                <select
+                    name="bank_account"
+                    id="bank_account"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:13px 14px;
+                        border:1px solid #d1d5db;
+                        border-radius:9px;
+                        background:#fff;
+                        font-size:15px;
+                    "
+                >
+
+                    <option value="">
+                        Select bank account
+                    </option>
+
+                    {% for bank in bank_accounts %}
+
+                        <option value="{{ bank.id }}">
+
+                            {{ bank.bank_name }}
+
+                            {% if bank.account_name %}
+                                — {{ bank.account_name }}
+                            {% endif %}
+
+                            {% if bank.account_number %}
+                                — {{ bank.account_number }}
+                            {% endif %}
+
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <!-- REFERENCE -->
+
+            <div
+                id="reference-field"
+                style="
+                    margin-bottom:20px;
+                    display:none;
+                "
+            >
+
+                <label
+                    for="reference"
+                    style="
+                        display:block;
+                        font-weight:600;
+                        margin-bottom:7px;
+                    "
+                >
+                    Reference
+                </label>
+
+                <input
+                    type="text"
+                    name="reference"
+                    id="reference"
+                    maxlength="100"
+                    placeholder="POS slip / transfer reference"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:13px 14px;
+                        border:1px solid #d1d5db;
+                        border-radius:9px;
+                        font-size:15px;
+                    "
+                >
+
+            </div>
+
+
+            <!-- DEPOSIT INFO -->
+
+            <div
+                id="deposit-info"
+                style="
+                    display:none;
+                    margin-bottom:20px;
+                    padding:14px 16px;
+                    border-radius:10px;
+                    background:#f8fafc;
+                    border:1px solid #e5e7eb;
+                    font-size:13px;
+                    color:#4b5563;
+                "
+            >
+
+                <strong>
+                    Guest Deposit
+                </strong>
+
+                <div style="margin-top:4px;">
+                    Available deposit:
+                    <strong>
+                        ₦{{ folio.guest.deposits.first.balance|default:"0.00"|floatformat:2 }}
+                    </strong>
+                </div>
+
+            </div>
+
+
+            <!-- NOTE -->
+
+            <div style="margin-bottom:24px;">
+
+                <label
+                    for="note"
+                    style="
+                        display:block;
+                        font-weight:600;
+                        margin-bottom:7px;
+                    "
+                >
+                    Note
+                </label>
+
+                <textarea
+                    name="note"
+                    id="note"
+                    rows="4"
+                    placeholder="Optional note"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:13px 14px;
+                        border:1px solid #d1d5db;
+                        border-radius:9px;
+                        resize:vertical;
+                        font-size:15px;
+                    "
+                ></textarea>
+
+            </div>
+
+
+            <!-- ACTIONS -->
+
+            <div style="
+                display:flex;
+                gap:12px;
+                align-items:center;
+                flex-wrap:wrap;
+            ">
+
+                <button
+                    type="submit"
+                    style="
+                        border:0;
+                        padding:12px 20px;
+                        border-radius:9px;
+                        background:#111827;
+                        color:#fff;
+                        font-size:15px;
+                        font-weight:600;
+                        cursor:pointer;
+                    "
+                >
+                    Record Payment
+                </button>
+
+                <a
+                    href="{% url 'frontdesk_active_stay' room.id %}"
+                    style="
+                        text-decoration:none;
+                        padding:11px 18px;
+                        border:1px solid #d1d5db;
+                        border-radius:9px;
+                        color:#374151;
+                        background:#fff;
+                        font-weight:600;
+                    "
+                >
+                    Cancel
+                </a>
+
+            </div>
+
+        </form>
+
+    </section>
 
 </div>
 
 
-<form method="post">
+<script>
 
-    {% csrf_token %}
+const method = document.getElementById("method");
+const bankField = document.getElementById("bank-account-field");
+const bankSelect = document.getElementById("bank_account");
+const referenceField = document.getElementById("reference-field");
+const referenceInput = document.getElementById("reference");
+const depositInfo = document.getElementById("deposit-info");
 
-    <div class="card" style="
-        padding:20px;
-        margin-bottom:25px;
-    ">
+function updatePaymentFields() {
 
-        <div style="margin-bottom:15px;">
+    const selected = method.value;
 
-            <label for="amount">
-                <strong>Payment Amount (₦)</strong>
-            </label>
+    const requiresBank =
+        selected === "POS" ||
+        selected === "TRANSFER";
 
-            <br>
+    const requiresReference =
+        selected === "POS" ||
+        selected === "TRANSFER";
 
-            <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                max="{{ balance }}"
-                name="amount"
-                id="amount"
-                value="{{ balance }}"
-                required
-                style="
-                    padding:8px;
-                    width:180px;
-                "
-            >
+    bankField.style.display =
+        requiresBank ? "block" : "none";
 
-        </div>
+    referenceField.style.display =
+        requiresReference ? "block" : "none";
 
+    depositInfo.style.display =
+        selected === "DEPOSIT" ? "block" : "none";
 
-        <div style="margin-bottom:15px;">
+    bankSelect.required =
+        requiresBank;
 
-            <label for="method">
-                <strong>Payment Method</strong>
-            </label>
+    referenceInput.required =
+        requiresReference;
 
-            <br>
+    if (!requiresBank) {
+        bankSelect.value = "";
+    }
 
-            <select
-                name="method"
-                id="method"
-                required
-                style="
-                    padding:8px;
-                    width:220px;
-                "
-            >
-                <option value="CASH">Cash</option>
-                <option value="POS">POS</option>
-                <option value="TRANSFER">Bank Transfer</option>
-            </select>
+    if (!requiresReference) {
+        referenceInput.value = "";
+    }
+}
 
-        </div>
+method.addEventListener(
+    "change",
+    updatePaymentFields
+);
 
+updatePaymentFields();
 
-        <div style="margin-bottom:15px;">
-
-            <label for="reference">
-                <strong>Reference</strong>
-            </label>
-
-            <br>
-
-            <input
-                type="text"
-                name="reference"
-                id="reference"
-                maxlength="100"
-                placeholder="Required for POS / Bank Transfer"
-                style="
-                    padding:8px;
-                    width:350px;
-                    max-width:100%;
-                "
-            >
-
-        </div>
-
-
-        <div style="margin-bottom:15px;">
-
-            <label for="note">
-                <strong>Note</strong>
-            </label>
-
-            <br>
-
-            <textarea
-                name="note"
-                id="note"
-                rows="4"
-                style="
-                    width:500px;
-                    max-width:100%;
-                    padding:8px;
-                "
-                placeholder="Optional note"
-            ></textarea>
-
-        </div>
-
-    </div>
-
-
-    <button type="submit">
-        Record Payment
-    </button>
-
-    &nbsp;
-
-    <a href="{% url 'frontdesk_active_stay' room.id %}">
-        Cancel
-    </a>
-
-</form>
+</script>
 
 {% endblock %}

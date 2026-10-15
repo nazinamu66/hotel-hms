@@ -4,266 +4,577 @@
     {% if edit_mode %}Edit User{% else %}Create User{% endif %}
 {% endblock %}
 
+{% block header %}
+<div style="display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap;">
+    <div>
+        <h2 style="margin:0;">
+            {% if edit_mode %}Edit User{% else %}Create User{% endif %}
+        </h2>
+
+        <p style="margin:6px 0 0; color:#6b7280;">
+            {% if edit_mode %}
+                Update this user's account, role and access.
+            {% else %}
+                Create a new system user and assign their role and access.
+            {% endif %}
+        </p>
+    </div>
+
+    <a href="{% url 'accounts_users' %}" class="btn btn-secondary">
+        ← Back to Users
+    </a>
+</div>
+{% endblock %}
+
+
 {% block content %}
 
-<h2>
-    {% if edit_mode %}Edit User{% else %}Create User{% endif %}
-</h2>
+<style>
+    .user-form-page {
+        max-width: 1100px;
+        margin: 0 auto;
+    }
 
-<div class="card">
+    .form-card {
+        background:#fff;
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        box-shadow:0 2px 8px rgba(0,0,0,.04);
+        overflow:hidden;
+    }
 
-    {% if form.non_field_errors %}
-        <div class="alert error">
-            {{ form.non_field_errors }}
-        </div>
-    {% endif %}
+    .form-section {
+        padding:24px;
+        border-bottom:1px solid #e5e7eb;
+    }
 
-    <form method="post">
-        {% csrf_token %}
+    .form-section:last-child {
+        border-bottom:none;
+    }
 
-        <!-- ===================================================== -->
-        <!-- USERNAME -->
-        <!-- ===================================================== -->
+    .section-heading {
+        margin-bottom:20px;
+    }
 
-        <label>Username</label>
-        {{ form.username }}
+    .section-heading h3 {
+        margin:0;
+        font-size:17px;
+        color:#111827;
+    }
 
-        {% if form.username.errors %}
-            <div class="alert error">
-                {{ form.username.errors }}
+    .section-heading p {
+        margin:5px 0 0;
+        color:#6b7280;
+        font-size:13px;
+    }
+
+    .form-grid {
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0,1fr));
+        gap:20px;
+    }
+
+    .form-group {
+        min-width:0;
+    }
+
+    .form-group.full-width {
+        grid-column:1 / -1;
+    }
+
+    .form-group label {
+        display:block;
+        margin-bottom:7px;
+        font-size:13px;
+        font-weight:600;
+        color:#374151;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width:100%;
+        box-sizing:border-box;
+        padding:10px 12px;
+        border:1px solid #d1d5db;
+        border-radius:8px;
+        background:#fff;
+        color:#111827;
+        font-size:14px;
+        transition:border-color .15s, box-shadow .15s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline:none;
+        border-color:#2563eb;
+        box-shadow:0 0 0 3px rgba(37,99,235,.10);
+    }
+
+    .form-help {
+        display:block;
+        margin-top:6px;
+        color:#6b7280;
+        font-size:12px;
+        line-height:1.5;
+    }
+
+    .field-error {
+        margin-top:6px;
+        color:#b91c1c;
+        font-size:12px;
+    }
+
+    .field-error ul {
+        margin:0;
+        padding-left:18px;
+    }
+
+    .checkbox-box {
+        display:flex;
+        align-items:center;
+        gap:9px;
+        min-height:42px;
+        padding:10px 12px;
+        border:1px solid #e5e7eb;
+        border-radius:8px;
+        background:#f9fafb;
+    }
+
+    .checkbox-box input {
+        width:auto;
+        margin:0;
+    }
+
+    .checkbox-box label {
+        margin:0;
+        cursor:pointer;
+    }
+
+    .multi-select select {
+        min-height:130px;
+    }
+
+    .alert-error {
+        margin:20px 24px 0;
+        padding:12px 14px;
+        border:1px solid #fecaca;
+        border-radius:8px;
+        background:#fef2f2;
+        color:#991b1b;
+        font-size:13px;
+    }
+
+    .form-actions {
+        display:flex;
+        justify-content:flex-end;
+        align-items:center;
+        gap:10px;
+        padding:20px 24px;
+        background:#f9fafb;
+        border-top:1px solid #e5e7eb;
+    }
+
+    .btn {
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:10px 16px;
+        border-radius:8px;
+        border:1px solid transparent;
+        text-decoration:none;
+        font-size:14px;
+        font-weight:600;
+        cursor:pointer;
+    }
+
+    .btn-primary {
+        background:#2563eb;
+        color:#fff;
+    }
+
+    .btn-primary:hover {
+        background:#1d4ed8;
+    }
+
+    .btn-secondary {
+        background:#fff;
+        color:#374151;
+        border-color:#d1d5db;
+    }
+
+    .btn-secondary:hover {
+        background:#f9fafb;
+    }
+
+    .password-note {
+        margin-top:6px;
+        color:#6b7280;
+        font-size:12px;
+    }
+
+    @media (max-width:700px) {
+        .form-grid {
+            grid-template-columns:1fr;
+        }
+
+        .form-group.full-width {
+            grid-column:auto;
+        }
+
+        .form-section {
+            padding:18px;
+        }
+
+        .alert-error {
+            margin:18px 18px 0;
+        }
+
+        .form-actions {
+            padding:18px;
+            flex-direction:column-reverse;
+            align-items:stretch;
+        }
+
+        .form-actions .btn {
+            width:100%;
+        }
+    }
+</style>
+
+
+<div class="user-form-page">
+
+    <div class="form-card">
+
+        {% if form.non_field_errors %}
+            <div class="alert-error">
+                {{ form.non_field_errors }}
             </div>
         {% endif %}
 
-        <br><br>
+
+        <form method="post">
+            {% csrf_token %}
 
 
-        <!-- ===================================================== -->
-        <!-- EMAIL -->
-        <!-- ===================================================== -->
+            <!-- ================================================= -->
+            <!-- ACCOUNT -->
+            <!-- ================================================= -->
 
-        <label>Email</label>
-        {{ form.email }}
+            <div class="form-section">
 
-        {% if form.email.errors %}
-            <div class="alert error">
-                {{ form.email.errors }}
-            </div>
-        {% endif %}
-
-        <br><br>
-
-
-        <!-- ===================================================== -->
-        <!-- ROLE -->
-        <!-- ===================================================== -->
-
-        <label>Role</label>
-        {{ form.role }}
-
-        {% if form.role.errors %}
-            <div class="alert error">
-                {{ form.role.errors }}
-            </div>
-        {% endif %}
-
-        <br><br>
-
-
-        <!-- ===================================================== -->
-        <!-- ORGANIZATION -->
-        <!-- ===================================================== -->
-
-        <div id="organization-field">
-
-            <label>Organization</label>
-            {{ form.organization }}
-
-            {% if form.organization.errors %}
-                <div class="alert error">
-                    {{ form.organization.errors }}
+                <div class="section-heading">
+                    <h3>Account Information</h3>
+                    <p>Basic information used to identify and contact the user.</p>
                 </div>
-            {% endif %}
 
-        </div>
+                <div class="form-grid">
 
-        <br><br>
+                    <div class="form-group">
 
+                        <label for="{{ form.username.id_for_label }}">
+                            Username
+                        </label>
 
-        <!-- ===================================================== -->
-        <!-- HOTEL -->
-        <!-- ===================================================== -->
+                        {{ form.username }}
 
-        <div id="hotel-field">
-
-            <label>Hotel</label>
-            {{ form.hotel }}
-
-            {% if form.hotel.errors %}
-                <div class="alert error">
-                    {{ form.hotel.errors }}
-                </div>
-            {% endif %}
-
-        </div>
-
-        <br><br>
-
-
-        <!-- ===================================================== -->
-        <!-- ASSIGNED HOTELS -->
-        <!-- ===================================================== -->
-
-        <div id="assigned-hotels-field">
-
-            <label>
-                Assigned Hotels
-            </label>
-
-            <p style="margin-top:4px; color:#666;">
-                Select all hotels this General Manager will manage.
-            </p>
-
-            {{ form.assigned_hotels }}
-
-            {% if form.assigned_hotels.errors %}
-                <div class="alert error">
-                    {{ form.assigned_hotels.errors }}
-                </div>
-            {% endif %}
-
-        </div>
-
-        <br><br>
-
-
-        <!-- ===================================================== -->
-        <!-- DEPARTMENT -->
-        <!-- ===================================================== -->
-
-        <div id="department-field">
-
-            <label>Department</label>
-
-            <select
-                name="department"
-                id="id_department"
-            >
-
-                <option value="">
-                    -- Select Department --
-                </option>
-
-                {% for department in form.department.field.queryset %}
-
-                    <option
-                        value="{{ department.id }}"
-                        data-hotel="{{ department.hotel_id }}"
-                        {% if form.department.value|stringformat:"s" == department.id|stringformat:"s" %}
-                            selected
+                        {% if form.username.errors %}
+                            <div class="field-error">
+                                {{ form.username.errors }}
+                            </div>
                         {% endif %}
-                    >
-                        {{ department.hotel.name }}
-                        — {{ department.name }}
-                    </option>
 
-                {% endfor %}
+                    </div>
 
-            </select>
 
-            {% if form.department.errors %}
-                <div class="alert error">
-                    {{ form.department.errors }}
+                    <div class="form-group">
+
+                        <label for="{{ form.email.id_for_label }}">
+                            Email
+                        </label>
+
+                        {{ form.email }}
+
+                        {% if form.email.errors %}
+                            <div class="field-error">
+                                {{ form.email.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+
+                    <div class="form-group full-width">
+
+                        <label for="{{ form.role.id_for_label }}">
+                            Role
+                        </label>
+
+                        {{ form.role }}
+
+                        <small class="form-help">
+                            The role determines the user's level of access within the system.
+                        </small>
+
+                        {% if form.role.errors %}
+                            <div class="field-error">
+                                {{ form.role.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
                 </div>
-            {% endif %}
 
-        </div>
-
-        <br><br>
-
-
-        <!-- ===================================================== -->
-        <!-- HEAD OF DEPARTMENT -->
-        <!-- ===================================================== -->
-
-        <div id="department-head-field">
-
-            <label>
-                {{ form.is_department_head }}
-                Head of Department
-            </label>
-
-            {% if form.is_department_head.errors %}
-                <div class="alert error">
-                    {{ form.is_department_head.errors }}
-                </div>
-            {% endif %}
-
-        </div>
-
-        <br><br>
-
-
-        <!-- ===================================================== -->
-        <!-- PASSWORD -->
-        <!-- ===================================================== -->
-
-        <label>
-            {{ form.password.label }}
-        </label>
-
-        {{ form.password }}
-
-        {% if form.password.help_text %}
-            <small>
-                {{ form.password.help_text }}
-            </small>
-        {% endif %}
-
-        {% if form.password.errors %}
-            <div class="alert error">
-                {{ form.password.errors }}
             </div>
-        {% endif %}
-
-        <br><br>
 
 
-        <!-- ===================================================== -->
-        <!-- ACTIONS -->
-        <!-- ===================================================== -->
+            <!-- ================================================= -->
+            <!-- ACCESS & ASSIGNMENT -->
+            <!-- ================================================= -->
 
-        <button
-            class="btn btn-primary"
-            type="submit"
-        >
-            {% if edit_mode %}
-                Update User
-            {% else %}
-                Create User
-            {% endif %}
-        </button>
+            <div class="form-section">
 
-        <a
-            href="{% url 'accounts_users' %}"
-            class="btn btn-secondary"
-        >
-            Cancel
-        </a>
+                <div class="section-heading">
+                    <h3>Access & Assignment</h3>
+                    <p>
+                        Assign the organization, hotel and department according to the user's role.
+                    </p>
+                </div>
 
-    </form>
+
+                <div class="form-grid">
+
+
+                    <!-- ORGANIZATION -->
+
+                    <div id="organization-field" class="form-group">
+
+                        <label for="{{ form.organization.id_for_label }}">
+                            Organization
+                        </label>
+
+                        {{ form.organization }}
+
+                        {% if form.organization.errors %}
+                            <div class="field-error">
+                                {{ form.organization.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- HOTEL -->
+
+                    <div id="hotel-field" class="form-group">
+
+                        <label for="{{ form.hotel.id_for_label }}">
+                            Hotel
+                        </label>
+
+                        {{ form.hotel }}
+
+                        {% if form.hotel.errors %}
+                            <div class="field-error">
+                                {{ form.hotel.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- ASSIGNED HOTELS -->
+
+                    <div
+                        id="assigned-hotels-field"
+                        class="form-group full-width multi-select"
+                    >
+
+                        <label for="{{ form.assigned_hotels.id_for_label }}">
+                            Assigned Hotels
+                        </label>
+
+                        {{ form.assigned_hotels }}
+
+                        <small class="form-help">
+                            Select all hotels this General Manager will manage.
+                        </small>
+
+                        {% if form.assigned_hotels.errors %}
+                            <div class="field-error">
+                                {{ form.assigned_hotels.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- DEPARTMENT -->
+
+                    <div id="department-field" class="form-group full-width">
+
+                        <label for="id_department">
+                            Department
+                        </label>
+
+                        <select
+                            name="department"
+                            id="id_department"
+                        >
+
+                            <option value="">
+                                -- Select Department --
+                            </option>
+
+                            {% for department in form.department.field.queryset %}
+
+                                <option
+                                    value="{{ department.id }}"
+                                    data-hotel="{{ department.hotel_id }}"
+                                    {% if form.department.value|stringformat:"s" == department.id|stringformat:"s" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ department.hotel.name }} — {{ department.name }}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                        <small class="form-help">
+                            For operational staff, the department determines the user's hotel assignment.
+                        </small>
+
+                        {% if form.department.errors %}
+                            <div class="field-error">
+                                {{ form.department.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+
+                    <!-- HEAD OF DEPARTMENT -->
+
+                    <div
+                        id="department-head-field"
+                        class="form-group full-width"
+                    >
+
+                        <div class="checkbox-box">
+
+                            {{ form.is_department_head }}
+
+                            <label for="{{ form.is_department_head.id_for_label }}">
+                                Head of Department
+                            </label>
+
+                        </div>
+
+                        {% if form.is_department_head.errors %}
+                            <div class="field-error">
+                                {{ form.is_department_head.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ================================================= -->
+            <!-- SECURITY -->
+            <!-- ================================================= -->
+
+            <div class="form-section">
+
+                <div class="section-heading">
+                    <h3>Security</h3>
+                    <p>Set the password used to sign in to the system.</p>
+                </div>
+
+                <div class="form-grid">
+
+                    <div class="form-group full-width">
+
+                        <label for="{{ form.password.id_for_label }}">
+                            {{ form.password.label }}
+                        </label>
+
+                        {{ form.password }}
+
+                        {% if form.password.help_text %}
+                            <small class="form-help">
+                                {{ form.password.help_text }}
+                            </small>
+                        {% elif edit_mode %}
+                            <small class="password-note">
+                                Leave blank to keep the current password.
+                            </small>
+                        {% endif %}
+
+                        {% if form.password.errors %}
+                            <div class="field-error">
+                                {{ form.password.errors }}
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ================================================= -->
+            <!-- ACTIONS -->
+            <!-- ================================================= -->
+
+            <div class="form-actions">
+
+                <a
+                    href="{% url 'accounts_users' %}"
+                    class="btn btn-secondary"
+                >
+                    Cancel
+                </a>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    {% if edit_mode %}
+                        Update User
+                    {% else %}
+                        Create User
+                    {% endif %}
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
 
 </div>
 
 
 <!-- ============================================================= -->
-<!-- ROLE-BASED FORM LOGIC -->
+<!-- ROLE-BASED FORM LOGIC                                         -->
 <!-- ============================================================= -->
 
 <script>
 
 document.addEventListener("DOMContentLoaded", function () {
 
-    const role = document.getElementById("id_role");
+    const role =
+        document.getElementById("id_role");
 
     const organizationField =
         document.getElementById("organization-field");
@@ -302,7 +613,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function show(element) {
 
         if (element) {
-            element.style.display = "block";
+            element.style.display = "";
         }
 
     }
@@ -321,6 +632,7 @@ document.addEventListener("DOMContentLoaded", function () {
             departmentSelect.querySelectorAll(
                 "option[data-hotel]"
             );
+
 
         options.forEach(function (option) {
 
@@ -347,6 +659,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     function updateForm() {
+
+        if (!role) {
+            return;
+        }
 
         const selectedRole = role.value;
 
@@ -419,19 +735,18 @@ document.addEventListener("DOMContentLoaded", function () {
             "HOUSEKEEPING",
             "LAUNDRY",
             "GYM",
-            "BOUTIQUE"
-
+            "BOUTIQUE",
+            "MAINTENANCE"
         ];
 
 
         if (
-            operationalRoles.includes(
-                selectedRole
-            )
+            operationalRoles.includes(selectedRole)
         ) {
 
             // Hotel is determined automatically
             // from the selected department.
+
             hide(hotelField);
 
             show(departmentField);
@@ -448,10 +763,14 @@ document.addEventListener("DOMContentLoaded", function () {
     // EVENTS
     // ---------------------------------------------------------
 
-    role.addEventListener(
-        "change",
-        updateForm
-    );
+    if (role) {
+
+        role.addEventListener(
+            "change",
+            updateForm
+        );
+
+    }
 
 
     if (hotelSelect) {

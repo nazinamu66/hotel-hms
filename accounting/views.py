@@ -14,6 +14,8 @@ from accounting.constants import (INCOME_TYPES,EXPENSE_TYPES,)
 from accounting.constants import (ASSET_TYPES,LIABILITY_TYPES,EQUITY,)
 from django.db import transaction
 from accounting.forms import AccountForm, BankAccountForm
+from decimal import Decimal
+from accounting.services.journal import record_transaction, get_system_account
 
 
 
@@ -54,67 +56,222 @@ def trial_balance(request):
 
 
 
+@role_required("DIRECTOR", "ACCOUNTANT", "ADMIN")
 def chart_of_accounts(request):
-
-    hotel = request.user.hotel
-
-    accounts = (
-        Account.objects
-        .filter(
-            hotel=hotel,
-            is_active=True,
-        )
-        .select_related("parent")
-        .order_by("code")
+    from accounting.constants import (
+        CASH_ACCOUNT,
+        ACCOUNTS_RECEIVABLE,
+        INVENTORY_ASSET,
+        FINISHED_GOODS_INVENTORY,
+        ACCOUNTS_PAYABLE,
+        GUEST_DEPOSITS,
+        INCOME_TYPES,
+        EXPENSE_TYPES,
     )
+    from core.utils import get_user_hotels
+    from django.db.models import Q
+
+    accessible_hotels = get_user_hotels(request.user)
+
+    selected_hotel_id = request.GET.get("hotel", "").strip()
 
     # --------------------------------------------------
-    # BUILD ACCOUNT HIERARCHY
+    # HOTEL SCOPE
+    # --------------------------------------------------
+
+    selected_hotel = None
+
+    if request.user.role == "DIRECTOR":
+
+        if selected_hotel_id:
+            selected_hotel = get_object_or_404(
+                accessible_hotels,
+                id=selected_hotel_id,
+            )
+
+    else:
+        selected_hotel = accessible_hotels.first()
+
+    # --------------------------------------------------
+    # ACCOUNT QUERY
+    # --------------------------------------------------
+
+    if selected_hotel:
+        accounts = (
+            Account.objects
+            .filter(
+                hotel=selected_hotel,
+                is_active=True,
+            )
+            .select_related("parent")
+            .order_by("code")
+        )
+
+    else:
+        accounts = (
+            Account.objects
+            .filter(
+                hotel__in=accessible_hotels,
+                is_active=True,
+            )
+            .select_related("hotel", "parent")
+            .order_by("hotel__name", "code")
+        )
+
+    # --------------------------------------------------
+    # SEARCH
+    # --------------------------------------------------
+
+    search = request.GET.get("search", "").strip()
+
+    if search:
+        accounts = accounts.filter(
+            Q(name__icontains=search)
+            | Q(code__icontains=search)
+            | Q(description__icontains=search)
+        )
+
+    # --------------------------------------------------
+    # ACCOUNT TYPE FILTER
+    # --------------------------------------------------
+
+    account_type = request.GET.get("account_type", "").strip()
+
+    if account_type:
+        accounts = accounts.filter(
+            account_type=account_type
+        )
+
+    # --------------------------------------------------
+    # FINANCIAL SUMMARY
+    # --------------------------------------------------
+
+    summary_accounts = (
+        Account.objects
+        .filter(
+            hotel__in=accessible_hotels,
+            is_active=True,
+        )
+    )
+
+    if selected_hotel:
+        summary_accounts = summary_accounts.filter(
+            hotel=selected_hotel
+        )
+
+    cash = Decimal("0.00")
+    bank = Decimal("0.00")
+    receivables = Decimal("0.00")
+    inventory = Decimal("0.00")
+    payables = Decimal("0.00")
+    guest_deposits = Decimal("0.00")
+    revenue = Decimal("0.00")
+    expenses = Decimal("0.00")
+
+    for account in summary_accounts:
+
+        balance = account.get_balance()
+
+        if account.system_key == CASH_ACCOUNT:
+            cash += balance
+
+        elif account.account_type == "bank":
+            bank += balance
+
+        elif account.system_key == ACCOUNTS_RECEIVABLE:
+            receivables += balance
+
+        elif account.system_key in {
+            INVENTORY_ASSET,
+            FINISHED_GOODS_INVENTORY,
+        }:
+            inventory += balance
+
+        elif account.system_key == ACCOUNTS_PAYABLE:
+            payables += balance
+
+        elif account.system_key == GUEST_DEPOSITS:
+            guest_deposits += balance
+
+        elif account.account_type in INCOME_TYPES:
+            revenue += balance
+
+        elif account.account_type in EXPENSE_TYPES:
+            expenses += balance
+
+    # --------------------------------------------------
+    # BUILD HIERARCHY ONLY FOR SINGLE-HOTEL VIEW
     # --------------------------------------------------
 
     account_tree = []
 
-    accounts_by_parent = {}
+    if selected_hotel:
 
-    for account in accounts:
+        accounts_by_parent = {}
 
-        parent_id = account.parent_id
+        for account in accounts:
+            accounts_by_parent.setdefault(
+                account.parent_id,
+                []
+            ).append(account)
 
-        accounts_by_parent.setdefault(
-            parent_id,
-            []
-        ).append(account)
+        def build_tree(parent_id=None, level=0):
 
-    def build_tree(parent_id=None, level=0):
+            tree = []
 
-        tree = []
+            for account in accounts_by_parent.get(
+                parent_id,
+                []
+            ):
+                tree.append({
+                    "account": account,
+                    "level": level,
+                    "children": build_tree(
+                        account.id,
+                        level + 1,
+                    ),
+                })
 
-        for account in accounts_by_parent.get(
-            parent_id,
-            []
-        ):
+            return tree
 
-            tree.append({
+        account_tree = build_tree()
+
+    else:
+
+        # All-hotels view is intentionally flat/grouped by hotel.
+        # Account IDs belong to different hotels and therefore
+        # cannot safely share one parent hierarchy.
+        account_tree = [
+            {
                 "account": account,
-                "level": level,
-                "children": build_tree(
-                    account.id,
-                    level + 1,
-                ),
-            })
-
-        return tree
-
-    account_tree = build_tree()
+                "level": 0,
+                "children": [],
+            }
+            for account in accounts
+        ]
 
     return render(
         request,
         "accounting/chart_of_accounts.html",
         {
             "account_tree": account_tree,
+            "accessible_hotels": accessible_hotels,
+            "selected_hotel": selected_hotel,
+            "is_all_hotels": selected_hotel is None,
+            "search": search,
+            "account_type": account_type,
+            "account_types": Account.ACCOUNT_TYPES,
+
+            "cash": cash,
+            "bank": bank,
+            "receivables": receivables,
+            "inventory": inventory,
+            "payables": payables,
+            "guest_deposits": guest_deposits,
+            "revenue": revenue,
+            "expenses": expenses,
         },
     )
-
 
 def journal_view(request):
 
@@ -214,26 +371,36 @@ def close_day(request):
     return redirect("accounting:pnl")
 
 
+@role_required("DIRECTOR", "ACCOUNTANT", "ADMIN")
 def account_ledger(request, account_id):
 
-    hotel = request.user.hotel
+    from core.utils import get_user_hotels
+
+    # --------------------------------------------------
+    # HOTEL ACCESS
+    # --------------------------------------------------
+
+    accessible_hotels = get_user_hotels(request.user)
 
     account = get_object_or_404(
-        Account,
+        Account.objects.select_related("hotel"),
         id=account_id,
-        hotel=hotel,
+        hotel__in=accessible_hotels,
+        is_active=True,
     )
+
+    # --------------------------------------------------
+    # FILTERS
+    # --------------------------------------------------
 
     user_id = request.GET.get("user")
 
     from django.contrib.auth import get_user_model
     User = get_user_model()
 
-    users = User.objects.filter(is_active=True)
-
-    # --------------------------------------------------
-    # FILTERS
-    # --------------------------------------------------
+    users = User.objects.filter(
+        is_active=True
+    ).order_by("username")
 
     start_date = request.GET.get("start_date")
     end_date = request.GET.get("end_date")
@@ -254,9 +421,6 @@ def account_ledger(request, account_id):
 
     # --------------------------------------------------
     # OPENING BALANCE
-    #
-    # Start with the account's configured opening balance.
-    # Then add/subtract transactions before start_date.
     # --------------------------------------------------
 
     opening_balance = account.opening_balance
@@ -282,12 +446,16 @@ def account_ledger(request, account_id):
         credit_before = opening["credit"] or 0
 
         if account.account_type in DEBIT_NORMAL_TYPES:
-            opening_balance += debit_before - credit_before
+            opening_balance += (
+                debit_before - credit_before
+            )
         else:
-            opening_balance += credit_before - debit_before
+            opening_balance += (
+                credit_before - debit_before
+            )
 
     # --------------------------------------------------
-    # APPLY DISPLAY FILTERS
+    # DISPLAY FILTERS
     # --------------------------------------------------
 
     if start_date:
@@ -364,7 +532,6 @@ def account_ledger(request, account_id):
             "user_id": user_id,
         },
     )
-
 
 def profit_and_loss(request):
 
@@ -778,5 +945,184 @@ def edit_account(request, account_id):
             "account_form": account_form,
             "bank_form": bank_form,
             "account": account,
+        },
+    )
+
+@role_required("DIRECTOR", "ACCOUNTANT", "ADMIN")
+@transaction.atomic
+def cash_deposit(request):
+    hotel = request.user.hotel
+
+    if request.method == "POST":
+        bank_account_id = request.POST.get("bank_account")
+        amount_raw = request.POST.get("amount", "").strip()
+        note = request.POST.get("note", "").strip()
+
+        try:
+            amount = Decimal(amount_raw)
+        except Exception:
+            messages.error(request, "Please enter a valid amount.")
+            return redirect("accounting:cash_deposit")
+
+        if amount <= 0:
+            messages.error(request, "Amount must be greater than zero.")
+            return redirect("accounting:cash_deposit")
+
+        bank_account = get_object_or_404(
+            BankAccount.objects.select_related("account"),
+            id=bank_account_id,
+            hotel=hotel,
+            is_active=True,
+        )
+
+        cash_account = get_system_account(
+            hotel,
+            "cash",
+        )
+
+        available_cash = cash_account.get_balance()
+
+        if amount > available_cash:
+            messages.error(
+                request,
+                f"Insufficient physical cash. Available cash is ₦{available_cash:,.2f}.",
+            )
+            return redirect("accounting:cash_deposit")
+
+        description = (
+            f"Cash deposit to {bank_account.bank_name}"
+            f" ({bank_account.account_number})"
+        )
+
+        if note:
+            description += f" — {note}"
+
+        record_transaction(
+            debit_account=bank_account.account,
+            credit_account=cash_account,
+            amount=amount,
+            description=description,
+            hotel=hotel,
+            created_by=request.user,
+            reference=None,
+        )
+
+        messages.success(
+            request,
+            f"Cash deposit of ₦{amount:.2f} recorded successfully.",
+        )
+
+        return redirect("accounting:cash_deposit")
+
+    bank_accounts = (
+        BankAccount.objects
+        .select_related("account")
+        .filter(
+            hotel=hotel,
+            is_active=True,
+        )
+        .order_by("-is_default", "bank_name")
+    )
+
+    return render(
+        request,
+        "accounting/cash_deposit.html",
+        {
+            "bank_accounts": bank_accounts,
+        },
+    )
+
+@role_required("DIRECTOR", "ACCOUNTANT", "ADMIN")
+@transaction.atomic
+def bank_transfer(request):
+    hotel = request.user.hotel
+
+    if request.method == "POST":
+        source_id = request.POST.get("source_bank")
+        destination_id = request.POST.get("destination_bank")
+        amount_raw = request.POST.get("amount", "").strip()
+        note = request.POST.get("note", "").strip()
+
+        try:
+            amount = Decimal(amount_raw)
+        except Exception:
+            messages.error(request, "Please enter a valid amount.")
+            return redirect("accounting:bank_transfer")
+
+        if amount <= 0:
+            messages.error(request, "Amount must be greater than zero.")
+            return redirect("accounting:bank_transfer")
+
+        if source_id == destination_id:
+            messages.error(
+                request,
+                "Source and destination bank accounts must be different.",
+            )
+            return redirect("accounting:bank_transfer")
+
+        source_bank = get_object_or_404(
+            BankAccount.objects.select_related("account"),
+            id=source_id,
+            hotel=hotel,
+            is_active=True,
+        )
+
+        destination_bank = get_object_or_404(
+            BankAccount.objects.select_related("account"),
+            id=destination_id,
+            hotel=hotel,
+            is_active=True,
+        )
+
+        available_balance = source_bank.account.get_balance()
+
+        if amount > available_balance:
+            messages.error(
+                request,
+                f"Insufficient funds in the source bank account. "
+                f"Available balance is ₦{available_balance:,.2f}.",
+            )
+            return redirect("accounting:bank_transfer")
+
+        description = (
+            f"Bank transfer: {source_bank.bank_name} "
+            f"→ {destination_bank.bank_name}"
+        )
+
+        if note:
+            description += f" — {note}"
+
+        record_transaction(
+            debit_account=destination_bank.account,
+            credit_account=source_bank.account,
+            amount=amount,
+            description=description,
+            hotel=hotel,
+            created_by=request.user,
+            reference=None,
+        )
+
+        messages.success(
+            request,
+            f"Bank transfer of ₦{amount:.2f} recorded successfully.",
+        )
+
+        return redirect("accounting:bank_transfer")
+
+    bank_accounts = (
+        BankAccount.objects
+        .select_related("account")
+        .filter(
+            hotel=hotel,
+            is_active=True,
+        )
+        .order_by("-is_default", "bank_name")
+    )
+
+    return render(
+        request,
+        "accounting/bank_transfer.html",
+        {
+            "bank_accounts": bank_accounts,
         },
     )

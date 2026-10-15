@@ -6,155 +6,678 @@ Pay Purchase Order #{{ po.id }}
 
 {% block content %}
 
-<h2>
-    Pay Purchase Order #{{ po.id }}
-</h2>
+<style>
+    .po-pay-page {
+        max-width: 1050px;
+        margin: 0 auto;
+        padding: 10px 0 45px;
+    }
 
-<p>
-    <strong>Supplier:</strong>
-    {{ po.supplier }}
-</p>
+    .po-pay-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 26px;
+    }
 
-<p>
-    <strong>PO Status:</strong>
-    {{ po.get_status_display }}
-</p>
+    .po-pay-header h2 {
+        margin: 0 0 8px;
+        color: #293241;
+        font-size: 30px;
+        font-weight: 750;
+    }
 
-<p>
-    <strong>Payment Status:</strong>
-    {{ po.get_payment_status_display }}
-</p>
+    .po-pay-header p {
+        margin: 0;
+        max-width: 700px;
+        color: #667085;
+        font-size: 15px;
+        line-height: 1.6;
+    }
 
-<hr>
+    .po-back {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        padding: 0 15px;
+        border: 1px solid #d0d5dd;
+        border-radius: 9px;
+        background: #fff;
+        color: #344054;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 650;
+        white-space: nowrap;
+    }
 
-<h3>Purchase Details</h3>
+    .po-back:hover {
+        background: #f8fafc;
+    }
 
-<table style="width:100%; border-collapse:collapse;">
+    .po-card {
+        margin-bottom: 22px;
+        border: 1px solid #e2e6ed;
+        border-radius: 14px;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 4px 18px rgba(16, 24, 40, .05);
+    }
 
-<thead style="background:#eee;">
+    .po-card-header {
+        padding: 21px 25px;
+        border-bottom: 1px solid #eaecf0;
+        background: #fafbfc;
+    }
 
-<tr>
+    .po-card-header h3 {
+        margin: 0 0 5px;
+        color: #293241;
+        font-size: 19px;
+        font-weight: 700;
+    }
 
-    <th style="text-align:left; padding:8px;">
-        Product
-    </th>
+    .po-card-header p {
+        margin: 0;
+        color: #667085;
+        font-size: 13px;
+        line-height: 1.5;
+    }
 
-    <th style="text-align:right; padding:8px;">
-        Quantity
-    </th>
+    .po-card-body {
+        padding: 25px;
+    }
 
-    <th style="text-align:right; padding:8px;">
-        Unit Cost
-    </th>
+    .po-info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px 28px;
+    }
 
-    <th style="text-align:right; padding:8px;">
-        Total
-    </th>
+    .po-info-label {
+        margin-bottom: 5px;
+        color: #667085;
+        font-size: 12px;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
 
-</tr>
+    .po-info-value {
+        color: #293241;
+        font-size: 15px;
+        font-weight: 650;
+        word-break: break-word;
+    }
 
-</thead>
+    .po-status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 0 11px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+    }
 
-<tbody>
+    .status-approved {
+        background: #ecfdf3;
+        color: #027a48;
+    }
 
-{% for item in po.items.all %}
+    .status-received {
+        background: #eff8ff;
+        color: #175cd3;
+    }
 
-<tr style="border-top:1px solid #ddd;">
+    .payment-unpaid {
+        background: #fef3f2;
+        color: #b42318;
+    }
 
-    <td style="padding:8px;">
-        {{ item.product.name }}
-    </td>
+    .po-table-wrap {
+        overflow-x: auto;
+    }
 
-    <td style="padding:8px; text-align:right;">
-        {{ item.purchase_quantity }}
-        {{ item.product.purchase_unit }}
-    </td>
+    .po-items-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 650px;
+    }
 
-    <td style="padding:8px; text-align:right;">
-        ₦{{ item.unit_cost|floatformat:2 }}
-    </td>
+    .po-items-table th {
+        padding: 13px 12px;
+        border-bottom: 1px solid #dfe3e8;
+        background: #f8fafc;
+        color: #475467;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: left;
+        text-transform: uppercase;
+        letter-spacing: .035em;
+    }
 
-    <td style="padding:8px; text-align:right;">
-        ₦{{ item.total_cost|floatformat:2 }}
-    </td>
+    .po-items-table th.number,
+    .po-items-table td.number {
+        text-align: right;
+    }
 
-</tr>
+    .po-items-table td {
+        padding: 15px 12px;
+        border-bottom: 1px solid #eaecf0;
+        color: #344054;
+        font-size: 14px;
+    }
 
-{% endfor %}
+    .po-items-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
 
-</tbody>
+    .po-product {
+        color: #293241;
+        font-weight: 650;
+    }
 
-</table>
+    .po-unit {
+        margin-left: 4px;
+        color: #667085;
+        font-size: 12px;
+    }
 
-<hr>
+    .po-total-row {
+        background: #fafbfc;
+    }
 
-<h3>Payment</h3>
+    .po-total-row td {
+        border-top: 2px solid #e4e7ec;
+        color: #293241;
+        font-weight: 750;
+    }
 
-<p>
-    <strong>Total Purchase Value:</strong>
-    ₦{{ total|floatformat:2 }}
-</p>
+    .po-payment-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding: 20px 22px;
+        margin-bottom: 22px;
+        border: 1px solid #e2e6ed;
+        border-radius: 11px;
+        background: #f8fafc;
+    }
 
-<form method="post">
+    .po-payment-summary-label {
+        color: #667085;
+        font-size: 13px;
+        font-weight: 650;
+    }
 
-    {% csrf_token %}
+    .po-payment-summary-value {
+        color: #293241;
+        font-size: 25px;
+        font-weight: 750;
+    }
 
-    <p>
+    .po-payment-form {
+        max-width: 720px;
+    }
 
-        <label for="payment_account">
-            Payment Account
-        </label>
+    .po-form-field {
+        margin-bottom: 19px;
+    }
 
-        <br>
+    .po-form-field label {
+        display: block;
+        margin-bottom: 7px;
+        color: #344054;
+        font-size: 14px;
+        font-weight: 650;
+    }
 
-        <select
-            name="payment_account"
-            id="payment_account"
-            required
+    .po-form-field select,
+    .po-form-field input {
+        width: 100%;
+        min-height: 46px;
+        padding: 10px 12px;
+        box-sizing: border-box;
+        border: 1px solid #d0d5dd;
+        border-radius: 9px;
+        background: #fff;
+        color: #1d2939;
+        font-size: 14px;
+    }
+
+    .po-form-field select:focus,
+    .po-form-field input:focus {
+        outline: none;
+        border-color: #667085;
+        box-shadow: 0 0 0 3px rgba(102, 112, 133, .12);
+    }
+
+    .po-help {
+        margin-top: 7px;
+        color: #667085;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .po-payment-warning {
+        margin-bottom: 22px;
+        padding: 16px 18px;
+        border-left: 4px solid #d9a441;
+        border-radius: 6px;
+        background: #fffbeb;
+        color: #475467;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .po-actions {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding-top: 5px;
+    }
+
+    .po-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 19px;
+        border-radius: 9px;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    .po-cancel {
+        border: 1px solid #d0d5dd;
+        background: #fff;
+        color: #344054;
+    }
+
+    .po-cancel:hover {
+        background: #f8fafc;
+    }
+
+    .po-pay-button {
+        border: 0;
+        background: #087443;
+        color: #fff;
+    }
+
+    .po-pay-button:hover {
+        opacity: .92;
+    }
+
+    @media (max-width: 750px) {
+        .po-pay-header {
+            flex-direction: column;
+        }
+
+        .po-info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .po-card-body {
+            padding: 19px;
+        }
+
+        .po-card-header {
+            padding: 19px;
+        }
+
+        .po-payment-summary {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .po-actions {
+            flex-direction: column-reverse;
+            align-items: stretch;
+        }
+
+        .po-button {
+            width: 100%;
+        }
+    }
+</style>
+
+
+<div class="po-pay-page">
+
+    <!-- HEADER -->
+    <div class="po-pay-header">
+
+        <div>
+            <h2>
+                Pay Purchase Order #{{ po.id }}
+            </h2>
+
+            <p>
+                Review the purchase order and record the supplier
+                payment using the appropriate hotel cash or bank account.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'inventory:po_detail' po.pk %}"
+            class="po-back"
         >
+            ← Back to Purchase Order
+        </a>
 
-            <option value="">
-                -- Select Bank / Cash Account --
-            </option>
+    </div>
 
-            {% for account in payment_accounts %}
 
-            <option value="{{ account.id }}">
-                {{ account.code }} - {{ account.name }}
-            </option>
+    <!-- ORDER INFORMATION -->
+    <div class="po-card">
 
-            {% endfor %}
+        <div class="po-card-header">
 
-        </select>
+            <h3>Purchase Order Information</h3>
 
-    </p>
+            <p>
+                Confirm the order details before recording payment.
+            </p>
 
-    <p>
+        </div>
 
-        <label for="payment_reference">
-            Payment Reference
-        </label>
+        <div class="po-card-body">
 
-        <br>
+            <div class="po-info-grid">
 
-        <input
-            type="text"
-            name="payment_reference"
-            id="payment_reference"
-            maxlength="100"
-            placeholder="Bank transfer / cheque / receipt reference"
-        >
+                <div>
+                    <div class="po-info-label">
+                        Purchase Order
+                    </div>
 
-    </p>
+                    <div class="po-info-value">
+                        #{{ po.id }}
+                    </div>
+                </div>
 
-    <button type="submit">
-        💰 Pay ₦{{ total|floatformat:2 }}
-    </button>
 
-    <a href="{% url 'inventory:po_detail' po.pk %}">
-        Cancel
-    </a>
+                <div>
+                    <div class="po-info-label">
+                        Supplier
+                    </div>
 
-</form>
+                    <div class="po-info-value">
+                        {{ po.supplier }}
+                    </div>
+                </div>
+
+
+                <div>
+                    <div class="po-info-label">
+                        Receiving Department
+                    </div>
+
+                    <div class="po-info-value">
+                        {{ po.department }}
+                    </div>
+                </div>
+
+
+                <div>
+                    <div class="po-info-label">
+                        PO Status
+                    </div>
+
+                    <div>
+                        <span class="po-status
+                            {% if po.status == 'APPROVED' %}
+                                status-approved
+                            {% else %}
+                                status-received
+                            {% endif %}
+                        ">
+                            {{ po.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+
+
+                <div>
+                    <div class="po-info-label">
+                        Payment Status
+                    </div>
+
+                    <div>
+                        <span class="po-status payment-unpaid">
+                            {{ po.get_payment_status_display }}
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ITEMS -->
+    <div class="po-card">
+
+        <div class="po-card-header">
+
+            <h3>Purchase Items</h3>
+
+            <p>
+                Items included in this supplier payment.
+            </p>
+
+        </div>
+
+        <div class="po-card-body po-table-wrap">
+
+            <table class="po-items-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Product
+                        </th>
+
+                        <th class="number">
+                            Quantity
+                        </th>
+
+                        <th class="number">
+                            Unit Cost
+                        </th>
+
+                        <th class="number">
+                            Total
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for item in po.items.all %}
+
+                        <tr>
+
+                            <td>
+                                <span class="po-product">
+                                    {{ item.product.name }}
+                                </span>
+                            </td>
+
+                            <td class="number">
+                                {{ item.purchase_quantity }}
+                                <span class="po-unit">
+                                    {{ item.product.purchase_unit }}
+                                </span>
+                            </td>
+
+                            <td class="number">
+                                ₦{{ item.unit_cost|floatformat:2 }}
+                            </td>
+
+                            <td class="number">
+                                ₦{{ item.total_cost|floatformat:2 }}
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+
+                    <tr class="po-total-row">
+
+                        <td colspan="3" class="number">
+                            Purchase Order Total
+                        </td>
+
+                        <td class="number">
+                            ₦{{ total|floatformat:2 }}
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- PAYMENT -->
+    <div class="po-card">
+
+        <div class="po-card-header">
+
+            <h3>Record Payment</h3>
+
+            <p>
+                Select the account from which the supplier will be paid.
+            </p>
+
+        </div>
+
+        <div class="po-card-body">
+
+            <div class="po-payment-summary">
+
+                <div>
+                    <div class="po-payment-summary-label">
+                        Total Amount Payable
+                    </div>
+
+                    <div class="po-payment-summary-value">
+                        ₦{{ total|floatformat:2 }}
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div class="po-payment-warning">
+                <strong>Payment confirmation:</strong>
+                Recording this payment will post the supplier payment
+                through the accounting system and mark this purchase
+                order as paid.
+            </div>
+
+
+            <form method="post" class="po-payment-form">
+
+                {% csrf_token %}
+
+
+                <div class="po-form-field">
+
+                    <label for="payment_account">
+                        Payment Account
+                    </label>
+
+                    <select
+                        name="payment_account"
+                        id="payment_account"
+                        required
+                    >
+
+                        <option value="">
+                            — Select Bank / Cash Account —
+                        </option>
+
+                        {% for account in payment_accounts %}
+
+                            <option value="{{ account.id }}">
+                                {{ account.code }} — {{ account.name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <div class="po-help">
+                        Only active cash and bank accounts that can
+                        receive accounting postings are available.
+                    </div>
+
+                </div>
+
+
+                <div class="po-form-field">
+
+                    <label for="payment_reference">
+                        Payment Reference
+                    </label>
+
+                    <input
+                        type="text"
+                        name="payment_reference"
+                        id="payment_reference"
+                        maxlength="100"
+                        placeholder="Bank transfer, cheque, receipt or transaction reference"
+                    >
+
+                    <div class="po-help">
+                        Optional, but recommended for audit and reconciliation.
+                    </div>
+
+                </div>
+
+
+                <div class="po-actions">
+
+                    <a
+                        href="{% url 'inventory:po_detail' po.pk %}"
+                        class="po-button po-cancel"
+                    >
+                        Cancel
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="po-button po-pay-button"
+                    >
+                        💰 Pay ₦{{ total|floatformat:2 }}
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
 
 {% endblock %}

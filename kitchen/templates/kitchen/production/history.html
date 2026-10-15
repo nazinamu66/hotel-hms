@@ -2,115 +2,441 @@
 
 {% block content %}
 
-<h2>Production History</h2>
+<style>
+    .production-page {
+        max-width: 1280px;
+        margin: 0 auto;
+    }
 
-<!-- FILTERS -->
-<form method="get" style="margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap;">
+    .page-header {
+        margin-bottom: 28px;
+    }
 
-<label>
-From:
-<input type="date" name="from" value="{{ filters.from }}">
-</label>
+    .eyebrow {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 1.4px;
+        color: #64748b;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+    }
 
-<label>
-To:
-<input type="date" name="to" value="{{ filters.to }}">
-</label>
+    .page-header h1 {
+        margin: 0;
+        font-size: 32px;
+        color: #273449;
+    }
 
-<label>
-Food:
-<select name="recipe">
-<option value="">All</option>
-{% for r in recipes %}
-<option value="{{ r.id }}"
-{% if filters.recipe == r.id|stringformat:"s" %}selected{% endif %}>
-{{ r.name }}
-</option>
-{% endfor %}
-</select>
-</label>
+    .page-header p {
+        margin: 8px 0 0;
+        color: #64748b;
+        font-size: 16px;
+    }
 
-<label>
-Produced By:
-<select name="user">
-<option value="">All</option>
-{% for u in users %}
-<option value="{{ u.id }}"
-{% if filters.user == u.id|stringformat:"s" %}selected{% endif %}>
-{{ u.username }}
-</option>
-{% endfor %}
-</select>
-</label>
+    .card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
 
-<button type="submit">Filter</button>
+    .card-header {
+        padding: 22px 26px;
+        border-bottom: 1px solid #e2e8f0;
+    }
 
-<a href="{% url 'kitchen_production_history' %}">
-<button type="button">Reset</button>
-</a>
+    .card-header h2 {
+        margin: 0;
+        font-size: 20px;
+        color: #273449;
+    }
 
-</form>
+    .card-header p {
+        margin: 6px 0 0;
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .filters {
+        padding: 22px 26px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(150px, 1fr));
+        gap: 18px;
+        align-items: end;
+    }
+
+    .field {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .field label {
+        font-size: 13px;
+        font-weight: 700;
+        color: #475569;
+    }
+
+    .field input,
+    .field select {
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 44px;
+        padding: 9px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 9px;
+        background: #fff;
+        color: #273449;
+        font-size: 14px;
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 17px;
+        border-radius: 9px;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 700;
+        border: 1px solid transparent;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    .btn-primary {
+        background: #2563eb;
+        color: #fff;
+    }
+
+    .btn-secondary {
+        background: #fff;
+        color: #475569;
+        border-color: #cbd5e1;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+    }
+
+    .production-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .production-table th {
+        padding: 15px 22px;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .production-table td {
+        padding: 18px 22px;
+        border-top: 1px solid #e2e8f0;
+        color: #334155;
+        font-size: 14px;
+    }
+
+    .production-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .food-name {
+        font-weight: 700;
+        color: #273449;
+    }
+
+    .date {
+        color: #64748b;
+        white-space: nowrap;
+    }
+
+    .quantity {
+        font-weight: 800;
+        color: #273449;
+    }
+
+    .view-link {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 13px;
+        border-radius: 8px;
+        background: #eff6ff;
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 13px;
+    }
+
+    .view-link:hover {
+        background: #dbeafe;
+    }
+
+    .empty-state {
+        padding: 55px 20px;
+        text-align: center;
+        color: #64748b;
+    }
+
+    .empty-state .icon {
+        font-size: 30px;
+        margin-bottom: 10px;
+    }
+
+    .empty-state strong {
+        display: block;
+        color: #334155;
+        font-size: 16px;
+        margin-bottom: 5px;
+    }
+
+    .results-bar {
+        padding: 16px 26px;
+        border-bottom: 1px solid #e2e8f0;
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    @media (max-width: 900px) {
+        .filters {
+            grid-template-columns: repeat(2, minmax(150px, 1fr));
+        }
+    }
+
+    @media (max-width: 600px) {
+        .production-page {
+            width: 100%;
+        }
+
+        .page-header h1 {
+            font-size: 27px;
+        }
+
+        .filters {
+            grid-template-columns: 1fr;
+        }
+
+        .filter-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+
+        .production-table th,
+        .production-table td {
+            padding: 13px 14px;
+        }
+    }
+</style>
+
+<div class="production-page">
+
+    <div class="page-header">
+        <div class="eyebrow">Kitchen Operations</div>
+        <h1>Production History</h1>
+        <p>Review prepared food production and recorded ingredient usage.</p>
+    </div>
+
+    <div class="card">
+
+        <div class="card-header">
+            <h2>Find Production Records</h2>
+            <p>Filter production records by date, food, or kitchen staff.</p>
+        </div>
+
+        <form method="get" class="filters">
+
+            <div class="field">
+                <label for="from">From</label>
+                <input
+                    type="date"
+                    id="from"
+                    name="from"
+                    value="{{ filters.from }}"
+                >
+            </div>
+
+            <div class="field">
+                <label for="to">To</label>
+                <input
+                    type="date"
+                    id="to"
+                    name="to"
+                    value="{{ filters.to }}"
+                >
+            </div>
+
+            <div class="field">
+                <label for="recipe">Food</label>
+                <select id="recipe" name="recipe">
+                    <option value="">All foods</option>
+
+                    {% for r in recipes %}
+                        <option
+                            value="{{ r.id }}"
+                            {% if filters.recipe == r.id|stringformat:"s" %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ r.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="user">Produced By</label>
+                <select id="user" name="user">
+                    <option value="">All kitchen staff</option>
+
+                    {% for u in users %}
+                        <option
+                            value="{{ u.id }}"
+                            {% if filters.user == u.id|stringformat:"s" %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ u.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary">
+                    Apply Filters
+                </button>
+
+                <a
+                    href="{% url 'kitchen_production_history' %}"
+                    class="btn btn-secondary"
+                >
+                    Reset
+                </a>
+            </div>
+
+        </form>
+
+    </div>
 
 
-<!-- TABLE -->
+    <div class="card">
 
-<table style="width:100%; border-collapse:collapse;" border="1">
+        <div class="card-header">
+            <h2>Production Records</h2>
+            <p>Click a record to view ingredient usage and variance.</p>
+        </div>
 
-<thead>
-<tr>
+        <div class="results-bar">
+            {% if batches %}
+                Showing production records
+            {% else %}
+                No production records match the current filters.
+            {% endif %}
+        </div>
 
-<th>
-<a href="?{% if filters.from %}from={{ filters.from }}&{% endif %}
-{% if filters.to %}to={{ filters.to }}&{% endif %}
-{% if filters.recipe %}recipe={{ filters.recipe }}&{% endif %}
-{% if filters.user %}user={{ filters.user }}&{% endif %}
-sort={% if ordering == '-created_at' %}created_at{% else %}-created_at{% endif %}">
-Date
-</a>
-</th>
+        <div class="table-wrap">
 
-<th>Food</th>
-<th>Quantity</th>
-<th>Produced By</th>
-<th>Details</th>
+            <table class="production-table">
 
-</tr>
-</thead>
+                <thead>
+                    <tr>
 
-<tbody>
+                        <th>
+                            <a
+                                href="?{% if filters.from %}from={{ filters.from }}&{% endif %}{% if filters.to %}to={{ filters.to }}&{% endif %}{% if filters.recipe %}recipe={{ filters.recipe }}&{% endif %}{% if filters.user %}user={{ filters.user }}&{% endif %}sort={% if ordering == '-created_at' %}created_at{% else %}-created_at{% endif %}"
+                                style="color:inherit;text-decoration:none;"
+                            >
+                                Date
+                                {% if ordering == "-created_at" %}
+                                    ↓
+                                {% else %}
+                                    ↑
+                                {% endif %}
+                            </a>
+                        </th>
 
-{% for batch in batches %}
+                        <th>Food</th>
+                        <th>Portions</th>
+                        <th>Produced By</th>
+                        <th>Details</th>
 
-<tr>
+                    </tr>
+                </thead>
 
-<td>{{ batch.created_at|date:"Y-m-d H:i" }}</td>
+                <tbody>
 
-<td>{{ batch.recipe.name }}</td>
+                    {% for batch in batches %}
 
-<td>{{ batch.quantity_produced }}</td>
+                        <tr>
 
-<td>{{ batch.produced_by.username }}</td>
+                            <td class="date">
+                                {{ batch.created_at|date:"d M Y, H:i" }}
+                            </td>
 
-<td>
-<a href="{% url 'kitchen_production_detail' batch.id %}">
-View
-</a>
-</td>
+                            <td class="food-name">
+                                {{ batch.recipe.name }}
+                            </td>
 
-</tr>
+                            <td class="quantity">
+                                {{ batch.quantity_produced }}
+                            </td>
 
-{% empty %}
+                            <td>
+                                {{ batch.produced_by.username }}
+                            </td>
 
-<tr>
-<td colspan="5" style="text-align:center;">
-No production batches yet.
-</td>
-</tr>
+                            <td>
+                                <a
+                                    href="{% url 'kitchen_production_detail' batch.id %}"
+                                    class="view-link"
+                                >
+                                    View Record →
+                                </a>
+                            </td>
 
-{% endfor %}
+                        </tr>
 
-</tbody>
+                    {% empty %}
 
-</table>
+                        <tr>
+                            <td colspan="5">
+
+                                <div class="empty-state">
+                                    <div class="icon">🍳</div>
+                                    <strong>No production records</strong>
+                                    There are no production batches matching your current filters.
+                                </div>
+
+                            </td>
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
 
 {% endblock %}

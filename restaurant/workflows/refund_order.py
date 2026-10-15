@@ -1,7 +1,12 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from inventory.models import (Department,Stock,StockMovement,)
+from inventory.models import (
+    Department,
+    Stock,
+    StockMovement,
+    StockCostLayer,
+)
 from billing.models import (Charge,Payment,)
 from accounting.services.journal import record_transaction
 from accounting.services.postings.cogs_reversal import (reverse_cogs_for_order,)
@@ -42,27 +47,27 @@ def restore_inventory(order, user, kitchen, restaurant):
         product = item.menu_item.product
         qty = item.quantity
 
+        if not product.is_stock_item():
+            continue
+
         if product.product_type == "DRINK":
             target_department = restaurant
-        else:
+
+        elif product.product_type == "FOOD":
             target_department = kitchen
 
-        stock = (
+        else:
+            continue
+
+        stock, _ = (
             Stock.objects
             .select_for_update()
-            .filter(
-                product=product,
-                department=target_department
-            )
-            .first()
-        )
-
-        if not stock:
-            stock = Stock.objects.create(
+            .get_or_create(
                 product=product,
                 department=target_department,
-                quantity=0,
+                defaults={"quantity": 0},
             )
+        )
 
         stock.quantity += qty
         stock.save(update_fields=["quantity"])
@@ -74,6 +79,18 @@ def restore_inventory(order, user, kitchen, restaurant):
             movement_type="IN",
             created_by=user,
             reference=f"POS-REFUND-{order.id}",
+        )
+
+        # Restore the inventory value at the exact historical
+        # cost recorded when the sale occurred.
+        StockCostLayer.objects.create(
+            product=product,
+            department=target_department,
+            purchase_item=None,
+            quantity_received=qty,
+            quantity_remaining=qty,
+            unit_cost=item.cost_at_sale,
+            is_opening_balance=False,
         )
 
 def reverse_revenue(order, hotel, user):

@@ -4,45 +4,256 @@
 
 {% block content %}
 
-<h2>Create Reservation</h2>
+<style>
+    .page-header {
+        margin-bottom: 24px;
+    }
 
-<p>
-Room: {{ room.room_number }} <br>
-Check-in: {{ check_in }}
-</p>
+    .page-title {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: #1f2937;
+    }
 
-<form method="post">
+    .page-subtitle {
+        margin: 6px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-{% csrf_token %}
+    .reservation-card {
+        max-width: 720px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 28px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
 
-<label>Guest</label>
+    .stay-summary {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 28px;
+    }
 
-<select name="guest" required>
+    .summary-box {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 9px;
+        padding: 15px 16px;
+    }
 
-<option value="">Select Guest</option>
+    .summary-label {
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        font-weight: 700;
+        color: #64748b;
+        margin-bottom: 5px;
+    }
 
-{% for g in guests %}
-<option value="{{ g.id }}">
-{{ g.first_name }} {{ g.last_name }}
-</option>
-{% endfor %}
+    .summary-value {
+        font-size: 17px;
+        font-weight: 700;
+        color: #1e293b;
+    }
 
-</select>
+    .form-group {
+        margin-bottom: 20px;
+    }
 
-<br><br>
+    .form-label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #334155;
+    }
 
-<label>Check-out Date</label>
+    .form-control {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 11px 13px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: white;
+        color: #1e293b;
+        font-size: 14px;
+    }
 
-<input type="date" name="check_out" required>
+    .form-control:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
 
-<br><br>
+    .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 28px;
+    }
 
-<button type="submit">Create Reservation</button>
+    .primary-btn {
+        padding: 10px 18px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+    }
 
-<a href="{% url 'frontdesk_reservation_calendar' %}">
-Cancel
-</a>
+    .primary-btn:hover {
+        background: #1d4ed8;
+    }
 
-</form>
+    .secondary-btn {
+        padding: 10px 18px;
+        background: #f8fafc;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .secondary-btn:hover {
+        background: #f1f5f9;
+    }
+
+    @media (max-width: 600px) {
+        .reservation-card {
+            padding: 20px;
+        }
+
+        .stay-summary {
+            grid-template-columns: 1fr;
+        }
+
+        .actions {
+            flex-direction: column;
+        }
+
+        .primary-btn,
+        .secondary-btn {
+            text-align: center;
+        }
+    }
+</style>
+
+<div class="page-header">
+
+    <h1 class="page-title">
+        Create Reservation
+    </h1>
+
+    <p class="page-subtitle">
+        Reserve the selected room for a guest.
+    </p>
+
+</div>
+
+<div class="reservation-card">
+
+    <div class="stay-summary">
+
+        <div class="summary-box">
+
+            <span class="summary-label">
+                Room
+            </span>
+
+            <span class="summary-value">
+                Room {{ room.room_number }}
+            </span>
+
+        </div>
+
+        <div class="summary-box">
+
+            <span class="summary-label">
+                Check-in
+            </span>
+
+            <span class="summary-value">
+                {{ check_in|date:"d M Y" }}
+            </span>
+
+        </div>
+
+    </div>
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <div class="form-group">
+
+            <label class="form-label">
+                Guest
+            </label>
+
+            <select
+                name="guest"
+                required
+                class="form-control"
+            >
+
+                <option value="">
+                    Select Guest
+                </option>
+
+                {% for g in guests %}
+
+                <option value="{{ g.id }}">
+                    {{ g.first_name }} {{ g.last_name }}
+                    {% if g.phone %} — {{ g.phone }}{% endif %}
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+        <div class="form-group">
+
+            <label class="form-label">
+                Check-out Date
+            </label>
+
+            <input
+                type="date"
+                name="check_out"
+                required
+                class="form-control"
+            >
+
+        </div>
+
+        <div class="actions">
+
+            <button
+                type="submit"
+                class="primary-btn"
+            >
+                Create Reservation
+            </button>
+
+            <a
+                href="{% url 'frontdesk_reservation_calendar' %}"
+                class="secondary-btn"
+            >
+                Cancel
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
 
 {% endblock %}

@@ -1,62 +1,801 @@
 {% extends "base/base.html" %}
+
 {% block content %}
 
-<h2>Kitchen Ingredient Requests</h2>
+<style>
+    .manager-requests-page {
+        max-width: 1250px;
+        margin: 0 auto;
+        padding: 28px 20px 50px;
+    }
 
-<table border="1" cellpadding="8" width="100%">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Requested By</th>
-      <th>Items</th>
-      <th>Status</th>
-      <th>Created</th>
-    </tr>
-  </thead>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
 
-  <tbody>
-    {% for req in requests %}
-    <tr>
-      <td>
-        <a href="{% url 'kitchen_ingredient_request_detail' req.id %}">
-          #{{ req.id }}
-        </a>
-      </td>
+    .eyebrow {
+        margin-bottom: 6px;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+    }
 
-      <td>{{ req.requested_by }}</td>
+    .page-title {
+        margin: 0;
+        color: #172033;
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: -.02em;
+    }
 
-      <td>
-        <ul style="margin:0; padding-left:18px;">
-          {% for item in req.items.all %}
-            <li>
-              {{ item.ingredient.name }}
-              — {{ item.quantity }}
-              <em>({{ item.get_source_display }})</em>
-            </li>
-          {% endfor %}
-        </ul>
-      </td>
+    .page-subtitle {
+        margin: 7px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-      <td>
-        {% if req.status == "PENDING" %}
-          <span style="color:orange;">Pending</span>
-        {% elif req.status == "APPROVED" %}
-          <span style="color:green;">Approved</span>
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 22px;
+    }
+
+    .summary-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 13px;
+        padding: 17px 19px;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, .04);
+    }
+
+    .summary-label {
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    .summary-value {
+        margin-top: 6px;
+        color: #172033;
+        font-size: 24px;
+        font-weight: 700;
+    }
+
+    .summary-card.pending .summary-value {
+        color: #c2410c;
+    }
+
+    .summary-card.approved .summary-value {
+        color: #047857;
+    }
+
+    .summary-card.rejected .summary-value {
+        color: #b91c1c;
+    }
+
+    .filter-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 18px 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, .04);
+    }
+
+    .filter-title {
+        margin: 0 0 14px;
+        color: #1f2937;
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    .filter-form {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) 180px 180px auto auto;
+        gap: 10px;
+        align-items: end;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 6px;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .filter-control {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px 11px;
+        border: 1px solid #d5dbe5;
+        border-radius: 8px;
+        background: #fff;
+        color: #1f2937;
+        font-size: 14px;
+        outline: none;
+    }
+
+    .filter-control:focus {
+        border-color: #64748b;
+        box-shadow: 0 0 0 3px rgba(100, 116, 139, .10);
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 10px 15px;
+        border-radius: 9px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        border: 1px solid transparent;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .btn-primary {
+        background: #1f2937;
+        color: #fff;
+    }
+
+    .btn-primary:hover {
+        background: #111827;
+    }
+
+    .btn-secondary {
+        background: #fff;
+        color: #374151;
+        border-color: #d9dee7;
+    }
+
+    .btn-secondary:hover {
+        background: #f8fafc;
+    }
+
+    .results-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, .04);
+    }
+
+    .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        padding: 19px 20px;
+        border-bottom: 1px solid #edf0f4;
+    }
+
+    .results-title {
+        margin: 0;
+        color: #1f2937;
+        font-size: 17px;
+        font-weight: 700;
+    }
+
+    .results-count {
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+    }
+
+    .requests-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 900px;
+    }
+
+    .requests-table th {
+        padding: 13px 16px;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 700;
+        text-align: left;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .requests-table td {
+        padding: 15px 16px;
+        color: #374151;
+        font-size: 14px;
+        vertical-align: top;
+        border-bottom: 1px solid #f0f2f5;
+    }
+
+    .requests-table tbody tr:hover {
+        background: #fafbfc;
+    }
+
+    .requests-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .request-id {
+        color: #1f2937;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .request-id:hover {
+        text-decoration: underline;
+    }
+
+    .requester-name {
+        color: #1f2937;
+        font-weight: 600;
+    }
+
+    .requester-role {
+        display: block;
+        margin-top: 3px;
+        color: #94a3b8;
+        font-size: 11px;
+    }
+
+    .items-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .item-line {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex-wrap: wrap;
+    }
+
+    .item-name {
+        color: #1f2937;
+        font-weight: 600;
+    }
+
+    .item-quantity {
+        color: #475569;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .source-badge {
+        display: inline-flex;
+        padding: 3px 7px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 76px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .status-pending {
+        background: #fff7ed;
+        color: #c2410c;
+    }
+
+    .status-approved {
+        background: #ecfdf5;
+        color: #047857;
+    }
+
+    .status-rejected {
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+
+    .status-received {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .status-default {
+        background: #f3f4f6;
+        color: #4b5563;
+    }
+
+    .created-date {
+        color: #374151;
+        font-weight: 500;
+    }
+
+    .created-time {
+        display: block;
+        margin-top: 3px;
+        color: #9ca3af;
+        font-size: 12px;
+    }
+
+    .action-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 12px;
+        border: 1px solid #d9dee7;
+        border-radius: 8px;
+        background: #fff;
+        color: #374151;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .action-link:hover {
+        background: #f8fafc;
+    }
+
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+    }
+
+    .empty-icon {
+        font-size: 38px;
+        margin-bottom: 12px;
+    }
+
+    .empty-title {
+        margin: 0;
+        color: #374151;
+        font-size: 17px;
+        font-weight: 700;
+    }
+
+    .empty-text {
+        margin: 7px 0 20px;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    @media (max-width: 1000px) {
+        .summary-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .filter-form {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    @media (max-width: 650px) {
+        .manager-requests-page {
+            padding: 20px 12px 40px;
+        }
+
+        .summary-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .filter-form {
+            grid-template-columns: 1fr;
+        }
+
+        .results-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+</style>
+
+
+<div class="manager-requests-page">
+
+    <!-- HEADER -->
+
+    <div class="page-header">
+
+        <div>
+            <div class="eyebrow">
+                Kitchen • Management
+            </div>
+
+            <h1 class="page-title">
+                Kitchen Ingredient Requests
+            </h1>
+
+            <p class="page-subtitle">
+                Review and manage ingredient requests submitted by the kitchen.
+            </p>
+        </div>
+
+    </div>
+
+
+    <!-- SUMMARY -->
+
+    <div class="summary-grid">
+
+        <div class="summary-card">
+            <div class="summary-label">Total Requests</div>
+            <div class="summary-value">{{ total_count }}</div>
+        </div>
+
+        <div class="summary-card pending">
+            <div class="summary-label">Pending Review</div>
+            <div class="summary-value">{{ pending_count }}</div>
+        </div>
+
+        <div class="summary-card approved">
+            <div class="summary-label">Approved</div>
+            <div class="summary-value">{{ approved_count }}</div>
+        </div>
+
+        <div class="summary-card rejected">
+            <div class="summary-label">Rejected</div>
+            <div class="summary-value">{{ rejected_count }}</div>
+        </div>
+
+    </div>
+
+
+    <!-- FILTERS -->
+
+    <div class="filter-card">
+
+        <h2 class="filter-title">
+            Search & Filter
+        </h2>
+
+        <form method="get" class="filter-form">
+
+            <div class="filter-group">
+
+                <label for="search">
+                    Search
+                </label>
+
+                <input
+                    type="text"
+                    id="search"
+                    name="q"
+                    value="{{ search }}"
+                    class="filter-control"
+                    placeholder="Requester or ingredient..."
+                >
+
+            </div>
+
+
+            <div class="filter-group">
+
+                <label for="status">
+                    Status
+                </label>
+
+                <select
+                    id="status"
+                    name="status"
+                    class="filter-control"
+                >
+
+                    <option value="">
+                        All Statuses
+                    </option>
+
+                    <option
+                        value="PENDING"
+                        {% if status == "PENDING" %}selected{% endif %}
+                    >
+                        Pending
+                    </option>
+
+                    <option
+                        value="APPROVED"
+                        {% if status == "APPROVED" %}selected{% endif %}
+                    >
+                        Approved
+                    </option>
+
+                    <option
+                        value="REJECTED"
+                        {% if status == "REJECTED" %}selected{% endif %}
+                    >
+                        Rejected
+                    </option>
+
+                    <option
+                        value="RECEIVED"
+                        {% if status == "RECEIVED" %}selected{% endif %}
+                    >
+                        Received
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="filter-group">
+
+                <label for="source">
+                    Source
+                </label>
+
+                <select
+                    id="source"
+                    name="source"
+                    class="filter-control"
+                >
+
+                    <option value="">
+                        All Sources
+                    </option>
+
+                    <option
+                        value="STORE"
+                        {% if source == "STORE" %}selected{% endif %}
+                    >
+                        From Store
+                    </option>
+
+                    <option
+                        value="DIRECT"
+                        {% if source == "DIRECT" %}selected{% endif %}
+                    >
+                        Direct Purchase
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <button
+                type="submit"
+                class="btn btn-primary"
+            >
+                🔎 Apply
+            </button>
+
+
+            <a
+                href="{% url 'manager_ingredient_requests' %}"
+                class="btn btn-secondary"
+            >
+                Reset
+            </a>
+
+        </form>
+
+    </div>
+
+
+    <!-- RESULTS -->
+
+    <div class="results-card">
+
+        <div class="results-header">
+
+            <div>
+                <h2 class="results-title">
+                    Request Queue
+                </h2>
+            </div>
+
+            <div class="results-count">
+                {{ requests|length }} request{{ requests|length|pluralize }}
+                in view
+            </div>
+
+        </div>
+
+
+        {% if requests %}
+
+        <div class="table-wrap">
+
+            <table class="requests-table">
+
+                <thead>
+
+                    <tr>
+                        <th>Request</th>
+                        <th>Requested By</th>
+                        <th>Ingredients</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Action</th>
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for req in requests %}
+
+                    <tr>
+
+                        <td>
+                            <a
+                                href="{% url 'kitchen_ingredient_request_detail' req.id %}"
+                                class="request-id"
+                            >
+                                #{{ req.id }}
+                            </a>
+                        </td>
+
+
+                        <td>
+
+                            <span class="requester-name">
+                                {{ req.requested_by }}
+                            </span>
+
+                            {% if req.requested_by.role %}
+                                <span class="requester-role">
+                                    {{ req.requested_by.role }}
+                                </span>
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            <div class="items-list">
+
+                                {% for item in req.items.all %}
+
+                                <div class="item-line">
+
+                                    <span class="item-name">
+                                        {{ item.ingredient.name }}
+                                    </span>
+
+                                    <span class="item-quantity">
+                                        — {{ item.quantity }}
+                                    </span>
+
+                                    <span class="source-badge">
+                                        {% if item.source == "DIRECT" %}
+                                            Direct Purchase
+                                        {% else %}
+                                            From Store
+                                        {% endif %}
+                                    </span>
+
+                                </div>
+
+                                {% endfor %}
+
+                            </div>
+
+                        </td>
+
+
+                        <td>
+
+                            {% if req.status == "PENDING" %}
+
+                                <span class="status-badge status-pending">
+                                    Pending
+                                </span>
+
+                            {% elif req.status == "APPROVED" %}
+
+                                <span class="status-badge status-approved">
+                                    Approved
+                                </span>
+
+                            {% elif req.status == "REJECTED" %}
+
+                                <span class="status-badge status-rejected">
+                                    Rejected
+                                </span>
+
+                            {% elif req.status == "RECEIVED" %}
+
+                                <span class="status-badge status-received">
+                                    Received
+                                </span>
+
+                            {% else %}
+
+                                <span class="status-badge status-default">
+                                    {{ req.status|title }}
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <td>
+
+                            <span class="created-date">
+                                {{ req.created_at|date:"d M Y" }}
+                            </span>
+
+                            <span class="created-time">
+                                {{ req.created_at|date:"H:i" }}
+                            </span>
+
+                        </td>
+
+
+                        <td>
+
+                            <a
+                                href="{% url 'kitchen_ingredient_request_detail' req.id %}"
+                                class="action-link"
+                            >
+                                Review →
+                            </a>
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
         {% else %}
-          <span style="color:red;">Rejected</span>
-        {% endif %}
-      </td>
 
-      <td>{{ req.created_at|date:"Y-m-d H:i" }}</td>
-    </tr>
-    {% empty %}
-    <tr>
-      <td colspan="5" style="text-align:center;">
-        No kitchen ingredient requests
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+        <div class="empty-state">
+
+            <div class="empty-icon">
+                🔎
+            </div>
+
+            <h3 class="empty-title">
+                No requests found
+            </h3>
+
+            <p class="empty-text">
+                No kitchen ingredient requests match the current search or filters.
+            </p>
+
+            <a
+                href="{% url 'manager_ingredient_requests' %}"
+                class="btn btn-secondary"
+            >
+                Clear Filters
+            </a>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
 
 {% endblock %}

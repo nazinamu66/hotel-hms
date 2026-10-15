@@ -1,0 +1,462 @@
+{% extends "base/base.html" %}
+
+{% block title %}Receive Guest Deposit{% endblock %}
+
+{% block header %}
+<div>
+    <h2 style="margin:0;">Receive Guest Deposit</h2>
+    <p style="margin:6px 0 0;color:#6b7280;">
+        Record money received from a guest for future charges.
+    </p>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div style="
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) minmax(320px, 420px);
+    gap:24px;
+    align-items:start;
+">
+
+    <!-- GUEST SUMMARY -->
+
+    <section class="card">
+
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:20px;
+            margin-bottom:24px;
+        ">
+
+            <div>
+                <div style="
+                    font-size:13px;
+                    font-weight:600;
+                    color:#6b7280;
+                    text-transform:uppercase;
+                    letter-spacing:.04em;
+                ">
+                    Guest
+                </div>
+
+                <h3 style="margin:6px 0 4px;">
+                    {{ guest.full_name }}
+                </h3>
+
+                <div style="color:#6b7280;">
+                    {{ guest.phone|default:"No phone number" }}
+                </div>
+            </div>
+
+            <a
+                href="{% url 'frontdesk_guest_profile' guest.id %}"
+                style="
+                    text-decoration:none;
+                    padding:9px 14px;
+                    border:1px solid #d1d5db;
+                    border-radius:8px;
+                    color:#374151;
+                    background:#fff;
+                    font-size:14px;
+                    font-weight:600;
+                "
+            >
+                Back to Profile
+            </a>
+
+        </div>
+
+        <div style="
+            padding:20px;
+            border-radius:12px;
+            background:#f8fafc;
+            border:1px solid #e5e7eb;
+        ">
+
+            <div style="
+                font-size:13px;
+                color:#6b7280;
+                margin-bottom:6px;
+            ">
+                Current Deposit Balance
+            </div>
+
+            <div style="
+                font-size:30px;
+                font-weight:700;
+                letter-spacing:-.02em;
+            ">
+                ₦{{ deposit.balance|default:"0.00" }}
+            </div>
+
+            <div style="
+                margin-top:8px;
+                font-size:13px;
+                color:#6b7280;
+            ">
+                Available guest credit
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- RECEIVE DEPOSIT -->
+
+    <section class="card">
+
+        <div style="margin-bottom:22px;">
+
+            <h3 style="margin:0;">
+                Receive Deposit
+            </h3>
+
+            <p style="
+                margin:6px 0 0;
+                color:#6b7280;
+                font-size:14px;
+                line-height:1.5;
+            ">
+                The amount will be added to the guest's deposit balance.
+            </p>
+
+        </div>
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <!-- AMOUNT -->
+
+            <div style="margin-bottom:18px;">
+
+                <label
+                    for="amount"
+                    style="
+                        display:block;
+                        margin-bottom:7px;
+                        font-weight:600;
+                        font-size:14px;
+                    "
+                >
+                    Amount
+                </label>
+
+                <div style="position:relative;">
+
+                    <span style="
+                        position:absolute;
+                        left:12px;
+                        top:50%;
+                        transform:translateY(-50%);
+                        color:#6b7280;
+                        font-weight:600;
+                    ">
+                        ₦
+                    </span>
+
+                    <input
+                        type="number"
+                        id="amount"
+                        name="amount"
+                        min="0.01"
+                        step="0.01"
+                        required
+                        placeholder="0.00"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:12px 12px 12px 30px;
+                            border:1px solid #d1d5db;
+                            border-radius:8px;
+                            font-size:15px;
+                        "
+                    >
+
+                </div>
+
+            </div>
+
+
+            <!-- PAYMENT METHOD -->
+
+            <div style="margin-bottom:18px;">
+
+                <label
+                    for="method"
+                    style="
+                        display:block;
+                        margin-bottom:7px;
+                        font-weight:600;
+                        font-size:14px;
+                    "
+                >
+                    Payment Method
+                </label>
+
+                <select
+                    id="method"
+                    name="method"
+                    required
+                    onchange="toggleBankFields()"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:12px;
+                        border:1px solid #d1d5db;
+                        border-radius:8px;
+                        background:#fff;
+                        font-size:15px;
+                    "
+                >
+                    <option value="">Select payment method</option>
+                    <option value="CASH">Cash</option>
+                    <option value="POS">POS</option>
+                    <option value="TRANSFER">Bank Transfer</option>
+                </select>
+
+            </div>
+
+
+            <!-- BANK DETAILS -->
+
+            <div
+                id="bank-fields"
+                style="
+                    display:none;
+                    padding:16px;
+                    margin-bottom:18px;
+                    border:1px solid #e5e7eb;
+                    border-radius:10px;
+                    background:#f8fafc;
+                "
+            >
+
+                <div style="
+                    font-size:13px;
+                    font-weight:600;
+                    color:#6b7280;
+                    margin-bottom:12px;
+                ">
+                    Bank Details
+                </div>
+
+                <label
+                    for="bank_account"
+                    style="
+                        display:block;
+                        margin-bottom:7px;
+                        font-weight:600;
+                        font-size:14px;
+                    "
+                >
+                    Bank Account
+                </label>
+
+                <select
+                    id="bank_account"
+                    name="bank_account"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:12px;
+                        border:1px solid #d1d5db;
+                        border-radius:8px;
+                        background:#fff;
+                        font-size:15px;
+                    "
+                >
+                    <option value="">
+                        Select bank account
+                    </option>
+
+                    {% for bank in bank_accounts %}
+
+                    <option value="{{ bank.id }}">
+                        {{ bank.bank_name }}
+                        — {{ bank.account_number }}
+                    </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <!-- REFERENCE -->
+
+            <div
+                id="reference-field"
+                style="
+                    display:none;
+                    margin-bottom:18px;
+                "
+            >
+
+                <label
+                    for="reference"
+                    style="
+                        display:block;
+                        margin-bottom:7px;
+                        font-weight:600;
+                        font-size:14px;
+                    "
+                >
+                    Reference
+                </label>
+
+                <input
+                    type="text"
+                    id="reference"
+                    name="reference"
+                    maxlength="100"
+                    placeholder="POS slip or transfer reference"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:12px;
+                        border:1px solid #d1d5db;
+                        border-radius:8px;
+                        font-size:15px;
+                    "
+                >
+
+            </div>
+
+
+            <!-- NOTE -->
+
+            <div style="margin-bottom:22px;">
+
+                <label
+                    for="note"
+                    style="
+                        display:block;
+                        margin-bottom:7px;
+                        font-weight:600;
+                        font-size:14px;
+                    "
+                >
+                    Note
+                </label>
+
+                <textarea
+                    id="note"
+                    name="note"
+                    rows="3"
+                    placeholder="Optional note"
+                    style="
+                        width:100%;
+                        box-sizing:border-box;
+                        padding:12px;
+                        border:1px solid #d1d5db;
+                        border-radius:8px;
+                        resize:vertical;
+                        font-size:15px;
+                    "
+                ></textarea>
+
+            </div>
+
+
+            <!-- ACTIONS -->
+
+            <div style="
+                display:flex;
+                gap:10px;
+                align-items:center;
+            ">
+
+                <button
+                    type="submit"
+                    style="
+                        border:0;
+                        border-radius:8px;
+                        padding:11px 18px;
+                        background:#111827;
+                        color:#fff;
+                        font-size:14px;
+                        font-weight:600;
+                        cursor:pointer;
+                    "
+                >
+                    Receive Deposit
+                </button>
+
+                <a
+                    href="{% url 'frontdesk_guest_profile' guest.id %}"
+                    style="
+                        text-decoration:none;
+                        border:1px solid #d1d5db;
+                        border-radius:8px;
+                        padding:10px 16px;
+                        color:#374151;
+                        background:#fff;
+                        font-size:14px;
+                        font-weight:600;
+                    "
+                >
+                    Cancel
+                </a>
+
+            </div>
+
+        </form>
+
+    </section>
+
+</div>
+
+
+<script>
+
+function toggleBankFields() {
+
+    const method =
+        document.getElementById("method").value;
+
+    const bankFields =
+        document.getElementById("bank-fields");
+
+    const referenceField =
+        document.getElementById("reference-field");
+
+    const bankAccount =
+        document.getElementById("bank_account");
+
+    const reference =
+        document.getElementById("reference");
+
+    if (
+        method === "POS" ||
+        method === "TRANSFER"
+    ) {
+
+        bankFields.style.display = "block";
+        referenceField.style.display = "block";
+
+        bankAccount.required = true;
+        reference.required = true;
+
+    } else {
+
+        bankFields.style.display = "none";
+        referenceField.style.display = "none";
+
+        bankAccount.required = false;
+        reference.required = false;
+
+        bankAccount.value = "";
+        reference.value = "";
+    }
+}
+
+</script>
+
+{% endblock %}

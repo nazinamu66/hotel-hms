@@ -1,101 +1,449 @@
 {% extends "base/base.html" %}
 
 {% block title %}
-Room {{ room.room_number }}
-{% endblock %}
-
-{% block header %}
-<h2>Room {{ room.room_number }}</h2>
+    Room {{ room.room_number }}
 {% endblock %}
 
 {% block content %}
 
-<div class="card">
+<style>
+    .room-detail-page {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
 
-    <h3>Room Information</h3>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
 
-    <p>
-        <strong>Category:</strong>
-        {{ room.category.name }}
-    </p>
+    .page-header h1 {
+        margin: 0 0 6px;
+        font-size: 30px;
+        font-weight: 700;
+        color: #273449;
+    }
 
-    <p>
-        <strong>Building:</strong>
-        {{ room.building.name|default:"-" }}
-    </p>
+    .page-header p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 15px;
+    }
 
-    <p>
-        <strong>Floor:</strong>
-        {{ room.floor.name|default:"-" }}
-    </p>
+    .header-actions {
+        display: flex;
+        gap: 9px;
+        flex-wrap: wrap;
+    }
 
-    <p>
-        <strong>Status:</strong>
-        {{ room.get_status_display }}
-    </p>
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 15px;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        background: #fff;
+        color: #374151 !important;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        box-sizing: border-box;
+    }
 
-</div>
+    .action-btn:hover {
+        background: #f3f4f6;
+    }
 
-<br>
+    .primary-btn {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #fff !important;
+    }
 
-<div class="card">
+    .primary-btn:hover {
+        background: #1d4ed8;
+        border-color: #1d4ed8;
+    }
 
-    <h3>Room Amenities</h3>
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+    }
 
-    <ul>
+    .info-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 18px 20px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
 
-        {% for room_amenity in room.room_amenities.all %}
+    .info-label {
+        margin-bottom: 7px;
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
 
-            <li>
+    .info-value {
+        color: #111827;
+        font-size: 17px;
+        font-weight: 700;
+    }
 
-                <strong>
-                    {{ room_amenity.amenity.name }}
-                </strong>
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 11px;
+        border-radius: 999px;
+        background: #f3f4f6;
+        color: #374151;
+        font-size: 12px;
+        font-weight: 700;
+    }
 
-                — {{ room_amenity.get_status_display }}
+    .content-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
 
-                {% if room_amenity.quantity > 1 %}
-                    — Quantity: {{ room_amenity.quantity }}
+    .card-header {
+        padding: 18px 22px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .card-header h2 {
+        margin: 0;
+        color: #1f2937;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .card-header p {
+        margin: 4px 0 0;
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .card-body {
+        padding: 22px;
+    }
+
+    .amenity-list {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .amenity-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding: 14px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .amenity-row:first-child {
+        padding-top: 0;
+    }
+
+    .amenity-row:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+
+    .amenity-name {
+        color: #1f2937;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .amenity-meta {
+        margin-top: 4px;
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    .amenity-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: #f3f4f6;
+        color: #374151;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .empty-state {
+        padding: 18px 0 4px;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .card-footer {
+        padding: 16px 22px;
+        background: #f9fafb;
+        border-top: 1px solid #eef0f3;
+    }
+
+    @media (max-width: 900px) {
+        .info-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .page-header {
+            flex-direction: column;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .header-actions {
+            width: 100%;
+        }
+
+        .header-actions .action-btn {
+            flex: 1;
+        }
+
+        .amenity-row {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 8px;
+        }
+    }
+</style>
+
+<div class="room-detail-page">
+
+    <!-- HEADER -->
+
+    <div class="page-header">
+
+        <div>
+            <h1>Room {{ room.room_number }}</h1>
+
+            <p>
+                {{ room.hotel.name }}
+            </p>
+        </div>
+
+        <div class="header-actions">
+
+            <a
+                href="{% url 'room_list' %}"
+                class="action-btn"
+            >
+                Back to Rooms
+            </a>
+
+            <a
+                href="{% url 'room_edit' room.id %}"
+                class="action-btn primary-btn"
+            >
+                Edit Room
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- ROOM SUMMARY -->
+
+    <div class="info-grid">
+
+        <div class="info-card">
+
+            <div class="info-label">
+                Category
+            </div>
+
+            <div class="info-value">
+                {{ room.category.name }}
+            </div>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <div class="info-label">
+                Building
+            </div>
+
+            <div class="info-value">
+                {% if room.building %}
+                    {{ room.building.name }}
+                {% else %}
+                    —
                 {% endif %}
+            </div>
 
-            </li>
+        </div>
 
-        {% empty %}
 
-            <li>
-                No amenities configured.
-            </li>
+        <div class="info-card">
 
-        {% endfor %}
+            <div class="info-label">
+                Floor
+            </div>
 
-    </ul>
+            <div class="info-value">
+                {% if room.floor %}
+                    {{ room.floor.name }}
+                {% else %}
+                    —
+                {% endif %}
+            </div>
 
-    <a
-        href="{% url 'room_amenities' room.id %}"
-        class="btn btn-primary"
-    >
-        Configure Amenities
-    </a>
+        </div>
 
-</div>
 
-<br>
+        <div class="info-card">
 
-<div>
+            <div class="info-label">
+                Status
+            </div>
 
-    <a
-        href="{% url 'room_edit' room.id %}"
-        class="btn btn-secondary"
-    >
-        Edit Room
-    </a>
+            <div class="info-value">
 
-    <a
-        href="{% url 'room_list' %}"
-        class="btn btn-secondary"
-    >
-        Back to Rooms
-    </a>
+                <span class="status-badge">
+                    {{ room.get_status_display }}
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- AMENITIES -->
+
+    <div class="content-card">
+
+        <div class="card-header">
+
+            <div>
+                <h2>Room Amenities</h2>
+
+                <p>
+                    Amenities currently assigned to this room.
+                </p>
+            </div>
+
+            <a
+                href="{% url 'room_amenities' room.id %}"
+                class="action-btn primary-btn"
+            >
+                Configure Amenities
+            </a>
+
+        </div>
+
+
+        <div class="card-body">
+
+            {% if room.room_amenities.all %}
+
+                <div class="amenity-list">
+
+                    {% for room_amenity in room.room_amenities.all %}
+
+                        <div class="amenity-row">
+
+                            <div>
+
+                                <div class="amenity-name">
+                                    {{ room_amenity.amenity.name }}
+                                </div>
+
+                                <div class="amenity-meta">
+
+                                    {% if room_amenity.quantity > 1 %}
+                                        Quantity: {{ room_amenity.quantity }}
+                                    {% else %}
+                                        Quantity: 1
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+
+                            <span class="amenity-status">
+                                {{ room_amenity.get_status_display }}
+                            </span>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <div class="empty-state">
+                    No amenities configured for this room yet.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- FOOTER ACTIONS -->
+
+    <div class="content-card">
+
+        <div class="card-footer">
+
+            <div class="header-actions">
+
+                <a
+                    href="{% url 'room_edit' room.id %}"
+                    class="action-btn"
+                >
+                    Edit Room
+                </a>
+
+                <a
+                    href="{% url 'room_amenities' room.id %}"
+                    class="action-btn"
+                >
+                    Manage Amenities
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
 
 </div>
 

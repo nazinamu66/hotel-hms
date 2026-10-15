@@ -6,31 +6,373 @@ Create Purchase Order
 
 {% block content %}
 
-<h2>Create Purchase Order</h2>
+<style>
+    .po-create-page {
+        max-width: 1050px;
+        margin: 0 auto;
+        padding: 10px 0 40px;
+    }
 
-<p>
-    Create a new purchase order. Supplier, quantities and prices
-    will be finalized before submission for approval.
-</p>
+    .po-create-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 28px;
+    }
 
-<hr>
+    .po-create-header h2 {
+        margin: 0 0 8px;
+        font-size: 30px;
+        font-weight: 750;
+        color: #293241;
+    }
 
-<form method="post">
+    .po-create-header p {
+        margin: 0;
+        color: #667085;
+        font-size: 15px;
+        line-height: 1.6;
+        max-width: 680px;
+    }
 
-    {% csrf_token %}
+    .po-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 15px;
+        border: 1px solid #d8dee8;
+        border-radius: 9px;
+        background: #fff;
+        color: #344054;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
 
-    {{ form.as_p }}
+    .po-back-link:hover {
+        background: #f8fafc;
+    }
 
-    <br>
+    .po-create-card {
+        background: #fff;
+        border: 1px solid #e2e6ed;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 4px 18px rgba(16, 24, 40, 0.05);
+    }
 
-    <button type="submit">
-        Create Purchase Order
-    </button>
+    .po-card-header {
+        padding: 22px 26px;
+        border-bottom: 1px solid #eaecf0;
+        background: #fafbfc;
+    }
 
-    <a href="{% url 'inventory:po_list' %}">
-        Cancel
-    </a>
+    .po-card-header h3 {
+        margin: 0 0 5px;
+        font-size: 19px;
+        font-weight: 700;
+        color: #293241;
+    }
 
-</form>
+    .po-card-header p {
+        margin: 0;
+        color: #667085;
+        font-size: 14px;
+    }
+
+    .po-form-body {
+        padding: 28px 26px;
+    }
+
+    .po-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px;
+    }
+
+    .po-field {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .po-field label {
+        margin-bottom: 8px;
+        color: #344054;
+        font-size: 14px;
+        font-weight: 650;
+    }
+
+    .po-field select,
+    .po-field input {
+        width: 100%;
+        min-height: 46px;
+        padding: 10px 13px;
+        border: 1px solid #d0d5dd;
+        border-radius: 9px;
+        background: #fff;
+        color: #1d2939;
+        font-size: 15px;
+        box-sizing: border-box;
+        transition: border-color 0.15s ease,
+                    box-shadow 0.15s ease;
+    }
+
+    .po-field select:focus,
+    .po-field input:focus {
+        outline: none;
+        border-color: #667085;
+        box-shadow: 0 0 0 3px rgba(102, 112, 133, 0.12);
+    }
+
+    .po-help {
+        margin-top: 7px;
+        color: #667085;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .po-error {
+        margin-top: 7px;
+        color: #b42318;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .po-form-errors {
+        margin-bottom: 22px;
+        padding: 14px 16px;
+        border: 1px solid #fecdca;
+        border-radius: 9px;
+        background: #fef3f2;
+        color: #b42318;
+        font-size: 14px;
+    }
+
+    .po-form-errors ul {
+        margin: 6px 0 0 18px;
+        padding: 0;
+    }
+
+    .po-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        padding: 20px 26px;
+        border-top: 1px solid #eaecf0;
+        background: #fafbfc;
+    }
+
+    .po-cancel {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 18px;
+        border: 1px solid #d0d5dd;
+        border-radius: 9px;
+        background: #fff;
+        color: #344054;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 650;
+    }
+
+    .po-cancel:hover {
+        background: #f8fafc;
+    }
+
+    .po-submit {
+        min-height: 44px;
+        padding: 0 22px;
+        border: 0;
+        border-radius: 9px;
+        background: #293241;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: opacity 0.15s ease,
+                    transform 0.15s ease;
+    }
+
+    .po-submit:hover {
+        opacity: 0.92;
+        transform: translateY(-1px);
+    }
+
+    .po-note {
+        margin-top: 22px;
+        padding: 15px 17px;
+        border-left: 4px solid #98a2b3;
+        border-radius: 6px;
+        background: #f8fafc;
+        color: #475467;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    @media (max-width: 700px) {
+        .po-create-header {
+            flex-direction: column;
+        }
+
+        .po-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .po-form-body {
+            padding: 22px 18px;
+        }
+
+        .po-actions {
+            padding: 18px;
+            flex-direction: column-reverse;
+            align-items: stretch;
+        }
+
+        .po-submit,
+        .po-cancel {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="po-create-page">
+
+    <div class="po-create-header">
+
+        <div>
+            <h2>Create Purchase Order</h2>
+
+            <p>
+                Create a purchase order for a specific supplier and
+                receiving department. The order will begin as a draft
+                and can then be finalized through the procurement workflow.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'inventory:po_list' %}"
+            class="po-back-link"
+        >
+            ← Purchase Orders
+        </a>
+
+    </div>
+
+
+    <div class="po-create-card">
+
+        <div class="po-card-header">
+
+            <h3>Purchase Order Details</h3>
+
+            <p>
+                Select the supplier and the department that will receive
+                the purchased stock.
+            </p>
+
+        </div>
+
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <div class="po-form-body">
+
+                {% if form.non_field_errors %}
+                    <div class="po-form-errors">
+                        <strong>Please correct the following:</strong>
+
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+
+                <div class="po-form-grid">
+
+                    <div class="po-field">
+
+                        <label for="{{ form.supplier.id_for_label }}">
+                            Supplier
+                        </label>
+
+                        {{ form.supplier }}
+
+                        {% if form.supplier.errors %}
+                            <div class="po-error">
+                                {{ form.supplier.errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="po-help">
+                            Select the supplier that will fulfill this
+                            purchase order.
+                        </div>
+
+                    </div>
+
+
+                    <div class="po-field">
+
+                        <label for="{{ form.department.id_for_label }}">
+                            Receiving Department
+                        </label>
+
+                        {{ form.department }}
+
+                        {% if form.department.errors %}
+                            <div class="po-error">
+                                {{ form.department.errors }}
+                            </div>
+                        {% endif %}
+
+                        <div class="po-help">
+                            Stock received against this PO will be added
+                            to this department's inventory.
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="po-note">
+                    <strong>Next step:</strong>
+                    After creating the draft, you will add the products,
+                    quantities and purchase prices before finalizing the
+                    purchase order.
+                </div>
+
+            </div>
+
+
+            <div class="po-actions">
+
+                <a
+                    href="{% url 'inventory:po_list' %}"
+                    class="po-cancel"
+                >
+                    Cancel
+                </a>
+
+                <button
+                    type="submit"
+                    class="po-submit"
+                >
+                    Create Draft Purchase Order
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
 
 {% endblock %}

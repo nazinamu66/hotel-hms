@@ -103,31 +103,52 @@ def get_system_account(hotel,system_key,):
 
 
 def record_transaction(
-    debit_system_key,
-    credit_system_key,
-    amount,
-    description,
-    hotel,
+    debit_system_key=None,
+    credit_system_key=None,
+    amount=None,
+    description="",
+    hotel=None,
     created_by=None,
     entry_type="NORMAL",
     reference=None,
+    debit_account=None,
+    credit_account=None,
 ):
-
     if not hotel:
         raise ValueError("Hotel is required")
 
-    if amount <= 0:
+    if amount is None or amount <= 0:
         raise ValueError("Amount must be greater than zero")
 
-    debit_account = get_system_account(
-        hotel,
-        debit_system_key,
-    )
+    # Resolve debit account.
+    # Explicit account takes precedence over a system account.
+    if debit_account is not None:
+        if debit_account.hotel_id != hotel.id:
+            raise ValueError("Debit account does not belong to this hotel")
+    elif debit_system_key:
+        debit_account = get_system_account(
+            hotel,
+            debit_system_key,
+        )
+    else:
+        raise ValueError(
+            "Either debit_account or debit_system_key is required"
+        )
 
-    credit_account = get_system_account(
-        hotel,
-        credit_system_key,
-    )
+    # Resolve credit account.
+    # Explicit account takes precedence over a system account.
+    if credit_account is not None:
+        if credit_account.hotel_id != hotel.id:
+            raise ValueError("Credit account does not belong to this hotel")
+    elif credit_system_key:
+        credit_account = get_system_account(
+            hotel,
+            credit_system_key,
+        )
+    else:
+        raise ValueError(
+            "Either credit_account or credit_system_key is required"
+        )
 
     if debit_account == credit_account:
         raise ValueError(

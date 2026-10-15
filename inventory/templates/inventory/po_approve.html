@@ -1,60 +1,538 @@
 {% extends "base/base.html" %}
 
+{% block title %}
+Approve Purchase Order #{{ po.id }}
+{% endblock %}
+
 {% block content %}
 
-<h2>
-    Approve Purchase Order #{{ po.id }}
-</h2>
+<style>
+    .po-approve-page {
+        max-width: 1050px;
+        margin: 0 auto;
+        padding: 10px 0 45px;
+    }
 
-<hr>
+    .po-approve-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 26px;
+    }
 
-<p>
-    <strong>Supplier:</strong>
-    {{ po.supplier }}
-</p>
+    .po-approve-header h2 {
+        margin: 0 0 8px;
+        color: #293241;
+        font-size: 30px;
+        font-weight: 750;
+    }
 
-<p>
-    <strong>Department:</strong>
-    {{ po.department }}
-</p>
+    .po-approve-header p {
+        margin: 0;
+        max-width: 700px;
+        color: #667085;
+        font-size: 15px;
+        line-height: 1.6;
+    }
 
-<p>
-    <strong>Status:</strong>
-    {{ po.status }}
-</p>
+    .po-back {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        padding: 0 15px;
+        border: 1px solid #d0d5dd;
+        border-radius: 9px;
+        background: #fff;
+        color: #344054;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 650;
+        white-space: nowrap;
+    }
 
-<h3>Items</h3>
+    .po-back:hover {
+        background: #f8fafc;
+    }
 
-<ul>
-{% for item in po.items.all %}
-    <li>
-        {{ item.product.name }}
-        —
-        {{ item.purchase_quantity }}
-        × ₦{{ item.unit_cost|floatformat:2 }}
-    </li>
-{% endfor %}
-</ul>
+    .po-alert {
+        margin-bottom: 22px;
+        padding: 16px 18px;
+        border-left: 4px solid #d9a441;
+        border-radius: 7px;
+        background: #fffbeb;
+        color: #475467;
+        font-size: 14px;
+        line-height: 1.6;
+    }
 
-<hr>
+    .po-card {
+        margin-bottom: 22px;
+        border: 1px solid #e2e6ed;
+        border-radius: 14px;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 4px 18px rgba(16, 24, 40, .05);
+    }
 
-<form method="post">
+    .po-card-header {
+        padding: 21px 25px;
+        border-bottom: 1px solid #eaecf0;
+        background: #fafbfc;
+    }
 
-    {% csrf_token %}
+    .po-card-header h3 {
+        margin: 0 0 5px;
+        color: #293241;
+        font-size: 19px;
+        font-weight: 700;
+    }
 
-    <p>
-        Are you sure you want to approve this
-        Purchase Order?
-    </p>
+    .po-card-header p {
+        margin: 0;
+        color: #667085;
+        font-size: 13px;
+    }
 
-    <button type="submit">
-        Approve Purchase Order
-    </button>
+    .po-card-body {
+        padding: 25px;
+    }
 
-    <a href="{% url 'inventory:po_detail' po.pk %}">
-        Cancel
-    </a>
+    .po-info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px 28px;
+    }
 
-</form>
+    .po-info-label {
+        margin-bottom: 5px;
+        color: #667085;
+        font-size: 12px;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .po-info-value {
+        color: #293241;
+        font-size: 15px;
+        font-weight: 650;
+        word-break: break-word;
+    }
+
+    .po-status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 0 11px;
+        border-radius: 999px;
+        background: #fff4e5;
+        color: #9a6700;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .po-table-wrap {
+        overflow-x: auto;
+    }
+
+    .po-items-table {
+        width: 100%;
+        min-width: 650px;
+        border-collapse: collapse;
+    }
+
+    .po-items-table th {
+        padding: 13px 12px;
+        border-bottom: 1px solid #dfe3e8;
+        background: #f8fafc;
+        color: #475467;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: left;
+        text-transform: uppercase;
+        letter-spacing: .035em;
+    }
+
+    .po-items-table th.number,
+    .po-items-table td.number {
+        text-align: right;
+    }
+
+    .po-items-table td {
+        padding: 15px 12px;
+        border-bottom: 1px solid #eaecf0;
+        color: #344054;
+        font-size: 14px;
+    }
+
+    .po-items-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .po-product {
+        color: #293241;
+        font-weight: 650;
+    }
+
+    .po-unit {
+        margin-left: 4px;
+        color: #667085;
+        font-size: 12px;
+    }
+
+    .po-total-row {
+        background: #fafbfc;
+    }
+
+    .po-total-row td {
+        border-top: 2px solid #e4e7ec;
+        color: #293241;
+        font-weight: 750;
+    }
+
+    .po-confirm {
+        padding: 22px 25px;
+        border-top: 1px solid #eaecf0;
+        background: #fafbfc;
+    }
+
+    .po-confirm-text {
+        margin: 0 0 18px;
+        color: #475467;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .po-actions {
+        display: flex;
+        gap: 11px;
+        align-items: center;
+    }
+
+    .po-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 19px;
+        border-radius: 9px;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    .po-cancel {
+        border: 1px solid #d0d5dd;
+        background: #fff;
+        color: #344054;
+    }
+
+    .po-cancel:hover {
+        background: #f8fafc;
+    }
+
+    .po-approve {
+        border: 0;
+        background: #087443;
+        color: #fff;
+    }
+
+    .po-approve:hover {
+        opacity: .92;
+    }
+
+    @media (max-width: 750px) {
+        .po-approve-header {
+            flex-direction: column;
+        }
+
+        .po-info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .po-card-body {
+            padding: 19px;
+        }
+
+        .po-card-header,
+        .po-confirm {
+            padding: 19px;
+        }
+
+        .po-actions {
+            flex-direction: column-reverse;
+            align-items: stretch;
+        }
+
+        .po-button {
+            width: 100%;
+        }
+    }
+</style>
+
+
+<div class="po-approve-page">
+
+    <!-- HEADER -->
+    <div class="po-approve-header">
+
+        <div>
+            <h2>
+                Approve Purchase Order #{{ po.id }}
+            </h2>
+
+            <p>
+                Review the purchase order details before granting
+                management approval.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'inventory:po_detail' po.pk %}"
+            class="po-back"
+        >
+            ← Back to Purchase Order
+        </a>
+
+    </div>
+
+
+    <!-- WARNING -->
+    <div class="po-alert">
+        <strong>Approval required:</strong>
+        Review the supplier, receiving department and purchase items
+        carefully before approving this purchase order.
+    </div>
+
+
+    <!-- ORDER INFORMATION -->
+    <div class="po-card">
+
+        <div class="po-card-header">
+
+            <h3>Purchase Order Information</h3>
+
+            <p>
+                Summary of the order awaiting your approval.
+            </p>
+
+        </div>
+
+        <div class="po-card-body">
+
+            <div class="po-info-grid">
+
+                <div>
+                    <div class="po-info-label">
+                        Purchase Order
+                    </div>
+
+                    <div class="po-info-value">
+                        #{{ po.id }}
+                    </div>
+                </div>
+
+
+                <div>
+                    <div class="po-info-label">
+                        Supplier
+                    </div>
+
+                    <div class="po-info-value">
+                        {{ po.supplier }}
+                    </div>
+                </div>
+
+
+                <div>
+                    <div class="po-info-label">
+                        Receiving Department
+                    </div>
+
+                    <div class="po-info-value">
+                        {{ po.department }}
+                    </div>
+                </div>
+
+
+                <div>
+                    <div class="po-info-label">
+                        Status
+                    </div>
+
+                    <div>
+                        <span class="po-status">
+                            Awaiting Approval
+                        </span>
+                    </div>
+                </div>
+
+
+                <div>
+                    <div class="po-info-label">
+                        Created By
+                    </div>
+
+                    <div class="po-info-value">
+                        {{ po.created_by }}
+                    </div>
+                </div>
+
+
+                <div>
+                    <div class="po-info-label">
+                        Created
+                    </div>
+
+                    <div class="po-info-value">
+                        {{ po.created_at|date:"Y-m-d H:i" }}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ITEMS -->
+    <div class="po-card">
+
+        <div class="po-card-header">
+
+            <h3>Purchase Items</h3>
+
+            <p>
+                Items and purchase costs included in this order.
+            </p>
+
+        </div>
+
+        <div class="po-card-body po-table-wrap">
+
+            <table class="po-items-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Product
+                        </th>
+
+                        <th class="number">
+                            Quantity
+                        </th>
+
+                        <th class="number">
+                            Unit Cost
+                        </th>
+
+                        <th class="number">
+                            Line Total
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    {% for item in po.items.all %}
+
+                        <tr>
+
+                            <td>
+                                <span class="po-product">
+                                    {{ item.product.name }}
+                                </span>
+                            </td>
+
+                            <td class="number">
+                                {{ item.purchase_quantity }}
+                                <span class="po-unit">
+                                    {{ item.product.purchase_unit }}
+                                </span>
+                            </td>
+
+                            <td class="number">
+                                ₦{{ item.unit_cost|floatformat:2 }}
+                            </td>
+
+                            <td class="number">
+                                ₦{{ item.total_cost|floatformat:2 }}
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+
+                    <tr class="po-total-row">
+
+                        <td colspan="3" class="number">
+                            Purchase Order Total
+                        </td>
+
+                        <td class="number">
+                            ₦{{ po_total|floatformat:2 }}
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- CONFIRM -->
+    <div class="po-card">
+
+        <div class="po-confirm">
+
+            <p class="po-confirm-text">
+                Are you sure you want to approve this Purchase Order?
+                Once approved, it can proceed to supplier payment and
+                goods receipt.
+            </p>
+
+            <form method="post">
+
+                {% csrf_token %}
+
+                <div class="po-actions">
+
+                    <a
+                        href="{% url 'inventory:po_detail' po.pk %}"
+                        class="po-button po-cancel"
+                    >
+                        Cancel
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="po-button po-approve"
+                    >
+                        ✓ Approve Purchase Order
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
 
 {% endblock %}

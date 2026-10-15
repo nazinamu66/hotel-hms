@@ -4,74 +4,461 @@
 
 {% block content %}
 
-<h2>Reservations</h2>
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        gap: 16px;
+    }
 
-<a href="{% url 'frontdesk_create_reservation' %}">
-<button>Create Reservation</button>
-</a>
+    .page-title {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        color: #1f2937;
+    }
 
-<br><br>
+    .page-subtitle {
+        margin: 5px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-<table style="width:100%; border-collapse:collapse;">
+    .primary-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: #2563eb;
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+    }
 
-<thead style="background:#eee;">
-<tr>
-<th>ID</th>
-<th>Guest</th>
-<th>Room Category</th>
-<th>Check-in</th>
-<th>Check-out</th>
-<th>Status</th>
-<th></th>
-</tr>
-</thead>
+    .primary-btn:hover {
+        background: #1d4ed8;
+    }
 
-<tbody>
+    .card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
 
-{% for r in reservations %}
+    .table-wrapper {
+        overflow-x: auto;
+    }
 
-<tr style="border-bottom:1px solid #ddd;">
+    .reservation-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+    table-layout: fixed;
+}
 
-<td>{{ r.id }}</td>
+.reservation-table th:nth-child(1),
+.reservation-table td:nth-child(1) {
+    width: 6%;
+}
 
-<td>
-{{ r.guest.first_name }} {{ r.guest.last_name }}
+.reservation-table th:nth-child(2),
+.reservation-table td:nth-child(2) {
+    width: 18%;
+}
+
+.reservation-table th:nth-child(3),
+.reservation-table td:nth-child(3) {
+    width: 14%;
+}
+
+.reservation-table th:nth-child(4),
+.reservation-table td:nth-child(4),
+.reservation-table th:nth-child(5),
+.reservation-table td:nth-child(5) {
+    width: 11%;
+}
+
+.reservation-table th:nth-child(6),
+.reservation-table td:nth-child(6) {
+    width: 10%;
+}
+
+.reservation-table th:nth-child(7),
+.reservation-table td:nth-child(7) {
+    width: 13%;
+}
+
+.reservation-table th:nth-child(8),
+.reservation-table td:nth-child(8) {
+    width: 17%;
+}
+
+    .reservation-table th {
+        background: #f8fafc;
+        color: #475569;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        font-weight: 700;
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .reservation-table td {
+        padding: 15px 16px;
+        border-bottom: 1px solid #eef2f7;
+        color: #334155;
+        font-size: 14px;
+    }
+
+    .reservation-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .reservation-id {
+        font-weight: 700;
+        color: #64748b;
+    }
+
+    .guest-name {
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .date {
+        white-space: nowrap;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .status-reserved {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .status-checked {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .status-cancelled {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .status-noshow {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 10px;
+        background: #2563eb;
+        color: white;
+        text-decoration: none;
+        border-radius: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .action-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: nowrap;
+    }
+
+    .cancel-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 12px;
+        background: #dc2626;
+        color: white;
+        border: none;
+        border-radius: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .cancel-btn:hover {
+        background: #b91c1c;
+    }
+
+    .guarantee-amount {
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .action-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 50px 20px;
+        color: #64748b;
+    }
+
+    .empty-state-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 6px;
+    }
+
+    .empty-state-text {
+        font-size: 14px;
+    }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Reservations</h1>
+        <p class="page-subtitle">
+            Manage upcoming guest reservations and arrivals.
+        </p>
+    </div>
+
+    <a href="{% url 'frontdesk_create_reservation' %}" class="primary-btn">
+        + Create Reservation
+    </a>
+</div>
+
+<div class="card">
+    <div class="table-wrapper">
+
+        <table class="reservation-table">
+
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Guest</th>
+                    <th>Room Category</th>
+                    <th>Check-in</th>
+                    <th>Check-out</th>
+                    <th>Status</th>
+                    <th>Guarantee</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for r in reservations %}
+
+                <tr>
+
+                    <td>
+                        <span class="reservation-id">
+                            #{{ r.id }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="guest-name">
+                            {{ r.guest.first_name }} {{ r.guest.last_name }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {{ r.room_category.name }}
+                    </td>
+
+                    <td class="date">
+                        {{ r.check_in_date|date:"d M Y" }}
+                    </td>
+
+                    <td class="date">
+                        {{ r.check_out_date|date:"d M Y" }}
+                    </td>
+
+                    <td>
+
+                        {% if r.status == "RESERVED" %}
+                            <span class="status-badge status-reserved">
+                                Reserved
+                            </span>
+
+                        {% elif r.status == "CHECKED_IN" %}
+                            <span class="status-badge status-checked">
+                                Checked In
+                            </span>
+
+                        {% elif r.status == "CANCELLED" %}
+                            <span class="status-badge status-cancelled">
+                                Cancelled
+                            </span>
+
+                        {% elif r.status == "NO_SHOW" %}
+                            <span class="status-badge status-noshow">
+                                No Show
+                            </span>
+
+                        {% else %}
+                            <span class="status-badge">
+                                {{ r.status }}
+                            </span>
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+                        {% if r.reservation_deposit %}
+
+                            {% if r.reservation_deposit.status == "GUARANTEED" %}
+
+                                <span class="status-badge status-checked">
+                                    Guaranteed
+                                </span>
+
+                                <div class="guarantee-amount">
+                                    ₦{{ r.reservation_deposit.allocated_amount|floatformat:2 }}
+                                </div>
+
+                            {% elif r.reservation_deposit.status == "PENDING" %}
+
+                                <span class="status-badge status-noshow">
+                                    Pending
+                                </span>
+
+                                <div class="guarantee-amount">
+                                    ₦{{ r.reservation_deposit.allocated_amount|floatformat:2 }}
+                                    / ₦{{ r.reservation_deposit.required_amount|floatformat:2 }}
+                                </div>
+
+                            {% elif r.reservation_deposit.status == "RELEASED" %}
+
+                                <span class="status-badge status-cancelled">
+                                    Released
+                                </span>
+
+                            {% elif r.reservation_deposit.status == "FORFEITED" %}
+
+                                <span class="status-badge status-cancelled">
+                                    Forfeited
+                                </span>
+
+                            {% elif r.reservation_deposit.status == "REFUNDED" %}
+
+                                <span class="status-badge status-cancelled">
+                                    Refunded
+                                </span>
+
+                            {% endif %}
+
+                        {% else %}
+
+                            <span style="color:#94a3b8;font-size:13px;">
+                                Not Required
+                            </span>
+
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+    {% if r.status == "RESERVED" %}
+
+        <div class="action-group">
+
+            <a
+                href="{% url 'frontdesk_reservation_checkin' r.id %}"
+                class="action-btn"
+            >
+                Check-in
+            </a>
+
+            {% if not r.reservation_deposit or r.reservation_deposit.status == "PENDING" or r.reservation_deposit.status == "GUARANTEED" %}
+
+                <form
+                    method="post"
+                    action="{% url 'frontdesk_reservation_cancel' r.id %}"
+                    style="margin:0;"
+                    onsubmit="return confirm('Cancel reservation #{{ r.id }} for {{ r.guest.first_name }} {{ r.guest.last_name }}?');"
+                >
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="cancel-btn"
+                    >
+                        Cancel
+                    </button>
+
+                </form>
+
+            {% endif %}
+
+        </div>
+
+    {% elif r.status == "CHECKED_IN" %}
+
+        <span style="color:#64748b;font-size:13px;">
+            In-house
+        </span>
+
+    {% else %}
+
+        <span style="color:#94a3b8;font-size:13px;">
+            —
+        </span>
+
+    {% endif %}
+
 </td>
 
-<td>
-{{ r.room_category.name }}
-</td>
+                </tr>
 
-<td>{{ r.check_in_date }}</td>
+                {% empty %}
 
-<td>{{ r.check_out_date }}</td>
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <div class="empty-state-title">
+                                No reservations found
+                            </div>
 
-<td>{{ r.status }}</td>
+                            <div class="empty-state-text">
+                                Create a reservation to see it here.
+                            </div>
+                        </div>
+                    </td>
+                </tr>
 
-<td>
+                {% endfor %}
 
-{% if r.status == "RESERVED" %}
+            </tbody>
 
-<a href="{% url 'frontdesk_reservation_checkin' r.id %}">
-<button>Check-in</button>
-</a>
+        </table>
 
-{% endif %}
-
-</td>
-
-</tr>
-
-{% empty %}
-
-<tr>
-<td colspan="7">No reservations found.</td>
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
+    </div>
+</div>
 
 {% endblock %}

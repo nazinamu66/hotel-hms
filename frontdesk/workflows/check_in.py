@@ -1,7 +1,8 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
-from datetime import datetime, date, time
+from datetime import datetime, time, timedelta,date
 from django.utils import timezone
+from billing.models import FolioRoomHistory
 from billing.models import (
     Guest,
     Folio,
@@ -116,8 +117,7 @@ def validate_active_folio(room):
         )
 
 
-def create_folio(room, guest, expected_checkout):
-
+def create_folio(room, guest, expected_checkout, user=None):
     folio = Folio.objects.create(
         folio_type="ROOM",
         room=room,
@@ -126,7 +126,6 @@ def create_folio(room, guest, expected_checkout):
     )
 
     if expected_checkout:
-
         if isinstance(expected_checkout, datetime):
             checkout_at = expected_checkout
 
@@ -140,11 +139,36 @@ def create_folio(room, guest, expected_checkout):
 
         folio.check_out_at = checkout_at
 
-        folio.save(
-            update_fields=[
-                "check_out_at",
-            ]
+    else:
+        # CCH standard checkout:
+        # Every normal room night ends at 12:00 PM
+        # on the day after check-in.
+        next_day = (
+            timezone.localdate(folio.check_in_at)
+            + timedelta(days=1)
         )
+
+        checkout_at = timezone.make_aware(
+            datetime.combine(
+                next_day,
+                time(hour=12, minute=0),
+            )
+        )
+
+        folio.check_out_at = checkout_at
+
+    folio.save(
+        update_fields=[
+            "check_out_at",
+        ]
+    )
+
+    FolioRoomHistory.objects.create(
+        folio=folio,
+        room=room,
+        reason="CHECK_IN",
+        assigned_by=user,
+    )
 
     return folio
 
@@ -198,6 +222,7 @@ def check_in_guest(
         room,
         guest,
         expected_checkout,
+        user=user,
     )
 
 

@@ -1,0 +1,218 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1>Refunds</h1>
+        <p>Review, approve, reject, and execute refund requests.</p>
+    </div>
+</div>
+
+<div class="card">
+
+    {% if refund_requests %}
+
+        <div style="overflow-x:auto;">
+
+            <table class="table">
+
+                <thead>
+                    <tr>
+                        <th>Request</th>
+                        <th>Source</th>
+                        <th>Amount</th>
+                        <th>Requested By</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Reason</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% for refund in refund_requests %}
+
+                    <tr>
+
+                        <td>
+                            #{{ refund.id }}
+                        </td>
+
+                        <td>
+
+                            {% if refund.source_type == "POS_ORDER" %}
+
+                                Restaurant Order
+                                #{{ refund.pos_order.id }}
+
+                            {% elif refund.source_type == "CHARGE" %}
+
+                                Charge
+                                #{{ refund.charge.id }}
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+
+                            {% if refund.source_type == "POS_ORDER" %}
+
+                                ₦{{ refund.pos_order.total_amount|floatformat:2 }}
+
+                            {% elif refund.source_type == "CHARGE" %}
+
+                                ₦{{ refund.charge.amount|floatformat:2 }}
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+                            {{ refund.requested_by.get_full_name|default:refund.requested_by.username }}
+                        </td>
+
+                        <td>
+                            {{ refund.requested_at|date:"Y-m-d H:i" }}
+                        </td>
+
+                        <td>
+
+                            {% if refund.status == "PENDING" %}
+                                <span class="badge badge-warning">
+                                    Pending
+                                </span>
+
+                            {% elif refund.status == "APPROVED" %}
+                                <span class="badge badge-success">
+                                    Approved
+                                </span>
+
+                            {% elif refund.status == "REJECTED" %}
+                                <span class="badge badge-danger">
+                                    Rejected
+                                </span>
+
+                            {% elif refund.status == "COMPLETED" %}
+                                <span class="badge badge-success">
+                                    Completed
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+                            {{ refund.reason }}
+                        </td>
+
+                        <td>
+
+                            {% if refund.status == "PENDING" %}
+
+                                {% if user.role == "MANAGER" or user.role == "ADMIN" or user.role == "DIRECTOR" %}
+
+                                    <form
+                                        method="post"
+                                        action="{% url 'approve_refund' refund.id %}"
+                                        style="display:inline;"
+                                    >
+                                        {% csrf_token %}
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-success"
+                                        >
+                                            Approve
+                                        </button>
+                                    </form>
+
+                                    <form
+                                        method="post"
+                                        action="{% url 'reject_refund' refund.id %}"
+                                        style="display:inline;"
+                                    >
+                                        {% csrf_token %}
+
+                                        <input
+                                            type="hidden"
+                                            name="rejection_reason"
+                                            value="Rejected by management."
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-danger"
+                                        >
+                                            Reject
+                                        </button>
+                                    </form>
+
+                                {% endif %}
+
+                            {% elif refund.status == "APPROVED" %}
+
+                                {% if user.role == "DIRECTOR" or user.role == "ADMIN" %}
+
+                                    <form
+                                        method="post"
+                                        action="{% url 'execute_refund' refund.id %}"
+                                        style="display:inline;"
+                                        onsubmit="return confirm('Execute this refund? This will reverse the transaction.');"
+                                    >
+                                        {% csrf_token %}
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-primary"
+                                        >
+                                            Execute Refund
+                                        </button>
+
+                                    </form>
+
+                                {% endif %}
+
+                            {% elif refund.status == "REJECTED" %}
+
+                                {% if refund.rejection_reason %}
+                                    {{ refund.rejection_reason }}
+                                {% endif %}
+
+                            {% elif refund.status == "COMPLETED" %}
+
+                                {% if refund.executed_at %}
+                                    Executed
+                                    {{ refund.executed_at|date:"Y-m-d H:i" }}
+                                {% endif %}
+
+                            {% endif %}
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    {% else %}
+
+        <div style="padding:40px;text-align:center;">
+            <h3>No refund requests</h3>
+            <p>
+                There are currently no refund requests in your accessible hotels.
+            </p>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

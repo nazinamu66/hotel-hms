@@ -1,46 +1,350 @@
 {% extends "base/base.html" %}
 
-{% block title %}Change Room{% endblock %}
+{% block title %}Change Guest Room{% endblock %}
 
 {% block header %}
-<h2>Change Room – Room {{ room.room_number }}</h2>
+<div style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px;
+    flex-wrap:wrap;
+">
+    <div>
+        <h2 style="margin:0;">Change Guest Room</h2>
+        <p style="margin:6px 0 0;color:#6b7280;">
+            Transfer the guest to another available room
+        </p>
+    </div>
+
+    <a
+        href="{% url 'frontdesk_active_stay' room.id %}"
+        style="
+            text-decoration:none;
+            padding:9px 15px;
+            border:1px solid #d1d5db;
+            border-radius:8px;
+            color:#374151;
+            background:#fff;
+        "
+    >
+        ← Back to Active Stay
+    </a>
+</div>
 {% endblock %}
 
 {% block content %}
 
-<form method="post">
-{% csrf_token %}
+<div style="
+    max-width:900px;
+    margin:25px auto;
+">
 
-<p>
-Guest:
-<strong>{{ folio.guest.full_name }}</strong>
-</p>
+    <!-- Guest / Current Stay -->
+    <div style="
+        background:#fff;
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        padding:24px;
+        margin-bottom:20px;
+        box-shadow:0 1px 3px rgba(0,0,0,.05);
+    ">
 
-<p>
-Current Room:
-<strong>{{ room.room_number }}</strong>
-</p>
+        <div style="
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+            gap:24px;
+        ">
 
-<label>Select New Room</label><br>
+            <div>
+                <div style="
+                    font-size:12px;
+                    font-weight:700;
+                    color:#6b7280;
+                    text-transform:uppercase;
+                    letter-spacing:.05em;
+                ">
+                    Guest
+                </div>
 
-<select name="new_room" required>
+                <div style="
+                    font-size:22px;
+                    font-weight:700;
+                    margin-top:6px;
+                    color:#111827;
+                ">
+                    {{ folio.guest.full_name }}
+                </div>
 
-{% for r in available_rooms %}
-<option value="{{ r.id }}">
-Room {{ r.room_number }} ({{ r.category.name }})
-</option>
-{% endfor %}
+                {% if folio.guest.phone %}
+                <div style="
+                    margin-top:5px;
+                    color:#6b7280;
+                ">
+                    {{ folio.guest.phone }}
+                </div>
+                {% endif %}
+            </div>
 
-</select>
+            <div>
+                <div style="
+                    font-size:12px;
+                    font-weight:700;
+                    color:#6b7280;
+                    text-transform:uppercase;
+                    letter-spacing:.05em;
+                ">
+                    Folio
+                </div>
 
-<br><br>
+                <div style="
+                    font-size:22px;
+                    font-weight:700;
+                    margin-top:6px;
+                    color:#111827;
+                ">
+                    #{{ folio.id }}
+                </div>
 
-<button type="submit">Move Guest</button>
+                <div style="
+                    margin-top:5px;
+                    color:#6b7280;
+                ">
+                    Active stay
+                </div>
+            </div>
 
-<a href="{% url 'frontdesk_active_stay' room.id %}">
-Cancel
-</a>
+            <div>
+                <div style="
+                    font-size:12px;
+                    font-weight:700;
+                    color:#6b7280;
+                    text-transform:uppercase;
+                    letter-spacing:.05em;
+                ">
+                    Current Room
+                </div>
 
-</form>
+                <div style="
+                    font-size:22px;
+                    font-weight:700;
+                    margin-top:6px;
+                    color:#111827;
+                ">
+                    Room {{ room.room_number }}
+                </div>
+
+                {% if room.category %}
+                <div style="
+                    margin-top:5px;
+                    color:#6b7280;
+                ">
+                    {{ room.category.name }}
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- Transfer -->
+    <div style="
+        background:#fff;
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        padding:24px;
+        box-shadow:0 1px 3px rgba(0,0,0,.05);
+    ">
+
+        <div style="margin-bottom:20px;">
+            <h3 style="
+                margin:0;
+                font-size:20px;
+                color:#111827;
+            ">
+                Select Destination Room
+            </h3>
+
+            <p style="
+                margin:7px 0 0;
+                color:#6b7280;
+            ">
+                Only rooms that are available and not assigned to another
+                active guest stay are shown.
+            </p>
+        </div>
+
+
+        {% if available_rooms %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <label
+                for="new_room"
+                style="
+                    display:block;
+                    font-weight:600;
+                    margin-bottom:8px;
+                    color:#374151;
+                "
+            >
+                Available Room
+            </label>
+
+            <select
+                id="new_room"
+                name="new_room"
+                required
+                style="
+                    width:100%;
+                    padding:12px 14px;
+                    border:1px solid #d1d5db;
+                    border-radius:8px;
+                    background:#fff;
+                    font-size:15px;
+                    box-sizing:border-box;
+                "
+            >
+                <option value="">
+                    -- Select a room --
+                </option>
+
+                {% for r in available_rooms %}
+                <option value="{{ r.id }}">
+                    Room {{ r.room_number }}
+                    {% if r.category %}
+                    — {{ r.category.name }}
+                    {% endif %}
+                </option>
+                {% endfor %}
+            </select>
+
+
+            <!-- Important notice -->
+            <div style="
+                margin-top:20px;
+                padding:15px 16px;
+                border-radius:8px;
+                background:#f9fafb;
+                border:1px solid #e5e7eb;
+                color:#4b5563;
+                line-height:1.5;
+            ">
+                <strong style="color:#111827;">
+                    What happens when you move the guest?
+                </strong>
+
+                <ul style="
+                    margin:8px 0 0 20px;
+                    padding:0;
+                ">
+                    <li>
+                        The existing folio remains unchanged.
+                    </li>
+                    <li>
+                        Existing charges and payments remain on the same folio.
+                    </li>
+                    <li>
+                        The current room becomes <strong>Vacant Dirty</strong>.
+                    </li>
+                    <li>
+                        The destination room becomes <strong>Occupied</strong>.
+                    </li>
+                    <li>
+                        The room transfer is recorded in the guest's room history.
+                    </li>
+                </ul>
+            </div>
+
+
+            <!-- Actions -->
+            <div style="
+                display:flex;
+                justify-content:flex-end;
+                gap:10px;
+                margin-top:24px;
+                flex-wrap:wrap;
+            ">
+
+                <a
+                    href="{% url 'frontdesk_active_stay' room.id %}"
+                    style="
+                        display:inline-block;
+                        padding:11px 18px;
+                        border:1px solid #d1d5db;
+                        border-radius:8px;
+                        background:#fff;
+                        color:#374151;
+                        text-decoration:none;
+                    "
+                >
+                    Cancel
+                </a>
+
+                <button
+                    type="submit"
+                    style="
+                        padding:11px 20px;
+                        border:0;
+                        border-radius:8px;
+                        background:#1f2937;
+                        color:#fff;
+                        font-weight:600;
+                        cursor:pointer;
+                    "
+                >
+                    Confirm Room Change
+                </button>
+
+            </div>
+
+        </form>
+
+        {% else %}
+
+        <div style="
+            padding:30px;
+            text-align:center;
+            border:1px dashed #d1d5db;
+            border-radius:10px;
+            background:#f9fafb;
+        ">
+            <div style="
+                font-size:18px;
+                font-weight:600;
+                color:#374151;
+            ">
+                No available rooms
+            </div>
+
+            <p style="
+                margin:8px 0 20px;
+                color:#6b7280;
+            ">
+                There are currently no rooms available for this guest transfer.
+            </p>
+
+            <a
+                href="{% url 'frontdesk_active_stay' room.id %}"
+                style="
+                    display:inline-block;
+                    padding:10px 16px;
+                    border-radius:8px;
+                    background:#1f2937;
+                    color:#fff;
+                    text-decoration:none;
+                "
+            >
+                Return to Active Stay
+            </a>
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
 
 {% endblock %}

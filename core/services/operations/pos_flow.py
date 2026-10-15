@@ -1,12 +1,12 @@
 from django.db import transaction
 from decimal import Decimal
-
+from accounting.models import BankAccount
 from django.shortcuts import get_object_or_404
-
+from core.workflows.finalize_order import finalize_order
 from inventory.models import Stock, Department
-from restaurant.models import POSOrder, POSOrderItem, Shift
-from restaurant.models import MenuItem
+from restaurant.models import POSOrder, POSOrderItem, Shift, MenuItem
 from rooms.models import Room
+from accounting.services.journal import get_system_account
 from billing.services.folio_factory import (
     get_active_room_folio_or_fail,
     get_or_create_walkin_folio,
@@ -15,7 +15,14 @@ from accounting.utils import get_current_business_day
 from accounting.services.journal import record_transaction
 
 @transaction.atomic
-def process_pos_order(user, cart, settlement, payment_method, room_id=None):
+def process_pos_order(
+    user,
+    cart,
+    settlement,
+    payment_method,
+    room_id=None,
+    bank_account_id=None,
+):
 
     if not cart or not cart.get("items"):
         raise ValueError("Cart is empty")
@@ -104,28 +111,84 @@ def process_pos_order(user, cart, settlement, payment_method, room_id=None):
         )
 
     # ------------------------------
-    # CHARGE & PAYMENT
+    # CHARGE & COGS
     # ------------------------------
     order.charge_order()
+    finalize_order(order)
 
+    # ------------------------------
+    # PAYMENT
+    # ------------------------------
     if settlement == "PAY_NOW":
-        order.pay_order(payment_method or "CASH")
+        payment_method = payment_method or "CASH"
+
+        if payment_method == "CASH":
+            payment_account = get_system_account(
+                hotel,
+                "cash",
+            )
+
+        elif payment_method in ("POS", "TRANSFER"):
+            if not bank_account_id:
+                raise ValueError(
+                    "Bank account is required for POS or Transfer payments."
+                )
+
+            bank_account = (
+                BankAccount.objects
+                .select_related("account")
+                .filter(
+                    id=bank_account_id,
+                    hotel=hotel,
+                    is_active=True,
+                    account__is_active=True,
+                )
+                .first()
+            )
+
+            if not bank_account:
+                raise ValueError(
+                    "Selected bank account is not available."
+                )
+
+            payment_account = bank_account.account
+
+        else:
+            raise ValueError("Invalid payment method.")
+
+        order.pay_order(
+            payment_method,
+            account=payment_account,
+        )
 
     # ------------------------------
     # ACCOUNTING
     # ------------------------------
     if settlement == "PAY_NOW":
 
-        record_transaction(
-            debit_system_key="pos_clearing",
-            credit_system_key="restaurant_revenue",
-            amount=order.total_amount,
-            description=f"POS Sale #{order.id}",
-            hotel=hotel,
-            created_by=user,
-            entry_type="SALE",
-            reference=f"POS-{order.id}",
-        )
+        if payment_method == "CASH":
+            record_transaction(
+                debit_system_key="cash",
+                credit_system_key="restaurant_revenue",
+                amount=order.total_amount,
+                description=f"POS Sale #{order.id}",
+                hotel=hotel,
+                created_by=user,
+                entry_type="SALE",
+                reference=f"POS-{order.id}",
+            )
+
+        else:
+            record_transaction(
+                debit_account=payment_account,
+                credit_system_key="restaurant_revenue",
+                amount=order.total_amount,
+                description=f"POS Sale #{order.id}",
+                hotel=hotel,
+                created_by=user,
+                entry_type="SALE",
+                reference=f"POS-{order.id}",
+            )
 
     elif settlement == "ROOM":
 
@@ -139,4 +202,5 @@ def process_pos_order(user, cart, settlement, payment_method, room_id=None):
             entry_type="SALE",
             reference=f"POS-{order.id}",
         )
+
     return order

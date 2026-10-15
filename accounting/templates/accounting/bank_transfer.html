@@ -1,0 +1,105 @@
+{% extends "base/base.html" %}
+
+{% block title %}Bank Transfer{% endblock %}
+
+{% block content %}
+
+<div style="max-width:800px;margin:0 auto;padding:30px 20px;">
+
+    <h1>Bank Transfer</h1>
+
+    <p style="color:#666;">
+        Transfer funds between the hotel's own bank accounts.
+    </p>
+
+    <div style="padding:25px;border:1px solid #ddd;border-radius:10px;">
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div style="margin-bottom:20px;">
+                <label style="display:block;font-weight:600;margin-bottom:7px;">
+                    Source Bank Account
+                </label>
+
+                <select
+                    name="source_bank"
+                    required
+                    style="width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;"
+                >
+                    <option value="">Select source account</option>
+
+                    {% for bank in bank_accounts %}
+                        <option value="{{ bank.id }}">
+                            {{ bank.bank_name }}
+                            — {{ bank.account_name }}
+                            — {{ bank.account_number }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="display:block;font-weight:600;margin-bottom:7px;">
+                    Destination Bank Account
+                </label>
+
+                <select
+                    name="destination_bank"
+                    required
+                    style="width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;"
+                >
+                    <option value="">Select destination account</option>
+
+                    {% for bank in bank_accounts %}
+                        <option value="{{ bank.id }}">
+                            {{ bank.bank_name }}
+                            — {{ bank.account_name }}
+                            — {{ bank.account_number }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="display:block;font-weight:600;margin-bottom:7px;">
+                    Amount
+                </label>
+
+                <input
+                    type="number"
+                    name="amount"
+                    min="0.01"
+                    step="0.01"
+                    required
+                    style="width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;"
+                >
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="display:block;font-weight:600;margin-bottom:7px;">
+                    Note
+                </label>
+
+                <textarea
+                    name="note"
+                    rows="3"
+                    placeholder="Optional transfer note..."
+                    style="width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;"
+                ></textarea>
+            </div>
+
+            <button
+                type="submit"
+                style="padding:12px 20px;border:0;border-radius:6px;background:#198754;color:white;font-weight:600;cursor:pointer;"
+            >
+                Record Bank Transfer
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

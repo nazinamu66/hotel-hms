@@ -1,11 +1,17 @@
 from django.db import models
-from inventory.models import Product, Department,StockMovement
 from django.conf import settings
 from decimal import Decimal
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from inventory.models import Stock, PurchaseOrder,Supplier
 from django.utils import timezone
+from inventory.models import (
+    Product,
+    Department,
+    StockMovement,
+    StockCostLayer,
+    stock_out,
+)
 
 # from .models import ProductionIngredientUsage
 
@@ -125,9 +131,30 @@ class ProductionBatch(models.Model):
         return f"{self.recipe} x {self.quantity_produced}"
 
     def total_cost(self):
+        
+        """
+        Return the actual FIFO cost consumed by this production batch.
+
+        ProductionIngredientUsage records quantity and variance for audit.
+        The authoritative monetary cost comes from the FIFO allocations
+        attached to the production StockMovement.
+        """
+        movement = (
+            StockMovement.objects
+            .filter(
+                reference=f"PROD-{self.id}",
+                movement_type="OUT",
+            )
+            .prefetch_related("cost_allocations")
+            .first()
+        )
+
+        if not movement:
+            return Decimal("0.00")
+
         return sum(
-            usage.actual_quantity * usage.ingredient.cost_price
-            for usage in self.ingredient_usages.all()
+            allocation.total_cost
+            for allocation in movement.cost_allocations.all()
         )
 
     def cost_per_unit(self):
@@ -200,11 +227,11 @@ class ProductionBatch(models.Model):
 
         ingredient_rows = self._collect_ingredient_rows(actual_quantities)
 
-        self._deduct_ingredients(ingredient_rows)
+        total_cost = self._deduct_ingredients(ingredient_rows)
 
-        self._add_finished_product()
+        self._add_finished_product(total_cost)
 
-        self._finalize()
+        self._finalize(total_cost)
 
     # =====================================
     # VALIDATE PRODUCER
@@ -230,6 +257,7 @@ class ProductionBatch(models.Model):
     # =====================================
     # VALIDATE INGREDIENTS
     # =====================================
+    
     def _collect_ingredient_rows(self, actual_quantities):
 
         kitchen = self.produced_by.department
@@ -237,37 +265,31 @@ class ProductionBatch(models.Model):
 
         for item in self.recipe.items.select_related("ingredient"):
 
-            expected_qty = Decimal(item.quantity) * Decimal(self.quantity_produced)
+            # Recipe standard × number of portions
+            expected_qty = (
+                Decimal(item.quantity)
+                * Decimal(self.quantity_produced)
+            )
 
+            # Actual quantity entered by the kitchen.
+            # If nothing was supplied, use expected as the fallback.
             actual_qty = Decimal(
                 actual_quantities.get(
                     str(item.ingredient.id),
-                    actual_quantities.get(item.ingredient.id, expected_qty)
+                    actual_quantities.get(
+                        item.ingredient.id,
+                        expected_qty
+                    )
                 )
             )
 
             if actual_qty <= 0:
                 raise ValidationError(
-                    f"Actual quantity must be > 0 for {item.ingredient}"
+                    f"Actual quantity must be greater than 0 for "
+                    f"{item.ingredient}."
                 )
 
-            if item.control_mode == "STRICT":
-                if actual_qty != expected_qty:
-                    raise ValidationError(
-                        f"{item.ingredient} must match recipe exactly."
-                    )
-
-            elif item.control_mode == "TOLERANCE":
-
-                allowed_variance = (
-                    expected_qty * item.tolerance_percent / Decimal("100")
-                )
-
-                if abs(actual_qty - expected_qty) > allowed_variance:
-                    raise ValidationError(
-                        f"{item.ingredient} exceeds allowed tolerance"
-                    )
-
+            # Kitchen must have enough working stock.
             stock = (
                 Stock.objects
                 .select_for_update()
@@ -280,10 +302,14 @@ class ProductionBatch(models.Model):
 
             if not stock or stock.quantity < actual_qty:
                 raise ValidationError(
-                    f"Insufficient {item.ingredient}"
+                    f"Insufficient {item.ingredient}."
                 )
 
-            ingredient_rows.append((item, expected_qty, actual_qty))
+            # Keep both expected and actual so the production record
+            # can retain the variance.
+            ingredient_rows.append(
+                (item, expected_qty, actual_qty)
+            )
 
         return ingredient_rows
 
@@ -294,24 +320,22 @@ class ProductionBatch(models.Model):
 
         kitchen = self.produced_by.department
 
+        total_cost = Decimal("0.00")
+
         for item, expected_qty, actual_qty in ingredient_rows:
 
-            stock = Stock.objects.select_for_update().get(
+            # Production quantities are already expressed in
+            # the ingredient's BASE UNIT.
+            result = stock_out(
                 product=item.ingredient,
-                department=kitchen
-            )
-
-            stock.quantity -= actual_qty
-            stock.save(update_fields=["quantity"])
-
-            StockMovement.objects.create(
-                product=item.ingredient,
-                from_department=kitchen,
+                department=kitchen,
                 quantity=actual_qty,
-                movement_type="OUT",
-                created_by=self.produced_by,
-                reference=f"PROD-{self.id}"
+                user=self.produced_by,
+                reason="Kitchen production",
+                reference=f"PROD-{self.id}",
             )
+
+            total_cost += result["total_cost"]
 
             ProductionIngredientUsage.objects.create(
                 production=self,
@@ -321,10 +345,12 @@ class ProductionBatch(models.Model):
                 variance=actual_qty - expected_qty
             )
 
+        return total_cost
+
     # =====================================
     # ADD FINISHED PRODUCT
     # =====================================
-    def _add_finished_product(self):
+    def _add_finished_product(self, total_cost):
 
         kitchen = self.produced_by.department
 
@@ -350,11 +376,32 @@ class ProductionBatch(models.Model):
             reference=f"PROD-{self.id}"
         )
 
+        # --------------------------------------
+        # CREATE FIFO COST LAYER FOR PREPARED FOOD
+        # --------------------------------------
+
+        if total_cost > 0:
+
+            unit_cost = (
+                total_cost
+                / Decimal(self.quantity_produced)
+            )
+
+            StockCostLayer.objects.create(
+                product=self.recipe.product,
+                department=kitchen,
+                purchase_item=None,
+                quantity_received=self.quantity_produced,
+                quantity_remaining=self.quantity_produced,
+                unit_cost=unit_cost,
+                is_opening_balance=False,
+            )
+
     # =====================================
     # FINALIZE BATCH
     # =====================================
 
-    def _finalize(self):
+    def _finalize(self, total_cost):
 
         # --------------------------------------
         # ACCOUNTING ENTRY (RAW → FINISHED)
@@ -372,12 +419,6 @@ class ProductionBatch(models.Model):
         finished_inventory = Account.objects.get(
             hotel=hotel,
             slug="finished-goods-inventory"
-        )
-
-        # 🔥 total cost of ingredients used
-        total_cost = sum(
-            usage.actual_quantity * usage.ingredient.cost_price
-            for usage in self.ingredient_usages.all()
         )
 
         if total_cost > 0:

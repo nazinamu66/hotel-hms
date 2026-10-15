@@ -61,6 +61,8 @@ MAINTENANCE_EXPENSE = "maintenance_expense"
 
 LAUNDRY_EXPENSE = "laundry_expense"
 
+RESTAURANT_EXPENSE = "restaurant_expense"
+
 UTILITIES_EXPENSE = "utilities_expense"
 
 
@@ -314,6 +316,16 @@ DEFAULT_ACCOUNTS = [
         "code": "5100",
         "name": "Maintenance Expense",
         "system_key": MAINTENANCE_EXPENSE,
+        "type": EXPENSE,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": True,
+    },
+
+    {
+        "code": "5300",
+        "name": "Restaurant Expense",
+        "system_key": RESTAURANT_EXPENSE,
         "type": EXPENSE,
         "is_system": True,
         "allow_posting": True,

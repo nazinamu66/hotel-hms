@@ -1,9 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError,PermissionDenied
 from accounts.decorators import manager_admin_or_director
 from django.db import transaction
+from django.db.models import Q
 from decimal import Decimal, InvalidOperation
 from .models import (
     Building,
@@ -68,11 +69,10 @@ def building_list(request):
     )
 
 @user_passes_test(manager_admin_or_director)
+@transaction.atomic
 def building_create(request):
 
-    hotels = get_accessible_hotels(
-        request.user,
-    )
+    hotels = get_accessible_hotels(request.user)
 
     if not hotels.exists():
         messages.error(
@@ -92,6 +92,15 @@ def building_create(request):
             "hotel",
         )
 
+        floor_count = request.POST.get(
+            "floor_count",
+            "",
+        ).strip()
+
+        # -----------------------------------------------------
+        # VALIDATE BUILDING
+        # -----------------------------------------------------
+
         if not name:
             messages.error(
                 request,
@@ -104,18 +113,68 @@ def building_create(request):
             pk=hotel_id,
         )
 
-        Building.objects.create(
+        # -----------------------------------------------------
+        # VALIDATE FLOOR COUNT
+        # -----------------------------------------------------
+
+        try:
+            floor_count = int(floor_count)
+        except (TypeError, ValueError):
+            messages.error(
+                request,
+                "Number of floors must be a valid number.",
+            )
+            return redirect("building_create")
+
+        if floor_count < 1:
+            messages.error(
+                request,
+                "A building must have at least one floor.",
+            )
+            return redirect("building_create")
+
+        # -----------------------------------------------------
+        # DUPLICATE BUILDING CHECK
+        # -----------------------------------------------------
+
+        if Building.objects.filter(
+            hotel=hotel,
+            name__iexact=name,
+        ).exists():
+
+            messages.error(
+                request,
+                f"A building named '{name}' already exists "
+                f"in {hotel.name}.",
+            )
+            return redirect("building_create")
+
+        # -----------------------------------------------------
+        # CREATE BUILDING + FLOORS
+        # -----------------------------------------------------
+
+        building = Building.objects.create(
             hotel=hotel,
             name=name,
         )
 
+        for number in range(1, floor_count + 1):
+
+            Floor.objects.create(
+                building=building,
+                name=f"Floor {number}",
+                number=number,
+            )
+
         messages.success(
             request,
-            f"Building '{name}' created.",
+            f"Building '{name}' created with "
+            f"{floor_count} floor(s).",
         )
 
         return redirect(
-            "building_list",
+            "building_detail",
+            pk=building.pk,
         )
 
     return render(
@@ -123,6 +182,28 @@ def building_create(request):
         "rooms/building_form.html",
         {
             "hotels": hotels,
+        },
+    )
+
+@user_passes_test(manager_admin_or_director)
+def building_detail(request, pk):
+
+    building = get_object_or_404(
+        Building.objects
+        .select_related("hotel")
+        .prefetch_related("floors"),
+        pk=pk,
+        hotel__in=get_accessible_hotels(request.user),
+    )
+
+    floors = building.floors.order_by("number")
+
+    return render(
+        request,
+        "rooms/building_detail.html",
+        {
+            "building": building,
+            "floors": floors,
         },
     )
 
@@ -818,26 +899,54 @@ def room_detail(request, pk):
 @user_passes_test(manager_admin_or_director)
 def amenity_list(request):
 
-    if not request.user.hotel:
-        messages.error(
-            request,
-            "Your account is not assigned to a hotel.",
-        )
-        return redirect("owner_dashboard")
+    hotels = (
+        get_accessible_hotels(request.user)
+        .filter(is_active=True)
+        .order_by("name")
+    )
 
     amenities = (
         Amenity.objects
         .filter(
-            hotel=request.user.hotel,
+            hotel__in=hotels,
         )
-        .order_by("name")
+        .select_related("hotel")
+        .order_by(
+            "hotel__name",
+            "name",
+        )
     )
+
+    search = request.GET.get("search", "").strip()
+    hotel_id = request.GET.get("hotel", "").strip()
+    status = request.GET.get("status", "").strip()
+
+    if search:
+        amenities = amenities.filter(
+            Q(name__icontains=search)
+            | Q(description__icontains=search)
+        )
+
+    if hotel_id:
+        amenities = amenities.filter(
+            hotel_id=hotel_id,
+        )
+
+    if status == "active":
+        amenities = amenities.filter(
+            is_active=True,
+        )
+    elif status == "inactive":
+        amenities = amenities.filter(
+            is_active=False,
+        )
 
     return render(
         request,
         "rooms/amenity_list.html",
         {
             "amenities": amenities,
+            "hotels": hotels,
         },
     )
 
@@ -845,14 +954,22 @@ def amenity_list(request):
 @user_passes_test(manager_admin_or_director)
 def amenity_create(request):
 
-    if not request.user.hotel:
+    hotels = (
+        get_accessible_hotels(request.user)
+        .filter(is_active=True)
+        .order_by("name")
+    )
+
+    if not hotels.exists():
         messages.error(
             request,
-            "Your account is not assigned to a hotel.",
+            "You do not have access to any hotel.",
         )
         return redirect("owner_dashboard")
 
     if request.method == "POST":
+
+        hotel_id = request.POST.get("hotel")
 
         name = request.POST.get(
             "name",
@@ -864,32 +981,32 @@ def amenity_create(request):
             "",
         ).strip()
 
+        hotel = get_object_or_404(
+            hotels,
+            pk=hotel_id,
+        )
+
         if not name:
             messages.error(
                 request,
                 "Amenity name is required.",
             )
-
-            return redirect(
-                "amenity_create",
-            )
+            return redirect("amenity_create")
 
         if Amenity.objects.filter(
-            hotel=request.user.hotel,
+            hotel=hotel,
             name__iexact=name,
         ).exists():
 
             messages.error(
                 request,
-                "An amenity with this name already exists for your hotel.",
+                "An amenity with this name already exists for this hotel.",
             )
 
-            return redirect(
-                "amenity_create",
-            )
+            return redirect("amenity_create")
 
         Amenity.objects.create(
-            hotel=request.user.hotel,
+            hotel=hotel,
             name=name,
             description=description,
         )
@@ -899,30 +1016,30 @@ def amenity_create(request):
             f"Amenity '{name}' created.",
         )
 
-        return redirect(
-            "amenity_list",
-        )
+        return redirect("amenity_list")
 
     return render(
         request,
         "rooms/amenity_form.html",
+        {
+            "hotels": hotels,
+        },
     )
 
 
 @user_passes_test(manager_admin_or_director)
 def amenity_edit(request, pk):
 
-    if not request.user.hotel:
-        messages.error(
-            request,
-            "Your account is not assigned to a hotel.",
-        )
-        return redirect("owner_dashboard")
+    hotels = (
+        get_accessible_hotels(request.user)
+        .filter(is_active=True)
+        .order_by("name")
+    )
 
     amenity = get_object_or_404(
-        Amenity,
+        Amenity.objects.select_related("hotel"),
         pk=pk,
-        hotel=request.user.hotel,
+        hotel__in=hotels,
     )
 
     if request.method == "POST":
@@ -951,7 +1068,7 @@ def amenity_edit(request, pk):
         duplicate = (
             Amenity.objects
             .filter(
-                hotel=request.user.hotel,
+                hotel=amenity.hotel,
                 name__iexact=name,
             )
             .exclude(
@@ -961,10 +1078,9 @@ def amenity_edit(request, pk):
         )
 
         if duplicate:
-
             messages.error(
                 request,
-                "An amenity with this name already exists for your hotel.",
+                "An amenity with this name already exists for this hotel.",
             )
 
             return redirect(
@@ -996,6 +1112,7 @@ def amenity_edit(request, pk):
         "rooms/amenity_form.html",
         {
             "amenity": amenity,
+            "hotels": hotels,
         },
     )
 
@@ -1003,17 +1120,14 @@ def amenity_edit(request, pk):
 @user_passes_test(manager_admin_or_director)
 def amenity_toggle_active(request, pk):
 
-    if not request.user.hotel:
-        messages.error(
-            request,
-            "Your account is not assigned to a hotel.",
-        )
-        return redirect("owner_dashboard")
+    hotels = get_accessible_hotels(
+        request.user,
+    )
 
     amenity = get_object_or_404(
         Amenity,
         pk=pk,
-        hotel=request.user.hotel,
+        hotel__in=hotels,
     )
 
     amenity.is_active = not amenity.is_active
@@ -1039,18 +1153,13 @@ def amenity_toggle_active(request, pk):
         "amenity_list",
     )
 
+
 @user_passes_test(manager_admin_or_director)
 def room_amenities(request, pk):
 
-    if not request.user.hotel:
-        messages.error(
-            request,
-            "Your account is not assigned to a hotel.",
-        )
-
-        return redirect(
-            "owner_dashboard",
-        )
+    hotels = get_accessible_hotels(
+        request.user,
+    )
 
     room = get_object_or_404(
         Room.objects
@@ -1058,18 +1167,19 @@ def room_amenities(request, pk):
             "category",
             "building",
             "floor",
+            "hotel",
         )
         .prefetch_related(
             "room_amenities__amenity",
         ),
         pk=pk,
-        hotel=request.user.hotel,
+        hotel__in=hotels,
     )
 
     amenities = (
         Amenity.objects
         .filter(
-            hotel=request.user.hotel,
+            hotel=room.hotel,
             is_active=True,
         )
         .order_by(
@@ -1171,22 +1281,74 @@ def room_amenities(request, pk):
 @user_passes_test(manager_admin_or_director)
 def floor_list(request):
 
+    accessible_hotels = get_accessible_hotels(
+        request.user,
+    )
+
+    hotels = (
+        accessible_hotels
+        .filter(is_active=True)
+        .order_by("name")
+    )
+
+    buildings = (
+        Building.objects
+        .filter(
+            hotel__in=accessible_hotels,
+            is_active=True,
+        )
+        .select_related("hotel")
+        .order_by(
+            "hotel__name",
+            "name",
+        )
+    )
+
     floors = (
         Floor.objects
         .filter(
-            building__hotel__in=get_accessible_hotels(
-                request.user,
-            ),
+            building__hotel__in=accessible_hotels,
         )
         .select_related(
             "building",
             "building__hotel",
         )
-        .order_by(
-            "building__hotel__name",
-            "building__name",
-            "number",
+    )
+
+    search = request.GET.get("search", "").strip()
+    hotel_id = request.GET.get("hotel", "").strip()
+    building_id = request.GET.get("building", "").strip()
+    status = request.GET.get("status", "").strip()
+
+    if search:
+        floors = floors.filter(
+            Q(building__name__icontains=search)
+            | Q(name__icontains=search)
         )
+
+    if hotel_id:
+        floors = floors.filter(
+            building__hotel_id=hotel_id,
+        )
+
+    if building_id:
+        floors = floors.filter(
+            building_id=building_id,
+        )
+
+    if status == "active":
+        floors = floors.filter(
+            is_active=True,
+        )
+    elif status == "inactive":
+        floors = floors.filter(
+            is_active=False,
+        )
+
+    floors = floors.order_by(
+        "building__hotel__name",
+        "building__name",
+        "number",
     )
 
     return render(
@@ -1194,6 +1356,8 @@ def floor_list(request):
         "rooms/floor_list.html",
         {
             "floors": floors,
+            "hotels": hotels,
+            "buildings": buildings,
         },
     )
 
@@ -1216,6 +1380,8 @@ def floor_create(request):
             "name",
         )
     )
+
+    selected_building_id = request.GET.get("building")
 
     if request.method == "POST":
 
@@ -1290,7 +1456,7 @@ def floor_create(request):
             )
 
             return redirect(
-                "floor_create",
+                f"/manage/floors/add/?building={building.pk}"
             )
 
         Floor.objects.create(
@@ -1304,6 +1470,15 @@ def floor_create(request):
             "Floor created.",
         )
 
+        # If the user came from a specific building,
+        # return them to that building's floor management page.
+        if request.GET.get("building"):
+
+            return redirect(
+                "building_detail",
+                pk=building.pk,
+            )
+
         return redirect(
             "floor_list",
         )
@@ -1313,39 +1488,158 @@ def floor_create(request):
         "rooms/floor_form.html",
         {
             "buildings": buildings,
+            "selected_building_id": selected_building_id,
         },
     )
 
-def rate_list(request):
+@user_passes_test(manager_admin_or_director)
+def floor_edit(request, pk):
 
-    rates = RoomRate.objects.select_related(
-        "category"
+    floor = get_object_or_404(
+        Floor.objects.select_related(
+            "building",
+            "building__hotel",
+        ),
+        pk=pk,
+        building__hotel__in=get_accessible_hotels(
+            request.user,
+        ),
     )
-
-    return render(
-        request,
-        "rooms/rate_list.html",
-        {"rates": rates}
-    )
-
-def rate_create(request):
-
-    categories = RoomCategory.objects.all()
 
     if request.method == "POST":
 
-        RoomRate.objects.update_or_create(
-            category_id=request.POST.get("category"),
-            defaults={
-                "price_per_night": request.POST.get("price"),
-                "currency": request.POST.get("currency")
-            }
+        name = request.POST.get(
+            "name",
+            "",
+        ).strip()
+
+        number = request.POST.get(
+            "number",
+            "",
+        ).strip()
+
+        if not name:
+            messages.error(
+                request,
+                "Floor name is required.",
+            )
+            return redirect(
+                "floor_edit",
+                pk=floor.pk,
+            )
+
+        try:
+            number = int(number)
+        except (TypeError, ValueError):
+            messages.error(
+                request,
+                "Floor number must be a valid number.",
+            )
+            return redirect(
+                "floor_edit",
+                pk=floor.pk,
+            )
+
+        if number < 0:
+            messages.error(
+                request,
+                "Floor number cannot be negative.",
+            )
+            return redirect(
+                "floor_edit",
+                pk=floor.pk,
+            )
+
+        duplicate = (
+            Floor.objects
+            .filter(
+                building=floor.building,
+                number=number,
+            )
+            .exclude(
+                pk=floor.pk,
+            )
+            .exists()
         )
 
-        return redirect("rate_list")
+        if duplicate:
+            messages.error(
+                request,
+                f"Floor {number} already exists "
+                f"in {floor.building.name}.",
+            )
+            return redirect(
+                "floor_edit",
+                pk=floor.pk,
+            )
+
+        floor.name = name
+        floor.number = number
+
+        floor.save(
+            update_fields=[
+                "name",
+                "number",
+            ],
+        )
+
+        messages.success(
+            request,
+            "Floor updated successfully.",
+        )
+
+        return redirect(
+            "building_detail",
+            pk=floor.building_id,
+        )
 
     return render(
         request,
-        "rooms/rate_form.html",
-        {"categories": categories}
+        "rooms/floor_form.html",
+        {
+            "floor": floor,
+            "building": floor.building,
+            "edit_mode": True,
+        },
     )
+@user_passes_test(manager_admin_or_director)
+def floor_toggle_active(request, pk):
+
+    if request.method != "POST":
+        raise PermissionDenied
+
+    floor = get_object_or_404(
+        Floor.objects.select_related(
+            "building",
+            "building__hotel",
+        ),
+        pk=pk,
+        building__hotel__in=get_accessible_hotels(
+            request.user,
+        ),
+    )
+
+    floor.is_active = not floor.is_active
+
+    floor.save(
+        update_fields=[
+            "is_active",
+        ],
+    )
+
+    state = (
+        "activated"
+        if floor.is_active
+        else "deactivated"
+    )
+
+    messages.success(
+        request,
+        f"Floor '{floor.name}' {state}.",
+    )
+
+    return redirect(
+        "building_detail",
+        pk=floor.building_id,
+    )
+

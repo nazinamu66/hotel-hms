@@ -1305,7 +1305,8 @@ def laundry_stock(request):
             hotel__in=accessible_hotels,
             departments__in=laundry_departments,
             is_active=True,
-            usage_type="INTERNAL",
+            product_type="LAUNDRY",
+
         )
         .order_by(
             "hotel__name",

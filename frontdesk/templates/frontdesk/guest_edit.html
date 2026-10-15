@@ -1,0 +1,940 @@
+{% extends "base/base.html" %}
+
+{% block title %}Edit Guest{% endblock %}
+
+{% block header %}
+
+<div>
+    <div style="
+        font-size:13px;
+        font-weight:600;
+        color:#6b7280;
+        text-transform:uppercase;
+        letter-spacing:.04em;
+    ">
+        Guest Management
+    </div>
+
+    <h2 style="margin:5px 0 0;">
+        Edit Guest
+    </h2>
+</div>
+
+{% endblock %}
+
+
+{% block content %}
+
+<div style="
+    max-width:1000px;
+    margin:0 auto;
+">
+
+    <div style="margin-bottom:24px;">
+
+        <div style="
+            font-size:13px;
+            color:#6b7280;
+        ">
+            Guest Profile
+        </div>
+
+        <h3 style="
+            margin:5px 0 0;
+            font-size:24px;
+        ">
+            {{ guest.full_name }}
+        </h3>
+
+    </div>
+
+
+    <form
+        method="post"
+        enctype="multipart/form-data"
+    >
+
+        {% csrf_token %}
+
+
+        <!-- GUEST INFORMATION -->
+
+        <section class="card">
+
+            <div style="margin-bottom:24px;">
+
+                <div style="
+                    font-size:13px;
+                    font-weight:600;
+                    color:#6b7280;
+                    text-transform:uppercase;
+                    letter-spacing:.04em;
+                ">
+                    Guest Information
+                </div>
+
+                <h3 style="margin:5px 0 0;">
+                    Personal Details
+                </h3>
+
+            </div>
+
+
+            <div style="
+                display:grid;
+                grid-template-columns:repeat(2, minmax(0, 1fr));
+                gap:20px;
+            ">
+
+                <div>
+                    <label
+                        for="first_name"
+                        style="
+                            display:block;
+                            margin-bottom:7px;
+                            font-weight:600;
+                        "
+                    >
+                        First Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="first_name"
+                        name="first_name"
+                        value="{{ guest.first_name }}"
+                        required
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:13px 14px;
+                            border:1px solid #cbd5e1;
+                            border-radius:10px;
+                            font-size:15px;
+                        "
+                    >
+                </div>
+
+
+                <div>
+                    <label
+                        for="last_name"
+                        style="
+                            display:block;
+                            margin-bottom:7px;
+                            font-weight:600;
+                        "
+                    >
+                        Last Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="last_name"
+                        name="last_name"
+                        value="{{ guest.last_name }}"
+                        required
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:13px 14px;
+                            border:1px solid #cbd5e1;
+                            border-radius:10px;
+                            font-size:15px;
+                        "
+                    >
+                </div>
+
+
+                <div>
+                    <label
+                        for="phone"
+                        style="
+                            display:block;
+                            margin-bottom:7px;
+                            font-weight:600;
+                        "
+                    >
+                        Phone
+                    </label>
+
+                    <input
+                        type="text"
+                        id="phone"
+                        name="phone"
+                        value="{{ guest.phone }}"
+                        placeholder="e.g. 08031165185"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:13px 14px;
+                            border:1px solid #cbd5e1;
+                            border-radius:10px;
+                            font-size:15px;
+                        "
+                    >
+                </div>
+
+
+                <div>
+                    <label
+                        for="email"
+                        style="
+                            display:block;
+                            margin-bottom:7px;
+                            font-weight:600;
+                        "
+                    >
+                        Email
+                    </label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value="{{ guest.email }}"
+                        placeholder="guest@example.com"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:13px 14px;
+                            border:1px solid #cbd5e1;
+                            border-radius:10px;
+                            font-size:15px;
+                        "
+                    >
+                </div>
+
+
+                <div>
+                    <label
+                        for="nationality"
+                        style="
+                            display:block;
+                            margin-bottom:7px;
+                            font-weight:600;
+                        "
+                    >
+                        Nationality
+                    </label>
+
+                    <input
+                        type="text"
+                        id="nationality"
+                        name="nationality"
+                        value="{{ guest.nationality }}"
+                        placeholder="e.g. Nigerian"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:13px 14px;
+                            border:1px solid #cbd5e1;
+                            border-radius:10px;
+                            font-size:15px;
+                        "
+                    >
+                </div>
+
+
+                <div>
+                    <label
+                        for="id_number"
+                        style="
+                            display:block;
+                            margin-bottom:7px;
+                            font-weight:600;
+                        "
+                    >
+                        ID / Passport Number
+                    </label>
+
+                    <input
+                        type="text"
+                        id="id_number"
+                        name="id_number"
+                        value="{{ guest.id_number }}"
+                        placeholder="Passport or national ID number"
+                        style="
+                            width:100%;
+                            box-sizing:border-box;
+                            padding:13px 14px;
+                            border:1px solid #cbd5e1;
+                            border-radius:10px;
+                            font-size:15px;
+                        "
+                    >
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ID DOCUMENT -->
+
+        <section class="card" style="margin-top:24px;">
+
+            <div style="margin-bottom:18px;">
+
+                <div style="
+                    font-size:13px;
+                    font-weight:600;
+                    color:#6b7280;
+                    text-transform:uppercase;
+                    letter-spacing:.04em;
+                ">
+                    Identity Document
+                </div>
+
+                <h3 style="margin:5px 0 0;">
+                    Passport / National ID
+                </h3>
+
+            </div>
+
+
+            {% if guest.id_document %}
+
+                <div style="
+                    margin-bottom:20px;
+                    padding:16px;
+                    background:#f8fafc;
+                    border:1px solid #e5e7eb;
+                    border-radius:12px;
+                    text-align:center;
+                ">
+
+                    <div style="
+                        margin-bottom:10px;
+                        font-size:13px;
+                        font-weight:600;
+                        color:#6b7280;
+                    ">
+                        Current Document
+                    </div>
+
+                    <img
+                        src="{% url 'frontdesk_guest_id_document' guest.id %}"
+                        alt="Current identity document"
+                        style="
+                            display:block;
+                            width:320px;
+                            height:240px;
+                            max-width:100%;
+                            margin:0 auto 14px;
+                            border-radius:8px;
+                            object-fit:contain;
+                            background:#fff;
+                        "
+                    >
+
+                    <a
+                        href="{% url 'frontdesk_guest_id_document' guest.id %}"
+                        target="_blank"
+                        style="
+                            text-decoration:none;
+                            color:#2563eb;
+                            font-size:14px;
+                            font-weight:600;
+                        "
+                    >
+                        View Current Document
+                    </a>
+
+                </div>
+
+            {% else %}
+
+                <div style="
+                    margin-bottom:20px;
+                    padding:16px;
+                    border:1px dashed #cbd5e1;
+                    border-radius:12px;
+                    color:#6b7280;
+                    font-size:14px;
+                ">
+                    No identity document is currently stored.
+                </div>
+
+            {% endif %}
+
+
+            <!-- REPLACE DOCUMENT -->
+
+            <div style="
+                padding-top:18px;
+                border-top:1px solid #e5e7eb;
+            ">
+
+                <div style="
+                    font-weight:700;
+                    font-size:16px;
+                    margin-bottom:6px;
+                ">
+                    Replace Identity Document
+                </div>
+
+                <div style="
+                    color:#6b7280;
+                    font-size:14px;
+                    margin-bottom:16px;
+                ">
+                    Take a new photo using the camera or upload an existing image.
+                </div>
+
+
+                <!-- BUTTONS -->
+
+                <div style="
+                    display:flex;
+                    gap:10px;
+                    flex-wrap:wrap;
+                ">
+
+                    <button
+                        type="button"
+                        id="take-photo-button"
+                        style="
+                            padding:12px 18px;
+                            border:1px solid #93c5fd;
+                            border-radius:9px;
+                            background:#eff6ff;
+                            color:#1d4ed8;
+                            font-size:14px;
+                            font-weight:700;
+                            cursor:pointer;
+                        "
+                    >
+                        📷 Take Photo
+                    </button>
+
+
+                    <button
+                        type="button"
+                        id="upload-image-button"
+                        style="
+                            padding:12px 18px;
+                            border:1px solid #cbd5e1;
+                            border-radius:9px;
+                            background:#fff;
+                            color:#374151;
+                            font-size:14px;
+                            font-weight:700;
+                            cursor:pointer;
+                        "
+                    >
+                        📁 Upload Image
+                    </button>
+
+                </div>
+
+
+                <!-- REAL FILE INPUT -->
+
+                <input
+                    type="file"
+                    id="id_document"
+                    name="id_document"
+                    accept="image/*"
+                    style="display:none;"
+                >
+
+
+                <!-- CAMERA -->
+
+                <div
+                    id="camera-container"
+                    style="
+                        display:none;
+                        margin-top:18px;
+                        padding:16px;
+                        border:1px solid #cbd5e1;
+                        border-radius:12px;
+                        background:#f8fafc;
+                    "
+                >
+
+                    <video
+                        id="camera-video"
+                        autoplay
+                        playsinline
+                        style="
+                            display:block;
+                            width:100%;
+                            max-width:700px;
+                            max-height:500px;
+                            margin:0 auto;
+                            border-radius:10px;
+                            background:#111827;
+                            object-fit:contain;
+                        "
+                    ></video>
+
+
+                    <div style="
+                        display:flex;
+                        justify-content:center;
+                        gap:10px;
+                        margin-top:14px;
+                        flex-wrap:wrap;
+                    ">
+
+                        <button
+                            type="button"
+                            id="capture-button"
+                            style="
+                                padding:11px 18px;
+                                border:0;
+                                border-radius:9px;
+                                background:#2563eb;
+                                color:#fff;
+                                font-size:14px;
+                                font-weight:700;
+                                cursor:pointer;
+                            "
+                        >
+                            Capture Photo
+                        </button>
+
+
+                        <button
+                            type="button"
+                            id="cancel-camera-button"
+                            style="
+                                padding:11px 18px;
+                                border:1px solid #cbd5e1;
+                                border-radius:9px;
+                                background:#fff;
+                                color:#374151;
+                                font-size:14px;
+                                font-weight:600;
+                                cursor:pointer;
+                            "
+                        >
+                            Cancel
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        id="camera-error"
+                        style="
+                            display:none;
+                            margin-top:12px;
+                            padding:10px;
+                            border-radius:8px;
+                            background:#fef2f2;
+                            color:#b91c1c;
+                            font-size:13px;
+                        "
+                    ></div>
+
+                </div>
+
+
+                <!-- PREVIEW -->
+
+                <div
+                    id="preview-container"
+                    style="
+                        display:none;
+                        margin-top:18px;
+                        padding:16px;
+                        border:1px solid #cbd5e1;
+                        border-radius:12px;
+                        background:#f8fafc;
+                    "
+                >
+
+                    <div style="
+                        font-size:13px;
+                        font-weight:700;
+                        color:#374151;
+                        margin-bottom:10px;
+                    ">
+                        New Document
+                    </div>
+
+
+                    <img
+                        id="preview-image"
+                        alt="New identity document preview"
+                        style="
+                            display:block;
+                            width:320px;
+                            height:240px;
+                            max-width:100%;
+                            margin:0 auto;
+                            border-radius:8px;
+                            object-fit:contain;
+                            background:#fff;
+                        "
+                    >
+
+
+                    <div style="
+                        display:flex;
+                        justify-content:center;
+                        gap:10px;
+                        margin-top:14px;
+                        flex-wrap:wrap;
+                    ">
+
+                        <button
+                            type="button"
+                            id="retake-button"
+                            style="
+                                padding:10px 16px;
+                                border:1px solid #cbd5e1;
+                                border-radius:8px;
+                                background:#fff;
+                                color:#374151;
+                                font-size:13px;
+                                font-weight:600;
+                                cursor:pointer;
+                            "
+                        >
+                            Retake
+                        </button>
+
+
+                        <button
+                            type="button"
+                            id="remove-button"
+                            style="
+                                padding:10px 16px;
+                                border:1px solid #fecaca;
+                                border-radius:8px;
+                                background:#fef2f2;
+                                color:#b91c1c;
+                                font-size:13px;
+                                font-weight:600;
+                                cursor:pointer;
+                            "
+                        >
+                            Remove
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="document-status"
+                    style="
+                        margin-top:10px;
+                        font-size:13px;
+                        color:#6b7280;
+                    "
+                >
+                    {% if guest.id_document %}
+                        Leave this empty to keep the current document.
+                    {% else %}
+                        No identity document selected.
+                    {% endif %}
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ACTIONS -->
+
+        <div style="
+            display:flex;
+            gap:12px;
+            margin-top:24px;
+        ">
+
+            <button
+                type="submit"
+                style="
+                    border:0;
+                    padding:13px 22px;
+                    border-radius:9px;
+                    background:#2563eb;
+                    color:#fff;
+                    font-size:15px;
+                    font-weight:700;
+                    cursor:pointer;
+                "
+            >
+                Save Changes
+            </button>
+
+
+            <a
+                href="{% url 'frontdesk_guest_profile' guest.id %}"
+                style="
+                    text-decoration:none;
+                    padding:13px 22px;
+                    border-radius:9px;
+                    border:1px solid #cbd5e1;
+                    background:#fff;
+                    color:#374151;
+                    font-size:15px;
+                    font-weight:600;
+                "
+            >
+                Cancel
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+<script>
+
+(function () {
+
+    const fileInput = document.getElementById("id_document");
+
+    const uploadButton = document.getElementById("upload-image-button");
+    const takePhotoButton = document.getElementById("take-photo-button");
+
+    const cameraContainer = document.getElementById("camera-container");
+    const video = document.getElementById("camera-video");
+
+    const captureButton = document.getElementById("capture-button");
+    const cancelCameraButton = document.getElementById("cancel-camera-button");
+
+    const previewContainer = document.getElementById("preview-container");
+    const previewImage = document.getElementById("preview-image");
+
+    const retakeButton = document.getElementById("retake-button");
+    const removeButton = document.getElementById("remove-button");
+
+    const status = document.getElementById("document-status");
+    const cameraError = document.getElementById("camera-error");
+
+    let cameraStream = null;
+
+
+    function stopCamera() {
+
+        if (cameraStream) {
+
+            cameraStream.getTracks().forEach(function (track) {
+                track.stop();
+            });
+
+            cameraStream = null;
+        }
+
+        video.srcObject = null;
+    }
+
+
+    function showPreview(file) {
+
+        if (!file) {
+            return;
+        }
+
+        const url = URL.createObjectURL(file);
+
+        previewImage.src = url;
+        previewContainer.style.display = "block";
+
+        status.textContent = "New identity document selected.";
+
+    }
+
+
+    function clearPreview() {
+
+        previewImage.src = "";
+        previewContainer.style.display = "none";
+
+        fileInput.value = "";
+
+        {% if guest.id_document %}
+            status.textContent = "Leave this empty to keep the current document.";
+        {% else %}
+            status.textContent = "No identity document selected.";
+        {% endif %}
+    }
+
+
+    uploadButton.addEventListener("click", function () {
+
+        stopCamera();
+
+        cameraContainer.style.display = "none";
+
+        fileInput.click();
+
+    });
+
+
+    fileInput.addEventListener("change", function () {
+
+        const file = fileInput.files[0];
+
+        if (!file) {
+            return;
+        }
+
+        showPreview(file);
+
+    });
+
+
+    takePhotoButton.addEventListener("click", async function () {
+
+        cameraError.style.display = "none";
+        cameraError.textContent = "";
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+
+            cameraError.textContent =
+                "Camera access is not available in this browser or on this connection.";
+
+            cameraError.style.display = "block";
+
+            return;
+        }
+
+
+        try {
+
+            stopCamera();
+
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: {
+                        ideal: "environment"
+                    }
+                },
+                audio: false
+            });
+
+            video.srcObject = cameraStream;
+
+            cameraContainer.style.display = "block";
+
+            await video.play();
+
+        } catch (error) {
+
+            console.error("Camera error:", error);
+
+            cameraError.textContent =
+                "Unable to access the camera. Please check browser camera permissions.";
+
+            cameraError.style.display = "block";
+
+            stopCamera();
+
+        }
+
+    });
+
+
+    captureButton.addEventListener("click", function () {
+
+        if (!cameraStream) {
+            return;
+        }
+
+
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+
+        if (!width || !height) {
+            return;
+        }
+
+
+        const canvas = document.createElement("canvas");
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const context = canvas.getContext("2d");
+
+        context.drawImage(
+            video,
+            0,
+            0,
+            width,
+            height
+        );
+
+
+        canvas.toBlob(function (blob) {
+
+            if (!blob) {
+                return;
+            }
+
+
+            const file = new File(
+                [blob],
+                "guest-id-" + Date.now() + ".jpg",
+                {
+                    type: "image/jpeg"
+                }
+            );
+
+
+            const dataTransfer = new DataTransfer();
+
+            dataTransfer.items.add(file);
+
+            fileInput.files = dataTransfer.files;
+
+
+            showPreview(file);
+
+            stopCamera();
+
+            cameraContainer.style.display = "none";
+
+        }, "image/jpeg", 0.90);
+
+    });
+
+
+    cancelCameraButton.addEventListener("click", function () {
+
+        stopCamera();
+
+        cameraContainer.style.display = "none";
+
+    });
+
+
+    retakeButton.addEventListener("click", function () {
+
+        clearPreview();
+
+        takePhotoButton.click();
+
+    });
+
+
+    removeButton.addEventListener("click", function () {
+
+        clearPreview();
+
+    });
+
+
+    window.addEventListener("beforeunload", function () {
+
+        stopCamera();
+
+    });
+
+})();
+
+</script>
+
+{% endblock %}

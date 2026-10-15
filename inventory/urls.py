@@ -14,6 +14,9 @@ urlpatterns = [
     # SUPPLIERS
     path("suppliers/", views.supplier_list, name="supplier_list"),
     path("suppliers/create/", views.supplier_create, name="supplier_create"),
+    path("suppliers/<int:pk>/",views.supplier_detail,name="supplier_detail",),
+    path("suppliers/<int:pk>/edit/",views.supplier_edit,name="supplier_edit",),
+    path("suppliers/<int:pk>/archive/",views.supplier_archive,name="supplier_archive",),
 
     # PURCHASE ORDERS
     path("purchase-orders/", views.po_list, name="po_list"),
@@ -49,7 +52,9 @@ urlpatterns = [
     path("departments/",views.department_list,name="department_list",),
 
     path("departments/create/",views.department_create,name="department_create",),
-
     path("departments/<int:dept_id>/edit/",views.department_edit,name="department_edit",),
+    path("departments/<int:dept_id>/toggle-active/",views.department_toggle_active,name="department_toggle_active",),
+
+
     path("purchase-orders/<int:pk>/approve/",views.po_approve,name="po_approve",),
 ]

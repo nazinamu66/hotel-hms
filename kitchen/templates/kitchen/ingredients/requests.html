@@ -1,64 +1,522 @@
 {% extends "base/base.html" %}
+
 {% block content %}
 
-<h2>My Ingredient Requests</h2>
+<style>
+    .requests-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 28px 20px 50px;
+    }
 
-<table border="1" cellpadding="8" width="100%">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Items</th>
-      <th>Status</th>
-      <th>Created</th>
-    </tr>
-  </thead>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
 
-  <tbody>
-    {% for req in requests %}
-    <tr>
-      <td>
-        <a href="{% url 'kitchen_ingredient_request_detail' req.id %}">
-          #{{ req.id }}
-        </a>
-      </td>
+    .page-title {
+        margin: 0;
+        color: #172033;
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: -.02em;
+    }
 
-      <td>
-        <ul style="margin:0; padding-left:18px;">
-          {% for item in req.items.all %}
-            <li>
-              {{ item.ingredient.name }}
-              — {{ item.quantity }}
-              <em>({{ item.get_source_display }})</em>
-            </li>
-          {% endfor %}
-        </ul>
-      </td>
+    .page-subtitle {
+        margin: 7px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
 
-      <td>
-  {% if req.status == "PENDING" %}
-    <span style="color:orange;">Pending</span>
-  {% elif req.status == "APPROVED" %}
-    <span style="color:green;">Approved</span>
-  {% elif req.status == "RECEIVED" %}
-    <span style="color:blue;">Received</span>
-  {% elif req.status == "REJECTED" %}
-    <span style="color:red;">Rejected</span>
-  {% endif %}
-</td>
+    .header-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
 
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 10px 16px;
+        border-radius: 9px;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        border: 1px solid transparent;
+        transition: .15s ease;
+    }
 
-      <td>{{ req.created_at|date:"Y-m-d H:i" }}</td>
-    </tr>
-    {% empty %}
-    <tr>
-      <td colspan="4" style="text-align:center;">
-        No ingredient requests yet
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+    .btn-primary {
+        background: #1f2937;
+        color: #fff;
+    }
 
-<br>
+    .btn-primary:hover {
+        background: #111827;
+    }
+
+    .btn-secondary {
+        background: #fff;
+        color: #374151;
+        border-color: #d9dee7;
+    }
+
+    .btn-secondary:hover {
+        background: #f8fafc;
+    }
+
+    .summary-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 13px;
+        padding: 17px 20px;
+        margin-bottom: 22px;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, .04);
+    }
+
+    .summary-icon {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        background: #f1f5f9;
+        font-size: 20px;
+    }
+
+    .summary-label {
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .summary-value {
+        margin-top: 2px;
+        color: #172033;
+        font-size: 22px;
+        font-weight: 700;
+    }
+
+    .requests-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, .04);
+    }
+
+    .card-header {
+        padding: 19px 20px;
+        border-bottom: 1px solid #edf0f4;
+    }
+
+    .card-title {
+        margin: 0;
+        color: #1f2937;
+        font-size: 17px;
+        font-weight: 700;
+    }
+
+    .card-description {
+        margin: 5px 0 0;
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+    }
+
+    .requests-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 800px;
+    }
+
+    .requests-table th {
+        padding: 13px 16px;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .requests-table td {
+        padding: 16px;
+        border-bottom: 1px solid #f0f2f5;
+        vertical-align: top;
+        color: #374151;
+        font-size: 14px;
+    }
+
+    .requests-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .requests-table tbody tr {
+        transition: background .15s ease;
+    }
+
+    .requests-table tbody tr:hover {
+        background: #fafbfc;
+    }
+
+    .request-id {
+        color: #374151;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .request-id:hover {
+        text-decoration: underline;
+    }
+
+    .items-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .item-line {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex-wrap: wrap;
+    }
+
+    .item-name {
+        color: #1f2937;
+        font-weight: 600;
+    }
+
+    .item-quantity {
+        color: #475569;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .source-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 7px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 78px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .status-pending {
+        background: #fff7ed;
+        color: #c2410c;
+    }
+
+    .status-approved {
+        background: #ecfdf5;
+        color: #047857;
+    }
+
+    .status-rejected {
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+
+    .status-received {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .status-default {
+        background: #f3f4f6;
+        color: #4b5563;
+    }
+
+    .created-date {
+        color: #374151;
+        font-weight: 500;
+    }
+
+    .created-time {
+        display: block;
+        margin-top: 3px;
+        color: #9ca3af;
+        font-size: 12px;
+    }
+
+    .action-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 12px;
+        border: 1px solid #d9dee7;
+        border-radius: 8px;
+        background: #fff;
+        color: #374151;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .action-link:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+    }
+
+    .empty-icon {
+        font-size: 38px;
+        margin-bottom: 12px;
+    }
+
+    .empty-title {
+        margin: 0;
+        color: #374151;
+        font-size: 17px;
+        font-weight: 700;
+    }
+
+    .empty-text {
+        margin: 7px 0 20px;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    @media (max-width: 700px) {
+        .requests-page {
+            padding: 20px 12px 40px;
+        }
+
+        .page-header {
+            flex-direction: column;
+        }
+
+        .header-actions {
+            width: 100%;
+        }
+
+        .header-actions .btn {
+            flex: 1;
+        }
+    }
+</style>
+
+<div class="requests-page">
+
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">My Ingredient Requests</h1>
+            <p class="page-subtitle">
+                Track ingredient requests submitted by your kitchen.
+            </p>
+        </div>
+
+        <div class="header-actions">
+            <a href="{% url 'kitchen_ingredients' %}" class="btn btn-secondary">
+                ← Ingredients
+            </a>
+
+            <a href="{% url 'kitchen_ingredient_request_create' %}" class="btn btn-primary">
+                ＋ New Request
+            </a>
+        </div>
+    </div>
+
+    <div class="summary-card">
+        <div class="summary-icon">🧾</div>
+        <div>
+            <div class="summary-label">Requests in View</div>
+            <div class="summary-value">{{ requests|length }}</div>
+        </div>
+    </div>
+
+    <div class="requests-card">
+
+        <div class="card-header">
+            <h2 class="card-title">Request History</h2>
+            <p class="card-description">
+                Review the status and contents of each ingredient request.
+            </p>
+        </div>
+
+        {% if requests %}
+
+        <div class="table-wrap">
+            <table class="requests-table">
+
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">Request</th>
+                        <th style="width: 42%;">Ingredients</th>
+                        <th style="width: 14%;">Status</th>
+                        <th style="width: 19%;">Created</th>
+                        <th style="width: 15%;">Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for req in requests %}
+
+                    <tr>
+
+                        <td>
+                            <a
+                                href="{% url 'kitchen_ingredient_request_detail' req.id %}"
+                                class="request-id"
+                            >
+                                #{{ req.id }}
+                            </a>
+                        </td>
+
+                        <td>
+                            <div class="items-list">
+
+                                {% for item in req.items.all %}
+
+                                <div class="item-line">
+
+                                    <span class="item-name">
+                                        {{ item.ingredient.name }}
+                                    </span>
+
+                                    <span class="item-quantity">
+                                        — {{ item.quantity }}
+                                    </span>
+
+                                    <span class="source-badge">
+                                        {% if item.source == "DIRECT" %}
+                                            Direct Purchase
+                                        {% else %}
+                                            From Store
+                                        {% endif %}
+                                    </span>
+
+                                </div>
+
+                                {% empty %}
+
+                                <span style="color:#9ca3af;">
+                                    No items recorded
+                                </span>
+
+                                {% endfor %}
+
+                            </div>
+                        </td>
+
+                        <td>
+
+                            {% if req.status == "PENDING" %}
+                                <span class="status-badge status-pending">
+                                    Pending
+                                </span>
+
+                            {% elif req.status == "APPROVED" %}
+                                <span class="status-badge status-approved">
+                                    Approved
+                                </span>
+
+                            {% elif req.status == "REJECTED" %}
+                                <span class="status-badge status-rejected">
+                                    Rejected
+                                </span>
+
+                            {% elif req.status == "RECEIVED" %}
+                                <span class="status-badge status-received">
+                                    Received
+                                </span>
+
+                            {% else %}
+                                <span class="status-badge status-default">
+                                    {{ req.status|title }}
+                                </span>
+                            {% endif %}
+
+                        </td>
+
+                        <td>
+                            <span class="created-date">
+                                {{ req.created_at|date:"d M Y" }}
+                            </span>
+
+                            <span class="created-time">
+                                {{ req.created_at|date:"H:i" }}
+                            </span>
+                        </td>
+
+                        <td>
+                            <a
+                                href="{% url 'kitchen_ingredient_request_detail' req.id %}"
+                                class="action-link"
+                            >
+                                View Request →
+                            </a>
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+        </div>
+
+        {% else %}
+
+        <div class="empty-state">
+            <div class="empty-icon">🧾</div>
+
+            <h3 class="empty-title">
+                No ingredient requests yet
+            </h3>
+
+            <p class="empty-text">
+                Create a request when the kitchen needs additional ingredients.
+            </p>
+
+            <a
+                href="{% url 'kitchen_ingredient_request_create' %}"
+                class="btn btn-primary"
+            >
+                ＋ Create First Request
+            </a>
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
 
 {% endblock %}

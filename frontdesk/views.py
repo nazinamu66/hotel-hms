@@ -1,8 +1,6 @@
 from accounts.decorators import role_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from billing.models import Payment
-from itertools import groupby
 from rooms.models import Room, RoomCategory
 from django.db import transaction
 from billing.models import Guest, Folio
@@ -10,13 +8,22 @@ from collections import defaultdict
 from decimal import Decimal
 from core.models import BusinessProfile
 from django.utils import timezone
-from billing.models import Guest, Reservation
 from django.db.models import Q
 from frontdesk.services import get_available_rooms
 from datetime import timedelta, datetime
 from maintenance.models import MaintenanceTicket
 from django.core.exceptions import ValidationError
 from frontdesk.workflows.check_in import check_in_guest
+from django.http import JsonResponse, FileResponse
+
+from billing.models import (
+    Payment,
+    Guest,
+    Folio,
+    Reservation,
+    GuestDeposit,
+    GuestDepositTransaction,
+)
 
 
 
@@ -50,12 +57,52 @@ def guest_search(request):
     )
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
+def guest_search_api(request):
+
+    hotel = request.user.department.hotel
+    query = request.GET.get("q", "").strip()
+
+    if not query:
+        return JsonResponse({"results": []})
+
+    guests = (
+        Guest.objects
+        .filter(hotel=hotel)
+        .filter(
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(phone__icontains=query) |
+            Q(email__icontains=query) |
+            Q(id_number__icontains=query)
+        )
+        .order_by("first_name", "last_name")[:20]
+    )
+
+    results = []
+
+    for guest in guests:
+        results.append({
+            "id": guest.id,
+            "name": guest.full_name,
+            "phone": guest.phone or "",
+            "email": guest.email or "",
+            "id_number": guest.id_number or "",
+        })
+
+    return JsonResponse({
+        "results": results
+    })
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
 def guest_profile(request, guest_id):
+
+    hotel = request.user.department.hotel
 
     guest = get_object_or_404(
         Guest,
         id=guest_id,
-        hotel=request.user.department.hotel
+        hotel=hotel,
     )
 
     folios = (
@@ -65,15 +112,39 @@ def guest_profile(request, guest_id):
         .order_by("-created_at")
     )
 
-    total_spent = sum(f.total_charges for f in folios)
+    total_spent = sum(
+        f.total_charges for f in folios
+    )
 
-    active_folio = folios.filter(is_closed=False).first()
+    active_folio = folios.filter(
+        is_closed=False
+    ).first()
+
+    guest_deposit = (
+        GuestDeposit.objects
+        .filter(
+            guest=guest,
+            hotel=hotel,
+        )
+        .first()
+    )
+
+    deposit_transactions = []
+
+    if guest_deposit:
+        deposit_transactions = (
+            guest_deposit.transactions
+            .select_related("created_by", "folio")
+            .order_by("-created_at")[:20]
+        )
 
     context = {
         "guest": guest,
         "folios": folios,
         "active_folio": active_folio,
-        "total_spent": total_spent
+        "total_spent": total_spent,
+        "guest_deposit": guest_deposit,
+        "deposit_transactions": deposit_transactions,
     }
 
     return render(
@@ -83,21 +154,199 @@ def guest_profile(request, guest_id):
     )
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
+def guest_id_document(request, guest_id):
+
+    hotel = request.user.department.hotel
+
+    guest = get_object_or_404(
+        Guest,
+        id=guest_id,
+        hotel=hotel,
+    )
+
+    if not guest.id_document:
+        return JsonResponse(
+            {"error": "No identity document uploaded."},
+            status=404,
+        )
+
+    response = FileResponse(
+        guest.id_document.open("rb"),
+        content_type="image/jpeg",
+    )
+
+    filename = guest.id_document.name.rsplit("/", 1)[-1]
+
+    response["Content-Disposition"] = (
+        f'inline; filename="{filename}"'
+    )
+
+    return response
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def guest_deposit_receive(request, guest_id):
+
+    from accounting.models import BankAccount
+    from billing.models import GuestDeposit
+    from billing.services.guest_deposit import (
+        receive_guest_deposit,
+    )
+
+    hotel = request.user.department.hotel
+
+    guest = get_object_or_404(
+        Guest,
+        id=guest_id,
+        hotel=hotel,
+    )
+
+    deposit = (
+        GuestDeposit.objects
+        .filter(
+            guest=guest,
+            hotel=hotel,
+        )
+        .first()
+    )
+
+    if request.method == "POST":
+
+        from decimal import Decimal, InvalidOperation
+
+        try:
+            amount = Decimal(
+                request.POST.get(
+                    "amount",
+                    "0",
+                )
+            )
+
+            method = request.POST.get(
+                "method",
+                "",
+            ).strip().upper()
+
+            reference = request.POST.get(
+                "reference",
+                "",
+            ).strip()
+
+            note = request.POST.get(
+                "note",
+                "",
+            ).strip()
+
+            bank_account_id = request.POST.get(
+                "bank_account",
+                "",
+            ).strip()
+
+            bank_account = None
+
+            if method in ("POS", "TRANSFER"):
+
+                bank_account = get_object_or_404(
+                    BankAccount.objects.select_related(
+                        "account"
+                    ),
+                    id=bank_account_id,
+                    hotel=hotel,
+                    is_active=True,
+                )
+
+            receive_guest_deposit(
+                guest=guest,
+                hotel=hotel,
+                amount=amount,
+                method=method,
+                user=request.user,
+                reference=reference,
+                note=note,
+                bank_account=bank_account,
+            )
+
+        except (
+            ValidationError,
+            InvalidOperation,
+            ValueError,
+        ) as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
+            return redirect(request.path)
+
+        except Exception as e:
+
+            messages.error(
+                request,
+                str(e),
+            )
+
+            return redirect(request.path)
+
+        messages.success(
+            request,
+            f"Guest deposit of ₦{amount:,.2f} "
+            "recorded successfully.",
+        )
+
+        return redirect(
+            "frontdesk_guest_profile",
+            guest.id,
+        )
+
+    bank_accounts = (
+        BankAccount.objects
+        .select_related("account")
+        .filter(
+            hotel=hotel,
+            is_active=True,
+        )
+        .order_by(
+            "-is_default",
+            "bank_name",
+        )
+    )
+
+    return render(
+        request,
+        "frontdesk/guest_deposit_receive.html",
+        {
+            "guest": guest,
+            "deposit": deposit,
+            "bank_accounts": bank_accounts,
+        },
+    )
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
 def guest_create(request):
 
     hotel = request.user.department.hotel
 
+    next_page = request.GET.get("next", "").strip()
+
     if request.method == "POST":
 
-        first_name = request.POST.get("first_name")
-        last_name = request.POST.get("last_name")
-        phone = request.POST.get("phone")
-        email = request.POST.get("email")
-        nationality = request.POST.get("nationality")
-        id_number = request.POST.get("id_number")
+        first_name = request.POST.get("first_name", "").strip()
+        last_name = request.POST.get("last_name", "").strip()
+        phone = request.POST.get("phone", "").strip()
+        email = request.POST.get("email", "").strip()
+        nationality = request.POST.get("nationality", "").strip()
+        id_number = request.POST.get("id_number", "").strip()
+
+        id_document = request.FILES.get("id_document")
 
         if not first_name or not last_name:
-            messages.error(request, "First and last name are required.")
+            messages.error(
+                request,
+                "First and last name are required."
+            )
+
             return redirect(request.path)
 
         guest = Guest.objects.create(
@@ -107,18 +356,98 @@ def guest_create(request):
             phone=phone,
             email=email,
             nationality=nationality,
-            id_number=id_number
+            id_number=id_number,
+            id_document=id_document,
         )
 
-        messages.success(request, "Guest created successfully.")
+        if next_page == "reservation":
 
-        return redirect("frontdesk_guest_profile", guest.id)
+            messages.success(
+                request,
+                "Guest created successfully. "
+                "Please complete the reservation."
+            )
+
+            return redirect(
+                f"/frontdesk/reservations/create/?guest={guest.id}"
+            )
+
+        messages.success(
+            request,
+            "Guest created successfully."
+        )
+
+        return redirect(
+            "frontdesk_guest_profile",
+            guest.id,
+        )
 
     return render(
         request,
-        "frontdesk/guest_create.html"
+        "frontdesk/guest_create.html",
+        {
+            "next_page": next_page,
+        },
     )
 
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def guest_edit(request, guest_id):
+
+    hotel = request.user.department.hotel
+
+    guest = get_object_or_404(
+        Guest,
+        id=guest_id,
+        hotel=hotel,
+    )
+
+    if request.method == "POST":
+
+        first_name = request.POST.get("first_name", "").strip()
+        last_name = request.POST.get("last_name", "").strip()
+        phone = request.POST.get("phone", "").strip()
+        email = request.POST.get("email", "").strip()
+        nationality = request.POST.get("nationality", "").strip()
+        id_number = request.POST.get("id_number", "").strip()
+
+        if not first_name or not last_name:
+            messages.error(
+                request,
+                "First and last name are required."
+            )
+            return redirect("frontdesk_guest_edit", guest.id)
+
+        guest.first_name = first_name
+        guest.last_name = last_name
+        guest.phone = phone
+        guest.email = email
+        guest.nationality = nationality
+        guest.id_number = id_number
+
+        id_document = request.FILES.get("id_document")
+
+        if id_document:
+            guest.id_document = id_document
+
+        guest.save()
+
+        messages.success(
+            request,
+            "Guest information updated successfully."
+        )
+
+        return redirect(
+            "frontdesk_guest_profile",
+            guest.id
+        )
+
+    return render(
+        request,
+        "frontdesk/guest_edit.html",
+        {
+            "guest": guest,
+        },
+    )
 
 def build_invoice_context(folio):
     room = folio.room
@@ -380,6 +709,15 @@ def active_stay(request, room_id):
 
     guest = folio.guest
 
+    room_history = (
+        folio.room_history
+        .select_related(
+            "room",
+            "assigned_by",
+        )
+        .order_by("assigned_at")
+    )
+
     if not guest:
         messages.warning(
             request,
@@ -431,12 +769,33 @@ def active_stay(request, room_id):
     # 🔽 Newest → Oldest
     timeline.sort(key=lambda x: x["time"], reverse=True)
 
+    # ================= CHARGES BY DEPARTMENT =================
+    charges_by_department = {}
+
+    for charge in folio.charges.select_related("department").order_by("created_at"):
+        department_name = (
+            charge.department.name
+            if charge.department
+            else "Other"
+        )
+
+        if department_name not in charges_by_department:
+            charges_by_department[department_name] = {
+                "charges": [],
+                "total": 0,
+            }
+
+        charges_by_department[department_name]["charges"].append(charge)
+        charges_by_department[department_name]["total"] += charge.amount
+
     context = {
         "room": room,
         "folio": folio,
         "guest": guest,
         "timeline": timeline,
+        "room_history": room_history,
         "payments": folio.payments.all(),
+        "charges_by_department": charges_by_department,
         "can_force_checkout": request.user.role in ["MANAGER", "ADMIN"],
     }
 
@@ -474,6 +833,8 @@ def extend_stay(request, room_id):
             extend_guest_stay(
                 room=room,
                 new_checkout=request.POST.get("new_checkout"),
+                charged_by=request.user,
+
             )
 
         except ValidationError as e:
@@ -525,13 +886,27 @@ def change_room(request, room_id):
 
         return redirect("/frontdesk/")
 
+    active_room_ids = Folio.objects.filter(
+        hotel=room.hotel,
+        folio_type="ROOM",
+        is_closed=False,
+    ).values_list(
+        "room_id",
+        flat=True,
+    )
+
     available_rooms = (
         Room.objects
         .filter(
             hotel=room.hotel,
             status="AVAILABLE",
         )
-        .exclude(id=room.id)
+        .exclude(
+            id=room.id,
+        )
+        .exclude(
+            id__in=active_room_ids,
+        )
     )
 
     if request.method == "POST":
@@ -541,6 +916,7 @@ def change_room(request, room_id):
             old_room, new_room = change_guest_room(
                 room=room,
                 new_room_id=request.POST.get("new_room"),
+                user=request.user,
             )
 
         except ValidationError as e:
@@ -584,10 +960,10 @@ def change_room(request, room_id):
         },
     )
 
-@role_required("FRONTDESK", "MANAGER", "ADMIN")
 def take_payment(request, room_id):
 
     from decimal import Decimal, InvalidOperation
+    from accounting.models import BankAccount
 
     from frontdesk.workflows.payment import (
         take_payment as process_payment,
@@ -623,6 +999,22 @@ def take_payment(request, room_id):
                 "",
             ).strip()
 
+            bank_account = None
+
+            if method in ("POS", "TRANSFER"):
+
+                bank_account_id = request.POST.get(
+                    "bank_account",
+                    "",
+                ).strip()
+
+                bank_account = get_object_or_404(
+                    BankAccount.objects.select_related("account"),
+                    id=bank_account_id,
+                    hotel=request.user.department.hotel,
+                    is_active=True,
+                )
+
             process_payment(
                 room=room,
                 user=request.user,
@@ -630,6 +1022,7 @@ def take_payment(request, room_id):
                 method=method,
                 reference=reference,
                 note=note,
+                bank_account=bank_account,
             )
 
         except (
@@ -664,6 +1057,20 @@ def take_payment(request, room_id):
             room.id,
         )
 
+
+    bank_accounts = (
+        BankAccount.objects
+        .select_related("account")
+        .filter(
+            hotel=request.user.department.hotel,
+            is_active=True,
+        )
+        .order_by(
+            "-is_default",
+            "bank_name",
+        )
+    )
+
     return render(
         request,
         "frontdesk/payment.html",
@@ -671,6 +1078,7 @@ def take_payment(request, room_id):
             "room": room,
             "folio": folio,
             "balance": folio.balance,
+            "bank_accounts": bank_accounts,
         },
     )
 
@@ -792,7 +1200,11 @@ def reservation_list(request):
     reservations = (
         Reservation.objects
         .filter(hotel=hotel)
-        .select_related("guest", "room_category")
+        .select_related(
+            "guest",
+            "room_category",
+            "reservation_deposit",
+        )
         .order_by("-created_at")
     )
 
@@ -827,6 +1239,7 @@ def create_reservation(request):
                 user=request.user,
                 guest_id=request.POST.get("guest"),
                 category_id=request.POST.get("category"),
+                number_of_rooms=request.POST.get("number_of_rooms", 1),
                 check_in=request.POST.get("check_in"),
                 check_out=request.POST.get("check_out"),
             )
@@ -857,7 +1270,9 @@ def create_reservation(request):
         return redirect(
             "frontdesk_reservations",
         )
+    
 
+    selected_guest_id = request.GET.get("guest", "").strip()
     guests = (
         Guest.objects
         .filter(hotel=hotel)
@@ -870,6 +1285,8 @@ def create_reservation(request):
         {
             "guests": guests,
             "categories": categories,
+            "selected_guest_id": selected_guest_id,
+
         },
     )
 
@@ -925,6 +1342,93 @@ def reservation_checkin(request, reservation_id):
         room.id,
     )
 
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def reservation_cancel(request, reservation_id):
+
+    from billing.services.reservation_deposit import (
+        cancel_reservation,
+    )
+
+    if request.method != "POST":
+        messages.error(
+            request,
+            "Reservation cancellation must be submitted as a POST request.",
+        )
+        return redirect(
+            "frontdesk_reservations",
+        )
+
+    reservation = get_object_or_404(
+        Reservation,
+        id=reservation_id,
+        hotel=request.user.department.hotel,
+    )
+
+    try:
+
+        result = cancel_reservation(
+            reservation=reservation,
+            user=request.user,
+        )
+
+    except ValidationError as e:
+
+        messages.error(
+            request,
+            str(e),
+        )
+
+        return redirect(
+            "frontdesk_reservations",
+        )
+
+    except Exception as e:
+
+        messages.error(
+            request,
+            str(e),
+        )
+
+        return redirect(
+            "frontdesk_reservations",
+        )
+
+    forfeited_amount = result.get(
+        "forfeited_amount",
+        Decimal("0.00"),
+    )
+
+    released_amount = result.get(
+        "released_amount",
+        Decimal("0.00"),
+    )
+
+    if forfeited_amount > 0:
+
+        messages.success(
+            request,
+            f"Reservation #{reservation.id} cancelled. "
+            f"₦{forfeited_amount:,.2f} was forfeited.",
+        )
+
+    elif released_amount > 0:
+
+        messages.success(
+            request,
+            f"Reservation #{reservation.id} cancelled. "
+            f"₦{released_amount:,.2f} guarantee was released.",
+        )
+
+    else:
+
+        messages.success(
+            request,
+            f"Reservation #{reservation.id} cancelled.",
+        )
+
+    return redirect(
+        "frontdesk_reservations",
+    )
 
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
@@ -968,9 +1472,18 @@ def reservation_calendar(request):
     # -------------------------
     # Reservations
     # -------------------------
-    reservations = Reservation.objects.filter(
-        hotel=hotel,
-        status="RESERVED"
+    reservations = (
+        Reservation.objects
+        .filter(
+            hotel=hotel,
+            status="RESERVED",
+            reservation_deposit__status="GUARANTEED",
+        )
+        .select_related(
+            "guest",
+            "room_category",
+            "reservation_deposit",
+        )
     )
 
     calendar = []
@@ -1005,6 +1518,21 @@ def reservation_calendar(request):
         .order_by("name")
     )
 
+    category_reservations = (
+        reservations
+        .filter(
+            room__isnull=True,
+            check_in_date__lt=days[-1] + timedelta(days=1),
+            check_out_date__gt=start_date,
+        )
+        .order_by("check_in_date", "id")
+    )
+
+    if category_id:
+        category_reservations = category_reservations.filter(
+            room_category_id=category_id
+        )
+
     context = {
         "calendar": calendar,
         "days": days,
@@ -1012,6 +1540,7 @@ def reservation_calendar(request):
         "prev_week": prev_week,
         "next_week": next_week,
         "categories": categories,
+        "category_reservations": category_reservations,
         "filters": request.GET
     }
 

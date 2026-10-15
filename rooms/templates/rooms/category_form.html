@@ -1,115 +1,363 @@
 {% extends "base/base.html" %}
 
 {% block title %}
-Room Category Setup
+    {% if category %}Edit Room Category{% else %}Add Room Category{% endif %}
 {% endblock %}
 
 {% block content %}
 
-<h2>
-{% if category %}
-    Edit Room Category
-{% else %}
-    Add Room Category
-{% endif %}
-</h2>
+<style>
+    .setup-page {
+        max-width: 900px;
+        margin: 0 auto;
+    }
 
-<div class="card">
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
 
-<form method="post">
-{% csrf_token %}
+    .page-header h1 {
+        margin: 0 0 6px;
+        font-size: 30px;
+        font-weight: 700;
+        color: #273449;
+    }
 
-<h3>Room Category</h3>
+    .page-header p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 15px;
+    }
 
-<label>Name</label><br>
+    .form-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+        overflow: hidden;
+    }
 
-<input
-    type="text"
-    name="name"
-    value="{{ category.name|default:'' }}"
-    required
->
+    .form-section {
+        padding: 26px 28px;
+    }
 
-<br><br>
+    .form-section + .form-section {
+        border-top: 1px solid #eef0f3;
+    }
 
-<label>Description</label><br>
+    .section-heading {
+        margin-bottom: 20px;
+    }
 
-<textarea
-    name="description"
->{{ category.description|default:'' }}</textarea>
+    .section-heading h2 {
+        margin: 0 0 5px;
+        font-size: 19px;
+        font-weight: 700;
+        color: #273449;
+    }
 
-<hr>
+    .section-heading p {
+        margin: 0;
+        font-size: 14px;
+        color: #6b7280;
+    }
 
-<h3>Room Rate</h3>
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
 
-<label>Price Per Night</label><br>
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
 
-<input
-    type="number"
-    name="price"
-    step="0.01"
-    min="0.01"
-    value="{{ rate.price_per_night|default:'' }}"
-    placeholder="Example: 50000"
-    required
->
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
 
-<br><br>
+    .form-group label {
+        margin-bottom: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+    }
 
-<label>Currency</label><br>
+    .form-control {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 11px 13px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        color: #1f2937;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
 
-<select name="currency">
+    .form-control:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
 
-<option
-    value="NGN"
-    {% if not rate or rate.currency == "NGN" %}
-        selected
-    {% endif %}
->
-    NGN (₦)
-</option>
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+        line-height: 1.5;
+    }
 
-<option
-    value="USD"
-    {% if rate and rate.currency == "USD" %}
-        selected
-    {% endif %}
->
-    USD ($)
-</option>
+    .input-prefix {
+        position: relative;
+    }
 
-<option
-    value="EUR"
-    {% if rate and rate.currency == "EUR" %}
-        selected
-    {% endif %}
->
-    EUR (€)
-</option>
+    .input-prefix .form-control {
+        padding-left: 42px;
+    }
 
-</select>
+    .input-prefix span {
+        position: absolute;
+        left: 13px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+        font-size: 14px;
+        font-weight: 600;
+        pointer-events: none;
+    }
 
-<br><br>
+    .form-help {
+        margin-top: 6px;
+        font-size: 12px;
+        color: #6b7280;
+    }
 
-<button
-    type="submit"
-    class="btn btn-primary"
->
-    {% if category %}
-        Save Changes
-    {% else %}
-        Create Category
-    {% endif %}
-</button>
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 20px 28px;
+        background: #f9fafb;
+        border-top: 1px solid #eef0f3;
+    }
 
-<a
-    href="{% url 'category_list' %}"
-    class="btn btn-secondary"
->
-    Cancel
-</a>
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 0 18px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        border: 1px solid transparent;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
 
-</form>
+    .btn-primary-action {
+        background: #2563eb;
+        color: #fff;
+    }
+
+    .btn-primary-action:hover {
+        background: #1d4ed8;
+    }
+
+    .btn-secondary-action {
+        background: #fff;
+        color: #374151;
+        border-color: #d1d5db;
+    }
+
+    .btn-secondary-action:hover {
+        background: #f3f4f6;
+    }
+
+    @media (max-width: 700px) {
+        .page-header {
+            flex-direction: column;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .form-group.full-width {
+            grid-column: auto;
+        }
+
+        .form-section {
+            padding: 22px 20px;
+        }
+
+        .form-actions {
+            padding: 18px 20px;
+            flex-direction: column-reverse;
+        }
+
+        .btn-action {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="setup-page">
+
+    <div class="page-header">
+        <div>
+            <h1>
+                {% if category %}
+                    Edit Room Category
+                {% else %}
+                    Add Room Category
+                {% endif %}
+            </h1>
+
+            <p>
+                Configure the room type and its nightly accommodation rate.
+            </p>
+        </div>
+    </div>
+
+    <form method="post" class="form-card">
+        {% csrf_token %}
+
+        <div class="form-section">
+            <div class="section-heading">
+                <h2>Room Category</h2>
+                <p>Define the room type used when setting up rooms.</p>
+            </div>
+
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label for="id_name">Category Name</label>
+
+                    <input
+                        id="id_name"
+                        type="text"
+                        name="name"
+                        class="form-control"
+                        value="{{ category.name|default:'' }}"
+                        placeholder="Example: Standard Room"
+                        required
+                    >
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="id_description">Description</label>
+
+                    <textarea
+                        id="id_description"
+                        name="description"
+                        class="form-control"
+                        placeholder="Describe the room type, features, or positioning..."
+                    >{{ category.description|default:'' }}</textarea>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="section-heading">
+                <h2>Nightly Rate</h2>
+                <p>Set the accommodation price associated with this room category.</p>
+            </div>
+
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label for="id_price">Price Per Night</label>
+
+                    <div class="input-prefix">
+                        <span>₦</span>
+
+                        <input
+                            id="id_price"
+                            type="number"
+                            name="price"
+                            class="form-control"
+                            step="0.01"
+                            min="0.01"
+                            value="{{ rate.price_per_night|default:'' }}"
+                            placeholder="50000"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-help">
+                        Enter the base nightly accommodation rate.
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="id_currency">Currency</label>
+
+                    <select
+                        id="id_currency"
+                        name="currency"
+                        class="form-control"
+                    >
+                        <option
+                            value="NGN"
+                            {% if not rate or rate.currency == "NGN" %}
+                                selected
+                            {% endif %}
+                        >
+                            NGN (₦)
+                        </option>
+
+                        <option
+                            value="USD"
+                            {% if rate and rate.currency == "USD" %}
+                                selected
+                            {% endif %}
+                        >
+                            USD ($)
+                        </option>
+
+                        <option
+                            value="EUR"
+                            {% if rate and rate.currency == "EUR" %}
+                                selected
+                            {% endif %}
+                        >
+                            EUR (€)
+                        </option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a
+                href="{% url 'category_list' %}"
+                class="btn-action btn-secondary-action"
+            >
+                Cancel
+            </a>
+
+            <button
+                type="submit"
+                class="btn-action btn-primary-action"
+            >
+                {% if category %}
+                    Save Changes
+                {% else %}
+                    Create Category
+                {% endif %}
+            </button>
+        </div>
+
+    </form>
 
 </div>
 

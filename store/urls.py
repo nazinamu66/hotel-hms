@@ -1,7 +1,6 @@
 from django.urls import path
 from . import views
 from inventory.views import (
-    department_request_stock,
     department_stock_requests,
 )
 
@@ -43,6 +42,12 @@ urlpatterns = [
     ),
 
     path(
+        "request/",
+        views.store_request_stock,
+        name="store_request_low_stock",
+    ),
+
+    path(
         "requests/<int:pk>/",
         views.stock_request_detail,
         name="store_request_detail",
@@ -79,11 +84,6 @@ urlpatterns = [
     ),
 
     # Generic department stock requests
-    path(
-        "request/",
-        department_request_stock,
-        name="store_request_low_stock",
-    ),
 
     path(
         "requests/",

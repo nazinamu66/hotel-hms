@@ -3,106 +3,747 @@
 {% block title %}Guest Profile{% endblock %}
 
 {% block header %}
-<h2>{{ guest.full_name }}</h2>
+
+<div>
+    <div style="
+        font-size:13px;
+        font-weight:600;
+        color:#6b7280;
+        text-transform:uppercase;
+        letter-spacing:.04em;
+    ">
+        Guest Profile
+    </div>
+
+    <h2 style="margin:5px 0 0;">
+        {{ guest.full_name }}
+    </h2>
+</div>
+
 {% endblock %}
+
 
 {% block content %}
 
-<!-- GUEST DETAILS -->
+<!-- GUEST OVERVIEW -->
 
-<section class="card">
+<div style="
+    display:grid;
+    grid-template-columns:minmax(0, 1.5fr) minmax(260px, .7fr);
+    gap:24px;
+    margin-bottom:24px;
+">
 
-<h3>Guest Information</h3>
+    <!-- GUEST INFORMATION -->
 
-<p><strong>Name:</strong> {{ guest.full_name }}</p>
-<p><strong>Phone:</strong> {{ guest.phone|default:"—" }}</p>
-<p><strong>Email:</strong> {{ guest.email|default:"—" }}</p>
-<p><strong>Nationality:</strong> {{ guest.nationality|default:"—" }}</p>
-<p><strong>ID:</strong> {{ guest.id_number|default:"—" }}</p>
+    <section class="card">
+
+        <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:20px;
+            margin-bottom:24px;
+        ">
+
+            <div style="
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:20px;
+    margin-bottom:24px;
+">
+
+    <div>
+
+        <div style="
+            font-size:13px;
+            font-weight:600;
+            color:#6b7280;
+            text-transform:uppercase;
+            letter-spacing:.04em;
+            margin-bottom:5px;
+        ">
+            Guest Information
+        </div>
+
+        <h3 style="margin:0;">
+            {{ guest.full_name }}
+        </h3>
+
+    </div>
+
+    <a
+        href="{% url 'frontdesk_guest_edit' guest.id %}"
+        style="
+            text-decoration:none;
+            padding:10px 16px;
+            border:1px solid #cbd5e1;
+            border-radius:8px;
+            color:#374151;
+            background:#fff;
+            font-size:14px;
+            font-weight:600;
+            white-space:nowrap;
+        "
+    >
+        Edit Guest
+    </a>
+
+</div>
+
+        </div>
+
+
+        <div style="
+            display:grid;
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+            gap:18px;
+        ">
+
+            <div>
+                <div style="
+                    font-size:12px;
+                    color:#6b7280;
+                    margin-bottom:4px;
+                ">
+                    Phone
+                </div>
+
+                <div style="font-weight:600;">
+                    {{ guest.phone|default:"—" }}
+                </div>
+            </div>
+
+
+            <div>
+                <div style="
+                    font-size:12px;
+                    color:#6b7280;
+                    margin-bottom:4px;
+                ">
+                    Email
+                </div>
+
+                <div style="font-weight:600;">
+                    {{ guest.email|default:"—" }}
+                </div>
+            </div>
+
+
+            <div>
+                <div style="
+                    font-size:12px;
+                    color:#6b7280;
+                    margin-bottom:4px;
+                ">
+                    Nationality
+                </div>
+
+                <div style="font-weight:600;">
+                    {{ guest.nationality|default:"—" }}
+                </div>
+            </div>
+
+
+            <div>
+                <div style="
+                    font-size:12px;
+                    color:#6b7280;
+                    margin-bottom:4px;
+                ">
+                    ID / Passport
+                </div>
+
+                <div style="font-weight:600;">
+                    {{ guest.id_number|default:"—" }}
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- GUEST STATISTICS -->
+
+    <section class="card">
+
+        <div style="
+            font-size:13px;
+            font-weight:600;
+            color:#6b7280;
+            text-transform:uppercase;
+            letter-spacing:.04em;
+        ">
+            Guest Statistics
+        </div>
+
+        <div style="
+            margin-top:20px;
+            display:grid;
+            gap:18px;
+        ">
+
+            <div>
+                <div style="
+                    font-size:12px;
+                    color:#6b7280;
+                ">
+                    Total Stays
+                </div>
+
+                <div style="
+                    margin-top:4px;
+                    font-size:24px;
+                    font-weight:700;
+                ">
+                    {{ folios.count }}
+                </div>
+            </div>
+
+
+            <div>
+                <div style="
+                    font-size:12px;
+                    color:#6b7280;
+                ">
+                    Total Charges
+                </div>
+
+                <div style="
+                    margin-top:4px;
+                    font-size:24px;
+                    font-weight:700;
+                ">
+                    ₦{{ total_spent|floatformat:2 }}
+                </div>
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+
+<!-- IDENTITY DOCUMENT -->
+
+<section class="card" style="margin-bottom:24px;">
+
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:20px;
+        margin-bottom:18px;
+    ">
+
+        <div>
+
+            <div style="
+                font-size:13px;
+                font-weight:600;
+                color:#6b7280;
+                text-transform:uppercase;
+                letter-spacing:.04em;
+            ">
+                Identity Document
+            </div>
+
+            <h3 style="margin:5px 0 0;">
+                Passport / National ID
+            </h3>
+
+        </div>
+
+        {% if guest.id_document %}
+        <a
+            href="{% url 'frontdesk_guest_id_document' guest.id %}"
+            target="_blank"
+            style="
+                text-decoration:none;
+                padding:10px 16px;
+                border:1px solid #d1d5db;
+                border-radius:8px;
+                color:#374151;
+                background:#fff;
+                font-size:14px;
+                font-weight:600;
+            "
+        >
+            View Full Size
+        </a>
+        {% endif %}
+
+    </div>
+
+    {% if guest.id_document %}
+
+        <div style="
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            background:#f8fafc;
+            padding:16px;
+            text-align:center;
+        ">
+
+            <img
+                src="{% url 'frontdesk_guest_id_document' guest.id %}"
+                alt="Identity document for {{ guest.full_name }}"
+                style="
+                    display:block;
+                    width:320px;
+                    height:240px;
+                    max-width:100%;
+                    margin:0 auto;
+                    border-radius:8px;
+                    object-fit:contain;
+                    background:#ffffff;
+                "
+            >
+
+        </div>
+
+    {% else %}
+
+        <div style="
+            padding:24px;
+            text-align:center;
+            border:1px dashed #d1d5db;
+            border-radius:10px;
+            color:#6b7280;
+        ">
+            No identity document uploaded.
+        </div>
+
+    {% endif %}
 
 </section>
 
-<br>
 
-<!-- STATS -->
+<!-- GUEST DEPOSIT -->
 
-<section class="card">
+<section class="card" style="margin-bottom:24px;">
 
-<h3>Guest Statistics</h3>
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:20px;
+        margin-bottom:20px;
+    ">
 
-<p>Total Stays: {{ folios.count }}</p>
-<p>Total Spent: ₦{{ total_spent }}</p>
+        <div>
+
+            <div style="
+                font-size:13px;
+                font-weight:600;
+                color:#6b7280;
+                text-transform:uppercase;
+                letter-spacing:.04em;
+            ">
+                Guest Deposit
+            </div>
+
+            <h3 style="margin:5px 0 0;">
+                Available Credit
+            </h3>
+
+        </div>
+
+
+        <a
+            href="{% url 'frontdesk_guest_deposit_receive' guest.id %}"
+            style="
+                text-decoration:none;
+                padding:10px 16px;
+                border-radius:8px;
+                background:#111827;
+                color:#fff;
+                font-size:14px;
+                font-weight:600;
+            "
+        >
+            Receive Deposit
+        </a>
+
+    </div>
+
+
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        padding:20px;
+        border-radius:12px;
+        background:#f8fafc;
+        border:1px solid #e5e7eb;
+        margin-bottom:20px;
+    ">
+
+        <div>
+
+            <div style="
+                font-size:13px;
+                color:#6b7280;
+            ">
+                Available Balance
+            </div>
+
+            <div style="
+                margin-top:5px;
+                font-size:30px;
+                font-weight:700;
+            ">
+                ₦{{ guest_deposit.balance|default:"0.00"|floatformat:2 }}
+            </div>
+
+        </div>
+
+    </div>
+
+
+    {% if deposit_transactions %}
+
+    <div style="
+        font-size:15px;
+        font-weight:700;
+        margin-bottom:12px;
+    ">
+        Recent Transactions
+    </div>
+
+
+    <div style="
+        overflow-x:auto;
+        border:1px solid #e5e7eb;
+        border-radius:10px;
+    ">
+
+        <table style="
+            width:100%;
+            border-collapse:collapse;
+            min-width:700px;
+        ">
+
+            <thead>
+
+                <tr style="
+                    background:#f8fafc;
+                    text-align:left;
+                ">
+
+                    <th style="padding:12px 14px;">Date</th>
+                    <th style="padding:12px 14px;">Type</th>
+                    <th style="padding:12px 14px;">Amount</th>
+                    <th style="padding:12px 14px;">Reference</th>
+                    <th style="padding:12px 14px;">Note</th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody>
+
+            {% for tx in deposit_transactions %}
+
+                <tr style="
+                    border-top:1px solid #e5e7eb;
+                ">
+
+                    <td style="padding:12px 14px;">
+                        {{ tx.created_at|date:"Y-m-d H:i" }}
+                    </td>
+
+                    <td style="
+                        padding:12px 14px;
+                        font-weight:600;
+                    ">
+                        {{ tx.get_transaction_type_display }}
+                    </td>
+
+                    <td style="
+                        padding:12px 14px;
+                        font-weight:600;
+                    ">
+                        ₦{{ tx.amount|floatformat:2 }}
+                    </td>
+
+                    <td style="padding:12px 14px;">
+                        {{ tx.reference|default:"—" }}
+                    </td>
+
+                    <td style="padding:12px 14px;">
+                        {{ tx.note|default:"—" }}
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    {% else %}
+
+    <div style="
+        padding:20px;
+        text-align:center;
+        border:1px dashed #d1d5db;
+        border-radius:10px;
+        color:#6b7280;
+    ">
+        No deposit transactions yet.
+    </div>
+
+    {% endif %}
 
 </section>
 
-<br>
 
-<!-- CURRENT STAY -->
+<!-- ACTIVE STAY -->
 
 {% if active_folio %}
 
-<section class="card">
+<section class="card" style="margin-bottom:24px;">
 
-<h3>Active Stay</h3>
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:20px;
+        margin-bottom:20px;
+    ">
 
-<p>Room: {{ active_folio.room.room_number }}</p>
-<p>Check-in: {{ active_folio.check_in_at }}</p>
+        <div>
 
-<a href="{% url 'frontdesk_active_stay' active_folio.room.id %}">
-<button>View Stay</button>
-</a>
+            <div style="
+                font-size:13px;
+                font-weight:600;
+                color:#6b7280;
+                text-transform:uppercase;
+                letter-spacing:.04em;
+            ">
+                Current Stay
+            </div>
+
+            <h3 style="margin:5px 0 0;">
+                Room {{ active_folio.room.room_number }}
+            </h3>
+
+        </div>
+
+
+        <a
+            href="{% url 'frontdesk_active_stay' active_folio.room.id %}"
+            style="
+                text-decoration:none;
+                padding:10px 16px;
+                border:1px solid #d1d5db;
+                border-radius:8px;
+                color:#374151;
+                background:#fff;
+                font-size:14px;
+                font-weight:600;
+            "
+        >
+            View Stay
+        </a>
+
+    </div>
+
+
+    <div style="
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:18px;
+    ">
+
+        <div>
+            <div style="
+                font-size:12px;
+                color:#6b7280;
+            ">
+                Check-in
+            </div>
+
+            <div style="
+                margin-top:4px;
+                font-weight:600;
+            ">
+                {{ active_folio.check_in_at }}
+            </div>
+        </div>
+
+
+        <div>
+            <div style="
+                font-size:12px;
+                color:#6b7280;
+            ">
+                Scheduled Checkout
+            </div>
+
+            <div style="
+                margin-top:4px;
+                font-weight:600;
+            ">
+                {{ active_folio.check_out_at|default:"—" }}
+            </div>
+        </div>
+
+    </div>
 
 </section>
 
-<br>
-
 {% endif %}
+
 
 <!-- STAY HISTORY -->
 
 <section class="card">
 
-<h3>Stay History</h3>
+    <div style="margin-bottom:18px;">
 
-<table border="1" width="100%" cellpadding="6">
+        <div style="
+            font-size:13px;
+            font-weight:600;
+            color:#6b7280;
+            text-transform:uppercase;
+            letter-spacing:.04em;
+        ">
+            History
+        </div>
 
-<tr>
-<th>Room</th>
-<th>Check-in</th>
-<th>Checkout</th>
-<th>Total Charges</th>
-</tr>
+        <h3 style="margin:5px 0 0;">
+            Stay History
+        </h3>
 
-{% for f in folios %}
+    </div>
 
-<tr>
 
-<td>{{ f.room.room_number }}</td>
+    <div style="
+        overflow-x:auto;
+        border:1px solid #e5e7eb;
+        border-radius:10px;
+    ">
 
-<td>{{ f.check_in_at|date:"Y-m-d" }}</td>
+        <table style="
+            width:100%;
+            border-collapse:collapse;
+            min-width:700px;
+        ">
 
-<td>
-{% if f.check_out_at %}
-{{ f.check_out_at|date:"Y-m-d" }}
-{% else %}
-Active
-{% endif %}
-</td>
+            <thead>
 
-<td>₦{{ f.total_charges }}</td>
+                <tr style="
+                    background:#f8fafc;
+                    text-align:left;
+                ">
 
-</tr>
+                    <th style="padding:12px 14px;">Room</th>
+                    <th style="padding:12px 14px;">Check-in</th>
+                    <th style="padding:12px 14px;">Checkout</th>
+                    <th style="padding:12px 14px;">Total Charges</th>
 
-{% endfor %}
+                </tr>
 
-</table>
+            </thead>
+
+
+            <tbody>
+
+            {% for f in folios %}
+
+                <tr style="
+                    border-top:1px solid #e5e7eb;
+                ">
+
+                    <td style="padding:12px 14px;">
+                        {% if f.room %}
+                            Room {{ f.room.room_number }}
+                        {% else %}
+                            Walk-in
+                        {% endif %}
+                    </td>
+
+                    <td style="padding:12px 14px;">
+                        {{ f.check_in_at|date:"Y-m-d" }}
+                    </td>
+
+                    <td style="padding:12px 14px;">
+
+                        {% if f.check_out_at %}
+                            {{ f.check_out_at|date:"Y-m-d" }}
+                        {% else %}
+                            <span style="color:#6b7280;">
+                                Active
+                            </span>
+                        {% endif %}
+
+                    </td>
+
+                    <td style="
+                        padding:12px 14px;
+                        font-weight:600;
+                    ">
+                        ₦{{ f.total_charges|floatformat:2 }}
+                    </td>
+
+                </tr>
+
+            {% empty %}
+
+                <tr>
+
+                    <td
+                        colspan="4"
+                        style="
+                            padding:24px;
+                            text-align:center;
+                            color:#6b7280;
+                        "
+                    >
+                        No stay history yet.
+                    </td>
+
+                </tr>
+
+            {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
 
 </section>
 
-<br>
 
-<a href="{% url 'frontdesk_guest_search' %}">
-<button>Back</button>
-</a>
+<!-- BACK -->
+
+<div style="
+    margin-top:20px;
+">
+
+    <a
+        href="{% url 'frontdesk_guest_search' %}"
+        style="
+            text-decoration:none;
+            color:#4b5563;
+            font-size:14px;
+            font-weight:600;
+        "
+    >
+        ← Back to Guest Search
+    </a>
+
+</div>
 
 {% endblock %}

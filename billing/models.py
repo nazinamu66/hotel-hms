@@ -35,6 +35,13 @@ class Guest(models.Model):
         help_text="Passport / National ID"
     )
 
+    id_document = models.ImageField(
+        upload_to="guest_ids/%Y/%m/",
+        blank=True,
+        null=True,
+        help_text="Guest passport, national ID, driver's licence or other identity document.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property
@@ -123,6 +130,16 @@ class Folio(models.Model):
 
 
     def apply_daily_room_charge(self, charged_by=None):
+        """
+        Apply one room-night charge.
+
+        CCH billing rule:
+        - First room night is charged immediately at check-in.
+        - The same room night is not charged again merely because
+        the calendar date changes.
+        - A subsequent room night becomes chargeable only after
+        the normal 12:00 PM checkout boundary has passed.
+        """
 
         if self.folio_type != "ROOM" or self.is_closed:
             return
@@ -131,37 +148,81 @@ class Folio(models.Model):
             raise ValidationError("Room or category missing.")
 
         rate = getattr(self.room.category, "rate", None)
+
         if not rate or not rate.is_active:
-            raise ValidationError("No active rate for this room category.")
+            raise ValidationError(
+                "No active rate for this room category."
+            )
 
-        today = timezone.now().date()
+        today = timezone.localdate()
 
-        # ❌ Already charged today
-        if self.last_room_charge_date == today:
-            return
+        # First room-night charge:
+        # check-in charges the current room night immediately.
+        if self.last_room_charge_date is None:
+            charge_date = timezone.localdate(self.check_in_at)
 
-        # ✅ CREATE ONCE
+        else:
+            # The guest's next room night is not billable until
+            # the normal 12:00 PM checkout boundary has passed.
+            checkout_boundary = timezone.make_aware(
+                timezone.datetime.combine(
+                    self.last_room_charge_date,
+                    timezone.datetime.min.time(),
+                )
+            ).replace(hour=12, minute=0, second=0, microsecond=0)
+
+            if timezone.now() <= checkout_boundary:
+                return
+
+            # Do not create another room-night charge if the guest's
+            # current stay has already reached its scheduled checkout.
+            if self.check_out_at:
+                scheduled_checkout = self.check_out_at
+
+                if timezone.is_naive(scheduled_checkout):
+                    scheduled_checkout = timezone.make_aware(
+                        scheduled_checkout
+                    )
+
+                if timezone.now() >= scheduled_checkout:
+                    return
+
+            charge_date = today
+
+            # Prevent duplicate charging of the same room-night.
+            if self.last_room_charge_date == charge_date:
+                return
+
         charge = Charge.objects.create(
             folio=self,
-            description=f"Room charge – {today}",
+            description=f"Room charge – {charge_date}",
             department=Department.objects.get(
                 hotel=self.room.hotel,
                 department_type="FRONTDESK",
                 is_active=True,
             ),
             amount=Decimal(rate.price_per_night),
-            reference=f"ROOM-{self.room.room_number}-{today}"
+            reference=f"ROOM-{self.room.room_number}-{charge_date}",
         )
 
-        # 🔥 ACCOUNTING HOOK
-        try:
-            from accounting.services.postings.room_charge import post_room_charge
-            post_room_charge(self, charge.amount, charged_by)
-        except Exception as e:
-            print("Accounting error (room charge):", e)
+        # Accounting must succeed before the room charge is considered posted.
+        from accounting.services.postings.room_charge import (
+            post_room_charge,
+        )
 
-        self.last_room_charge_date = today
-        self.save(update_fields=["last_room_charge_date"])
+        post_room_charge(
+            self,
+            charge.amount,
+            charged_by,
+        )
+
+        self.last_room_charge_date = charge_date
+
+        self.save(
+            update_fields=[
+                "last_room_charge_date",
+            ]
+        )
 
     @property
     def total_charges(self):
@@ -216,6 +277,56 @@ class Charge(models.Model):
     def __str__(self):
         return f"{self.description} - {self.amount}"
 
+class FolioRoomHistory(models.Model):
+
+    REASON_CHOICES = (
+        ("CHECK_IN", "Check-in"),
+        ("ROOM_CHANGE", "Room Change"),
+    )
+
+    folio = models.ForeignKey(
+        Folio,
+        related_name="room_history",
+        on_delete=models.PROTECT,
+    )
+
+    room = models.ForeignKey(
+        "rooms.Room",
+        on_delete=models.PROTECT,
+        related_name="folio_room_history",
+    )
+
+    assigned_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    ended_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    reason = models.CharField(
+        max_length=30,
+        choices=REASON_CHOICES,
+    )
+
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        ordering = ["assigned_at"]
+
+    def __str__(self):
+        return (
+            f"Folio #{self.folio_id} — "
+            f"Room {self.room.room_number}"
+        )
+
 
 # =========================
 # PAYMENT (SETTLEMENT)
@@ -225,6 +336,7 @@ class Payment(models.Model):
         ("CASH", "Cash"),
         ("POS", "POS"),
         ("TRANSFER", "Bank Transfer"),
+        ("DEPOSIT", "Guest Deposit"),
     )
 
     folio = models.ForeignKey(
@@ -232,6 +344,21 @@ class Payment(models.Model):
         related_name="payments",
         on_delete=models.PROTECT
     )
+    account = models.ForeignKey(
+        "accounting.Account",
+        related_name="payments",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
+
+    shift = models.ForeignKey(
+        "restaurant.Shift",
+        related_name="payments",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )    
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     method = models.CharField(max_length=20, choices=METHOD_CHOICES)
     reference = models.CharField(
@@ -239,6 +366,7 @@ class Payment(models.Model):
         blank=True,
         help_text="POS slip number / Transfer reference"
     )
+
     note = models.TextField(blank=True)
     collected_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -249,6 +377,107 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.method} – {self.amount}"
+
+
+# =========================
+# GUEST DEPOSIT
+# =========================
+
+class GuestDeposit(models.Model):
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.PROTECT,
+        related_name="guest_deposits",
+    )
+
+    guest = models.ForeignKey(
+        Guest,
+        on_delete=models.PROTECT,
+        related_name="deposits",
+    )
+
+    balance = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "guest"],
+                name="unique_guest_deposit_per_hotel",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.guest.full_name} – "
+            f"Deposit ₦{self.balance:,.2f}"
+        )
+
+
+class GuestDepositTransaction(models.Model):
+
+    TYPE_CHOICES = (
+        ("RECEIVED", "Deposit Received"),
+        ("APPLIED", "Deposit Applied"),
+        ("REFUNDED", "Deposit Refunded"),
+        ("FORFEITED", "Reservation Guarantee Forfeited"),
+
+    )
+
+    deposit = models.ForeignKey(
+        GuestDeposit,
+        on_delete=models.PROTECT,
+        related_name="transactions",
+    )
+
+    transaction_type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+    )
+
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    folio = models.ForeignKey(
+        Folio,
+        on_delete=models.PROTECT,
+        related_name="deposit_transactions",
+        null=True,
+        blank=True,
+    )
+
+    reference = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    note = models.TextField(
+        blank=True,
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    def __str__(self):
+        return (
+            f"{self.transaction_type} – "
+            f"₦{self.amount:,.2f}"
+        )
     
 
 class Reservation(models.Model):
@@ -283,6 +512,11 @@ class Reservation(models.Model):
         blank=True
     )
 
+    number_of_rooms = models.PositiveIntegerField(
+        default=1,
+        help_text="Number of rooms reserved under this reservation.",
+    )
+
     check_in_date = models.DateField()
     check_out_date = models.DateField()
 
@@ -310,3 +544,174 @@ class Reservation(models.Model):
 
     def __str__(self):
         return f"Reservation {self.id} - {self.guest}"
+
+class ReservationDeposit(models.Model):
+
+    STATUS_CHOICES = (
+        ("PENDING", "Pending"),
+        ("GUARANTEED", "Guaranteed"),
+        ("RELEASED", "Released"),
+        ("FORFEITED", "Forfeited"),
+        ("REFUNDED", "Refunded"),
+    )
+
+    reservation = models.OneToOneField(
+        Reservation,
+        on_delete=models.PROTECT,
+        related_name="reservation_deposit",
+    )
+
+    guest_deposit = models.ForeignKey(
+        GuestDeposit,
+        on_delete=models.PROTECT,
+        related_name="reservation_allocations",
+    )
+
+    nightly_rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    number_of_rooms = models.PositiveIntegerField(
+        default=1,
+    )
+
+    number_of_nights = models.PositiveIntegerField(
+        default=1,
+    )
+
+    reservation_value = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    required_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    allocated_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+
+    cancellation_deadline = models.DateTimeField()
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="PENDING",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    def __str__(self):
+        return (
+            f"Reservation {self.reservation_id} "
+            f"– ₦{self.allocated_amount:,.2f}"
+        )
+    @property
+    def is_guaranteed(self):
+        return self.status == "GUARANTEED"
+
+# =========================
+# REFUND REQUEST
+# =========================
+
+class RefundRequest(models.Model):
+
+    STATUS_CHOICES = (
+        ("PENDING", "Pending"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+        ("COMPLETED", "Completed"),
+    )
+
+    SOURCE_CHOICES = (
+        ("POS_ORDER", "Restaurant Order"),
+        ("CHARGE", "Charge"),
+    )
+
+    source_type = models.CharField(
+        max_length=20,
+        choices=SOURCE_CHOICES,
+    )
+
+    pos_order = models.ForeignKey(
+        "restaurant.POSOrder",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="refund_requests",
+    )
+
+    charge = models.ForeignKey(
+        "billing.Charge",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="refund_requests",
+    )
+
+    reason = models.TextField()
+
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="refund_requests_created",
+    )
+
+    requested_at = models.DateTimeField(auto_now_add=True)
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="PENDING",
+    )
+
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="refund_requests_approved",
+    )
+
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    rejection_reason = models.TextField(
+        blank=True,
+    )
+
+    executed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="refund_requests_executed",
+    )
+
+    executed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    def __str__(self):
+        if self.source_type == "POS_ORDER" and self.pos_order_id:
+            source = f"POS Order #{self.pos_order_id}"
+        elif self.source_type == "CHARGE" and self.charge_id:
+            source = f"Charge #{self.charge_id}"
+        else:
+            source = "Unknown Source"
+
+        return f"Refund Request #{self.id} - {source} ({self.status})"

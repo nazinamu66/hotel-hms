@@ -1,60 +1,616 @@
 {% extends "base/base.html" %}
 
-{% block title %}Floors{% endblock %}
+{% block title %}Floor Management{% endblock %}
 
 {% block content %}
 
-<h2>Floors</h2>
+<style>
+    .floor-page {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
 
-<div style="margin-bottom:15px;">
-<a href="{% url 'floor_create' %}" class="btn btn-primary">
-Add Floor
-</a>
+    .page-heading {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:20px;
+        flex-wrap:wrap;
+        margin-bottom:20px;
+    }
+
+    .page-heading h2 {
+        margin:0;
+        color:#111827;
+    }
+
+    .page-heading p {
+        margin:6px 0 0;
+        color:#6b7280;
+    }
+
+    .filter-card {
+        background:#fff;
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        padding:20px;
+        margin-bottom:20px;
+        box-shadow:0 2px 8px rgba(0,0,0,.04);
+    }
+
+    .filter-title {
+        margin:0 0 15px;
+        font-size:16px;
+        font-weight:700;
+        color:#111827;
+    }
+
+    .filter-grid {
+        display:grid;
+        grid-template-columns:2fr 1.5fr 1.5fr 1fr auto;
+        gap:12px;
+        align-items:end;
+    }
+
+    .field label {
+        display:block;
+        margin-bottom:6px;
+        font-size:13px;
+        font-weight:600;
+        color:#374151;
+    }
+
+    .field input,
+    .field select {
+        width:100%;
+        box-sizing:border-box;
+        padding:10px 11px;
+        border:1px solid #d1d5db;
+        border-radius:8px;
+        background:#fff;
+        font-size:14px;
+    }
+
+    .field input:focus,
+    .field select:focus {
+        outline:none;
+        border-color:#2563eb;
+    }
+
+    .filter-actions {
+        display:flex;
+        gap:8px;
+    }
+
+    .table-card {
+        background:#fff;
+        border:1px solid #e5e7eb;
+        border-radius:12px;
+        overflow:hidden;
+        box-shadow:0 2px 8px rgba(0,0,0,.04);
+    }
+
+    .table-wrapper {
+        overflow-x:auto;
+    }
+
+    .floor-table {
+        width:100%;
+        border-collapse:collapse;
+        min-width:850px;
+    }
+
+    .floor-table th {
+        padding:13px 16px;
+        text-align:left;
+        background:#f9fafb;
+        color:#6b7280;
+        font-size:12px;
+        text-transform:uppercase;
+        letter-spacing:.04em;
+        border-bottom:1px solid #e5e7eb;
+    }
+
+    .floor-table td {
+        padding:15px 16px;
+        border-bottom:1px solid #f0f0f0;
+        font-size:14px;
+        color:#374151;
+    }
+
+    .floor-table tr:last-child td {
+        border-bottom:none;
+    }
+
+    .building-name {
+        font-weight:700;
+        color:#111827;
+    }
+
+    .floor-name {
+        font-weight:700;
+        color:#111827;
+    }
+
+    .floor-number {
+        display:inline-flex;
+        min-width:28px;
+        height:28px;
+        padding:0 7px;
+        align-items:center;
+        justify-content:center;
+        border-radius:8px;
+        background:#f3f4f6;
+        color:#374151;
+        font-weight:700;
+    }
+
+    .status-badge {
+        display:inline-flex;
+        align-items:center;
+        padding:5px 9px;
+        border-radius:999px;
+        font-size:12px;
+        font-weight:700;
+    }
+
+    .status-active {
+        background:#dcfce7;
+        color:#166534;
+    }
+
+    .status-inactive {
+        background:#fee2e2;
+        color:#991b1b;
+    }
+
+    .actions {
+        display:flex;
+        gap:7px;
+        flex-wrap:wrap;
+    }
+
+    .btn {
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        padding:9px 13px;
+        border-radius:8px;
+        border:1px solid transparent;
+        text-decoration:none;
+        font-size:13px;
+        font-weight:600;
+        cursor:pointer;
+        white-space:nowrap;
+    }
+
+    .btn-primary {
+        background:#2563eb;
+        color:#fff;
+    }
+
+    .btn-primary:hover {
+        background:#1d4ed8;
+    }
+
+    .btn-secondary {
+        background:#fff;
+        color:#374151;
+        border-color:#d1d5db;
+    }
+
+    .btn-secondary:hover {
+        background:#f9fafb;
+    }
+
+    .btn-danger {
+        background:#fff;
+        color:#b91c1c;
+        border-color:#fecaca;
+    }
+
+    .btn-danger:hover {
+        background:#fef2f2;
+    }
+
+    .btn-success {
+        background:#fff;
+        color:#15803d;
+        border-color:#bbf7d0;
+    }
+
+    .btn-success:hover {
+        background:#f0fdf4;
+    }
+
+    .empty-state {
+        padding:55px 20px;
+        text-align:center;
+        color:#6b7280;
+    }
+
+    .empty-state strong {
+        display:block;
+        margin-bottom:6px;
+        color:#374151;
+        font-size:16px;
+    }
+
+    @media (max-width:1100px) {
+        .filter-grid {
+            grid-template-columns:1fr 1fr;
+        }
+
+        .filter-actions {
+            grid-column:1 / -1;
+        }
+    }
+
+    @media (max-width:650px) {
+        .filter-grid {
+            grid-template-columns:1fr;
+        }
+
+        .filter-actions {
+            grid-column:auto;
+        }
+
+        .filter-actions .btn {
+            flex:1;
+        }
+
+        .page-heading .btn {
+            width:100%;
+        }
+    }
+</style>
+
+
+<div class="floor-page">
+
+    <!-- HEADER -->
+
+    <div class="page-heading">
+
+        <div>
+
+            <h2>
+                Floor Management
+            </h2>
+
+            <p>
+                Manage hotel floors, numbering and status.
+            </p>
+
+        </div>
+
+        <a
+            href="{% url 'floor_create' %}"
+            class="btn btn-primary"
+        >
+            + Add Floor
+        </a>
+
+    </div>
+
+
+    <!-- FILTERS -->
+
+    <div class="filter-card">
+
+        <h3 class="filter-title">
+            Filter Floors
+        </h3>
+
+        <form method="get">
+
+            <div class="filter-grid">
+
+                <div class="field">
+
+                    <label for="search">
+                        Search
+                    </label>
+
+                    <input
+                        id="search"
+                        type="text"
+                        name="search"
+                        value="{{ request.GET.search|default:'' }}"
+                        placeholder="Building or floor name"
+                    >
+
+                </div>
+
+
+                <div class="field">
+
+                    <label for="hotel">
+                        Hotel
+                    </label>
+
+                    <select id="hotel" name="hotel">
+
+                        <option value="">
+                            All Hotels
+                        </option>
+
+                        {% for hotel in hotels %}
+
+                            <option
+                                value="{{ hotel.id }}"
+                                {% if request.GET.hotel == hotel.id|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ hotel.name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <div class="field">
+
+                    <label for="building">
+                        Building
+                    </label>
+
+                    <select id="building" name="building">
+
+                        <option value="">
+                            All Buildings
+                        </option>
+
+                        {% for building in buildings %}
+
+                            <option
+                                value="{{ building.id }}"
+                                {% if request.GET.building == building.id|stringformat:"s" %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ building.name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+
+                <div class="field">
+
+                    <label for="status">
+                        Status
+                    </label>
+
+                    <select id="status" name="status">
+
+                        <option
+                            value=""
+                            {% if not request.GET.status %}
+                                selected
+                            {% endif %}
+                        >
+                            All Statuses
+                        </option>
+
+                        <option
+                            value="active"
+                            {% if request.GET.status == "active" %}
+                                selected
+                            {% endif %}
+                        >
+                            Active
+                        </option>
+
+                        <option
+                            value="inactive"
+                            {% if request.GET.status == "inactive" %}
+                                selected
+                            {% endif %}
+                        >
+                            Inactive
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="filter-actions">
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                    >
+                        Filter
+                    </button>
+
+                    <a
+                        href="{% url 'floor_list' %}"
+                        class="btn btn-secondary"
+                    >
+                        Clear
+                    </a>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+    <!-- TABLE -->
+
+    <div class="table-card">
+
+        {% if floors %}
+
+            <div class="table-wrapper">
+
+                <table class="floor-table">
+
+                    <thead>
+
+                        <tr>
+                            <th>Hotel</th>
+                            <th>Building</th>
+                            <th>Floor Name</th>
+                            <th>Number</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for floor in floors %}
+
+                            <tr>
+
+                                <td>
+                                    {{ floor.building.hotel.name }}
+                                </td>
+
+
+                                <td>
+                                    <a
+                                        href="{% url 'building_detail' floor.building.id %}"
+                                        class="building-name"
+                                        style="text-decoration:none;"
+                                    >
+                                        {{ floor.building.name }}
+                                    </a>
+                                </td>
+
+
+                                <td>
+                                    <span class="floor-name">
+                                        {{ floor.name }}
+                                    </span>
+                                </td>
+
+
+                                <td>
+                                    <span class="floor-number">
+                                        {{ floor.number }}
+                                    </span>
+                                </td>
+
+
+                                <td>
+
+                                    {% if floor.is_active %}
+
+                                        <span class="status-badge status-active">
+                                            Active
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="status-badge status-inactive">
+                                            Inactive
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+
+                                <td>
+
+                                    <div class="actions">
+
+                                        <a
+                                            href="{% url 'floor_edit' floor.id %}"
+                                            class="btn btn-secondary"
+                                        >
+                                            Edit
+                                        </a>
+
+
+                                        <form
+                                            method="post"
+                                            action="{% url 'floor_toggle_active' floor.id %}"
+                                            style="display:inline;"
+                                            onsubmit="return confirm('{% if floor.is_active %}Make this floor inactive?{% else %}Activate this floor?{% endif %}');"
+                                        >
+
+                                            {% csrf_token %}
+
+                                            {% if floor.is_active %}
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-danger"
+                                                >
+                                                    Make Inactive
+                                                </button>
+
+                                            {% else %}
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-success"
+                                                >
+                                                    Activate
+                                                </button>
+
+                                            {% endif %}
+
+                                        </form>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="empty-state">
+
+                <strong>
+                    No floors found.
+                </strong>
+
+                <span>
+                    Try changing your filters or create a new floor.
+                </span>
+
+                <br><br>
+
+                <a
+                    href="{% url 'floor_create' %}"
+                    class="btn btn-primary"
+                >
+                    + Add Floor
+                </a>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
 </div>
-
-<table class="table">
-
-<thead>
-<tr>
-<th>Building</th>
-<th>Floor Name</th>
-<th>Floor Number</th>
-<th>Status</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for floor in floors %}
-
-<tr>
-
-<td>{{ floor.building.name }}</td>
-
-<td>{{ floor.name }}</td>
-
-<td>{{ floor.number }}</td>
-
-<td>
-{% if floor.is_active %}
-Active
-{% else %}
-Inactive
-{% endif %}
-</td>
-
-</tr>
-
-{% empty %}
-
-<tr>
-<td colspan="4">No floors created yet.</td>
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
 
 {% endblock %}

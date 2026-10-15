@@ -6,153 +6,678 @@ Receive Purchase Order #{{ po.id }}
 
 {% block content %}
 
-<h2>
-    Receive Purchase Order #{{ po.id }}
-</h2>
+<style>
+    .receive-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 10px 0 45px;
+    }
 
-<p>
-    <strong>Receiving Department:</strong>
-    {{ po.department.name }}
-</p>
+    .receive-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 26px;
+    }
 
-<p>
-    <strong>Supplier:</strong>
-    {{ po.supplier|default:"—" }}
-</p>
+    .receive-header h2 {
+        margin: 0 0 7px;
+        color: #293241;
+        font-size: 30px;
+        font-weight: 750;
+    }
 
-<p>
-    <strong>PO Status:</strong>
-    {{ po.get_status_display }}
-</p>
+    .receive-header p {
+        margin: 0;
+        color: #667085;
+        font-size: 15px;
+        line-height: 1.6;
+    }
 
-<p>
-    <strong>Payment Status:</strong>
-    {{ po.get_payment_status_display }}
-</p>
+    .receive-back {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 0 15px;
+        border: 1px solid #d0d5dd;
+        border-radius: 9px;
+        background: #fff;
+        color: #344054;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 650;
+        white-space: nowrap;
+    }
 
-<hr>
+    .receive-back:hover {
+        background: #f8fafc;
+    }
 
-<h3>
-    Goods to Receive
-</h3>
+    .receive-card {
+        margin-bottom: 22px;
+        border: 1px solid #e2e6ed;
+        border-radius: 14px;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 4px 18px rgba(16, 24, 40, .05);
+    }
 
-<table style="width:100%; border-collapse:collapse;">
+    .receive-card-header {
+        padding: 21px 25px;
+        border-bottom: 1px solid #eaecf0;
+        background: #fafbfc;
+    }
 
-    <thead style="background:#eee;">
+    .receive-card-header h3 {
+        margin: 0 0 5px;
+        color: #293241;
+        font-size: 19px;
+        font-weight: 700;
+    }
 
-        <tr>
+    .receive-card-header p {
+        margin: 0;
+        color: #667085;
+        font-size: 13px;
+        line-height: 1.5;
+    }
 
-            <th style="text-align:left; padding:8px;">
-                Product
-            </th>
+    .receive-card-body {
+        padding: 25px;
+    }
 
-            <th style="text-align:right; padding:8px;">
-                Purchase Qty
-            </th>
+    .receive-info-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px 28px;
+    }
 
-            <th style="text-align:right; padding:8px;">
-                Base Qty
-            </th>
+    .receive-label {
+        margin-bottom: 5px;
+        color: #667085;
+        font-size: 12px;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
 
-            <th style="text-align:right; padding:8px;">
-                Unit Cost
-            </th>
+    .receive-value {
+        color: #293241;
+        font-size: 15px;
+        font-weight: 650;
+        word-break: break-word;
+    }
 
-            <th style="text-align:right; padding:8px;">
-                Total
-            </th>
+    .receive-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 0 11px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+    }
 
-        </tr>
+    .badge-approved {
+        background: #ecfdf3;
+        color: #027a48;
+    }
 
-    </thead>
+    .badge-paid {
+        background: #ecfdf3;
+        color: #027a48;
+    }
 
-    <tbody>
+    .badge-unpaid {
+        background: #fef3f2;
+        color: #b42318;
+    }
 
-    {% for item in po.items.all %}
+    .badge-partial {
+        background: #fff4e5;
+        color: #9a6700;
+    }
 
-        <tr style="border-top:1px solid #ddd;">
+    .receive-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+    }
 
-            <td style="padding:8px;">
-                {{ item.product.name }}
-            </td>
+    .receive-table {
+        width: 100%;
+        min-width: 760px;
+        border-collapse: collapse;
+    }
 
-            <td style="padding:8px; text-align:right;">
-                {{ item.purchase_quantity }}
-                {{ item.product.purchase_unit }}
-            </td>
+    .receive-table th {
+        padding: 13px 12px;
+        border-bottom: 1px solid #dfe3e8;
+        background: #f8fafc;
+        color: #475467;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: left;
+        text-transform: uppercase;
+        letter-spacing: .035em;
+    }
 
-            <td style="padding:8px; text-align:right;">
-                {{ item.base_quantity }}
-                {{ item.product.base_unit }}
-            </td>
+    .receive-table th.right,
+    .receive-table td.right {
+        text-align: right;
+    }
 
-            <td style="padding:8px; text-align:right;">
-                ₦{{ item.unit_cost|floatformat:2 }}
-            </td>
+    .receive-table td {
+        padding: 16px 12px;
+        border-bottom: 1px solid #eaecf0;
+        color: #344054;
+        font-size: 14px;
+        vertical-align: middle;
+    }
 
-            <td style="padding:8px; text-align:right;">
-                ₦{{ item.total_cost|floatformat:2 }}
-            </td>
+    .receive-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
 
-        </tr>
+    .receive-product {
+        color: #293241;
+        font-weight: 650;
+    }
 
-    {% endfor %}
+    .receive-unit {
+        margin-left: 4px;
+        color: #667085;
+        font-size: 12px;
+    }
 
-    </tbody>
+    .receive-total-row {
+        background: #fafbfc;
+    }
 
-</table>
+    .receive-total-row td {
+        border-top: 2px solid #e4e7ec;
+        color: #293241;
+        font-weight: 750;
+    }
 
-<hr>
+    .receive-destination {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 20px 22px;
+        border-left: 4px solid #2e90fa;
+        border-radius: 7px;
+        background: #f5faff;
+    }
 
-<div style="
-    padding:15px;
-    border:1px solid #ddd;
-    margin-bottom:20px;
-">
+    .receive-destination-icon {
+        font-size: 27px;
+        line-height: 1;
+    }
 
-    <strong>
-        Receiving this PO will add the goods to:
-    </strong>
+    .receive-destination-label {
+        margin-bottom: 3px;
+        color: #667085;
+        font-size: 12px;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
 
-    <br><br>
+    .receive-destination-name {
+        color: #293241;
+        font-size: 17px;
+        font-weight: 700;
+    }
 
-    {{ po.department.name }}
+    .receive-payment-note {
+        padding: 18px 20px;
+        border-left: 4px solid #12b76a;
+        border-radius: 7px;
+        background: #f6fef9;
+        color: #475467;
+        font-size: 14px;
+        line-height: 1.65;
+    }
+
+    .receive-payment-note strong {
+        color: #293241;
+    }
+
+    .receive-confirm {
+        padding: 23px 25px;
+        border: 1px solid #e2e6ed;
+        border-radius: 14px;
+        background: #fff;
+        box-shadow: 0 4px 18px rgba(16, 24, 40, .05);
+    }
+
+    .receive-confirm-title {
+        margin: 0 0 7px;
+        color: #293241;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .receive-confirm-text {
+        margin: 0 0 19px;
+        color: #667085;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .receive-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 11px;
+    }
+
+    .receive-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 19px;
+        border-radius: 9px;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    .receive-cancel {
+        border: 1px solid #d0d5dd;
+        background: #fff;
+        color: #344054;
+    }
+
+    .receive-cancel:hover {
+        background: #f8fafc;
+    }
+
+    .receive-submit {
+        border: 0;
+        background: #087443;
+        color: #fff;
+    }
+
+    .receive-submit:hover {
+        opacity: .92;
+    }
+
+    .receive-warning {
+        margin-top: 17px;
+        color: #667085;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    @media (max-width: 750px) {
+        .receive-header {
+            flex-direction: column;
+        }
+
+        .receive-info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .receive-card-body {
+            padding: 19px;
+        }
+
+        .receive-card-header {
+            padding: 19px;
+        }
+
+        .receive-confirm {
+            padding: 20px;
+        }
+
+        .receive-actions {
+            flex-direction: column-reverse;
+        }
+
+        .receive-button {
+            width: 100%;
+        }
+    }
+</style>
+
+
+<div class="receive-page">
+
+    <!-- HEADER -->
+    <div class="receive-header">
+
+        <div>
+            <h2>
+                Receive Purchase Order #{{ po.id }}
+            </h2>
+
+            <p>
+                Review the delivery and confirm that the goods
+                have physically arrived at your department.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'inventory:department_incoming_pos' %}"
+            class="receive-back"
+        >
+            ← Incoming Deliveries
+        </a>
+
+    </div>
+
+
+    <!-- ORDER INFORMATION -->
+    <div class="receive-card">
+
+        <div class="receive-card-header">
+
+            <h3>Purchase Order Information</h3>
+
+            <p>
+                Confirm the supplier, destination and current
+                workflow status before receiving the goods.
+            </p>
+
+        </div>
+
+        <div class="receive-card-body">
+
+            <div class="receive-info-grid">
+
+                <div>
+                    <div class="receive-label">
+                        Purchase Order
+                    </div>
+
+                    <div class="receive-value">
+                        #{{ po.id }}
+                    </div>
+                </div>
+
+
+                <div>
+                    <div class="receive-label">
+                        Supplier
+                    </div>
+
+                    <div class="receive-value">
+                        {{ po.supplier|default:"—" }}
+                    </div>
+                </div>
+
+
+                <div>
+                    <div class="receive-label">
+                        Receiving Department
+                    </div>
+
+                    <div class="receive-value">
+                        {{ po.department.name }}
+                    </div>
+                </div>
+
+
+                <div>
+                    <div class="receive-label">
+                        PO Status
+                    </div>
+
+                    <span class="receive-badge badge-approved">
+                        {{ po.get_status_display }}
+                    </span>
+                </div>
+
+
+                <div>
+                    <div class="receive-label">
+                        Payment Status
+                    </div>
+
+                    <span class="receive-badge
+                        {% if po.payment_status == 'PAID' %}
+                            badge-paid
+                        {% elif po.payment_status == 'PARTIAL' %}
+                            badge-partial
+                        {% else %}
+                            badge-unpaid
+                        {% endif %}
+                    ">
+                        {{ po.get_payment_status_display }}
+                    </span>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- GOODS -->
+    <div class="receive-card">
+
+        <div class="receive-card-header">
+
+            <h3>Goods to Receive</h3>
+
+            <p>
+                These quantities will be added to the receiving
+                department's inventory when confirmed.
+            </p>
+
+        </div>
+
+
+        <div class="receive-card-body receive-table-wrap">
+
+            <table class="receive-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Product
+                        </th>
+
+                        <th class="right">
+                            Purchase Qty
+                        </th>
+
+                        <th class="right">
+                            Base Qty
+                        </th>
+
+                        <th class="right">
+                            Unit Cost
+                        </th>
+
+                        <th class="right">
+                            Total
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                {% for item in po.items.all %}
+
+                    <tr>
+
+                        <td>
+                            <span class="receive-product">
+                                {{ item.product.name }}
+                            </span>
+                        </td>
+
+
+                        <td class="right">
+                            {{ item.purchase_quantity }}
+                            <span class="receive-unit">
+                                {{ item.product.purchase_unit }}
+                            </span>
+                        </td>
+
+
+                        <td class="right">
+                            {{ item.base_quantity }}
+                            <span class="receive-unit">
+                                {{ item.product.base_unit }}
+                            </span>
+                        </td>
+
+
+                        <td class="right">
+                            ₦{{ item.unit_cost|floatformat:2 }}
+                        </td>
+
+
+                        <td class="right">
+                            ₦{{ item.total_cost|floatformat:2 }}
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+
+                
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- DESTINATION -->
+    <div class="receive-card">
+
+        <div class="receive-card-body">
+
+            <div class="receive-destination">
+
+                <div class="receive-destination-icon">
+                    📦
+                </div>
+
+                <div>
+
+                    <div class="receive-destination-label">
+                        Stock Destination
+                    </div>
+
+                    <div class="receive-destination-name">
+                        {{ po.department.name }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- PAYMENT NOTE -->
+    <div class="receive-card">
+
+        <div class="receive-card-body">
+
+            {% if po.payment_status == "PAID" %}
+
+                <div class="receive-payment-note">
+
+                    <strong>
+                        ✓ Supplier payment completed.
+                    </strong>
+
+                    The supplier has already been fully paid.
+                    You may proceed with goods receipt.
+
+                </div>
+
+            {% else %}
+
+                <div class="receive-payment-note">
+
+                    <strong>
+                        Payment is currently
+                        {{ po.get_payment_status_display|lower }}.
+                    </strong>
+
+                    Goods may still be received.
+                    Supplier payment does not have to occur
+                    before receiving.
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- CONFIRMATION -->
+    <div class="receive-confirm">
+
+        <h3 class="receive-confirm-title">
+            Confirm Goods Receipt
+        </h3>
+
+        <p class="receive-confirm-text">
+            Confirm only after the physical goods have been
+            checked and received by {{ po.department.name }}.
+            Once confirmed, the quantities will be added to
+            the department's inventory.
+        </p>
+
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <div class="receive-actions">
+
+                <a
+                    href="{% url 'inventory:department_incoming_pos' %}"
+                    class="receive-button receive-cancel"
+                >
+                    Cancel
+                </a>
+
+                <button
+                    type="submit"
+                    class="receive-button receive-submit"
+                >
+                    📦 Confirm Goods Received
+                </button>
+
+            </div>
+
+        </form>
+
+
+        <div class="receive-warning">
+            This action records the delivery and updates inventory.
+            Make sure the delivered quantities have been verified.
+        </div>
+
+    </div>
 
 </div>
-
-{% if po.payment_status == "PAID" %}
-
-<p>
-    ✓ Supplier has already been fully paid.
-</p>
-
-{% else %}
-
-<p>
-    <strong>
-        Payment is currently {{ po.get_payment_status_display|lower }}.
-    </strong>
-</p>
-
-<p>
-    Goods may still be received. Payment does not have to
-    occur before receiving.
-</p>
-
-{% endif %}
-
-<form method="post">
-
-    {% csrf_token %}
-
-    <button type="submit">
-        📦 Confirm Goods Received
-    </button>
-
-    <a href="{% url 'inventory:department_incoming_pos' %}">
-        Cancel
-    </a>
-
-</form>
 
 {% endblock %}

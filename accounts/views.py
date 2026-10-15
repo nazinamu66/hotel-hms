@@ -15,10 +15,10 @@ from django.core.files.storage import default_storage
 from django.urls import reverse
 from core.models import BusinessProfile
 from inventory.constants import DEFAULT_DEPARTMENTS
-from inventory.models import Hotel, HotelFeature, Organization
+from inventory.models import Hotel, HotelFeature, Organization,Department
 from inventory.services.setup_hotel import setup_new_hotel
 import os
-
+from django.db.models import Q
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -726,8 +726,40 @@ def get_manageable_users(actor):
 @role_required("ADMIN", "DIRECTOR")
 def user_list(request):
 
+    users = get_manageable_users(request.user)
+
+    # ---------------------------------------------------------
+    # FILTERS
+    # ---------------------------------------------------------
+
+    search = request.GET.get("search", "").strip()
+    role = request.GET.get("role", "").strip()
+    hotel_id = request.GET.get("hotel", "").strip()
+    department_id = request.GET.get("department", "").strip()
+    status = request.GET.get("status", "").strip()
+
+    if search:
+        users = users.filter(
+            Q(username__icontains=search)
+            | Q(email__icontains=search)
+        )
+
+    if role:
+        users = users.filter(role=role)
+
+    if hotel_id:
+        users = users.filter(hotel_id=hotel_id)
+
+    if department_id:
+        users = users.filter(department_id=department_id)
+
+    if status == "active":
+        users = users.filter(is_active=True)
+    elif status == "inactive":
+        users = users.filter(is_active=False)
+
     users = (
-        get_manageable_users(request.user)
+        users
         .select_related(
             "organization",
             "hotel",
@@ -739,10 +771,47 @@ def user_list(request):
         .order_by("username")
     )
 
+    # ---------------------------------------------------------
+    # FILTER OPTIONS
+    # ---------------------------------------------------------
+
+    manageable_users = get_manageable_users(request.user)
+
+    hotels = (
+        Hotel.objects
+        .filter(
+            users__in=manageable_users,
+            is_active=True,
+        )
+        .distinct()
+        .order_by("name")
+    )
+
+    departments = (
+        Department.objects
+        .filter(
+            users__in=manageable_users,
+            is_active=True,
+        )
+        .select_related("hotel")
+        .distinct()
+        .order_by("hotel__name", "name")
+    )
+
     return render(
         request,
         "accounts/user_list.html",
-        {"users": users}
+        {
+            "users": users,
+            "roles": User.ROLE_CHOICES,
+            "hotels": hotels,
+            "departments": departments,
+            "filter_search": search,
+            "filter_role": role,
+            "filter_hotel": hotel_id,
+            "filter_department": department_id,
+            "filter_status": status,
+        },
     )
 
 
@@ -832,3 +901,39 @@ def user_edit(request, user_id):
             "edit_mode": True,
         }
     )
+
+@role_required("ADMIN", "DIRECTOR")
+def user_toggle_active(request, user_id):
+
+    if request.method != "POST":
+        raise PermissionDenied
+
+    user_obj = get_object_or_404(
+        get_manageable_users(request.user),
+        id=user_id,
+    )
+
+    # Prevent an administrator from accidentally disabling their
+    # own account.
+    if user_obj == request.user:
+        messages.error(
+            request,
+            "You cannot deactivate your own account.",
+        )
+        return redirect("accounts_users")
+
+    user_obj.is_active = not user_obj.is_active
+    user_obj.save(update_fields=["is_active"])
+
+    if user_obj.is_active:
+        messages.success(
+            request,
+            f"User '{user_obj.username}' has been activated.",
+        )
+    else:
+        messages.success(
+            request,
+            f"User '{user_obj.username}' has been made inactive.",
+        )
+
+    return redirect("accounts_users")

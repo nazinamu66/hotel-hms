@@ -1,0 +1,75 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<div style="max-width:520px;margin:50px auto;">
+
+    <div style="
+        background:#fff;
+        border:1px solid #e5e7eb;
+        border-radius:16px;
+        padding:32px;
+        box-shadow:0 8px 30px rgba(0,0,0,.06);
+    ">
+
+        <h2 style="margin:0 0 8px;">
+            Open Restaurant Shift
+        </h2>
+
+        <p style="color:#6b7280;margin-bottom:28px;">
+            Count the physical cash in your possession before opening the shift.
+        </p>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <label style="
+                display:block;
+                font-weight:600;
+                margin-bottom:8px;
+            ">
+                Opening Cash
+            </label>
+
+            <input
+                type="number"
+                name="opening_cash"
+                value="{{ opening_cash }}"
+                min="0"
+                step="0.01"
+                required
+                style="
+                    width:100%;
+                    box-sizing:border-box;
+                    padding:13px 14px;
+                    border:1px solid #d1d5db;
+                    border-radius:10px;
+                    font-size:16px;
+                    margin-bottom:20px;
+                "
+            >
+
+            <button
+                type="submit"
+                style="
+                    width:100%;
+                    padding:13px;
+                    border:0;
+                    border-radius:10px;
+                    background:#111827;
+                    color:white;
+                    font-size:15px;
+                    font-weight:600;
+                    cursor:pointer;
+                "
+            >
+                Open Shift
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

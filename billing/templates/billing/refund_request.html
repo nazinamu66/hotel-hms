@@ -1,0 +1,114 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1>Request Refund</h1>
+        <p>Submit this transaction for management approval.</p>
+    </div>
+</div>
+
+<div class="card">
+
+    {% if source_type == "POS_ORDER" %}
+
+        <h2>Restaurant Order #{{ source.id }}</h2>
+
+        <p>
+            <strong>Department:</strong>
+            {{ source.department.name }}
+        </p>
+
+        <p>
+            <strong>Total:</strong>
+            ₦{{ source.total_amount|floatformat:2 }}
+        </p>
+
+        <p>
+            <strong>Status:</strong>
+            {{ source.get_status_display }}
+        </p>
+
+    {% elif source_type == "CHARGE" %}
+
+        <h2>Charge #{{ source.id }}</h2>
+
+        <p>
+            <strong>Description:</strong>
+            {{ source.description }}
+        </p>
+
+        <p>
+            <strong>Department:</strong>
+            {{ source.department.name }}
+        </p>
+
+        <p>
+            <strong>Amount:</strong>
+            ₦{{ source.amount|floatformat:2 }}
+        </p>
+
+        <p>
+            <strong>Reference:</strong>
+            {{ source.reference|default:"—" }}
+        </p>
+
+    {% endif %}
+
+    <hr>
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="reason">
+                Refund Reason
+            </label>
+
+            <textarea
+                id="reason"
+                name="reason"
+                rows="5"
+                required
+                placeholder="Explain why this transaction should be refunded."
+            ></textarea>
+        </div>
+
+        <div style="margin-top: 20px;">
+
+            <button
+                type="submit"
+                class="btn btn-primary"
+            >
+                Submit Refund Request
+            </button>
+
+            {% if source_type == "POS_ORDER" %}
+
+                <a
+                    href="{% url 'restaurant_order_detail' source.id %}"
+                    class="btn btn-secondary"
+                >
+                    Cancel
+                </a>
+
+            {% elif source_type == "CHARGE" %}
+
+                <a
+                    href="{% url 'frontdesk_invoice' source.folio_id %}"
+                    class="btn btn-secondary"
+                >
+                    Cancel
+                </a>
+
+            {% endif %}
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

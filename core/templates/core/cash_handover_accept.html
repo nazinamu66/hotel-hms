@@ -1,0 +1,302 @@
+{% extends "base/base.html" %}
+
+{% block title %}Accept Cash Handover{% endblock %}
+
+{% block content %}
+
+<style>
+    .accept-page {
+        max-width: 850px;
+        margin: 0 auto;
+        padding: 32px 24px 60px;
+    }
+
+    .eyebrow {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
+
+    .title {
+        margin: 0;
+        color: #172033;
+        font-size: 34px;
+        font-weight: 800;
+    }
+
+    .subtitle {
+        margin: 8px 0 28px;
+        color: #64748b;
+    }
+
+    .card {
+        background: #fff;
+        border: 1px solid #e5eaf0;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
+        margin-bottom: 20px;
+    }
+
+    .amount-box {
+        background: #f1f5f9;
+        border-radius: 14px;
+        padding: 22px;
+        margin: 20px 0;
+    }
+
+    .amount-label {
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        margin-bottom: 6px;
+    }
+
+    .amount {
+        color: #172033;
+        font-size: 30px;
+        font-weight: 800;
+    }
+
+    .details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+    }
+
+    .detail {
+        background: #f8fafc;
+        border-radius: 11px;
+        padding: 15px;
+    }
+
+    .detail-label {
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+
+    .detail-value {
+        color: #172033;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .warning {
+        padding: 15px 17px;
+        border-radius: 11px;
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        color: #9a3412;
+        font-size: 13px;
+        line-height: 1.6;
+        margin-bottom: 22px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    label {
+        display: block;
+        color: #334155;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    input,
+    textarea {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        font-size: 14px;
+    }
+
+    textarea {
+        min-height: 110px;
+        resize: vertical;
+    }
+
+    input:focus,
+    textarea:focus {
+        outline: none;
+        border-color: #64748b;
+        box-shadow: 0 0 0 3px rgba(100,116,139,.12);
+    }
+
+    .actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-primary {
+        border: 0;
+        border-radius: 10px;
+        padding: 12px 18px;
+        background: #172033;
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .btn-secondary {
+        display: inline-block;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        padding: 11px 17px;
+        color: #334155;
+        text-decoration: none;
+        font-weight: 700;
+    }
+
+    @media (max-width: 600px) {
+        .details {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="accept-page">
+
+    <div class="eyebrow">CASH CONTROL</div>
+
+    <h1 class="title">Accept Cash Handover</h1>
+
+    <p class="subtitle">
+        Perform your own independent count before accepting custody.
+    </p>
+
+    <div class="card">
+
+        <div class="details">
+
+            <div class="detail">
+                <div class="detail-label">Handover</div>
+                <div class="detail-value">
+                    #{{ handover.id }}
+                </div>
+            </div>
+
+            <div class="detail">
+                <div class="detail-label">Type</div>
+                <div class="detail-value">
+                    {{ handover.get_custody_type_display }}
+                </div>
+            </div>
+
+            <div class="detail">
+                <div class="detail-label">From</div>
+                <div class="detail-value">
+                    {{ handover.from_user.get_full_name|default:handover.from_user.username }}
+                </div>
+            </div>
+
+            <div class="detail">
+                <div class="detail-label">Department</div>
+                <div class="detail-value">
+                    {{ handover.department.name }}
+                </div>
+            </div>
+
+        </div>
+
+        <div class="amount-box">
+
+            <div class="amount-label">
+                Expected Cash
+            </div>
+
+            <div class="amount">
+                ₦{{ handover.expected_amount|floatformat:2 }}
+            </div>
+
+            <div class="amount-label" style="margin-top:18px;">
+                Sender Count
+            </div>
+
+            <div class="amount">
+                ₦{{ handover.sender_count|floatformat:2 }}
+            </div>
+
+        </div>
+
+        <div class="warning">
+            <strong>Independent count required.</strong><br>
+            Count the physical cash yourself. Compare your count with both
+            the expected cash and the sender's count. If either amount differs,
+            an explanation will be required.
+        </div>
+        <form method="post">
+
+            {% csrf_token %}
+
+            <div class="form-group">
+
+                <label for="recipient_count">
+                    Your Cash Count
+                </label>
+
+                <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    name="recipient_count"
+                    id="recipient_count"
+                    placeholder="Enter the amount you physically counted"
+                    required
+                    autofocus
+                >
+
+            </div>
+
+            <div class="form-group">
+
+                <label for="variance_note">
+                    Variance Explanation
+                    <span style="font-weight:400;color:#64748b;">
+                        — required only if your count differs
+                    </span>
+                </label>
+
+                <textarea
+                    name="variance_note"
+                    id="variance_note"
+                    placeholder="Explain any difference between your count and the sender's count..."
+                ></textarea>
+
+            </div>
+
+            <div class="actions">
+
+                <a
+                    href="{% url 'cash_handover_list' %}"
+                    class="btn-secondary"
+                >
+                    Cancel
+                </a>
+
+                <button
+                    type="submit"
+                    class="btn-primary"
+                >
+                    Submit Count & Accept →
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}
