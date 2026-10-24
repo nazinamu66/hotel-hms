@@ -2280,13 +2280,21 @@ def housekeeping_linen_movements(request):
 
     movements = movements.order_by("-created_at", "-id")
 
+    custody_rows = list(custodies)
+    clean_total = sum(item.clean_quantity for item in custody_rows)
+    dirty_total = sum(item.dirty_quantity for item in custody_rows)
+
     return render(
         request,
         "housekeeping/linen_movements.html",
         {
             "movements": movements,
-            "custodies": custodies,
+            "custodies": custody_rows,
             "is_regular_staff": is_regular_staff,
+            "clean_total": clean_total,
+            "dirty_total": dirty_total,
+            "custody_total": clean_total + dirty_total,
+            "custody_count": len(custody_rows),
         },
     )
 
