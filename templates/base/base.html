@@ -280,6 +280,12 @@
                 {% if user.role == "HOUSEKEEPING" and not user.is_department_head %}My Cleaning History{% else %}Cleaning History{% endif %}
             </a>
 
+            {% if user.role == "HOUSEKEEPING" and not user.is_department_head %}
+            <a href="{% url 'housekeeping_linen_movements' %}">
+                My Linen Tracking History
+            </a>
+            {% endif %}
+
             <a href="{% url 'housekeeping_lost_found' %}">
                 Lost & Found
             </a>
