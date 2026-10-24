@@ -334,6 +334,12 @@
             <a href="{% url 'housekeeping_linen_movements' %}">
                 Linen Movements
             </a>
+
+            {% if user.role == "HOUSEKEEPING" and user.is_department_head %}
+            <a href="{% url 'housekeeping_linen_request_queue' %}">
+                Staff Linen Requests
+            </a>
+            {% endif %}
             {% endif %}
 
         </div>
