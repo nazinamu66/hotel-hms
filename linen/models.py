@@ -226,9 +226,10 @@ class LinenIssue(models.Model):
         if self.source not in (
             "STORE",
             "LAUNDRY",
+            "HOUSEKEEPING",
         ):
             raise ValidationError(
-                "Linen can only be issued from Store or Laundry."
+                "Linen source must be Store, Laundry, or Housekeeping."
             )
 
     def __str__(self):
