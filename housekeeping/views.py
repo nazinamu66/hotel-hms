@@ -2354,6 +2354,134 @@ def fulfill_housekeeping_linen_request(request, request_id):
             or linen_request.requested_by.department_id != department.id
         ):
             raise PermissionDenied("This request belongs to another department.")
+    else:
+        hotels = get_accessible_hotels(request.user)
+        requested_department = linen_request.requested_by.department
+        if (
+            not requested_department
+            or not hotels.filter(pk=requested_department.hotel_id).exists()
+        ):
+            raise PermissionDenied("You do not have access to this hotel's linen.")
+        department = requested_department
+
+    if linen_request.status in ("FULFILLED", "REJECTED", "CANCELLED"):
+        messages.error(request, "This request is already closed.")
+        return redirect("housekeeping_linen_request_queue")
+
+    raw_quantity = request.POST.get("quantity", "").strip()
+    try:
+        quantity = int(raw_quantity)
+    except (TypeError, ValueError):
+        quantity = 0
+
+    remaining = linen_request.quantity - linen_request.fulfilled_quantity
+    if quantity <= 0 or quantity > remaining:
+        messages.error(request, f"Enter a quantity between 1 and {remaining}.")
+        return redirect("housekeeping_linen_request_queue")
+
+    from linen.models import LinenCustody, LinenIssue
+
+    # The Housekeeping Stock page is backed by inventory.Stock, while
+    # LinenCustody tracks what each staff member physically holds.
+    # Fulfil from the department's stock balance, not the Head's personal
+    # LinenCustody (which may legitimately be zero).
+    source_stock = (
+        Stock.objects.select_for_update()
+        .filter(
+            department=department,
+            product=linen_request.linen_item.product,
+        )
+        .first()
+    )
+    available = source_stock.quantity if source_stock else 0
+    if quantity > available:
+        messages.error(
+            request,
+            f"Housekeeping has only {available} "
+            f"{linen_request.linen_item.product.name} in department stock.",
+        )
+        return redirect("housekeeping_linen_request_queue")
+
+    target_custody, _ = LinenCustody.objects.get_or_create(
+        user=linen_request.requested_by,
+        linen_item=linen_request.linen_item,
+        defaults={"clean_quantity": 0, "dirty_quantity": 0},
+    )
+
+    source_stock.quantity -= quantity
+    source_stock.save(update_fields=["quantity"])
+
+    target_custody.clean_quantity += quantity
+    target_custody.save(update_fields=["clean_quantity", "dirty_quantity", "updated_at"])
+
+    reference = f"HK-LINEN-REQ-{linen_request.id}"
+    issue_note = request.POST.get("note", "").strip() or linen_request.note
+    LinenIssue.objects.create(
+        linen_item=linen_request.linen_item,
+        quantity=quantity,
+        issued_to=linen_request.requested_by,
+        issued_by=request.user,
+        source="HOUSEKEEPING",
+        reference=reference,
+        note=issue_note,
+    )
+
+    LinenTransaction.objects.create(
+        linen_item=linen_request.linen_item,
+        quantity=quantity,
+        condition="CLEAN",
+        event_type="ISSUED",
+        from_location="HOUSEKEEPING",
+        to_location="HOUSEKEEPING",
+        performed_by=request.user,
+        reference=reference,
+        note=(
+            f"Issued from Housekeeping department stock to "
+            f"{linen_request.requested_by.get_username()}."
+            + (f" {issue_note}" if issue_note else "")
+        ),
+    )
+
+    linen_request.fulfilled_quantity += quantity
+    linen_request.approved_by = request.user
+    linen_request.approved_at = timezone.now()
+    if linen_request.fulfilled_quantity >= linen_request.quantity:
+        linen_request.status = "FULFILLED"
+        linen_request.fulfilled_at = timezone.now()
+    else:
+        linen_request.status = "PARTIAL"
+    linen_request.save(update_fields=[
+        "fulfilled_quantity", "approved_by", "approved_at",
+        "status", "fulfilled_at",
+    ])
+
+    messages.success(
+        request,
+        f"Issued {quantity} {linen_request.linen_item.product.name} "
+        f"to {linen_request.requested_by.get_username()}. "
+        f"Housekeeping stock remaining: {source_stock.quantity}.",
+    )
+    return redirect("housekeeping_linen_request_queue")
+
+    linen_request = get_object_or_404(
+        LinenRequest.objects.select_for_update().select_related(
+            "linen_item", "linen_item__product",
+            "requested_by", "requested_by__department",
+        ),
+        pk=request_id,
+        request_type="HOUSEKEEPING",
+    )
+
+    if request.user.role == "HOUSEKEEPING":
+        if not is_department_head(request.user):
+            raise PermissionDenied("Only the Housekeeping Head can issue linen.")
+        department = request.user.department
+        if (
+            not department
+            or department.department_type != "HOUSEKEEPING"
+            or linen_request.requested_by.department_id != department.id
+        ):
+            raise PermissionDenied("This request belongs to another department.")
         source_user = request.user
     else:
         hotels = get_accessible_hotels(request.user)
