@@ -2311,10 +2311,28 @@ def housekeeping_linen_request_queue(request):
         "requested_by__department",
     ).order_by("created_at", "id")
 
+    for linen_request in requests:
+        linen_request.remaining_quantity = (
+            linen_request.quantity - linen_request.fulfilled_quantity
+        )
+
+    housekeeping_heads = User.objects.none()
+    if request.user.role != "HOUSEKEEPING":
+        hotels = get_accessible_hotels(request.user)
+        housekeeping_heads = User.objects.filter(
+            department__hotel__in=hotels,
+            department__department_type="HOUSEKEEPING",
+            is_department_head=True,
+            is_active=True,
+        ).order_by("username")
+
     return render(
         request,
         "housekeeping/linen_request_queue.html",
-        {"linen_requests": requests},
+        {
+            "linen_requests": requests,
+            "housekeeping_heads": housekeeping_heads,
+        },
     )
 
 
