@@ -277,7 +277,7 @@
             </a>
 
             <a href="{% url 'housekeeping_cleaning_history' %}">
-                Cleaning History
+                {% if user.role == "HOUSEKEEPING" and not user.is_department_head %}My Cleaning History{% else %}Cleaning History{% endif %}
             </a>
 
             <a href="{% url 'housekeeping_lost_found' %}">
@@ -288,26 +288,25 @@
                 ➕ Request Stock
             </a>
 
-             {% if user|has_role:"ADMIN,DIRECTOR" or user.is_department_head and user.department.department_type == "HOUSEKEEPING" %}
+            {% if user|has_role:"ADMIN,DIRECTOR" or user.is_department_head and user.department.department_type == "HOUSEKEEPING" %}
             <a href="{% url 'housekeeping_stock' %}">
                 📦 Stock
             </a>
-
             {% endif %}
 
             <a href="{% url 'housekeeping_stock_requests' %}">
                 📋 My Stock Requests
             </a>
-             {% if user|has_role:"ADMIN,DIRECTOR" or user.is_department_head and user.department.department_type == "HOUSEKEEPING" %}
 
+            {% if user|has_role:"ADMIN,DIRECTOR" or user.is_department_head and user.department.department_type == "HOUSEKEEPING" %}
             <a href="{% url 'housekeeping_stock_movements' %}">
                 🔄 Stock Movements
             </a>
-            {% endif %}
-
             <a href="{% url 'housekeeping_incoming_pos' %}">
                 🚚 Incoming Deliveries
             </a>
+            {% endif %}
+
             <a href="{% url 'housekeeping_request_new_linen' %}">
                 🛏️ Request New Linen
             </a>
@@ -315,14 +314,15 @@
             <a href="{% url 'housekeeping_linen_requests' %}">
                 📋 My Linen Requests
             </a>
-            
+
+            {% if user.role != "HOUSEKEEPING" or user.is_department_head %}
             <a href="{% url 'housekeeping_send_linen_to_laundry' %}">
                 Send Linen to Laundry
             </a>
-
             <a href="{% url 'housekeeping_linen_movements' %}">
                 Linen Movements
             </a>
+            {% endif %}
 
         </div>
 
@@ -333,7 +333,7 @@
         <!-- LINEN MANAGEMENT -->
         <!-- ========================= -->
 
-        {% if user|has_role:"STORE,HOUSEKEEPING,LAUNDRY,MANAGER,ADMIN,DIRECTOR" %}
+        {% if user|has_role:"STORE,LAUNDRY,MANAGER,ADMIN,DIRECTOR" or user.role == "HOUSEKEEPING" and user.is_department_head %}
 
         <h4 class="menu-toggle"
             onclick="toggleMenu('linen_menu', this)">
