@@ -2039,7 +2039,7 @@ def housekeeping_linen_requests(request):
         LinenRequest.objects
         .filter(
             requested_by=request.user,
-            request_type__in=["STORE", "LAUNDRY"],
+            request_type__in=["STORE", "LAUNDRY", "HOUSEKEEPING"],
         )
         .select_related(
             "linen_item",
