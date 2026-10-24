@@ -1,96 +1,118 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-Linen Movements
-{% endblock %}
+{% block title %}My Linen Tracking{% endblock %}
 
 {% block content %}
+<style>
+    .linen-track { max-width:1400px; margin:0 auto; padding:8px 0 30px; color:#1e293b; }
+    .linen-track-head { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:22px; }
+    .linen-kicker { color:#64748b; font-size:.76rem; font-weight:750; text-transform:uppercase; letter-spacing:.09em; margin-bottom:6px; }
+    .linen-track-title { margin:0; font-size:clamp(1.55rem,2.5vw,2rem); font-weight:800; letter-spacing:-.035em; }
+    .linen-track-sub { color:#64748b; margin:8px 0 0; }
+    .linen-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:22px; }
+    .linen-card { background:#fff; border:1px solid #e2e8f0; border-radius:15px; box-shadow:0 3px 14px rgba(15,23,42,.035); overflow:hidden; }
+    .linen-card-top { padding:16px 18px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .linen-card-top strong { font-size:.95rem; }
+    .linen-card-body { padding:16px 18px; }
+    .linen-total { font-size:1.8rem; line-height:1.2; font-weight:800; font-variant-numeric:tabular-nums; }
+    .linen-caption { color:#64748b; font-size:.82rem; margin-top:5px; }
+    .linen-state { display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; font-size:.75rem; font-weight:750; }
+    .linen-clean { background:#dcfce7; color:#166534; }
+    .linen-dirty { background:#fef3c7; color:#92400e; }
+    .linen-table-wrap { overflow-x:auto; }
+    .linen-table { width:100%; border-collapse:separate; border-spacing:0; min-width:760px; }
+    .linen-table th { text-align:left; background:#f8fafc; color:#64748b; font-size:.75rem; text-transform:uppercase; letter-spacing:.045em; padding:13px 16px; white-space:nowrap; }
+    .linen-table td { padding:14px 16px; border-top:1px solid #f1f5f9; vertical-align:middle; }
+    .linen-table tbody tr:hover { background:#fafcff; }
+    .linen-section { margin-top:22px; }
+    .linen-section-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:17px 20px; border-bottom:1px solid #e2e8f0; }
+    .linen-section-head h3 { margin:0; font-size:1rem; font-weight:750; }
+    .linen-empty { text-align:center; padding:34px 16px!important; color:#64748b; }
+    .linen-qty { font-weight:750; font-variant-numeric:tabular-nums; }
+    @media(max-width:700px){ .linen-summary{grid-template-columns:1fr;} .linen-section-head{padding:14px;} }
+</style>
 
-<h2>Linen Movements</h2>
-
-<p style="color:#666;">
-    History of hotel linen movement.
-</p>
-
-<table class="table">
-
-<thead>
-<tr>
-    <th>Date</th>
-    <th>Linen</th>
-    <th>Quantity</th>
-    <th>Movement</th>
-    <th>From</th>
-    <th>To</th>
-    <th>Performed By</th>
-    <th>Reference</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for movement in movements %}
-
-<tr>
-
-    <td>
-        {{ movement.created_at|date:"d M Y H:i" }}
-    </td>
-
-    <td>
-        {{ movement.linen_item.product.name }}
-    </td>
-
-    <td>
-        {{ movement.quantity }}
-    </td>
-
-    <td>
-        {{ movement.get_event_type_display }}
-    </td>
-
-    <td>
-        {% if movement.from_location %}
-            {{ movement.get_from_location_display }}
-        {% else %}
-            —
+<div class="linen-track">
+    <div class="linen-track-head">
+        <div>
+            <div class="linen-kicker">Housekeeping · Linen control</div>
+            <h2 class="linen-track-title">{% if is_regular_staff %}My Linen Tracking{% else %}Linen Tracking{% endif %}</h2>
+            <p class="linen-track-sub">See the clean and dirty linen currently in your custody and review recorded movements.</p>
+        </div>
+        {% if is_regular_staff %}
+        <a class="btn btn-primary" href="{% url 'housekeeping_request_new_linen' %}">+ Request linen</a>
         {% endif %}
-    </td>
+    </div>
 
-    <td>
-        {% if movement.to_location %}
-            {{ movement.get_to_location_display }}
-        {% else %}
-            —
-        {% endif %}
-    </td>
+    <div class="linen-summary">
+        <section class="linen-card">
+            <div class="linen-card-top"><strong>Clean linen</strong><span class="linen-state linen-clean">Ready to use</span></div>
+            <div class="linen-card-body">
+                <div class="linen-total">{% with total=0 %}{% endwith %}{{ clean_total|default:"—" }}</div>
+                <div class="linen-caption">Total clean items in your custody</div>
+            </div>
+        </section>
+        <section class="linen-card">
+            <div class="linen-card-top"><strong>Dirty linen</strong><span class="linen-state linen-dirty">Return to laundry</span></div>
+            <div class="linen-card-body">
+                <div class="linen-total">{{ dirty_total|default:"—" }}</div>
+                <div class="linen-caption">Total dirty items awaiting laundry</div>
+            </div>
+        </section>
+        <section class="linen-card">
+            <div class="linen-card-top"><strong>Total in custody</strong><span class="linen-state">{{ custody_count }} linen types</span></div>
+            <div class="linen-card-body">
+                <div class="linen-total">{{ custody_total|default:"0" }}</div>
+                <div class="linen-caption">Clean plus dirty linen currently held</div>
+            </div>
+        </section>
+    </div>
 
-    <td>
-        {% if movement.performed_by %}
-            {{ movement.performed_by.username }}
-        {% else %}
-            —
-        {% endif %}
-    </td>
+    <section class="linen-card">
+        <div class="linen-section-head"><h3>Current linen by item</h3><span class="linen-caption">Live custody balance</span></div>
+        <div class="linen-table-wrap">
+            <table class="linen-table">
+                <thead><tr><th>Linen item</th><th>Clean</th><th>Dirty</th><th>Total held</th><th>Last updated</th></tr></thead>
+                <tbody>
+                    {% for custody in custodies %}
+                    <tr>
+                        <td><strong>{{ custody.linen_item.product.name }}</strong><div class="linen-caption">{{ custody.linen_item.product.sku|default:"" }}</div></td>
+                        <td><span class="linen-state linen-clean">{{ custody.clean_quantity }} clean</span></td>
+                        <td><span class="linen-state linen-dirty">{{ custody.dirty_quantity }} dirty</span></td>
+                        <td class="linen-qty">{{ custody.total_quantity }}</td>
+                        <td>{{ custody.updated_at|date:"d M Y, H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="linen-empty">No linen has been assigned to your custody yet. Issued linen will appear here.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 
-    <td>
-        {{ movement.reference|default:"—" }}
-    </td>
-
-</tr>
-
-{% empty %}
-
-<tr>
-    <td colspan="8">
-        No linen movements recorded.
-    </td>
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
+    <section class="linen-card linen-section">
+        <div class="linen-section-head"><h3>Linen movement history</h3><span class="linen-caption">Issuances, returns and laundry movements</span></div>
+        <div class="linen-table-wrap">
+            <table class="linen-table">
+                <thead><tr><th>Date</th><th>Linen item</th><th>Quantity</th><th>Movement</th><th>From</th><th>To</th><th>Recorded by</th><th>Reference</th></tr></thead>
+                <tbody>
+                    {% for movement in movements %}
+                    <tr>
+                        <td>{{ movement.created_at|date:"d M Y, H:i" }}</td>
+                        <td><strong>{{ movement.linen_item.product.name }}</strong></td>
+                        <td class="linen-qty">{{ movement.quantity }}</td>
+                        <td>{{ movement.get_event_type_display }}<div class="linen-caption">{{ movement.get_condition_display }}</div></td>
+                        <td>{{ movement.get_from_location_display|default:"—" }}</td>
+                        <td>{{ movement.get_to_location_display|default:"—" }}</td>
+                        <td>{{ movement.performed_by.username|default:"—" }}</td>
+                        <td>{{ movement.reference|default:"—" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="linen-empty">No linen movement history has been recorded yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
 {% endblock %}
