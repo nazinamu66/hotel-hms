@@ -1,41 +1,44 @@
 {% extends "base/base.html" %}
 
-{% block title %}Report Maintenance Issue{% endblock %}
+{% block title %}Report Maintenance Issue · Room {{ room.room_number }}{% endblock %}
 
 {% block content %}
-
-<h2>Report Maintenance Issue</h2>
-
-<p><strong>Room:</strong> {{ room.room_number }}</p>
-
-<form method="post">
-
-{% csrf_token %}
-
-<label>Description</label>
-<br>
-<textarea name="description" required style="width:400px;height:120px;"></textarea>
-
-<br><br>
-
-<label>Priority</label>
-<br>
-<select name="priority">
-
-<option value="LOW">Low</option>
-<option value="MEDIUM" selected>Medium</option>
-<option value="HIGH">High</option>
-
-</select>
-
-<br><br>
-
-<button type="submit">Submit Ticket</button>
-
-<a href="{% url 'housekeeping_dashboard' %}">
-<button type="button">Cancel</button>
-</a>
-
-</form>
-
+<style>
+.issue-page{max-width:900px;margin:0 auto;color:#1e293b;padding-bottom:30px}
+.issue-kicker{font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;font-weight:750;color:#64748b;margin-bottom:6px}
+.issue-title{font-size:clamp(1.5rem,2.4vw,2rem);font-weight:800;letter-spacing:-.035em;margin:0}
+.issue-sub{color:#64748b;margin:8px 0 22px}
+.issue-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:22px;box-shadow:0 4px 16px rgba(15,23,42,.04)}
+.issue-room{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.issue-room strong{font-size:1.05rem}.issue-label{display:block;font-weight:700;margin:17px 0 7px}
+.issue-control{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:9px;background:white;color:#0f172a;font:inherit}
+.issue-control:focus{outline:3px solid #dbeafe;border-color:#60a5fa}
+.issue-help{color:#64748b;font-size:.83rem;margin-top:6px}
+.issue-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.issue-btn{border:0;border-radius:9px;padding:11px 16px;background:#2563eb;color:white;font-weight:750;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.issue-btn:hover{background:#1d4ed8}.issue-btn-secondary{background:#e2e8f0;color:#334155}
+.issue-warning{border:1px solid #fde68a;background:#fffbeb;color:#92400e;padding:12px 14px;border-radius:10px;margin-bottom:16px;font-size:.9rem}
+</style>
+<div class="issue-page">
+  <div class="issue-kicker">Engineering & facilities</div>
+  <h2 class="issue-title">Report a maintenance issue</h2>
+  <p class="issue-sub">Describe the fault clearly so the Maintenance team can assess and prioritize the repair.</p>
+  <div class="issue-card">
+    <div class="issue-room"><div><span class="issue-help">Affected location</span><strong>Room {{ room.room_number }}</strong></div><div><span class="issue-help">Room category</span><strong>{{ room.category|default:"Standard" }}</strong></div><div><span class="issue-help">Current status</span><strong>{{ room.get_status_display }}</strong></div></div>
+    <div class="issue-warning">For urgent faults that make the room unsafe or unusable, select High priority. High-priority tickets currently mark the room out of order.</div>
+    <form method="post">
+      {% csrf_token %}
+      <label class="issue-label" for="maintenance-description">Describe the issue <span aria-hidden="true">*</span></label>
+      <textarea class="issue-control" id="maintenance-description" name="description" rows="6" required maxlength="5000" placeholder="Example: Bathroom hot water is not working. The issue started this morning."></textarea>
+      <div class="issue-help">Include what is faulty, where it is located, when it started, and any immediate impact on the guest or room.</div>
+      <label class="issue-label" for="maintenance-priority">Priority</label>
+      <select class="issue-control" id="maintenance-priority" name="priority">
+        <option value="LOW">Low — minor issue, no immediate impact</option>
+        <option value="MEDIUM" selected>Medium — repair needed soon</option>
+        <option value="HIGH">High — urgent or room may be unusable</option>
+      </select>
+      <div class="issue-actions"><button class="issue-btn" type="submit">Submit maintenance ticket</button><a class="issue-btn issue-btn-secondary" href="{% url 'maintenance_create_ticket_room' %}">Cancel</a></div>
+    </form>
+  </div>
+</div>
 {% endblock %}
