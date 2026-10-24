@@ -1,116 +1,32 @@
 {% extends "base/base.html" %}
-
-{% block title %}Lost & Found{% endblock %}
-
+{% block title %}Lost & Found · Housekeeping{% endblock %}
 {% block content %}
-
-<h2>Lost & Found</h2>
-
-<a href="{% url 'housekeeping_lost_found_create' %}">
-<button>Record Item</button>
-</a>
-
-<br><br>
-
-<table style="width:100%; border-collapse:collapse;">
-
-<thead style="background:#eee;">
-<tr>
-<th>Date</th>
-<th>Hotel</th>
-<th>Room</th>
-<th>Description</th>
-<th>Found By</th>
-<th>Status</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for item in items %}
-
-<tr style="border-bottom:1px solid #ddd;">
-
-<td>{{ item.found_at|date:"Y-m-d H:i" }}</td>
-
-<td>
-    {{ item.hotel.name }}
-</td>
-
-<td>
-{% if item.room %}
-Room {{ item.room.room_number }}
-{% else %}
-—
-{% endif %}
-</td>
-
-<td>{{ item.description }}</td>
-
-<td>{{ item.found_by }}</td>
-
-<td>
-
-    {{ item.get_status_display }}
-
-    {% if item.status == "FOUND" %}
-
-        <br><br>
-
-        <a href="{% url 'housekeeping_lost_found_claim' item.id %}">
-            <button type="button">
-                Claim
-            </button>
-        </a>
-
-        <form
-            method="post"
-            action="{% url 'housekeeping_lost_found_dispose' item.id %}"
-            style="display:inline;"
-        >
-
-            {% csrf_token %}
-
-            <button
-                type="submit"
-                onclick="return confirm('Are you sure you want to dispose of this item?');"
-            >
-                Dispose
-            </button>
-
-        </form>
-
-    {% elif item.status == "CLAIMED" %}
-
-        <br>
-
-        <small>
-            Claimed by: {{ item.claimed_by }}
-        </small>
-
-        {% if item.claimed_at %}
-            <br>
-            <small>
-                {{ item.claimed_at|date:"Y-m-d H:i" }}
-            </small>
-        {% endif %}
-
-    {% endif %}
-
-</td>
-
-</tr>
-
-{% empty %}
-
-<tr>
-<td colspan="6">No items recorded.</td>
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
+<style>
+.lf-page{max-width:1450px;margin:0 auto;padding-bottom:32px;color:#1e293b}.lf-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin:6px 0 24px}.lf-kicker{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#64748b;margin-bottom:7px}.lf-title{font-size:clamp(1.65rem,2.5vw,2.1rem);font-weight:850;letter-spacing:-.04em;margin:0}.lf-sub{color:#64748b;margin:8px 0 0}.lf-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:9px;background:#2563eb;color:#fff!important;text-decoration:none;font-weight:750;border:0;cursor:pointer}.lf-btn:hover{background:#1d4ed8}.lf-btn-muted{background:#e2e8f0;color:#334155!important}.lf-btn-danger{background:#fff1f2;color:#be123c;border:1px solid #fecdd3}.lf-card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;overflow:hidden;box-shadow:0 4px 14px rgba(15,23,42,.04)}.lf-card-head{padding:17px 20px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.lf-card-head h3{margin:0;font-size:1rem}.lf-count{font-size:.82rem;color:#64748b}.lf-table-wrap{overflow-x:auto}.lf-table{width:100%;border-collapse:collapse;min-width:850px}.lf-table th{background:#f8fafc;color:#64748b;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;text-align:left;padding:13px 15px;white-space:nowrap}.lf-table td{padding:15px;border-top:1px solid #f1f5f9;vertical-align:top}.lf-table tbody tr:hover{background:#fafcff}.lf-desc{max-width:330px;white-space:pre-wrap;overflow-wrap:anywhere}.lf-muted{color:#64748b;font-size:.84rem;margin-top:4px}.lf-pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.75rem;font-weight:750}.lf-found{background:#fef3c7;color:#92400e}.lf-claimed{background:#dcfce7;color:#166534}.lf-disposed{background:#e2e8f0;color:#475569}.lf-actions{display:flex;gap:7px;flex-wrap:wrap}.lf-empty{text-align:center;padding:42px 18px!important;color:#64748b}.lf-empty strong{display:block;color:#334155;margin-bottom:5px;font-size:1rem}
+@media(max-width:700px){.lf-table{min-width:800px}}
+</style>
+<div class="lf-page">
+  <header class="lf-hero"><div><div class="lf-kicker">Housekeeping · Accountability</div><h1 class="lf-title">Lost &amp; Found</h1><p class="lf-sub">Record found property and maintain a clear record until it is returned or formally disposed of.</p></div><a class="lf-btn" href="{% url 'housekeeping_lost_found_create' %}">＋ Record found item</a></header>
+  <section class="lf-card">
+    <div class="lf-card-head"><h3>Lost &amp; Found register</h3><span class="lf-count">{{ items|length }} record{{ items|length|pluralize }}</span></div>
+    <div class="lf-table-wrap"><table class="lf-table">
+      <thead><tr><th>Found date</th><th>Hotel / room</th><th>Item description</th><th>Recorded by</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for item in items %}
+        <tr>
+          <td><strong>{{ item.found_at|date:"d M Y" }}</strong><div class="lf-muted">{{ item.found_at|date:"H:i" }}</div></td>
+          <td><strong>{{ item.hotel.name }}</strong><div class="lf-muted">{% if item.room %}Room {{ item.room.room_number }}{% else %}Unknown room / public area{% endif %}</div></td>
+          <td><div class="lf-desc">{{ item.description }}</div></td>
+          <td>{{ item.found_by|default:"—" }}</td>
+          <td><span class="lf-pill {% if item.status == 'FOUND' %}lf-found{% elif item.status == 'CLAIMED' %}lf-claimed{% else %}lf-disposed{% endif %}">{{ item.get_status_display }}</span>
+            {% if item.status == "CLAIMED" %}<div class="lf-muted">Claimant: {{ item.claimed_by|default:"—" }}</div>{% if item.claimed_at %}<div class="lf-muted">{{ item.claimed_at|date:"d M Y, H:i" }}</div>{% endif %}{% endif %}
+          </td>
+          <td>{% if item.status == "FOUND" %}<div class="lf-actions"><a class="lf-btn" href="{% url 'housekeeping_lost_found_claim' item.id %}">Record claim</a><form method="post" action="{% url 'housekeeping_lost_found_dispose' item.id %}">{% csrf_token %}<button class="lf-btn lf-btn-danger" type="submit" onclick="return confirm('Mark this item as disposed? This action will be recorded.');">Dispose</button></form></div>{% else %}<span class="lf-muted">No further action</span>{% endif %}</td>
+        </tr>
+      {% empty %}<tr><td class="lf-empty" colspan="6"><strong>No items recorded yet</strong>When an item is found, record it here to start its custody history.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+  <p class="lf-muted">Records shown are limited to hotels you are authorized to access.</p>
+</div>
 {% endblock %}
