@@ -794,6 +794,118 @@ def finish_cleaning(request, room_id):
     "ADMIN",
     "DIRECTOR",
 )
+def inspect_cleaning(request, room_id):
+    from django.db import transaction
+    from .models import CleaningInspection
+    from housekeeping.workflows.approve_cleaning import approve_cleaning as approve_cleaning_workflow
+
+    room = get_object_or_404(
+        Room.objects.select_related("hotel", "category"),
+        pk=room_id,
+    )
+    if not user_can_access_hotel(request.user, room.hotel):
+        raise PermissionDenied(
+            "You do not have access to this hotel's housekeeping operations."
+        )
+
+    department = Department.objects.filter(
+        hotel=room.hotel,
+        department_type="HOUSEKEEPING",
+        is_active=True,
+    ).first()
+    if not department or not can_manage_department(request.user, department):
+        raise PermissionDenied("You do not have permission to inspect Housekeeping work.")
+
+    assignment = get_object_or_404(
+        CleaningAssignment.objects.select_related("room", "assigned_to"),
+        room=room,
+        status="INSPECTION",
+    )
+
+    checklist_items = [
+        ("bed_made", "Bed properly made and presentation checked"),
+        ("bathroom_clean", "Bathroom, toilet and mirrors clean"),
+        ("linen", "Linen and towels clean, correct and present"),
+        ("amenities", "Guest amenities replenished"),
+        ("surfaces", "Furniture and high-touch surfaces clean"),
+        ("floor", "Floor and visible areas clean"),
+        ("waste", "Waste bins emptied and liners replaced"),
+        ("maintenance", "No visible damage or unresolved maintenance issue"),
+    ]
+
+    if request.method == "POST":
+        result = request.POST.get("result", "").upper()
+        notes = request.POST.get("notes", "").strip()
+        checklist = {
+            key: request.POST.get(f"check_{key}") == "on"
+            for key, label in checklist_items
+        }
+
+        if result not in ("PASS", "FAIL"):
+            messages.error(request, "Choose approve or fail inspection.")
+            return redirect("housekeeping_inspect_cleaning", room_id=room.pk)
+
+        if result == "PASS" and not all(checklist.values()):
+            messages.error(
+                request,
+                "Every checklist item must pass before the room can be approved. "
+                "Fail the inspection and describe the issues if any item needs attention.",
+            )
+            return redirect("housekeeping_inspect_cleaning", room_id=room.pk)
+
+        if result == "FAIL" and not notes:
+            messages.error(
+                request,
+                "Enter the defects or corrective actions required before returning this room to the cleaner.",
+            )
+            return redirect("housekeeping_inspect_cleaning", room_id=room.pk)
+
+        with transaction.atomic():
+            CleaningInspection.objects.create(
+                assignment=assignment,
+                inspected_by=request.user,
+                result=result,
+                checklist=checklist,
+                notes=notes,
+            )
+            if result == "PASS":
+                approve_cleaning_workflow(room=room, user=request.user)
+            else:
+                assignment.status = "IN_PROGRESS"
+                assignment.completed_at = None
+                previous_notes = assignment.notes.strip()
+                failure_note = f"Inspection failed ({timezone.localtime():%Y-%m-%d %H:%M}): {notes}"
+                assignment.notes = f"{previous_notes}\n{failure_note}".strip()
+                assignment.save(update_fields=["status", "completed_at", "notes"])
+
+        if result == "PASS":
+            messages.success(request, f"Room {room.room_number} passed inspection and is ready.")
+        else:
+            messages.warning(
+                request,
+                f"Room {room.room_number} failed inspection and has been returned to {assignment.assigned_to}.",
+            )
+        return redirect("housekeeping_dashboard")
+
+    prior_inspections = assignment.inspections.select_related("inspected_by").all()
+    return render(
+        request,
+        "housekeeping/inspection_checklist.html",
+        {
+            "room": room,
+            "assignment": assignment,
+            "checklist_items": checklist_items,
+            "prior_inspections": prior_inspections,
+        },
+    )
+
+
+@role_required(
+    "HOUSEKEEPING",
+    "MANAGER",
+    "ADMIN",
+    "DIRECTOR",
+)
 def approve_cleaning(request, room_id):
 
     from housekeeping.workflows.approve_cleaning import (
