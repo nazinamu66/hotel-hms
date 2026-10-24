@@ -337,6 +337,50 @@
             </div>
         </div>
 
+        <div class="form-section">
+            <div class="section-heading">
+                <h2>Standard Linen Requirements</h2>
+                <p>Set the default linen quantities for each room in this category. Individual rooms can override these defaults later. Leave blank to exclude an item.</p>
+            </div>
+
+            {% if category_linen_rows %}
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left;padding:12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Linen item</th>
+                                <th style="text-align:left;padding:12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;">SKU</th>
+                                <th style="text-align:left;padding:12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;width:220px;">Quantity per room</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in category_linen_rows %}
+                                <tr>
+                                    <td style="padding:12px;border-bottom:1px solid #eef0f3;font-weight:600;">{{ row.item.product.name }}</td>
+                                    <td style="padding:12px;border-bottom:1px solid #eef0f3;color:#6b7280;">{{ row.item.product.sku }}</td>
+                                    <td style="padding:12px;border-bottom:1px solid #eef0f3;">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            step="1"
+                                            name="linen_quantity_{{ row.item.pk }}"
+                                            class="form-control"
+                                            value="{{ row.quantity }}"
+                                            placeholder="Not included"
+                                        >
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div style="padding:16px;border:1px dashed #d1d5db;border-radius:8px;color:#6b7280;background:#f9fafb;">
+                    No active linen items are configured for your accessible hotels. Add a linen item in Linen Management first.
+                </div>
+            {% endif %}
+        </div>
+
         <div class="form-actions">
             <a
                 href="{% url 'category_list' %}"
