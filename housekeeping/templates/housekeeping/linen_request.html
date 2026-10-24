@@ -1,118 +1,90 @@
 {% extends "base/base.html" %}
 
 {% block title %}
-Request New Linen
+Request Linen
 {% endblock %}
 
 {% block content %}
-
-<h2>Request New Linen</h2>
+<h2>Request Linen</h2>
 
 <p style="color:#666;">
-    {% if user.role == 'HOUSEKEEPING' and not user.is_department_head %}Request clean linen from your Housekeeping Head. The request will be fulfilled from the Head's available clean linen custody.{% else %}Request additional clean, unused linen from the Linen Store.{% endif %}
+    {% if user.role == 'HOUSEKEEPING' and not user.is_department_head %}
+    Request several types of clean linen from your Housekeeping Head in one submission. Enter a quantity only for each item you need; leave the others at zero.
+    {% else %}
+    Request several types of additional clean, unused linen from the Linen Store in one submission.
+    {% endif %}
 </p>
 
 <p style="color:#a00;">
     <strong>Important:</strong>
     {% if user.role == "HOUSEKEEPING" and not user.is_department_head %}
-    This request is for clean linen held by the Housekeeping Head. The Head must issue the linen before your custody balance increases.
+    Your request will be fulfilled from the Housekeeping Head's available clean linen custody. Your balance increases only when the Head issues the linen.
     {% else %}
     This request is for new/unused linen from the Linen Store. Linen already in Housekeeping circulation must go through the normal Housekeeping → Laundry → Housekeeping cycle.
     {% endif %}
 </p>
 
-<div
-    class="card"
-    style="
-        max-width:700px;
-        padding:25px;
-        background:white;
-        border:1px solid #ddd;
-    "
->
+<div class="card" style="padding:20px;background:white;border:1px solid #ddd;">
+    <form method="post">
+        {% csrf_token %}
 
-<form method="post">
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr>
+                        <th style="text-align:left;padding:10px;border-bottom:1px solid #ddd;">Linen item</th>
+                        <th style="text-align:left;padding:10px;border-bottom:1px solid #ddd;">SKU</th>
+                        <th style="text-align:left;padding:10px;border-bottom:1px solid #ddd;">Quantity needed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for linen_item in linen_items %}
+                    <tr>
+                        <td style="padding:10px;border-bottom:1px solid #eee;">
+                            {{ linen_item.product.name }}
+                        </td>
+                        <td style="padding:10px;border-bottom:1px solid #eee;">
+                            {{ linen_item.product.sku|default:"—" }}
+                        </td>
+                        <td style="padding:10px;border-bottom:1px solid #eee;">
+                            <input
+                                type="number"
+                                name="quantity_{{ linen_item.id }}"
+                                min="0"
+                                step="1"
+                                value="0"
+                                inputmode="numeric"
+                                aria-label="Quantity of {{ linen_item.product.name }}"
+                                style="width:130px;max-width:100%;padding:8px;"
+                            >
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" style="padding:12px;">No active linen items are available for your hotel.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-{% csrf_token %}
+        <div style="margin-top:20px;">
+            <label for="linen-request-note"><strong>Note (optional)</strong></label>
+            <textarea
+                id="linen-request-note"
+                name="note"
+                rows="3"
+                placeholder="For example: linen required for today's room assignments."
+                style="width:100%;padding:10px;margin-top:6px;"
+            ></textarea>
+        </div>
 
-<label>
-    <strong>Linen Item</strong>
-</label>
-
-<br>
-
-<select
-    name="linen_item"
-    required
-    style="width:100%;padding:10px;"
->
-
-    <option value="">
-        Select linen item
-    </option>
-
-    {% for linen_item in linen_items %}
-
-        <option value="{{ linen_item.id }}">
-            {{ linen_item.product.name }}
-            — {{ linen_item.product.sku }}
-        </option>
-
-    {% endfor %}
-
-</select>
-
-<br><br>
-
-<label>
-    <strong>Quantity</strong>
-</label>
-
-<br>
-
-<input
-    type="number"
-    name="quantity"
-    min="1"
-    step="1"
-    required
-    style="width:100%;padding:10px;"
->
-
-<br><br>
-
-<label>
-    <strong>Note</strong>
-</label>
-
-<br>
-
-<textarea
-    name="note"
-    rows="4"
-    placeholder="Why is additional new linen required? (optional)"
-    style="width:100%;padding:10px;"
-></textarea>
-
-<br><br>
-
-<button
-    type="submit"
-    class="btn btn-primary"
->
-    Submit Linen Request
-</button>
-
-<a
-    href="{% url 'housekeeping_linen_requests' %}"
-    class="btn btn-secondary"
-    style="margin-left:10px;"
->
-    My Linen Requests
-</a>
-
-</form>
-
+        <div style="margin-top:20px;">
+            <button type="submit" class="btn btn-primary">Submit Linen Request</button>
+            <a href="{% url 'housekeeping_linen_requests' %}" class="btn btn-secondary" style="margin-left:10px;">
+                My Linen Requests
+            </a>
+        </div>
+    </form>
 </div>
-
 {% endblock %}
