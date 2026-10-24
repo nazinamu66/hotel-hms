@@ -317,11 +317,17 @@
             </a>
             {% endif %}
 
-            {% if user.role != "HOUSEKEEPING" or user.is_department_head %}
+            {% if user.role == "HOUSEKEEPING" and not user.is_department_head %}
+            <a href="{% url 'housekeeping_request_new_linen' %}">
+                🛏️ Request Linen from Head
+            </a>
+            <a href="{% url 'housekeeping_linen_requests' %}">
+                📋 My Linen Requests
+            </a>
+            {% elif user.role != "HOUSEKEEPING" or user.is_department_head %}
             <a href="{% url 'housekeeping_request_new_linen' %}">
                 🛏️ Request New Linen
             </a>
-
             <a href="{% url 'housekeeping_linen_requests' %}">
                 📋 My Linen Requests
             </a>
