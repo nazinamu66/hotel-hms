@@ -100,6 +100,10 @@ Housekeeping Dashboard
     </th>
 
     <th>
+        Rework notes
+    </th>
+
+    <th>
         Action
     </th>
 
@@ -133,6 +137,14 @@ Housekeeping Dashboard
 
     <td>
         {{ assignment.get_status_display }}
+    </td>
+
+    <td style="max-width:280px;">
+        {% if assignment.notes %}
+            <span style="color:#92400e;font-size:13px;">{{ assignment.notes|linebreaksbr }}</span>
+        {% else %}
+            <span style="color:#9ca3af;">—</span>
+        {% endif %}
     </td>
 
     <td>
