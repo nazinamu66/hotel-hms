@@ -1,0 +1,72 @@
+{% extends "base/base.html" %}
+{% block title %}Room Inspection{% endblock %}
+{% block header %}<h2>Room Inspection</h2>{% endblock %}
+{% block content %}
+<style>
+.inspection-wrap{max-width:1000px;margin:0 auto}
+.inspection-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:24px;margin-bottom:18px;box-shadow:0 2px 8px rgba(15,23,42,.04)}
+.inspection-header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.inspection-subtitle{color:#6b7280;margin-top:6px}
+.check-row{display:flex;align-items:flex-start;gap:12px;padding:14px 4px;border-bottom:1px solid #eef0f3}
+.check-row:last-child{border-bottom:0}
+.check-row input{width:18px;height:18px;margin-top:3px}
+.check-label{font-weight:600;color:#1f2937}
+.muted{color:#6b7280;font-size:13px}
+.notes{width:100%;min-height:110px;padding:12px;border:1px solid #d1d5db;border-radius:8px;box-sizing:border-box;font:inherit}
+.actions{display:flex;gap:12px;flex-wrap:wrap}
+.action-btn{border:0;border-radius:8px;padding:12px 18px;font-weight:700;cursor:pointer}
+.pass-btn{background:#15803d;color:white}
+.fail-btn{background:#b91c1c;color:white}
+.back-btn{display:inline-block;padding:12px 16px;border:1px solid #d1d5db;border-radius:8px;text-decoration:none;color:#374151}
+.history-item{border-top:1px solid #e5e7eb;padding:12px 0}
+@media(max-width:600px){.inspection-card{padding:16px}.actions>*{width:100%}}
+</style>
+<div class="inspection-wrap">
+  <section class="inspection-card inspection-header">
+    <div>
+      <h2 style="margin:0">Room {{ room.room_number }} inspection</h2>
+      <div class="inspection-subtitle">{{ room.hotel.name }} · {{ room.category.name }}</div>
+      <p>Cleaner: <strong>{{ assignment.assigned_to.username }}</strong></p>
+    </div>
+    <div><strong>Waiting for inspection</strong></div>
+  </section>
+
+  <form method="post">
+    {% csrf_token %}
+    <section class="inspection-card">
+      <h3 style="margin-top:0">Inspection checklist</h3>
+      <p class="muted">Tick every item that passes. If any item needs attention, leave it unchecked, choose “Fail inspection”, and explain what the cleaner must correct.</p>
+      {% for key,label in checklist_items %}
+      <label class="check-row">
+        <input type="checkbox" name="check_{{ key }}">
+        <span><span class="check-label">{{ label }}</span></span>
+      </label>
+      {% endfor %}
+    </section>
+
+    <section class="inspection-card">
+      <h3 style="margin-top:0">Inspector's notes</h3>
+      <p class="muted">For a failed inspection, list the defects and corrective action required. Notes are saved to inspection history.</p>
+      <textarea class="notes" name="notes" placeholder="Example: Bathroom mirror has marks; replace stained pillowcase and re-make the bed."></textarea>
+    </section>
+
+    <div class="actions">
+      <button class="action-btn pass-btn" type="submit" name="result" value="PASS">Approve Room</button>
+      <button class="action-btn fail-btn" type="submit" name="result" value="FAIL">Fail Inspection & Return to Cleaner</button>
+      <a class="back-btn" href="{% url 'housekeeping_dashboard' %}">Back to Dashboard</a>
+    </div>
+  </form>
+
+  {% if prior_inspections %}
+  <section class="inspection-card" style="margin-top:20px">
+    <h3 style="margin-top:0">Previous inspection attempts</h3>
+    {% for inspection in prior_inspections %}
+      <div class="history-item">
+        <strong>{{ inspection.get_result_display }}</strong> · {{ inspection.inspected_at|date:"d M Y, H:i" }} · {{ inspection.inspected_by.username }}
+        {% if inspection.notes %}<p>{{ inspection.notes|linebreaksbr }}</p>{% endif %}
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
