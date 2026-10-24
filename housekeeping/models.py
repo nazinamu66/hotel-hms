@@ -136,6 +136,24 @@ class CleaningMaterialUsage(models.Model):
         )
     
 
+
+
+class CleaningInspection(models.Model):
+    RESULT_CHOICES = (("PASS", "Passed"), ("FAIL", "Failed"))
+    assignment = models.ForeignKey(
+        CleaningAssignment, on_delete=models.PROTECT, related_name="inspections"
+    )
+    inspected_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="cleaning_inspections"
+    )
+    result = models.CharField(max_length=10, choices=RESULT_CHOICES)
+    checklist = models.JSONField(default=dict)
+    notes = models.TextField(blank=True)
+    inspected_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-inspected_at", "-id")
+
 class LostFoundItem(models.Model):
 
     STATUS_CHOICES = (
