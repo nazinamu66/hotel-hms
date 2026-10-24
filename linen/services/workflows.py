@@ -569,8 +569,8 @@ def return_linen_to_laundry(
     create_laundry_receipt(
         linen_item=linen_item,
         returned_by=user,
-        declared_clean=clean_quantity,
-        declared_dirty=dirty_quantity,
+        declared_clean_quantity=clean_quantity,
+        declared_dirty_quantity=dirty_quantity,
         reference=reference,
         note=note,
     )
