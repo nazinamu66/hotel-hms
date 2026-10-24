@@ -907,50 +907,8 @@ def inspect_cleaning(request, room_id):
     "DIRECTOR",
 )
 def approve_cleaning(request, room_id):
-
-    from housekeeping.workflows.approve_cleaning import (
-        approve_cleaning as approve_cleaning_workflow,
-    )
-
-    room = get_object_or_404(
-        Room,
-        id=room_id,
-    )
-
-    if not user_can_access_hotel(
-        request.user,
-        room.hotel,
-    ):
-        raise PermissionDenied(
-            "You do not have access to this hotel's housekeeping operations."
-        )
-
-    try:
-
-        approve_cleaning_workflow(
-            room=room,
-            user=request.user,
-        )
-
-    except (ValidationError, PermissionDenied) as e:
-
-        messages.error(
-            request,
-            str(e),
-        )
-
-        return redirect(
-            "housekeeping_dashboard",
-        )
-
-    messages.success(
-        request,
-        f"Room {room.room_number} approved and ready.",
-    )
-
-    return redirect(
-        "housekeeping_dashboard",
-    )
+    # Keep the legacy URL safe: approval must happen through the checklist.
+    return redirect("housekeeping_inspect_cleaning", room_id=room_id)
 
 @role_required(
     "HOUSEKEEPING",
