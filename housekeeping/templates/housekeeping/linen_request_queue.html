@@ -87,14 +87,6 @@
                             {% if req.status == "PENDING" or req.status == "PARTIAL" or req.status == "APPROVED" %}
                             <form method="post" action="{% url 'housekeeping_fulfill_linen_request' req.id %}" class="linen-form">
                                 {% csrf_token %}
-                                {% if user.role != "HOUSEKEEPING" %}
-                                <label for="source-{{ req.id }}">Housekeeping department stock</label>
-                                <select name="source_user" id="source-{{ req.id }}" required>
-                                    {% for head in housekeeping_heads %}
-                                    <option value="{{ head.id }}">{{ head.get_username }}</option>
-                                    {% endfor %}
-                                </select>
-                                {% endif %}
                                 <label for="quantity-{{ req.id }}">Quantity to issue (max {{ req.remaining_quantity }})</label>
                                 <input id="quantity-{{ req.id }}" type="number" name="quantity" min="1" max="{{ req.remaining_quantity }}" required>
                                 <input class="linen-note" type="text" name="note" placeholder="Optional issue note">
