@@ -25,6 +25,7 @@ from .workflows.remove_amenity import (
 from accounts.services.access import (
     get_accessible_hotels,
 )
+from linen.models import LinenItem, RoomLinenRequirement
 
 def accessible_buildings(user):
     return Building.objects.filter(
@@ -270,6 +271,59 @@ def category_list(request):
         },
     )
 
+def _category_linen_context(category, user):
+    hotels = get_accessible_hotels(user)
+    items = LinenItem.objects.filter(
+        product__hotel__in=hotels,
+        is_active=True,
+        product__is_active=True,
+    ).select_related("product").order_by("product__name")
+    saved = {}
+    if category:
+        saved = {
+            row.linen_item_id: row.quantity
+            for row in RoomLinenRequirement.objects.filter(
+                category=category,
+                linen_item__in=items,
+            )
+        }
+    return [
+        {"item": item, "quantity": saved.get(item.pk, "")}
+        for item in items
+    ]
+
+
+def _save_category_linen_defaults(request, category):
+    items = LinenItem.objects.filter(
+        product__hotel__in=get_accessible_hotels(request.user),
+        is_active=True,
+        product__is_active=True,
+    ).select_related("product")
+    for item in items:
+        raw = request.POST.get(f"linen_quantity_{item.pk}", "").strip()
+        if raw == "":
+            RoomLinenRequirement.objects.filter(
+                category=category, linen_item=item
+            ).delete()
+            continue
+        try:
+            quantity = int(raw)
+        except (TypeError, ValueError):
+            raise ValueError(f"Enter a whole number for {item.product.name}.")
+        if quantity < 0:
+            raise ValueError(f"Quantity for {item.product.name} cannot be negative.")
+        if quantity == 0:
+            RoomLinenRequirement.objects.filter(
+                category=category, linen_item=item
+            ).delete()
+        else:
+            RoomLinenRequirement.objects.update_or_create(
+                category=category,
+                linen_item=item,
+                defaults={"quantity": quantity},
+            )
+
+
 @user_passes_test(manager_admin_or_director)
 def category_create(request):
 
@@ -352,10 +406,16 @@ def category_create(request):
                 price_per_night=price,
                 currency=currency,
             )
+            try:
+                _save_category_linen_defaults(request, category)
+            except ValueError as exc:
+                transaction.set_rollback(True)
+                messages.error(request, str(exc))
+                return redirect("category_create")
 
         messages.success(
             request,
-            "Room category and initial rate created.",
+            "Room category, initial rate and linen defaults saved.",
         )
 
         return redirect(
@@ -365,6 +425,7 @@ def category_create(request):
     return render(
         request,
         "rooms/category_form.html",
+        {"category_linen_rows": _category_linen_context(None, request.user)},
     )
 
 @user_passes_test(manager_admin_or_director)
@@ -495,10 +556,16 @@ def category_edit(request, pk):
                     price_per_night=price,
                     currency=currency,
                 )
+            try:
+                _save_category_linen_defaults(request, category)
+            except ValueError as exc:
+                transaction.set_rollback(True)
+                messages.error(request, str(exc))
+                return redirect("category_edit", pk=category.pk)
 
         messages.success(
             request,
-            "Room category and rate updated.",
+            "Room category, rate and linen defaults updated.",
         )
 
         return redirect(
@@ -511,6 +578,7 @@ def category_edit(request, pk):
         {
             "category": category,
             "rate": rate,
+            "category_linen_rows": _category_linen_context(category, request.user),
         },
     )
 
