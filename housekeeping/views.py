@@ -34,6 +34,7 @@ from accounts.services.access import (
     user_can_access_hotel,
     get_accessible_hotels,
     can_manage_department,
+    is_department_head,
 )
 from housekeeping.workflows.materials import consume_cleaning_material
 
@@ -311,6 +312,15 @@ def cleaning_history(request):
         )
     )
 
+    # Regular staff may review only their own cleaning records.
+    # Department heads may review records for their assigned hotel.
+    staff_history_only = (
+        request.user.role == "HOUSEKEEPING"
+        and not is_department_head(request.user)
+    )
+    if staff_history_only:
+        logs = logs.filter(cleaned_by=request.user)
+
     # Filter dropdown options are restricted to accessible hotels.
     available_hotels = hotels.filter(
         is_active=True,
@@ -326,6 +336,10 @@ def cleaning_history(request):
         .order_by("username")
         .distinct()
     )
+
+    if staff_history_only:
+        available_hotels = available_hotels.filter(pk=request.user.hotel_id)
+        available_housekeepers = available_housekeepers.filter(pk=request.user.pk)
 
     # Read filter values.
     date_from = request.GET.get("date_from", "").strip()
