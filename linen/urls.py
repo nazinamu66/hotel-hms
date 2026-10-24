@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import (
+from .setup_views import linen_category_setup, linen_room_setup\n\nfrom .views import (
     linen_dashboard,
     linen_receive,
     linen_issue,
