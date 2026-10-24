@@ -275,6 +275,9 @@
             <a href="{% url 'housekeeping_dashboard' %}">
                 Dashboard
             </a>
+            <a href="{% url 'maintenance_create_ticket_room' %}">
+                🛠️ Report Room Maintenance
+            </a>
 
             <a href="{% url 'housekeeping_cleaning_history' %}">
                 {% if user.role == "HOUSEKEEPING" and not user.is_department_head %}My Cleaning History{% else %}Cleaning History{% endif %}
