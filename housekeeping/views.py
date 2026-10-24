@@ -2250,11 +2250,17 @@ def housekeeping_linen_movements(request):
             "linen_item__product",
             "performed_by",
         )
-        .order_by(
-            "-created_at",
-            "-id",
-        )
     )
+
+    # Regular Housekeeping staff can see only their own linen
+    # movement records. Department heads retain hotel-level history.
+    if (
+        request.user.role == "HOUSEKEEPING"
+        and not is_department_head(request.user)
+    ):
+        movements = movements.filter(performed_by=request.user)
+
+    movements = movements.order_by("-created_at", "-id")
 
     return render(
         request,
