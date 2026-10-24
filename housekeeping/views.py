@@ -1814,91 +1814,79 @@ def request_new_linen(request):
     )
 
     if request.method == "POST":
+        note = request.POST.get("note", "").strip()
+        selected_quantities = []
+        invalid_quantity = False
 
-        linen_item_id = request.POST.get(
-            "linen_item",
-        )
+        # A single request form can include several linen types.
+        # Empty/zero quantities are ignored; invalid positive entries
+        # prevent the whole submission so it cannot be partially saved.
+        for linen_item in linen_items:
+            raw_quantity = request.POST.get(
+                f"quantity_{linen_item.pk}",
+                "",
+            ).strip()
 
-        quantity_raw = request.POST.get(
-            "quantity",
-            "",
-        ).strip()
-
-        note = request.POST.get(
-            "note",
-            "",
-        ).strip()
-
-        if not linen_item_id:
-
-            messages.error(
-                request,
-                "Please select a linen item.",
-            )
-
-        elif not quantity_raw:
-
-            messages.error(
-                request,
-                "Please enter a quantity.",
-            )
-
-        else:
+            if not raw_quantity or raw_quantity == "0":
+                continue
 
             try:
-                quantity = int(
-                    quantity_raw,
-                )
-
+                quantity = int(raw_quantity)
             except (TypeError, ValueError):
+                invalid_quantity = True
+                break
 
-                quantity = 0
+            if quantity < 0:
+                invalid_quantity = True
+                break
 
-            if quantity <= 0:
+            if quantity > 0:
+                selected_quantities.append((linen_item, quantity))
 
-                messages.error(
-                    request,
-                    "Quantity must be greater than zero.",
+        if invalid_quantity:
+            messages.error(
+                request,
+                "Enter a whole number of zero or more for each linen item.",
+            )
+        elif not selected_quantities:
+            messages.error(
+                request,
+                "Enter a quantity for at least one linen item.",
+            )
+        else:
+            request_type = (
+                "HOUSEKEEPING"
+                if (
+                    request.user.role == "HOUSEKEEPING"
+                    and not is_department_head(request.user)
                 )
+                else "STORE"
+            )
 
-            else:
-
-                linen_item = get_object_or_404(
-                    linen_items,
-                    pk=linen_item_id,
-                )
-
-                request_type = (
-                    "HOUSEKEEPING"
-                    if (
-                        request.user.role == "HOUSEKEEPING"
-                        and not is_department_head(request.user)
+            with transaction.atomic():
+                for linen_item, quantity in selected_quantities:
+                    LinenRequest.objects.create(
+                        linen_item=linen_item,
+                        quantity=quantity,
+                        request_type=request_type,
+                        requested_by=request.user,
+                        note=note,
                     )
-                    else "STORE"
-                )
 
-                LinenRequest.objects.create(
-                    linen_item=linen_item,
-                    quantity=quantity,
-                    request_type=request_type,
-                    requested_by=request.user,
-                    note=note,
-                )
-
-                messages.success(
-                    request,
-                    f"Request for {quantity} "
-                    f"{linen_item.product.name} "
-                    (
-                        "submitted to the Housekeeping Head."
-                        if request_type == "HOUSEKEEPING"
-                        else "submitted to the Linen Store."
-                    ),
-                )
-
-                return redirect(
-                    "housekeeping_linen_requests",
-                )
+            destination = (
+                "the Housekeeping Head"
+                if request_type == "HOUSEKEEPING"
+                else "the Linen Store"
+            )
+            item_summary = ", ".join(
+                f"{quantity} {linen_item.product.name}"
+                for linen_item, quantity in selected_quantities
+            )
+            messages.success(
+                request,
+                f"Your linen request ({item_summary}) was submitted to {destination}.",
+            )
+            return redirect("housekeeping_linen_requests")
 
     return render(
         request,
