@@ -53,6 +53,10 @@ def dashboard(request):
     hotels = get_accessible_hotels(request.user)
 
     today = timezone.localdate()
+    is_hk_staff = (
+        request.user.role == "HOUSEKEEPING"
+        and not is_department_head(request.user)
+    )
 
     # ---------------------------------------------------------
     # ROOM COUNTS
@@ -103,6 +107,11 @@ def dashboard(request):
         )
     )
 
+    if is_hk_staff:
+        active_assignments = active_assignments.filter(
+            assigned_to=request.user,
+        )
+
     assigned_count = active_assignments.filter(
         status="ASSIGNED"
     ).count()
@@ -114,6 +123,18 @@ def dashboard(request):
     inspection_count = active_assignments.filter(
         status="INSPECTION"
     ).count()
+
+    if is_hk_staff:
+        return render(
+            request,
+            "housekeeping/dashboard_staff.html",
+            {
+                "active_assignments": active_assignments,
+                "assigned_count": assigned_count,
+                "in_progress_count": in_progress_count,
+                "inspection_count": inspection_count,
+            },
+        )
 
     # ---------------------------------------------------------
     # TODAY'S CLEANING ACTIVITY
