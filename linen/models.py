@@ -192,7 +192,11 @@ class LinenIssue(models.Model):
 
     source = models.CharField(
         max_length=20,
-        choices=LinenTransaction.LOCATION_CHOICES,
+        choices=(
+            ("STORE", "Linen Store"),
+            ("LAUNDRY", "Laundry"),
+            ("HOUSEKEEPING", "Housekeeping Head"),
+        ),
         default="LAUNDRY",
     )
 
@@ -280,6 +284,7 @@ class LinenRequest(models.Model):
     REQUEST_TYPE_CHOICES = (
         ("STORE", "Request from Linen Store"),
         ("LAUNDRY", "Request Clean Linen from Laundry"),
+        ("HOUSEKEEPING", "Request from Housekeeping Head"),
     )
 
     STATUS_CHOICES = (
