@@ -9,14 +9,16 @@ Request New Linen
 <h2>Request New Linen</h2>
 
 <p style="color:#666;">
-    Request additional clean, unused linen from the Linen Store.
+    {% if user.role == 'HOUSEKEEPING' and not user.is_department_head %}Request clean linen from your Housekeeping Head. The request will be fulfilled from the Head's available clean linen custody.{% else %}Request additional clean, unused linen from the Linen Store.{% endif %}
 </p>
 
 <p style="color:#a00;">
     <strong>Important:</strong>
-    This request is for new/unused linen only.
-    Linen already in Housekeeping circulation must go through the
-    normal Housekeeping → Laundry → Housekeeping cycle.
+    {% if user.role == "HOUSEKEEPING" and not user.is_department_head %}
+    This request is for clean linen held by the Housekeeping Head. The Head must issue the linen before your custody balance increases.
+    {% else %}
+    This request is for new/unused linen from the Linen Store. Linen already in Housekeeping circulation must go through the normal Housekeeping → Laundry → Housekeeping cycle.
+    {% endif %}
 </p>
 
 <div
