@@ -1,0 +1,37 @@
+{% extends "base/base.html" %}
+{% block title %}Linen Category Defaults{% endblock %}
+{% block content %}
+<h2>Linen Setup · Category Defaults</h2>
+<p>Set reusable standard quantities for each room category. Leave an item blank to exclude it from the category defaults.</p>
+<form method="get" style="margin-bottom:20px;">
+  <label for="category">Room category</label>
+  <select id="category" name="category" required>
+    <option value="">Choose a category</option>
+    {% for category in categories %}
+      <option value="{{ category.pk }}" {% if selected_category.pk == category.pk %}selected{% endif %}>{{ category.name }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-secondary" type="submit">Load defaults</button>
+</form>
+{% if selected_category %}
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="category" value="{{ selected_category.pk }}">
+  <h3>{{ selected_category.name }} defaults</h3>
+  <table style="width:100%;border-collapse:collapse;">
+    <thead><tr><th style="text-align:left;padding:10px;">Linen item</th><th style="padding:10px;">Default quantity per room</th></tr></thead>
+    <tbody>
+    {% for row in item_rows %}
+      <tr style="border-top:1px solid #ddd;">
+        <td style="padding:10px;">{{ row.item.product.name }} <small>({{ row.item.product.sku }})</small></td>
+        <td style="padding:10px;text-align:center;"><input type="number" min="1" step="1" name="quantity_{{ row.item.pk }}" value="{{ row.quantity }}" placeholder="Not included"></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="2" style="padding:16px;">No active linen items are available for your hotel.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <button class="btn btn-primary" type="submit">Save category defaults</button>
+</form>
+{% endif %}
+{% endblock %}
