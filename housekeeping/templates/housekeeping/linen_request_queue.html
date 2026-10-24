@@ -1,0 +1,61 @@
+{% extends "base/base.html" %}
+
+{% block title %}Housekeeping Linen Requests{% endblock %}
+
+{% block content %}
+<h2>Housekeeping Linen Requests</h2>
+<p style="color:#64748b;">Review staff requests and issue clean linen from the Housekeeping Head's personal custody.</p>
+
+<div style="overflow-x:auto;">
+<table class="table">
+<thead>
+<tr>
+    <th>Requested by</th>
+    <th>Linen</th>
+    <th>Requested</th>
+    <th>Issued</th>
+    <th>Remaining</th>
+    <th>Request date</th>
+    <th>Note</th>
+    <th>Issue linen</th>
+</tr>
+</thead>
+<tbody>
+{% for req in linen_requests %}
+<tr>
+    <td>{{ req.requested_by.get_username }}</td>
+    <td>{{ req.linen_item.product.name }}</td>
+    <td>{{ req.quantity }}</td>
+    <td>{{ req.fulfilled_quantity }}</td>
+    <td>{{ req.quantity|add:"-"|default:"" }}</td>
+    <td>{{ req.created_at|date:"d M Y H:i" }}</td>
+    <td>{{ req.note|default:"—" }}</td>
+    <td>
+        {% if req.status == "PENDING" or req.status == "PARTIAL" or req.status == "APPROVED" %}
+        <form method="post" action="{% url 'housekeeping_fulfill_linen_request' req.id %}" style="min-width:210px;">
+            {% csrf_token %}
+            {% if user.role != "HOUSEKEEPING" %}
+            <label>Issue from Head</label>
+            <select name="source_user" required>
+                {% for head in housekeeping_heads %}
+                <option value="{{ head.id }}">{{ head.get_username }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+            <label>Quantity to issue</label>
+            <input type="number" name="quantity" min="1" max="{{ req.quantity }}" required style="width:90px;">
+            <input type="text" name="note" placeholder="Optional note">
+            <button type="submit" class="btn btn-primary">Issue Linen</button>
+        </form>
+        {% else %}
+        {{ req.get_status_display }}
+        {% endif %}
+    </td>
+</tr>
+{% empty %}
+<tr><td colspan="8">There are no Housekeeping linen requests.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}
