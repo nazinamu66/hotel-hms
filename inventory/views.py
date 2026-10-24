@@ -38,6 +38,59 @@ from accounts.services.access import (
 
 )
 
+
+def sync_product_linen_registration(product, form):
+    from linen.models import LinenItem
+
+    register_as_linen = form.cleaned_data.get(
+        "register_as_linen",
+        False,
+    )
+
+    linen_item = (
+        LinenItem.objects
+        .select_for_update()
+        .filter(product=product)
+        .first()
+    )
+
+    if register_as_linen:
+        if product.usage_type != "ASSET":
+            raise ValidationError(
+                "Only products with usage type ASSET "
+                "can be registered as linen."
+            )
+
+        linen_item, _ = LinenItem.objects.get_or_create(
+            product=product,
+            defaults={
+                "par_level": form.cleaned_data["linen_par_level"],
+                "minimum_level": form.cleaned_data[
+                    "linen_minimum_level"
+                ],
+            },
+        )
+
+        linen_item.par_level = form.cleaned_data["linen_par_level"]
+        linen_item.minimum_level = form.cleaned_data[
+            "linen_minimum_level"
+        ]
+        linen_item.is_active = True
+        linen_item.full_clean()
+        linen_item.save()
+        return
+
+    if linen_item is not None:
+        if linen_item.transactions.exists():
+            raise ValidationError(
+                "This linen item cannot be unregistered because "
+                "it has transaction history. Keep registration "
+                "enabled to preserve the linen ledger."
+            )
+
+        linen_item.delete()
+
+
 from restaurant.models import MenuItem
 
 
@@ -395,29 +448,18 @@ def product_list(request):
 from django.db import IntegrityError
 
 
-def product_create(request):
 
+def product_create(request):
     from restaurant.models import MenuItem
 
-    # --------------------------------------------------------
-    # Hotels this Director is allowed to manage
-    # --------------------------------------------------------
-
     hotels = (
-        get_accessible_hotels(
-            request.user,
-        )
-        .filter(
-            is_active=True,
-        )
+        get_accessible_hotels(request.user)
+        .filter(is_active=True)
         .order_by("name")
     )
+
     if not can_view_product_master(request.user):
         raise PermissionDenied
-
-    # --------------------------------------------------------
-    # Determine selected hotel
-    # --------------------------------------------------------
 
     hotel_id = (
         request.POST.get("hotel")
@@ -428,32 +470,13 @@ def product_create(request):
     hotel = None
 
     if hotel_id:
-        hotel = get_object_or_404(
-            hotels,
-            pk=hotel_id,
-        )
-
+        hotel = get_object_or_404(hotels, pk=hotel_id)
     elif hotels.count() == 1:
         hotel = hotels.first()
 
-    # --------------------------------------------------------
-    # Hotel is required
-    # --------------------------------------------------------
-
     if request.method == "POST" and not hotel:
-
-        messages.error(
-            request,
-            "Please select a hotel.",
-        )
-
-        return redirect(
-            request.path,
-        )
-
-    # --------------------------------------------------------
-    # Product form
-    # --------------------------------------------------------
+        messages.error(request, "Please select a hotel.")
+        return redirect(request.path)
 
     form = ProductForm(
         request.POST or None,
@@ -468,70 +491,61 @@ def product_create(request):
         )
 
     if form.is_valid():
-
-        product = form.save(commit=False)
-
         selected_departments = form.cleaned_data.get(
             "departments"
         )
 
         if not selected_departments:
-            raise ValidationError(
-                "At least one department must be selected."
+            form.add_error(
+                "departments",
+                "At least one department must be selected.",
             )
+        else:
+            for department in selected_departments:
+                if not can_create_product(
+                    request.user,
+                    department,
+                ):
+                    raise PermissionDenied
 
-        for department in selected_departments:
-            if not can_create_product(
-                request.user,
-                department,
-            ):
-                raise PermissionDenied
+            try:
+                with transaction.atomic():
+                    product = form.save(commit=False)
+                    product.hotel = hotel
 
-        # ----------------------------------------------------
-        # Server-side ownership
-        # ----------------------------------------------------
+                    if product.product_type == "FOOD":
+                        product.base_unit = "portion"
+                        product.purchase_unit = "portion"
+                        product.unit_multiplier = 1
+                        product.cost_price = 0
+                        product.usage_type = "RESALE"
 
-        product.hotel = hotel
+                    product.save()
+                    form.save_m2m()
 
-        # ----------------------------------------------------
-        # FOOD rules
-        # ----------------------------------------------------
+                    sync_product_linen_registration(
+                        product,
+                        form,
+                    )
 
-        if product.product_type == "FOOD":
+                    if product.usage_type == "RESALE":
+                        MenuItem.objects.get_or_create(
+                            product=product,
+                            defaults={
+                                "name": product.name,
+                                "price": product.price or 0,
+                                "is_active": True,
+                            },
+                        )
 
-            product.base_unit = "portion"
-            product.purchase_unit = "portion"
-            product.unit_multiplier = 1
-            product.cost_price = 0
-            product.usage_type = "RESALE"
-
-        product.save()
-
-        form.save_m2m()
-
-        # ----------------------------------------------------
-        # Auto-create MenuItem for resale products
-        # ----------------------------------------------------
-
-        if product.usage_type == "RESALE":
-
-            MenuItem.objects.get_or_create(
-                product=product,
-                defaults={
-                    "name": product.name,
-                    "price": product.price or 0,
-                    "is_active": True,
-                },
-            )
-
-        messages.success(
-            request,
-            "Product created successfully.",
-        )
-
-        return redirect(
-            "inventory:product_list",
-        )
+            except ValidationError as exc:
+                form.add_error(None, exc)
+            else:
+                messages.success(
+                    request,
+                    "Product created successfully.",
+                )
+                return redirect("inventory:product_list")
 
     return render(
         request,
@@ -542,6 +556,7 @@ def product_create(request):
             "selected_hotel": hotel,
         },
     )
+
 
 @role_required("ADMIN", "DIRECTOR")
 def hotel_feature_setup(request):
@@ -1597,6 +1612,7 @@ def po_approve(request, pk):
         },
     )
 
+
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 @transaction.atomic
 def po_finalize(request, pk):
@@ -1649,11 +1665,8 @@ def po_finalize(request, pk):
             )
 
             if qty <= 0:
-
                 item.delete()
-
             else:
-
                 item.purchase_quantity = qty
                 item.unit_cost = cost
 
@@ -1665,7 +1678,7 @@ def po_finalize(request, pk):
                 )
 
         # ----------------------------------------------------
-        # Make sure at least one item remains
+        # ENSURE AT LEAST ONE ITEM REMAINS
         # ----------------------------------------------------
 
         if not po.items.exists():
@@ -1680,11 +1693,12 @@ def po_finalize(request, pk):
         # ----------------------------------------------------
         # FINALIZE
         #
-        # ADMIN / DIRECTOR → AUTO-APPROVED
-        # MANAGER → SUBMITTED FOR DIRECTOR APPROVAL
+        # ADMIN / DIRECTOR -> AUTO-APPROVED
+        # MANAGER -> SUBMITTED FOR DIRECTOR APPROVAL
         # ----------------------------------------------------
 
         if request.user.role in ("ADMIN", "DIRECTOR"):
+
             po.status = "APPROVED"
             po.approved_by = request.user
             po.approved_at = timezone.now()
@@ -1704,6 +1718,7 @@ def po_finalize(request, pk):
             )
 
         else:
+
             po.status = "SUBMITTED"
 
             po.save(
@@ -1721,6 +1736,15 @@ def po_finalize(request, pk):
                 ),
             )
 
+        # ----------------------------------------------------
+        # REDIRECT AFTER SUCCESS
+        # ----------------------------------------------------
+
+        return redirect(
+            "inventory:po_detail",
+            pk=po.pk,
+        )
+
     # --------------------------------------------------------
     # GET
     # --------------------------------------------------------
@@ -1733,9 +1757,11 @@ def po_finalize(request, pk):
             "items": items,
             "suppliers": Supplier.objects.filter(
                 hotel=po.department.hotel,
-            ),        
-            },
+                is_active=True,
+            ),
+        },
     )
+
 
 @role_required("ACCOUNTANT", "DIRECTOR", "ADMIN")
 @transaction.atomic
@@ -2404,13 +2430,11 @@ def review_stock_request(request, pk):
     )
 
 
-def product_edit(request, pk):
 
+def product_edit(request, pk):
     from restaurant.models import MenuItem
 
-    accessible_hotels = get_accessible_hotels(
-        request.user,
-    )
+    accessible_hotels = get_accessible_hotels(request.user)
 
     product = get_object_or_404(
         Product.objects.select_related("hotel"),
@@ -2418,10 +2442,7 @@ def product_edit(request, pk):
         hotel__in=accessible_hotels,
     )
 
-    if not can_edit_product(
-        request.user,
-        product,
-    ):
+    if not can_edit_product(request.user, product):
         raise PermissionDenied
 
     form = ProductForm(
@@ -2438,50 +2459,68 @@ def product_edit(request, pk):
         )
 
     if form.is_valid():
-
         selected_departments = form.cleaned_data.get(
             "departments"
         )
 
         if not selected_departments:
-            raise ValidationError(
-                "At least one department must be selected."
+            form.add_error(
+                "departments",
+                "At least one department must be selected.",
             )
+        else:
+            for department in selected_departments:
+                if not can_create_product(
+                    request.user,
+                    department,
+                ):
+                    raise PermissionDenied
 
-        for department in selected_departments:
-            if not can_create_product(
-                request.user,
-                department,
-            ):
-                raise PermissionDenied
+            try:
+                with transaction.atomic():
+                    product = form.save(commit=False)
 
-        product = form.save()
+                    if product.product_type == "FOOD":
+                        product.base_unit = "portion"
+                        product.purchase_unit = "portion"
+                        product.unit_multiplier = 1
+                        product.cost_price = 0
+                        product.usage_type = "RESALE"
 
-        if product.usage_type == "RESALE":
+                    product.save()
+                    form.save_m2m()
 
-            menu_item, created = MenuItem.objects.get_or_create(
-                product=product,
-                defaults={
-                    "name": product.name,
-                    "price": product.price or 0,
-                    "is_active": True,
-                },
-            )
+                    sync_product_linen_registration(
+                        product,
+                        form,
+                    )
 
-            if not created:
-                menu_item.name = product.name
-                menu_item.price = product.price or 0
-                menu_item.is_active = True
-                menu_item.save()
+                    if product.usage_type == "RESALE":
+                        menu_item, created = (
+                            MenuItem.objects.get_or_create(
+                                product=product,
+                                defaults={
+                                    "name": product.name,
+                                    "price": product.price or 0,
+                                    "is_active": True,
+                                },
+                            )
+                        )
 
-        messages.success(
-            request,
-            "Product updated.",
-        )
+                        if not created:
+                            menu_item.name = product.name
+                            menu_item.price = product.price or 0
+                            menu_item.is_active = True
+                            menu_item.save()
 
-        return redirect(
-            "inventory:product_list",
-        )
+            except ValidationError as exc:
+                form.add_error(None, exc)
+            else:
+                messages.success(
+                    request,
+                    "Product updated.",
+                )
+                return redirect("inventory:product_list")
 
     return render(
         request,
@@ -2493,6 +2532,7 @@ def product_edit(request, pk):
             "selected_hotel": product.hotel,
         },
     )
+
 
 def product_delete(request, pk):
 

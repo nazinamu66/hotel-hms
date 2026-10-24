@@ -1,0 +1,552 @@
+
+{% extends "base/base.html" %}
+
+{% block content %}
+<style>
+    .reservation-detail {
+        --rd-primary: #0f766e;
+        --rd-primary-light: #f0fdfa;
+        --rd-border: #e5e7eb;
+        --rd-muted: #64748b;
+        max-width: 1500px;
+        margin: 0 auto;
+        color: #172033;
+    }
+
+    .rd-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 26px;
+    }
+
+    .rd-breadcrumb {
+        color: var(--rd-muted);
+        font-size: .85rem;
+        margin-bottom: 10px;
+    }
+
+    .rd-breadcrumb a {
+        color: var(--rd-primary);
+        text-decoration: none;
+    }
+
+    .rd-title {
+        font-size: clamp(1.5rem, 3vw, 2rem);
+        font-weight: 750;
+        letter-spacing: -.04em;
+        margin: 0 0 8px;
+    }
+
+    .rd-subtitle {
+        color: var(--rd-muted);
+        margin: 0;
+    }
+
+    .rd-card {
+        background: #fff;
+        border: 1px solid var(--rd-border);
+        border-radius: 16px;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, .035);
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .rd-card-header {
+        padding: 20px 22px;
+        border-bottom: 1px solid #eef0f3;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .rd-card-header h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .rd-card-body {
+        padding: 22px;
+    }
+
+    .rd-icon {
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: var(--rd-primary-light);
+        color: var(--rd-primary);
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    .rd-status-panel {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 20px 22px;
+        margin-bottom: 20px;
+        background: linear-gradient(120deg, #ffffff, #f8fafc);
+        border: 1px solid var(--rd-border);
+        border-radius: 16px;
+    }
+
+    .rd-eyebrow {
+        color: var(--rd-muted);
+        font-size: .75rem;
+        font-weight: 700;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+
+    .rd-reservation-number {
+        font-size: 1.2rem;
+        font-weight: 750;
+    }
+
+    .rd-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-size: .8rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .rd-badge-reserved {
+        color: #1d4ed8;
+        background: #dbeafe;
+    }
+
+    .rd-badge-checked-in {
+        color: #047857;
+        background: #d1fae5;
+    }
+
+    .rd-badge-cancelled {
+        color: #b91c1c;
+        background: #fee2e2;
+    }
+
+    .rd-badge-no-show {
+        color: #475569;
+        background: #e2e8f0;
+    }
+
+    .rd-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+
+    .rd-stat {
+        border: 1px solid var(--rd-border);
+        border-radius: 14px;
+        padding: 18px;
+        background: #fff;
+        min-width: 0;
+    }
+
+    .rd-stat-label {
+        color: var(--rd-muted);
+        font-size: .8rem;
+        margin-bottom: 8px;
+    }
+
+    .rd-stat-value {
+        font-size: 1.05rem;
+        font-weight: 750;
+        overflow-wrap: anywhere;
+    }
+
+    .rd-stat-caption {
+        color: var(--rd-muted);
+        font-size: .78rem;
+        margin-top: 5px;
+    }
+
+    .rd-info-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px 28px;
+    }
+
+    .rd-info-label {
+        color: var(--rd-muted);
+        font-size: .8rem;
+        margin-bottom: 6px;
+    }
+
+    .rd-info-value {
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+    .rd-note {
+        background: #f8fafc;
+        border: 1px solid #edf0f4;
+        border-radius: 12px;
+        padding: 15px;
+        overflow-wrap: anywhere;
+    }
+
+    .rd-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 16px 0 4px;
+        margin-top: 22px;
+        background: rgba(245, 247, 250, .96);
+    }
+
+    .rd-action-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .rd-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 42px;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-size: .88rem;
+        font-weight: 650;
+        text-decoration: none;
+        border: 1px solid transparent;
+        transition: background .15s ease, transform .15s ease;
+    }
+
+    .rd-btn:hover {
+        transform: translateY(-1px);
+        text-decoration: none;
+    }
+
+    .rd-btn-primary {
+        color: #fff;
+        background: var(--rd-primary);
+    }
+
+    .rd-btn-primary:hover {
+        color: #fff;
+        background: #115e59;
+    }
+
+    .rd-btn-secondary {
+        color: #334155;
+        background: #fff;
+        border-color: #cbd5e1;
+    }
+
+    .rd-btn-secondary:hover {
+        color: #0f172a;
+        background: #f8fafc;
+    }
+
+    .rd-btn-danger {
+        color: #b91c1c;
+        background: #fff;
+        border-color: #fecaca;
+    }
+
+    .rd-btn-danger:hover {
+        color: #991b1b;
+        background: #fef2f2;
+    }
+
+    .rd-empty {
+        color: var(--rd-muted);
+    }
+
+    @media (max-width: 768px) {
+        .rd-stat-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .rd-info-list {
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+
+        .rd-card-header,
+        .rd-card-body {
+            padding: 17px;
+        }
+
+        .rd-actions {
+            position: static;
+        }
+
+        .rd-action-group {
+            width: 100%;
+        }
+
+        .rd-action-group .rd-btn {
+            flex: 1 1 auto;
+        }
+    }
+</style>
+
+<div class="container-fluid py-4 reservation-detail">
+
+    <div class="rd-header">
+        <div>
+            <div class="rd-breadcrumb">
+                <a href="{% url 'frontdesk_reservations' %}">Reservations</a>
+                <span class="mx-2">/</span>
+                <span>Reservation #{{ reservation.id }}</span>
+            </div>
+
+            <h1 class="rd-title">Reservation details</h1>
+            <p class="rd-subtitle">
+                Review booking information and manage the guest's arrival.
+            </p>
+        </div>
+
+        <a href="{% url 'frontdesk_reservations' %}"
+           class="rd-btn rd-btn-secondary">
+            &larr; Back to reservations
+        </a>
+    </div>
+
+    <div class="rd-status-panel">
+        <div>
+            <div class="rd-eyebrow">Booking reference</div>
+            <div class="rd-reservation-number">
+                Reservation #{{ reservation.id }}
+            </div>
+            <div class="rd-subtitle mt-1">
+                Created {{ reservation.created_at|date:"d M Y, H:i" }}
+            </div>
+        </div>
+
+        <div>
+            {% if reservation.status == "RESERVED" %}
+                <span class="rd-badge rd-badge-reserved">● Reserved</span>
+            {% elif reservation.status == "CHECKED_IN" %}
+                <span class="rd-badge rd-badge-checked-in">● Checked in</span>
+            {% elif reservation.status == "CANCELLED" %}
+                <span class="rd-badge rd-badge-cancelled">● Cancelled</span>
+            {% elif reservation.status == "NO_SHOW" %}
+                <span class="rd-badge rd-badge-no-show">● No show</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="rd-stat-grid">
+        <div class="rd-stat">
+            <div class="rd-stat-label">Check-in date</div>
+            <div class="rd-stat-value">
+                {{ reservation.check_in_date|date:"d M Y" }}
+            </div>
+            <div class="rd-stat-caption">Expected arrival</div>
+        </div>
+
+        <div class="rd-stat">
+            <div class="rd-stat-label">Check-out date</div>
+            <div class="rd-stat-value">
+                {{ reservation.check_out_date|date:"d M Y" }}
+            </div>
+            <div class="rd-stat-caption">Expected departure</div>
+        </div>
+
+        <div class="rd-stat">
+            <div class="rd-stat-label">Rooms reserved</div>
+            <div class="rd-stat-value">{{ reservation.number_of_rooms }}</div>
+            <div class="rd-stat-caption">
+                {{ reservation.room_category }}
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <div class="col-lg-6">
+            <section class="rd-card">
+                <div class="rd-card-header">
+                    <span class="rd-icon" aria-hidden="true">&#128100;</span>
+                    <div>
+                        <h3>Guest information</h3>
+                        <div class="rd-subtitle small">Primary guest on this booking</div>
+                    </div>
+                </div>
+
+                <div class="rd-card-body">
+                    <div class="rd-info-list">
+                        <div>
+                            <div class="rd-info-label">Full name</div>
+                            <div class="rd-info-value">{{ reservation.guest }}</div>
+                        </div>
+
+                        <div>
+                            <div class="rd-info-label">Phone number</div>
+                            <div class="rd-info-value">
+                                {{ reservation.guest.phone|default:"—" }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="rd-info-label">Email address</div>
+                            <div class="rd-info-value">
+                                {{ reservation.guest.email|default:"—" }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="rd-info-label">Booking source</div>
+                            <div class="rd-info-value">
+                                {{ reservation.source|default:"Not specified" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-6">
+            <section class="rd-card">
+                <div class="rd-card-header">
+                    <span class="rd-icon" aria-hidden="true">&#127976;</span>
+                    <div>
+                        <h3>Accommodation</h3>
+                        <div class="rd-subtitle small">Room and stay allocation</div>
+                    </div>
+                </div>
+
+                <div class="rd-card-body">
+                    <div class="rd-info-list">
+                        <div>
+                            <div class="rd-info-label">Room category</div>
+                            <div class="rd-info-value">
+                                {{ reservation.room_category }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="rd-info-label">Assigned room</div>
+                            <div class="rd-info-value">
+                                {% if reservation.room %}
+                                    Room {{ reservation.room.room_number }}
+                                {% else %}
+                                    <span class="rd-empty">Not assigned</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="rd-info-label">Check-in</div>
+                            <div class="rd-info-value">
+                                {{ reservation.check_in_date|date:"l, d M Y" }}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="rd-info-label">Check-out</div>
+                            <div class="rd-info-value">
+                                {{ reservation.check_out_date|date:"l, d M Y" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12">
+            <section class="rd-card">
+                <div class="rd-card-header">
+                    <span class="rd-icon" aria-hidden="true">&#128203;</span>
+                    <div>
+                        <h3>Guarantee and notes</h3>
+                        <div class="rd-subtitle small">
+                            Booking assurance and additional information
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rd-card-body">
+                    <div class="rd-info-list mb-4">
+                        <div>
+                            <div class="rd-info-label">Guarantee status</div>
+                            <div class="rd-info-value">
+                                {% if reservation.reservation_deposit %}
+                                    {{ reservation.reservation_deposit.status }}
+                                {% else %}
+                                    <span class="rd-empty">No deposit record</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="rd-info-label">Reservation created</div>
+                            <div class="rd-info-value">
+                                {{ reservation.created_at|date:"d M Y, H:i" }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rd-info-label">Reservation notes</div>
+
+                    {% if reservation.note %}
+                        <div class="rd-note">
+                            {{ reservation.note|linebreaksbr }}
+                        </div>
+                    {% else %}
+                        <div class="rd-note rd-empty">
+                            No notes have been added to this reservation.
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+
+    </div>
+
+    <div class="rd-actions">
+        <a href="{% url 'frontdesk_reservations' %}"
+           class="rd-btn rd-btn-secondary">
+            Back to list
+        </a>
+
+        <div class="rd-action-group">
+            {% if reservation.status == "RESERVED" %}
+                <a href="{% url 'frontdesk_reservation_checkin' reservation.id %}"
+                   class="rd-btn rd-btn-primary">
+                    Check in guest &rarr;
+                </a>
+
+                <a href="{% url 'frontdesk_reservation_cancel' reservation.id %}"
+                   class="rd-btn rd-btn-danger">
+                    Cancel reservation
+                </a>
+            {% endif %}
+
+            {% if reservation.status == "CHECKED_IN" and reservation.room %}
+                <a href="{% url 'frontdesk_active_stay' reservation.room.id %}"
+                   class="rd-btn rd-btn-primary">
+                    View active stay &rarr;
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

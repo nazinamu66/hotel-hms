@@ -1214,6 +1214,29 @@ def reservation_list(request):
         {"reservations": reservations}
     )
 
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def reservation_detail(request, reservation_id):
+    hotel = request.user.department.hotel
+
+    reservation = get_object_or_404(
+        Reservation.objects.select_related(
+            "guest",
+            "room_category",
+            "reservation_deposit",
+            "room",
+        ),
+        id=reservation_id,
+        hotel=hotel,
+    )
+
+    return render(
+        request,
+        "frontdesk/reservation_detail.html",
+        {"reservation": reservation},
+    )
+
+
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def create_reservation(request):
 
@@ -1486,30 +1509,43 @@ def reservation_calendar(request):
         )
     )
 
+    
     calendar = []
 
     for room in rooms:
-
         row = {
             "room": room,
-            "days": []
+            "days": [],
         }
 
         for day in days:
-
             reservation = reservations.filter(
                 room=room,
                 check_in_date__lte=day,
-                check_out_date__gt=day
+                check_out_date__gt=day,
             ).first()
+
+            available_room_ids = get_available_rooms(
+                hotel=hotel,
+                category=room.category,
+                check_in=day,
+                check_out=day + timedelta(days=1),
+            ).values_list("id", flat=True)
+
+            is_available = (
+                room.id in available_room_ids
+                and reservation is None
+            )
 
             row["days"].append({
                 "date": day,
                 "reservation": reservation,
-                "room_id": room.id
+                "room_id": room.id,
+                "is_available": is_available,
             })
 
         calendar.append(row)
+
 
     categories = (
         RoomCategory.objects
@@ -1550,31 +1586,31 @@ def reservation_calendar(request):
         context
     )
 
+
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def calendar_create_reservation(request):
-
-    from frontdesk.workflows.reservation import (
-        create_reservation,
-    )
+    from frontdesk.workflows.reservation import create_reservation
 
     hotel = request.user.department.hotel
 
+    room_id = request.GET.get("room")
+    check_in = request.GET.get("date")
+
     room = get_object_or_404(
         Room,
-        id=request.GET.get("room"),
+        id=room_id,
         hotel=hotel,
     )
 
-    check_in = request.GET.get("date")
+    guests = Guest.objects.filter(hotel=hotel)[:50]
 
-    guests = Guest.objects.filter(
-        hotel=hotel,
-    )[:50]
+    form_data = {
+        "selected_guest": request.POST.get("guest", ""),
+        "check_out": request.POST.get("check_out", ""),
+    }
 
     if request.method == "POST":
-
         try:
-
             create_reservation(
                 hotel=hotel,
                 user=request.user,
@@ -1583,24 +1619,22 @@ def calendar_create_reservation(request):
                 check_in=check_in,
                 check_out=request.POST.get("check_out"),
             )
-
         except ValidationError as e:
-
-            messages.error(
+            messages.error(request, " ".join(e.messages))
+            return render(
                 request,
-                str(e),
+                "frontdesk/calendar_reservation.html",
+                {
+                    "room": room,
+                    "check_in": check_in,
+                    "guests": guests,
+                    **form_data,
+                },
+                status=400,
             )
 
-            return redirect(request.path)
-
-        messages.success(
-            request,
-            "Reservation created.",
-        )
-
-        return redirect(
-            "frontdesk_reservation_calendar",
-        )
+        messages.success(request, "Reservation created.")
+        return redirect("frontdesk_reservation_calendar")
 
     return render(
         request,
@@ -1609,8 +1643,10 @@ def calendar_create_reservation(request):
             "room": room,
             "check_in": check_in,
             "guests": guests,
+            **form_data,
         },
     )
+
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def arrivals_departures_today(request):

@@ -328,6 +328,41 @@
 
         {% endif %}
 
+    
+        <!-- ========================= -->
+        <!-- LINEN MANAGEMENT -->
+        <!-- ========================= -->
+
+        {% if user|has_role:"STORE,HOUSEKEEPING,LAUNDRY,MANAGER,ADMIN,DIRECTOR" %}
+
+        <h4 class="menu-toggle"
+            onclick="toggleMenu('linen_menu', this)">
+            <span class="arrow">▸</span>
+            Linen Management
+        </h4>
+
+        <div id="linen_menu" class="menu-section">
+
+            <a href="{% url 'linen_dashboard' %}">
+                Linen Overview
+            </a>
+
+            {% if user|has_role:"STORE,MANAGER,ADMIN,DIRECTOR" %}
+            <a href="{% url 'linen_receive' %}">
+                Receive Linen
+            </a>
+            {% endif %}
+
+            {% if user|has_role:"STORE,HOUSEKEEPING,MANAGER,ADMIN,DIRECTOR" %}
+            <a href="{% url 'linen_issue' %}">
+                Issue Linen
+            </a>
+            {% endif %}
+
+        </div>
+
+        {% endif %}
+
         <!-- ========================= -->
         <!-- LAUNDRY -->
         <!-- ========================= -->

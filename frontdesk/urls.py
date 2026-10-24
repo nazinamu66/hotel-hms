@@ -24,6 +24,7 @@ from .views import (
     arrivals_departures_today,
     guest_deposit_receive,
     guest_search_api,
+    reservation_detail,
 )
 
 urlpatterns = [
@@ -44,6 +45,7 @@ urlpatterns = [
     path("stay/<int:room_id>/change-room/",change_room,name="frontdesk_change_room"),
     path("reservations/",reservation_list,name="frontdesk_reservations"),
     path("reservations/create/",create_reservation,name="frontdesk_create_reservation"),
+    path("reservations/<int:reservation_id>/",reservation_detail,name="frontdesk_reservation_detail",),
     path("reservations/<int:reservation_id>/checkin/",reservation_checkin,name="frontdesk_reservation_checkin"),
     path("reservations/<int:reservation_id>/cancel/",reservation_cancel,name="frontdesk_reservation_cancel",),
     path("guests/create/",guest_create,name="frontdesk_guest_create"),

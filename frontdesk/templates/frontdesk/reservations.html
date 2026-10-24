@@ -26,6 +26,17 @@
         font-size: 14px;
     }
 
+    .reservation-id-link {
+        display: inline-block;
+        text-decoration: none;
+        transition: color .15s ease;
+    }
+
+    .reservation-id-link:hover {
+        color: #0f766e;
+        text-decoration: underline;
+    }
+
     .primary-btn {
         display: inline-flex;
         align-items: center;
@@ -274,9 +285,13 @@
                 <tr>
 
                     <td>
-                        <span class="reservation-id">
+                        <a
+                            href="{% url 'frontdesk_reservation_detail' r.id %}"
+                            class="reservation-id reservation-id-link"
+                            title="View reservation #{{ r.id }}"
+                        >
                             #{{ r.id }}
-                        </span>
+                        </a>
                     </td>
 
                     <td>

@@ -96,12 +96,14 @@ def get_room_category(
     )
 
 
+
 def validate_availability(
     hotel,
     category,
     check_in,
     check_out,
     number_of_rooms,
+    room=None,
 ):
     available_rooms = get_available_rooms(
         hotel,
@@ -110,6 +112,23 @@ def validate_availability(
         check_out,
     )
 
+    # When a specific room was selected from the calendar,
+    # it must be available for the entire requested stay.
+    if room is not None:
+        if room.hotel_id != hotel.id or room.category_id != category.id:
+            raise ValidationError(
+                "The selected room does not belong to this hotel "
+                "and room category."
+            )
+
+        if not available_rooms.filter(pk=room.pk).exists():
+            raise ValidationError(
+                f"Room {room.room_number} is unavailable for the "
+                "selected dates. Please choose another room or dates."
+            )
+
+        return
+
     available_count = available_rooms.count()
 
     if available_count < number_of_rooms:
@@ -117,6 +136,7 @@ def validate_availability(
             f"Only {available_count} room(s) are available "
             f"for the selected dates."
         )
+
 
 
 def create_reservation_record(
@@ -183,6 +203,7 @@ def create_reservation(
         check_in,
         check_out,
         number_of_rooms,
+        room=room,
     )
 
     reservation = create_reservation_record(

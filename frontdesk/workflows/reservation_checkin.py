@@ -15,23 +15,23 @@ def validate_reservation(reservation):
         )
 
 
-def find_available_room(reservation):
 
+def find_available_room(reservation):
     available_rooms = get_available_rooms(
         reservation.hotel,
         reservation.room_category,
         reservation.check_in_date,
         reservation.check_out_date,
+        exclude_reservation_id=reservation.pk,
     )
 
     available_room = available_rooms.first()
 
     if not available_room:
-        raise ValidationError(
-            "No room available."
-        )
+        raise ValidationError("No room available.")
 
     return available_room
+
 
 
 def mark_reservation_checked_in(

@@ -677,9 +677,54 @@
                 </div>
 
             </div>
+                    <div class="field hidden-field" id="linen-registration-field">
+            <label>
+                {{ form.register_as_linen }}
+                Register as linen
+            </label>
+
+            {{ form.register_as_linen.errors }}
+
+            <div class="field-help">
+                Enable linen tracking for reusable items such as bedsheets,
+                towels, pillowcases, and duvet covers.
+            </div>
+        </div>
+
+        <div
+           class="field-grid hidden-field"
+            id="linen-level-fields"
+        >
+            <div class="field">
+                <label for="{{ form.linen_par_level.id_for_label }}">
+                    Linen par level
+                </label>
+                {{ form.linen_par_level }}
+                {{ form.linen_par_level.errors }}
+                <div class="field-help">
+                    Target quantity the hotel should maintain.
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="{{ form.linen_minimum_level.id_for_label }}">
+                    Linen minimum level
+                </label>
+                {{ form.linen_minimum_level }}
+                {{ form.linen_minimum_level.errors }}
+                <div class="field-help">
+                    Minimum quantity before replenishment is required.
+                </div>
+            </div>
+        </div>
+
 
             <div class="info-panel" id="classification-help"></div>
         </div>
+
+
+
+
 
 
         <!-- ================================================= -->
@@ -964,6 +1009,18 @@
         "classification-help"
     );
 
+    const linenRegistrationField = document.getElementById(
+        "linen-registration-field"
+    );
+
+    const linenLevelFields = document.getElementById(
+        "linen-level-fields"
+    );
+
+    const registerAsLinen = document.getElementById(
+        "{{ form.register_as_linen.id_for_label }}"
+    );
+
     const pricingHelp = document.getElementById(
         "pricing-help"
     );
@@ -1165,6 +1222,29 @@
         updateUnitCost();
     }
 
+    function updateLinenUI() {
+        if (!usageSelect || !linenRegistrationField || !linenLevelFields) {
+            return;
+        }
+
+        const isAsset = usageSelect.value === "ASSET";
+        const isChecked = registerAsLinen && registerAsLinen.checked;
+
+        // Keep existing linen registration visible even if the
+        // usage type is changed, so it cannot be silently removed.
+        const showRegistration = isAsset || isChecked;
+
+        linenRegistrationField.classList.toggle(
+            "hidden-field",
+            !showRegistration
+        );
+
+        linenLevelFields.classList.toggle(
+            "hidden-field",
+            !(showRegistration && isChecked)
+        );
+    }
+
 
     function updateConversion() {
 
@@ -1241,11 +1321,19 @@
 
 
     typeInputs.forEach(function (input) {
-        input.addEventListener(
-            "change",
-            updateProductTypeUI
-        );
+        input.addEventListener("change", function () {
+            updateProductTypeUI();
+            updateLinenUI();
+        });
     });
+
+    if (usageSelect) {
+        usageSelect.addEventListener("change", updateLinenUI);
+    }
+
+    if (registerAsLinen) {
+        registerAsLinen.addEventListener("change", updateLinenUI);
+    }
 
 
     [
@@ -1278,6 +1366,7 @@
 
 
     updateProductTypeUI();
+    updateLinenUI();
 
 })();
 </script>

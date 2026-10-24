@@ -15,6 +15,12 @@ from .services.balances import get_linen_summary
 # LINEN DASHBOARD
 # ============================================================
 
+@role_required(
+    "ADMIN",
+    "DIRECTOR",
+    "GENERAL_MANAGER",
+    "MANAGER",
+)
 def linen_dashboard(request):
 
     accessible_hotels = get_accessible_hotels(

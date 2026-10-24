@@ -35,6 +35,17 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
 
+    .reservation-detail-link {
+        color: #0f766e;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .reservation-detail-link:hover {
+        color: #115e59;
+        text-decoration: underline;
+    }
+
     .filters {
         display: flex;
         align-items: flex-end;
@@ -283,6 +294,22 @@
         background: #dcfce7;
     }
 
+
+    .unavailable-cell {
+        background: #fff7ed;
+    }
+
+    .unavailable-cell:hover {
+        background: #ffedd5;
+    }
+
+    .unavailable-action {
+        color: #c2410c;
+        background: #ffedd5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
     .reserved-cell {
         background: #eff6ff;
     }
@@ -503,35 +530,39 @@
 
                     {% for day in row.days %}
 
+                                        
                     {% if day.reservation %}
-
-                    <td class="calendar-cell reserved-cell">
-
-                        <a
-                            href="{% url 'frontdesk_reservation_checkin' day.reservation.id %}"
-                            class="calendar-action reservation-action"
-                            title="Reservation #{{ day.reservation.id }} — Check-in"
-                        >
-                            RES
-                        </a>
-
-                    </td>
-
+                        <td class="calendar-cell reserved-cell">
+                            <a
+                                href="{% url 'frontdesk_reservation_detail' day.reservation.id %}"
+                                class="calendar-action reservation-action"
+                                title="View reservation #{{ day.reservation.id }}"
+                                aria-label="View reservation #{{ day.reservation.id }}"
+                            >
+                                RES
+                            </a>
+                        </td>
                     {% else %}
-
-                    <td class="calendar-cell available-cell">
-
-                        <a
-                            href="{% url 'frontdesk_calendar_create_reservation' %}?room={{ row.room.id }}&date={{ day.date|date:'Y-m-d' }}"
-                            class="calendar-action add-action"
-                            title="Create reservation for Room {{ row.room.room_number }}"
-                        >
-                            +
-                        </a>
-
-                    </td>
-
+                        {% if day.is_available %}
+                            <td class="calendar-cell available-cell">
+                                <a
+                                    href="{% url 'frontdesk_calendar_create_reservation' %}?room={{ row.room.id }}&date={{ day.date|date:'Y-m-d' }}"
+                                    class="calendar-action add-action"
+                                    title="Create reservation for Room {{ row.room.room_number }}"
+                                >+</a>
+                            </td>
+                        {% else %}
+                            <td class="calendar-cell unavailable-cell">
+                                <span
+                                    class="calendar-action unavailable-action"
+                                    title="Room {{ row.room.room_number }} is unavailable for this date"
+                                    aria-label="Unavailable"
+                                >×</span>
+                            </td>
+                        {% endif %}
                     {% endif %}
+
+
 
                     {% endfor %}
 
@@ -578,11 +609,15 @@
                     {% for reservation in category_reservations %}
                         <tr>
                             <td>
-                                <a href="{% url 'frontdesk_reservation_checkin' reservation.id %}">
+                                <a
+                                    href="{% url 'frontdesk_reservation_detail' reservation.id %}"
+                                    class="reservation-detail-link"
+                                    title="View reservation #{{ reservation.id }}"
+                                >
                                     #{{ reservation.id }}
                                 </a>
-                            </td>
 
+                            </td>
                             <td>{{ reservation.guest }}</td>
                             <td>{{ reservation.room_category.name }}</td>
                             <td>{{ reservation.number_of_rooms }}</td>
