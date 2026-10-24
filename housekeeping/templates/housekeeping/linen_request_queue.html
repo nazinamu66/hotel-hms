@@ -27,7 +27,7 @@
     <td>{{ req.linen_item.product.name }}</td>
     <td>{{ req.quantity }}</td>
     <td>{{ req.fulfilled_quantity }}</td>
-    <td>{{ req.quantity|add:"-"|default:"" }}</td>
+    <td>{{ req.remaining_quantity }}</td>
     <td>{{ req.created_at|date:"d M Y H:i" }}</td>
     <td>{{ req.note|default:"—" }}</td>
     <td>
@@ -43,7 +43,7 @@
             </select>
             {% endif %}
             <label>Quantity to issue</label>
-            <input type="number" name="quantity" min="1" max="{{ req.quantity }}" required style="width:90px;">
+            <input type="number" name="quantity" min="1" max="{{ req.remaining_quantity }}" required style="width:90px;">
             <input type="text" name="note" placeholder="Optional note">
             <button type="submit" class="btn btn-primary">Issue Linen</button>
         </form>
