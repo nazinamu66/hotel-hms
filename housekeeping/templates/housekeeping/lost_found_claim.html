@@ -1,68 +1,23 @@
 {% extends "base/base.html" %}
-
-{% block title %}Claim Lost & Found Item{% endblock %}
-
+{% block title %}Record Item Claim · Lost & Found{% endblock %}
 {% block content %}
-
-<h2>Claim Lost & Found Item</h2>
-
-<div class="card">
-
-    <p>
-        <strong>Hotel:</strong>
-        {{ item.hotel.name }}
-    </p>
-
-    <p>
-        <strong>Room:</strong>
-        {% if item.room %}
-            Room {{ item.room.room_number }}
-        {% else %}
-            Unknown / Public Area
-        {% endif %}
-    </p>
-
-    <p>
-        <strong>Item:</strong>
-        {{ item.description }}
-    </p>
-
-    <p>
-        <strong>Found By:</strong>
-        {{ item.found_by }}
-    </p>
-
-    <form method="post">
-
-        {% csrf_token %}
-
-        <label>Claimant Name</label>
-
-        <input
-            type="text"
-            name="claimant"
-            required
-            maxlength="200"
-        >
-
-        <br><br>
-
-        <button
-            class="btn btn-primary"
-            type="submit"
-        >
-            Confirm Claim
-        </button>
-
-        <a
-            href="{% url 'housekeeping_lost_found' %}"
-            class="btn btn-secondary"
-        >
-            Cancel
-        </a>
-
+<style>
+.lfc-page{max-width:900px;margin:0 auto;padding-bottom:32px;color:#1e293b}.lfc-kicker{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#64748b;margin:6px 0 7px}.lfc-title{font-size:clamp(1.6rem,2.5vw,2.1rem);font-weight:850;letter-spacing:-.04em;margin:0}.lfc-sub{color:#64748b;margin:8px 0 22px}.lfc-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:22px;box-shadow:0 4px 14px rgba(15,23,42,.04)}.lfc-details{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:22px}.lfc-detail{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:13px}.lfc-label{font-size:.76rem;color:#64748b;font-weight:750;text-transform:uppercase;letter-spacing:.04em}.lfc-value{font-weight:750;margin-top:5px;overflow-wrap:anywhere}.lfc-field{margin-bottom:18px}.lfc-field label{display:block;font-weight:750;margin-bottom:7px}.lfc-control{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:11px 12px;background:#fff;color:#0f172a;font:inherit}.lfc-control:focus{outline:3px solid #dbeafe;border-color:#60a5fa}.lfc-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.lfc-btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:9px;padding:11px 15px;background:#2563eb;color:#fff!important;text-decoration:none;font-weight:750;cursor:pointer}.lfc-secondary{background:#e2e8f0;color:#334155!important}
+</style>
+<div class="lfc-page">
+  <div class="lfc-kicker">Housekeeping · Accountability</div><h1 class="lfc-title">Record item claim</h1><p class="lfc-sub">Verify the person collecting the property before marking the item as returned.</p>
+  <section class="lfc-card">
+    <div class="lfc-details">
+      <div class="lfc-detail"><div class="lfc-label">Hotel</div><div class="lfc-value">{{ item.hotel.name }}</div></div>
+      <div class="lfc-detail"><div class="lfc-label">Found location</div><div class="lfc-value">{% if item.room %}Room {{ item.room.room_number }}{% else %}Unknown / public area{% endif %}</div></div>
+      <div class="lfc-detail"><div class="lfc-label">Found by</div><div class="lfc-value">{{ item.found_by|default:"—" }}</div></div>
+      <div class="lfc-detail"><div class="lfc-label">Date found</div><div class="lfc-value">{{ item.found_at|date:"d M Y, H:i" }}</div></div>
+    </div>
+    <div class="lfc-detail" style="margin-bottom:22px"><div class="lfc-label">Item description</div><div class="lfc-value" style="white-space:pre-wrap">{{ item.description }}</div></div>
+    <form method="post">{% csrf_token %}
+      <div class="lfc-field"><label for="claimant">Claimant's full name <span aria-hidden="true">*</span></label><input class="lfc-control" id="claimant" type="text" name="claimant" required maxlength="200" autocomplete="name" placeholder="Enter the name of the person collecting the item"></div>
+      <div class="lfc-actions"><button class="lfc-btn" type="submit">Confirm handover</button><a class="lfc-btn lfc-secondary" href="{% url 'housekeeping_lost_found' %}">Cancel</a></div>
     </form>
-
+  </section>
 </div>
-
 {% endblock %}
