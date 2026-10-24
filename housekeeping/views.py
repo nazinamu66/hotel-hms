@@ -4,6 +4,8 @@ from django.utils import timezone
 from django.db.models import Prefetch, Sum
 from rooms.models import Room
 from django.contrib import messages
+from django.core.paginator import Paginator
+from django.utils.dateparse import parse_date
 from django.db.models import Q
 from .models import (
     CleaningAssignment,
@@ -288,6 +290,7 @@ def dashboard(request):
 from housekeeping.models import CleaningLog
 
 
+
 @role_required(
     "HOUSEKEEPING",
     "MANAGER",
@@ -295,31 +298,101 @@ from housekeeping.models import CleaningLog
     "DIRECTOR",
 )
 def cleaning_history(request):
-
     hotels = get_accessible_hotels(request.user)
 
+    # Start with records belonging only to accessible hotels.
     logs = (
         CleaningLog.objects
+        .filter(room__hotel__in=hotels)
         .select_related(
             "room",
             "room__hotel",
             "cleaned_by",
         )
-        .filter(
-            room__hotel__in=hotels,
-        )
-        .order_by(
-            "-cleaned_at",
-        )[:100]
     )
+
+    # Filter dropdown options are restricted to accessible hotels.
+    available_hotels = hotels.filter(
+        is_active=True,
+    ).order_by("name")
+
+    available_housekeepers = (
+        User.objects
+        .filter(
+            role="HOUSEKEEPING",
+            hotel__in=hotels,
+            is_active=True,
+        )
+        .order_by("username")
+        .distinct()
+    )
+
+    # Read filter values.
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    hotel_id = request.GET.get("hotel", "").strip()
+    housekeeper_id = request.GET.get("housekeeper", "").strip()
+    previous_status = request.GET.get(
+        "previous_status", ""
+    ).strip()
+
+    # Validate dates before filtering.
+    parsed_from = parse_date(date_from) if date_from else None
+    parsed_to = parse_date(date_to) if date_to else None
+
+    if date_from and parsed_from:
+        logs = logs.filter(cleaned_at__date__gte=parsed_from)
+
+    if date_to and parsed_to:
+        logs = logs.filter(cleaned_at__date__lte=parsed_to)
+
+    # Invalid or inaccessible IDs simply produce no matching records.
+    if hotel_id:
+        logs = logs.filter(
+            room__hotel__pk=hotel_id,
+        )
+
+    if housekeeper_id:
+        logs = logs.filter(
+            cleaned_by__pk=housekeeper_id,
+        )
+
+    allowed_statuses = {
+        "VACANT_DIRTY",
+        "OCCUPIED_DIRTY",
+    }
+
+    if previous_status in allowed_statuses:
+        logs = logs.filter(
+            previous_status=previous_status,
+        )
+    elif previous_status:
+        # Ignore unsupported status values rather than accepting
+        # arbitrary query parameters.
+        previous_status = ""
+
+    logs = logs.order_by("-cleaned_at", "-pk")
+
+    # Keep the history manageable as records accumulate.
+    paginator = Paginator(logs, 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
 
     return render(
         request,
         "housekeeping/history.html",
         {
-            "logs": logs,
+            "logs": page_obj.object_list,
+            "page_obj": page_obj,
+            "available_hotels": available_hotels,
+            "available_housekeepers": available_housekeepers,
+            "date_from": date_from,
+            "date_to": date_to,
+            "selected_hotel": hotel_id,
+            "selected_housekeeper": housekeeper_id,
+            "selected_previous_status": previous_status,
         },
     )
+
 
 @role_required(
     "HOUSEKEEPING",

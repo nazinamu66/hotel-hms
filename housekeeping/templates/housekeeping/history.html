@@ -1,56 +1,449 @@
+
 {% extends "base/base.html" %}
 
 {% block title %}Cleaning History{% endblock %}
 
 {% block content %}
+<style>
+    .history-page {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 8px 0 32px;
+        color: #253044;
+    }
 
-<h2>Cleaning History</h2>
+    .history-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 22px;
+    }
 
-<table style="width:100%; border-collapse:collapse;">
+    .history-heading h2 {
+        margin: 0 0 6px;
+        font-size: 27px;
+        font-weight: 750;
+    }
 
-<thead style="background:#eee;">
-<tr>
-<th style="padding:10px;">Date</th>
-<th>Room</th>
-<th>Cleaned By</th>
-<th>Previous Status</th>
-</tr>
-</thead>
+    .history-muted {
+        color: #64748b;
+        font-size: 14px;
+    }
 
-<tbody>
+    .history-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
+    }
 
-{% for log in logs %}
+    .history-card h3 {
+        margin: 0 0 16px;
+        font-size: 17px;
+    }
 
-<tr style="border-bottom:1px solid #ddd;">
+    .history-filters {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(160px, 1fr));
+        gap: 16px;
+    }
 
-<td style="padding:10px;">
-{{ log.cleaned_at|date:"Y-m-d H:i" }}
-</td>
+    .history-field label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 13px;
+        font-weight: 650;
+        color: #475569;
+    }
 
-<td>
-Room {{ log.room.room_number }}
-</td>
+    .history-field input,
+    .history-field select {
+        width: 100%;
+        min-height: 42px;
+        box-sizing: border-box;
+        padding: 9px 11px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #fff;
+        color: #1e293b;
+        font: inherit;
+    }
 
-<td>
-{{ log.cleaned_by }}
-</td>
+    .history-field input:focus,
+    .history-field select:focus {
+        outline: 2px solid #bfdbfe;
+        border-color: #3b82f6;
+    }
 
-<td>
-{{ log.previous_status }}
-</td>
+    .history-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+    }
 
-</tr>
+    .history-btn {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 40px;
+        padding: 9px 15px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 650;
+        cursor: pointer;
+        font-size: 14px;
+    }
 
-{% empty %}
+    .history-btn-primary {
+        background: #1d4ed8;
+        color: #fff;
+    }
 
-<tr>
-<td colspan="4">No cleaning records found.</td>
-</tr>
+    .history-btn-primary:hover {
+        background: #1e40af;
+        color: #fff;
+    }
 
-{% endfor %}
+    .history-btn-secondary {
+        background: #fff;
+        border-color: #cbd5e1;
+        color: #334155;
+    }
 
-</tbody>
+    .history-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+    }
 
-</table>
+    .history-count {
+        font-size: 14px;
+        color: #475569;
+    }
 
+    .history-table-wrap {
+        overflow-x: auto;
+        width: 100%;
+    }
+
+    .history-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        min-width: 720px;
+    }
+
+    .history-table th {
+        padding: 13px 15px;
+        text-align: left;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        white-space: nowrap;
+    }
+
+    .history-table th:first-child {
+        border-radius: 8px 0 0 8px;
+    }
+
+    .history-table th:last-child {
+        border-radius: 0 8px 8px 0;
+    }
+
+    .history-table td {
+        padding: 15px;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 14px;
+        vertical-align: middle;
+    }
+
+    .history-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .history-room {
+        font-weight: 700;
+    }
+
+    .history-hotel {
+        display: block;
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .history-status {
+        display: inline-block;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: #fff7ed;
+        color: #9a3412;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .history-empty {
+        padding: 38px 20px !important;
+        text-align: center;
+        color: #64748b;
+    }
+
+    .history-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+    }
+
+    .history-pagination a {
+        color: #1d4ed8;
+        text-decoration: none;
+        font-weight: 650;
+    }
+
+    .history-pagination a:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 900px) {
+        .history-filters {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 560px) {
+        .history-filters {
+            grid-template-columns: 1fr;
+        }
+
+        .history-card {
+            padding: 15px;
+        }
+
+        .history-heading h2 {
+            font-size: 23px;
+        }
+    }
+</style>
+
+<div class="history-page">
+    <div class="history-heading">
+        <div>
+            <h2>Cleaning History</h2>
+            <div class="history-muted">
+                Review completed room cleanings across your accessible hotels.
+            </div>
+        </div>
+    </div>
+
+    <section class="history-card">
+        <h3>Filter records</h3>
+
+        <form method="get">
+            <div class="history-filters">
+                <div class="history-field">
+                    <label for="date_from">From date</label>
+                    <input
+                        type="date"
+                        id="date_from"
+                        name="date_from"
+                        value="{{ date_from }}"
+                    >
+                </div>
+
+                <div class="history-field">
+                    <label for="date_to">To date</label>
+                    <input
+                        type="date"
+                        id="date_to"
+                        name="date_to"
+                        value="{{ date_to }}"
+                        min="{{ date_from }}"
+                    >
+                </div>
+
+                <div class="history-field">
+                    <label for="hotel">Hotel</label>
+                    <select id="hotel" name="hotel">
+                        <option value="">All accessible hotels</option>
+                        {% for hotel in available_hotels %}
+                            <option
+                                value="{{ hotel.pk }}"
+                                {% if selected_hotel == hotel.pk|stringformat:"s" %}selected{% endif %}
+                            >
+                                {{ hotel.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="history-field">
+                    <label for="housekeeper">Housekeeper</label>
+                    <select id="housekeeper" name="housekeeper">
+                        <option value="">All housekeepers</option>
+                        {% for person in available_housekeepers %}
+                            <option
+                                value="{{ person.pk }}"
+                                {% if selected_housekeeper == person.pk|stringformat:"s" %}selected{% endif %}
+                            >
+                                {{ person.get_full_name|default:person.username }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="history-field">
+                    <label for="previous_status">Previous room status</label>
+                    <select id="previous_status" name="previous_status">
+                        <option value="">All statuses</option>
+                        <option
+                            value="VACANT_DIRTY"
+                            {% if selected_previous_status == "VACANT_DIRTY" %}selected{% endif %}
+                        >
+                            Vacant — needs cleaning
+                        </option>
+                        <option
+                            value="OCCUPIED_DIRTY"
+                            {% if selected_previous_status == "OCCUPIED_DIRTY" %}selected{% endif %}
+                        >
+                            Occupied — needs cleaning
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="history-actions">
+                <button class="history-btn history-btn-primary" type="submit">
+                    Apply filters
+                </button>
+                <a
+                    class="history-btn history-btn-secondary"
+                    href="{% url 'housekeeping_cleaning_history' %}"
+                >
+                    Clear filters
+                </a>
+            </div>
+        </form>
+    </section>
+
+    <section class="history-card">
+        <div class="history-summary">
+            <div>
+                <h3 style="margin-bottom: 5px;">Cleaning records</h3>
+                <div class="history-muted">
+                    Most recent records appear first.
+                </div>
+            </div>
+
+            <div class="history-count">
+                <strong>{{ page_obj.paginator.count }}</strong>
+                matching record{{ page_obj.paginator.count|pluralize }}
+            </div>
+        </div>
+
+        <div class="history-table-wrap">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Date and time</th>
+                        <th>Room / Hotel</th>
+                        <th>Housekeeper</th>
+                        <th>Previous status</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for log in logs %}
+                        <tr>
+                            <td>
+                                <strong>{{ log.cleaned_at|date:"d M Y" }}</strong>
+                                <div class="history-muted">
+                                    {{ log.cleaned_at|date:"H:i" }}
+                                </div>
+                            </td>
+
+                            <td>
+                                <span class="history-room">
+                                    Room {{ log.room.room_number }}
+                                </span>
+                                <span class="history-hotel">
+                                    {{ log.room.hotel.name }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {% if log.cleaned_by %}
+                                    {{ log.cleaned_by.get_full_name|default:log.cleaned_by.username }}
+                                {% else %}
+                                    <span class="history-muted">User unavailable</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <span class="history-status">
+                                    {{ log.get_previous_status_display|default:log.previous_status }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {% if log.notes %}
+                                    {{ log.notes|truncatechars:100 }}
+                                {% else %}
+                                    <span class="history-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="history-empty">
+                                <strong>No cleaning records found.</strong>
+                                <div class="history-muted" style="margin-top: 7px;">
+                                    Try changing your filters or clearing them to view all available records.
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+            <nav class="history-pagination" aria-label="Cleaning history pages">
+                <div class="history-muted">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </div>
+
+                <div style="display:flex; gap:16px;">
+                    {% if page_obj.has_previous %}
+                        <a href="?{% if date_from %}date_from={{ date_from|urlencode }}&amp;{% endif %}{% if date_to %}date_to={{ date_to|urlencode }}&amp;{% endif %}{% if selected_hotel %}hotel={{ selected_hotel|urlencode }}&amp;{% endif %}{% if selected_housekeeper %}housekeeper={{ selected_housekeeper|urlencode }}&amp;{% endif %}{% if selected_previous_status %}previous_status={{ selected_previous_status|urlencode }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">
+                            ← Previous
+                        </a>
+                    {% endif %}
+
+                    {% if page_obj.has_next %}
+                        <a href="?{% if date_from %}date_from={{ date_from|urlencode }}&amp;{% endif %}{% if date_to %}date_to={{ date_to|urlencode }}&amp;{% endif %}{% if selected_hotel %}hotel={{ selected_hotel|urlencode }}&amp;{% endif %}{% if selected_housekeeper %}housekeeper={{ selected_housekeeper|urlencode }}&amp;{% endif %}{% if selected_previous_status %}previous_status={{ selected_previous_status|urlencode }}&amp;{% endif %}page={{ page_obj.next_page_number }}">
+                            Next →
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+        {% endif %}
+    </section>
+</div>
 {% endblock %}

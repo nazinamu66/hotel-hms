@@ -2,6 +2,7 @@ from django.db import transaction
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
 from accounts.services.access import can_manage_department
+from housekeeping.models import CleaningLog
 from inventory.models import Department
 from housekeeping.workflows.common import (
     get_active_assignment,
@@ -117,12 +118,24 @@ def approve_cleaning(
         room,
     )
 
+    
     validate_assignment(
         assignment,
     )
 
+    # Preserve the room status before approval changes it.
+    previous_status = room.status
+
     approve_room(
         assignment,
+    )
+
+    # Record the cleaning performed by the assigned staff member.
+    # This runs only when the room passes inspection.
+    CleaningLog.objects.create(
+        room=room,
+        cleaned_by=assignment.assigned_to,
+        previous_status=previous_status,
     )
 
     record_inspection(
