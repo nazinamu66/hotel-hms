@@ -181,8 +181,8 @@ Housekeeping Dashboard
 
             {% if request.user.is_department_head or request.user.role == "MANAGER" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
 
-                <a href="{% url 'housekeeping_approve_cleaning' assignment.room.id %}">
-                    Approve
+                <a href="{% url 'housekeeping_inspect_cleaning' assignment.room.id %}">
+                    Inspect Room
                 </a>
 
             {% else %}
