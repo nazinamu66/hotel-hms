@@ -9,6 +9,7 @@ from .views import (
     start_cleaning,
     finish_cleaning,
     approve_cleaning,
+    inspect_cleaning,
     lost_found_claim,
     lost_found_dispose,
     cleaning_material_add,
@@ -74,6 +75,12 @@ urlpatterns = [
         "rooms/<int:room_id>/approve-cleaning/",
         approve_cleaning,
         name="housekeeping_approve_cleaning",
+    ),
+
+    path(
+        "rooms/<int:room_id>/inspect-cleaning/",
+        inspect_cleaning,
+        name="housekeeping_inspect_cleaning",
     ),
 
     # Lost & Found
