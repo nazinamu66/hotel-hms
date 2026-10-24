@@ -82,11 +82,17 @@ def linen_category_setup(request):
             )
         }
 
+    item_rows = [
+        {"item": item, "quantity": defaults.get(item.pk, "")}
+        for item in linen_items
+    ]
+
     return render(request, "linen/category_setup.html", {
         "categories": categories,
         "selected_category": selected_category,
         "linen_items": linen_items,
         "defaults": defaults,
+        "item_rows": item_rows,
     })
 
 
@@ -155,9 +161,18 @@ def linen_room_setup(request, pk):
             linen_item__in=linen_items,
         )
     }
+    item_rows = [
+        {
+            "item": item,
+            "state_quantity": states.get(item.pk, ""),
+            "default_quantity": category_defaults.get(item.pk, ""),
+        }
+        for item in linen_items
+    ]
     return render(request, "linen/room_setup.html", {
         "room": room,
         "linen_items": linen_items,
         "states": states,
         "category_defaults": category_defaults,
+        "item_rows": item_rows,
     })
