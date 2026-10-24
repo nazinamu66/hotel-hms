@@ -1,20 +1,50 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-Housekeeping Dashboard
-{% endblock %}
+{% block title %}Housekeeping Head Dashboard{% endblock %}
 
-{% block header %}
-<h2>Housekeeping Dashboard</h2>
-{% endblock %}
+{% block header %}{% endblock %}
 
 {% block content %}
+<style>
+.hk-head-dashboard{max-width:1500px;margin:0 auto;padding-bottom:32px;color:#1e293b}
+.hk-head-dashboard .hk-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin:4px 0 26px}
+.hk-head-dashboard .hk-eyebrow{font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#64748b;margin-bottom:7px}
+.hk-head-dashboard .hk-title{font-size:clamp(1.7rem,2.7vw,2.25rem);font-weight:850;letter-spacing:-.045em;margin:0}
+.hk-head-dashboard .hk-subtitle{color:#64748b;margin:8px 0 0;max-width:700px}
+.hk-head-dashboard .hk-actions{display:flex;gap:9px;flex-wrap:wrap}
+.hk-head-dashboard .hk-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 14px;border-radius:10px;background:#2563eb;color:#fff!important;text-decoration:none;font-weight:750}
+.hk-head-dashboard .hk-btn:hover{background:#1d4ed8}
+.hk-head-dashboard .hk-btn.secondary{background:#e2e8f0;color:#334155!important}
+.hk-head-dashboard h3{font-size:1.12rem;font-weight:800;letter-spacing:-.02em;margin:28px 0 13px}
+.hk-head-dashboard .hk-section-note{font-size:.85rem;color:#64748b;margin:-5px 0 14px}
+.hk-head-dashboard .hk-kpis{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px!important;margin:0 0 28px!important}
+.hk-head-dashboard .hk-kpis .card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;padding:17px!important;box-shadow:0 4px 14px rgba(15,23,42,.04)}
+.hk-head-dashboard .hk-kpis strong{font-size:.85rem;color:#64748b}
+.hk-head-dashboard .hk-kpis h2{font-size:1.9rem;line-height:1.2;margin:8px 0 0;font-weight:850;letter-spacing:-.04em}
+.hk-head-dashboard table{width:100%;border-collapse:separate!important;border-spacing:0;overflow:hidden;background:#fff;border:1px solid #e2e8f0;border-radius:13px;margin:0 0 24px!important;font-size:.9rem}
+.hk-head-dashboard thead{background:#f8fafc!important}
+.hk-head-dashboard th{padding:13px 15px!important;text-align:left;color:#64748b;font-size:.73rem;text-transform:uppercase;letter-spacing:.055em;white-space:nowrap}
+.hk-head-dashboard td{padding:13px 15px!important;border-top:1px solid #f1f5f9;vertical-align:middle}
+.hk-head-dashboard tbody tr:hover td{background:#fafcff}
+.hk-head-dashboard p{color:#64748b;line-height:1.55}
+.hk-head-dashboard a:not(.hk-btn){font-weight:650}
+.hk-head-dashboard .hk-quick-links{display:flex;flex-wrap:wrap;gap:10px}
+.hk-head-dashboard .hk-quick-links a{display:inline-flex;padding:9px 12px;border:1px solid #e2e8f0;border-radius:9px;text-decoration:none;background:#fff}
+.hk-head-dashboard .hk-quick-links a:hover{background:#f8fafc;border-color:#cbd5e1}
+@media(max-width:700px){.hk-head-dashboard table{display:block;overflow-x:auto}.hk-head-dashboard .hk-hero{margin-bottom:20px}}
+</style>
+<div class="hk-head-dashboard">
+<div class="hk-hero">
+  <div><div class="hk-eyebrow">Housekeeping · Operations</div><h1 class="hk-title">Housekeeping Head Dashboard</h1><p class="hk-subtitle">Manage room readiness, staff assignments, inspections, supplies and daily service activity for your hotel.</p></div>
+  <div class="hk-actions"><a class="hk-btn secondary" href="{% url 'housekeeping_cleaning_history' %}">View cleaning history</a><a class="hk-btn secondary" href="{% url 'maintenance_create_ticket_room' %}">Report room issue</a></div>
+</div>
 
 <!-- ===================================================== -->
 <!-- SUMMARY -->
 <!-- ===================================================== -->
 
 <h3>Today's Overview</h3>
+<p class="hk-section-note">A live snapshot of housekeeping workload and operational exceptions.</p>
 
 <div style="
     display:grid;
@@ -66,6 +96,7 @@ Housekeeping Dashboard
 <!-- ===================================================== -->
 
 <h3>Cleaning Queue</h3>
+<p class="hk-section-note">Monitor active assignments, rework notes and inspections that need a Head’s attention.</p>
 
 {% if active_assignments %}
 
@@ -229,6 +260,7 @@ Housekeeping Dashboard
 <!-- ===================================================== -->
 
 <h3>Rooms Requiring Cleaning</h3>
+<p class="hk-section-note">Assign dirty rooms to available housekeeping staff.</p>
 
 {% if dirty_rooms %}
 
@@ -405,6 +437,7 @@ Housekeeping Dashboard
 <!-- ===================================================== -->
 
 <h3>Housekeeping Stock Alerts</h3>
+<p class="hk-section-note">Items at or below their configured reorder levels.</p>
 
 {% if low_stock_items %}
 
@@ -490,6 +523,7 @@ Housekeeping Dashboard
 <!-- ===================================================== -->
 
 <h3>Today's Cleaning Material Usage</h3>
+<p class="hk-section-note">Consumables recorded against cleaning assignments today.</p>
 
 {% if materials_used_today %}
 
@@ -589,9 +623,8 @@ Housekeeping Dashboard
 
 <hr>
 
-<h3>Housekeeping</h3>
-
-<p>
+<h3>Quick Actions</h3>
+<div class="hk-quick-links">
 
     <a href="{% url 'housekeeping_cleaning_history' %}">
         Cleaning History
@@ -620,6 +653,7 @@ Housekeeping Dashboard
         Lost & Found
     </a>
 
-</p>
+</div>
+</div>
 
 {% endblock %}
