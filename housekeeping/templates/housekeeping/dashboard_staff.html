@@ -1,0 +1,101 @@
+{% extends "base/base.html" %}
+
+{% block title %}My Housekeeping Tasks{% endblock %}
+
+{% block header %}
+<h2>My Housekeeping Dashboard</h2>
+{% endblock %}
+
+{% block content %}
+<style>
+    .hk-staff { max-width: 1200px; margin: 0 auto; color: #1e293b; }
+    .hk-staff-intro { color: #64748b; margin: 0 0 22px; }
+    .hk-staff-cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 14px; margin-bottom: 24px; }
+    .hk-staff-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; box-shadow: 0 3px 12px rgba(15,23,42,.04); }
+    .hk-staff-card span { color: #64748b; font-size: 13px; font-weight: 600; }
+    .hk-staff-card strong { display: block; font-size: 30px; margin-top: 8px; }
+    .hk-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 22px; }
+    .hk-panel h3 { margin: 0 0 15px; }
+    .hk-table-wrap { overflow-x: auto; }
+    .hk-table { width: 100%; border-collapse: collapse; min-width: 650px; }
+    .hk-table th { background: #f1f5f9; color: #475569; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; padding: 12px; }
+    .hk-table td { padding: 14px 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; vertical-align: top; }
+    .hk-pill { display: inline-block; border-radius: 999px; padding: 5px 9px; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; }
+    .hk-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .hk-btn { display: inline-block; padding: 8px 11px; border-radius: 8px; background: #1d4ed8; color: #fff; text-decoration: none; font-weight: 650; font-size: 13px; }
+    .hk-btn-secondary { background: #f1f5f9; color: #334155; }
+    .hk-muted { color: #64748b; }
+    .hk-empty { padding: 28px !important; text-align: center; color: #64748b; }
+</style>
+
+<div class="hk-staff">
+    <p class="hk-staff-intro">Your assigned rooms and the next actions you need to complete.</p>
+
+    <div class="hk-staff-cards">
+        <div class="hk-staff-card"><span>Assigned to me</span><strong>{{ assigned_count }}</strong></div>
+        <div class="hk-staff-card"><span>In progress</span><strong>{{ in_progress_count }}</strong></div>
+        <div class="hk-staff-card"><span>Awaiting inspection</span><strong>{{ inspection_count }}</strong></div>
+    </div>
+
+    <section class="hk-panel">
+        <h3>My cleaning tasks</h3>
+        <div class="hk-table-wrap">
+            <table class="hk-table">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Hotel</th>
+                        <th>Task status</th>
+                        <th>Notes / corrections</th>
+                        <th>My actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in active_assignments %}
+                    <tr>
+                        <td><strong>Room {{ assignment.room.room_number }}</strong></td>
+                        <td>{{ assignment.room.hotel.name }}</td>
+                        <td><span class="hk-pill">{{ assignment.get_status_display }}</span></td>
+                        <td>
+                            {% if assignment.notes %}
+                                {{ assignment.notes|linebreaksbr }}
+                            {% else %}
+                                <span class="hk-muted">No correction notes</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="hk-actions">
+                                {% if assignment.status == "ASSIGNED" and assignment.assigned_to_id == request.user.id %}
+                                    <a class="hk-btn" href="{% url 'housekeeping_start_cleaning' assignment.room.id %}">Start cleaning</a>
+                                {% elif assignment.status == "IN_PROGRESS" and assignment.assigned_to_id == request.user.id %}
+                                    <a class="hk-btn" href="{% url 'housekeeping_cleaning_materials' assignment.id %}">Materials</a>
+                                    <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_cleaning_linen' assignment.id %}">Linen checklist</a>
+                                    <a class="hk-btn" href="{% url 'housekeeping_finish_cleaning' assignment.room.id %}">Finish cleaning</a>
+                                {% elif assignment.status == "INSPECTION" %}
+                                    <span class="hk-muted">Submitted for inspection</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="hk-empty">You have no active cleaning assignments. New assignments will appear here.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="hk-panel">
+        <h3>Useful links</h3>
+        <div class="hk-actions">
+            <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_cleaning_history' %}">My cleaning history</a>
+            <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_request_stock' %}">Request stock</a>
+            <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_stock_requests' %}">My stock requests</a>
+            <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_request_new_linen' %}">Request linen</a>
+            <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_request_laundry' %}">Request from Laundry</a>
+            <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_linen_requests' %}">My linen requests</a>
+            <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_send_linen_to_laundry' %}">Return linen to Laundry</a>
+        </div>
+    </section>
+</div>
+{% endblock %}
