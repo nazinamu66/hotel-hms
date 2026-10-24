@@ -1,63 +1,18 @@
 {% extends "base/base.html" %}
-
-{% block title %}Record Lost Item{% endblock %}
-
+{% block title %}Record Found Item · Housekeeping{% endblock %}
 {% block content %}
-
-<h2>Record Lost & Found Item</h2>
-
-<form method="post">
-
-{% csrf_token %}
-
-<label>Hotel</label>
-<br>
-
-<select name="hotel" required>
-
-    <option value="">-- Select Hotel --</option>
-
-    {% for hotel in hotels %}
-        <option value="{{ hotel.id }}">
-            {{ hotel.name }}
-        </option>
-    {% endfor %}
-
-</select>
-
-<br><br>
-
-<label>Room</label>
-<br>
-<select name="room">
-<option value="">Unknown / Public Area</option>
-
-{% for room in rooms %}
-<option value="{{ room.id }}">
-Room {{ room.room_number }}
-</option>
-{% endfor %}
-
-</select>
-
-<br><br>
-
-<label>Description</label>
-<br>
-<textarea name="description" required></textarea>
-
-<br><br>
-
-<button type="submit">
-Save
-</button>
-
-<a href="{% url 'housekeeping_lost_found' %}">
-<button type="button">
-Cancel
-</button>
-</a>
-
-</form>
-
+<style>
+.lfc-page{max-width:900px;margin:0 auto;padding-bottom:32px;color:#1e293b}.lfc-kicker{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#64748b;margin:6px 0 7px}.lfc-title{font-size:clamp(1.6rem,2.5vw,2.1rem);font-weight:850;letter-spacing:-.04em;margin:0}.lfc-sub{color:#64748b;margin:8px 0 22px}.lfc-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:22px;box-shadow:0 4px 14px rgba(15,23,42,.04)}.lfc-field{margin-bottom:18px}.lfc-label{display:block;font-weight:750;margin-bottom:7px}.lfc-help{font-size:.82rem;color:#64748b;margin-top:6px}.lfc-control{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:11px 12px;background:#fff;color:#0f172a;font:inherit}.lfc-control:focus{outline:3px solid #dbeafe;border-color:#60a5fa}.lfc-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.lfc-btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:9px;padding:11px 15px;background:#2563eb;color:#fff!important;text-decoration:none;font-weight:750;cursor:pointer}.lfc-secondary{background:#e2e8f0;color:#334155!important}
+</style>
+<div class="lfc-page">
+  <div class="lfc-kicker">Housekeeping · Accountability</div><h1 class="lfc-title">Record a found item</h1><p class="lfc-sub">Capture enough information to identify the item and where it was found. The record will be linked to your account and the selected hotel.</p>
+  <section class="lfc-card">
+    <form method="post">{% csrf_token %}
+      <div class="lfc-field"><label class="lfc-label" for="lfc-hotel">Hotel <span aria-hidden="true">*</span></label><select class="lfc-control" id="lfc-hotel" name="hotel" required><option value="">Select hotel</option>{% for hotel in hotels %}<option value="{{ hotel.id }}">{{ hotel.name }}</option>{% endfor %}</select><div class="lfc-help">Only hotels available to your account are listed.</div></div>
+      <div class="lfc-field"><label class="lfc-label" for="lfc-room">Where was it found?</label><select class="lfc-control" id="lfc-room" name="room"><option value="">Unknown room / lobby / public area</option>{% for room in rooms %}<option value="{{ room.id }}">Room {{ room.room_number }} — {{ room.hotel.name }}</option>{% endfor %}</select><div class="lfc-help">Choose a room if known; otherwise leave this as unknown or public area.</div></div>
+      <div class="lfc-field"><label class="lfc-label" for="lfc-description">Item description <span aria-hidden="true">*</span></label><textarea class="lfc-control" id="lfc-description" name="description" rows="5" maxlength="5000" required placeholder="Describe the item, colour, brand, identifying marks, and exact location where it was found."></textarea><div class="lfc-help">Avoid including sensitive personal details unless needed to identify or return the property.</div></div>
+      <div class="lfc-actions"><button class="lfc-btn" type="submit">Save found item</button><a class="lfc-btn lfc-secondary" href="{% url 'housekeeping_lost_found' %}">Cancel</a></div>
+    </form>
+  </section>
+</div>
 {% endblock %}
