@@ -2242,25 +2242,41 @@ def housekeeping_linen_movements(request):
     if not hotels.exists():
         raise PermissionDenied
 
-    movements = (
-        LinenTransaction.objects
-        .filter(
-            linen_item__product__hotel__in=hotels,
-        )
-        .select_related(
-            "linen_item",
-            "linen_item__product",
-            "performed_by",
-        )
-    )
+    from django.db.models import Q
+    from linen.models import LinenCustody, LinenIssue
 
-    # Regular Housekeeping staff can see only their own linen
-    # movement records. Department heads retain hotel-level history.
-    if (
+    is_regular_staff = (
         request.user.role == "HOUSEKEEPING"
         and not is_department_head(request.user)
-    ):
-        movements = movements.filter(performed_by=request.user)
+    )
+
+    custodies = (
+        LinenCustody.objects
+        .filter(
+            user=request.user if is_regular_staff else request.user,
+            linen_item__product__hotel__in=hotels,
+            linen_item__is_active=True,
+        )
+        .select_related("linen_item", "linen_item__product")
+        .order_by("linen_item__product__name")
+    )
+
+    movements = (
+        LinenTransaction.objects
+        .filter(linen_item__product__hotel__in=hotels)
+        .select_related("linen_item", "linen_item__product", "performed_by")
+    )
+
+    if is_regular_staff:
+        # Include movements they performed themselves and movements
+        # generated when a Head issued linen to them.
+        issued_references = LinenIssue.objects.filter(
+            issued_to=request.user
+        ).values_list("reference", flat=True)
+        movements = movements.filter(
+            Q(performed_by=request.user)
+            | Q(reference__in=issued_references)
+        )
 
     movements = movements.order_by("-created_at", "-id")
 
@@ -2269,6 +2285,8 @@ def housekeeping_linen_movements(request):
         "housekeeping/linen_movements.html",
         {
             "movements": movements,
+            "custodies": custodies,
+            "is_regular_staff": is_regular_staff,
         },
     )
 
