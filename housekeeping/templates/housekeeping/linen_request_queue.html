@@ -3,59 +3,114 @@
 {% block title %}Housekeeping Linen Requests{% endblock %}
 
 {% block content %}
-<h2>Housekeeping Linen Requests</h2>
-<p style="color:#64748b;">Review staff requests and issue clean linen from the Housekeeping Head's personal custody.</p>
+<style>
+    .linen-page { max-width: 1440px; margin: 0 auto; padding: 8px 0 28px; color: #1e293b; }
+    .linen-hero { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; flex-wrap:wrap; margin-bottom:22px; }
+    .linen-eyebrow { color:#64748b; font-size:.78rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; margin-bottom:7px; }
+    .linen-title { margin:0; font-size:clamp(1.5rem,2.5vw,2rem); font-weight:750; letter-spacing:-.03em; }
+    .linen-subtitle { color:#64748b; margin:8px 0 0; }
+    .linen-stat { border:1px solid #e2e8f0; border-radius:14px; background:#fff; padding:14px 18px; min-width:140px; box-shadow:0 2px 8px rgba(15,23,42,.04); }
+    .linen-stat span { display:block; color:#64748b; font-size:.82rem; }
+    .linen-stat strong { display:block; font-size:1.45rem; margin-top:3px; }
+    .linen-panel { border:1px solid #e2e8f0; border-radius:16px; background:#fff; box-shadow:0 4px 18px rgba(15,23,42,.04); overflow:hidden; }
+    .linen-panel-head { padding:17px 20px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .linen-panel-head h3 { margin:0; font-size:1rem; font-weight:700; }
+    .linen-table-wrap { overflow-x:auto; }
+    .linen-table { width:100%; border-collapse:separate; border-spacing:0; min-width:900px; }
+    .linen-table th { text-align:left; background:#f8fafc; color:#64748b; font-size:.76rem; text-transform:uppercase; letter-spacing:.045em; font-weight:700; padding:13px 16px; white-space:nowrap; }
+    .linen-table td { padding:16px; border-top:1px solid #f1f5f9; vertical-align:middle; }
+    .linen-table tbody tr:hover { background:#fafcff; }
+    .linen-person { font-weight:700; }
+    .linen-muted { color:#64748b; font-size:.82rem; margin-top:3px; }
+    .linen-item { font-weight:650; }
+    .linen-pill { display:inline-flex; border-radius:999px; padding:4px 9px; font-size:.78rem; font-weight:700; background:#eff6ff; color:#1d4ed8; }
+    .linen-number { font-variant-numeric:tabular-nums; font-weight:650; }
+    .linen-remaining { color:#b45309; }
+    .linen-form { min-width:220px; display:grid; grid-template-columns:1fr auto; gap:8px; align-items:end; }
+    .linen-form label { grid-column:1 / -1; font-size:.8rem; color:#475569; font-weight:650; }
+    .linen-form input { width:100%; min-width:0; padding:9px 10px; border:1px solid #cbd5e1; border-radius:9px; background:#fff; color:#0f172a; }
+    .linen-form input:focus { outline:3px solid #dbeafe; border-color:#60a5fa; }
+    .linen-form .linen-note { grid-column:1 / -1; }
+    .linen-btn { border:0; border-radius:9px; padding:10px 13px; font-weight:700; color:#fff; background:#2563eb; cursor:pointer; white-space:nowrap; }
+    .linen-btn:hover { background:#1d4ed8; }
+    .linen-empty { padding:42px 20px; text-align:center; color:#64748b; }
+    @media (max-width: 640px) { .linen-stat { flex:1; } .linen-panel-head { padding:14px; } }
+</style>
 
-<div style="overflow-x:auto;">
-<table class="table">
-<thead>
-<tr>
-    <th>Requested by</th>
-    <th>Linen</th>
-    <th>Requested</th>
-    <th>Issued</th>
-    <th>Remaining</th>
-    <th>Request date</th>
-    <th>Note</th>
-    <th>Issue linen</th>
-</tr>
-</thead>
-<tbody>
-{% for req in linen_requests %}
-<tr>
-    <td>{{ req.requested_by.get_username }}</td>
-    <td>{{ req.linen_item.product.name }}</td>
-    <td>{{ req.quantity }}</td>
-    <td>{{ req.fulfilled_quantity }}</td>
-    <td>{{ req.remaining_quantity }}</td>
-    <td>{{ req.created_at|date:"d M Y H:i" }}</td>
-    <td>{{ req.note|default:"—" }}</td>
-    <td>
-        {% if req.status == "PENDING" or req.status == "PARTIAL" or req.status == "APPROVED" %}
-        <form method="post" action="{% url 'housekeeping_fulfill_linen_request' req.id %}" style="min-width:210px;">
-            {% csrf_token %}
-            {% if user.role != "HOUSEKEEPING" %}
-            <label>Issue from Head</label>
-            <select name="source_user" required>
-                {% for head in housekeeping_heads %}
-                <option value="{{ head.id }}">{{ head.get_username }}</option>
-                {% endfor %}
-            </select>
-            {% endif %}
-            <label>Quantity to issue</label>
-            <input type="number" name="quantity" min="1" max="{{ req.remaining_quantity }}" required style="width:90px;">
-            <input type="text" name="note" placeholder="Optional note">
-            <button type="submit" class="btn btn-primary">Issue Linen</button>
-        </form>
-        {% else %}
-        {{ req.get_status_display }}
-        {% endif %}
-    </td>
-</tr>
-{% empty %}
-<tr><td colspan="8">There are no Housekeeping linen requests.</td></tr>
-{% endfor %}
-</tbody>
-</table>
+<div class="linen-page">
+    <div class="linen-hero">
+        <div>
+            <div class="linen-eyebrow">Housekeeping · Linen control</div>
+            <h2 class="linen-title">Linen requests</h2>
+            <p class="linen-subtitle">Review staff requests and issue clean linen from Housekeeping department stock.</p>
+        </div>
+        <div class="linen-stat">
+            <span>Open requests</span>
+            <strong>{{ linen_requests|length }}</strong>
+        </div>
+    </div>
+
+    <section class="linen-panel">
+        <div class="linen-panel-head">
+            <h3>Staff requests awaiting fulfilment</h3>
+            <span class="linen-muted">Issue all or part of the remaining quantity</span>
+        </div>
+        <div class="linen-table-wrap">
+            <table class="linen-table">
+                <thead>
+                    <tr>
+                        <th>Requested by</th>
+                        <th>Linen item</th>
+                        <th>Requested</th>
+                        <th>Issued</th>
+                        <th>Remaining</th>
+                        <th>Request details</th>
+                        <th>Issue linen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in linen_requests %}
+                    <tr>
+                        <td>
+                            <div class="linen-person">{{ req.requested_by.get_username }}</div>
+                            <div class="linen-muted">{{ req.created_at|date:"d M Y · H:i" }}</div>
+                        </td>
+                        <td><div class="linen-item">{{ req.linen_item.product.name }}</div></td>
+                        <td><span class="linen-pill">{{ req.quantity }}</span></td>
+                        <td class="linen-number">{{ req.fulfilled_quantity }}</td>
+                        <td class="linen-number {% if req.remaining_quantity > 0 %}linen-remaining{% endif %}">{{ req.remaining_quantity }}</td>
+                        <td>
+                            <div>{{ req.note|default:"No note provided" }}</div>
+                            <div class="linen-muted">Status: {{ req.get_status_display }}</div>
+                        </td>
+                        <td>
+                            {% if req.status == "PENDING" or req.status == "PARTIAL" or req.status == "APPROVED" %}
+                            <form method="post" action="{% url 'housekeeping_fulfill_linen_request' req.id %}" class="linen-form">
+                                {% csrf_token %}
+                                {% if user.role != "HOUSEKEEPING" %}
+                                <label for="source-{{ req.id }}">Housekeeping department stock</label>
+                                <select name="source_user" id="source-{{ req.id }}" required>
+                                    {% for head in housekeeping_heads %}
+                                    <option value="{{ head.id }}">{{ head.get_username }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% endif %}
+                                <label for="quantity-{{ req.id }}">Quantity to issue (max {{ req.remaining_quantity }})</label>
+                                <input id="quantity-{{ req.id }}" type="number" name="quantity" min="1" max="{{ req.remaining_quantity }}" required>
+                                <input class="linen-note" type="text" name="note" placeholder="Optional issue note">
+                                <button type="submit" class="linen-btn">Issue linen</button>
+                            </form>
+                            {% else %}
+                            <span class="linen-pill">{{ req.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="linen-empty">No Housekeeping linen requests yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
 </div>
 {% endblock %}
