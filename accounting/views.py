@@ -1221,6 +1221,29 @@ def supplier_payments(request):
             if total <= 0:
                 raise ValueError("This obligation has no payable value.")
             with transaction.atomic():
+                # Direct kitchen purchases currently do not create an AP
+                # liability at approval. Establish it exactly once before
+                # recording the first payment so the payment can clear AP.
+                if source_type == "DIRECT":
+                    obligation_reference = f"DP-{source.pk}-OBL"
+                    obligation_journal = JournalEntry.objects.filter(
+                        hotel=hotel, reference=obligation_reference, entry_type="PURCHASE"
+                    ).first()
+                    if not obligation_journal:
+                        inventory_account = get_system_account(hotel, "inventory_asset")
+                        payable_account = get_system_account(hotel, "accounts_payable")
+                        obligation_journal = record_transaction(
+                            debit_account=inventory_account,
+                            credit_account=payable_account,
+                            amount=total,
+                            description=f"Direct purchase obligation #{source.pk}",
+                            hotel=hotel, created_by=request.user,
+                            entry_type="PURCHASE", reference=obligation_reference,
+                        )
+                        SupplierLedger.objects.create(
+                            supplier=supplier, journal_entry=obligation_journal,
+                            amount=total, entry_type="credit",
+                        )
                 payment = SupplierPayment.objects.create(
                     hotel=hotel, supplier=supplier, source_type=source_type,
                     source_id=source.pk, amount=amount, payment_account=payment_account,
