@@ -1454,12 +1454,13 @@ def po_detail(request, pk):
     )
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
+@require_POST
+@transaction.atomic
 def po_submit(request, pk):
-
     hotels = get_accessible_hotels(request.user)
 
     po = get_object_or_404(
-        PurchaseOrder,
+        PurchaseOrder.objects.select_for_update(),
         pk=pk,
         status="DRAFT",
         department__hotel__in=hotels,
@@ -1621,7 +1622,7 @@ def po_finalize(request, pk):
     hotels = get_accessible_hotels(request.user)
 
     po = get_object_or_404(
-        PurchaseOrder,
+        PurchaseOrder.objects.select_for_update(),
         pk=pk,
         status="DRAFT",
         department__hotel__in=hotels,
