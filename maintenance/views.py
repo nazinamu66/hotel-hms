@@ -106,21 +106,26 @@ def create_ticket_location(request, location_id):
     configured = set(location.responsible_departments.values_list("department_type", flat=True))
     if not privileged and (location.location_type not in allowed or (configured and department_type not in configured)):
         raise PermissionDenied
+    assets = MaintenanceAsset.objects.filter(hotel=location.hotel, location=location, is_active=True).order_by("name")
     if request.method == "POST":
         description = request.POST.get("description", "").strip()
         priority = request.POST.get("priority", "MEDIUM").strip().upper()
+        asset_id = request.POST.get("asset", "").strip()
         valid_priorities = {choice[0] for choice in MaintenanceTicket.PRIORITY_CHOICES}
+        asset = None
+        if asset_id:
+            asset = get_object_or_404(assets, pk=asset_id)
         if not description:
             messages.error(request, "Please describe the maintenance issue.")
         elif priority not in valid_priorities:
             messages.error(request, "Please select a valid priority.")
         else:
-            ticket = MaintenanceTicket.objects.create(location=location, description=description, priority=priority, reported_by=request.user)
+            ticket = MaintenanceTicket.objects.create(location=location, asset=asset, description=description, priority=priority, reported_by=request.user)
             messages.success(request, f"Issue at {location.name} reported successfully (ticket #{ticket.pk}).")
             if role == "MAINTENANCE":
                 return redirect("maintenance_dashboard")
             return redirect("maintenance_create_ticket_room")
-    return render(request, "maintenance/create_ticket_location.html", {"location": location})
+    return render(request, "maintenance/create_ticket_location.html", {"location": location, "assets": assets})
 
 
 @role_required(
