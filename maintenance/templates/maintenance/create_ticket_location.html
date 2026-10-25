@@ -1,0 +1,37 @@
+{% extends "base/base.html" %}
+{% block title %}Report an Issue · {{ location.name }}{% endblock %}
+{% block content %}
+<style>
+.loc-page{max-width:880px;margin:0 auto;padding:10px 0 32px;color:#1e293b}
+.loc-kicker{font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;font-weight:750;color:#64748b}
+.loc-title{font-size:clamp(1.5rem,2.4vw,2rem);font-weight:800;letter-spacing:-.035em;margin:7px 0}
+.loc-sub{color:#64748b;margin:0 0 22px}
+.loc-card{background:white;border:1px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 4px 16px rgba(15,23,42,.04)}
+.loc-summary{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:15px;margin-bottom:20px}
+.loc-label{display:block;font-weight:700;margin:17px 0 7px}
+.loc-control{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:9px;background:white;color:#0f172a;font:inherit}
+.loc-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.loc-btn{border:0;border-radius:9px;padding:11px 16px;background:#2563eb;color:white!important;font-weight:750;cursor:pointer;text-decoration:none}
+.loc-secondary{background:#e2e8f0;color:#334155!important}
+</style>
+<div class="loc-page">
+  <div class="loc-kicker">Maintenance · Facilities</div>
+  <h2 class="loc-title">Report an issue</h2>
+  <p class="loc-sub">Tell the Maintenance team what needs attention in this area.</p>
+  <div class="loc-card">
+    <div class="loc-summary"><strong>{{ location.name }}</strong><br>{{ location.hotel.name }} · {{ location.get_location_type_display }}{% if location.description %}<p>{{ location.description }}</p>{% endif %}</div>
+    <form method="post">
+      {% csrf_token %}
+      <label class="loc-label" for="maintenance-description">Describe the issue *</label>
+      <textarea class="loc-control" id="maintenance-description" name="description" rows="6" required maxlength="5000" placeholder="Describe the fault, exact position and any safety concern."></textarea>
+      <label class="loc-label" for="maintenance-priority">Priority</label>
+      <select class="loc-control" id="maintenance-priority" name="priority">
+        <option value="LOW">Low — minor issue</option>
+        <option value="MEDIUM" selected>Medium — repair needed soon</option>
+        <option value="HIGH">High — urgent or safety-related</option>
+      </select>
+      <div class="loc-actions"><button class="loc-btn" type="submit">Submit maintenance report</button><a class="loc-btn loc-secondary" href="{% url 'maintenance_create_ticket_room' %}">Cancel</a></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
