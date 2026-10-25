@@ -1,144 +1,36 @@
 {% extends "base/base.html" %}
-
-{% block title %}
-Maintenance Assets
-{% endblock %}
-
+{% block title %}Equipment & Maintenance Assets{% endblock %}
 {% block content %}
-
-<div style="
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:20px;
-">
-
-    <h2 style="margin:0;">
-        Maintenance Assets
-    </h2>
-
-    {% if user.role in "MANAGER ADMIN DIRECTOR" %}
-        <a href="{% url 'maintenance_asset_create' %}">
-            <button type="button">
-                + Add Asset
-            </button>
-        </a>
-    {% endif %}
-
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:15px;">
+    <h2 style="margin:0;">Equipment & Maintenance Assets</h2>
+    {% if user.role in "MANAGER ADMIN DIRECTOR" %}<a href="{% url 'maintenance_asset_create' %}"><button type="button">+ Add Asset</button></a>{% endif %}
 </div>
-
+<p>Each physical unit has its own asset tag. Use Edit to enter its serial number, warranty and assigned location after receipt.</p>
 <hr>
-
-<table style="
-    width:100%;
-    border-collapse:collapse;
-">
-
-<thead style="background:#eee;">
-
-<tr>
-
-    <th style="padding:10px;">Asset Tag</th>
-    <th>Asset</th>
-    <th>Product</th>
-    <th>Type</th>
-    <th>Location</th>
-    <th>Manufacturer</th>
-    <th>Model</th>
-    <th>Serial Number</th>
-    <th>Condition</th>
-    <th>Purchase Cost</th>
-    <th>Warranty Expiry</th>
-    <th>Condition</th>
-    <th>Purchase Cost</th>
-    <th>Warranty Expiry</th>
-    <th>Manage</th>
-    <th>Status</th>
-
-</tr>
-
-</thead>
-
+<div style="width:100%;overflow-x:auto;">
+<table style="width:100%;border-collapse:collapse;min-width:1050px;">
+<thead style="background:#eee;"><tr>
+    <th style="padding:10px;">Asset Tag</th><th>Asset</th><th>Product</th><th>Type</th><th>Location</th>
+    <th>Manufacturer</th><th>Model</th><th>Serial Number</th><th>Condition</th><th>Purchase Cost</th><th>Warranty Expiry</th><th>Status</th><th>Manage</th>
+</tr></thead>
 <tbody>
-
 {% for asset in assets %}
-
 <tr style="border-bottom:1px solid #ddd;">
-
     <td style="padding:10px;">{{ asset.asset_tag|default:"—" }}</td>
     <td><strong>{{ asset.name }}</strong></td>
     <td>{{ asset.product.name|default:"—" }}</td>
-
-    <td>
-        {{ asset.asset_type|default:"—" }}
-    </td>
-
-    <td>
-
-        {% if asset.room %}
-            Room {{ asset.room.room_number }}
-        {% elif asset.location %}
-            {{ asset.location.name }}
-        {% else %}
-            Hotel / Common Area
-        {% endif %}
-
-    </td>
-
-    <td>
-        {{ asset.manufacturer|default:"—" }}
-    </td>
-
-    <td>
-        {{ asset.model_number|default:"—" }}
-    </td>
-
-    <td>
-        {{ asset.serial_number|default:"—" }}
-    </td>
-
-    <td>{{ asset.get_condition_display }}</td>
-    <td>{{ asset.purchase_cost|floatformat:2 }}</td>
-    <td>{{ asset.warranty_expiry|default:"—" }}</td>
-
-    <td>
-
-        {% if asset.is_active %>
-            Active
-        {% else %}
-            Inactive
-        {% endif %}
-
-    </td>
-
+    <td>{{ asset.asset_type|default:"—" }}</td>
+    <td>{% if asset.room %}Room {{ asset.room.room_number }}{% elif asset.location %}{{ asset.location.name }}{% else %}Unassigned{% endif %}</td>
+    <td>{{ asset.manufacturer|default:"—" }}</td><td>{{ asset.model_number|default:"—" }}</td><td>{{ asset.serial_number|default:"—" }}</td>
+    <td>{{ asset.get_condition_display }}</td><td>{{ asset.purchase_cost|floatformat:2 }}</td><td>{{ asset.warranty_expiry|default:"—" }}</td>
+    <td>{% if asset.is_active %}Active{% else %}Inactive{% endif %}</td>
+    <td><a href="{% url 'maintenance_asset_edit' asset.id %}">Edit</a></td>
 </tr>
-
 {% empty %}
-
-<tr>
-
-    <td
-        colspan="10"
-        style="
-            padding:20px;
-            text-align:center;
-        "
-    >
-        No maintenance assets have been registered.
-    </td>
-
-</tr>
-
+<tr><td colspan="13" style="padding:20px;text-align:center;">No maintenance assets have been registered.</td></tr>
 {% endfor %}
-
 </tbody>
-
 </table>
-
-<br>
-
-<a href="{% url 'maintenance_dashboard' %}">
-    ← Back to Maintenance Dashboard
-</a>
-
+</div>
+<br><a href="{% url 'maintenance_dashboard' %}">← Back to Maintenance Dashboard</a>
 {% endblock %}
