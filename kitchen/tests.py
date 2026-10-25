@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from inventory.models import Department, Hotel, Organization, Product, Supplier
+from inventory.models import Department, Hotel, Organization, Product, StockTransfer, Supplier
 from kitchen.models import (
     DirectPurchase,
     DirectPurchaseItem,
@@ -184,3 +184,100 @@ class IngredientRequestApprovalTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+    def make_store_request(self, quantities=(("Rice", Decimal("5.000")),)):
+        request_obj = IngredientRestockRequest.objects.create(
+            requested_by=self.requester,
+            note="Store request",
+            status="APPROVED",
+        )
+        for _name, quantity in quantities:
+            IngredientRestockItem.objects.create(
+                request=request_obj,
+                ingredient=self.ingredient,
+                quantity=quantity,
+                source="STORE",
+            )
+        return request_obj
+
+    def make_transfer_record(self, item, quantity):
+        store_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            department_type="STORE",
+            defaults={"code": "STK", "name": "Approval Test Store"},
+        )
+        return StockTransfer.objects.create(
+            product=item.ingredient,
+            from_department=store_department,
+            to_department=self.kitchen_department,
+            quantity=quantity,
+            created_by=self.manager,
+            ingredient_request_item=item,
+        )
+
+    def test_one_fully_issued_line_and_one_unissued_line_is_partial(self):
+        request_obj = self.make_store_request(
+            quantities=(
+                ("Rice", Decimal("2.000")),
+                ("Rice", Decimal("5.000")),
+            )
+        )
+        items = list(request_obj.items.all())
+        self.make_transfer_record(items[0], 2)
+
+        request_obj.update_issue_status()
+        request_obj.refresh_from_db()
+
+        self.assertEqual(request_obj.status, "PARTIALLY_ISSUED")
+        self.assertIsNone(request_obj.received_at)
+
+    def test_store_request_becomes_received_only_when_all_lines_are_fulfilled(self):
+        request_obj = self.make_store_request(
+            quantities=(
+                ("Rice", Decimal("2.000")),
+                ("Rice", Decimal("3.000")),
+            )
+        )
+        for item in request_obj.items.all():
+            self.make_transfer_record(item, int(item.quantity))
+
+        request_obj.update_issue_status()
+        request_obj.refresh_from_db()
+
+        self.assertEqual(request_obj.status, "RECEIVED")
+        self.assertIsNotNone(request_obj.received_at)
+
+    def test_mixed_request_waits_for_direct_purchase_receipt(self):
+        request_obj = self.make_store_request(
+            quantities=(("Rice", Decimal("2.000")),)
+        )
+        IngredientRestockItem.objects.create(
+            request=request_obj,
+            ingredient=self.ingredient,
+            quantity=Decimal("1.000"),
+            source="DIRECT",
+        )
+        store_item = request_obj.items.get(source="STORE")
+        self.make_transfer_record(store_item, 2)
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=request_obj,
+            supplier=self.supplier,
+            requested_by=self.requester,
+            approved_by=self.manager,
+            status="PAID",
+            total_cost=Decimal("12.50"),
+        )
+
+        request_obj.update_issue_status()
+        request_obj.refresh_from_db()
+        self.assertEqual(request_obj.status, "PARTIALLY_ISSUED")
+        self.assertIsNone(request_obj.received_at)
+
+        purchase.status = "RECEIVED"
+        purchase.save(update_fields=["status"])
+        request_obj.update_issue_status()
+        request_obj.refresh_from_db()
+
+        self.assertEqual(request_obj.status, "RECEIVED")
+        self.assertIsNotNone(request_obj.received_at)
+
