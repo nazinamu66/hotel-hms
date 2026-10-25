@@ -26,7 +26,7 @@ Maintenance Work History
 <tr>
 
     <th style="padding:10px;">Work Order</th>
-    <th>Room</th>
+    <th>Location</th>
     <th>Problem</th>
     <th>Technician</th>
     <th>Outcome</th>
@@ -54,7 +54,7 @@ Maintenance Work History
     </td>
 
     <td>
-        Room {{ ticket.room.room_number }}
+        {% if ticket.room_id %}Room {{ ticket.room.room_number }}{% elif ticket.location_id %}{{ ticket.location.name }}{% else %}—{% endif %}
     </td>
 
     <td>
