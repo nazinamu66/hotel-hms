@@ -1286,7 +1286,11 @@ def maintenance_asset_create(request, asset_id=None):
             messages.error(request, "Select a valid equipment condition.")
             return redirect(request.path)
         asset.condition = condition
-        asset.full_clean()
+        try:
+            asset.full_clean()
+        except ValidationError as exc:
+            messages.error(request, " ".join(exc.messages))
+            return redirect(request.path)
         asset.save()
 
         messages.success(request, "Equipment asset saved successfully.")
