@@ -1147,6 +1147,7 @@ def bank_transfer(request):
     )
 
 
+@transaction.atomic
 @role_required("MANAGER", "GENERAL_MANAGER", "ACCOUNTANT", "CHIEF_ACCOUNTANT", "DIRECTOR", "ADMIN")
 def supplier_payments(request):
     """Unified view of approved, outstanding supplier obligations and payments."""
@@ -1175,18 +1176,18 @@ def supplier_payments(request):
 
     def source_details(source_type, source_id):
         if source_type == "PO":
-            source = get_object_or_404(PurchaseOrder.objects.select_related("supplier", "department__hotel"), pk=source_id, department__hotel=hotel)
+            source = get_object_or_404(PurchaseOrder.objects.select_for_update().select_related("supplier", "department__hotel"), pk=source_id, department__hotel=hotel)
             if source.status != "RECEIVED" or not source.supplier_id:
                 raise ValueError("Only received purchase orders with a supplier can be paid.")
             total = sum((item.purchase_quantity * item.unit_cost for item in source.items.all()), Decimal("0.00"))
             return source, source.supplier, total, f"PO #{source.pk} · {source.department.name}"
         if source_type == "DIRECT":
-            source = get_object_or_404(DirectPurchase.objects.select_related("supplier"), pk=source_id, supplier__hotel=hotel)
+            source = get_object_or_404(DirectPurchase.objects.select_for_update().select_related("supplier"), pk=source_id, supplier__hotel=hotel)
             if source.status not in ("APPROVED", "PAID", "RECEIVED"):
                 raise ValueError("Only approved direct purchases can be paid.")
             return source, source.supplier, Decimal(str(source.total_cost)), f"Direct purchase #{source.pk}"
         if source_type == "LABOUR":
-            source = get_object_or_404(MaintenanceLabour.objects.select_related("supplier", "ticket__room__hotel", "ticket__location__hotel"), pk=source_id, labour_type="OUTSOURCED")
+            source = get_object_or_404(MaintenanceLabour.objects.select_for_update().select_related("supplier", "ticket__room__hotel", "ticket__location__hotel"), pk=source_id, labour_type="OUTSOURCED")
             source_hotel = source.ticket.room.hotel if source.ticket.room_id else (source.ticket.location.hotel if source.ticket.location_id else None)
             if not source_hotel or source_hotel.pk != hotel.pk or not source.supplier_id:
                 raise ValueError("This labour charge has no valid supplier obligation for the selected hotel.")
