@@ -229,6 +229,7 @@ class Product(models.Model):
         ("HOUSEKEEPING", "Housekeeping Supply"),
         ("LAUNDRY", "Laundry Supply"),
         ("BOUTIQUE", "Boutique Item"),
+        ("EQUIPMENT", "Equipment"),
         ("SERVICE", "Service"),
     )
 
@@ -399,6 +400,17 @@ class Product(models.Model):
 
             if self.cost_price <= 0:
                 raise ValidationError("Resale items must have cost price.")
+
+        # ----------------------------------
+        # EQUIPMENT RULES
+        # ----------------------------------
+        if self.product_type == "EQUIPMENT":
+            if self.usage_type != "ASSET":
+                raise ValidationError("Equipment products must use usage type ASSET.")
+            if self.unit_multiplier != 1:
+                raise ValidationError("Equipment must use one base unit per purchased unit.")
+            if self.purchase_cost <= 0:
+                raise ValidationError("Equipment must have a purchase cost.")
 
         # ----------------------------------
         # SERVICE RULES
