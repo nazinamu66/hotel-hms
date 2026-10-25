@@ -61,7 +61,7 @@ def create_ticket_room(request):
             locations = locations.filter(Q(responsible_departments__isnull=True) | Q(responsible_departments__department_type=department_type)).distinct()
         else:
             locations = locations.filter(responsible_departments__isnull=True)
-        if role in {"LAUNDRY", "KITCHEN", "RESTAURANT", "GYM", "STORE"}:
+        if role in {"LAUNDRY", "KITCHEN", "RESTAURANT", "GYM", "STORE", "SECURITY"}:
             rooms = rooms.none()
     return render(request, "maintenance/create_ticket_room.html", {"rooms": rooms, "locations": locations.order_by("hotel__name", "name"), "hotels": hotels})
 
