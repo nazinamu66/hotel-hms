@@ -1,110 +1,29 @@
 {% extends "base/base.html" %}
-
-{% block title %}
-Add Maintenance Asset
-{% endblock %}
-
+{% block title %}Add Equipment Asset{% endblock %}
 {% block content %}
-
-<h2>Add Maintenance Asset</h2>
-
-<hr>
-
-<form method="post">
-
-    {% csrf_token %}
-
-    <p>
-        <label>
-            Asset Name
-        </label>
-        <br>
-
-        <input
-            type="text"
-            name="name"
-            required
-            placeholder="e.g. Room 101 Split AC"
-        >
-    </p>
-
-    <p>
-        <label>
-            Asset Type
-        </label>
-        <br>
-
-        <input
-            type="text"
-            name="asset_type"
-            placeholder="e.g. Air Conditioner"
-        >
-    </p>
-
-    <p>
-        <label>Room (optional)</label><br>
-        <select name="room">
-            <option value="">No room selected</option>
-            {% for room in rooms %}
-            <option value="{{ room.id }}">Room {{ room.room_number }}</option>
-            {% endfor %}
-        </select>
-    </p>
-    <p>
-        <label>Non-room location (optional)</label><br>
-        <select name="location">
-            <option value="">No area selected</option>
-            {% for location in locations %}
-            <option value="{{ location.id }}">{{ location.name }} · {{ location.get_location_type_display }}</option>
-            {% endfor %}
-        </select>
-        <small>Choose a room or a non-room location, not both.</small>
-    </p>
-
-    <p>
-        <label>
-            Manufacturer
-        </label>
-        <br>
-
-        <input
-            type="text"
-            name="manufacturer"
-        >
-    </p>
-
-    <p>
-        <label>
-            Model Number
-        </label>
-        <br>
-
-        <input
-            type="text"
-            name="model_number"
-        >
-    </p>
-
-    <p>
-        <label>
-            Serial Number
-        </label>
-        <br>
-
-        <input
-            type="text"
-            name="serial_number"
-        >
-    </p>
-
-    <button type="submit">
-        Create Asset
-    </button>
-
-    <a href="{% url 'maintenance_assets' %}">
-        Cancel
-    </a>
-
-</form>
-
+<div class="container" style="max-width:900px;margin:25px auto;">
+    <h2>Register Equipment Asset</h2>
+    <p>Register one physical unit. Equipment received through a purchase order is registered automatically; use this form for existing equipment or to complete missing details.</p>
+    <form method="post">
+        {% csrf_token %}
+        <p><label>Equipment product (optional)</label><br>
+            <select name="product" style="min-width:300px;">
+                <option value="">Manual / legacy asset</option>
+                {% for product in products %}<option value="{{ product.id }}">{{ product.name }} · {{ product.sku }}</option>{% endfor %}
+            </select>
+        </p>
+        <p><label>Asset name</label><br><input type="text" name="name" required placeholder="e.g. Laundry Washing Machine 01" style="width:100%;max-width:500px;"></p>
+        <p><label>Asset type</label><br><input type="text" name="asset_type" placeholder="e.g. Washing Machine"></p>
+        <p><label>Room (optional)</label><br><select name="room"><option value="">No room selected</option>{% for room in rooms %}<option value="{{ room.id }}">Room {{ room.room_number }}</option>{% endfor %}</select></p>
+        <p><label>Non-room location (optional)</label><br><select name="location"><option value="">No area selected</option>{% for location in locations %}<option value="{{ location.id }}">{{ location.name }} · {{ location.get_location_type_display }}</option>{% endfor %}</select><br><small>Choose a room or a non-room location, not both.</small></p>
+        <p><label>Manufacturer</label><br><input type="text" name="manufacturer"></p>
+        <p><label>Model number</label><br><input type="text" name="model_number"></p>
+        <p><label>Serial number</label><br><input type="text" name="serial_number"></p>
+        <p><label>Purchase date</label><br><input type="date" name="purchase_date"></p>
+        <p><label>Purchase cost</label><br><input type="number" name="purchase_cost" min="0" step="0.01" value="0"></p>
+        <p><label>Warranty expiry</label><br><input type="date" name="warranty_expiry"></p>
+        <button type="submit">Save Asset</button>
+        <a href="{% url 'maintenance_assets' %}">Cancel</a>
+    </form>
+</div>
 {% endblock %}
