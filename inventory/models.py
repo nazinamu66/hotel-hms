@@ -1060,6 +1060,15 @@ class StockTransfer(models.Model):
         if transfer.product.hotel_id != transfer.to_department.hotel_id:
             raise ValidationError("The product must belong to the destination department's hotel.")
 
+        # A transfer record represents one stock movement and must never be
+        # executable twice. The deterministic reference also protects against
+        # duplicate retries after a request timeout.
+        if StockMovement.objects.filter(
+            reference=f"TRANSFER-{transfer.id}",
+            movement_type="TRANSFER",
+        ).exists():
+            raise ValidationError("This stock transfer has already been executed.")
+
         transfer_stock(
             product=transfer.product,
             from_department=transfer.from_department,
