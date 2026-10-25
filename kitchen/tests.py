@@ -28,11 +28,13 @@ class IngredientRequestApprovalTests(TestCase):
             organization=cls.organization,
             name="Other Approval Hotel",
         )
-        cls.kitchen_department = Department.objects.create(
+        cls.kitchen_department, _ = Department.objects.get_or_create(
             hotel=cls.hotel,
-            code="KIT",
-            name="Kitchen",
             department_type="KITCHEN",
+            defaults={
+                "code": "KAT",
+                "name": "Kitchen Approval Tests",
+            },
         )
         cls.requester = User.objects.create_user(
             username="kitchen_head",
@@ -164,12 +166,14 @@ class IngredientRequestApprovalTests(TestCase):
                 username="other_kitchen_head",
                 password="test-password",
                 role="KITCHEN",
-                department=Department.objects.create(
+                department=Department.objects.get_or_create(
                     hotel=self.other_hotel,
-                    code="KIT",
-                    name="Other Kitchen",
                     department_type="KITCHEN",
-                ),
+                    defaults={
+                        "code": "OKT",
+                        "name": "Other Approval Kitchen",
+                    },
+                )[0],
                 is_department_head=True,
             ),
         )
