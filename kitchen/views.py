@@ -5,6 +5,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from django.forms import formset_factory
 from decimal import Decimal
 from accounts.services.access import (
@@ -64,6 +65,7 @@ def kitchen_ingredient_requests(request):
     )
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
+@require_POST
 @transaction.atomic
 def direct_purchase_update(request, pk):
     dp = get_object_or_404(
@@ -93,10 +95,12 @@ def direct_purchase_update(request, pk):
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 def manager_ingredient_requests(request):
+    hotels = get_accessible_hotels(request.user)
     requests = (
         IngredientRestockRequest.objects
+        .filter(requested_by__department__hotel__in=hotels)
         .prefetch_related("items__ingredient")
-        .select_related("requested_by")
+        .select_related("requested_by", "requested_by__department")
         .order_by("-created_at")
     )
 
@@ -132,7 +136,7 @@ def manager_ingredient_requests(request):
     # ----------------------------
     # SUMMARY COUNTS
     # ----------------------------
-    all_requests = IngredientRestockRequest.objects.all()
+    all_requests = IngredientRestockRequest.objects.filter(requested_by__department__hotel__in=hotels)
 
     total_count = all_requests.count()
     pending_count = all_requests.filter(status="PENDING").count()
@@ -241,7 +245,11 @@ def kitchen_ingredient_request_detail(request, pk):
                     messages.error(request, "Supplier is required for direct purchase.")
                     return redirect(request.path)
 
-                supplier = get_object_or_404(Supplier, id=supplier_id)
+                supplier = get_object_or_404(
+                    Supplier, id=supplier_id,
+                    hotel__in=get_accessible_hotels(request.user),
+                    is_active=True,
+                )
 
                 dp = DirectPurchase.objects.create(
                     ingredient_request=req,
@@ -286,11 +294,15 @@ def kitchen_ingredient_request_detail(request, pk):
             "is_manager": is_manager,
             "is_kitchen": is_kitchen,
             "has_direct_items": req.has_direct_items(),
-            "suppliers": Supplier.objects.all(),  # 🔑 THIS WAS MISSING
+            "suppliers": Supplier.objects.filter(
+                hotel__in=get_accessible_hotels(request.user),
+                is_active=True,
+            ).order_by("name"),
         }
     )
 
 @role_required("KITCHEN")
+@require_POST
 def kitchen_confirm_direct_ingredients(request, pk):
     req = get_object_or_404(IngredientRestockRequest, pk=pk)
 
@@ -301,7 +313,8 @@ def kitchen_confirm_direct_ingredients(request, pk):
     return redirect("direct_purchase_receive", pk=req.directpurchase.pk)
 
 
-@role_required("ACCOUNTANT", "DIRECTOR", "ADMIN")
+@role_required("ACCOUNTANT", "CHIEF_ACCOUNTANT", "DIRECTOR", "ADMIN")
+@require_POST
 @transaction.atomic
 def direct_purchase_pay(request, pk):
     messages.info(request, "Supplier payments are now recorded through Accounting → Supplier & Vendor Payments.")
@@ -336,7 +349,9 @@ def direct_purchase_pay(request, pk):
 @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR","ACCOUNTANT")
 def direct_purchase_list(request):
     qs = DirectPurchase.objects.select_related(
-        "supplier", "requested_by"
+        "supplier", "requested_by", "supplier__hotel"
+    ).filter(
+        supplier__hotel__in=get_accessible_hotels(request.user)
     ).order_by("-created_at")
 
     if request.user.role == "KITCHEN":
@@ -345,7 +360,7 @@ def direct_purchase_list(request):
     from django.db.models import Sum, F, DecimalField, ExpressionWrapper
 
     purchases = (
-        DirectPurchase.objects
+        qs
         .select_related("supplier")
         .annotate(
             computed_total=Sum(
@@ -363,10 +378,20 @@ def direct_purchase_list(request):
         {"purchases": qs}
     )
 
+@role_required("KITCHEN", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 def recipe_ingredients_api(request, recipe_id):
-    recipe = get_object_or_404(Recipe, id=recipe_id)
-
-    qty = float(request.GET.get("qty", 1))  # 🔥 NEW
+    hotels = get_accessible_hotels(request.user)
+    recipe = get_object_or_404(
+        Recipe.objects.select_related("product"),
+        id=recipe_id,
+        product__hotel__in=hotels,
+    )
+    try:
+        qty = Decimal(request.GET.get("qty", "1"))
+    except (ArithmeticError, ValueError):
+        return JsonResponse({"error": "Invalid quantity."}, status=400)
+    if not qty.is_finite() or qty <= 0 or qty > Decimal("10000"):
+        return JsonResponse({"error": "Quantity must be positive and within the allowed range."}, status=400)
 
     data = [
         {
@@ -456,11 +481,15 @@ def kitchen_quick_production(request):
 @role_required("KITCHEN")
 def kitchen_dashboard(request):
 
+    hotels = get_accessible_hotels(request.user)
     tickets = (
         KitchenTicket.objects
-        .select_related("order", "room")
+        .select_related("order", "order__department", "room")
         .prefetch_related("items__menu_item")
-        .filter(status__in=["NEW", "PREPARING", "READY"])
+        .filter(
+            order__department__hotel__in=hotels,
+            status__in=["NEW", "PREPARING", "READY"],
+        )
         .order_by("created_at")
     )
 
@@ -675,19 +704,27 @@ def prepared_food_list(request):
 
 
 @role_required("KITCHEN")
+@require_POST
 @transaction.atomic
 def direct_purchase_receive(request, pk):
     dp = get_object_or_404(
-        DirectPurchase,
+        DirectPurchase.objects.select_related(
+            "supplier", "requested_by", "requested_by__department"
+        ),
         pk=pk,
-        status="PAID"
+        status="PAID",
+        supplier__hotel__in=get_accessible_hotels(request.user),
     )
 
     if dp.requested_by != request.user:
         raise PermissionDenied
 
     kitchen = request.user.department
-    if kitchen.department_type != "KITCHEN":
+    if (
+        not kitchen
+        or kitchen.department_type != "KITCHEN"
+        or kitchen.hotel_id != dp.supplier.hotel_id
+    ):
         raise PermissionDenied
 
     for item in dp.items.select_related("product"):
@@ -729,7 +766,8 @@ def direct_purchase_detail(request, pk):
         DirectPurchase.objects
         .select_related("supplier", "ingredient_request")
         .prefetch_related("items__product"),
-        pk=pk
+        pk=pk,
+        supplier__hotel__in=get_accessible_hotels(request.user),
     )
 
     if request.user.role == "KITCHEN" and dp.requested_by != request.user:
@@ -872,9 +910,14 @@ def production_detail(request, pk):
 
 
 @role_required("KITCHEN")
+@require_POST
 def kitchen_ticket_start(request, ticket_id):
 
-    ticket = get_object_or_404(KitchenTicket, id=ticket_id)
+    ticket = get_object_or_404(
+        KitchenTicket.objects.select_related("order__department"),
+        id=ticket_id,
+        order__department__hotel__in=get_accessible_hotels(request.user),
+    )
 
     if ticket.status != "NEW":
         messages.error(request, "Ticket already started.")
@@ -890,9 +933,14 @@ def kitchen_ticket_start(request, ticket_id):
 
 
 @role_required("KITCHEN")
+@require_POST
 def kitchen_ticket_ready(request, ticket_id):
 
-    ticket = get_object_or_404(KitchenTicket, id=ticket_id)
+    ticket = get_object_or_404(
+        KitchenTicket.objects.select_related("order__department"),
+        id=ticket_id,
+        order__department__hotel__in=get_accessible_hotels(request.user),
+    )
 
     ticket.status = "READY"
     ticket.save(update_fields=["status"])
