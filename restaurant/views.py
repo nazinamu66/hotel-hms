@@ -52,9 +52,13 @@ def pos_order_list(request):
         "folio"
     )
 
-    # 🔒 Restrict restaurant staff to their department
+    # Scope every role to the departments/hotels it may access.
     if user.role == "RESTAURANT":
+        if not user.department_id:
+            raise PermissionDenied("Restaurant staff must be assigned to a department.")
         orders = orders.filter(department=user.department)
+    else:
+        orders = orders.filter(department__hotel__in=get_accessible_hotels(user))
 
     # 🔍 Filters
     selected_date = request.GET.get("date")
@@ -480,8 +484,9 @@ def pos_order_detail(request, order_id):
         )
     else:
         order = get_object_or_404(
-            POSOrder,
+            POSOrder.objects.select_related("department__hotel"),
             id=order_id,
+            department__hotel__in=get_accessible_hotels(request.user),
         )
 
     ticket = KitchenTicket.objects.filter(
