@@ -1,0 +1,67 @@
+{% extends "base/base.html" %}
+{% block title %}Maintenance Locations{% endblock %}
+{% block content %}
+<style>
+.locations-page{max-width:1200px;margin:0 auto;padding-bottom:30px;color:#1e293b}
+.locations-head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.locations-title{font-size:clamp(1.6rem,2.5vw,2.1rem);font-weight:800;letter-spacing:-.035em;margin:0}
+.locations-sub{color:#64748b;margin:7px 0 0}
+.locations-grid{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(0,1.5fr);gap:20px}
+.locations-card{background:white;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 16px rgba(15,23,42,.04);overflow:hidden}
+.locations-card h3{font-size:1rem;margin:0;padding:17px 20px;border-bottom:1px solid #e2e8f0}
+.locations-form{padding:20px}
+.locations-label{display:block;font-weight:700;margin:14px 0 6px}
+.locations-control{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font:inherit}
+.locations-btn{border:0;border-radius:9px;padding:11px 15px;background:#2563eb;color:white;font-weight:750;cursor:pointer;margin-top:18px}
+.locations-table{width:100%;border-collapse:collapse}
+.locations-table th{text-align:left;padding:12px;background:#f8fafc;color:#64748b;font-size:.75rem;text-transform:uppercase}
+.locations-table td{padding:13px 12px;border-top:1px solid #f1f5f9;vertical-align:top}
+.locations-muted{color:#64748b;font-size:.85rem}
+@media(max-width:800px){.locations-grid{grid-template-columns:1fr}}
+</style>
+<div class="locations-page">
+  <div class="locations-head"><div><div class="locations-muted">MAINTENANCE · CONFIGURATION</div><h2 class="locations-title">Hotel locations</h2><p class="locations-sub">Set up non-room areas and assign the departments responsible for reporting faults there.</p></div><a href="{% url 'maintenance_dashboard' %}">Back to dashboard</a></div>
+  <div class="locations-grid">
+    <section class="locations-card">
+      <h3>Add a location</h3>
+      <form class="locations-form" method="post">
+        {% csrf_token %}
+        <label class="locations-label" for="location-hotel">Hotel</label>
+        <select class="locations-control" name="hotel" id="location-hotel" required>
+          {% for hotel in hotels %}<option value="{{ hotel.id }}">{{ hotel.name }}</option>{% endfor %}
+        </select>
+        <label class="locations-label" for="location-name">Location name</label>
+        <input class="locations-control" id="location-name" name="name" required maxlength="150" placeholder="e.g. Main Laundry">
+        <label class="locations-label" for="location-type">Location type</label>
+        <select class="locations-control" id="location-type" name="location_type" required>
+          {% for value,label in location_types %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+        </select>
+        <label class="locations-label" for="location-description">Description (optional)</label>
+        <textarea class="locations-control" id="location-description" name="description" rows="3" placeholder="Building, floor, or useful directions"></textarea>
+        <label class="locations-label" for="location-departments">Responsible departments (optional)</label>
+        <select class="locations-control" id="location-departments" name="departments" multiple size="5">
+          {% for department in departments %}<option value="{{ department.id }}">{{ department.hotel.name }} · {{ department.name }}</option>{% endfor %}
+        </select>
+        <p class="locations-muted">If you assign departments, reporting access is restricted to those departments. Leave blank to use the default role-to-area rules.</p>
+        <button class="locations-btn" type="submit">Create location</button>
+      </form>
+    </section>
+    <section class="locations-card">
+      <h3>Configured locations ({{ locations|length }})</h3>
+      <div style="overflow-x:auto"><table class="locations-table">
+        <thead><tr><th>Hotel / Location</th><th>Type</th><th>Responsible departments</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for location in locations %}
+          <tr>
+            <td><strong>{{ location.name }}</strong><div class="locations-muted">{{ location.hotel.name }}</div>{% if location.description %}<div class="locations-muted">{{ location.description }}</div>{% endif %}</td>
+            <td>{{ location.get_location_type_display }}</td>
+            <td>{% for department in location.responsible_departments.all %}{{ department.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="locations-muted">Role-based defaults</span>{% endfor %}</td>
+            <td>{{ location.get_status_display }}</td>
+          </tr>
+          {% empty %}<tr><td colspan="4" class="locations-muted" style="padding:24px">No locations have been configured yet.</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+  </div>
+</div>
+{% endblock %}
