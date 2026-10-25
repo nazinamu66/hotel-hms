@@ -405,3 +405,35 @@ class ExpenseEntry(models.Model):
         return f"{self.expense_account.name} - {self.amount}"
 
 
+
+
+class SupplierPayment(models.Model):
+    """Payment allocated to one recorded supplier obligation."""
+
+    SOURCE_CHOICES = (
+        ("PO", "Purchase order"),
+        ("DIRECT", "Direct purchase"),
+        ("LABOUR", "Outsourced maintenance labour"),
+    )
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="supplier_payments")
+    supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name="payments")
+    source_type = models.CharField(max_length=12, choices=SOURCE_CHOICES)
+    source_id = models.PositiveBigIntegerField()
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="supplier_payments")
+    payment_date = models.DateField()
+    reference = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    journal_entry = models.ForeignKey(JournalEntry, null=True, blank=True, on_delete=models.PROTECT, related_name="supplier_payments")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-payment_date", "-id"]
+        constraints = [
+            models.UniqueConstraint(fields=("hotel", "reference"), condition=~models.Q(reference=""), name="unique_supplier_payment_reference_per_hotel"),
+        ]
+
+    def __str__(self):
+        return f"Supplier payment #{self.pk} - {self.supplier} - {self.amount}"
