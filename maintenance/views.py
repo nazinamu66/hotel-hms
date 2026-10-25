@@ -1186,12 +1186,15 @@ def maintenance_asset_create(request):
 
         raise PermissionDenied
 
+    products = Product.objects.filter(hotel=hotel, product_type="EQUIPMENT", is_active=True).order_by("name")
+
     if request.method == "POST":
 
         name = request.POST.get(
             "name",
             "",
         ).strip()
+        product_id = request.POST.get("product", "").strip()
 
         asset_type = request.POST.get(
             "asset_type",
@@ -1212,6 +1215,9 @@ def maintenance_asset_create(request):
             "model_number",
             "",
         ).strip()
+        purchase_date_raw = request.POST.get("purchase_date", "").strip()
+        warranty_expiry_raw = request.POST.get("warranty_expiry", "").strip()
+        purchase_cost_raw = request.POST.get("purchase_cost", "").strip()
 
         room_id = request.POST.get("room", "").strip()
         location_id = request.POST.get("location", "").strip()
@@ -1229,6 +1235,22 @@ def maintenance_asset_create(request):
             messages.error(request, "Choose either a room or a non-room location, not both.")
             return redirect(request.path)
 
+        product = None
+        if product_id:
+            product = get_object_or_404(products, pk=product_id)
+            if not name:
+                name = product.name
+            if not asset_type:
+                asset_type = product.name
+
+        try:
+            purchase_cost = Decimal(purchase_cost_raw or "0")
+            purchase_date = timezone.datetime.strptime(purchase_date_raw, "%Y-%m-%d").date() if purchase_date_raw else None
+            warranty_expiry = timezone.datetime.strptime(warranty_expiry_raw, "%Y-%m-%d").date() if warranty_expiry_raw else None
+        except (InvalidOperation, ValueError):
+            messages.error(request, "Enter valid purchase cost and dates.")
+            return redirect(request.path)
+
         room = None
         location = None
         if room_id:
@@ -1240,11 +1262,15 @@ def maintenance_asset_create(request):
             hotel=hotel,
             room=room,
             location=location,
+            product=product,
             name=name,
             asset_type=asset_type,
             serial_number=serial_number,
             manufacturer=manufacturer,
             model_number=model_number,
+            purchase_date=purchase_date,
+            purchase_cost=purchase_cost,
+            warranty_expiry=warranty_expiry,
         )
 
         messages.success(
@@ -1273,6 +1299,7 @@ def maintenance_asset_create(request):
         {
             "rooms": rooms,
             "locations": locations,
+            "products": products,
         },
     )
 
