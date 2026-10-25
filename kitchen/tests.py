@@ -124,6 +124,23 @@ class IngredientRequestApprovalTests(TestCase):
         self.assertEqual(purchase.total_cost, Decimal("62.50"))
         self.assertEqual(purchase.items.count(), 1)
 
+    def test_repeated_approval_does_not_create_duplicate_purchase(self):
+        request_obj = self.make_direct_request()
+        self.client.force_login(self.manager)
+        url = reverse("kitchen_ingredient_request_detail", args=[request_obj.pk])
+        payload = self.approve_payload(request_obj, cost="12.50")
+
+        first_response = self.client.post(url, data=payload)
+        second_response = self.client.post(url, data=payload)
+
+        self.assertEqual(first_response.status_code, 302)
+        self.assertEqual(second_response.status_code, 302)
+        self.assertEqual(
+            DirectPurchase.objects.filter(ingredient_request=request_obj).count(),
+            1,
+        )
+        self.assertEqual(DirectPurchaseItem.objects.count(), 1)
+
     def test_manager_cannot_approve_request_containing_other_hotel_ingredient(self):
         request_obj = self.make_direct_request(ingredient=self.other_ingredient)
         self.client.force_login(self.manager)
