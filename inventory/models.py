@@ -686,6 +686,7 @@ class PurchaseOrder(models.Model):
     @transaction.atomic
     def receive(self, user):
 
+        from maintenance.models import MaintenanceAsset
         from accounting.services.postings.purchase import post_inventory_receipt
 
         print(">>> ENTERING receive()", self.id)
@@ -699,6 +700,30 @@ class PurchaseOrder(models.Model):
             )
 
         for item in self.items.select_related("product"):
+
+            if item.product.product_type == "EQUIPMENT":
+                if item.product.usage_type != "ASSET" or item.product.unit_multiplier != 1:
+                    raise ValidationError(
+                        f"{item.product.name} must be configured as an ASSET with unit multiplier 1."
+                    )
+                if item.unit_cost <= 0:
+                    raise ValidationError(
+                        f"Equipment {item.product.name} must have a positive unit cost."
+                    )
+                for unit_number in range(item.purchase_quantity):
+                    MaintenanceAsset.objects.create(
+                        hotel=self.department.hotel,
+                        product=item.product,
+                        purchase_item=item,
+                        name=item.product.name,
+                        asset_type=item.product.name,
+                        manufacturer="",
+                        model_number="",
+                        purchase_date=timezone.localdate(),
+                        purchase_cost=item.unit_cost,
+                        condition="NEW",
+                    )
+                continue
 
             # -----------------------------------------
             # Receive physical stock
