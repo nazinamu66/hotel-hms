@@ -3,7 +3,7 @@
 {% block content %}
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:15px;">
     <h2 style="margin:0;">Equipment & Maintenance Assets</h2>
-    {% if user.role in "MANAGER ADMIN DIRECTOR" %}<a href="{% url 'maintenance_asset_create' %}"><button type="button">+ Add Asset</button></a>{% endif %}
+    {% if user.role == "MAINTENANCE" or user.role == "MANAGER" or user.role == "ADMIN" or user.role == "DIRECTOR" %}<a href="{% url 'maintenance_asset_create' %}"><button type="button">+ Add Asset</button></a>{% endif %}
 </div>
 <p>Each physical unit has its own asset tag. Use Edit to enter its serial number, warranty and assigned location after receipt.</p>
 <hr>
