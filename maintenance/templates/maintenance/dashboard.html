@@ -108,7 +108,7 @@ Maintenance Dashboard
             <thead style="background:#eee;">
 
                 <tr>
-                    <th style="padding:10px;">Room</th>
+                    <th style="padding:10px;">Location</th>
                     <th>Problem</th>
                     <th>Priority</th>
                     <th>Status</th>
@@ -128,7 +128,7 @@ Maintenance Dashboard
                     <td style="padding:10px;">
 
                         <a href="{% url 'maintenance_ticket_detail' ticket.id %}">
-                            Room {{ ticket.room.room_number }}
+                            {% if ticket.room_id %}Room {{ ticket.room.room_number }}{% elif ticket.location_id %}{{ ticket.location.name }}{% else %}Location not set{% endif %}
                         </a>
 
                     </td>
