@@ -849,9 +849,7 @@ def direct_purchase_receive(request, pk):
 
     req = dp.ingredient_request
     if req:
-        req.status = "RECEIVED"
-        req.received_at = timezone.now()
-        req.save(update_fields=["status", "received_at"])
+        req.update_issue_status()
 
     messages.success(request, f"Direct Purchase #{dp.id} received.")
     return redirect("kitchen_dashboard")
