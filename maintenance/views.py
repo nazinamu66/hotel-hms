@@ -37,28 +37,6 @@ from .workflows.preventive import (
 
 
 @role_required(
-    "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER",
-    "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT",
-    "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY",
-    "GYM", "BOUTIQUE", "SECURITY",
-)
-def create_ticket_room(request):
-    """Let any authenticated hotel user report a room issue within their hotel access."""
-    hotels = get_accessible_hotels(request.user)
-    rooms = (
-        Room.objects
-        .filter(hotel__in=hotels)
-        .select_related("hotel", "category")
-        .order_by("hotel__name", "room_number")
-    )
-    return render(
-        request,
-        "maintenance/create_ticket_room.html",
-        {"rooms": rooms, "hotels": hotels},
-    )
-
-
-@role_required(
     "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT", "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY", "GYM", "BOUTIQUE", "SECURITY",
 )
 def create_ticket_room(request):
@@ -126,6 +104,37 @@ def create_ticket_location(request, location_id):
                 return redirect("maintenance_dashboard")
             return redirect("maintenance_create_ticket_room")
     return render(request, "maintenance/create_ticket_location.html", {"location": location, "assets": assets})
+
+
+@role_required("MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR")
+def maintenance_locations(request):
+    hotels = get_accessible_hotels(request.user)
+    if request.user.role in {"MAINTENANCE", "MANAGER"}:
+        if not request.user.hotel_id:
+            raise PermissionDenied
+        hotels = hotels.filter(pk=request.user.hotel_id)
+    departments = Department.objects.filter(hotel__in=hotels, is_active=True).select_related("hotel").order_by("hotel__name", "name")
+    if request.method == "POST":
+        hotel = get_object_or_404(hotels, pk=request.POST.get("hotel"))
+        name = request.POST.get("name", "").strip()
+        location_type = request.POST.get("location_type", "OTHER").strip().upper()
+        description = request.POST.get("description", "").strip()
+        valid_types = {choice[0] for choice in MaintenanceLocation.LOCATION_TYPES}
+        if not name:
+            messages.error(request, "Location name is required.")
+        elif location_type not in valid_types:
+            messages.error(request, "Select a valid location type.")
+        elif MaintenanceLocation.objects.filter(hotel=hotel, name__iexact=name).exists():
+            messages.error(request, "A location with that name already exists for this hotel.")
+        else:
+            location = MaintenanceLocation.objects.create(hotel=hotel, name=name, location_type=location_type, description=description)
+            department_ids = request.POST.getlist("departments")
+            valid_departments = departments.filter(hotel=hotel, id__in=department_ids)
+            location.responsible_departments.set(valid_departments)
+            messages.success(request, f"Location '{location.name}' created.")
+            return redirect("maintenance_locations")
+    locations = MaintenanceLocation.objects.filter(hotel__in=hotels).select_related("hotel").prefetch_related("responsible_departments").order_by("hotel__name", "name")
+    return render(request, "maintenance/locations.html", {"hotels": hotels, "departments": departments, "locations": locations, "location_types": MaintenanceLocation.LOCATION_TYPES})
 
 
 @role_required(
