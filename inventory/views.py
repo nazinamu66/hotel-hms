@@ -1296,6 +1296,7 @@ def po_create(request):
 
     form = PurchaseOrderForm(
         request.POST or None,
+        hotels=hotels,
     )
 
     # Only allow departments belonging to hotels
@@ -1387,6 +1388,7 @@ def po_detail(request, pk):
 
     item_form = PurchaseItemForm(
         request.POST or None,
+        hotel=po.department.hotel,
     )
 
     # --------------------------------------------------------
