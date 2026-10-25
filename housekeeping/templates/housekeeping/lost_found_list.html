@@ -10,7 +10,7 @@
   <section class="lf-card">
     <div class="lf-card-head"><h3>Lost &amp; Found register</h3><span class="lf-count">{{ items|length }} record{{ items|length|pluralize }}</span></div>
     <div class="lf-table-wrap"><table class="lf-table">
-      <thead><tr><th>Found date</th><th>Hotel / room</th><th>Item description</th><th>Recorded by</th><th>Status</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Found date</th><th>Hotel / room</th><th>Item description</th><th>Reported by</th><th>Status / audit trail</th><th>Actions</th></tr></thead>
       <tbody>
       {% for item in items %}
         <tr>
@@ -19,7 +19,7 @@
           <td><div class="lf-desc">{{ item.description }}</div></td>
           <td>{{ item.found_by|default:"—" }}</td>
           <td><span class="lf-pill {% if item.status == 'FOUND' %}lf-found{% elif item.status == 'CLAIMED' %}lf-claimed{% else %}lf-disposed{% endif %}">{{ item.get_status_display }}</span>
-            {% if item.status == "CLAIMED" %}<div class="lf-muted">Claimant: {{ item.claimed_by|default:"—" }}</div>{% if item.claimed_at %}<div class="lf-muted">{{ item.claimed_at|date:"d M Y, H:i" }}</div>{% endif %}{% endif %}
+            {% if item.status == "CLAIMED" %}<div class="lf-muted">Claimant: {{ item.claimed_by|default:"—" }}</div>{% if item.claimed_at %}<div class="lf-muted">Handover: {{ item.claimed_at|date:"d M Y, H:i" }}</div>{% endif %}{% if item.claimed_verified_by %}<div class="lf-muted">Verified by: {{ item.claimed_verified_by }}</div>{% endif %}{% endif %}{% if item.status == "DISPOSED" %}{% if item.disposed_at %}<div class="lf-muted">Disposed: {{ item.disposed_at|date:"d M Y, H:i" }}</div>{% endif %}{% if item.disposed_by %}<div class="lf-muted">Recorded by: {{ item.disposed_by }}</div>{% endif %}{% endif %}
           </td>
           <td>{% if item.status == "FOUND" %}<div class="lf-actions"><a class="lf-btn" href="{% url 'housekeeping_lost_found_claim' item.id %}">Record claim</a><form method="post" action="{% url 'housekeeping_lost_found_dispose' item.id %}">{% csrf_token %}<button class="lf-btn lf-btn-danger" type="submit" onclick="return confirm('Mark this item as disposed? This action will be recorded.');">Dispose</button></form></div>{% else %}<span class="lf-muted">No further action</span>{% endif %}</td>
         </tr>
