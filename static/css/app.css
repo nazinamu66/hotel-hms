@@ -241,3 +241,77 @@ hr {
     font-weight: 700;
     line-height: 18px;
 }
+
+
+/* =========================================================
+   Hotel HMS UI refresh — shared foundations
+   ========================================================= */
+:root {
+    --hms-ink: #172033;
+    --hms-muted: #64748b;
+    --hms-border: #e2e8f0;
+    --hms-surface: #ffffff;
+    --hms-page: #f4f7fb;
+    --hms-primary: #2563eb;
+    --hms-primary-dark: #1d4ed8;
+    --hms-radius: 14px;
+    --hms-shadow: 0 8px 24px rgba(15, 23, 42, .055);
+}
+body { background: var(--hms-page); color: var(--hms-ink); }
+.sidebar {
+    box-sizing: border-box;
+    width: 260px;
+    flex: 0 0 260px;
+    background: #17232e;
+    padding: 22px 16px;
+}
+.sidebar h4 {
+    margin: 16px 0 7px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    letter-spacing: .045em;
+    font-weight: 750;
+}
+.sidebar h4:hover, .sidebar h4.active-menu { background: rgba(148, 163, 184, .13); color: #f8fafc; }
+.sidebar a { padding: 9px 12px; border-radius: 8px; line-height: 1.35; }
+.sidebar a:hover { background: rgba(96, 165, 250, .12); color: #bfdbfe; }
+.menu-section { margin: 3px 0 8px 7px; padding-left: 8px; border-left: 1px solid rgba(148,163,184,.2); }
+.topbar { min-height: 52px; padding: 12px 24px; border-bottom-color: var(--hms-border); }
+.content { padding: clamp(18px, 2.5vw, 34px); }
+.content h1, .content h2, .content h3 { color: var(--hms-ink); letter-spacing: -.025em; }
+.card { border: 1px solid var(--hms-border); border-radius: var(--hms-radius); box-shadow: var(--hms-shadow); }
+button, .btn, input[type="submit"] {
+    border-radius: 9px;
+    font: inherit;
+    font-weight: 650;
+    transition: background .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+button, input[type="submit"] { cursor: pointer; }
+button:hover, .btn:hover, input[type="submit"]:hover { box-shadow: 0 4px 12px rgba(37,99,235,.16); }
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]), select, textarea {
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: white;
+    color: var(--hms-ink);
+}
+input:focus, select:focus, textarea:focus {
+    outline: 3px solid rgba(37,99,235,.14);
+    border-color: #60a5fa;
+}
+.table { border: 1px solid var(--hms-border); border-radius: 12px; overflow: hidden; }
+.table th { color: #475569; font-size: .76rem; letter-spacing: .04em; text-transform: uppercase; }
+.alert { border: 1px solid transparent; border-radius: 10px; padding: 12px 15px; }
+@media (max-width: 800px) {
+    .layout { min-height: 100vh; height: auto; }
+    .sidebar { width: 220px; flex-basis: 220px; padding: 14px 10px; }
+    .content { padding: 16px; }
+}
+@media (max-width: 600px) {
+    .layout { display: block; }
+    .sidebar { width: 100%; max-height: 45vh; }
+    .main { min-width: 0; }
+    .topbar { padding: 12px 16px; }
+}
