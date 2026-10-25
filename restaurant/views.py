@@ -276,6 +276,7 @@ def pos_v2(request):
     )
 
 @role_required("RESTAURANT")
+@require_POST
 def cart_add(request, item_id):
 
     user = request.user
@@ -363,6 +364,7 @@ def cart_add(request, item_id):
 
 
 @role_required("RESTAURANT")
+@require_POST
 def cart_update(request, item_id):
 
     cart = get_cart(request.session)
@@ -409,6 +411,7 @@ def cart_update(request, item_id):
 
 
 @role_required("RESTAURANT")
+@require_POST
 def cart_clear(request):
     request.session["pos_cart"] = {
         "items": {},
