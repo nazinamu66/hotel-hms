@@ -358,13 +358,21 @@ def kitchen_ingredient_request_detail(request, pk):
 @role_required("KITCHEN")
 @require_POST
 def kitchen_confirm_direct_ingredients(request, pk):
-    req = get_object_or_404(IngredientRestockRequest, pk=pk)
+    hotels = get_accessible_hotels(request.user)
+    req = get_object_or_404(
+        IngredientRestockRequest.objects.select_related("requested_by", "requested_by__hotel"),
+        pk=pk,
+        requested_by=request.user,
+        requested_by__hotel__in=hotels,
+    )
 
-    if not hasattr(req, "directpurchase"):
+    # The OneToOneField's related_name is "direct_purchase".
+    direct_purchase = getattr(req, "direct_purchase", None)
+    if direct_purchase is None:
         messages.error(request, "Direct purchase not created yet.")
         return redirect("kitchen_ingredient_requests")
 
-    return redirect("direct_purchase_receive", pk=req.directpurchase.pk)
+    return redirect("direct_purchase_receive", pk=direct_purchase.pk)
 
 
 @role_required("ACCOUNTANT", "CHIEF_ACCOUNTANT", "DIRECTOR", "ADMIN")
