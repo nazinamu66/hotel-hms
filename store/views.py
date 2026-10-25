@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied, ValidationError
 from inventory.models import StockMovement
 from django.db import models
@@ -832,6 +833,7 @@ def store_receive_history(request):
 
 
 @role_required("STORE")
+@require_POST
 @transaction.atomic
 def issue_request_item(request, item_id):
     store = request.user.department
