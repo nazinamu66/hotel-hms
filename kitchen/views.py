@@ -7,7 +7,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.forms import formset_factory
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from accounts.services.access import (
     get_accessible_hotels,)
 
