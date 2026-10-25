@@ -680,17 +680,8 @@
                         </span>
                     {% endif %}
                 {% endfor %}
-            </a>
-
-            {% if user.role == "ADMIN" %}
-
-            <a href="{% url 'inventory:supplier_list' %}">
-                Suppliers
-            </a>
-
-            {% endif %}
-
-        </div>
+            </a> 
+</div>
 
         {% endif %}
 
@@ -915,12 +906,7 @@
             <a href="{% url 'inventory:product_list' %}">
                 Products
             </a>
-
-            <a href="{% url 'inventory:supplier_list' %}">
-                Suppliers
-            </a>
-
-            <hr>
+<hr>
 
 
 
