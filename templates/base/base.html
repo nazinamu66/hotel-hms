@@ -6,6 +6,8 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#17232e">
     <link rel="stylesheet" href="{% static 'css/app.css' %}">
     <title>{% block title %}Hotel HMS{% endblock %}</title>
 </head>
@@ -17,7 +19,9 @@
     <!-- SIDEBAR -->
     <!-- ========================= -->
 
-    <div class="sidebar" id="sidebar">
+    <div class="mobile-sidebar-backdrop" id="mobileSidebarBackdrop" onclick="closeMobileSidebar()" aria-hidden="true"></div>
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+        <div class="mobile-sidebar-head"><span>Hotel HMS</span><button type="button" class="mobile-sidebar-close" onclick="closeMobileSidebar()" aria-label="Close navigation">×</button></div>
 
         {% if user.is_authenticated %}
         {% get_pending_actions_for user as pending_actions %}
@@ -932,7 +936,7 @@
 
         {% endif %}
 
-    </div>
+    </aside>
 
 
     <!-- ========================= -->
@@ -944,6 +948,7 @@
         <!-- TOP BAR -->
 
         <div class="topbar">
+            <button type="button" class="mobile-nav-toggle" onclick="toggleMobileSidebar()" aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation">☰ <span>Menu</span></button>
 
             <div class="system-name">
 
@@ -1014,6 +1019,27 @@
 <!-- ========================= -->
 
 <script>
+
+function toggleMobileSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    const backdrop = document.getElementById("mobileSidebarBackdrop");
+    const button = document.querySelector(".mobile-nav-toggle");
+    const isOpen = sidebar && sidebar.classList.contains("mobile-open");
+    if (sidebar) sidebar.classList.toggle("mobile-open", !isOpen);
+    if (backdrop) backdrop.classList.toggle("visible", !isOpen);
+    document.body.classList.toggle("mobile-nav-open", !isOpen);
+    if (button) button.setAttribute("aria-expanded", String(!isOpen));
+}
+
+function closeMobileSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    const backdrop = document.getElementById("mobileSidebarBackdrop");
+    const button = document.querySelector(".mobile-nav-toggle");
+    if (sidebar) sidebar.classList.remove("mobile-open");
+    if (backdrop) backdrop.classList.remove("visible");
+    document.body.classList.remove("mobile-nav-open");
+    if (button) button.setAttribute("aria-expanded", "false");
+}
 
 function toggleMenu(menuId, toggleElement) {
 
