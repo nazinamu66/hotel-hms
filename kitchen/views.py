@@ -781,7 +781,7 @@ def direct_purchase_receive(request, pk):
             "ingredient_request",
         ),
         pk=pk,
-        status="PAID",
+        status__in=["PAID", "PARTIALLY_RECEIVED"],
         supplier__hotel__in=get_accessible_hotels(request.user),
     )
 
@@ -801,58 +801,116 @@ def direct_purchase_receive(request, pk):
         messages.error(request, "This direct purchase has no items to receive.")
         return redirect("direct_purchase_detail", pk=dp.pk)
 
+    # Validate every submitted quantity before changing any stock.
+    receipt_quantities = {}
+    total_to_receive = Decimal("0.000")
     for item in items:
         if item.quantity <= 0:
             raise ValidationError(
-                f"Received quantity for {item.product.name} must be greater than zero."
+                f"Ordered quantity for {item.product.name} must be greater than zero."
             )
-        if item.unit_cost < 0:
+        if not item.unit_cost.is_finite() or item.unit_cost < 0:
             raise ValidationError(
                 f"Unit cost for {item.product.name} cannot be negative."
             )
         if item.product.hotel_id != kitchen.hotel_id:
             raise PermissionDenied
 
+        raw_quantity = request.POST.get(f"received_{item.pk}", "0").strip()
+        try:
+            received_now = Decimal(raw_quantity)
+        except (InvalidOperation, TypeError, ValueError):
+            messages.error(request, f"Enter a valid received quantity for {item.product.name}.")
+            return redirect("direct_purchase_detail", pk=dp.pk)
+
+        if not received_now.is_finite() or received_now < 0:
+            messages.error(request, f"Received quantity for {item.product.name} must be zero or greater.")
+            return redirect("direct_purchase_detail", pk=dp.pk)
+
+        if received_now > item.outstanding_quantity:
+            messages.error(
+                request,
+                f"Received quantity for {item.product.name} exceeds the outstanding "
+                f"quantity ({item.outstanding_quantity}).",
+            )
+            return redirect("direct_purchase_detail", pk=dp.pk)
+
+        receipt_quantities[item.pk] = received_now
+        total_to_receive += received_now
+
+    if total_to_receive <= 0:
+        messages.error(request, "Enter a positive quantity for at least one item to receive.")
+        return redirect("direct_purchase_detail", pk=dp.pk)
+
+    for item in items:
+        received_now = receipt_quantities[item.pk]
+        if received_now == 0:
+            continue
+
         stock, _ = Stock.objects.select_for_update().get_or_create(
             product=item.product,
             department=kitchen,
             defaults={"quantity": 0},
         )
-        stock.quantity += item.quantity
+        stock.quantity += received_now
         stock.save(update_fields=["quantity"])
 
+        new_total_received = item.quantity_received + received_now
         StockMovement.objects.create(
             product=item.product,
             to_department=kitchen,
-            quantity=item.quantity,
+            quantity=received_now,
             movement_type="IN",
             created_by=request.user,
-            reference=f"DP-{dp.id}",
+            reference=f"DP-{dp.id}-ITEM-{item.pk}-TOTAL-{new_total_received}",
         )
 
-        # Direct-purchase quantities are recorded in the ingredient's
-        # base unit, so this receipt must not apply the purchase-unit
-        # multiplier used by stock_in().
+        # Preserve the purchase's unit cost in a separate FIFO layer for
+        # each partial delivery. Quantities are already in the base unit.
         StockCostLayer.objects.create(
             product=item.product,
             department=kitchen,
             purchase_item=None,
-            quantity_received=item.quantity,
-            quantity_remaining=item.quantity,
+            quantity_received=received_now,
+            quantity_remaining=received_now,
             unit_cost=item.unit_cost,
             is_opening_balance=False,
         )
 
-    dp.status = "RECEIVED"
-    dp.received_at = timezone.now()
-    dp.save(update_fields=["status", "received_at"])
+        item.quantity_received = new_total_received
+        item.save(update_fields=["quantity_received"])
+
+    all_received = all(
+        item.quantity_received >= item.quantity
+        for item in items
+    )
+    dp.status = "RECEIVED" if all_received else "PARTIALLY_RECEIVED"
+    update_fields = ["status"]
+    if all_received:
+        dp.received_at = timezone.now()
+        update_fields.append("received_at")
+    else:
+        dp.received_at = None
+        update_fields.append("received_at")
+    dp.save(update_fields=update_fields)
 
     req = dp.ingredient_request
     if req:
         req.update_issue_status()
 
-    messages.success(request, f"Direct Purchase #{dp.id} received.")
-    return redirect("kitchen_dashboard")
+    if all_received:
+        messages.success(request, f"Direct Purchase #{dp.id} fully received.")
+    else:
+        outstanding = sum(
+            (item.outstanding_quantity for item in items),
+            Decimal("0.000"),
+        )
+        messages.success(
+            request,
+            f"Partial delivery recorded for Direct Purchase #{dp.id}. "
+            f"{outstanding} unit(s) remain outstanding.",
+        )
+    return redirect("direct_purchase_detail", pk=dp.pk)
 
 
 @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT")
@@ -873,12 +931,12 @@ def direct_purchase_detail(request, pk):
         request,
         "kitchen/direct_purchase/detail.html",
         {
-            "dp": dp,  # 🔑 FIX
+            "dp": dp,
             "can_receive": (
                 request.user.role == "KITCHEN"
-                and dp.status == "PAID"
-            )
-        }
+                and dp.status in ("PAID", "PARTIALLY_RECEIVED")
+            ),
+        },
     )
 
 @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")

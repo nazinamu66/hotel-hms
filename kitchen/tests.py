@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from inventory.models import Department, Hotel, Organization, Product, StockMovement, StockTransfer, Supplier
+from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement, StockTransfer, Supplier
 from kitchen.models import (
     DirectPurchase,
     DirectPurchaseItem,
@@ -272,6 +272,108 @@ class IngredientRequestApprovalTests(TestCase):
 
         self.assertEqual(request_obj.status, "RECEIVED")
         self.assertIsNotNone(request_obj.received_at)
+
+    def make_paid_direct_purchase(self, *, quantity="5.000", unit_cost="12.50", request_obj=None):
+        request_obj = request_obj or self.make_direct_request()
+        request_obj.status = "APPROVED"
+        request_obj.save(update_fields=["status"])
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=request_obj,
+            supplier=self.supplier,
+            requested_by=self.requester,
+            approved_by=self.manager,
+            status="PAID",
+            total_cost=Decimal(quantity) * Decimal(unit_cost),
+        )
+        item = DirectPurchaseItem.objects.create(
+            purchase=purchase,
+            product=self.ingredient,
+            quantity=Decimal(quantity),
+            unit_cost=Decimal(unit_cost),
+        )
+        return request_obj, purchase, item
+
+    def test_direct_purchase_can_be_received_in_multiple_deliveries(self):
+        request_obj, purchase, item = self.make_paid_direct_purchase()
+        self.client.force_login(self.requester)
+        url = reverse("direct_purchase_receive", args=[purchase.pk])
+
+        first_response = self.client.post(url, {f"received_{item.pk}": "2.000"})
+        item.refresh_from_db()
+        purchase.refresh_from_db()
+        request_obj.refresh_from_db()
+
+        self.assertEqual(first_response.status_code, 302)
+        self.assertEqual(item.quantity_received, Decimal("2.000"))
+        self.assertEqual(purchase.status, "PARTIALLY_RECEIVED")
+        self.assertEqual(request_obj.status, "PARTIALLY_ISSUED")
+        self.assertIsNone(purchase.received_at)
+        self.assertEqual(
+            Stock.objects.get(product=self.ingredient, department=self.kitchen_department).quantity,
+            Decimal("2.000"),
+        )
+        self.assertEqual(
+            StockCostLayer.objects.filter(product=self.ingredient, department=self.kitchen_department).count(),
+            1,
+        )
+
+        second_response = self.client.post(url, {f"received_{item.pk}": "3.000"})
+        item.refresh_from_db()
+        purchase.refresh_from_db()
+        request_obj.refresh_from_db()
+
+        self.assertEqual(second_response.status_code, 302)
+        self.assertEqual(item.quantity_received, Decimal("5.000"))
+        self.assertEqual(purchase.status, "RECEIVED")
+        self.assertIsNotNone(purchase.received_at)
+        self.assertEqual(request_obj.status, "RECEIVED")
+        self.assertEqual(
+            Stock.objects.get(product=self.ingredient, department=self.kitchen_department).quantity,
+            Decimal("5.000"),
+        )
+        self.assertEqual(
+            StockMovement.objects.filter(
+                product=self.ingredient,
+                movement_type="IN",
+                reference__startswith=f"DP-{purchase.pk}-",
+            ).count(),
+            2,
+        )
+        self.assertEqual(
+            StockCostLayer.objects.filter(product=self.ingredient, department=self.kitchen_department).count(),
+            2,
+        )
+
+    def test_direct_purchase_rejects_quantity_above_outstanding(self):
+        _request_obj, purchase, item = self.make_paid_direct_purchase(quantity="5.000")
+        self.client.force_login(self.requester)
+
+        response = self.client.post(
+            reverse("direct_purchase_receive", args=[purchase.pk]),
+            {f"received_{item.pk}": "5.001"},
+        )
+
+        item.refresh_from_db()
+        purchase.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(item.quantity_received, Decimal("0.000"))
+        self.assertEqual(purchase.status, "PAID")
+        self.assertFalse(Stock.objects.filter(product=self.ingredient, department=self.kitchen_department).exists())
+        self.assertFalse(StockMovement.objects.filter(reference__startswith=f"DP-{purchase.pk}-").exists())
+
+    def test_direct_purchase_rejects_empty_receipt(self):
+        _request_obj, purchase, item = self.make_paid_direct_purchase(quantity="5.000")
+        self.client.force_login(self.requester)
+
+        response = self.client.post(
+            reverse("direct_purchase_receive", args=[purchase.pk]),
+            {f"received_{item.pk}": "0"},
+        )
+
+        item.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(item.quantity_received, Decimal("0.000"))
+        self.assertFalse(Stock.objects.filter(product=self.ingredient, department=self.kitchen_department).exists())
 
     def test_mixed_request_waits_for_direct_purchase_receipt(self):
         request_obj = self.make_store_request(

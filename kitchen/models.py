@@ -599,9 +599,13 @@ class IngredientRestockRequest(models.Model):
             direct_fulfilled = bool(
                 direct_purchase and direct_purchase.status == "RECEIVED"
             )
-            if direct_fulfilled:
+            direct_partially_fulfilled = bool(
+                direct_purchase
+                and direct_purchase.status == "PARTIALLY_RECEIVED"
+            )
+            if direct_fulfilled or direct_partially_fulfilled:
                 any_fulfilled = True
-            else:
+            if not direct_fulfilled:
                 all_fulfilled = False
 
         if all_fulfilled:
@@ -661,6 +665,7 @@ class DirectPurchase(models.Model):
     STATUS_CHOICES = (
         ("APPROVED", "Approved"),
         ("PAID", "Paid"),
+        ("PARTIALLY_RECEIVED", "Partially Received"),
         ("RECEIVED", "Received"),
         ("REJECTED", "Rejected"),
     )
@@ -739,7 +744,17 @@ class DirectPurchaseItem(models.Model):
     )
 
     quantity = models.DecimalField(max_digits=10, decimal_places=3)
+    quantity_received = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        default=Decimal("0.000"),
+        help_text="Cumulative quantity received in the product's base unit.",
+    )
     unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
+
+    @property
+    def outstanding_quantity(self):
+        return max(Decimal("0.000"), self.quantity - self.quantity_received)
 
     @property
     def total_cost(self):

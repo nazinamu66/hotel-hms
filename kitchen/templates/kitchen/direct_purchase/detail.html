@@ -3,10 +3,10 @@
 
 <h2>Direct Purchase #{{ dp.id }}</h2>
 
-<p><strong>Status:</strong> {{ dp.status }}</p>
+<p><strong>Status:</strong> {{ dp.get_status_display }}</p>
 <p><strong>Supplier:</strong> {{ dp.supplier }}</p>
 <p><strong>Requested by:</strong> {{ dp.requested_by }}</p>
-<p><strong>Total Cost:</strong>₦{{ dp.total_cost|default:0 }}</p>
+<p><strong>Total Cost:</strong> ₦{{ dp.total_cost|default:0 }}</p>
 
 {% if dp.note %}
 <p><strong>Note:</strong> {{ dp.note }}</p>
@@ -18,21 +18,39 @@
 <table border="1" cellpadding="6" width="100%">
   <tr>
     <th>Ingredient</th>
-    <th>Quantity</th>
+    <th>Ordered</th>
+    <th>Received</th>
+    <th>Outstanding</th>
     <th>Unit Cost</th>
-    <th>Total</th>
+    <th>Order Total</th>
+    {% if can_receive %}<th>Receive Now</th>{% endif %}
   </tr>
 
   {% for item in dp.items.all %}
   <tr>
     <td>{{ item.product.name }}</td>
     <td>{{ item.quantity }}</td>
+    <td>{{ item.quantity_received }}</td>
+    <td>{{ item.outstanding_quantity }}</td>
     <td>₦{{ item.unit_cost }}</td>
     <td>₦{{ item.total_cost }}</td>
+    {% if can_receive %}
+    <td>
+      <input
+        form="receive-purchase-form"
+        type="number"
+        name="received_{{ item.pk }}"
+        min="0"
+        max="{{ item.outstanding_quantity }}"
+        step="0.001"
+        value="0"
+      >
+    </td>
+    {% endif %}
   </tr>
   {% empty %}
   <tr>
-    <td colspan="4">No items</td>
+    <td colspan="7">No items</td>
   </tr>
   {% endfor %}
 </table>
@@ -50,11 +68,13 @@
 {% endif %}
 
 {# ===== KITCHEN ===== #}
-{% if user.role == "KITCHEN" and dp.status == "PAID" %}
-<form method="post" action="{% url 'direct_purchase_receive' dp.id %}">
+{% if can_receive %}
+<form id="receive-purchase-form" method="post" action="{% url 'direct_purchase_receive' dp.id %}">
   {% csrf_token %}
-  <button type="submit">📦 Receive into Kitchen</button>
+  <button type="submit">📦 Record Delivery</button>
 </form>
+{% elif dp.status == "RECEIVED" %}
+<p><strong>All ordered quantities have been received.</strong></p>
 {% endif %}
 
 <a href="{% url 'kitchen_dashboard' %}">⬅ Back</a>

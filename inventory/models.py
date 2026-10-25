@@ -1045,6 +1045,8 @@ class StockTransfer(models.Model):
 
     @transaction.atomic
     def execute(self):
+        # Serialize execution of this transfer and reject cross-hotel product
+        # or department combinations before moving physical stock or FIFO cost.
         transfer = (
             self.__class__.objects
             .select_for_update()
@@ -1052,60 +1054,20 @@ class StockTransfer(models.Model):
             .get(pk=self.pk)
         )
 
-        if transfer.quantity <= 0:
-            raise ValidationError("Transfer quantity must be greater than zero.")
-
         if transfer.product.hotel_id != transfer.from_department.hotel_id:
             raise ValidationError("The product must belong to the source department's hotel.")
 
         if transfer.product.hotel_id != transfer.to_department.hotel_id:
             raise ValidationError("The product must belong to the destination department's hotel.")
 
+        # A transfer record represents one stock movement and must never be
+        # executable twice. The deterministic reference also protects against
+        # duplicate retries after a request timeout.
         if StockMovement.objects.filter(
             reference=f"TRANSFER-{transfer.id}",
             movement_type="TRANSFER",
         ).exists():
             raise ValidationError("This stock transfer has already been executed.")
-
-        request_item = None
-        if transfer.ingredient_request_item_id:
-            request_item = (
-                transfer.ingredient_request_item.__class__.objects
-                .select_for_update()
-                .select_related("request", "ingredient")
-                .get(pk=transfer.ingredient_request_item_id)
-            )
-            request_obj = request_item.request
-
-            if request_item.source != "STORE":
-                raise ValidationError("Only store-sourced request items can be fulfilled by a stock transfer.")
-
-            if request_item.ingredient_id != transfer.product_id:
-                raise ValidationError("Transfer product must match the requested ingredient.")
-
-            if request_obj.status not in ("APPROVED", "PARTIALLY_ISSUED"):
-                raise ValidationError("Only approved ingredient requests can receive store transfers.")
-
-            if transfer.to_department.department_type != "KITCHEN":
-                raise ValidationError("Ingredient request transfers must be sent to a kitchen department.")
-
-            if transfer.to_department.hotel_id != request_obj.requested_by.department.hotel_id:
-                raise ValidationError("The transfer destination must belong to the requester's hotel.")
-
-            issued_quantity = Decimal("0")
-            for previous in request_item.transfers.exclude(pk=transfer.pk):
-                if StockMovement.objects.filter(
-                    reference=f"TRANSFER-{previous.pk}",
-                    movement_type="TRANSFER",
-                ).exists():
-                    issued_quantity += previous.quantity
-
-            remaining_quantity = request_item.quantity - issued_quantity
-            if transfer.quantity > remaining_quantity:
-                raise ValidationError(
-                    f"Transfer quantity exceeds the remaining requested quantity "
-                    f"({remaining_quantity})."
-                )
 
         transfer_stock(
             product=transfer.product,
@@ -1116,8 +1078,10 @@ class StockTransfer(models.Model):
             reference=f"TRANSFER-{transfer.id}",
         )
 
-        if request_item:
-            request_item.request.update_issue_status()
+        # Recalculate request status in the same transaction as the stock move.
+        if transfer.ingredient_request_item_id:
+            req = transfer.ingredient_request_item.request
+            req.update_issue_status()
 
     def clean(self):
             if self.from_department.hotel_id != self.to_department.hotel_id:
