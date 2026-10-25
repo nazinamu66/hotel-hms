@@ -1166,33 +1166,33 @@ def maintenance_assets(request):
 @role_required("ADMIN", "DIRECTOR")
 def maintenance_asset_create(request, asset_id=None):
 
-    if request.user.role in ("MAINTENANCE", "MANAGER"):
-
-        if not request.user.hotel_id:
-            raise PermissionDenied
-
-        hotel = request.user.hotel
-
-    elif request.user.role in (
-        "ADMIN",
-        "DIRECTOR",
-    ):
-
-        # For now, these roles use their assigned hotel
-        # when creating a maintenance asset.
-        if not request.user.hotel_id:
-            raise PermissionDenied
-
-        hotel = request.user.hotel
-
-    else:
-
+    hotels = get_accessible_hotels(request.user)
+    if request.user.hotel_id:
+        hotels = hotels.filter(pk=request.user.hotel_id)
+    if not hotels.exists():
         raise PermissionDenied
 
-    products = Product.objects.filter(hotel=hotel, product_type="EQUIPMENT", is_active=True).order_by("name")
-    asset = get_object_or_404(MaintenanceAsset, pk=asset_id, hotel=hotel) if asset_id else None
+    selected_hotel_id = request.POST.get("hotel") if request.method == "POST" else request.GET.get("hotel")
+    if selected_hotel_id:
+        hotel = get_object_or_404(hotels, pk=selected_hotel_id)
+    elif hotels.count() == 1:
+        hotel = hotels.first()
+    else:
+        hotel = None
 
+    if asset_id:
+        if hotel is None:
+            raise PermissionDenied
+        asset = get_object_or_404(MaintenanceAsset, pk=asset_id, hotel=hotel)
+    else:
+        asset = None
+
+    products = Product.objects.filter(hotel=hotel, product_type="EQUIPMENT", is_active=True).order_by("name") if hotel else Product.objects.none()
     if request.method == "POST":
+
+        if hotel is None:
+            messages.error(request, "Select a hotel before registering equipment.")
+            return redirect(request.path)
 
         name = request.POST.get(
             "name",
@@ -1309,6 +1309,8 @@ def maintenance_asset_create(request, asset_id=None):
             "rooms": rooms,
             "locations": locations,
             "products": products,
+            "hotels": hotels,
+            "selected_hotel": hotel,
             "asset": asset,
             "is_edit": bool(asset),
             "condition_choices": MaintenanceAsset.CONDITION_CHOICES,
