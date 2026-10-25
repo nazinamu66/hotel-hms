@@ -42,5 +42,25 @@
       </tbody>
     </table></div>
   </section>
+
+  {% if locations %}
+  <section class="maint-panel" style="margin-top:20px">
+    <div class="maint-panel-head"><h3>Other hotel areas</h3><span class="maint-muted">{{ locations|length }} locations</span></div>
+    <div class="maint-table-wrap"><table class="maint-table">
+      <thead><tr><th>Hotel</th><th>Area</th><th>Type</th><th>Description</th><th>Action</th></tr></thead>
+      <tbody>
+      {% for location in locations %}
+        <tr>
+          <td>{{ location.hotel.name }}</td>
+          <td><div class="maint-room">{{ location.name }}</div></td>
+          <td><span class="maint-status">{{ location.get_location_type_display }}</span></td>
+          <td>{{ location.description|default:"—"|truncatechars:80 }}</td>
+          <td><a class="maint-btn" href="{% url 'maintenance_create_ticket_location' location.id %}">Report issue →</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+  {% endif %}
 </div>
 {% endblock %}
