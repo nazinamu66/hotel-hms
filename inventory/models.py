@@ -238,7 +238,7 @@ class Product(models.Model):
         ("CONSUMABLE", "Consumable"),     # sugar, soap, tea
         ("RESALE", "Resale Item"),        # drinks, boutique
         ("INTERNAL", "Internal Use"),     # cleaning, ops
-        ("ASSET", "Asset"),               # towels, bedsheets
+        ("ASSET", "Asset"),               # linen and individually tracked equipment
     )
 
     SUPPLY_SOURCE_CHOICES = (
