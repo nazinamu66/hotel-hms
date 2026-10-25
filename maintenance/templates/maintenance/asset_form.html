@@ -42,26 +42,23 @@ Add Maintenance Asset
     </p>
 
     <p>
-        <label>
-            Room / Location
-        </label>
-        <br>
-
+        <label>Room (optional)</label><br>
         <select name="room">
-
-            <option value="">
-                Hotel / Common Area
-            </option>
-
+            <option value="">No room selected</option>
             {% for room in rooms %}
-
-            <option value="{{ room.id }}">
-                Room {{ room.room_number }}
-            </option>
-
+            <option value="{{ room.id }}">Room {{ room.room_number }}</option>
             {% endfor %}
-
         </select>
+    </p>
+    <p>
+        <label>Non-room location (optional)</label><br>
+        <select name="location">
+            <option value="">No area selected</option>
+            {% for location in locations %}
+            <option value="{{ location.id }}">{{ location.name }} · {{ location.get_location_type_display }}</option>
+            {% endfor %}
+        </select>
+        <small>Choose a room or a non-room location, not both.</small>
     </p>
 
     <p>
