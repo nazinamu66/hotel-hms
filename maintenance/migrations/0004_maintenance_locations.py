@@ -55,6 +55,28 @@ class Migration(migrations.Migration):
                 ],
             },
         ),
+        migrations.AddField(
+            model_name="maintenanceasset",
+            name="location",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="assets",
+                to="maintenance.maintenancelocation",
+            ),
+        ),
+        migrations.AddField(
+            model_name="maintenanceticket",
+            name="asset",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="maintenance_tickets",
+                to="maintenance.maintenanceasset",
+            ),
+        ),
         migrations.AlterField(
             model_name="maintenanceticket",
             name="room",
