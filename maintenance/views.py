@@ -429,11 +429,11 @@ def maintenance_ticket_detail(request, ticket_id):
             raise PermissionDenied
 
         # Technician must be assigned to this ticket.
-        ticket_hotel_id = ticket.room.hotel_id if ticket.room_id else ticket.location.hotel_id
-    if ticket_hotel_id != request.user.hotel_id:
-        raise PermissionDenied
-
-    if ticket.assigned_to_id != request.user.id:
+        if request.user.hotel_id:
+            ticket_hotel_id = ticket.room.hotel_id if ticket.room_id else ticket.location.hotel_id
+            if ticket_hotel_id != request.user.hotel_id:
+                raise PermissionDenied
+        if ticket.assigned_to_id != request.user.id:
             raise PermissionDenied
 
         note = request.POST.get(
@@ -524,12 +524,14 @@ def start_ticket(request, ticket_id):
 def resolve_ticket(request, ticket_id):
 
     ticket = get_object_or_404(
-        MaintenanceTicket,
+        MaintenanceTicket.objects.select_related("room", "location"),
         id=ticket_id,
-        room__hotel_id=request.user.hotel_id,
     )
 
     if not request.user.hotel_id:
+        raise PermissionDenied
+    ticket_hotel_id = ticket.room.hotel_id if ticket.room_id else ticket.location.hotel_id
+    if ticket_hotel_id != request.user.hotel_id:
         raise PermissionDenied
 
     if ticket.assigned_to_id != request.user.id:
@@ -1654,7 +1656,7 @@ def maintenance_work_orders(request):
             raise PermissionDenied
 
         tickets = MaintenanceTicket.objects.filter(
-            room__hotel_id=request.user.hotel_id,
+            Q(room__hotel_id=request.user.hotel_id) | Q(location__hotel_id=request.user.hotel_id),
         )
 
     else:
@@ -1847,8 +1849,9 @@ def maintenance_work_history(request):
                 "material_entries",
             )
             .filter(
-                room__hotel_id=request.user.hotel_id,
                 status="RESOLVED",
+            ).filter(
+                Q(room__hotel_id=request.user.hotel_id) | Q(location__hotel_id=request.user.hotel_id),
             )
             .order_by("-resolved_at", "-id")
         )
