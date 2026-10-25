@@ -532,10 +532,10 @@ def assign_room(request, room_id):
     )
 
 @role_required(
-    "HOUSEKEEPING",
-    "MANAGER",
-    "ADMIN",
-    "DIRECTOR",
+    "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER",
+    "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT",
+    "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY",
+    "GYM", "BOUTIQUE", "SECURITY",
 )
 def lost_found_list(request):
 
@@ -573,10 +573,10 @@ def lost_found_list(request):
 
 
 @role_required(
-    "HOUSEKEEPING",
-    "MANAGER",
-    "ADMIN",
-    "DIRECTOR",
+    "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER",
+    "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT",
+    "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY",
+    "GYM", "BOUTIQUE", "SECURITY",
 )
 def lost_found_create(request):
 
@@ -665,10 +665,10 @@ def lost_found_create(request):
         },
     )
 @role_required(
-    "HOUSEKEEPING",
-    "MANAGER",
-    "ADMIN",
-    "DIRECTOR",
+    "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER",
+    "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT",
+    "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY",
+    "GYM", "BOUTIQUE", "SECURITY",
 )
 def lost_found_claim(request, item_id):
 
@@ -733,10 +733,10 @@ def lost_found_claim(request, item_id):
         },
     )
 @role_required(
-    "HOUSEKEEPING",
-    "MANAGER",
-    "ADMIN",
-    "DIRECTOR",
+    "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER",
+    "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT",
+    "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY",
+    "GYM", "BOUTIQUE", "SECURITY",
 )
 def lost_found_dispose(request, item_id):
 
