@@ -94,9 +94,10 @@ Maintenance Dashboard
 
             <h3>Active Work Orders</h3>
 
-            <a href="{% url 'maintenance_create_ticket_room' %}">
-                + Create Ticket
-            </a>
+            <div style="display:flex;gap:12px;flex-wrap:wrap">
+              <a href="{% url 'maintenance_create_ticket_room' %}">+ Report an Issue</a>
+              <a href="{% url 'maintenance_locations' %}">Manage Locations</a>
+            </div>
 
         </div>
 
