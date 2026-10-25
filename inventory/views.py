@@ -1767,6 +1767,13 @@ def po_finalize(request, pk):
 @transaction.atomic
 def po_pay(request, pk):
 
+    # Payments are now centralized so partial payments and payment history
+    # cannot be bypassed through the legacy full-payment screen.
+    from accounting.models import SupplierPayment
+    if SupplierPayment.objects.filter(source_type="PO", source_id=pk).exists():
+        messages.info(request, "This purchase order has payments recorded in Supplier & Vendor Payments. Continue there to avoid duplicate or excess payment.")
+        return redirect("accounting:supplier_payments")
+
     hotels = get_accessible_hotels(request.user)
 
     po = get_object_or_404(
