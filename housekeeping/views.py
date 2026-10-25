@@ -553,6 +553,8 @@ def lost_found_list(request):
             "hotel",
             "room",
             "found_by",
+            "claimed_verified_by",
+            "disposed_by",
         )
         .filter(
             hotel__in=hotels,
@@ -562,11 +564,19 @@ def lost_found_list(request):
         )
     )
 
+    can_manage_lost_found = (
+        request.user.is_department_head
+        or request.user.role in {
+            "MANAGER", "ADMIN", "DIRECTOR", "GENERAL_MANAGER",
+        }
+    )
+
     return render(
         request,
         "housekeeping/lost_found_list.html",
         {
             "items": items,
+            "can_manage_lost_found": can_manage_lost_found,
         },
     )
 
