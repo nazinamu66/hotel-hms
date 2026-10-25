@@ -254,6 +254,26 @@ class ProductionBatch(models.Model):
                 "Production must be executed from a kitchen department."
             )
 
+        # Recipes and ingredients must be owned by the same hotel as
+        # the kitchen performing production.
+        if not self.recipe_id or not self.recipe.product_id:
+            raise ValidationError("A recipe with a finished product is required.")
+
+        if self.recipe.product.hotel_id != kitchen.hotel_id:
+            raise ValidationError(
+                "The recipe's finished product must belong to the kitchen's hotel."
+            )
+
+        for recipe_item in self.recipe.items.select_related("ingredient"):
+            if recipe_item.ingredient.hotel_id != kitchen.hotel_id:
+                raise ValidationError(
+                    f"Ingredient {recipe_item.ingredient} belongs to another hotel."
+                )
+            if not recipe_item.ingredient.departments.filter(pk=kitchen.pk).exists():
+                raise ValidationError(
+                    f"Ingredient {recipe_item.ingredient} is not assigned to this kitchen."
+                )
+
     # =====================================
     # VALIDATE INGREDIENTS
     # =====================================
