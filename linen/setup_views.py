@@ -42,23 +42,28 @@ def linen_category_setup(request):
             messages.error(request, "Please select a room category.")
             return redirect("linen_category_setup")
 
+        # Validate the entire submission before writing anything. Returning a
+        # redirect from inside atomic() does not roll back earlier writes.
+        submitted_quantities = {}
+        for item in linen_items:
+            raw = request.POST.get(f"quantity_{item.pk}", "").strip()
+            if raw == "":
+                submitted_quantities[item.pk] = None
+                continue
+            try:
+                quantity = int(raw)
+            except (TypeError, ValueError):
+                messages.error(request, f"Enter a whole number for {item.product.name}.")
+                return redirect(f"{request.path}?category={selected_category.pk}")
+            if quantity < 0:
+                messages.error(request, f"Quantity for {item.product.name} cannot be negative.")
+                return redirect(f"{request.path}?category={selected_category.pk}")
+            submitted_quantities[item.pk] = quantity or None
+
         with transaction.atomic():
             for item in linen_items:
-                raw = request.POST.get(f"quantity_{item.pk}", "").strip()
-                if raw == "":
-                    RoomLinenRequirement.objects.filter(
-                        category=selected_category, linen_item=item
-                    ).delete()
-                    continue
-                try:
-                    quantity = int(raw)
-                except (TypeError, ValueError):
-                    messages.error(request, f"Enter a whole number for {item.product.name}.")
-                    return redirect(f"{request.path}?category={selected_category.pk}")
-                if quantity < 0:
-                    messages.error(request, f"Quantity for {item.product.name} cannot be negative.")
-                    return redirect(f"{request.path}?category={selected_category.pk}")
-                if quantity == 0:
+                quantity = submitted_quantities[item.pk]
+                if quantity is None:
                     RoomLinenRequirement.objects.filter(
                         category=selected_category, linen_item=item
                     ).delete()
@@ -107,40 +112,51 @@ def linen_room_setup(request, pk):
     )
     linen_items = _accessible_linen_items(request.user).filter(product__hotel=room.hotel)
 
-    states_qs = RoomLinenState.objects.filter(room=room)
-    if not states_qs.exists():
-        category_defaults = RoomLinenRequirement.objects.filter(
-            category=room.category,
-            linen_item__in=linen_items,
-        ).select_related("linen_item")
-        for default in category_defaults:
-            RoomLinenState.objects.get_or_create(
-                room=room,
-                linen_item=default.linen_item,
-                defaults={"quantity": default.quantity},
-            )
+    # Seed category defaults independently for each missing linen item. This
+    # also picks up newly added defaults without overwriting room-specific
+    # quantities already configured for this room.
+    category_defaults = RoomLinenRequirement.objects.filter(
+        category=room.category,
+        linen_item__in=linen_items,
+    ).select_related("linen_item")
+    for default in category_defaults:
+        RoomLinenState.objects.get_or_create(
+            room=room,
+            linen_item=default.linen_item,
+            defaults={"quantity": default.quantity},
+        )
 
     if request.method == "POST":
+        # As with category defaults, validate all values before mutating rows.
+        submitted_quantities = {}
+        for item in linen_items:
+            field = f"quantity_{item.pk}"
+            if field not in request.POST:
+                continue
+            raw = request.POST.get(field, "").strip()
+            if raw == "":
+                submitted_quantities[item.pk] = None
+                continue
+            try:
+                quantity = int(raw)
+            except (TypeError, ValueError):
+                messages.error(request, f"Enter a whole number for {item.product.name}.")
+                return redirect("linen_room_setup", pk=room.pk)
+            if quantity < 0:
+                messages.error(request, f"Quantity for {item.product.name} cannot be negative.")
+                return redirect("linen_room_setup", pk=room.pk)
+            submitted_quantities[item.pk] = quantity
+
         with transaction.atomic():
-            for item in linen_items:
-                field = f"quantity_{item.pk}"
-                if field not in request.POST:
+            for item_id, quantity in submitted_quantities.items():
+                if quantity is None:
+                    RoomLinenState.objects.filter(
+                        room=room, linen_item_id=item_id
+                    ).delete()
                     continue
-                raw = request.POST.get(field, "").strip()
-                if raw == "":
-                    RoomLinenState.objects.filter(room=room, linen_item=item).delete()
-                    continue
-                try:
-                    quantity = int(raw)
-                except (TypeError, ValueError):
-                    messages.error(request, f"Enter a whole number for {item.product.name}.")
-                    return redirect("linen_room_setup", pk=room.pk)
-                if quantity < 0:
-                    messages.error(request, f"Quantity for {item.product.name} cannot be negative.")
-                    return redirect("linen_room_setup", pk=room.pk)
                 RoomLinenState.objects.update_or_create(
                     room=room,
-                    linen_item=item,
+                    linen_item_id=item_id,
                     defaults={"quantity": quantity},
                 )
 
