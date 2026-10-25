@@ -140,26 +140,6 @@ class RoomSpecificLinenSetupTests(TestCase):
             },
         )
 
-        # Add a new category default after the room has been configured.
-        product_c = Product.objects.create(
-            hotel=self.hotel,
-            name="Test Pillowcase",
-            sku="LINEN-SETUP-PILLOW",
-            product_type="HOUSEKEEPING",
-            usage_type="ASSET",
-            base_unit="pcs",
-        )
-        linen_c = LinenItem.objects.create(
-            product=product_c,
-            par_level=100,
-            minimum_level=20,
-        )
-        RoomLinenRequirement.objects.create(
-            category=self.category,
-            linen_item=linen_c,
-            quantity=2,
-        )
-
         response = self.client.get(
             reverse("linen_room_setup", args=[self.room.pk])
         )
@@ -174,9 +154,32 @@ class RoomSpecificLinenSetupTests(TestCase):
         self.assertEqual(
             RoomLinenState.objects.get(
                 room=self.room,
-                linen_item=linen_c,
+                linen_item=self.linen_b,
             ).quantity,
-            2,
+            4,
+        )
+
+    def test_excluded_room_linen_item_is_not_recreated_on_next_visit(self):
+        RoomLinenRequirement.objects.create(
+            category=self.category,
+            linen_item=self.linen_a,
+            quantity=2,
+        )
+        url = reverse("linen_room_setup", args=[self.room.pk])
+        self.client.get(url)
+        self.client.post(url, {f"quantity_{self.linen_a.pk}": ""})
+        self.assertFalse(
+            RoomLinenState.objects.filter(
+                room=self.room,
+                linen_item=self.linen_a,
+            ).exists()
+        )
+        self.client.get(url)
+        self.assertFalse(
+            RoomLinenState.objects.filter(
+                room=self.room,
+                linen_item=self.linen_a,
+            ).exists()
         )
 
     def test_room_setup_rejects_invalid_submission_without_partial_updates(self):
