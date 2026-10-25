@@ -948,12 +948,14 @@ def kitchen_ticket_ready(request, ticket_id):
     return redirect("kitchen_dashboard")
 
 @role_required("KITCHEN")
+@require_POST
 @transaction.atomic
 def kitchen_ticket_served(request, ticket_id):
 
     ticket = get_object_or_404(
-        KitchenTicket.objects.select_related("order"),
+        KitchenTicket.objects.select_related("order__department"),
         id=ticket_id,
+        order__department__hotel__in=get_accessible_hotels(request.user),
     )
 
     if ticket.status == "SERVED":
