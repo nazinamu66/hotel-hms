@@ -37,116 +37,78 @@ from .workflows.preventive import (
 
 
 @role_required(
-    "HOUSEKEEPING",
-    "FRONTDESK",
-    "MAINTENANCE",
-    "MANAGER",
-    "DIRECTOR",
+    "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER",
+    "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT",
+    "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY",
+    "GYM", "BOUTIQUE", "SECURITY",
 )
 def create_ticket_room(request):
-
-    hotel = request.user.department.hotel
-
+    """Let any authenticated hotel user report a room issue within their hotel access."""
+    hotels = get_accessible_hotels(request.user)
     rooms = (
         Room.objects
-        .filter(hotel=hotel)
-        .select_related("category")
-        .order_by("room_number")
+        .filter(hotel__in=hotels)
+        .select_related("hotel", "category")
+        .order_by("hotel__name", "room_number")
     )
-
     return render(
         request,
         "maintenance/create_ticket_room.html",
-        {
-            "rooms": rooms,
-        },
+        {"rooms": rooms, "hotels": hotels},
     )
 
+
 @role_required(
-    "HOUSEKEEPING",
-    "FRONTDESK",
-    "MAINTENANCE",
-    "MANAGER",
-    "DIRECTOR",
+    "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER",
+    "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT",
+    "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY",
+    "GYM", "BOUTIQUE", "SECURITY",
 )
 def create_ticket(request, room_id):
-
+    """Create a maintenance report without relying on a user's department being present."""
+    hotels = get_accessible_hotels(request.user)
     room = get_object_or_404(
-        Room,
-        id=room_id,
-        hotel=request.user.department.hotel,
+        Room.objects.select_related("hotel", "category"),
+        pk=room_id,
+        hotel__in=hotels,
     )
 
     if request.method == "POST":
-
-        description = request.POST.get(
-            "description",
-            "",
-        ).strip()
-
-        priority = request.POST.get(
-            "priority",
-            "MEDIUM",
-        ).strip()
+        description = request.POST.get("description", "").strip()
+        priority = request.POST.get("priority", "MEDIUM").strip().upper()
+        valid_priorities = {choice[0] for choice in MaintenanceTicket.PRIORITY_CHOICES}
 
         if not description:
-            messages.error(
-                request,
-                "Please describe the maintenance issue.",
-            )
-
+            messages.error(request, "Please describe the maintenance issue.")
             return redirect(request.path)
 
-        # ----------------------------------------------------
-        # Capture the room state BEFORE Maintenance changes it
-        # ----------------------------------------------------
+        if priority not in valid_priorities:
+            messages.error(request, "Please select a valid priority.")
+            return redirect(request.path)
 
-        previous_room_status = room.status
-
-        ticket = MaintenanceTicket.objects.create(
-            room=room,
-            description=description,
-            priority=priority,
-            reported_by=request.user,
-            room_status_before_maintenance=previous_room_status,
-        )
-
-        # ----------------------------------------------------
-        # High-priority maintenance takes the room out of order
-        # ----------------------------------------------------
-
-        if priority == "HIGH":
-            room.status = "OUT_OF_ORDER"
-
-            room.save(
-                update_fields=["status"]
+        with transaction.atomic():
+            room = Room.objects.select_for_update().get(pk=room.pk)
+            ticket = MaintenanceTicket.objects.create(
+                room=room,
+                description=description,
+                priority=priority,
+                reported_by=request.user,
+                room_status_before_maintenance=room.status,
             )
+
+            if priority == "HIGH":
+                room.status = "OUT_OF_ORDER"
+                room.save(update_fields=["status"])
 
         messages.success(
             request,
-            "Maintenance ticket created.",
+            f"Maintenance issue for Room {room.room_number} reported successfully (ticket #{ticket.pk}).",
         )
-
-        # ----------------------------------------------------
-        # Return user to their own operational area
-        # ----------------------------------------------------
-
         if request.user.role == "MAINTENANCE":
-            return redirect(
-                "maintenance_dashboard"
-            )
+            return redirect("maintenance_dashboard")
+        return redirect("maintenance_create_ticket_room")
 
-        return redirect(
-            "housekeeping_dashboard"
-        )
-
-    return render(
-        request,
-        "maintenance/create_ticket.html",
-        {
-            "room": room,
-        },
-    )
+    return render(request, "maintenance/create_ticket.html", {"room": room})
 
 
 # ============================================================
