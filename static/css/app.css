@@ -442,3 +442,60 @@ input, select, textarea { font-size: 16px; }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+
+/* Mobile layout correction: the navigation must overlay, never consume page width. */
+@media (max-width: 800px) {
+    html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+    .layout { display: block !important; width: 100%; height: 100dvh; min-height: 100vh; overflow: hidden; }
+    .sidebar, .layout > .sidebar, aside#sidebar {
+        display: block;
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: auto !important;
+        z-index: 1200 !important;
+        width: min(300px, 86vw) !important;
+        max-width: 86vw !important;
+        height: 100dvh !important;
+        max-height: none !important;
+        margin: 0 !important;
+        flex: none !important;
+        box-sizing: border-box !important;
+        overflow-y: auto !important;
+        transform: translateX(-110%) !important;
+        transition: transform .22s ease;
+        padding: 12px 14px 28px !important;
+        background: #17232e;
+    }
+    .sidebar.mobile-open, .layout > .sidebar.mobile-open, aside#sidebar.mobile-open {
+        transform: translateX(0) !important;
+    }
+    .mobile-sidebar-backdrop.visible {
+        display: block !important;
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 1190 !important;
+        background: rgba(15,23,42,.55) !important;
+    }
+    .main { display: flex !important; flex-direction: column !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; height: 100dvh !important; margin: 0 !important; }
+    .topbar { display: flex !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
+    .content { width: 100% !important; max-width: 100% !important; min-width: 0 !important; box-sizing: border-box !important; }
+}
+@media (max-width: 650px) {
+    .equipment-form-page { width: 100% !important; max-width: 100% !important; }
+    .equipment-form-card { width: 100% !important; min-width: 0 !important; }
+    .equipment-grid, .equipment-form-page .equipment-grid {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 14px !important;
+    }
+    .equipment-section { min-width: 0 !important; padding: 16px !important; }
+    .equipment-field { min-width: 0 !important; width: 100% !important; }
+    .equipment-field input, .equipment-field select { width: 100% !important; min-width: 0 !important; }
+    .equipment-title { overflow-wrap: anywhere; }
+    .equipment-form-header { overflow-wrap: anywhere; }
+    .topbar { align-items: center !important; }
+    .system-name { overflow: hidden; text-overflow: ellipsis; }
+}
