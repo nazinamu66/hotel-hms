@@ -228,8 +228,13 @@ def kitchen_ingredient_request_detail(request, pk):
             "requested_by", "requested_by__department", "requested_by__hotel",
         ).prefetch_related("items__ingredient"),
         pk=pk,
-        requested_by__hotel__in=hotels,
+    ).filter(
+        Q(requested_by__hotel__in=hotels)
+        | Q(requested_by__department__hotel__in=hotels)
     )
+
+    if not req:
+        raise PermissionDenied
 
     is_manager = request.user.role in {"MANAGER", "ADMIN", "DIRECTOR"}
     is_kitchen = request.user.role == "KITCHEN"
@@ -363,7 +368,9 @@ def kitchen_confirm_direct_ingredients(request, pk):
         IngredientRestockRequest.objects.select_related("requested_by", "requested_by__hotel"),
         pk=pk,
         requested_by=request.user,
-        requested_by__hotel__in=hotels,
+    ).filter(
+        Q(requested_by__hotel__in=hotels)
+        | Q(requested_by__department__hotel__in=hotels)
     )
 
     # The OneToOneField's related_name is "direct_purchase".
