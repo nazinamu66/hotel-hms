@@ -113,12 +113,15 @@ Complete Maintenance Work Order #{{ ticket.id }}
         Completion Outcome
     </h3>
 
-    <p>
-        What should happen to the room after this
-        maintenance work is completed?
-    </p>
+    {% if ticket.room_id %}
+    <p>What should happen to the room after this maintenance work is completed?</p>
+    {% else %}
+    <p>This ticket concerns a non-room area or equipment. No guest-room status will be changed.</p>
+    <input type="hidden" name="completion_outcome" value="NOT_APPLICABLE">
+    {% endif %}
 
 
+    {% if ticket.room_id %}
     <label>
         <input
             type="radio"
@@ -183,7 +186,9 @@ Complete Maintenance Work Order #{{ ticket.id }}
 
 
     <!-- ------------------------------------------------- -->
-    <!-- ACTIONS -->
+    {% endif %}
+
+        <!-- ACTIONS -->
     <!-- ------------------------------------------------- -->
 
     <button type="submit">
