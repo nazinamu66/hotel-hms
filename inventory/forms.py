@@ -222,6 +222,8 @@ class ProductForm(forms.ModelForm):
         # ----------------------------------------------------
 
         if cleaned_data.get("register_as_linen"):
+            if product_type == "EQUIPMENT":
+                raise forms.ValidationError("Equipment cannot be registered as linen.")
             # Use the final usage type after applying FOOD rules.
             final_usage_type = cleaned_data.get("usage_type")
 
