@@ -7,6 +7,7 @@ from .views import (
     start_ticket,
     create_ticket_room,
     create_ticket_location,
+    maintenance_locations,
     add_labour,
     add_material,
     maintenance_work_orders,
@@ -49,6 +50,7 @@ urlpatterns = [
         create_ticket_room,
         name="maintenance_create_ticket_room",
     ),
+    path("locations/", maintenance_locations, name="maintenance_locations"),
     path(
         "create/location/<int:location_id>/",
         create_ticket_location,
