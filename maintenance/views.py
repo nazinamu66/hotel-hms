@@ -892,7 +892,7 @@ def add_labour(request, ticket_id):
 def add_material(request, ticket_id):
 
     ticket = get_object_or_404(
-        MaintenanceTicket,
+        MaintenanceTicket.objects.select_related("room", "location"),
         id=ticket_id,
     )
 
@@ -902,8 +902,8 @@ def add_material(request, ticket_id):
 
     if not request.user.hotel_id:
         raise PermissionDenied
-
-    if ticket.room.hotel_id != request.user.hotel_id:
+    ticket_hotel_id = ticket.room.hotel_id if ticket.room_id else ticket.location.hotel_id
+    if ticket_hotel_id != request.user.hotel_id:
         raise PermissionDenied
 
     # --------------------------------------------------------
@@ -932,7 +932,7 @@ def add_material(request, ticket_id):
 
     maintenance_department = get_object_or_404(
         Department,
-        hotel_id=ticket.room.hotel_id,
+        hotel_id=ticket_hotel_id,
         code="MNT",
         department_type="MAINTENANCE",
         is_active=True,
