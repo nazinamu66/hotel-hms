@@ -311,7 +311,15 @@ def cart_add(request, item_id):
     # --------------------------------
     cart = get_cart(request.session)
 
-    menu_item = get_object_or_404(MenuItem, id=item_id)
+    if not restaurant or not restaurant.hotel_id:
+        return JsonResponse({"success": False, "error": "Your account is not assigned to a hotel restaurant."}, status=403)
+
+    menu_item = get_object_or_404(
+        MenuItem.objects.select_related("product", "product__hotel"),
+        id=item_id,
+        is_active=True,
+        product__hotel_id=restaurant.hotel_id,
+    )
 
     # --------------------------------
     # Determine stock department
@@ -376,7 +384,15 @@ def cart_update(request, item_id):
     if item_id not in cart["items"]:
         return JsonResponse({"success": False})
 
-    menu_item = get_object_or_404(MenuItem, id=item_id)
+    if not restaurant or not restaurant.hotel_id:
+        return JsonResponse({"success": False, "error": "Your account is not assigned to a hotel restaurant."}, status=403)
+
+    menu_item = get_object_or_404(
+        MenuItem.objects.select_related("product", "product__hotel"),
+        id=item_id,
+        is_active=True,
+        product__hotel_id=restaurant.hotel_id,
+    )
 
     if menu_item.product.product_type == "DRINK":
         stock_department = restaurant
