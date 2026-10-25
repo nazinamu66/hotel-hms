@@ -205,5 +205,26 @@ class LostFoundItem(models.Model):
         blank=True,
     )
 
+    claimed_verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verified_lost_found_claims",
+    )
+
+    disposed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    disposed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="disposed_lost_found_items",
+    )
+
     def __str__(self):
         return f"Lost Item - {self.hotel.name} - Room {self.room}"
