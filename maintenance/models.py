@@ -112,6 +112,14 @@ class MaintenanceTicket(models.Model):
         blank=True,
         related_name="work_orders",
     )
+    asset = models.ForeignKey(
+        "MaintenanceAsset",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="maintenance_tickets",
+    )
+
     description = models.TextField()
 
     reported_by = models.ForeignKey(
@@ -381,6 +389,14 @@ class MaintenanceAsset(models.Model):
         null=True,
         blank=True,
         related_name="maintenance_assets",
+    )
+
+    location = models.ForeignKey(
+        "MaintenanceLocation",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="assets",
     )
 
     name = models.CharField(
