@@ -13,7 +13,9 @@ from inventory.models import (
     StockCostLayer,
     StockMovement,
     StockTransfer,
+    Supplier,
 )
+from inventory.forms import PurchaseItemForm, PurchaseOrderForm
 from inventory.views import po_submit, product_delete
 
 
@@ -126,3 +128,74 @@ class FractionalStockTransferTests(TestCase):
         self.assertEqual(destination_layer.quantity_remaining, Decimal("1.250"))
         self.assertEqual(movement.quantity, Decimal("1.250"))
 
+
+
+
+class PurchaseOrderHotelIsolationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        organization = Organization.objects.create(name="PO Isolation Org")
+        cls.hotel_a = Hotel.objects.create(
+            organization=organization,
+            name="PO Isolation Hotel A",
+        )
+        cls.hotel_b = Hotel.objects.create(
+            organization=organization,
+            name="PO Isolation Hotel B",
+        )
+        cls.department_a = Department.objects.create(
+            hotel=cls.hotel_a,
+            code="POA",
+            name="PO Department A",
+            department_type="STORE",
+        )
+        cls.supplier_a = Supplier.objects.create(
+            hotel=cls.hotel_a,
+            name="Supplier A",
+        )
+        cls.supplier_b = Supplier.objects.create(
+            hotel=cls.hotel_b,
+            name="Supplier B",
+        )
+        cls.product_a = Product.objects.create(
+            hotel=cls.hotel_a,
+            name="Hotel A Product",
+            sku="PO-ISO-A",
+            product_type="RAW",
+            base_unit="kg",
+        )
+        cls.product_b = Product.objects.create(
+            hotel=cls.hotel_b,
+            name="Hotel B Product",
+            sku="PO-ISO-B",
+            product_type="RAW",
+            base_unit="kg",
+        )
+
+    def test_purchase_order_rejects_supplier_from_another_hotel(self):
+        form = PurchaseOrderForm(
+            data={
+                "supplier": str(self.supplier_b.pk),
+                "department": str(self.department_a.pk),
+            },
+            hotels=Hotel.objects.filter(
+                pk__in=[self.hotel_a.pk, self.hotel_b.pk]
+            ),
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("supplier", form.errors)
+
+    def test_purchase_item_form_excludes_products_from_other_hotels(self):
+        form = PurchaseItemForm(hotel=self.hotel_a)
+
+        self.assertTrue(
+            form.fields["product"].queryset.filter(
+                pk=self.product_a.pk
+            ).exists()
+        )
+        self.assertFalse(
+            form.fields["product"].queryset.filter(
+                pk=self.product_b.pk
+            ).exists()
+        )
