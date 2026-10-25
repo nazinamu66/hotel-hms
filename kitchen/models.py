@@ -552,32 +552,62 @@ class IngredientRestockRequest(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def update_issue_status(self):
-        store_items = self.items.filter(source="STORE")
+        """
+        Recalculate fulfillment from the quantities actually issued from
+        Store and the receipt state of any linked Direct Purchase.
 
-        if not store_items.exists():
-            return  # nothing to track
+        A request is RECEIVED only when every requested source is fulfilled.
+        Partial fulfillment is reported even when one line has received
+        nothing yet but another line has already been fulfilled.
+        """
+        if self.status in ("PENDING", "REJECTED"):
+            return
 
-        fully_issued = True
-        partially_issued = False
+        items = list(self.items.all())
+        if not items:
+            return
+
+        store_items = [item for item in items if item.source == "STORE"]
+        direct_items = [item for item in items if item.source == "DIRECT"]
+
+        all_fulfilled = True
+        any_fulfilled = False
 
         for item in store_items:
             total_issued = sum(
-                Decimal(t.quantity) for t in item.transfers.all()
+                (Decimal(str(transfer.quantity)) for transfer in item.transfers.all()),
+                Decimal("0"),
             )
+            line_fulfilled = total_issued >= item.quantity
+            if total_issued > 0:
+                any_fulfilled = True
+            if not line_fulfilled:
+                all_fulfilled = False
 
-            if total_issued == 0:
-                fully_issued = False
-            elif total_issued < item.quantity:
-                fully_issued = False
-                partially_issued = True
+        if direct_items:
+            try:
+                direct_purchase = self.direct_purchase
+            except DirectPurchase.DoesNotExist:
+                direct_purchase = None
 
-        if fully_issued:
+            direct_fulfilled = bool(
+                direct_purchase and direct_purchase.status == "RECEIVED"
+            )
+            if direct_fulfilled:
+                any_fulfilled = True
+            else:
+                all_fulfilled = False
+
+        if all_fulfilled:
             self.status = "RECEIVED"
-            self.received_at = timezone.now()
-        elif partially_issued:
+            if self.received_at is None:
+                self.received_at = timezone.now()
+        elif any_fulfilled:
             self.status = "PARTIALLY_ISSUED"
+            self.received_at = None
         else:
             self.status = "APPROVED"
+            self.received_at = None
 
         self.save(update_fields=["status", "received_at"])
 
