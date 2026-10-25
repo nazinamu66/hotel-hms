@@ -69,6 +69,43 @@ def create_ticket_room(request):
 @role_required(
     "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT", "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY", "GYM", "BOUTIQUE", "SECURITY",
 )
+def create_ticket(request, room_id):
+    hotels = get_accessible_hotels(request.user)
+    room = get_object_or_404(Room.objects.select_related("hotel", "category"), pk=room_id, hotel__in=hotels)
+    if request.user.role in {"LAUNDRY", "KITCHEN", "RESTAURANT", "GYM", "STORE", "SECURITY"}:
+        raise PermissionDenied
+    if request.method == "POST":
+        description = request.POST.get("description", "").strip()
+        priority = request.POST.get("priority", "MEDIUM").strip().upper()
+        valid_priorities = {choice[0] for choice in MaintenanceTicket.PRIORITY_CHOICES}
+        if not description:
+            messages.error(request, "Please describe the maintenance issue.")
+            return redirect(request.path)
+        if priority not in valid_priorities:
+            messages.error(request, "Please select a valid priority.")
+            return redirect(request.path)
+        with transaction.atomic():
+            room = Room.objects.select_for_update().get(pk=room.pk)
+            ticket = MaintenanceTicket.objects.create(
+                room=room,
+                description=description,
+                priority=priority,
+                reported_by=request.user,
+                room_status_before_maintenance=room.status,
+            )
+            if priority == "HIGH":
+                room.status = "OUT_OF_ORDER"
+                room.save(update_fields=["status"])
+        messages.success(request, f"Maintenance issue for Room {room.room_number} reported successfully (ticket #{ticket.pk}).")
+        if request.user.role == "MAINTENANCE":
+            return redirect("maintenance_dashboard")
+        return redirect("maintenance_create_ticket_room")
+    return render(request, "maintenance/create_ticket.html", {"room": room})
+
+
+@role_required(
+    "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT", "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY", "GYM", "BOUTIQUE", "SECURITY",
+)
 def create_ticket_location(request, location_id):
     hotels = get_accessible_hotels(request.user)
     location = get_object_or_404(MaintenanceLocation.objects.select_related("hotel"), pk=location_id, hotel__in=hotels, is_active=True, status="ACTIVE")
