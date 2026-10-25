@@ -401,6 +401,8 @@ def maintenance_ticket_detail(request, ticket_id):
         MaintenanceTicket.objects
         .select_related(
             "room",
+            "location",
+            "asset",
             "reported_by",
             "assigned_to",
         )
