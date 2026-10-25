@@ -228,11 +228,12 @@
 
         {% if ticket.status == "OPEN" %}
 
-            <a href="{% url 'maintenance_start_ticket' ticket.id %}">
-                <button type="button">
+            <form method="post" action="{% url 'maintenance_start_ticket' ticket.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit">
                     Start
                 </button>
-            </a>
+            </form>
 
         {% else %}
 
