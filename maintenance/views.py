@@ -74,7 +74,10 @@ def create_ticket(request, room_id):
     room = get_object_or_404(Room.objects.select_related("hotel", "category"), pk=room_id, hotel__in=hotels)
     if request.user.role in {"LAUNDRY", "KITCHEN", "RESTAURANT", "GYM", "STORE", "SECURITY"}:
         raise PermissionDenied
+    assets = MaintenanceAsset.objects.filter(hotel=room.hotel, room=room, is_active=True).order_by("name")
     if request.method == "POST":
+        asset_id = request.POST.get("asset", "").strip()
+        asset = get_object_or_404(assets, pk=asset_id) if asset_id else None
         description = request.POST.get("description", "").strip()
         priority = request.POST.get("priority", "MEDIUM").strip().upper()
         valid_priorities = {choice[0] for choice in MaintenanceTicket.PRIORITY_CHOICES}
@@ -88,6 +91,7 @@ def create_ticket(request, room_id):
             room = Room.objects.select_for_update().get(pk=room.pk)
             ticket = MaintenanceTicket.objects.create(
                 room=room,
+                asset=asset,
                 description=description,
                 priority=priority,
                 reported_by=request.user,
@@ -100,7 +104,7 @@ def create_ticket(request, room_id):
         if request.user.role == "MAINTENANCE":
             return redirect("maintenance_dashboard")
         return redirect("maintenance_create_ticket_room")
-    return render(request, "maintenance/create_ticket.html", {"room": room})
+    return render(request, "maintenance/create_ticket.html", {"room": room, "assets": assets})
 
 
 @role_required(
