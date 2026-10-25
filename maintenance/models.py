@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from rooms.models import Room
 from decimal import Decimal
+from django.core.exceptions import ValidationError
 from inventory.models import Hotel, Supplier, Product
 
 
@@ -377,6 +378,14 @@ class MaintenanceMaterial(models.Model):
 
 class MaintenanceAsset(models.Model):
 
+    CONDITION_CHOICES = (
+        ("NEW", "New"),
+        ("GOOD", "Good"),
+        ("FAIR", "Fair"),
+        ("POOR", "Poor"),
+        ("DAMAGED", "Damaged"),
+    )
+
     hotel = models.ForeignKey(
         Hotel,
         on_delete=models.PROTECT,
@@ -398,6 +407,24 @@ class MaintenanceAsset(models.Model):
         blank=True,
         related_name="assets",
     )
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="equipment_assets",
+    )
+
+    purchase_item = models.ForeignKey(
+        "inventory.PurchaseItem",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="registered_assets",
+    )
+
+    asset_tag = models.CharField(max_length=50, unique=True, blank=True)
 
     name = models.CharField(
         max_length=150,
@@ -423,6 +450,11 @@ class MaintenanceAsset(models.Model):
         blank=True,
     )
 
+    purchase_date = models.DateField(null=True, blank=True)
+    purchase_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    warranty_expiry = models.DateField(null=True, blank=True)
+    condition = models.CharField(max_length=12, choices=CONDITION_CHOICES, default="GOOD")
+
     is_active = models.BooleanField(
         default=True,
     )
@@ -433,6 +465,24 @@ class MaintenanceAsset(models.Model):
 
     class Meta:
         ordering = ["name"]
+
+    def clean(self):
+        if self.room_id and self.location_id:
+            raise ValidationError("An equipment asset can be assigned to a room or a non-room location, not both.")
+        if self.room_id and self.room.hotel_id != self.hotel_id:
+            raise ValidationError("The selected room must belong to the asset hotel.")
+        if self.location_id and self.location.hotel_id != self.hotel_id:
+            raise ValidationError("The selected location must belong to the asset hotel.")
+        if self.product_id and self.product.hotel_id != self.hotel_id:
+            raise ValidationError("The equipment product must belong to the asset hotel.")
+
+    def save(self, *args, **kwargs):
+        if not self.asset_tag:
+            super().save(*args, **kwargs)
+            self.asset_tag = f"EQ-{self.hotel_id}-{self.pk:06d}"
+            super().save(update_fields=["asset_tag"])
+            return
+        super().save(*args, **kwargs)
 
     def __str__(self):
 
