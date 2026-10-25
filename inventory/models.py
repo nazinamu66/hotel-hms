@@ -1043,19 +1043,35 @@ class StockTransfer(models.Model):
         related_name="transfers",
     )
 
+    @transaction.atomic
     def execute(self):
-        transfer_stock(
-            product=self.product,
-            from_department=self.from_department,
-            to_department=self.to_department,
-            quantity=self.quantity,
-            user=self.created_by,
-            reference=f"TRANSFER-{self.id}"
+        # Serialize execution of this transfer and reject cross-hotel product
+        # or department combinations before moving physical stock or FIFO cost.
+        transfer = (
+            self.__class__.objects
+            .select_for_update()
+            .select_related("product", "from_department", "to_department")
+            .get(pk=self.pk)
         )
 
-        # 🔑 AUTO-UPDATE ingredient request status
-        if self.ingredient_request_item:
-            req = self.ingredient_request_item.request
+        if transfer.product.hotel_id != transfer.from_department.hotel_id:
+            raise ValidationError("The product must belong to the source department's hotel.")
+
+        if transfer.product.hotel_id != transfer.to_department.hotel_id:
+            raise ValidationError("The product must belong to the destination department's hotel.")
+
+        transfer_stock(
+            product=transfer.product,
+            from_department=transfer.from_department,
+            to_department=transfer.to_department,
+            quantity=transfer.quantity,
+            user=transfer.created_by,
+            reference=f"TRANSFER-{transfer.id}",
+        )
+
+        # Recalculate request status in the same transaction as the stock move.
+        if transfer.ingredient_request_item_id:
+            req = transfer.ingredient_request_item.request
             req.update_issue_status()
 
     def clean(self):
