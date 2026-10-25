@@ -121,6 +121,23 @@
 
 
         <!-- ========================= -->
+        <!-- SHARED HOTEL REPORTING -->
+        <!-- Available to all hotel roles -->
+        <!-- ========================= -->
+
+        <h4 class="menu-toggle {% if request.resolver_match.url_name == 'housekeeping_lost_found' or request.resolver_match.url_name == 'maintenance_create_ticket_room' or request.resolver_match.url_name == 'maintenance_create_ticket' %}active-menu{% endif %}"
+            onclick="toggleMenu('shared_reporting_menu', this)">
+            <span class="arrow">▸</span>
+            Room & Property Reports
+        </h4>
+
+        <div id="shared_reporting_menu" class="menu-section {% if request.resolver_match.url_name == 'housekeeping_lost_found' or request.resolver_match.url_name == 'maintenance_create_ticket_room' or request.resolver_match.url_name == 'maintenance_create_ticket' %}open{% endif %}">
+            <a href="{% url 'housekeeping_lost_found' %}">Lost &amp; Found</a>
+            <a href="{% url 'maintenance_create_ticket_room' %}">Report a Room Issue</a>
+        </div>
+
+
+        <!-- ========================= -->
         <!-- FRONT DESK -->
         <!-- ========================= -->
 
