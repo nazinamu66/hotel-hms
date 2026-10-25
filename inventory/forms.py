@@ -190,6 +190,19 @@ class ProductForm(forms.ModelForm):
             self.instance.cost_price = 0
 
         # ----------------------------------------------------
+        # EQUIPMENT validation
+        # ----------------------------------------------------
+
+        if product_type == "EQUIPMENT":
+            cleaned_data["usage_type"] = "ASSET"
+            if not purchase_cost or purchase_cost <= 0:
+                raise forms.ValidationError("Equipment must have a purchase cost.")
+            if unit_multiplier != 1:
+                raise forms.ValidationError("Equipment must use one base unit per purchased unit (unit multiplier = 1).")
+            if not cleaned_data.get("base_unit"):
+                raise forms.ValidationError("Choose a base unit such as pcs for equipment.")
+
+        # ----------------------------------------------------
         # RESALE validation
         # ----------------------------------------------------
 
