@@ -291,17 +291,39 @@ class PurchaseOrderForm(forms.ModelForm):
             "department",
         ]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, hotels=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields["supplier"].queryset = (
-            Supplier.objects
-            .filter(is_active=True)
-            .order_by("name")
-        )
+        suppliers = Supplier.objects.filter(is_active=True)
+        if hotels is not None:
+            suppliers = suppliers.filter(hotel__in=hotels)
+
+        self.fields["supplier"].queryset = suppliers.order_by("name")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        supplier = cleaned_data.get("supplier")
+        department = cleaned_data.get("department")
+
+        if supplier and department and supplier.hotel_id != department.hotel_id:
+            self.add_error(
+                "supplier",
+                "The supplier and destination department must belong to the same hotel.",
+            )
+
+        return cleaned_data
 
 
 class PurchaseItemForm(forms.ModelForm):
+
+    def __init__(self, *args, hotel=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        products = Product.objects.filter(is_active=True)
+        if hotel is not None:
+            products = products.filter(hotel=hotel)
+
+        self.fields["product"].queryset = products.order_by("name")
 
     class Meta:
         model = PurchaseItem
