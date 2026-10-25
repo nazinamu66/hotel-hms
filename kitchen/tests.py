@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from inventory.models import Department, Hotel, Organization, Product, StockTransfer, Supplier
+from inventory.models import Department, Hotel, Organization, Product, StockMovement, StockTransfer, Supplier
 from kitchen.models import (
     DirectPurchase,
     DirectPurchaseItem,
@@ -206,7 +206,7 @@ class IngredientRequestApprovalTests(TestCase):
             department_type="STORE",
             defaults={"code": "STK", "name": "Approval Test Store"},
         )
-        return StockTransfer.objects.create(
+        transfer = StockTransfer.objects.create(
             product=item.ingredient,
             from_department=store_department,
             to_department=self.kitchen_department,
@@ -214,6 +214,32 @@ class IngredientRequestApprovalTests(TestCase):
             created_by=self.manager,
             ingredient_request_item=item,
         )
+        # These status tests model transfers that have already executed.
+        StockMovement.objects.create(
+            product=item.ingredient,
+            from_department=store_department,
+            to_department=self.kitchen_department,
+            quantity=quantity,
+            movement_type="TRANSFER",
+            created_by=self.manager,
+            reference=f"TRANSFER-{transfer.pk}",
+        )
+        return transfer
+
+    def test_unexecuted_transfer_does_not_count_as_issued(self):
+        request_obj = self.make_store_request(
+            quantities=(("Rice", Decimal("2.000")),)
+        )
+        item = request_obj.items.get()
+        self.make_transfer_record(item, 2)
+        # Remove the simulated movement so the transfer remains a draft.
+        StockMovement.objects.filter(reference__startswith="TRANSFER-").delete()
+
+        request_obj.update_issue_status()
+        request_obj.refresh_from_db()
+
+        self.assertEqual(request_obj.status, "APPROVED")
+        self.assertIsNone(request_obj.received_at)
 
     def test_one_fully_issued_line_and_one_unissued_line_is_partial(self):
         request_obj = self.make_store_request(

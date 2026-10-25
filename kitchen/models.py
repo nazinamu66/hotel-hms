@@ -574,10 +574,16 @@ class IngredientRestockRequest(models.Model):
         any_fulfilled = False
 
         for item in store_items:
-            total_issued = sum(
-                (Decimal(str(transfer.quantity)) for transfer in item.transfers.all()),
-                Decimal("0"),
-            )
+            total_issued = Decimal("0")
+            for transfer in item.transfers.all():
+                # A transfer record is only a request/draft until its stock
+                # movement exists. Never report unexecuted transfers as issued.
+                if StockMovement.objects.filter(
+                    reference=f"TRANSFER-{transfer.pk}",
+                    movement_type="TRANSFER",
+                ).exists():
+                    total_issued += transfer.quantity
+
             line_fulfilled = total_issued >= item.quantity
             if total_issued > 0:
                 any_fulfilled = True
