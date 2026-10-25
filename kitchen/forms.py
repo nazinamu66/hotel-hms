@@ -17,12 +17,34 @@ class BaseIngredientRestockItemFormSet(BaseInlineFormSet):
         super().clean()
 
         sources = set()
+        requester = getattr(self.instance, "requested_by", None)
+        requester_department = getattr(requester, "department", None)
+        requester_hotel_id = getattr(requester_department, "hotel_id", None)
 
         for form in self.forms:
             if not form.cleaned_data or form.cleaned_data.get("DELETE"):
                 continue
 
-            sources.add(form.cleaned_data.get("source"))
+            ingredient = form.cleaned_data.get("ingredient")
+            quantity = form.cleaned_data.get("quantity")
+            source = form.cleaned_data.get("source")
+
+            if ingredient is None and quantity is None and source is None:
+                continue
+
+            if quantity is None or quantity <= 0:
+                raise forms.ValidationError(
+                    "Requested ingredient quantities must be greater than zero."
+                )
+
+            if ingredient and requester_hotel_id is not None:
+                if ingredient.hotel_id != requester_hotel_id:
+                    raise forms.ValidationError(
+                        "Requested ingredients must belong to your hotel's inventory."
+                    )
+
+            if source:
+                sources.add(source)
 
         if len(sources) > 1:
             raise forms.ValidationError(
