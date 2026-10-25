@@ -1145,3 +1145,142 @@ def bank_transfer(request):
             "bank_accounts": bank_accounts,
         },
     )
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "ACCOUNTANT", "CHIEF_ACCOUNTANT", "DIRECTOR", "ADMIN")
+def supplier_payments(request):
+    """Unified view of approved, outstanding supplier obligations and payments."""
+    from datetime import date
+    from decimal import Decimal, InvalidOperation
+    from django.db import transaction
+    from django.utils import timezone
+    from django.urls import reverse
+    from inventory.models import PurchaseOrder, Supplier
+    from kitchen.models import DirectPurchase
+    from maintenance.models import MaintenanceLabour
+    from core.utils import get_user_hotels
+    from accounting.models import SupplierPayment, SupplierLedger
+
+    accessible_hotels = get_user_hotels(request.user)
+    selected_hotel_id = request.GET.get("hotel") or request.POST.get("hotel") or ""
+    if request.user.role != "DIRECTOR" and getattr(request.user, "hotel_id", None):
+        hotels = accessible_hotels.filter(pk=request.user.hotel_id)
+    else:
+        hotels = accessible_hotels
+    hotel = hotels.filter(pk=selected_hotel_id).first() if selected_hotel_id else hotels.first()
+
+    if not hotel:
+        messages.error(request, "No accessible hotel is available for supplier payments.")
+        return redirect("accounting:chart")
+
+    def source_details(source_type, source_id):
+        if source_type == "PO":
+            source = get_object_or_404(PurchaseOrder.objects.select_related("supplier", "department__hotel"), pk=source_id, department__hotel=hotel)
+            if source.status != "RECEIVED" or not source.supplier_id:
+                raise ValueError("Only received purchase orders with a supplier can be paid.")
+            total = sum((item.purchase_quantity * item.unit_cost for item in source.items.all()), Decimal("0.00"))
+            return source, source.supplier, total, f"PO #{source.pk} · {source.department.name}"
+        if source_type == "DIRECT":
+            source = get_object_or_404(DirectPurchase.objects.select_related("supplier"), pk=source_id, supplier__hotel=hotel)
+            if source.status not in ("APPROVED", "PAID", "RECEIVED"):
+                raise ValueError("Only approved direct purchases can be paid.")
+            return source, source.supplier, Decimal(str(source.total_cost)), f"Direct purchase #{source.pk}"
+        if source_type == "LABOUR":
+            source = get_object_or_404(MaintenanceLabour.objects.select_related("supplier", "ticket__room__hotel", "ticket__location__hotel"), pk=source_id, labour_type="OUTSOURCED")
+            source_hotel = source.ticket.room.hotel if source.ticket.room_id else (source.ticket.location.hotel if source.ticket.location_id else None)
+            if not source_hotel or source_hotel.pk != hotel.pk or not source.supplier_id:
+                raise ValueError("This labour charge has no valid supplier obligation for the selected hotel.")
+            return source, source.supplier, Decimal(str(source.amount)), f"Maintenance labour · Ticket #{source.ticket_id}"
+        raise ValueError("Choose a valid supplier obligation.")
+
+    def paid_to_date(source_type, source_id):
+        return SupplierPayment.objects.filter(hotel=hotel, source_type=source_type, source_id=source_id).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+
+    if request.method == "POST":
+        source_type = request.POST.get("source_type", "").strip()
+        source_id = request.POST.get("source_id", "").strip()
+        try:
+            source, supplier, total, label = source_details(source_type, int(source_id))
+            amount = Decimal(request.POST.get("amount", "").strip())
+            payment_date = date.fromisoformat(request.POST.get("payment_date", "").strip())
+            reference = request.POST.get("reference", "").strip()
+            notes = request.POST.get("notes", "").strip()
+            account_id = request.POST.get("payment_account", "")
+            payment_account = get_object_or_404(Account.objects.select_for_update(), pk=account_id, hotel=hotel, is_active=True, allow_posting=True, account_type__in=("cash", "bank"))
+            already_paid = paid_to_date(source_type, source.pk)
+            outstanding = total - already_paid
+            if amount <= 0:
+                raise ValueError("Payment amount must be greater than zero.")
+            if amount > outstanding:
+                raise ValueError(f"Payment exceeds the outstanding balance of ₦{outstanding:,.2f}.")
+            if reference and SupplierPayment.objects.filter(hotel=hotel, reference=reference).exists():
+                raise ValueError("This payment reference has already been used for this hotel.")
+            if not supplier or supplier.hotel_id != hotel.pk:
+                raise ValueError("Supplier does not belong to the selected hotel.")
+            if total <= 0:
+                raise ValueError("This obligation has no payable value.")
+            with transaction.atomic():
+                payment = SupplierPayment.objects.create(
+                    hotel=hotel, supplier=supplier, source_type=source_type,
+                    source_id=source.pk, amount=amount, payment_account=payment_account,
+                    payment_date=payment_date, reference=reference, notes=notes,
+                    created_by=request.user,
+                )
+                payable = get_system_account(hotel, "accounts_payable")
+                journal = record_transaction(
+                    debit_account=payable, credit_account=payment_account,
+                    amount=amount, description=f"Supplier payment · {label}",
+                    hotel=hotel, created_by=request.user, entry_type="NORMAL",
+                    reference=f"SUPPAY-{payment.pk}",
+                )
+                payment.journal_entry = journal
+                payment.save(update_fields=["journal_entry"])
+                SupplierLedger.objects.create(supplier=supplier, journal_entry=journal, amount=amount, entry_type="debit")
+                if source_type == "PO":
+                    source.payment_status = "PAID" if amount + already_paid == total else "PARTIAL"
+                    if source.payment_status == "PAID":
+                        source.paid_by = request.user
+                        source.paid_at = timezone.now()
+                    source.payment_reference = reference
+                    source.save(update_fields=["payment_status", "paid_by", "paid_at", "payment_reference"])
+                elif source_type == "DIRECT" and amount + already_paid == total:
+                    source.status = "PAID"
+                    source.paid_by = request.user
+                    source.paid_at = timezone.now()
+                    source.payment_reference = reference
+                    source.save(update_fields=["status", "paid_by", "paid_at", "payment_reference"])
+            messages.success(request, f"Payment of ₦{amount:,.2f} recorded for {label}. Remaining balance: ₦{max(total - already_paid - amount, Decimal('0.00')):,.2f}.")
+            return redirect(f"{reverse('accounting:supplier_payments')}?hotel={hotel.pk}")
+        except (ValueError, InvalidOperation, TypeError) as exc:
+            messages.error(request, str(exc))
+        except Exception as exc:
+            messages.error(request, f"Payment was not recorded: {exc}")
+
+    obligations = []
+    for po in PurchaseOrder.objects.filter(department__hotel=hotel, status="RECEIVED", supplier__isnull=False).select_related("supplier", "department").prefetch_related("items"):
+        total = sum((item.purchase_quantity * item.unit_cost for item in po.items.all()), Decimal("0.00"))
+        paid = paid_to_date("PO", po.pk)
+        if po.payment_status == "PAID" and paid == 0:
+            continue
+        if total > paid:
+            obligations.append({"source_type":"PO","source_id":po.pk,"supplier":po.supplier,"label":f"PO #{po.pk} · {po.department.name}","total":total,"paid":paid,"outstanding":total-paid})
+    for dp in DirectPurchase.objects.filter(supplier__hotel=hotel, status__in=("APPROVED","PAID","RECEIVED")).select_related("supplier"):
+        total = Decimal(str(dp.total_cost)); paid = paid_to_date("DIRECT", dp.pk)
+        if dp.status == "PAID" and paid == 0:
+            continue
+        if total > paid:
+            obligations.append({"source_type":"DIRECT","source_id":dp.pk,"supplier":dp.supplier,"label":f"Direct purchase #{dp.pk}","total":total,"paid":paid,"outstanding":total-paid})
+    for labour in MaintenanceLabour.objects.filter(labour_type="OUTSOURCED", supplier__isnull=False).select_related("supplier","ticket__room__hotel","ticket__location__hotel"):
+        source_hotel = labour.ticket.room.hotel if labour.ticket.room_id else (labour.ticket.location.hotel if labour.ticket.location_id else None)
+        if not source_hotel or source_hotel.pk != hotel.pk:
+            continue
+        total = Decimal(str(labour.amount)); paid = paid_to_date("LABOUR", labour.pk)
+        if total > paid:
+            obligations.append({"source_type":"LABOUR","source_id":labour.pk,"supplier":labour.supplier,"label":f"Maintenance labour · Ticket #{labour.ticket_id}","total":total,"paid":paid,"outstanding":total-paid})
+    payment_history = SupplierPayment.objects.filter(hotel=hotel).select_related("supplier","payment_account","created_by","journal_entry")[:100]
+    payment_accounts = Account.objects.filter(hotel=hotel, account_type__in=("cash","bank"), is_active=True, allow_posting=True).order_by("code")
+    return render(request, "accounting/supplier_payments.html", {
+        "hotels": hotels, "hotel": hotel, "obligations": obligations,
+        "payment_history": payment_history, "payment_accounts": payment_accounts,
+        "today": date.today(),
+    })
