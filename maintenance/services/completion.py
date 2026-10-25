@@ -46,14 +46,16 @@ def complete_maintenance_ticket(
     )
 
     # =========================================================
-    # LOCK ROOM
+    # LOCK ROOM ONLY FOR ROOM-BASED TICKETS
     # =========================================================
 
-    room = (
-        ticket.room.__class__.objects
-        .select_for_update()
-        .get(pk=ticket.room_id)
-    )
+    room = None
+    if ticket.room_id:
+        room = (
+            ticket.room.__class__.objects
+            .select_for_update()
+            .get(pk=ticket.room_id)
+        )
 
     # =========================================================
     # VALIDATE TICKET
@@ -99,54 +101,24 @@ def complete_maintenance_ticket(
         )
 
     # =========================================================
-    # DETERMINE CURRENT OCCUPANCY
-    # =========================================================
-    #
-    # We deliberately check the folio NOW.
-    #
-    # The room may have changed since the maintenance ticket
-    # was originally created.
+    # DETERMINE RESULTING ROOM STATUS (ROOM TICKETS ONLY)
     # =========================================================
 
-    active_folio = Folio.get_active_room_folio(
-        room
-    )
+    resulting_room_status = None
+    if room is not None:
+        active_folio = Folio.get_active_room_folio(room)
+        has_active_folio = active_folio is not None
 
-    has_active_folio = (
-        active_folio is not None
-    )
-
-    # =========================================================
-    # DETERMINE RESULTING ROOM STATUS
-    # =========================================================
-
-    if outcome == "ROOM_READY":
-
-        if has_active_folio:
-            resulting_room_status = "OCCUPIED"
+        if outcome == "ROOM_READY":
+            resulting_room_status = "OCCUPIED" if has_active_folio else "AVAILABLE"
+        elif outcome == "HOUSEKEEPING_REQUIRED":
+            resulting_room_status = "OCCUPIED_DIRTY" if has_active_folio else "VACANT_DIRTY"
+        elif outcome == "NOT_APPLICABLE":
+            resulting_room_status = ticket.room_status_before_maintenance or room.status
         else:
-            resulting_room_status = "AVAILABLE"
-
-    elif outcome == "HOUSEKEEPING_REQUIRED":
-
-        if has_active_folio:
-            resulting_room_status = "OCCUPIED_DIRTY"
-        else:
-            resulting_room_status = "VACANT_DIRTY"
-
-    elif outcome == "NOT_APPLICABLE":
-
-        resulting_room_status = (
-            ticket.room_status_before_maintenance
-            or room.status
-        )
-
-    else:
-        # This should technically be impossible because the
-        # outcome was validated above.
-        raise ValidationError(
-            "Unable to determine the resulting room status."
-        )
+            raise ValidationError("Invalid completion outcome for a room ticket.")
+    elif outcome != "NOT_APPLICABLE":
+        raise ValidationError("Non-room maintenance tickets must use the no-room-status-change outcome.")
 
     # =========================================================
     # COMPLETE TICKET
@@ -201,16 +173,12 @@ def complete_maintenance_ticket(
             )
 
     # =========================================================
-    # SAVE ROOM STATUS
+    # SAVE ROOM STATUS ONLY WHEN A ROOM IS AFFECTED
     # =========================================================
 
-    room.status = resulting_room_status
-
-    room.save(
-        update_fields=[
-            "status",
-        ]
-    )
+    if room is not None:
+        room.status = resulting_room_status
+        room.save(update_fields=["status"])
 
     # =========================================================
     # RETURN COMPLETED TICKET
