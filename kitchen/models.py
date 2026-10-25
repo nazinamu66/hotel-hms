@@ -214,6 +214,16 @@ class ProductionBatch(models.Model):
     # =====================================
     @transaction.atomic
     def execute(self, actual_quantities: dict | None = None):
+        # Lock the batch itself before checking is_executed. Locking only the
+        # stock rows is insufficient: two requests could otherwise both pass
+        # the idempotency check and produce the same batch twice.
+        batch = (
+            self.__class__.objects
+            .select_for_update()
+            .select_related("recipe__product", "produced_by__department__hotel")
+            .get(pk=self.pk)
+        )
+        self.__dict__.update(batch.__dict__)
 
         self._validate_producer()
 
@@ -223,14 +233,14 @@ class ProductionBatch(models.Model):
         if self.is_executed:
             raise ValidationError("This production batch is already executed.")
 
-        actual_quantities = actual_quantities or {}
+        if self.quantity_produced <= 0:
+            raise ValidationError("Production quantity must be greater than zero.")
 
+        actual_quantities = actual_quantities or {}
         ingredient_rows = self._collect_ingredient_rows(actual_quantities)
 
         total_cost = self._deduct_ingredients(ingredient_rows)
-
         self._add_finished_product(total_cost)
-
         self._finalize(total_cost)
 
     # =====================================
