@@ -87,7 +87,7 @@ def consume_maintenance_material(
     # Determine Maintenance Store
     # ---------------------------------------------------------
 
-    hotel = ticket.room.hotel
+    hotel = ticket.room.hotel if ticket.room_id else ticket.location.hotel
 
     maintenance_department = get_maintenance_department(
         hotel
