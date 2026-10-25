@@ -1086,6 +1086,7 @@ def maintenance_assets(request):
             .select_related(
                 "hotel",
                 "room",
+                "location",
             )
             .filter(
                 hotel_id=request.user.hotel_id,
