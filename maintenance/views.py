@@ -1164,10 +1164,8 @@ def maintenance_asset_create(request):
             "",
         ).strip()
 
-        room_id = request.POST.get(
-            "room",
-            "",
-        ).strip()
+        room_id = request.POST.get("room", "").strip()
+        location_id = request.POST.get("location", "").strip()
 
         if not name:
 
@@ -1178,19 +1176,21 @@ def maintenance_asset_create(request):
 
             return redirect(request.path)
 
+        if room_id and location_id:
+            messages.error(request, "Choose either a room or a non-room location, not both.")
+            return redirect(request.path)
+
         room = None
-
+        location = None
         if room_id:
-
-            room = get_object_or_404(
-                Room,
-                id=room_id,
-                hotel=hotel,
-            )
+            room = get_object_or_404(Room, id=room_id, hotel=hotel)
+        if location_id:
+            location = get_object_or_404(MaintenanceLocation, id=location_id, hotel=hotel, is_active=True)
 
         MaintenanceAsset.objects.create(
             hotel=hotel,
             room=room,
+            location=location,
             name=name,
             asset_type=asset_type,
             serial_number=serial_number,
@@ -1217,11 +1217,13 @@ def maintenance_asset_create(request):
         )
     )
 
+    locations = MaintenanceLocation.objects.filter(hotel=hotel, is_active=True, status="ACTIVE").order_by("name")
     return render(
         request,
         "maintenance/asset_form.html",
         {
             "rooms": rooms,
+            "locations": locations,
         },
     )
 
