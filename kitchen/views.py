@@ -921,9 +921,12 @@ def direct_purchase_receive(request, pk):
 @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT")
 
 def direct_purchase_detail(request, pk):
+    from accounting.models import SupplierPayment
+    from decimal import Decimal
+
     dp = get_object_or_404(
         DirectPurchase.objects
-        .select_related("supplier", "ingredient_request")
+        .select_related("supplier", "supplier__hotel", "ingredient_request", "requested_by", "approved_by", "paid_by")
         .prefetch_related("items__product"),
         pk=pk,
         supplier__hotel__in=get_accessible_hotels(request.user),
@@ -932,13 +935,29 @@ def direct_purchase_detail(request, pk):
     if request.user.role == "KITCHEN" and dp.requested_by != request.user:
         raise PermissionDenied
 
+    payments = SupplierPayment.objects.filter(
+        hotel_id=dp.supplier.hotel_id,
+        source_type="DIRECT",
+        source_id=dp.pk,
+    ).select_related("payment_account", "created_by", "journal_entry").order_by("-payment_date", "-pk")
+    paid_to_date = payments.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+    purchase_total = Decimal(str(dp.total_cost or "0.00"))
+    payment_outstanding = max(Decimal("0.00"), purchase_total - paid_to_date)
+    can_manage_payment = request.user.role in {"ACCOUNTANT", "CHIEF_ACCOUNTANT", "DIRECTOR", "ADMIN"}
+
     return render(
         request,
         "kitchen/direct_purchase/detail.html",
         {
             "dp": dp,
+            "payments": payments,
+            "paid_to_date": paid_to_date,
+            "payment_outstanding": payment_outstanding,
+            "payment_complete": purchase_total > 0 and payment_outstanding == 0,
+            "can_manage_payment": can_manage_payment,
+            "payment_url": f"/accounting/supplier-payments/?hotel={dp.supplier.hotel_id}",
             "can_receive": (
-                request.user.role == "KITCHEN"
+                request.user.role in {"KITCHEN", "MANAGER", "ADMIN", "DIRECTOR"}
                 and dp.status in ("PAID", "PARTIALLY_RECEIVED")
             ),
         },
