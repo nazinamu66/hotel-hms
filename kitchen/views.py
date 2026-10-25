@@ -182,23 +182,28 @@ def kitchen_ingredient_request_create(request):
         raise PermissionDenied
 
     if request.method == "POST":
-        req = IngredientRestockRequest.objects.create(
+        # Validate the request and all line items before persisting anything.
+        # Invalid submissions must not leave empty/orphaned requests behind.
+        req = IngredientRestockRequest(
             requested_by=request.user,
-            note=request.POST.get("note", "")
+            note=request.POST.get("note", ""),
         )
-
         formset = IngredientRestockItemFormSet(
             request.POST,
             instance=req,
-            prefix="items"
+            prefix="items",
         )
 
         if formset.is_valid():
+            req.save()
+            formset.instance = req
             formset.save()
             messages.success(request, "Ingredient request submitted.")
             return redirect("kitchen_ingredients")
 
-        request_form = IngredientRestockRequestForm(instance=req)
+        request_form = IngredientRestockRequestForm(
+            initial={"note": request.POST.get("note", "")}
+        )
     else:
         req = IngredientRestockRequest(requested_by=request.user)
         formset = IngredientRestockItemFormSet(instance=req, prefix="items")
