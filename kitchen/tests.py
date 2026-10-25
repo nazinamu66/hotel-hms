@@ -122,10 +122,24 @@ class IngredientRequestApprovalTests(TestCase):
         request_obj.refresh_from_db()
         purchase = DirectPurchase.objects.get(ingredient_request=request_obj)
         self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("direct_purchase_detail", args=[purchase.pk]))
         self.assertEqual(request_obj.status, "APPROVED")
         self.assertEqual(purchase.status, "APPROVED")
         self.assertEqual(purchase.total_cost, Decimal("62.50"))
         self.assertEqual(purchase.items.count(), 1)
+
+    def test_approved_direct_purchase_request_leaves_manager_approval_queue(self):
+        request_obj = self.make_direct_request()
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            reverse("kitchen_ingredient_request_detail", args=[request_obj.pk]),
+            data=self.approve_payload(request_obj, cost="12.50"),
+        )
+        self.assertEqual(response.status_code, 302)
+
+        queue_response = self.client.get(reverse("manager_ingredient_requests"))
+        self.assertEqual(queue_response.status_code, 200)
+        self.assertNotContains(queue_response, f"Request #{request_obj.pk}")
 
     def test_repeated_approval_does_not_create_duplicate_purchase(self):
         request_obj = self.make_direct_request()
