@@ -1811,11 +1811,13 @@ def my_work_orders(request):
         MaintenanceTicket.objects
         .select_related(
             "room",
+            "location",
+            "asset",
             "reported_by",
             "assigned_to",
         )
         .filter(
-            room__hotel_id=request.user.hotel_id,
+            Q(room__hotel_id=request.user.hotel_id) | Q(location__hotel_id=request.user.hotel_id),
             assigned_to=request.user,
         )
         .exclude(
