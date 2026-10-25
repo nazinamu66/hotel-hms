@@ -30,7 +30,7 @@
         <!-- ACCOUNTING -->
         <!-- ========================= -->
 
-        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ACCOUNTANT,CHIEF_ACCOUNTANT,DIRECTOR,ADMIN" %}
+        {% if user|has_role:"ACCOUNTANT,CHIEF_ACCOUNTANT,DIRECTOR,ADMIN" %}
 
         <h4 class="menu-toggle {% if request.resolver_match.namespace == 'accounting' %}active-menu{% endif %}"
             onclick="toggleMenu('accounting_menu', this)">
@@ -77,6 +77,10 @@
 
         </div>
 
+        {% endif %}
+
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ACCOUNTANT,CHIEF_ACCOUNTANT,DIRECTOR,ADMIN" %}
+        <a href="{% url 'accounting:supplier_payments' %}" class="sidebar-link">Supplier & Vendor Payments</a>
         {% endif %}
 
     
