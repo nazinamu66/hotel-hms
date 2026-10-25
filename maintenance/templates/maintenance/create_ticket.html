@@ -31,6 +31,13 @@
       <label class="issue-label" for="maintenance-description">Describe the issue <span aria-hidden="true">*</span></label>
       <textarea class="issue-control" id="maintenance-description" name="description" rows="6" required maxlength="5000" placeholder="Example: Bathroom hot water is not working. The issue started this morning."></textarea>
       <div class="issue-help">Include what is faulty, where it is located, when it started, and any immediate impact on the guest or room.</div>
+      {% if assets %}
+      <label class="issue-label" for="maintenance-asset">Equipment (optional)</label>
+      <select class="issue-control" id="maintenance-asset" name="asset">
+        <option value="">Room in general / equipment not listed</option>
+        {% for asset in assets %}<option value="{{ asset.id }}">{{ asset.name }}{% if asset.asset_type %} · {{ asset.asset_type }}{% endif %}</option>{% endfor %}
+      </select>
+      {% endif %}
       <label class="issue-label" for="maintenance-priority">Priority</label>
       <select class="issue-control" id="maintenance-priority" name="priority">
         <option value="LOW">Low — minor issue, no immediate impact</option>
