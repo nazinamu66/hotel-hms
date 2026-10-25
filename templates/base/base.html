@@ -30,7 +30,7 @@
         <!-- ACCOUNTING -->
         <!-- ========================= -->
 
-        {% if user|has_role:"ACCOUNTANT,DIRECTOR,ADMIN" %}
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ACCOUNTANT,CHIEF_ACCOUNTANT,DIRECTOR,ADMIN" %}
 
         <h4 class="menu-toggle {% if request.resolver_match.namespace == 'accounting' %}active-menu{% endif %}"
             onclick="toggleMenu('accounting_menu', this)">
@@ -45,6 +45,10 @@
 
             <a href="{% url 'accounting:chart' %}">
                 Chart of Accounts
+            </a>
+
+            <a href="{% url 'accounting:supplier_payments' %}">
+                Supplier & Vendor Payments
             </a>
 
             <a href="{% url 'accounting:pnl' %}">
