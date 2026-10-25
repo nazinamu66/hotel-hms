@@ -1964,6 +1964,12 @@ def po_receive(request, pk):
                 "store_dashboard",
             )
 
+        elif department.department_type == "KITCHEN":
+
+            return redirect(
+                "kitchen_dashboard",
+            )
+
         raise PermissionDenied(
             "This department does not have a valid "
             "stock receiving destination."
