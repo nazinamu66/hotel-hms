@@ -2,10 +2,12 @@ from decimal import Decimal
 
 from accounting.services.journal import record_transaction
 from accounting.constants import INVENTORY_ASSET, EQUIPMENT_ASSET
+from accounting.services.setup_accounts import create_system_accounts
 
 
 def post_inventory_receipt(po):
     hotel = po.department.hotel
+    create_system_accounts(hotel)
     inventory_total = Decimal("0.00")
     equipment_total = Decimal("0.00")
 
