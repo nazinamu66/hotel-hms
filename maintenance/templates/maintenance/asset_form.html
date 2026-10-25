@@ -22,6 +22,7 @@
         <p><label>Purchase date</label><br><input type="date" name="purchase_date" value="{{ asset.purchase_date|date:'Y-m-d' }}"></p>
         <p><label>Purchase cost</label><br><input type="number" name="purchase_cost" min="0" step="0.01" value="{{ asset.purchase_cost|default:'0' }}"></p>
         <p><label>Warranty expiry</label><br><input type="date" name="warranty_expiry" value="{{ asset.warranty_expiry|date:'Y-m-d' }}"></p>
+        <p><label>Condition</label><br><select name="condition">{% for value, label in condition_choices %}<option value="{{ value }}" {% if asset.condition == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></p>
         <button type="submit">{% if is_edit %}Save Changes{% else %}Save Asset{% endif %}</button>
         <a href="{% url 'maintenance_assets' %}">Cancel</a>
     </form>
