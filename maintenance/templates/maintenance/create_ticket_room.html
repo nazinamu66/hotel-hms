@@ -23,9 +23,10 @@
 </style>
 <div class="maint-page">
   <div class="maint-head">
-    <div><div class="maint-kicker">Engineering & facilities</div><h2 class="maint-title">Report a room issue</h2><p class="maint-sub">Choose the affected room to create a maintenance ticket and notify the Maintenance team.</p></div>
+    <div><div class="maint-kicker">Engineering & facilities</div><h2 class="maint-title">Report a property issue</h2><p class="maint-sub">Report a fault in an authorized guest room or hotel area.</p></div>
     <a class="btn btn-secondary" href="{% if request.user.role == 'MAINTENANCE' %}{% url 'maintenance_dashboard' %}{% else %}{% url 'maintenance_create_ticket_room' %}{% endif %}">Back</a>
   </div>
+  {% if rooms %}
   <section class="maint-panel">
     <div class="maint-panel-head"><h3>Rooms in your accessible hotels</h3><span class="maint-muted">{{ rooms|length }} rooms</span></div>
     <div class="maint-table-wrap"><table class="maint-table">
@@ -42,6 +43,7 @@
       </tbody>
     </table></div>
   </section>
+  {% endif %}
 
   {% if locations %}
   <section class="maint-panel" style="margin-top:20px">
