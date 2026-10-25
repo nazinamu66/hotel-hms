@@ -127,6 +127,11 @@ urlpatterns = [
         maintenance_asset_create,
         name="maintenance_asset_create",
     ),
+    path(
+        "assets/<int:asset_id>/edit/",
+        maintenance_asset_create,
+        name="maintenance_asset_edit",
+    ),
 
     path(
         "ticket/<int:ticket_id>/materials/add/",
