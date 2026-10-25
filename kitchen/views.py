@@ -219,92 +219,126 @@ def kitchen_ingredient_request_create(request):
     )
 
 
-@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR","ACCOUNTANT" )
+@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT")
 @transaction.atomic
 def kitchen_ingredient_request_detail(request, pk):
-    req = get_object_or_404(IngredientRestockRequest, pk=pk)
+    hotels = get_accessible_hotels(request.user)
+    req = get_object_or_404(
+        IngredientRestockRequest.objects.select_for_update().select_related(
+            "requested_by", "requested_by__department", "requested_by__hotel",
+        ).prefetch_related("items__ingredient"),
+        pk=pk,
+        requested_by__hotel__in=hotels,
+    )
 
-    # 🔐 Kitchen users see only their own requests
-    if request.user.role == "KITCHEN" and req.requested_by != request.user:
-        raise PermissionDenied
-
-    is_manager = request.user.role in ["MANAGER", "ADMIN", "DIRECTOR"]
+    is_manager = request.user.role in {"MANAGER", "ADMIN", "DIRECTOR"}
     is_kitchen = request.user.role == "KITCHEN"
 
-    # ============================
-    # MANAGER / ADMIN ACTIONS
-    # ============================
-    if request.method == "POST" and is_manager:
+    if is_kitchen and req.requested_by_id != request.user.id:
+        raise PermissionDenied
 
+    if request.method == "POST" and is_manager:
         if req.status != "PENDING":
             messages.warning(request, "This request is already processed.")
             return redirect(request.path)
 
-        action = request.POST.get("action")
+        action = request.POST.get("action", "").strip()
         note = request.POST.get("manager_note", "").strip()
 
-        # ---------- REJECT ----------
         if action == "reject":
             req.status = "REJECTED"
             req.note = note
             req.approved_by = request.user
             req.save(update_fields=["status", "note", "approved_by"])
-
             messages.info(request, "Ingredient request rejected.")
             return redirect("manager_ingredient_requests")
 
-        # ---------- APPROVE ----------
-        if action == "approve":
-            req.note = note
-            req.approved_by = request.user
+        if action != "approve":
+            messages.error(request, "Choose a valid approval action.")
+            return redirect(request.path)
 
-            # 🔑 DIRECT items → DirectPurchase
-            if req.has_direct_items():
-                supplier_id = request.POST.get("supplier")
-                if not supplier_id:
-                    messages.error(request, "Supplier is required for direct purchase.")
+        items = list(req.items.select_related("ingredient"))
+        if not items:
+            messages.error(request, "This request has no ingredient items.")
+            return redirect(request.path)
+
+        # All requested products must belong to the requester's hotel.
+        requester_hotel_id = getattr(req.requested_by, "hotel_id", None)
+        if not requester_hotel_id and req.requested_by and req.requested_by.department_id:
+            requester_hotel_id = req.requested_by.department.hotel_id
+
+        if not requester_hotel_id or any(
+            item.ingredient.hotel_id != requester_hotel_id for item in items
+        ):
+            raise PermissionDenied("The request contains ingredients outside the requester's hotel.")
+
+        if req.has_direct_items():
+            if hasattr(req, "direct_purchase"):
+                messages.error(request, "A direct purchase already exists for this request.")
+                return redirect(request.path)
+
+            supplier_id = request.POST.get("supplier", "").strip()
+            if not supplier_id:
+                messages.error(request, "Supplier is required for direct purchase.")
+                return redirect(request.path)
+
+            supplier = get_object_or_404(
+                Supplier,
+                pk=supplier_id,
+                hotel_id=requester_hotel_id,
+                hotel__in=hotels,
+                is_active=True,
+            )
+
+            purchase_items = [item for item in items if item.source == "DIRECT"]
+            if not purchase_items:
+                messages.error(request, "No direct-purchase items were found.")
+                return redirect(request.path)
+
+            validated_costs = []
+            for item in purchase_items:
+                raw_cost = request.POST.get(f"cost_{item.pk}", "0").strip()
+                try:
+                    cost = Decimal(raw_cost)
+                except (InvalidOperation, TypeError, ValueError):
+                    messages.error(request, f"Enter a valid unit cost for {item.ingredient.name}.")
                     return redirect(request.path)
 
-                supplier = get_object_or_404(
-                    Supplier, id=supplier_id,
-                    hotel__in=get_accessible_hotels(request.user),
-                    is_active=True,
+                if not cost.is_finite() or cost < 0:
+                    messages.error(request, f"Unit cost for {item.ingredient.name} must be finite and non-negative.")
+                    return redirect(request.path)
+
+                validated_costs.append((item, cost))
+
+            # Persist purchase and request state only after every line is valid.
+            dp = DirectPurchase.objects.create(
+                ingredient_request=req,
+                supplier=supplier,
+                requested_by=req.requested_by,
+                approved_by=request.user,
+                status="APPROVED",
+                note=note,
+                approved_at=timezone.now(),
+            )
+            total = Decimal("0.00")
+            for item, cost in validated_costs:
+                dpi = DirectPurchaseItem.objects.create(
+                    purchase=dp,
+                    product=item.ingredient,
+                    quantity=item.quantity,
+                    unit_cost=cost,
                 )
+                total += dpi.total_cost
 
-                dp = DirectPurchase.objects.create(
-                    ingredient_request=req,
-                    supplier=supplier,
-                    requested_by=req.requested_by,
-                    approved_by=request.user,
-                    status="APPROVED",
-                    note=note,
-                    approved_at=timezone.now()
-                )
+            dp.total_cost = total
+            dp.save(update_fields=["total_cost"])
 
-                total = Decimal("0.00")
-
-                for item in req.items.filter(source="DIRECT"):
-                    cost = Decimal(request.POST.get(f"cost_{item.id}", "0"))
-
-                    dpi = DirectPurchaseItem.objects.create(
-                        purchase=dp,
-                        product=item.ingredient,
-                        quantity=item.quantity,
-                        unit_cost=cost
-                    )
-
-                    total += dpi.total_cost
-
-                dp.total_cost = total
-                dp.save(update_fields=["total_cost"])
-
-            # 🔥 NO MORE PURCHASE ORDER CREATION HERE
-
-            req.status = "APPROVED"
-            req.save(update_fields=["status", "note", "approved_by"])
-
-            messages.success(request, "Ingredient request approved.")
-            return redirect("manager_ingredient_requests")
+        req.status = "APPROVED"
+        req.note = note
+        req.approved_by = request.user
+        req.save(update_fields=["status", "note", "approved_by"])
+        messages.success(request, "Ingredient request approved.")
+        return redirect("manager_ingredient_requests")
 
     return render(
         request,
@@ -315,10 +349,10 @@ def kitchen_ingredient_request_detail(request, pk):
             "is_kitchen": is_kitchen,
             "has_direct_items": req.has_direct_items(),
             "suppliers": Supplier.objects.filter(
-                hotel__in=get_accessible_hotels(request.user),
+                hotel__in=hotels,
                 is_active=True,
             ).order_by("name"),
-        }
+        },
     )
 
 @role_required("KITCHEN")
