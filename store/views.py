@@ -669,13 +669,18 @@ def issue_stock(request):
         department_id = request.POST.get("department_id")
 
         try:
-            quantity = Decimal(request.POST.get("quantity"))
-        except (TypeError, InvalidOperation):
+            quantity = Decimal(request.POST.get("quantity", "").strip())
+        except (TypeError, InvalidOperation, ValueError):
             messages.error(request, "Invalid quantity.")
             return redirect("store_issue_stock")
 
-        if quantity <= 0:
-            messages.error(request, "Quantity must be greater than zero.")
+        if not quantity.is_finite() or quantity <= 0:
+            messages.error(request, "Quantity must be a finite number greater than zero.")
+            return redirect("store_issue_stock")
+
+        # Stock quantities are tracked to three decimal places.
+        if quantity.as_tuple().exponent < -3:
+            messages.error(request, "Quantity can have at most three decimal places.")
             return redirect("store_issue_stock")
 
         stock = Stock.objects.select_for_update().filter(
@@ -693,12 +698,16 @@ def issue_stock(request):
 
         to_department = get_object_or_404(
             Department,
-            pk=department_id
+            pk=department_id,
+            hotel=store.hotel,
         )
 
         if to_department == store:
             messages.error(request, "Cannot issue to same department.")
             return redirect("store_issue_stock")
+
+        if stock.product.hotel_id != store.hotel_id:
+            raise PermissionDenied("The product must belong to your hotel's inventory.")
 
         transfer = StockTransfer.objects.create(
             product=stock.product,
@@ -827,43 +836,66 @@ def store_receive_history(request):
 def issue_request_item(request, item_id):
     store = request.user.department
 
+    # Lock the request line before calculating the remaining quantity so
+    # two simultaneous issue attempts cannot both fulfil the same quantity.
     item = get_object_or_404(
-        IngredientRestockItem.objects.select_related("request", "ingredient"),
+        IngredientRestockItem.objects
+        .select_for_update()
+        .select_related(
+            "request",
+            "request__requested_by",
+            "request__requested_by__department",
+            "ingredient",
+        ),
         pk=item_id,
-        source="STORE"
+        source="STORE",
+        request__requested_by__department__hotel=store.hotel,
+        ingredient__hotel=store.hotel,
     )
+    req = item.request
 
-    # Ensure request is approved
-    if item.request.status not in ["APPROVED", "PARTIALLY_ISSUED"]:
+    # Lock and refresh the request status as part of the same transaction.
+    req = req.__class__.objects.select_for_update().get(pk=req.pk)
+    if req.status not in ["APPROVED", "PARTIALLY_ISSUED"]:
         messages.error(request, "Request not approved for issuing.")
         return redirect("store_ingredient_requests")
 
+    destination = req.requested_by.department
+    if not destination or destination.hotel_id != store.hotel_id:
+        raise PermissionDenied("The request destination must belong to this hotel.")
+
     stock = Stock.objects.select_for_update().filter(
         product=item.ingredient,
-        department=store
+        department=store,
     ).first()
 
     if not stock or stock.quantity <= 0:
         messages.error(request, "No stock available.")
         return redirect("store_ingredient_requests")
 
-    # Calculate remaining
-    total_issued = sum(t.quantity for t in item.transfers.all())
-    remaining = item.quantity - total_issued
+    # Sum as Decimal and never issue more than the remaining request quantity.
+    total_issued = sum(
+        (Decimal(str(t.quantity)) for t in item.transfers.all()),
+        Decimal("0.000"),
+    )
+    remaining = Decimal(str(item.quantity)) - total_issued
 
     if remaining <= 0:
         messages.info(request, "Already fully issued.")
         return redirect("store_ingredient_requests")
 
-    issue_quantity = min(stock.quantity, remaining)
+    issue_quantity = min(Decimal(str(stock.quantity)), remaining)
+    if issue_quantity <= 0:
+        messages.error(request, "No positive quantity remains to issue.")
+        return redirect("store_ingredient_requests")
 
     transfer = StockTransfer.objects.create(
         product=item.ingredient,
         from_department=store,
-        to_department=item.request.requested_by.department,
+        to_department=destination,
         quantity=issue_quantity,
         created_by=request.user,
-        ingredient_request_item=item
+        ingredient_request_item=item,
     )
 
     transfer.execute()
