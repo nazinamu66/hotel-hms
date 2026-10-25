@@ -109,12 +109,14 @@ def claim_item(
     item.status = "CLAIMED"
     item.claimed_by = claimant.strip()
     item.claimed_at = timezone.now()
+    item.claimed_verified_by = user
 
     item.save(
         update_fields=[
             "status",
             "claimed_by",
             "claimed_at",
+            "claimed_verified_by",
         ]
     )
 
@@ -146,10 +148,14 @@ def dispose_item(
         )
 
     item.status = "DISPOSED"
+    item.disposed_at = timezone.now()
+    item.disposed_by = user
 
     item.save(
         update_fields=[
             "status",
+            "disposed_at",
+            "disposed_by",
         ]
     )
 
