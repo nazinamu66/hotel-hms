@@ -494,7 +494,7 @@ class Stock(models.Model):
 
     quantity = models.DecimalField(
         max_digits=12,
-        decimal_places=2,
+        decimal_places=3,
         default=0
     )
 
@@ -550,12 +550,12 @@ class StockCostLayer(models.Model):
 
     quantity_received = models.DecimalField(
         max_digits=12,
-        decimal_places=2,
+        decimal_places=3,
     )
 
     quantity_remaining = models.DecimalField(
         max_digits=12,
-        decimal_places=2,
+        decimal_places=3,
     )
 
     unit_cost = models.DecimalField(
@@ -813,7 +813,7 @@ class StockMovement(models.Model):
 
     quantity = models.DecimalField(
         max_digits=12,
-        decimal_places=2,
+        decimal_places=3,
     )
     movement_type = models.CharField(max_length=10, choices=MOVEMENT_TYPE)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
@@ -848,7 +848,7 @@ class StockMovementCostAllocation(models.Model):
 
     quantity = models.DecimalField(
         max_digits=12,
-        decimal_places=2,
+        decimal_places=3,
     )
 
     unit_cost = models.DecimalField(
@@ -1008,7 +1008,10 @@ class StockTransfer(models.Model):
         related_name="transfer_in"
     )
 
-    quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+    )
 
     created_by = models.ForeignKey(
         User,
@@ -1220,7 +1223,7 @@ def stock_in(
 class StockOut(models.Model):
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     department = models.ForeignKey(Department, on_delete=models.PROTECT)
-    quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(max_digits=12, decimal_places=3)
     reason = models.CharField(max_length=255, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1381,7 +1384,7 @@ class StockAdjustment(models.Model):
     product = models.ForeignKey("Product", on_delete=models.CASCADE)
     department = models.ForeignKey("Department", on_delete=models.CASCADE)
 
-    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    quantity = models.DecimalField(max_digits=12, decimal_places=3)
 
     adjustment_type = models.CharField(max_length=10, choices=ADJUSTMENT_TYPE)
 
