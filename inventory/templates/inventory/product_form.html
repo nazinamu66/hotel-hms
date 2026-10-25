@@ -606,6 +606,13 @@
                                     Merchandise sold by the boutique.
                                 </span>
 
+                            {% elif value == "EQUIPMENT" %}
+                                <span class="type-icon">⚙️</span>
+                                <span class="type-name">Equipment</span>
+                                <span class="type-description">
+                                    Individually tracked hotel equipment and fixed assets.
+                                </span>
+
                             {% elif value == "SERVICE" %}
                                 <span class="type-icon">🛠️</span>
                                 <span class="type-name">Service</span>
@@ -1194,6 +1201,32 @@
 
             if (sellingPrice) {
                 sellingPrice.value = "0";
+            }
+
+        } else if (type === "EQUIPMENT") {
+
+            productTypeHelp.innerHTML =
+                "<strong>Equipment:</strong> " +
+                "Individually tracked physical equipment such as washing machines, " +
+                "generators, refrigerators, and air conditioners.";
+
+            classificationHelp.innerHTML =
+                "<strong>Equipment is always classified as an asset.</strong> " +
+                "Each purchased unit can be registered separately in the equipment asset register.";
+
+            pricingHelp.innerHTML =
+                "Enter the purchase cost per unit. Equipment uses one base unit per purchased unit.";
+
+            setSelectValue(usageSelect, "ASSET");
+
+            purchaseCostField.classList.remove("hidden-field");
+            sellingPriceField.classList.add("hidden-field");
+
+            if (sellingPrice) {
+                sellingPrice.value = "0";
+            }
+            if (multiplier) {
+                multiplier.value = "1";
             }
 
         } else if (type === "SERVICE") {
