@@ -3,7 +3,8 @@
 {% block content %}
 <div class="container" style="max-width:900px;margin:25px auto;">
     <h2>{% if is_edit %}Edit Equipment Asset{% else %}Register Equipment Asset{% endif %}</h2>
-    <p>Equipment received through a purchase order is registered automatically. Use this form to add serial details or assign a room or area after receipt.</p>
+    <p>Asset records are managed by Admin and Director users. Equipment received through a purchase order should be registered automatically; use this form for authorized manual registration or to complete asset details.</p>
+        {% if hotels|length > 1 %}<p><label>Hotel</label><br><select name="hotel" required onchange="window.location='?hotel='+this.value"><option value="">Select hotel</option>{% for hotel in hotels %}<option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}</select></p>{% elif selected_hotel %}<input type="hidden" name="hotel" value="{{ selected_hotel.id }}">{% endif %}
     <form method="post">
         {% csrf_token %}
         <p><label>Equipment product (optional)</label><br>
