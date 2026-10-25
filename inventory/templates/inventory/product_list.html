@@ -63,7 +63,10 @@
 <td>
     {% if can_manage_products %}
         <a href="{% url 'inventory:product_edit' product.id %}">Edit</a> |
-        <a href="{% url 'inventory:product_delete' product.id %}">Archive</a>
+        <form method="post" action="{% url 'inventory:product_delete' product.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" onclick="return confirm('Archive this product?');">Archive</button>
+        </form>
     {% else %}
         View only
     {% endif %}
