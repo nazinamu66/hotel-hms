@@ -100,6 +100,21 @@
 
         {% endif %}
 
+        <!-- ========================= -->
+        <!-- ASSET MANAGEMENT -->
+        <!-- Controlled by Admin / Director -->
+        <!-- ========================= -->
+        {% if user|has_role:"ADMIN,DIRECTOR" %}
+        <h4 class="menu-toggle" onclick="toggleMenu('asset_management_menu', this)">
+            <span class="arrow">▸</span>
+            Asset Management
+        </h4>
+        <div id="asset_management_menu" class="menu-section">
+            <a href="{% url 'maintenance_assets' %}">Equipment Register</a>
+            <a href="{% url 'maintenance_asset_create' %}">Register Equipment</a>
+            <a href="{% url 'maintenance_locations' %}">Hotel Locations</a>
+        </div>
+        {% endif %}
 
         <!-- ========================= -->
         <!-- HOTEL IDENTIFIER -->
