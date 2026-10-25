@@ -7,7 +7,7 @@ from accounts.decorators import role_required
 from rooms.models import Room
 from .models import MaintenanceTicket
 from django.core.exceptions import PermissionDenied, ValidationError
-from .models import MaintenanceTicket, MaintenanceLabour, MaintenanceMaterial, MaintenanceAsset, MaintenanceSchedule
+from .models import MaintenanceTicket, MaintenanceLabour, MaintenanceMaterial, MaintenanceAsset, MaintenanceSchedule, MaintenanceLocation
 
 from datetime import timedelta
 from accounts.models import User
@@ -59,61 +59,69 @@ def create_ticket_room(request):
 
 
 @role_required(
-    "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER",
-    "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT",
-    "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY",
-    "GYM", "BOUTIQUE", "SECURITY",
+    "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT", "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY", "GYM", "BOUTIQUE", "SECURITY",
 )
-def create_ticket(request, room_id):
-    """Create a maintenance report without relying on a user's department being present."""
+def create_ticket_room(request):
+    """Show only the room and non-room reporting options allowed for this role."""
     hotels = get_accessible_hotels(request.user)
-    room = get_object_or_404(
-        Room.objects.select_related("hotel", "category"),
-        pk=room_id,
-        hotel__in=hotels,
-    )
+    role = (request.user.role or "").upper()
+    department_type = getattr(getattr(request.user, "department", None), "department_type", "")
+    allowed_types = {
+        "LAUNDRY": {"LAUNDRY"}, "KITCHEN": {"KITCHEN"}, "RESTAURANT": {"RESTAURANT"},
+        "GYM": {"GYM"}, "STORE": {"STORE"},
+        "SECURITY": {"GROUNDS", "PARKING", "GATE", "CORRIDOR", "STAIRWELL", "PUBLIC_AREA"},
+        "HOUSEKEEPING": {"CORRIDOR", "STAIRWELL", "LOBBY", "PUBLIC_AREA"},
+        "FRONTDESK": {"RECEPTION", "LOBBY", "PUBLIC_AREA"},
+    }
+    privileged = role in {"MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT", "ACCOUNTANT"}
+    rooms = Room.objects.filter(hotel__in=hotels).select_related("hotel", "category").order_by("hotel__name", "room_number")
+    locations = MaintenanceLocation.objects.filter(hotel__in=hotels, is_active=True, status="ACTIVE").select_related("hotel").prefetch_related("responsible_departments")
+    if not privileged:
+        allowed = allowed_types.get(role, set()) | allowed_types.get(department_type, set())
+        locations = locations.filter(location_type__in=allowed)
+        if department_type:
+            locations = locations.filter(Q(responsible_departments__isnull=True) | Q(responsible_departments__department_type=department_type)).distinct()
+        else:
+            locations = locations.filter(responsible_departments__isnull=True)
+        if role in {"LAUNDRY", "KITCHEN", "RESTAURANT", "GYM", "STORE"}:
+            rooms = rooms.none()
+    return render(request, "maintenance/create_ticket_room.html", {"rooms": rooms, "locations": locations.order_by("hotel__name", "name"), "hotels": hotels})
 
+
+@role_required(
+    "HOUSEKEEPING", "FRONTDESK", "MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT", "ACCOUNTANT", "RESTAURANT", "STORE", "KITCHEN", "LAUNDRY", "GYM", "BOUTIQUE", "SECURITY",
+)
+def create_ticket_location(request, location_id):
+    hotels = get_accessible_hotels(request.user)
+    location = get_object_or_404(MaintenanceLocation.objects.select_related("hotel"), pk=location_id, hotel__in=hotels, is_active=True, status="ACTIVE")
+    role = (request.user.role or "").upper()
+    department_type = getattr(getattr(request.user, "department", None), "department_type", "")
+    allowed_types = {
+        "LAUNDRY": {"LAUNDRY"}, "KITCHEN": {"KITCHEN"}, "RESTAURANT": {"RESTAURANT"}, "GYM": {"GYM"}, "STORE": {"STORE"},
+        "SECURITY": {"GROUNDS", "PARKING", "GATE", "CORRIDOR", "STAIRWELL", "PUBLIC_AREA"},
+        "HOUSEKEEPING": {"CORRIDOR", "STAIRWELL", "LOBBY", "PUBLIC_AREA"}, "FRONTDESK": {"RECEPTION", "LOBBY", "PUBLIC_AREA"},
+    }
+    privileged = role in {"MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT", "ACCOUNTANT"}
+    allowed = allowed_types.get(role, set()) | allowed_types.get(department_type, set())
+    configured = set(location.responsible_departments.values_list("department_type", flat=True))
+    if not privileged and (location.location_type not in allowed or (configured and department_type not in configured)):
+        raise PermissionDenied
     if request.method == "POST":
         description = request.POST.get("description", "").strip()
         priority = request.POST.get("priority", "MEDIUM").strip().upper()
         valid_priorities = {choice[0] for choice in MaintenanceTicket.PRIORITY_CHOICES}
-
         if not description:
             messages.error(request, "Please describe the maintenance issue.")
-            return redirect(request.path)
-
-        if priority not in valid_priorities:
+        elif priority not in valid_priorities:
             messages.error(request, "Please select a valid priority.")
-            return redirect(request.path)
+        else:
+            ticket = MaintenanceTicket.objects.create(location=location, description=description, priority=priority, reported_by=request.user)
+            messages.success(request, f"Issue at {location.name} reported successfully (ticket #{ticket.pk}).")
+            if role == "MAINTENANCE":
+                return redirect("maintenance_dashboard")
+            return redirect("maintenance_create_ticket_room")
+    return render(request, "maintenance/create_ticket_location.html", {"location": location})
 
-        with transaction.atomic():
-            room = Room.objects.select_for_update().get(pk=room.pk)
-            ticket = MaintenanceTicket.objects.create(
-                room=room,
-                description=description,
-                priority=priority,
-                reported_by=request.user,
-                room_status_before_maintenance=room.status,
-            )
-
-            if priority == "HIGH":
-                room.status = "OUT_OF_ORDER"
-                room.save(update_fields=["status"])
-
-        messages.success(
-            request,
-            f"Maintenance issue for Room {room.room_number} reported successfully (ticket #{ticket.pk}).",
-        )
-        if request.user.role == "MAINTENANCE":
-            return redirect("maintenance_dashboard")
-        return redirect("maintenance_create_ticket_room")
-
-    return render(request, "maintenance/create_ticket.html", {"room": room})
-
-
-# ============================================================
-# MAINTENANCE DASHBOARD
-# ============================================================
 
 @role_required(
     "MAINTENANCE",
@@ -135,9 +143,7 @@ def maintenance_dashboard(request):
         if not request.user.hotel_id:
             raise PermissionDenied
 
-        hotel_filter = {
-            "room__hotel_id": request.user.hotel_id,
-        }
+        hotel_filter = Q(room__hotel_id=request.user.hotel_id) | Q(location__hotel_id=request.user.hotel_id)
 
     else:
 
@@ -147,10 +153,11 @@ def maintenance_dashboard(request):
     # Base ticket queryset
     # --------------------------------------------------------
 
-    tickets = (
-        MaintenanceTicket.objects
-        .filter(**hotel_filter)
-    )
+    tickets = MaintenanceTicket.objects.all()
+    if isinstance(hotel_filter, Q):
+        tickets = tickets.filter(hotel_filter)
+    elif hotel_filter:
+        tickets = tickets.filter(**hotel_filter)
 
     # --------------------------------------------------------
     # Ticket KPIs
@@ -197,6 +204,7 @@ def maintenance_dashboard(request):
         tickets
         .select_related(
             "room",
+            "location",
             "reported_by",
             "assigned_to",
         )
@@ -406,7 +414,8 @@ def maintenance_ticket_detail(request, ticket_id):
         if not request.user.hotel_id:
             raise PermissionDenied
 
-        if ticket.room.hotel_id != request.user.hotel_id:
+        ticket_hotel_id = ticket.room.hotel_id if ticket.room_id else ticket.location.hotel_id
+        if ticket_hotel_id != request.user.hotel_id:
             raise PermissionDenied
 
     # --------------------------------------------------------
