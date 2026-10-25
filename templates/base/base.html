@@ -133,7 +133,7 @@
 
         <div id="shared_reporting_menu" class="menu-section {% if request.resolver_match.url_name == 'housekeeping_lost_found' or request.resolver_match.url_name == 'maintenance_create_ticket_room' or request.resolver_match.url_name == 'maintenance_create_ticket' %}open{% endif %}">
             <a href="{% url 'housekeeping_lost_found' %}">Lost &amp; Found</a>
-            <a href="{% url 'maintenance_create_ticket_room' %}">Report a Room Issue</a>
+            <a href="{% url 'maintenance_create_ticket_room' %}">Report a Property Issue</a>
         </div>
 
 
