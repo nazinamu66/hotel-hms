@@ -429,7 +429,11 @@ def maintenance_ticket_detail(request, ticket_id):
             raise PermissionDenied
 
         # Technician must be assigned to this ticket.
-        if ticket.assigned_to_id != request.user.id:
+        ticket_hotel_id = ticket.room.hotel_id if ticket.room_id else ticket.location.hotel_id
+    if ticket_hotel_id != request.user.hotel_id:
+        raise PermissionDenied
+
+    if ticket.assigned_to_id != request.user.id:
             raise PermissionDenied
 
         note = request.POST.get(
@@ -479,10 +483,13 @@ def maintenance_ticket_detail(request, ticket_id):
 def start_ticket(request, ticket_id):
 
     ticket = get_object_or_404(
-        MaintenanceTicket,
+        MaintenanceTicket.objects.select_related("room", "location"),
         id=ticket_id,
-        room__hotel_id=request.user.hotel_id,
     )
+
+    ticket_hotel_id = ticket.room.hotel_id if ticket.room_id else ticket.location.hotel_id
+    if ticket_hotel_id != request.user.hotel_id:
+        raise PermissionDenied
 
     if ticket.status != "OPEN":
         messages.warning(
@@ -503,8 +510,7 @@ def start_ticket(request, ticket_id):
 
     messages.success(
         request,
-        f"Maintenance ticket for Room "
-        f"{ticket.room.room_number} is now in progress.",
+        f"Maintenance ticket for {('Room ' + ticket.room.room_number) if ticket.room_id else ticket.location.name} is now in progress.",
     )
 
     return redirect("maintenance_dashboard")
@@ -668,7 +674,8 @@ def add_labour(request, ticket_id):
         if not request.user.hotel_id:
             raise PermissionDenied
 
-        if ticket.room.hotel_id != request.user.hotel_id:
+        ticket_hotel_id = ticket.room.hotel_id if ticket.room_id else ticket.location.hotel_id
+        if ticket_hotel_id != request.user.hotel_id:
             raise PermissionDenied
 
     # --------------------------------------------------------
