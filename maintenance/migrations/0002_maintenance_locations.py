@@ -5,7 +5,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("maintenance", "0001_initial"),
+        ("maintenance", "0003_maintenanceticket_completion_outcome_and_more"),
         ("inventory", "0001_initial"),
     ]
 
@@ -75,28 +75,6 @@ class Migration(migrations.Migration):
                 on_delete=django.db.models.deletion.PROTECT,
                 related_name="maintenance_tickets",
                 to="maintenance.maintenancelocation",
-            ),
-        ),
-        migrations.AddField(
-            model_name="maintenanceasset",
-            name="location",
-            field=models.ForeignKey(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.PROTECT,
-                related_name="assets",
-                to="maintenance.maintenancelocation",
-            ),
-        ),
-        migrations.AddField(
-            model_name="maintenanceticket",
-            name="asset",
-            field=models.ForeignKey(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name="maintenance_tickets",
-                to="maintenance.maintenanceasset",
             ),
         ),
     ]
