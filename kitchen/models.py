@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from django.core.exceptions import ValidationError
 from inventory.models import Stock, PurchaseOrder,Supplier
@@ -303,19 +303,20 @@ class ProductionBatch(models.Model):
 
             # Actual quantity entered by the kitchen.
             # If nothing was supplied, use expected as the fallback.
-            actual_qty = Decimal(
-                actual_quantities.get(
-                    str(item.ingredient.id),
-                    actual_quantities.get(
-                        item.ingredient.id,
-                        expected_qty
-                    )
-                )
+            raw_actual_qty = actual_quantities.get(
+                str(item.ingredient.id),
+                actual_quantities.get(item.ingredient.id, expected_qty),
             )
-
-            if actual_qty <= 0:
+            try:
+                actual_qty = Decimal(str(raw_actual_qty))
+            except (InvalidOperation, TypeError, ValueError):
                 raise ValidationError(
-                    f"Actual quantity must be greater than 0 for "
+                    f"Enter a valid actual quantity for {item.ingredient}."
+                )
+
+            if not actual_qty.is_finite() or actual_qty <= 0:
+                raise ValidationError(
+                    f"Actual quantity must be a finite number greater than 0 for "
                     f"{item.ingredient}."
                 )
 
