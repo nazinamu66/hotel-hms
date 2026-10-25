@@ -448,7 +448,7 @@ def direct_purchase_list(request):
     return render(
         request,
         "kitchen/direct_purchase/list.html",
-        {"purchases": qs}
+        {"purchases": purchases}
     )
 
 @role_required("KITCHEN", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
