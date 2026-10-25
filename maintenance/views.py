@@ -43,7 +43,7 @@ def create_ticket_room(request):
     """Show only the room and non-room reporting options allowed for this role."""
     hotels = get_accessible_hotels(request.user)
     role = (request.user.role or "").upper()
-    department_type = getattr(getattr(request.user, "department", None), "department_type", "") or role
+    department_type = getattr(getattr(request.user, "department", None), "department_type", "") or role or role
     allowed_types = {
         "LAUNDRY": {"LAUNDRY"}, "KITCHEN": {"KITCHEN"}, "RESTAURANT": {"RESTAURANT"},
         "GYM": {"GYM"}, "STORE": {"STORE"}, "BOUTIQUE": {"OTHER"},
