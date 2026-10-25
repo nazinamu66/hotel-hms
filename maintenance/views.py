@@ -1161,13 +1161,14 @@ def maintenance_assets(request):
 
 
 @role_required(
+    "MAINTENANCE",
     "MANAGER",
     "ADMIN",
     "DIRECTOR",
 )
 def maintenance_asset_create(request, asset_id=None):
 
-    if request.user.role == "MANAGER":
+    if request.user.role in ("MAINTENANCE", "MANAGER"):
 
         if not request.user.hotel_id:
             raise PermissionDenied
