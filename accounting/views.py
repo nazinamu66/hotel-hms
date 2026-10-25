@@ -73,6 +73,25 @@ def chart_of_accounts(request):
 
     accessible_hotels = get_user_hotels(request.user)
 
+    # Ensure the equipment fixed-asset control account exists for each
+    # hotel shown in this chart. Existing balances and journal entries
+    # are left untouched.
+    from accounting.constants import EQUIPMENT_ASSET, FIXED_ASSET
+    for hotel_for_setup in accessible_hotels:
+        Account.objects.get_or_create(
+            hotel=hotel_for_setup,
+            code="1250",
+            defaults={
+                "name": "Equipment and Fixed Assets",
+                "account_type": FIXED_ASSET,
+                "system_key": EQUIPMENT_ASSET,
+                "is_system": True,
+                "allow_posting": True,
+                "allow_manual_entries": False,
+                "is_active": True,
+            },
+        )
+
     selected_hotel_id = request.GET.get("hotel", "").strip()
 
     # --------------------------------------------------
