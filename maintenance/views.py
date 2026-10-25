@@ -1222,6 +1222,7 @@ def maintenance_asset_create(request, asset_id=None):
         ).strip()
         purchase_date_raw = request.POST.get("purchase_date", "").strip()
         warranty_expiry_raw = request.POST.get("warranty_expiry", "").strip()
+        condition = request.POST.get("condition", "GOOD").strip().upper()
         purchase_cost_raw = request.POST.get("purchase_cost", "").strip()
 
         room_id = request.POST.get("room", "").strip()
@@ -1276,6 +1277,11 @@ def maintenance_asset_create(request, asset_id=None):
         asset.purchase_date = purchase_date
         asset.purchase_cost = purchase_cost
         asset.warranty_expiry = warranty_expiry
+        valid_conditions = {choice[0] for choice in MaintenanceAsset.CONDITION_CHOICES}
+        if condition not in valid_conditions:
+            messages.error(request, "Select a valid equipment condition.")
+            return redirect(request.path)
+        asset.condition = condition
         asset.full_clean()
         asset.save()
 
@@ -1302,6 +1308,7 @@ def maintenance_asset_create(request, asset_id=None):
             "products": products,
             "asset": asset,
             "is_edit": bool(asset),
+            "condition_choices": MaintenanceAsset.CONDITION_CHOICES,
         },
     )
 
