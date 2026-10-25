@@ -1,31 +1,72 @@
 {% extends "base/base.html" %}
-{% block title %}{% if is_edit %}Edit Equipment Asset{% else %}Register Equipment Asset{% endif %}{% endblock %}
+{% block title %}{% if is_edit %}Edit Equipment{% else %}Register Equipment{% endif %} | Hotel HMS{% endblock %}
 {% block content %}
-<div class="container" style="max-width:900px;margin:25px auto;">
-    <h2>{% if is_edit %}Edit Equipment Asset{% else %}Register Equipment Asset{% endif %}</h2>
-    <p>Asset records are managed by Admin and Director users. Equipment received through a purchase order should be registered automatically; use this form for authorized manual registration or to complete asset details.</p>
-    <form method="post">
-        {% csrf_token %}
-        {% if hotels|length > 1 %}<p><label>Hotel</label><br><select name="hotel" required onchange="window.location='?hotel='+this.value"><option value="">Select hotel</option>{% for hotel in hotels %}<option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}</select></p>{% elif selected_hotel %}<input type="hidden" name="hotel" value="{{ selected_hotel.id }}">{% endif %}
-        <p><label>Equipment product (optional)</label><br>
-            <select name="product" style="min-width:300px;">
-                <option value="">Manual / legacy asset</option>
-                {% for product in products %}<option value="{{ product.id }}" {% if asset.product_id == product.id %}selected{% endif %}>{{ product.name }} · {{ product.sku }}</option>{% endfor %}
-            </select>
-        </p>
-        <p><label>Asset name</label><br><input type="text" name="name" required value="{{ asset.name|default:'' }}" placeholder="e.g. Laundry Washing Machine 01" style="width:100%;max-width:500px;"></p>
-        <p><label>Asset type</label><br><input type="text" name="asset_type" value="{{ asset.asset_type|default:'' }}" placeholder="e.g. Washing Machine"></p>
-        <p><label>Room (optional)</label><br><select name="room"><option value="">No room selected</option>{% for room in rooms %}<option value="{{ room.id }}" {% if asset.room_id == room.id %}selected{% endif %}>Room {{ room.room_number }}</option>{% endfor %}</select></p>
-        <p><label>Non-room location (optional)</label><br><select name="location"><option value="">No area selected</option>{% for location in locations %}<option value="{{ location.id }}" {% if asset.location_id == location.id %}selected{% endif %}>{{ location.name }} · {{ location.get_location_type_display }}</option>{% endfor %}</select><br><small>Choose a room or a non-room location, not both.</small></p>
-        <p><label>Manufacturer</label><br><input type="text" name="manufacturer" value="{{ asset.manufacturer|default:'' }}"></p>
-        <p><label>Model number</label><br><input type="text" name="model_number" value="{{ asset.model_number|default:'' }}"></p>
-        <p><label>Serial number</label><br><input type="text" name="serial_number" value="{{ asset.serial_number|default:'' }}"></p>
-        <p><label>Purchase date</label><br><input type="date" name="purchase_date" value="{{ asset.purchase_date|date:'Y-m-d' }}"></p>
-        <p><label>Purchase cost</label><br><input type="number" name="purchase_cost" min="0" step="0.01" value="{{ asset.purchase_cost|default:'0' }}"></p>
-        <p><label>Warranty expiry</label><br><input type="date" name="warranty_expiry" value="{{ asset.warranty_expiry|date:'Y-m-d' }}"></p>
-        <p><label>Condition</label><br><select name="condition">{% for value, label in condition_choices %}<option value="{{ value }}" {% if asset.condition == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></p>
-        <button type="submit">{% if is_edit %}Save Changes{% else %}Save Asset{% endif %}</button>
-        <a href="{% url 'maintenance_assets' %}">Cancel</a>
-    </form>
+<style>
+.equipment-form-page{max-width:1040px;margin:0 auto;color:#172033}
+.equipment-form-header{margin-bottom:22px}
+.equipment-eyebrow{font-size:.76rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#64748b;margin-bottom:7px}
+.equipment-title{font-size:clamp(1.65rem,2.7vw,2.2rem);font-weight:800;margin:0 0 8px}
+.equipment-intro{color:#64748b;line-height:1.6;margin:0;max-width:760px}
+.equipment-form-card{background:white;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.045);overflow:hidden}
+.equipment-section{padding:22px 24px;border-bottom:1px solid #edf2f7}
+.equipment-section:last-of-type{border-bottom:0}
+.equipment-section h3{font-size:1rem;margin:0 0 5px}
+.equipment-section>p{font-size:.88rem;color:#64748b;margin:0 0 18px}
+.equipment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px 20px}
+.equipment-field label{display:block;font-size:.86rem;font-weight:750;color:#334155;margin-bottom:7px}
+.equipment-field input,.equipment-field select{width:100%;min-height:42px}
+.equipment-field small{display:block;color:#64748b;font-size:.78rem;margin-top:5px}
+.equipment-form-actions{display:flex;justify-content:flex-end;align-items:center;gap:12px;padding:18px 24px;background:#f8fafc}
+.equipment-cancel{color:#475569;text-decoration:none;font-weight:700;padding:10px 12px}
+.equipment-save{border:0;background:#2563eb;color:white;border-radius:9px;padding:11px 17px;font-weight:800}
+.equipment-save:hover{background:#1d4ed8}
+@media(max-width:650px){.equipment-grid{grid-template-columns:1fr}.equipment-section{padding:18px}.equipment-form-actions{padding:16px;flex-wrap:wrap}}
+</style>
+<div class="equipment-form-page">
+  <header class="equipment-form-header">
+    <div class="equipment-eyebrow">Asset Management</div>
+    <h2 class="equipment-title">{% if is_edit %}Edit equipment asset{% else %}Register equipment{% endif %}</h2>
+    <p class="equipment-intro">Maintain the identity, location and lifecycle details for each physical unit. Equipment received through a purchase order should be registered automatically; use this form to complete or correct its details.</p>
+  </header>
+  <form class="equipment-form-card" method="post">
+    {% csrf_token %}
+    {% if hotels|length > 1 %}
+    <section class="equipment-section">
+      <h3>Hotel</h3><p>Choose which hotel owns this equipment record.</p>
+      <div class="equipment-field"><label for="asset-hotel">Hotel *</label><select id="asset-hotel" name="hotel" required onchange="window.location='?hotel='+this.value">{% for hotel in hotels %}<option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}</select></div>
+    </section>
+    {% elif selected_hotel %}<input type="hidden" name="hotel" value="{{ selected_hotel.id }}">{% endif %}
+    <section class="equipment-section">
+      <h3>Equipment identity</h3>
+      <p>Link the register entry to an equipment product when available.</p>
+      <div class="equipment-grid">
+        <div class="equipment-field"><label for="asset-product">Equipment product</label><select id="asset-product" name="product"><option value="">Manual / legacy asset</option>{% for product in products %}<option value="{{ product.id }}" {% if asset.product_id == product.id %}selected{% endif %}>{{ product.name }} · {{ product.sku }}</option>{% endfor %}</select><small>Products must have the Equipment product type.</small></div>
+        <div class="equipment-field"><label for="asset-name">Asset name *</label><input id="asset-name" type="text" name="name" required value="{{ asset.name|default:'' }}" placeholder="e.g. Laundry Washing Machine 01"></div>
+        <div class="equipment-field"><label for="asset-type">Equipment type</label><input id="asset-type" type="text" name="asset_type" value="{{ asset.asset_type|default:'' }}" placeholder="e.g. Washing Machine"></div>
+        <div class="equipment-field"><label for="asset-condition">Condition</label><select id="asset-condition" name="condition">{% for value,label in condition_choices %}<option value="{{ value }}" {% if asset.condition == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      </div>
+    </section>
+    <section class="equipment-section">
+      <h3>Location &amp; identification</h3>
+      <p>Assign the equipment to a room or a non-room area. Select one location only.</p>
+      <div class="equipment-grid">
+        <div class="equipment-field"><label for="asset-room">Room</label><select id="asset-room" name="room"><option value="">No room selected</option>{% for room in rooms %}<option value="{{ room.id }}" {% if asset.room_id == room.id %}selected{% endif %}>Room {{ room.room_number }}</option>{% endfor %}</select></div>
+        <div class="equipment-field"><label for="asset-location">Non-room location</label><select id="asset-location" name="location"><option value="">No area selected</option>{% for location in locations %}<option value="{{ location.id }}" {% if asset.location_id == location.id %}selected{% endif %}>{{ location.name }} · {{ location.get_location_type_display }}</option>{% endfor %}</select></div>
+        <div class="equipment-field"><label for="asset-manufacturer">Manufacturer</label><input id="asset-manufacturer" type="text" name="manufacturer" value="{{ asset.manufacturer|default:'' }}" placeholder="e.g. Huawei"></div>
+        <div class="equipment-field"><label for="asset-model">Model number</label><input id="asset-model" type="text" name="model_number" value="{{ asset.model_number|default:'' }}"></div>
+        <div class="equipment-field"><label for="asset-serial">Serial number</label><input id="asset-serial" type="text" name="serial_number" value="{{ asset.serial_number|default:'' }}"></div>
+      </div>
+    </section>
+    <section class="equipment-section">
+      <h3>Purchase &amp; warranty</h3>
+      <p>These details help with asset valuation and warranty follow-up.</p>
+      <div class="equipment-grid">
+        <div class="equipment-field"><label for="asset-purchase-date">Purchase date</label><input id="asset-purchase-date" type="date" name="purchase_date" value="{{ asset.purchase_date|date:'Y-m-d' }}"></div>
+        <div class="equipment-field"><label for="asset-purchase-cost">Purchase cost</label><input id="asset-purchase-cost" type="number" name="purchase_cost" min="0" step="0.01" value="{{ asset.purchase_cost|default:'0' }}"></div>
+        <div class="equipment-field"><label for="asset-warranty">Warranty expiry</label><input id="asset-warranty" type="date" name="warranty_expiry" value="{{ asset.warranty_expiry|date:'Y-m-d' }}"></div>
+      </div>
+    </section>
+    <div class="equipment-form-actions"><a class="equipment-cancel" href="{% url 'maintenance_assets' %}">Cancel</a><button class="equipment-save" type="submit">{% if is_edit %}Save changes{% else %}Register equipment{% endif %}</button></div>
+  </form>
 </div>
 {% endblock %}
