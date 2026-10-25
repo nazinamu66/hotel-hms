@@ -38,12 +38,17 @@ Maintenance Assets
 
 <tr>
 
-    <th style="padding:10px;">Asset</th>
+    <th style="padding:10px;">Asset Tag</th>
+    <th>Asset</th>
+    <th>Product</th>
     <th>Type</th>
     <th>Location</th>
     <th>Manufacturer</th>
     <th>Model</th>
     <th>Serial Number</th>
+    <th>Condition</th>
+    <th>Purchase Cost</th>
+    <th>Warranty Expiry</th>
     <th>Status</th>
 
 </tr>
@@ -56,11 +61,9 @@ Maintenance Assets
 
 <tr style="border-bottom:1px solid #ddd;">
 
-    <td style="padding:10px;">
-        <strong>
-            {{ asset.name }}
-        </strong>
-    </td>
+    <td style="padding:10px;">{{ asset.asset_tag|default:"—" }}</td>
+    <td><strong>{{ asset.name }}</strong></td>
+    <td>{{ asset.product.name|default:"—" }}</td>
 
     <td>
         {{ asset.asset_type|default:"—" }}
@@ -90,9 +93,13 @@ Maintenance Assets
         {{ asset.serial_number|default:"—" }}
     </td>
 
+    <td>{{ asset.get_condition_display }}</td>
+    <td>{{ asset.purchase_cost|floatformat:2 }}</td>
+    <td>{{ asset.warranty_expiry|default:"—" }}</td>
+
     <td>
 
-        {% if asset.is_active %}
+        {% if asset.is_active %>
             Active
         {% else %}
             Inactive
@@ -107,7 +114,7 @@ Maintenance Assets
 <tr>
 
     <td
-        colspan="7"
+        colspan="10"
         style="
             padding:20px;
             text-align:center;
