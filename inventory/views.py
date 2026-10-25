@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
 from django.db import transaction
+from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied, ValidationError
 from accounts.decorators import role_required
 from decimal import Decimal, InvalidOperation
@@ -2547,11 +2548,9 @@ def product_edit(request, pk):
     )
 
 
+@require_POST
 def product_delete(request, pk):
-
-    accessible_hotels = get_accessible_hotels(
-        request.user,
-    )
+    accessible_hotels = get_accessible_hotels(request.user)
 
     product = get_object_or_404(
         Product,
