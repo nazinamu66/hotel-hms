@@ -114,8 +114,9 @@ def manager_ingredient_requests(request):
     requests = (
         IngredientRestockRequest.objects
         .filter(requested_by__department__hotel__in=hotels)
+        .exclude(status="APPROVED", direct_purchase__isnull=False)
         .prefetch_related("items__ingredient")
-        .select_related("requested_by", "requested_by__department")
+        .select_related("requested_by", "requested_by__department", "direct_purchase")
         .order_by("-created_at")
     )
 
@@ -340,6 +341,10 @@ def kitchen_ingredient_request_detail(request, pk):
         req.approved_by = request.user
         req.save(update_fields=["status", "note", "approved_by"])
         messages.success(request, "Ingredient request approved.")
+        # Once a direct-purchase request is approved, continue in the
+        # purchase workspace instead of leaving it in the approval queue.
+        if req.has_direct_items() and hasattr(req, "direct_purchase"):
+            return redirect("direct_purchase_detail", pk=req.direct_purchase.pk)
         return redirect("manager_ingredient_requests")
 
     return render(
