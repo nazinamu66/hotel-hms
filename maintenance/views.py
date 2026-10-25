@@ -15,6 +15,7 @@ from inventory.models import Product, Supplier,Department,Stock,StockMovement,Lo
 from decimal import Decimal, InvalidOperation
 from django.db.models import Q
 from django.db import transaction
+from django.views.decorators.http import require_POST
 from accounts.services.access import get_accessible_hotels
 from inventory.forms import ProductForm,SupplierForm
 from accounting.services.postings.maintenance import (
@@ -537,39 +538,49 @@ def maintenance_ticket_detail(request, ticket_id):
 # ============================================================
 
 @role_required("MAINTENANCE")
+@require_POST
 def start_ticket(request, ticket_id):
+    """
+    Claim an open ticket through an explicit POST action.
 
-    ticket = get_object_or_404(
-        MaintenanceTicket.objects.select_related("room", "location"),
-        id=ticket_id,
-    )
+    Locking the row prevents two technicians from claiming the same ticket
+    concurrently. Hotel access is checked against the shared access service,
+    rather than assuming every maintenance user has one hotel_id.
+    """
+    hotels = get_accessible_hotels(request.user)
 
-    ticket_hotel_id = ticket.room.hotel_id if ticket.room_id else ticket.location.hotel_id
-    if ticket_hotel_id != request.user.hotel_id:
-        raise PermissionDenied
-
-    if ticket.status != "OPEN":
-        messages.warning(
-            request,
-            "This maintenance ticket is no longer open.",
+    with transaction.atomic():
+        ticket = get_object_or_404(
+            MaintenanceTicket.objects
+            .select_for_update()
+            .select_related("room", "location"),
+            pk=ticket_id,
         )
-        return redirect("maintenance_dashboard")
 
-    ticket.assigned_to = request.user
-    ticket.status = "IN_PROGRESS"
+        ticket_hotel_id = (
+            ticket.room.hotel_id if ticket.room_id
+            else ticket.location.hotel_id if ticket.location_id
+            else None
+        )
+        if ticket_hotel_id is None or not hotels.filter(pk=ticket_hotel_id).exists():
+            raise PermissionDenied
 
-    ticket.save(
-        update_fields=[
-            "assigned_to",
-            "status",
-        ]
+        if ticket.status != "OPEN":
+            messages.warning(request, "This maintenance ticket is no longer open.")
+            return redirect("maintenance_dashboard")
+
+        ticket.assigned_to = request.user
+        ticket.status = "IN_PROGRESS"
+        ticket.save(update_fields=["assigned_to", "status"])
+
+    location_label = (
+        f"Room {ticket.room.room_number}" if ticket.room_id
+        else ticket.location.name
     )
-
     messages.success(
         request,
-        f"Maintenance ticket for {('Room ' + ticket.room.room_number) if ticket.room_id else ticket.location.name} is now in progress.",
+        f"Maintenance ticket for {location_label} is now in progress.",
     )
-
     return redirect("maintenance_dashboard")
 
 
