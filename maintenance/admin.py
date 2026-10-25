@@ -19,6 +19,6 @@ class MaintenanceTicketAdmin(admin.ModelAdmin):
 
 @admin.register(MaintenanceAsset)
 class MaintenanceAssetAdmin(admin.ModelAdmin):
-    list_display = ("name", "hotel", "room", "location", "asset_type", "is_active")
+    list_display = ("asset_tag", "name", "product", "hotel", "room", "location", "asset_type", "condition", "is_active")
     list_filter = ("hotel", "asset_type", "is_active")
-    search_fields = ("name", "serial_number", "location__name", "room__room_number")
+    search_fields = ("asset_tag", "name", "product__name", "serial_number", "location__name", "room__room_number")
