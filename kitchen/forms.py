@@ -18,7 +18,11 @@ class BaseIngredientRestockItemFormSet(BaseInlineFormSet):
 
         sources = set()
         requester = getattr(self.instance, "requested_by", None)
-        requester_department = getattr(requester, "department", None)
+        requester_department = (
+            requester.department
+            if requester and getattr(requester, "department_id", None)
+            else None
+        )
         requester_hotel_id = getattr(requester_department, "hotel_id", None)
 
         for form in self.forms:
