@@ -24,21 +24,21 @@
 <div class="maint-page">
   <div class="maint-head">
     <div><div class="maint-kicker">Engineering & facilities</div><h2 class="maint-title">Report a room issue</h2><p class="maint-sub">Choose the affected room to create a maintenance ticket and notify the Maintenance team.</p></div>
-    <a class="btn btn-secondary" href="{% url 'housekeeping_dashboard' %}">Back to Housekeeping</a>
+    <a class="btn btn-secondary" href="{% if request.user.role == 'MAINTENANCE' %}{% url 'maintenance_dashboard' %}{% else %}{% url 'maintenance_create_ticket_room' %}{% endif %}">Back</a>
   </div>
   <section class="maint-panel">
-    <div class="maint-panel-head"><h3>Rooms in your hotel</h3><span class="maint-muted">{{ rooms|length }} rooms</span></div>
+    <div class="maint-panel-head"><h3>Rooms in your accessible hotels</h3><span class="maint-muted">{{ rooms|length }} rooms</span></div>
     <div class="maint-table-wrap"><table class="maint-table">
-      <thead><tr><th>Room</th><th>Category</th><th>Current status</th><th>Action</th></tr></thead>
+      <thead><tr><th>Hotel</th><th>Room</th><th>Category</th><th>Current status</th><th>Action</th></tr></thead>
       <tbody>
       {% for room in rooms %}
         <tr>
-          <td><div class="maint-room">Room {{ room.room_number }}</div><div class="maint-muted">Room ID #{{ room.id }}</div></td>
+          <td>{{ room.hotel.name }}</td><td><div class="maint-room">Room {{ room.room_number }}</div><div class="maint-muted">Room ID #{{ room.id }}</div></td>
           <td>{{ room.category|default:"Standard" }}</td>
           <td><span class="maint-status">{{ room.get_status_display }}</span></td>
           <td><a class="maint-btn" href="{% url 'maintenance_create_ticket' room.id %}">Report issue <span aria-hidden="true">→</span></a></td>
         </tr>
-      {% empty %}<tr><td colspan="4" class="maint-empty">No rooms are available for your hotel.</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="5" class="maint-empty">No rooms are available for your hotel.</td></tr>{% endfor %}
       </tbody>
     </table></div>
   </section>
