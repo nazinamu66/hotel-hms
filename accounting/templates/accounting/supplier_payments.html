@@ -1,90 +1,127 @@
 {% extends "base/base.html" %}
 {% block title %}Supplier Payments | Hotel HMS{% endblock %}
 {% block content %}
-<div class="page-header">
-  <div>
-    <h1>Supplier & Vendor Payments</h1>
-    <p>Settle approved purchase orders, direct purchases and outsourced maintenance labour.</p>
-  </div>
+<style>
+.spm-page{max-width:1500px;margin:0 auto}.spm-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px}.spm-eyebrow{font-size:.76rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#64748b;margin:0 0 7px}.spm-heading h1{font-size:clamp(1.65rem,2.4vw,2.35rem);line-height:1.15;margin:0;color:#172033}.spm-subtitle{margin:9px 0 0;color:#64748b;max-width:720px}.spm-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:22px;box-shadow:0 8px 28px rgba(15,23,42,.045);margin-bottom:22px}.spm-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:17px}.spm-card h2{font-size:1.15rem;margin:0;color:#172033}.spm-muted{color:#64748b;font-size:.9rem}.spm-filter{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.spm-field{display:flex;flex-direction:column;gap:6px;min-width:0}.spm-field label{font-size:.8rem;font-weight:700;color:#475569}.spm-field input,.spm-field select{width:100%;min-width:0;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff;color:#0f172a;font:inherit;font-size:.92rem}.spm-filter select{min-width:250px}.spm-obligations{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}.spm-obligation{border:1px solid #e2e8f0;border-radius:15px;padding:18px;min-width:0}.spm-obligation-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:15px}.spm-vendor{font-size:1rem;font-weight:800;color:#172033;margin:0;overflow-wrap:anywhere}.spm-source{font-size:.84rem;color:#64748b;margin:5px 0 0}.spm-pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;background:#fff7ed;color:#9a3412;font-size:.76rem;font-weight:800;white-space:nowrap}.spm-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:17px}.spm-metric{background:#f8fafc;border-radius:11px;padding:10px;min-width:0}.spm-metric span{display:block;font-size:.72rem;color:#64748b;margin-bottom:5px}.spm-metric strong{display:block;font-size:clamp(.8rem,1.5vw,.98rem);color:#172033;overflow-wrap:anywhere}.spm-metric.balance{background:#eff6ff}.spm-metric.balance strong{color:#1d4ed8}.spm-payment-title{font-size:.84rem;font-weight:800;color:#334155;margin:0 0 10px}.spm-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.spm-span{grid-column:1/-1}.spm-btn{border:0;border-radius:10px;padding:11px 14px;background:#1d4ed8;color:white;font-weight:800;font-size:.92rem;cursor:pointer}.spm-btn:hover{background:#1e40af}.spm-empty{padding:32px 18px;text-align:center;border:1px dashed #cbd5e1;border-radius:14px;color:#64748b}.spm-table-wrap{overflow:auto}table.spm-table{width:100%;border-collapse:collapse;min-width:800px}table.spm-table th{text-align:left;font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:#64748b;background:#f8fafc;padding:12px}table.spm-table td{padding:13px 12px;border-top:1px solid #eef2f7;font-size:.88rem;color:#334155}table.spm-table td.amount{font-weight:800;color:#172033;white-space:nowrap}.spm-journal{color:#1d4ed8;font-weight:700;text-decoration:none}.spm-journal:hover{text-decoration:underline}.spm-history-ref{overflow-wrap:anywhere;max-width:180px}
+@media(max-width:640px){.spm-card{padding:15px;border-radius:14px}.spm-metrics{gap:5px}.spm-metric{padding:8px 6px}.spm-form-grid{grid-template-columns:1fr}.spm-span{grid-column:auto}.spm-filter,.spm-filter .spm-field,.spm-filter select{width:100%;min-width:0}}
+</style>
+<div class="spm-page">
+  <header class="spm-heading">
+    <div>
+      <p class="spm-eyebrow">Finance · Accounts payable</p>
+      <h1>Supplier &amp; Vendor Payments</h1>
+      <p class="spm-subtitle">Manage supplier balances and record full or partial settlements for received purchase orders, Kitchen direct purchases and outsourced maintenance labour.</p>
+    </div>
+  </header>
+
+  <section class="spm-card">
+    <form method="get" class="spm-filter">
+      <div class="spm-field">
+        <label for="hotel">Current hotel</label>
+        <select name="hotel" id="hotel" onchange="this.form.submit()">
+          {% for item in hotels %}
+            <option value="{{ item.pk }}" {% if item.pk == hotel.pk %}selected{% endif %}>{{ item.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <noscript><button class="spm-btn" type="submit">Switch hotel</button></noscript>
+      <span class="spm-muted">Payments and balances shown for the selected hotel.</span>
+    </form>
+  </section>
+
+  <section class="spm-card">
+    <div class="spm-card-head">
+      <div>
+        <h2>Outstanding obligations</h2>
+        <p class="spm-muted" style="margin:6px 0 0">Choose a cash or bank account and enter the amount you are settling.</p>
+      </div>
+      <span class="spm-pill">{{ obligations|length }} outstanding</span>
+    </div>
+    {% if obligations %}
+      <div class="spm-obligations">
+        {% for item in obligations %}
+          <article class="spm-obligation">
+            <div class="spm-obligation-top">
+              <div>
+                <p class="spm-vendor">{{ item.supplier.name }}</p>
+                <p class="spm-source">{{ item.label }}</p>
+              </div>
+              <span class="spm-pill">Unsettled</span>
+            </div>
+            <div class="spm-metrics">
+              <div class="spm-metric"><span>Obligation total</span><strong>₦{{ item.total|floatformat:2 }}</strong></div>
+              <div class="spm-metric"><span>Paid to date</span><strong>₦{{ item.paid|floatformat:2 }}</strong></div>
+              <div class="spm-metric balance"><span>Remaining</span><strong>₦{{ item.outstanding|floatformat:2 }}</strong></div>
+            </div>
+            <p class="spm-payment-title">Record a payment</p>
+            <form method="post" class="spm-form-grid">
+              {% csrf_token %}
+              <input type="hidden" name="hotel" value="{{ hotel.pk }}">
+              <input type="hidden" name="source_type" value="{{ item.source_type }}">
+              <input type="hidden" name="source_id" value="{{ item.source_id }}">
+              <div class="spm-field">
+                <label>Payment amount (₦)</label>
+                <input name="amount" type="number" min="0.01" max="{{ item.outstanding }}" step="0.01" required placeholder="Enter amount">
+              </div>
+              <div class="spm-field">
+                <label>Pay from</label>
+                <select name="payment_account" required>
+                  <option value="">Select account</option>
+                  {% for account in payment_accounts %}<option value="{{ account.pk }}">{{ account.code }} — {{ account.name }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="spm-field">
+                <label>Payment date</label>
+                <input type="date" name="payment_date" value="{{ today|date:'Y-m-d' }}" required>
+              </div>
+              <div class="spm-field">
+                <label>Reference (optional)</label>
+                <input name="reference" maxlength="100" placeholder="Transfer / receipt no.">
+              </div>
+              <div class="spm-field spm-span">
+                <label>Notes (optional)</label>
+                <input name="notes" placeholder="Payment details or explanation">
+              </div>
+              <button class="spm-btn spm-span" type="submit">Record supplier payment</button>
+            </form>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="spm-empty"><strong>All caught up</strong><p style="margin:6px 0 0">No outstanding supplier obligations were found for this hotel.</p></div>
+    {% endif %}
+  </section>
+
+  <section class="spm-card">
+    <div class="spm-card-head">
+      <div>
+        <h2>Recent payment history</h2>
+        <p class="spm-muted" style="margin:6px 0 0">Latest 100 payments recorded through this page.</p>
+      </div>
+    </div>
+    {% if payment_history %}
+      <div class="spm-table-wrap">
+        <table class="spm-table">
+          <thead><tr><th>Date</th><th>Supplier</th><th>Source</th><th>Amount</th><th>Paid from</th><th>Reference</th><th>Journal</th><th>Recorded by</th></tr></thead>
+          <tbody>
+          {% for payment in payment_history %}
+            <tr>
+              <td>{{ payment.payment_date|date:"Y-m-d" }}</td>
+              <td><strong>{{ payment.supplier.name }}</strong></td>
+              <td>{{ payment.get_source_type_display }} #{{ payment.source_id }}</td>
+              <td class="amount">₦{{ payment.amount|floatformat:2 }}</td>
+              <td>{{ payment.payment_account.name }}</td>
+              <td class="spm-history-ref">{{ payment.reference|default:"—" }}</td>
+              <td>{% if payment.journal_entry_id %}<a class="spm-journal" href="{% url 'accounting:journal_detail' payment.journal_entry_id %}">JE-{{ payment.journal_entry_id }}</a>{% else %}—{% endif %}</td>
+              <td>{{ payment.created_by|default:"—" }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="spm-empty">No supplier payments recorded through this page yet.</div>
+    {% endif %}
+  </section>
 </div>
-
-<form method="get" class="card" style="padding:16px;margin-bottom:20px;display:flex;gap:12px;align-items:end;flex-wrap:wrap">
-  <div>
-    <label for="hotel">Hotel</label>
-    <select name="hotel" id="hotel" onchange="this.form.submit()">
-      {% for item in hotels %}
-        <option value="{{ item.pk }}" {% if item.pk == hotel.pk %}selected{% endif %}>{{ item.name }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <noscript><button type="submit">Select hotel</button></noscript>
-</form>
-
-<section class="card" style="padding:18px;margin-bottom:24px">
-  <h2>Outstanding obligations</h2>
-  {% if obligations %}
-  <div style="overflow-x:auto">
-    <table style="width:100%;min-width:850px;border-collapse:collapse">
-      <thead><tr><th>Supplier</th><th>Source</th><th>Total</th><th>Paid</th><th>Outstanding</th><th>Record payment</th></tr></thead>
-      <tbody>
-      {% for item in obligations %}
-      <tr>
-        <td>{{ item.supplier.name }}</td>
-        <td>{{ item.label }}</td>
-        <td>₦{{ item.total|floatformat:2 }}</td>
-        <td>₦{{ item.paid|floatformat:2 }}</td>
-        <td><strong>₦{{ item.outstanding|floatformat:2 }}</strong></td>
-        <td>
-          <form method="post" style="display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:6px;min-width:300px">
-            {% csrf_token %}
-            <input type="hidden" name="hotel" value="{{ hotel.pk }}">
-            <input type="hidden" name="source_type" value="{{ item.source_type }}">
-            <input type="hidden" name="source_id" value="{{ item.source_id }}">
-            <input name="amount" type="number" min="0.01" max="{{ item.outstanding }}" step="0.01" required placeholder="Amount">
-            <select name="payment_account" required>
-              <option value="">Cash / Bank account</option>
-              {% for account in payment_accounts %}<option value="{{ account.pk }}">{{ account.code }} — {{ account.name }}</option>{% endfor %}
-            </select>
-            <input type="date" name="payment_date" value="{{ today|date:'Y-m-d' }}" required>
-            <input name="reference" maxlength="100" placeholder="Payment reference">
-            <input name="notes" placeholder="Notes (optional)" style="grid-column:1 / -1">
-            <button type="submit" style="grid-column:1 / -1">Record payment</button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-    <p>No outstanding supplier obligations found for this hotel.</p>
-  {% endif %}
-</section>
-
-<section class="card" style="padding:18px">
-  <h2>Recent payment history</h2>
-  {% if payment_history %}
-  <div style="overflow-x:auto">
-    <table style="width:100%;min-width:700px;border-collapse:collapse">
-      <thead><tr><th>Date</th><th>Supplier</th><th>Source</th><th>Amount</th><th>Paid from</th><th>Reference</th><th>Journal</th><th>Recorded by</th></tr></thead>
-      <tbody>
-      {% for payment in payment_history %}
-      <tr>
-        <td>{{ payment.payment_date|date:"Y-m-d" }}</td>
-        <td>{{ payment.supplier.name }}</td>
-        <td>{{ payment.get_source_type_display }} #{{ payment.source_id }}</td>
-        <td>₦{{ payment.amount|floatformat:2 }}</td>
-        <td>{{ payment.payment_account.name }}</td>
-        <td>{{ payment.reference|default:"—" }}</td>
-        <td>{% if payment.journal_entry_id %}<a href="{% url 'accounting:journal_detail' payment.journal_entry_id %}">JE-{{ payment.journal_entry_id }}</a>{% else %}—{% endif %}</td>
-        <td>{{ payment.created_by|default:"—" }}</td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-    <p>No supplier payments recorded through this page yet.</p>
-  {% endif %}
-</section>
 {% endblock %}
