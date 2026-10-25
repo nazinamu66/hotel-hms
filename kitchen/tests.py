@@ -40,6 +40,7 @@ class IngredientRequestApprovalTests(TestCase):
             username="kitchen_head",
             password="test-password",
             role="KITCHEN",
+            hotel=cls.hotel,
             department=cls.kitchen_department,
             is_department_head=True,
         )
