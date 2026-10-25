@@ -9,7 +9,7 @@ from .models import MaintenanceTicket
 from django.core.exceptions import PermissionDenied, ValidationError
 from .models import MaintenanceTicket, MaintenanceLabour, MaintenanceMaterial, MaintenanceAsset, MaintenanceSchedule, MaintenanceLocation
 
-from datetime import timedelta
+from datetime import timedelta, date
 from accounts.models import User
 from inventory.models import Product, Supplier,Department,Stock,StockMovement,LowStockRequest
 from decimal import Decimal, InvalidOperation
@@ -1161,7 +1161,7 @@ def maintenance_assets(request):
     "ADMIN",
     "DIRECTOR",
 )
-def maintenance_asset_create(request):
+def maintenance_asset_create(request, asset_id=None):
 
     if request.user.role == "MANAGER":
 
@@ -1187,6 +1187,7 @@ def maintenance_asset_create(request):
         raise PermissionDenied
 
     products = Product.objects.filter(hotel=hotel, product_type="EQUIPMENT", is_active=True).order_by("name")
+    asset = get_object_or_404(MaintenanceAsset, pk=asset_id, hotel=hotel) if asset_id else None
 
     if request.method == "POST":
 
@@ -1222,11 +1223,11 @@ def maintenance_asset_create(request):
         room_id = request.POST.get("room", "").strip()
         location_id = request.POST.get("location", "").strip()
 
-        if not name:
+        if not name and not product_id:
 
             messages.error(
                 request,
-                "Asset name is required.",
+                "Asset name or equipment product is required.",
             )
 
             return redirect(request.path)
@@ -1245,8 +1246,8 @@ def maintenance_asset_create(request):
 
         try:
             purchase_cost = Decimal(purchase_cost_raw or "0")
-            purchase_date = timezone.datetime.strptime(purchase_date_raw, "%Y-%m-%d").date() if purchase_date_raw else None
-            warranty_expiry = timezone.datetime.strptime(warranty_expiry_raw, "%Y-%m-%d").date() if warranty_expiry_raw else None
+            purchase_date = date.fromisoformat(purchase_date_raw) if purchase_date_raw else None
+            warranty_expiry = date.fromisoformat(warranty_expiry_raw) if warranty_expiry_raw else None
         except (InvalidOperation, ValueError):
             messages.error(request, "Enter valid purchase cost and dates.")
             return redirect(request.path)
@@ -1258,29 +1259,24 @@ def maintenance_asset_create(request):
         if location_id:
             location = get_object_or_404(MaintenanceLocation, id=location_id, hotel=hotel, is_active=True)
 
-        MaintenanceAsset.objects.create(
-            hotel=hotel,
-            room=room,
-            location=location,
-            product=product,
-            name=name,
-            asset_type=asset_type,
-            serial_number=serial_number,
-            manufacturer=manufacturer,
-            model_number=model_number,
-            purchase_date=purchase_date,
-            purchase_cost=purchase_cost,
-            warranty_expiry=warranty_expiry,
-        )
+        if asset is None:
+            asset = MaintenanceAsset(hotel=hotel)
+        asset.room = room
+        asset.location = location
+        asset.product = product
+        asset.name = name
+        asset.asset_type = asset_type
+        asset.serial_number = serial_number
+        asset.manufacturer = manufacturer
+        asset.model_number = model_number
+        asset.purchase_date = purchase_date
+        asset.purchase_cost = purchase_cost
+        asset.warranty_expiry = warranty_expiry
+        asset.full_clean()
+        asset.save()
 
-        messages.success(
-            request,
-            "Maintenance asset created successfully.",
-        )
-
-        return redirect(
-            "maintenance_assets",
-        )
+        messages.success(request, "Equipment asset saved successfully.")
+        return redirect("maintenance_assets")
 
     rooms = (
         Room.objects
@@ -1300,6 +1296,8 @@ def maintenance_asset_create(request):
             "rooms": rooms,
             "locations": locations,
             "products": products,
+            "asset": asset,
+            "is_edit": bool(asset),
         },
     )
 
