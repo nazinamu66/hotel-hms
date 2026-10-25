@@ -1859,6 +1859,8 @@ def maintenance_work_history(request):
             MaintenanceTicket.objects
             .select_related(
                 "room",
+                "location",
+                "asset",
                 "reported_by",
                 "assigned_to",
             )
