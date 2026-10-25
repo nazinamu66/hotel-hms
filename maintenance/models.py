@@ -5,6 +5,64 @@ from decimal import Decimal
 from inventory.models import Hotel, Supplier, Product
 
 
+class MaintenanceLocation(models.Model):
+    """A non-room physical area within a hotel that can have maintenance issues."""
+
+    LOCATION_TYPES = (
+        ("RECEPTION", "Reception"),
+        ("LOBBY", "Lobby"),
+        ("KITCHEN", "Kitchen"),
+        ("RESTAURANT", "Restaurant / Dining Area"),
+        ("LAUNDRY", "Laundry"),
+        ("CORRIDOR", "Hallway / Corridor"),
+        ("STAIRWELL", "Stairwell"),
+        ("GROUNDS", "Grounds"),
+        ("PARKING", "Parking"),
+        ("GATE", "Gate / Entrance"),
+        ("OFFICE", "Office"),
+        ("STORE", "Store / Warehouse"),
+        ("GYM", "Gym"),
+        ("PUBLIC_AREA", "Other Public Area"),
+        ("PLANT_ROOM", "Plant / Utility Room"),
+        ("OTHER", "Other"),
+    )
+
+    STATUS_CHOICES = (
+        ("ACTIVE", "Active"),
+        ("INACTIVE", "Inactive"),
+        ("UNDER_MAINTENANCE", "Under Maintenance"),
+    )
+
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.CASCADE,
+        related_name="maintenance_locations",
+    )
+    name = models.CharField(max_length=150)
+    location_type = models.CharField(max_length=30, choices=LOCATION_TYPES, default="OTHER")
+    description = models.TextField(blank=True)
+    responsible_departments = models.ManyToManyField(
+        "inventory.Department",
+        blank=True,
+        related_name="maintenance_locations",
+    )
+    status = models.CharField(max_length=25, choices=STATUS_CHOICES, default="ACTIVE")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["hotel__name", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "name"],
+                name="unique_maintenance_location_per_hotel",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.hotel})"
+
+
 class MaintenanceTicket(models.Model):
 
     PRIORITY_CHOICES = (
@@ -34,6 +92,25 @@ class MaintenanceTicket(models.Model):
     room = models.ForeignKey(
         Room,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="maintenance_tickets",
+    )
+
+    location = models.ForeignKey(
+        "MaintenanceLocation",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="maintenance_tickets",
+    )
+
+    asset = models.ForeignKey(
+        "MaintenanceAsset",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="maintenance_tickets",
     )
     
     schedule = models.ForeignKey(
@@ -127,10 +204,32 @@ class MaintenanceTicket(models.Model):
         )
 
     def __str__(self):
-        return (
-            f"Room {self.room.room_number} - "
-            f"{self.status}"
-        )
+        if self.room_id:
+            target = f"Room {self.room.room_number}"
+        elif self.location_id:
+            target = self.location.name
+        else:
+            target = "Unspecified location"
+        return f"{target} - {self.status}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if bool(self.room_id) == bool(self.location_id):
+            raise ValidationError(
+                "A maintenance ticket must reference either a room or a non-room location, not both."
+            )
+        if self.asset_id:
+            if self.room_id and self.asset.room_id != self.room_id:
+                raise ValidationError({"asset": "The selected asset does not belong to this room."})
+            if self.location_id and self.asset.location_id != self.location_id:
+                raise ValidationError({"asset": "The selected asset does not belong to this location."})
+            target_hotel_id = (
+                self.room.hotel_id if self.room_id
+                else self.location.hotel_id if self.location_id
+                else None
+            )
+            if target_hotel_id and self.asset.hotel_id != target_hotel_id:
+                raise ValidationError({"asset": "The selected asset belongs to another hotel."})
     
 class MaintenanceWorkNote(models.Model):
 
@@ -304,6 +403,14 @@ class MaintenanceAsset(models.Model):
         related_name="maintenance_assets",
     )
 
+    location = models.ForeignKey(
+        "MaintenanceLocation",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="assets",
+    )
+
     name = models.CharField(
         max_length=150,
     )
@@ -341,12 +448,10 @@ class MaintenanceAsset(models.Model):
 
     def __str__(self):
 
-        if self.room:
-            return (
-                f"{self.name} - "
-                f"Room {self.room.room_number}"
-            )
-
+        if self.room_id:
+            return f"{self.name} - Room {self.room.room_number}"
+        if self.location_id:
+            return f"{self.name} - {self.location.name}"
         return self.name
 
 
