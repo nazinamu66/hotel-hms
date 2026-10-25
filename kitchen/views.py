@@ -304,6 +304,9 @@ def kitchen_confirm_direct_ingredients(request, pk):
 @role_required("ACCOUNTANT", "DIRECTOR", "ADMIN")
 @transaction.atomic
 def direct_purchase_pay(request, pk):
+    messages.info(request, "Supplier payments are now recorded through Accounting → Supplier & Vendor Payments.")
+    return redirect("accounting:supplier_payments")
+
     dp = get_object_or_404(
         DirectPurchase,
         pk=pk,
