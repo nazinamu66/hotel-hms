@@ -68,29 +68,43 @@ def kitchen_ingredient_requests(request):
 @require_POST
 @transaction.atomic
 def direct_purchase_update(request, pk):
+    hotels = get_accessible_hotels(request.user)
     dp = get_object_or_404(
-        DirectPurchase,
+        DirectPurchase.objects.select_for_update().select_related("supplier"),
         pk=pk,
-        status="APPROVED"
+        status="APPROVED",
+        supplier__hotel__in=hotels,
     )
 
-    if request.method == "POST":
-        dp.vendor_name = request.POST.get("vendor")
-        total = 0
+    items = list(dp.items.select_for_update().all())
+    if not items:
+        messages.error(request, "This direct purchase has no items.")
+        return redirect("direct_purchase_detail", pk=dp.pk)
 
-        for item in dp.items.all():
-            cost = Decimal(request.POST.get(f"cost_{item.id}", 0))
-            item.unit_cost = cost
-            item.save(update_fields=["unit_cost"])
-            total += item.line_total()
+    total = Decimal("0.00")
+    for item in items:
+        raw_cost = request.POST.get(f"cost_{item.pk}", "").strip()
+        try:
+            cost = Decimal(raw_cost)
+        except (InvalidOperation, TypeError):
+            messages.error(request, f"Enter a valid unit cost for {item.product.name}.")
+            return redirect("direct_purchase_detail", pk=dp.pk)
 
-        dp.total_cost = total
-        dp.status = "PURCHASED"
-        dp.purchased_at = timezone.now()
-        dp.save(update_fields=["vendor_name", "total_cost", "status", "purchased_at"])
+        if not cost.is_finite() or cost < 0:
+            messages.error(request, f"Unit cost for {item.product.name} cannot be negative.")
+            return redirect("direct_purchase_detail", pk=dp.pk)
 
-        messages.success(request, "Direct purchase recorded.")
-        return redirect("kitchen_dashboard")
+        item.unit_cost = cost
+        item.save(update_fields=["unit_cost"])
+        total += item.total_cost
+
+    # The current model workflow is APPROVED -> PAID -> RECEIVED.
+    # Do not write the removed PURCHASED/vendor_name/purchased_at fields.
+    dp.total_cost = total
+    dp.save(update_fields=["total_cost"])
+
+    messages.success(request, "Direct purchase costs recorded.")
+    return redirect("direct_purchase_detail", pk=dp.pk)
 
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
