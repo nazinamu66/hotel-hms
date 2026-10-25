@@ -37,6 +37,8 @@ ACCOUNTS_RECEIVABLE = "accounts_receivable"
 
 INVENTORY_ASSET = "inventory_asset"
 
+EQUIPMENT_ASSET = "equipment_asset"
+
 FINISHED_GOODS_INVENTORY = "finished_goods_inventory"
 
 ACCOUNTS_PAYABLE = "accounts_payable"
@@ -187,6 +189,16 @@ DEFAULT_ACCOUNTS = [
         "name": "Inventory Asset",
         "system_key": INVENTORY_ASSET,
         "type": INVENTORY,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": False,
+    },
+
+    {
+        "code": "1250",
+        "name": "Equipment and Fixed Assets",
+        "system_key": EQUIPMENT_ASSET,
+        "type": FIXED_ASSET,
         "is_system": True,
         "allow_posting": True,
         "allow_manual_entries": False,
