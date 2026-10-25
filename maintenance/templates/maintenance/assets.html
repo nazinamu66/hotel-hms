@@ -70,6 +70,8 @@ Maintenance Assets
 
         {% if asset.room %}
             Room {{ asset.room.room_number }}
+        {% elif asset.location %}
+            {{ asset.location.name }}
         {% else %}
             Hotel / Common Area
         {% endif %}
