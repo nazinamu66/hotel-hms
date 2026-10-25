@@ -112,19 +112,21 @@ def linen_room_setup(request, pk):
     )
     linen_items = _accessible_linen_items(request.user).filter(product__hotel=room.hotel)
 
-    # Seed category defaults independently for each missing linen item. This
-    # also picks up newly added defaults without overwriting room-specific
-    # quantities already configured for this room.
-    category_defaults = RoomLinenRequirement.objects.filter(
-        category=room.category,
-        linen_item__in=linen_items,
-    ).select_related("linen_item")
-    for default in category_defaults:
-        RoomLinenState.objects.get_or_create(
-            room=room,
-            linen_item=default.linen_item,
-            defaults={"quantity": default.quantity},
-        )
+    # Copy defaults only when the room has never been configured. A missing
+    # state after configuration is meaningful: the item was intentionally
+    # excluded from that room's checklist and must not be re-created on GET.
+    states_qs = RoomLinenState.objects.filter(room=room)
+    if not states_qs.exists():
+        category_defaults = RoomLinenRequirement.objects.filter(
+            category=room.category,
+            linen_item__in=linen_items,
+        ).select_related("linen_item")
+        for default in category_defaults:
+            RoomLinenState.objects.get_or_create(
+                room=room,
+                linen_item=default.linen_item,
+                defaults={"quantity": default.quantity},
+            )
 
     if request.method == "POST":
         # As with category defaults, validate all values before mutating rows.
