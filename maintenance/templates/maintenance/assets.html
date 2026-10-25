@@ -1,36 +1,73 @@
 {% extends "base/base.html" %}
-{% block title %}Equipment & Maintenance Assets{% endblock %}
+{% block title %}Equipment Register | Hotel HMS{% endblock %}
 {% block content %}
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:15px;">
-    <h2 style="margin:0;">Equipment & Maintenance Assets</h2>
-    {% if user.role == "ADMIN" or user.role == "DIRECTOR" %}<a href="{% url 'maintenance_asset_create' %}"><button type="button">+ Register Equipment</button></a>{% endif %}
+<style>
+.asset-page{max-width:1500px;margin:0 auto;color:#172033}
+.asset-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:24px}
+.asset-eyebrow{font-size:.76rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#64748b;margin-bottom:7px}
+.asset-title{font-size:clamp(1.65rem,2.7vw,2.25rem);font-weight:800;margin:0 0 8px}
+.asset-subtitle{color:#64748b;max-width:760px;margin:0;line-height:1.6}
+.asset-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#2563eb;color:white;text-decoration:none;border:0;border-radius:10px;padding:11px 16px;font-weight:750}
+.asset-primary:hover{background:#1d4ed8;color:white}
+.asset-panel{background:white;border:1px solid #e2e8f0;border-radius:15px;box-shadow:0 8px 24px rgba(15,23,42,.045);overflow:hidden}
+.asset-panel-head{padding:17px 20px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.asset-panel-head h3{margin:0;font-size:1rem}
+.asset-count{display:inline-flex;align-items:center;background:#eff6ff;color:#1d4ed8;padding:4px 9px;border-radius:999px;font-size:.78rem;font-weight:750}
+.asset-table-wrap{overflow-x:auto}
+.asset-table{width:100%;border-collapse:collapse;white-space:nowrap}
+.asset-table th{background:#f8fafc;color:#64748b;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;text-align:left;padding:13px 15px}
+.asset-table td{padding:14px 15px;border-top:1px solid #edf2f7;vertical-align:middle}
+.asset-table tbody tr:hover{background:#f8fbff}
+.asset-tag{font-weight:800;color:#1d4ed8}
+.asset-name{font-weight:750;color:#172033}
+.asset-secondary{display:block;color:#64748b;font-size:.82rem;margin-top:3px}
+.asset-pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.76rem;font-weight:750;background:#f1f5f9;color:#475569}
+.asset-pill.good{background:#dcfce7;color:#166534}.asset-pill.warn{background:#fef3c7;color:#92400e}.asset-pill.bad{background:#fee2e2;color:#991b1b}
+.asset-action{color:#2563eb;font-weight:700;text-decoration:none}.asset-action:hover{text-decoration:underline}
+.asset-empty{text-align:center;padding:42px 20px;color:#64748b}
+.asset-empty strong{display:block;color:#334155;margin-bottom:6px}
+@media(max-width:700px){.asset-header{display:block}.asset-header .asset-primary{margin-top:16px}.asset-panel-head{padding:14px}}
+</style>
+<div class="asset-page">
+  <header class="asset-header">
+    <div>
+      <div class="asset-eyebrow">Property &amp; Operations</div>
+      <h2 class="asset-title">Equipment Register</h2>
+      <p class="asset-subtitle">A single register of hotel equipment, its assigned location, condition, warranty and maintenance status.</p>
+    </div>
+    {% if user.role == "ADMIN" or user.role == "DIRECTOR" %}
+      <a class="asset-primary" href="{% url 'maintenance_asset_create' %}"><span aria-hidden="true">＋</span> Register Equipment</a>
+    {% endif %}
+  </header>
+  <section class="asset-panel">
+    <div class="asset-panel-head">
+      <h3>Registered equipment</h3>
+      <span class="asset-count">{{ assets|length }} asset{{ assets|length|pluralize }}</span>
+    </div>
+    <div class="asset-table-wrap">
+      <table class="asset-table">
+        <thead><tr><th>Asset tag</th><th>Equipment</th><th>Product</th><th>Assigned location</th><th>Serial / Model</th><th>Condition</th><th>Purchase cost</th><th>Warranty</th><th>Status</th><th>Manage</th></tr></thead>
+        <tbody>
+        {% for asset in assets %}
+          <tr>
+            <td><span class="asset-tag">{{ asset.asset_tag|default:"—" }}</span></td>
+            <td><span class="asset-name">{{ asset.name }}</span><span class="asset-secondary">{{ asset.asset_type }}</span></td>
+            <td>{{ asset.product.name|default:"Manual record" }}</td>
+            <td>{% if asset.room %}Room {{ asset.room.room_number }}{% elif asset.location %}{{ asset.location.name }}{% else %}<span class="asset-secondary">Unassigned</span>{% endif %}</td>
+            <td>{{ asset.serial_number|default:"—" }}<span class="asset-secondary">{{ asset.manufacturer|default:"" }}{% if asset.model_number %} · {{ asset.model_number }}{% endif %}</span></td>
+            <td><span class="asset-pill {% if asset.condition == 'NEW' or asset.condition == 'GOOD' %}good{% elif asset.condition == 'FAIR' %}warn{% elif asset.condition == 'POOR' or asset.condition == 'DAMAGED' %}bad{% endif %}">{{ asset.get_condition_display|default:asset.condition }}</span></td>
+            <td>{{ asset.purchase_cost|floatformat:2 }}</td>
+            <td>{% if asset.warranty_expiry %}{{ asset.warranty_expiry|date:"d M Y" }}{% else %}—{% endif %}</td>
+            <td><span class="asset-pill {% if asset.is_active %}good{% else %}bad{% endif %}">{% if asset.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+            <td>{% if user.role == "ADMIN" or user.role == "DIRECTOR" %}<a class="asset-action" href="{% url 'maintenance_asset_edit' asset.id %}?hotel={{ asset.hotel_id }}">Edit</a>{% else %}<span class="asset-secondary">View only</span>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="10"><div class="asset-empty"><strong>No equipment registered yet</strong>Equipment received through purchase orders or registered manually will appear here.</div></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <p style="color:#64748b;font-size:.85rem;margin-top:14px;">Equipment records are managed by Admin and Director users. Maintenance staff can use this register to identify equipment and its location.</p>
 </div>
-<p>Each physical unit has its own asset tag. Admins and Directors manage asset records; Maintenance uses this register to identify equipment and review its assigned location.</p>
-<hr>
-<div style="width:100%;overflow-x:auto;">
-<table style="width:100%;border-collapse:collapse;min-width:1050px;">
-<thead style="background:#eee;"><tr>
-    <th style="padding:10px;">Asset Tag</th><th>Asset</th><th>Product</th><th>Type</th><th>Location</th>
-    <th>Manufacturer</th><th>Model</th><th>Serial Number</th><th>Condition</th><th>Purchase Cost</th><th>Warranty Expiry</th><th>Status</th><th>Manage</th>
-</tr></thead>
-<tbody>
-{% for asset in assets %}
-<tr style="border-bottom:1px solid #ddd;">
-    <td style="padding:10px;">{{ asset.asset_tag|default:"—" }}</td>
-    <td><strong>{{ asset.name }}</strong></td>
-    <td>{{ asset.product.name|default:"—" }}</td>
-    <td>{{ asset.asset_type|default:"—" }}</td>
-    <td>{% if asset.room %}Room {{ asset.room.room_number }}{% elif asset.location %}{{ asset.location.name }}{% else %}Unassigned{% endif %}</td>
-    <td>{{ asset.manufacturer|default:"—" }}</td><td>{{ asset.model_number|default:"—" }}</td><td>{{ asset.serial_number|default:"—" }}</td>
-    <td>{{ asset.get_condition_display }}</td><td>{{ asset.purchase_cost|floatformat:2 }}</td><td>{{ asset.warranty_expiry|default:"—" }}</td>
-    <td>{% if asset.is_active %}Active{% else %}Inactive{% endif %}</td>
-    <td>{% if user.role == "ADMIN" or user.role == "DIRECTOR" %}<a href="{% url 'maintenance_asset_edit' asset.id %}?hotel={{ asset.hotel_id }}">Edit</a>{% else %}<span>View only</span>{% endif %}</td>
-</tr>
-{% empty %}
-<tr><td colspan="13" style="padding:20px;text-align:center;">No maintenance assets have been registered.</td></tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-<br><a href="{% url 'maintenance_dashboard' %}">← Back to Maintenance Dashboard</a>
 {% endblock %}
