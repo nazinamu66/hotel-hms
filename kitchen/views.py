@@ -21,6 +21,7 @@ from inventory.models import (
     Product,
     Supplier,
     StockMovement,
+    StockCostLayer,
     StockTransfer
 )
 
@@ -722,8 +723,9 @@ def prepared_food_list(request):
 @transaction.atomic
 def direct_purchase_receive(request, pk):
     dp = get_object_or_404(
-        DirectPurchase.objects.select_related(
-            "supplier", "requested_by", "requested_by__department"
+        DirectPurchase.objects.select_for_update().select_related(
+            "supplier", "requested_by", "requested_by__department",
+            "ingredient_request",
         ),
         pk=pk,
         status="PAID",
@@ -741,13 +743,28 @@ def direct_purchase_receive(request, pk):
     ):
         raise PermissionDenied
 
-    for item in dp.items.select_related("product"):
-        stock, _ = Stock.objects.get_or_create(
+    items = list(dp.items.select_for_update().select_related("product"))
+    if not items:
+        messages.error(request, "This direct purchase has no items to receive.")
+        return redirect("direct_purchase_detail", pk=dp.pk)
+
+    for item in items:
+        if item.quantity <= 0:
+            raise ValidationError(
+                f"Received quantity for {item.product.name} must be greater than zero."
+            )
+        if item.unit_cost < 0:
+            raise ValidationError(
+                f"Unit cost for {item.product.name} cannot be negative."
+            )
+        if item.product.hotel_id != kitchen.hotel_id:
+            raise PermissionDenied
+
+        stock, _ = Stock.objects.select_for_update().get_or_create(
             product=item.product,
             department=kitchen,
-            defaults={"quantity": 0}
+            defaults={"quantity": 0},
         )
-
         stock.quantity += item.quantity
         stock.save(update_fields=["quantity"])
 
@@ -757,7 +774,20 @@ def direct_purchase_receive(request, pk):
             quantity=item.quantity,
             movement_type="IN",
             created_by=request.user,
-            reference=f"DP-{dp.id}"
+            reference=f"DP-{dp.id}",
+        )
+
+        # Direct-purchase quantities are recorded in the ingredient's
+        # base unit, so this receipt must not apply the purchase-unit
+        # multiplier used by stock_in().
+        StockCostLayer.objects.create(
+            product=item.product,
+            department=kitchen,
+            purchase_item=None,
+            quantity_received=item.quantity,
+            quantity_remaining=item.quantity,
+            unit_cost=item.unit_cost,
+            is_opening_balance=False,
         )
 
     dp.status = "RECEIVED"
@@ -765,9 +795,10 @@ def direct_purchase_receive(request, pk):
     dp.save(update_fields=["status", "received_at"])
 
     req = dp.ingredient_request
-    req.status = "RECEIVED"
-    req.received_at = timezone.now()
-    req.save(update_fields=["status", "received_at"])
+    if req:
+        req.status = "RECEIVED"
+        req.received_at = timezone.now()
+        req.save(update_fields=["status", "received_at"])
 
     messages.success(request, f"Direct Purchase #{dp.id} received.")
     return redirect("kitchen_dashboard")
