@@ -28,6 +28,7 @@ def validate_manager(user):
             "MANAGER",
             "ADMIN",
             "DIRECTOR",
+            "GENERAL_MANAGER",
         }
     ):
         return
