@@ -24,6 +24,13 @@
       {% csrf_token %}
       <label class="loc-label" for="maintenance-description">Describe the issue *</label>
       <textarea class="loc-control" id="maintenance-description" name="description" rows="6" required maxlength="5000" placeholder="Describe the fault, exact position and any safety concern."></textarea>
+      {% if assets %}
+      <label class="loc-label" for="maintenance-asset">Equipment (optional)</label>
+      <select class="loc-control" id="maintenance-asset" name="asset">
+        <option value="">Area in general / equipment not listed</option>
+        {% for asset in assets %}<option value="{{ asset.id }}">{{ asset.name }}{% if asset.asset_type %} · {{ asset.asset_type }}{% endif %}</option>{% endfor %}
+      </select>
+      {% endif %}
       <label class="loc-label" for="maintenance-priority">Priority</label>
       <select class="loc-control" id="maintenance-priority" name="priority">
         <option value="LOW">Low — minor issue</option>
