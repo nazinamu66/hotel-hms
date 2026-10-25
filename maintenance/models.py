@@ -104,14 +104,6 @@ class MaintenanceTicket(models.Model):
         blank=True,
         related_name="maintenance_tickets",
     )
-
-    asset = models.ForeignKey(
-        "MaintenanceAsset",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="maintenance_tickets",
-    )
     
     schedule = models.ForeignKey(
         "MaintenanceSchedule",
@@ -218,18 +210,6 @@ class MaintenanceTicket(models.Model):
             raise ValidationError(
                 "A maintenance ticket must reference either a room or a non-room location, not both."
             )
-        if self.asset_id:
-            if self.room_id and self.asset.room_id != self.room_id:
-                raise ValidationError({"asset": "The selected asset does not belong to this room."})
-            if self.location_id and self.asset.location_id != self.location_id:
-                raise ValidationError({"asset": "The selected asset does not belong to this location."})
-            target_hotel_id = (
-                self.room.hotel_id if self.room_id
-                else self.location.hotel_id if self.location_id
-                else None
-            )
-            if target_hotel_id and self.asset.hotel_id != target_hotel_id:
-                raise ValidationError({"asset": "The selected asset belongs to another hotel."})
     
 class MaintenanceWorkNote(models.Model):
 
@@ -401,14 +381,6 @@ class MaintenanceAsset(models.Model):
         null=True,
         blank=True,
         related_name="maintenance_assets",
-    )
-
-    location = models.ForeignKey(
-        "MaintenanceLocation",
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="assets",
     )
 
     name = models.CharField(
