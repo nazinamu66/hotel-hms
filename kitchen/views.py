@@ -226,15 +226,12 @@ def kitchen_ingredient_request_detail(request, pk):
     req = get_object_or_404(
         IngredientRestockRequest.objects.select_for_update().select_related(
             "requested_by", "requested_by__department", "requested_by__hotel",
-        ).prefetch_related("items__ingredient"),
+        ).prefetch_related("items__ingredient").filter(
+            Q(requested_by__hotel__in=hotels)
+            | Q(requested_by__department__hotel__in=hotels)
+        ),
         pk=pk,
-    ).filter(
-        Q(requested_by__hotel__in=hotels)
-        | Q(requested_by__department__hotel__in=hotels)
     )
-
-    if not req:
-        raise PermissionDenied
 
     is_manager = request.user.role in {"MANAGER", "ADMIN", "DIRECTOR"}
     is_kitchen = request.user.role == "KITCHEN"
@@ -365,12 +362,14 @@ def kitchen_ingredient_request_detail(request, pk):
 def kitchen_confirm_direct_ingredients(request, pk):
     hotels = get_accessible_hotels(request.user)
     req = get_object_or_404(
-        IngredientRestockRequest.objects.select_related("requested_by", "requested_by__hotel"),
+        IngredientRestockRequest.objects.select_related(
+            "requested_by", "requested_by__hotel", "requested_by__department",
+        ).filter(
+            Q(requested_by__hotel__in=hotels)
+            | Q(requested_by__department__hotel__in=hotels)
+        ),
         pk=pk,
         requested_by=request.user,
-    ).filter(
-        Q(requested_by__hotel__in=hotels)
-        | Q(requested_by__department__hotel__in=hotels)
     )
 
     # The OneToOneField's related_name is "direct_purchase".
