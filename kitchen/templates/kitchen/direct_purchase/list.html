@@ -1,36 +1,83 @@
 {% extends "base/base.html" %}
 {% block content %}
+<style>
+  .purchase-page{max-width:1320px;margin:0 auto;padding:28px 20px 48px}
+  .purchase-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:24px}
+  .purchase-title{margin:0;color:#172033;font-size:28px;font-weight:750;letter-spacing:-.025em}
+  .purchase-subtitle{margin:7px 0 0;color:#64748b;font-size:14px}
+  .purchase-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(15,23,42,.04)}
+  .purchase-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid #edf0f4}
+  .purchase-card-head h2{margin:0;font-size:16px;color:#1f2937}
+  .purchase-count{font-size:12px;color:#64748b}
+  .table-wrap{overflow-x:auto}
+  .purchase-table{width:100%;min-width:850px;border-collapse:collapse}
+  .purchase-table th{padding:12px 16px;text-align:left;background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  .purchase-table td{padding:15px 16px;border-top:1px solid #f0f2f5;color:#374151;font-size:14px;vertical-align:middle}
+  .purchase-table tbody tr:hover{background:#fafbfc}
+  .purchase-link{font-weight:700;color:#1d4ed8;text-decoration:none}
+  .purchase-link:hover{text-decoration:underline}
+  .muted{display:block;color:#64748b;font-size:12px;margin-top:4px}
+  .status{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:700;background:#f1f5f9;color:#475569;white-space:nowrap}
+  .status-approved{background:#eff6ff;color:#1d4ed8}
+  .status-paid{background:#ecfdf5;color:#047857}
+  .status-partial{background:#fff7ed;color:#c2410c}
+  .status-received{background:#f0fdf4;color:#166534}
+  .empty-state{padding:54px 20px;text-align:center;color:#64748b}
+  .empty-state strong{display:block;color:#1f2937;font-size:17px;margin-bottom:7px}
+  @media(max-width:700px){.purchase-page{padding:20px 12px 36px}.purchase-header{flex-direction:column}.purchase-title{font-size:24px}}
+</style>
+<div class="purchase-page">
+  <header class="purchase-header">
+    <div>
+      <h1 class="purchase-title">Direct Purchases</h1>
+      <p class="purchase-subtitle">Manage approved purchases, payments, and ingredient deliveries in one place.</p>
+    </div>
+  </header>
 
-<h2>Direct Purchases</h2>
-
-<table border="1" cellpadding="8" width="100%">
-  <tr>
-    <th>ID</th>
-    <th>Supplier</th>
-    <th>Total Cost</th>
-    <th>Status</th>
-    <th>Created</th>
-  </tr>
-
-  {% for dp in purchases %}
-  <tr>
-    <td>
-      <a href="{% url 'direct_purchase_detail' dp.id %}">
-        #{{ dp.id }}
-      </a>
-    </td>
-    <td>{{ dp.supplier.name }}</td>
-    <td>₦{{ dp.computed_total|default:dp.total_cost }}</td>
-    <td>{{ dp.status }}</td>
-    <td>{{ dp.created_at|date:"Y-m-d H:i" }}</td>
-  </tr>
-  {% empty %}
-  <tr>
-    <td colspan="5" style="text-align:center;">
-      No direct purchases
-    </td>
-  </tr>
-  {% endfor %}
-</table>
-
+  <section class="purchase-card">
+    <div class="purchase-card-head">
+      <h2>Purchase register</h2>
+      <span class="purchase-count">{{ purchases|length }} purchase{{ purchases|length|pluralize }}</span>
+    </div>
+    <div class="table-wrap">
+      <table class="purchase-table">
+        <thead>
+          <tr>
+            <th>Purchase</th>
+            <th>Supplier</th>
+            <th>Requested by</th>
+            <th>Total cost</th>
+            <th>Workflow status</th>
+            <th>Created</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for dp in purchases %}
+          <tr>
+            <td>
+              <a class="purchase-link" href="{% url 'direct_purchase_detail' dp.id %}">DP-{{ dp.id }}</a>
+              {% if dp.ingredient_request_id %}<span class="muted">Request #{{ dp.ingredient_request_id }}</span>{% else %}<span class="muted">Urgent / standalone purchase</span>{% endif %}
+            </td>
+            <td>{{ dp.supplier.name }}</td>
+            <td>{% if dp.requested_by %}{{ dp.requested_by.get_full_name|default:dp.requested_by.username }}{% else %}—{% endif %}</td>
+            <td>₦{{ dp.total_cost|default:"0.00" }}</td>
+            <td>
+              {% if dp.status == "APPROVED" %}<span class="status status-approved">Awaiting payment</span>
+              {% elif dp.status == "PAID" %}<span class="status status-paid">Paid · awaiting delivery</span>
+              {% elif dp.status == "PARTIALLY_RECEIVED" %}<span class="status status-partial">Partially received</span>
+              {% elif dp.status == "RECEIVED" %}<span class="status status-received">Received</span>
+              {% else %}<span class="status">{{ dp.get_status_display }}</span>{% endif %}
+            </td>
+            <td>{{ dp.created_at|date:"d M Y" }}<span class="muted">{{ dp.created_at|date:"H:i" }}</span></td>
+            <td><a class="purchase-link" href="{% url 'direct_purchase_detail' dp.id %}">Manage →</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7"><div class="empty-state"><strong>No direct purchases yet</strong>Approved direct purchases and urgent purchases will appear here.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
 {% endblock %}
