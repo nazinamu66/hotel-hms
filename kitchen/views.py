@@ -1260,6 +1260,112 @@ def production_history(request):
         }
     )
 
+@role_required("KITCHEN")
+@require_POST
+@transaction.atomic
+def recipe_version_draft_create(request, recipe_id):
+    if not request.user.is_department_head:
+        raise PermissionDenied("Only the Kitchen Department Head can create recipe versions.")
+
+    hotels = get_accessible_hotels(request.user)
+    recipe = get_object_or_404(
+        Recipe.objects.select_for_update().select_related("product"),
+        pk=recipe_id,
+        product__hotel__in=hotels,
+    )
+    if not request.user.department or request.user.department.department_type != "KITCHEN":
+        raise PermissionDenied("A Kitchen Department Head is required.")
+
+    latest_number = recipe.versions.order_by("-version_number").values_list(
+        "version_number", flat=True
+    ).first() or 0
+    version = RecipeVersion.objects.create(
+        recipe=recipe,
+        version_number=latest_number + 1,
+        status="DRAFT",
+        created_by=request.user,
+        change_note=request.POST.get("change_note", "").strip(),
+    )
+
+    # Initial draft is seeded from the currently configured recipe.
+    # Draft-specific ingredient editing is the next step; never edit a
+    # previously approved snapshot in place.
+    for item in recipe.items.select_related("ingredient").all():
+        RecipeVersionItem.objects.create(
+            recipe_version=version,
+            ingredient=item.ingredient,
+            quantity=item.quantity,
+            unit=getattr(item.ingredient, "base_unit", "") or "",
+            control_mode=item.control_mode,
+            tolerance_percent=item.tolerance_percent,
+        )
+
+    messages.success(
+        request,
+        f"Draft version {version.version_number} created. Review it before approval."
+    )
+    return redirect("kitchen_recipe_version_history", recipe_id=recipe.pk)
+
+
+@role_required("KITCHEN")
+@require_POST
+@transaction.atomic
+def recipe_version_approve(request, version_id):
+    if not request.user.is_department_head:
+        raise PermissionDenied("Only the Kitchen Department Head can approve recipe versions.")
+
+    hotels = get_accessible_hotels(request.user)
+    version = get_object_or_404(
+        RecipeVersion.objects.select_for_update().select_related("recipe__product"),
+        pk=version_id,
+        recipe__product__hotel__in=hotels,
+    )
+    if (
+        not request.user.department
+        or request.user.department.department_type != "KITCHEN"
+        or request.user.department.hotel_id != version.recipe.product.hotel_id
+    ):
+        raise PermissionDenied("You can only approve recipes for your own hotel's kitchen.")
+
+    if version.status != "DRAFT":
+        messages.error(request, "Only draft recipe versions can be approved.")
+        return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+
+    items = list(version.items.select_related("ingredient"))
+    if not items:
+        messages.error(request, "A recipe version must contain at least one ingredient.")
+        return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+
+    for item in items:
+        if item.quantity <= 0:
+            messages.error(request, f"Quantity for {item.ingredient.name} must be greater than zero.")
+            return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+        if item.ingredient.product_type != "RAW":
+            messages.error(request, f"{item.ingredient.name} is not a RAW ingredient.")
+            return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+        if item.ingredient.hotel_id != version.recipe.product.hotel_id:
+            messages.error(request, "Recipe ingredients and finished food must belong to the same hotel.")
+            return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+
+    now = timezone.now()
+    RecipeVersion.objects.filter(
+        recipe=version.recipe,
+        status="APPROVED",
+    ).exclude(pk=version.pk).update(status="SUPERSEDED")
+
+    version.status = "APPROVED"
+    version.approved_by = request.user
+    version.approved_at = now
+    version.save(update_fields=["status", "approved_by", "approved_at"])
+
+    version.recipe.active_version = version
+    version.recipe.version = version.version_number
+    version.recipe.save(update_fields=["active_version", "version"])
+
+    messages.success(request, f"Recipe version {version.version_number} approved and activated.")
+    return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+
+
 @role_required("KITCHEN", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 def recipe_version_history(request, recipe_id):
     hotels = get_accessible_hotels(request.user)
