@@ -715,7 +715,7 @@ class DirectPurchase(models.Model):
     )
 
     status = models.CharField(
-        max_length=20,
+        max_length=24,
         choices=STATUS_CHOICES,
         default="APPROVED"
     )
