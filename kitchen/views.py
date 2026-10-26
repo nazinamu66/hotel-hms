@@ -419,7 +419,28 @@ def direct_purchase_pay(request, pk):
     )
 
 
-@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR","ACCOUNTANT")
+@role_required("KITCHEN")
+def kitchen_incoming_deliveries(request):
+    """Kitchen-only operational view of purchases awaiting physical receipt."""
+    purchases = (
+        DirectPurchase.objects
+        .filter(
+            requested_by=request.user,
+            status__in=("PAID", "PARTIALLY_RECEIVED"),
+            supplier__hotel__in=get_accessible_hotels(request.user),
+        )
+        .select_related("supplier", "ingredient_request")
+        .prefetch_related("items__product")
+        .order_by("-created_at")
+    )
+    return render(
+        request,
+        "kitchen/incoming_deliveries.html",
+        {"purchases": purchases},
+    )
+
+
+@role_required("MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def direct_purchase_list(request):
     qs = DirectPurchase.objects.select_related(
         "supplier", "requested_by", "supplier__hotel"
@@ -804,7 +825,7 @@ def direct_purchase_receive(request, pk):
     items = list(dp.items.select_for_update().select_related("product"))
     if not items:
         messages.error(request, "This direct purchase has no items to receive.")
-        return redirect("direct_purchase_detail", pk=dp.pk)
+        return redirect("kitchen_incoming_deliveries")
 
     # Validate every submitted quantity before changing any stock.
     receipt_quantities = {}
@@ -826,11 +847,11 @@ def direct_purchase_receive(request, pk):
             received_now = Decimal(raw_quantity)
         except (InvalidOperation, TypeError, ValueError):
             messages.error(request, f"Enter a valid received quantity for {item.product.name}.")
-            return redirect("direct_purchase_detail", pk=dp.pk)
+            return redirect("kitchen_incoming_deliveries")
 
         if not received_now.is_finite() or received_now < 0:
             messages.error(request, f"Received quantity for {item.product.name} must be zero or greater.")
-            return redirect("direct_purchase_detail", pk=dp.pk)
+            return redirect("kitchen_incoming_deliveries")
 
         if received_now > item.outstanding_quantity:
             messages.error(
@@ -838,14 +859,14 @@ def direct_purchase_receive(request, pk):
                 f"Received quantity for {item.product.name} exceeds the outstanding "
                 f"quantity ({item.outstanding_quantity}).",
             )
-            return redirect("direct_purchase_detail", pk=dp.pk)
+            return redirect("kitchen_incoming_deliveries")
 
         receipt_quantities[item.pk] = received_now
         total_to_receive += received_now
 
     if total_to_receive <= 0:
         messages.error(request, "Enter a positive quantity for at least one item to receive.")
-        return redirect("direct_purchase_detail", pk=dp.pk)
+        return redirect("kitchen_incoming_deliveries")
 
     for item in items:
         received_now = receipt_quantities[item.pk]
@@ -915,10 +936,10 @@ def direct_purchase_receive(request, pk):
             f"Partial delivery recorded for Direct Purchase #{dp.id}. "
             f"{outstanding} unit(s) remain outstanding.",
         )
-    return redirect("direct_purchase_detail", pk=dp.pk)
+    return redirect("kitchen_incoming_deliveries")
 
 
-@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT")
+@role_required("MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 
 def direct_purchase_detail(request, pk):
     from accounting.models import SupplierPayment
