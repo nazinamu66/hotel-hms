@@ -27,6 +27,8 @@ urlpatterns = [
     path("recipes/<int:recipe_id>/versions/", views.recipe_version_history, name="kitchen_recipe_version_history"),
     path("recipes/<int:recipe_id>/versions/draft/", views.recipe_version_draft_create, name="kitchen_recipe_version_draft_create"),
     path("recipe-versions/<int:version_id>/items/<int:item_id>/update/", views.recipe_version_item_update, name="kitchen_recipe_version_item_update"),
+    path("recipe-versions/<int:version_id>/items/add/", views.recipe_version_item_add, name="kitchen_recipe_version_item_add"),
+    path("recipe-versions/<int:version_id>/items/<int:item_id>/remove/", views.recipe_version_item_remove, name="kitchen_recipe_version_item_remove"),
     path("recipe-versions/<int:version_id>/approve/", views.recipe_version_approve, name="kitchen_recipe_version_approve"),
 
     path("incoming-deliveries/", views.kitchen_incoming_deliveries, name="kitchen_incoming_deliveries"),
