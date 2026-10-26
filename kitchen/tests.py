@@ -798,8 +798,11 @@ class ProductionOverrideSecurityTests(TestCase):
         # still enforce department assignment from the pinned approved snapshot.
         self.ingredient.departments.remove(self.kitchen)
         from django.core.exceptions import ValidationError
-        with self.assertRaises(ValidationError):
+        # The error must come from the snapshot's ingredient assignment, not
+        # from the empty mutable RecipeItem relation. The surrounding atomic
+        # transaction rolls the temporary version pin back with the failure.
+        with self.assertRaisesMessage(ValidationError, "is not assigned to this kitchen"):
             batch.execute(actual_quantities={str(self.ingredient.pk): "1.000"})
         batch.refresh_from_db()
-        self.assertEqual(batch.recipe_version_id, self.version.pk)
+        self.assertIsNone(batch.recipe_version_id)
         self.assertFalse(batch.is_executed)
