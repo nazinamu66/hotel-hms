@@ -1432,6 +1432,57 @@ def recipe_version_draft_create(request, recipe_id):
 @role_required("KITCHEN")
 @require_POST
 @transaction.atomic
+def recipe_version_item_update(request, version_id, item_id):
+    """Edit one ingredient on a draft only; persist converted base-unit quantity."""
+    if not request.user.is_department_head:
+        raise PermissionDenied("Only the Kitchen Department Head can edit recipe drafts.")
+
+    hotels = get_accessible_hotels(request.user)
+    version = get_object_or_404(
+        RecipeVersion.objects.select_for_update().select_related("recipe__product"),
+        pk=version_id,
+        recipe__product__hotel__in=hotels,
+    )
+    if (
+        version.status != "DRAFT"
+        or not request.user.department
+        or request.user.department.department_type != "KITCHEN"
+        or request.user.department.hotel_id != version.recipe.product.hotel_id
+    ):
+        raise PermissionDenied("Only your hotel's Kitchen Head can edit draft recipe versions.")
+
+    item = get_object_or_404(
+        RecipeVersionItem.objects.select_for_update().select_related("ingredient"),
+        pk=item_id,
+        recipe_version=version,
+    )
+    try:
+        quantity = Decimal(request.POST.get("quantity", ""))
+        if not quantity.is_finite() or quantity <= 0:
+            raise ValidationError("Quantity must be a finite number greater than zero.")
+        entered_unit = request.POST.get("unit", "").strip()
+        base_unit = item.ingredient.base_unit.strip()
+        from .unit_conversion import convert_quantity
+        base_quantity = convert_quantity(quantity, entered_unit, base_unit)
+        if base_quantity <= 0:
+            raise ValidationError("Converted quantity must be greater than zero.")
+    except (InvalidOperation, TypeError, ValueError, ValidationError) as exc:
+        messages.error(request, str(exc) or "Enter a valid quantity and unit.")
+        return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+
+    item.quantity = base_quantity
+    item.unit = base_unit
+    item.save(update_fields=["quantity", "unit"])
+    messages.success(
+        request,
+        f"Updated {item.ingredient.name}: {base_quantity} {base_unit} per portion."
+    )
+    return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+
+
+@role_required("KITCHEN")
+@require_POST
+@transaction.atomic
 def recipe_version_approve(request, version_id):
     if not request.user.is_department_head:
         raise PermissionDenied("Only the Kitchen Department Head can approve recipe versions.")
