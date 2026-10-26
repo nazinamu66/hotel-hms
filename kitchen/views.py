@@ -722,7 +722,13 @@ def kitchen_quick_production(request):
             except ValidationError as exc:
                 if any("STRICT recipe requires exactly" in message for message in exc.messages) and strict_variances:
                     batch.override_status = "PENDING"
-                    batch.pending_actual_quantities = actual_quantities
+                    batch.pending_actual_quantities = {
+                        ingredient_id: {
+                            "quantity": str(entry["quantity"]),
+                            "reason": str(entry.get("reason", "")),
+                        }
+                        for ingredient_id, entry in actual_quantities.items()
+                    }
                     batch.override_requested_by = request.user
                     batch.override_reason = "; ".join(
                         f"{name}: {actual_quantities[str(item.ingredient_id)].get('reason', '').strip()}"
