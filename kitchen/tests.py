@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 
 from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement, StockTransfer, Supplier
@@ -959,6 +960,7 @@ class DraftRecipeUnitEditingTests(TestCase):
                 "unit": "g",
                 "control_mode": "TOLERANCE",
                 "tolerance_percent": "5",
+                "tolerance_quantity": "0.100",
             },
         )
         self.assertEqual(response.status_code, 302)
@@ -967,6 +969,7 @@ class DraftRecipeUnitEditingTests(TestCase):
         self.assertEqual(added.unit, "kg")
         self.assertEqual(added.control_mode, "TOLERANCE")
         self.assertEqual(added.tolerance_percent, Decimal("5.00"))
+        self.assertEqual(added.tolerance_quantity, Decimal("0.100"))
         self.assertFalse(self.recipe.items.filter(ingredient=salt).exists())
 
     def test_can_remove_ingredient_from_draft_without_changing_live_recipe(self):
@@ -995,4 +998,45 @@ class DraftRecipeUnitEditingTests(TestCase):
         self.assertEqual(remove_response.status_code, 403)
         self.assertFalse(RecipeVersionItem.objects.filter(recipe_version=self.draft, ingredient=salt).exists())
         self.assertTrue(RecipeVersionItem.objects.filter(pk=self.item.pk).exists())
+
+    def test_absolute_tolerance_blocks_tolerance_mode_even_when_percentage_passes(self):
+        self.item.control_mode = "TOLERANCE"
+        self.item.tolerance_percent = Decimal("100.00")
+        self.item.tolerance_quantity = Decimal("0.100")
+        self.item.save(update_fields=["control_mode", "tolerance_percent", "tolerance_quantity"])
+        batch = ProductionBatch(
+            recipe=self.recipe,
+            recipe_version=self.draft,
+            quantity_produced=1,
+            produced_by=self.head,
+        )
+        with self.assertRaises(ValidationError):
+            batch._collect_ingredient_rows({
+                str(self.ingredient.pk): {"quantity": "1.200", "unit": "kg"}
+            })
+
+    def test_flexible_absolute_tolerance_requires_reason_when_exceeded(self):
+        self.item.control_mode = "FLEXIBLE"
+        self.item.tolerance_percent = Decimal("100.00")
+        self.item.tolerance_quantity = Decimal("0.100")
+        self.item.save(update_fields=["control_mode", "tolerance_percent", "tolerance_quantity"])
+        batch = ProductionBatch(
+            recipe=self.recipe,
+            recipe_version=self.draft,
+            quantity_produced=1,
+            produced_by=self.head,
+        )
+        with self.assertRaises(ValidationError):
+            batch._collect_ingredient_rows({
+                str(self.ingredient.pk): {"quantity": "1.200", "unit": "kg"}
+            })
+        rows = batch._collect_ingredient_rows({
+            str(self.ingredient.pk): {
+                "quantity": "1.200",
+                "unit": "kg",
+                "reason": "Ingredient spilled during preparation",
+            }
+        })
+        self.assertEqual(rows[0][2], Decimal("1.200"))
+        self.assertEqual(rows[0][3], "Ingredient spilled during preparation")
 
