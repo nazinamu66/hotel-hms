@@ -291,22 +291,28 @@ class ProductionBatch(models.Model):
         return variance_data
     
     def calculate_variance_cost(self):
+        """Estimate excess-usage cost against the recipe version pinned to this batch.
 
-        total_loss = 0
+        This is an estimate at the ingredient's current cost price, not the
+        authoritative FIFO cost. Actual inventory valuation remains based on
+        the cost allocations recorded on stock movements.
+        """
+        total_loss = Decimal("0.00")
+        recipe_items = (
+            self.recipe_version.items.select_related("ingredient")
+            if self.recipe_version_id
+            else self.recipe.items.select_related("ingredient")
+        )
 
-        for item in self.recipe.items.all():
-
-            expected = item.quantity * self.quantity_produced
-
+        for item in recipe_items:
+            expected = Decimal(item.quantity) * Decimal(self.quantity_produced)
             actual = sum(
-                u.actual_quantity
-                for u in self.ingredient_usages.filter(
-                    ingredient=item.ingredient
-                )
+                (u.actual_quantity for u in self.ingredient_usages.filter(
+                    ingredient_id=item.ingredient_id
+                )),
+                Decimal("0.000"),
             )
-
             variance = actual - expected
-
             if variance > 0:
                 total_loss += variance * item.ingredient.cost_price
 
