@@ -74,7 +74,7 @@
             {% if version.status == "DRAFT" and request.user.role == "KITCHEN" and request.user.is_department_head %}
             <tr style="border-top:1px dashed #cbd5e1; background:#f8fafc;">
               <td colspan="{% if version.status == 'DRAFT' and request.user.role == 'KITCHEN' and request.user.is_department_head %}5{% else %}4{% endif %}" style="padding:10px;">
-                <form method="post" action="{% url 'kitchen_recipe_version_item_update' version.id item.id %}" style="display:flex; align-items:end; gap:10px; flex-wrap:wrap;">
+                <form method="post" data-recipe-unit-editor data-base-unit="{{ item.ingredient.base_unit|escape }}" action="{% url 'kitchen_recipe_version_item_update' version.id item.id %}" style="display:flex; align-items:end; gap:10px; flex-wrap:wrap;">
                   {% csrf_token %}
                   <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569;">Recipe quantity
                     <input type="number" name="quantity" min="0.001" step="0.001" required placeholder="Enter amount" style="padding:8px; border:1px solid #cbd5e1; border-radius:7px; width:130px;">
@@ -102,13 +102,13 @@
       {% if version.status == "DRAFT" and request.user.role == "KITCHEN" and request.user.is_department_head %}
       <div style="margin-top:18px; padding:16px; border:1px solid #bfdbfe; background:#eff6ff; border-radius:10px;">
         <h3 style="margin:0 0 12px; color:#1e3a8a; font-size:15px;">Add ingredient to this draft</h3>
-        <form method="post" action="{% url 'kitchen_recipe_version_item_add' version.id %}" style="display:flex; align-items:end; gap:10px; flex-wrap:wrap;">
+        <form method="post" data-recipe-add-form action="{% url 'kitchen_recipe_version_item_add' version.id %}" style="display:flex; align-items:end; gap:10px; flex-wrap:wrap;">
           {% csrf_token %}
           <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#334155;">Raw ingredient
             <select name="ingredient_id" required style="padding:9px; border:1px solid #cbd5e1; border-radius:7px; min-width:190px;">
               <option value="">Choose ingredient</option>
               {% for ingredient in available_ingredients %}
-              <option value="{{ ingredient.id }}">{{ ingredient.name }} ({{ ingredient.base_unit }})</option>
+              <option value="{{ ingredient.id }}" data-base-unit="{{ ingredient.base_unit|escape }}">{{ ingredient.name }} ({{ ingredient.base_unit }})</option>
               {% endfor %}
             </select>
           </label>
@@ -116,10 +116,8 @@
             <input type="number" name="quantity" min="0.001" step="0.001" placeholder="e.g. 250" required style="padding:9px; border:1px solid #cbd5e1; border-radius:7px; width:125px;">
           </label>
           <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#334155;">Unit
-            <select name="unit" required style="padding:9px; border:1px solid #cbd5e1; border-radius:7px;">
-              <option value="mg">mg</option><option value="g">g</option><option value="kg">kg</option>
-              <option value="ml">ml</option><option value="cl">cl</option><option value="l">litre</option>
-              <option value="pcs">pcs</option><option value="each">each</option>
+            <select name="unit" required disabled style="padding:9px; border:1px solid #cbd5e1; border-radius:7px;">
+              <option value="">Choose ingredient first</option>
             </select>
           </label>
           <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#334155;">Control mode
@@ -148,4 +146,72 @@
   <div style="background:#fff; border:1px dashed #cbd5e1; border-radius:14px; padding:40px; text-align:center; color:#64748b;">No recipe versions found.</div>
   {% endfor %}
 </div>
+
+<script>
+(function () {
+  const unitDimensions = {
+    mg: "mass", milligram: "mass", milligrams: "mass",
+    g: "mass", gram: "mass", grams: "mass",
+    kg: "mass", kilogram: "mass", kilograms: "mass",
+    ml: "volume", millilitre: "volume", millilitres: "volume",
+    milliliter: "volume", milliliters: "volume",
+    cl: "volume", centilitre: "volume", centilitres: "volume",
+    l: "volume", litre: "volume", litres: "volume", liter: "volume", liters: "volume",
+    pcs: "count", pc: "count", piece: "count", pieces: "count",
+    each: "count", unit: "count", units: "count"
+  };
+  const unitOptions = {
+    mass: [["mg", "mg"], ["g", "g"], ["kg", "kg"]],
+    volume: [["ml", "ml"], ["cl", "cl"], ["l", "litre"]],
+    count: [["pcs", "pcs"], ["each", "each"], ["unit", "unit"]]
+  };
+  function normalized(unit) {
+    return String(unit || "").trim().toLowerCase().replace(/\./g, "").replace(/\s+/g, " ");
+  }
+  function dimension(unit) {
+    return unitDimensions[normalized(unit)] || "";
+  }
+  function refill(select, baseUnit, selectedValue) {
+    const base = String(baseUnit || "").trim();
+    const dim = dimension(base);
+    select.replaceChildren();
+    const choices = dim ? unitOptions[dim].slice() : [];
+    if (base && !choices.some(pair => normalized(pair[0]) === normalized(base))) {
+      choices.unshift([base, base + " (base)"]);
+    } else if (base) {
+      choices.unshift([base, base + " (base)"]);
+    }
+    choices.forEach(pair => {
+      const option = document.createElement("option");
+      option.value = pair[0];
+      option.textContent = pair[1];
+      select.appendChild(option);
+    });
+    if (selectedValue && Array.from(select.options).some(o => o.value === selectedValue)) {
+      select.value = selectedValue;
+    } else if (base) {
+      select.value = base;
+    }
+  }
+  document.querySelectorAll("[data-recipe-unit-editor]").forEach(form => {
+    const select = form.querySelector('select[name="unit"]');
+    const base = form.dataset.baseUnit;
+    const selected = select.value;
+    refill(select, base, selected);
+  });
+  document.querySelectorAll("[data-recipe-add-form]").forEach(form => {
+    const ingredientSelect = form.querySelector('select[name="ingredient_id"]');
+    const unitSelect = form.querySelector('select[name="unit"]');
+    function updateUnits() {
+      const option = ingredientSelect.options[ingredientSelect.selectedIndex];
+      const base = option ? option.dataset.baseUnit || "" : "";
+      refill(unitSelect, base, "");
+      unitSelect.disabled = !base;
+    }
+    ingredientSelect.addEventListener("change", updateUnits);
+    updateUnits();
+  });
+})();
+</script>
+
 {% endblock %}
