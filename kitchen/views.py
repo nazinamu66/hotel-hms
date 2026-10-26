@@ -440,6 +440,18 @@ def kitchen_incoming_deliveries(request):
 
 
 @role_required("KITCHEN")
+def urgent_purchase_history(request):
+    """History of urgent purchases submitted by the current kitchen head."""
+    if not request.user.is_department_head:
+        raise PermissionDenied("Only the Kitchen Department Head can view this register.")
+    purchases = DirectPurchase.objects.filter(
+        urgent_purchase=True, requested_by=request.user,
+        supplier__hotel__in=get_accessible_hotels(request.user),
+    ).select_related("supplier", "reconciled_by").prefetch_related("items__product").order_by("-created_at")
+    return render(request, "kitchen/direct_purchase/urgent_history.html", {"purchases": purchases})
+
+
+@role_required("KITCHEN")
 def urgent_purchase_create(request):
     """Record an already-made urgent purchase for management reconciliation."""
     if not request.user.is_department_head:
@@ -518,7 +530,7 @@ def urgent_purchase_create(request):
                 for product, quantity, cost in rows
             ])
         messages.success(request, f"Urgent purchase DP-{purchase.pk} submitted for reconciliation. No stock or accounting entries have been posted yet.")
-        return redirect("kitchen_ingredient_requests")
+        return redirect("urgent_purchase_history")
 
     return render(request, "kitchen/direct_purchase/urgent_create.html", {
         "suppliers": suppliers,
