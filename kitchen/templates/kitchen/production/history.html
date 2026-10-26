@@ -336,6 +336,37 @@
     </div>
 
 
+    {% if pending_overrides %}
+    <div class="card">
+        <div class="card-header">
+            <h2>STRICT Variance Requests Awaiting Approval</h2>
+            <p>Review the reason and submitted quantities before approving. Approval executes production and deducts stock.</p>
+        </div>
+        <div class="table-wrap">
+            <table class="production-table">
+                <thead><tr><th>Batch</th><th>Food</th><th>Portions</th><th>Requested By</th><th>Reason</th><th>Action</th></tr></thead>
+                <tbody>
+                {% for pending in pending_overrides %}
+                    <tr>
+                        <td>#{{ pending.id }}</td>
+                        <td class="food-name">{{ pending.recipe.name }}</td>
+                        <td>{{ pending.quantity_produced }}</td>
+                        <td>{{ pending.override_requested_by|default:pending.produced_by }}</td>
+                        <td>{{ pending.override_reason|default:"—" }}</td>
+                        <td>
+                            <form method="post" action="{% url 'production_override_approve' pending.id %}">
+                                {% csrf_token %}
+                                <button class="btn btn-primary" type="submit">Approve &amp; Produce</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="card">
 
         <div class="card-header">
