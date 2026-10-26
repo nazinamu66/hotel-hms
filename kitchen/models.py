@@ -499,7 +499,9 @@ class ProductionBatch(models.Model):
                     and self.override_status == "APPROVED"
                     and self.override_approved_by_id
                     and self.override_approved_by.role in ("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+                    and self.override_approved_at is not None
                     and self.override_approved_by_id != self.produced_by_id
+                    and self.override_approved_by_id != self.override_requested_by_id
                 )
                 if not approved_override:
                     raise ValidationError(
