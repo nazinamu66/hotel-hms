@@ -631,6 +631,10 @@ class ProductionBatch(models.Model):
                 reason="Kitchen production",
                 reference=f"PROD-{self.id}",
                 allow_negative=False,
+                # Physical stock must be available, but legacy/opening stock
+                # may not yet have FIFO layers. Track that uncosted amount
+                # explicitly instead of permitting negative physical stock.
+                allow_uncosted_shortage=True,
             )
 
             total_cost += result["total_cost"]
