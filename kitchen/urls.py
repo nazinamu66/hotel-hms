@@ -40,6 +40,7 @@ urlpatterns = [
 
 
     path("production/history/", views.production_history, name="kitchen_production_history"),
+    path("production/<int:pk>/override/approve/", views.production_override_approve, name="production_override_approve"),
     path("production/<int:pk>/", views.production_detail, name="kitchen_production_detail"),
 
     path("ticket/<int:ticket_id>/start/",views.kitchen_ticket_start,name="kitchen_ticket_start"),
