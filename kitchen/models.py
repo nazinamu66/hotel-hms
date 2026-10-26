@@ -37,6 +37,15 @@ class Recipe(models.Model):
 
     version = models.IntegerField(default=1)
 
+    active_version = models.ForeignKey(
+        "RecipeVersion",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="active_for_recipes",
+        help_text="Currently approved recipe version used for new production."
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def total_cost(self):
@@ -106,11 +115,99 @@ class RecipeItem(models.Model):
             )
         ]
 
+class RecipeVersion(models.Model):
+    """Immutable, auditable snapshot of an approved recipe configuration."""
+
+    STATUS_CHOICES = (
+        ("DRAFT", "Draft"),
+        ("APPROVED", "Approved"),
+        ("SUPERSEDED", "Superseded"),
+    )
+
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.PROTECT,
+        related_name="versions",
+    )
+    version_number = models.PositiveIntegerField()
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="DRAFT")
+    change_note = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="created_recipe_versions",
+    )
+    approved_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="approved_recipe_versions",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    is_legacy_snapshot = models.BooleanField(
+        default=False,
+        help_text="True when migrated from current recipe data; historical version is not independently verified."
+    )
+
+    class Meta:
+        ordering = ["recipe_id", "-version_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recipe", "version_number"],
+                name="unique_recipe_version_number",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.recipe.name} v{self.version_number}"
+
+
+class RecipeVersionItem(models.Model):
+    """Ingredient and control settings frozen for a recipe version."""
+
+    CONTROL_CHOICES = RecipeItem.CONTROL_CHOICES
+
+    recipe_version = models.ForeignKey(
+        RecipeVersion, on_delete=models.PROTECT, related_name="items"
+    )
+    ingredient = models.ForeignKey(Product, on_delete=models.PROTECT)
+    quantity = models.DecimalField(max_digits=10, decimal_places=3)
+    unit = models.CharField(
+        max_length=20,
+        help_text="Inventory base unit used by the snapshot."
+    )
+    control_mode = models.CharField(
+        max_length=15, choices=CONTROL_CHOICES, default="STRICT"
+    )
+    tolerance_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0
+    )
+
+    class Meta:
+        ordering = ["ingredient__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recipe_version", "ingredient"],
+                name="unique_ingredient_per_recipe_version",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.recipe_version}: {self.ingredient} × {self.quantity} {self.unit}"
+
+
 class ProductionBatch(models.Model):
 
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.PROTECT
+    )
+
+    recipe_version = models.ForeignKey(
+        "RecipeVersion",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="production_batches",
+        help_text="Immutable recipe snapshot pinned to this batch."
     )
 
     quantity_produced = models.PositiveIntegerField(
