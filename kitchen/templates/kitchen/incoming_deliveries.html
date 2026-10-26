@@ -45,9 +45,20 @@
             <td><strong>DP-{{ dp.id }}</strong><div class="id-muted">Created {{ dp.created_at|date:"d M Y" }}</div></td>
             <td>{{ dp.supplier.name }}</td>
             <td>{% for item in dp.items.all %}<div><strong>{{ item.product.name }}</strong><div class="id-muted">{{ item.quantity_received|floatformat:3 }} of {{ item.quantity|floatformat:3 }} received</div></div>{% if not forloop.last %}<hr style="border:0;border-top:1px solid #eef2f7;margin:8px 0">{% endif %}{% empty %}No items{% endfor %}</td>
-            <td>{% for item in dp.items.all %}<div class="id-muted">{{ item.product.name }}: {{ item.outstanding_quantity|floatformat:3 }} outstanding</div>{% endfor %}</td>
+            <td>
+              <form method="post" action="{% url 'direct_purchase_receive' dp.id %}">
+                {% csrf_token %}
+                {% for item in dp.items.all %}
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:5px 0">
+                    <label for="received_{{ item.pk }}" class="id-muted">{{ item.product.name }} (max {{ item.outstanding_quantity|floatformat:3 }})</label>
+                    <input id="received_{{ item.pk }}" type="number" name="received_{{ item.pk }}" min="0" max="{{ item.outstanding_quantity }}" step="0.001" value="0" style="width:100px;padding:7px;border:1px solid #cbd5e1;border-radius:8px">
+                  </div>
+                {% endfor %}
+                <button class="id-btn" type="submit" style="border:0;cursor:pointer;margin-top:7px">Record received quantities</button>
+              </form>
+            </td>
             <td><span class="id-pill">{% if dp.status == "PARTIALLY_RECEIVED" %}Partially received{% else %}Awaiting receipt{% endif %}</span></td>
-            <td><a class="id-btn" href="{% url 'kitchen_ingredient_request_detail' dp.ingredient_request_id %}">Open delivery</a></td>
+            <td><strong>DP-{{ dp.id }}</strong><div class="id-muted">Delivery only</div></td>
           </tr>
         {% empty %}
           <tr><td colspan="6"><div class="id-empty"><strong>No deliveries awaiting receipt</strong>When an approved direct purchase is paid and ready for delivery, it will appear here.</div></td></tr>
