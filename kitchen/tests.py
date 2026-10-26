@@ -93,6 +93,66 @@ class IngredientRequestApprovalTests(TestCase):
             "manager_note": "Reviewed",
         }
 
+    def test_kitchen_head_can_submit_urgent_purchase_without_posting_stock(self):
+        self.client.force_login(self.requester)
+        before_stock = Stock.objects.filter(product=self.ingredient).count()
+        response = self.client.post(
+            reverse("urgent_purchase_create"),
+            {
+                "supplier": str(self.supplier.pk),
+                "purchase_date": "2026-10-26",
+                "payment_source": "STAFF_FUNDS",
+                "urgent_reason": "Immediate service requirement",
+                "receipt_reference": "RCPT-URG-01",
+                "goods_already_received": "on",
+                "product_0": str(self.ingredient.pk),
+                "quantity_0": "2.500",
+                "unit_cost_0": "125.00",
+            },
+        )
+        purchase = DirectPurchase.objects.get(urgent_purchase=True)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(purchase.status, "RECONCILIATION_PENDING")
+        self.assertIsNone(purchase.ingredient_request)
+        self.assertEqual(purchase.total_cost, Decimal("312.50"))
+        self.assertEqual(purchase.payment_source, "STAFF_FUNDS")
+        self.assertTrue(purchase.goods_already_received)
+        self.assertEqual(purchase.items.count(), 1)
+        self.assertEqual(Stock.objects.filter(product=self.ingredient).count(), before_stock)
+        self.assertFalse(StockMovement.objects.filter(reference__contains=f"DP-{purchase.pk}").exists())
+
+    def test_regular_kitchen_staff_cannot_submit_urgent_purchase(self):
+        staff = User.objects.create_user(
+            username="kitchen_staff_urgent",
+            password="test-password",
+            role="KITCHEN",
+            hotel=self.hotel,
+            department=self.kitchen_department,
+            is_department_head=False,
+        )
+        self.client.force_login(staff)
+        response = self.client.get(reverse("urgent_purchase_create"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_management_can_review_urgent_purchase_but_kitchen_cannot(self):
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=None,
+            supplier=self.supplier,
+            requested_by=self.requester,
+            status="RECONCILIATION_PENDING",
+            urgent_purchase=True,
+            payment_source="STAFF_FUNDS",
+            urgent_reason="Emergency restock",
+            total_cost=Decimal("25.00"),
+        )
+        self.client.force_login(self.requester)
+        self.assertEqual(self.client.get(reverse("urgent_purchase_review")).status_code, 403)
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("urgent_purchase_review"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"DP-{purchase.pk}")
+        self.assertContains(response, "Emergency restock")
+
     def test_invalid_direct_purchase_cost_does_not_approve_or_create_purchase(self):
         request_obj = self.make_direct_request()
         self.client.force_login(self.manager)
