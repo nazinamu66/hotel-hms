@@ -1,0 +1,60 @@
+{% extends "base/base.html" %}
+{% block title %}Incoming Deliveries | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.id-page{max-width:1180px;margin:0 auto;padding:28px 20px 48px;color:#172033}
+.id-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px}
+.id-title{font-size:clamp(1.7rem,2.4vw,2.2rem);font-weight:800;letter-spacing:-.03em;margin:0}
+.id-subtitle{color:#64748b;margin:8px 0 0;font-size:.93rem}
+.id-card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;overflow:hidden;box-shadow:0 5px 20px rgba(15,23,42,.035)}
+.id-card-head{padding:17px 20px;border-bottom:1px solid #edf0f4;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.id-card-head h2{font-size:1rem;margin:0}
+.id-muted{color:#64748b;font-size:.85rem;line-height:1.5}
+.id-table-wrap{overflow-x:auto}
+.id-table{width:100%;border-collapse:collapse;min-width:760px}
+.id-table th{text-align:left;padding:12px 15px;background:#f8fafc;color:#64748b;font-size:.72rem;letter-spacing:.05em;text-transform:uppercase}
+.id-table td{padding:14px 15px;border-top:1px solid #eef2f7;font-size:.88rem;vertical-align:top}
+.id-table strong{color:#1e293b}
+.id-pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:#fff7ed;color:#9a3412;font-size:.75rem;font-weight:800;white-space:nowrap}
+.id-btn{display:inline-flex;padding:9px 12px;border-radius:9px;background:#1d4ed8;color:#fff;text-decoration:none;font-size:.82rem;font-weight:750;white-space:nowrap}
+.id-empty{padding:48px 20px;text-align:center;color:#64748b}
+.id-empty strong{display:block;color:#1e293b;font-size:1.05rem;margin-bottom:7px}
+.id-message{padding:12px 15px;margin-bottom:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;color:#166534}
+@media(max-width:600px){.id-page{padding:20px 12px 36px}.id-header{flex-direction:column}}
+</style>
+<div class="id-page">
+  <header class="id-header">
+    <div>
+      <h1 class="id-title">Incoming Deliveries</h1>
+      <p class="id-subtitle">Record ingredients physically delivered for your approved direct purchases. Finance and payment details are managed separately.</p>
+    </div>
+    <a class="id-btn" href="{% url 'kitchen_ingredient_requests' %}">My ingredient requests</a>
+  </header>
+  {% if messages %}{% for message in messages %}<div class="id-message">{{ message }}</div>{% endfor %}{% endif %}
+  <section class="id-card">
+    <div class="id-card-head">
+      <h2>Deliveries awaiting receipt</h2>
+      <span class="id-muted">{{ purchases|length }} purchase{{ purchases|length|pluralize }}</span>
+    </div>
+    <div class="id-table-wrap">
+      <table class="id-table">
+        <thead><tr><th>Purchase</th><th>Supplier</th><th>Items</th><th>Delivery progress</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        {% for dp in purchases %}
+          <tr>
+            <td><strong>DP-{{ dp.id }}</strong><div class="id-muted">Created {{ dp.created_at|date:"d M Y" }}</div></td>
+            <td>{{ dp.supplier.name }}</td>
+            <td>{% for item in dp.items.all %}<div><strong>{{ item.product.name }}</strong><div class="id-muted">{{ item.quantity_received|floatformat:3 }} of {{ item.quantity|floatformat:3 }} received</div></div>{% if not forloop.last %}<hr style="border:0;border-top:1px solid #eef2f7;margin:8px 0">{% endif %}{% empty %}No items{% endfor %}</td>
+            <td>{% for item in dp.items.all %}<div class="id-muted">{{ item.product.name }}: {{ item.outstanding_quantity|floatformat:3 }} outstanding</div>{% endfor %}</td>
+            <td><span class="id-pill">{% if dp.status == "PARTIALLY_RECEIVED" %}Partially received{% else %}Awaiting receipt{% endif %}</span></td>
+            <td><a class="id-btn" href="{% url 'kitchen_ingredient_request_detail' dp.ingredient_request_id %}">Open delivery</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6"><div class="id-empty"><strong>No deliveries awaiting receipt</strong>When an approved direct purchase is paid and ready for delivery, it will appear here.</div></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
