@@ -439,6 +439,103 @@ def kitchen_incoming_deliveries(request):
     )
 
 
+@role_required("KITCHEN")
+def urgent_purchase_create(request):
+    """Record an already-made urgent purchase for management reconciliation."""
+    if not request.user.is_department_head:
+        raise PermissionDenied("Only the Kitchen Department Head can record urgent purchases.")
+
+    hotels = get_accessible_hotels(request.user)
+    suppliers = Supplier.objects.filter(hotel__in=hotels, is_active=True).order_by("name")
+    ingredients = Product.objects.filter(hotel__in=hotels, product_type="RAW", is_active=True).order_by("name") if hasattr(Product, "is_active") else Product.objects.filter(hotel__in=hotels, product_type="RAW").order_by("name")
+
+    if request.method == "POST":
+        supplier_id = request.POST.get("supplier", "")
+        purchase_date = request.POST.get("purchase_date") or timezone.localdate().isoformat()
+        payment_source = request.POST.get("payment_source", "")
+        reason = request.POST.get("urgent_reason", "").strip()
+        receipt_reference = request.POST.get("receipt_reference", "").strip()
+        note = request.POST.get("note", "").strip()
+        goods_received = request.POST.get("goods_already_received") == "on"
+        try:
+            supplier = suppliers.get(pk=supplier_id)
+        except (Supplier.DoesNotExist, ValueError, TypeError):
+            messages.error(request, "Select a valid supplier for this hotel.")
+            return redirect("urgent_purchase_create")
+        if payment_source not in {"HOTEL_FUNDS", "STAFF_FUNDS", "UNPAID"} or not reason:
+            messages.error(request, "Choose a payment source and explain why the purchase was urgent.")
+            return redirect("urgent_purchase_create")
+
+        rows = []
+        total = Decimal("0.00")
+        index = 0
+        while f"product_{index}" in request.POST:
+            product_id = request.POST.get(f"product_{index}")
+            quantity_raw = request.POST.get(f"quantity_{index}", "")
+            cost_raw = request.POST.get(f"unit_cost_{index}", "")
+            try:
+                product = ingredients.get(pk=product_id)
+                quantity = Decimal(quantity_raw)
+                unit_cost = Decimal(cost_raw)
+            except (Product.DoesNotExist, ValueError, TypeError, InvalidOperation):
+                messages.error(request, f"Check ingredient, quantity, and unit cost on line {index + 1}.")
+                return redirect("urgent_purchase_create")
+            if not quantity.is_finite() or quantity <= 0 or not unit_cost.is_finite() or unit_cost < 0:
+                messages.error(request, f"Line {index + 1} must have a positive quantity and a valid non-negative cost.")
+                return redirect("urgent_purchase_create")
+            rows.append((product, quantity, unit_cost))
+            total += quantity * unit_cost
+            index += 1
+
+        if not rows:
+            messages.error(request, "Add at least one ingredient to the urgent purchase.")
+            return redirect("urgent_purchase_create")
+
+        from datetime import date
+        try:
+            parsed_date = date.fromisoformat(purchase_date)
+        except ValueError:
+            messages.error(request, "Enter a valid purchase date.")
+            return redirect("urgent_purchase_create")
+
+        with transaction.atomic():
+            purchase = DirectPurchase.objects.create(
+                ingredient_request=None,
+                supplier=supplier,
+                requested_by=request.user,
+                total_cost=total.quantize(Decimal("0.01")),
+                status="RECONCILIATION_PENDING",
+                note=note,
+                purchase_date=parsed_date,
+                payment_source=payment_source,
+                receipt_reference=receipt_reference,
+                urgent_reason=reason,
+                urgent_purchase=True,
+                goods_already_received=goods_received,
+            )
+            DirectPurchaseItem.objects.bulk_create([
+                DirectPurchaseItem(purchase=purchase, product=product, quantity=quantity, unit_cost=cost)
+                for product, quantity, cost in rows
+            ])
+        messages.success(request, f"Urgent purchase DP-{purchase.pk} submitted for reconciliation. No stock or accounting entries have been posted yet.")
+        return redirect("kitchen_ingredient_requests")
+
+    return render(request, "kitchen/direct_purchase/urgent_create.html", {
+        "suppliers": suppliers,
+        "ingredients": ingredients,
+        "today": timezone.localdate().isoformat(),
+    })
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def urgent_purchase_review(request):
+    purchases = DirectPurchase.objects.filter(
+        urgent_purchase=True,
+        supplier__hotel__in=get_accessible_hotels(request.user),
+    ).select_related("supplier", "requested_by").prefetch_related("items__product").order_by("-created_at")
+    return render(request, "kitchen/direct_purchase/urgent_review.html", {"purchases": purchases})
+
+
 @role_required("MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def direct_purchase_list(request):
     qs = DirectPurchase.objects.select_related(
