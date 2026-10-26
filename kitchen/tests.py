@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement, StockTransfer, Supplier
+from accounting.models import StaffReimbursement
 from kitchen.models import (
     DirectPurchase,
     DirectPurchaseItem,
@@ -607,3 +608,27 @@ class IngredientRequestApprovalTests(TestCase):
             StockMovement.objects.filter(reference__contains=f"DP-{purchase.pk}").count(),
             1,
         )
+
+
+    def test_staff_funded_urgent_purchase_creates_one_reimbursement_claim(self):
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=None,
+            supplier=self.supplier,
+            requested_by=self.requester,
+            status="RECEIVED",
+            urgent_purchase=True,
+            payment_source="STAFF_FUNDS",
+            urgent_reason="Emergency purchase",
+            total_cost=Decimal("312.50"),
+        )
+        self.client.force_login(self.manager)
+        url = reverse("accounting:staff_reimbursements")
+        first = self.client.get(url)
+        second = self.client.get(url)
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        claim = StaffReimbursement.objects.get(direct_purchase=purchase)
+        self.assertEqual(claim.claimant, self.requester)
+        self.assertEqual(claim.amount, Decimal("312.50"))
+        self.assertEqual(claim.status, "PENDING")
+        self.assertEqual(StaffReimbursement.objects.filter(direct_purchase=purchase).count(), 1)
