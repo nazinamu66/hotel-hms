@@ -25,6 +25,7 @@ urlpatterns = [
     # Recipes
     path("foods/", views.prepared_food_list, name="kitchen_food_list"),
 
+    path("incoming-deliveries/", views.kitchen_incoming_deliveries, name="kitchen_incoming_deliveries"),
     path("direct-purchases/",views.direct_purchase_list,name="direct_purchase_list"),
     path("direct-purchase/<int:pk>/", views.direct_purchase_detail, name="direct_purchase_detail"),
     path("direct-purchase/<int:pk>/pay/", views.direct_purchase_pay, name="direct_purchase_pay"),
