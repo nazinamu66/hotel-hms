@@ -528,6 +528,47 @@ def urgent_purchase_create(request):
 
 
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+@require_POST
+@transaction.atomic
+def urgent_purchase_reconcile(request, pk):
+    """Approve or reject an urgent purchase; this action does not post payment or accounting."""
+    purchase = get_object_or_404(
+        DirectPurchase.objects.select_for_update().select_related("supplier"),
+        pk=pk,
+        urgent_purchase=True,
+        supplier__hotel__in=get_accessible_hotels(request.user),
+    )
+    if purchase.status != "RECONCILIATION_PENDING":
+        messages.error(request, "Only purchases awaiting reconciliation can be reviewed.")
+        return redirect("urgent_purchase_review")
+
+    decision = request.POST.get("decision", "").strip().upper()
+    note = request.POST.get("reconciliation_note", "").strip()
+    if decision not in {"APPROVE", "REJECT"}:
+        messages.error(request, "Choose approve or reject.")
+        return redirect("urgent_purchase_review")
+    if not note:
+        messages.error(request, "A reconciliation note is required for the audit trail.")
+        return redirect("urgent_purchase_review")
+    if decision == "REJECT":
+        purchase.status = "REJECTED"
+        message = f"Urgent purchase DP-{purchase.pk} rejected."
+    else:
+        # Approval authorizes receipt processing only. Supplier payment,
+        # reimbursement and journal posting remain separate controls.
+        purchase.status = "APPROVED"
+        message = f"Urgent purchase DP-{purchase.pk} approved for controlled receiving."
+    purchase.reconciliation_note = note
+    purchase.reconciled_by = request.user
+    purchase.reconciled_at = timezone.now()
+    purchase.save(update_fields=[
+        "status", "reconciliation_note", "reconciled_by", "reconciled_at"
+    ])
+    messages.success(request, message)
+    return redirect("urgent_purchase_review")
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def urgent_purchase_review(request):
     purchases = DirectPurchase.objects.filter(
         urgent_purchase=True,
@@ -903,7 +944,7 @@ def direct_purchase_receive(request, pk):
             "ingredient_request",
         ),
         pk=pk,
-        status__in=["PAID", "PARTIALLY_RECEIVED"],
+        status__in=["APPROVED", "PAID", "PARTIALLY_RECEIVED"],
         supplier__hotel__in=get_accessible_hotels(request.user),
     )
 
