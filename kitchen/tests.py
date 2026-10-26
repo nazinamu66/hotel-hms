@@ -308,6 +308,34 @@ class IngredientRequestApprovalTests(TestCase):
         )
         return request_obj, purchase, item
 
+    def test_kitchen_uses_delivery_queue_not_financial_purchase_pages(self):
+        _, purchase, item = self.make_paid_direct_purchase()
+        self.client.force_login(self.requester)
+
+        register_response = self.client.get(reverse("direct_purchase_list"))
+        detail_response = self.client.get(reverse("direct_purchase_detail", args=[purchase.pk]))
+        deliveries_response = self.client.get(reverse("kitchen_incoming_deliveries"))
+
+        self.assertNotEqual(register_response.status_code, 200)
+        self.assertNotEqual(detail_response.status_code, 200)
+        self.assertEqual(deliveries_response.status_code, 200)
+        self.assertContains(deliveries_response, f"DP-{purchase.pk}")
+        self.assertContains(deliveries_response, f"received_{item.pk}")
+        self.assertNotContains(deliveries_response, "Payment summary")
+        self.assertNotContains(deliveries_response, "Balance due")
+
+    def test_kitchen_receipt_redirects_to_incoming_deliveries(self):
+        _, purchase, item = self.make_paid_direct_purchase()
+        self.client.force_login(self.requester)
+
+        response = self.client.post(
+            reverse("direct_purchase_receive", args=[purchase.pk]),
+            {f"received_{item.pk}": "1.000"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("kitchen_incoming_deliveries"))
+
     def test_direct_purchase_can_be_received_in_multiple_deliveries(self):
         request_obj, purchase, item = self.make_paid_direct_purchase()
         self.client.force_login(self.requester)
