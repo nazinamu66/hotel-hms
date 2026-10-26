@@ -446,7 +446,7 @@ class ProductionBatch(models.Model):
     # VALIDATE INGREDIENTS
     # =====================================
     
-    def _collect_ingredient_rows(self, actual_quantities):
+    def _collect_ingredient_rows(self, actual_quantities, allow_strict_override=False):
 
         kitchen = self.produced_by.department
         ingredient_rows = []
