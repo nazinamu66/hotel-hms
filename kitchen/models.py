@@ -390,7 +390,10 @@ class ProductionBatch(models.Model):
             raise ValidationError("Production quantity must be greater than zero.")
 
         actual_quantities = actual_quantities or {}
-        ingredient_rows = self._collect_ingredient_rows(actual_quantities)
+        ingredient_rows = self._collect_ingredient_rows(
+            actual_quantities,
+            allow_strict_override=allow_strict_override,
+        )
 
         total_cost = self._deduct_ingredients(ingredient_rows)
         self._add_finished_product(total_cost)
