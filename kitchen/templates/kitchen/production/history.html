@@ -344,7 +344,7 @@
         </div>
         <div class="table-wrap">
             <table class="production-table">
-                <thead><tr><th>Batch</th><th>Food</th><th>Portions</th><th>Requested By</th><th>Reason</th><th>Action</th></tr></thead>
+                <thead><tr><th>Batch</th><th>Food</th><th>Portions</th><th>Requested By</th><th>Reason</th><th>Submitted Quantities</th><th>Action</th></tr></thead>
                 <tbody>
                 {% for pending in pending_overrides %}
                     <tr>
@@ -353,6 +353,7 @@
                         <td>{{ pending.quantity_produced }}</td>
                         <td>{{ pending.override_requested_by|default:pending.produced_by }}</td>
                         <td>{{ pending.override_reason|default:"—" }}</td>
+                        <td><details><summary>View quantities</summary>{% for ingredient_id, entry in pending.pending_actual_quantities.items %}<div style="padding:3px 0;">Ingredient #{{ ingredient_id }}: {{ entry.quantity }}</div>{% endfor %}</details></td>
                         <td>
                             <div style="display:flex;gap:8px;flex-wrap:wrap;">
                                 <form method="post" action="{% url 'production_override_approve' pending.id %}">
