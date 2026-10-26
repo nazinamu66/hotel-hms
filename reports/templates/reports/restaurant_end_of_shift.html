@@ -1,115 +1,139 @@
 {% extends "base/base.html" %}
-{% block title %}Restaurant End of Shift{% endblock %}
+{% block title %}Restaurant End-of-Shift{% endblock %}
 
 {% block content %}
+<style>
+    .eos-page { max-width: 1280px; margin: 0 auto; padding: 28px 24px 48px; color: #172033; }
+    .eos-header { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; margin-bottom:24px; flex-wrap:wrap; }
+    .eos-eyebrow { color:#64748b; font-size:11px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:8px; }
+    .eos-title { margin:0; font-size:clamp(25px,3vw,34px); line-height:1.15; font-weight:850; color:#172033; }
+    .eos-subtitle { color:#64748b; margin:8px 0 0; font-size:14px; }
+    .eos-date-pill { border:1px solid #dbe3ee; background:#fff; border-radius:12px; padding:12px 15px; color:#334155; font-weight:700; }
+    .eos-filters { display:flex; flex-wrap:wrap; gap:14px; align-items:end; background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:18px; box-shadow:0 5px 18px rgba(15,23,42,.04); margin-bottom:24px; }
+    .eos-field { display:flex; flex-direction:column; gap:7px; min-width:190px; }
+    .eos-field label { font-size:12px; color:#475569; font-weight:750; }
+    .eos-field input,.eos-field select { min-height:42px; border:1px solid #cbd5e1; border-radius:10px; padding:9px 12px; color:#172033; background:#fff; font:inherit; }
+    .eos-btn { min-height:42px; display:inline-flex; justify-content:center; align-items:center; gap:8px; padding:10px 16px; border-radius:10px; border:1px solid transparent; font-weight:750; cursor:pointer; text-decoration:none; }
+    .eos-btn-primary { background:#2563eb; color:#fff; }
+    .eos-btn-secondary { background:#fff; color:#334155; border-color:#cbd5e1; }
+    .eos-section-heading { display:flex; justify-content:space-between; align-items:end; gap:12px; margin:26px 0 13px; }
+    .eos-section-heading h2 { margin:0; font-size:19px; font-weight:850; color:#172033; }
+    .eos-section-heading p { margin:4px 0 0; color:#64748b; font-size:13px; }
+    .eos-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+    .eos-card { background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:19px; box-shadow:0 5px 18px rgba(15,23,42,.035); min-width:0; }
+    .eos-metric-label { display:flex; align-items:center; gap:8px; color:#64748b; font-size:12px; font-weight:750; margin-bottom:12px; }
+    .eos-dot { width:9px; height:9px; border-radius:50%; background:#64748b; display:inline-block; }
+    .eos-dot-blue { background:#2563eb; } .eos-dot-green { background:#059669; } .eos-dot-amber { background:#d97706; } .eos-dot-red { background:#dc2626; }
+    .eos-metric-value { font-size:clamp(21px,2vw,28px); font-weight:850; letter-spacing:-.6px; color:#172033; overflow-wrap:anywhere; }
+    .eos-metric-note { color:#94a3b8; font-size:12px; margin-top:7px; }
+    .eos-panel { background:#fff; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; box-shadow:0 5px 18px rgba(15,23,42,.035); }
+    .eos-panel-head { padding:18px 20px; border-bottom:1px solid #e8edf4; }
+    .eos-panel-head h3 { margin:0; font-size:16px; font-weight:850; }
+    .eos-panel-head p { margin:5px 0 0; color:#64748b; font-size:13px; }
+    .eos-rows { padding:4px 20px; }
+    .eos-row { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:15px 0; border-bottom:1px solid #eef2f7; }
+    .eos-row:last-child { border-bottom:0; }
+    .eos-row-label { color:#475569; font-size:14px; }
+    .eos-row-value { color:#172033; font-weight:800; font-variant-numeric:tabular-nums; text-align:right; }
+    .eos-two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .eos-warning { border:1px solid #fed7aa; background:#fff7ed; color:#9a3412; padding:14px 16px; border-radius:12px; margin-top:16px; font-size:14px; }
+    .eos-footer { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; color:#94a3b8; font-size:12px; margin-top:24px; }
+    @media(max-width:950px) { .eos-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .eos-two-col { grid-template-columns:1fr; } }
+    @media(max-width:560px) { .eos-page { padding:20px 12px 32px; } .eos-metrics { grid-template-columns:1fr 1fr; gap:9px; } .eos-card { padding:14px; } .eos-metric-value { font-size:20px; } .eos-field { min-width:100%; } .eos-filters .eos-btn { width:100%; } }
+    @media print {
+        body { background:#fff !important; }
+        .eos-page { max-width:none; padding:0; }
+        .eos-filters,.eos-no-print,nav,aside,.sidebar { display:none !important; }
+        .eos-card,.eos-panel { box-shadow:none; break-inside:avoid; border-color:#cbd5e1; }
+        .eos-title { font-size:24px; }
+        .eos-metrics { grid-template-columns:repeat(4,1fr); }
+        .eos-two-col { grid-template-columns:1fr 1fr; }
+    }
+</style>
 
-<h2>Restaurant End-of-Shift Report</h2>
+<div class="eos-page">
+    <header class="eos-header">
+        <div>
+            <div class="eos-eyebrow">Restaurant operations · Reporting</div>
+            <h1 class="eos-title">End-of-Shift Report</h1>
+            <p class="eos-subtitle">Sales performance and payment collection summary for the selected business date.</p>
+        </div>
+        <div class="eos-date-pill">Business date: {{ date|date:"d M Y" }}</div>
+    </header>
 
-<form method="get" style="margin-bottom:20px;">
+    <form method="get" class="eos-filters">
+        <div class="eos-field">
+            <label for="eos-date">Business date</label>
+            <input id="eos-date" type="date" name="date" value="{{ date|date:'Y-m-d' }}">
+        </div>
+        <div class="eos-field">
+            <label for="eos-staff">Cashier / staff</label>
+            <select id="eos-staff" name="staff">
+                <option value="">All restaurant staff</option>
+                {% for staff in staff_list %}
+                    <option value="{{ staff.id }}" {% if staff.id|stringformat:"s" == selected_staff %}selected{% endif %}>{{ staff.get_full_name|default:staff.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="eos-btn eos-btn-primary">Generate report</button>
+        <button type="button" class="eos-btn eos-btn-secondary eos-no-print" onclick="window.print()">Print report</button>
+    </form>
 
-    <label>
-        Date:
-        <input type="date" name="date" value="{{ date|date:'Y-m-d' }}">
-    </label>
+    <div class="eos-section-heading">
+        <div><h2>Shift overview</h2><p>Summary of orders and sales recorded on this date.</p></div>
+    </div>
+    <div class="eos-metrics">
+        <div class="eos-card">
+            <div class="eos-metric-label"><span class="eos-dot eos-dot-blue"></span>Total orders</div>
+            <div class="eos-metric-value">{{ order_count }}</div>
+            <div class="eos-metric-note">Orders created on selected date</div>
+        </div>
+        <div class="eos-card">
+            <div class="eos-metric-label"><span class="eos-dot eos-dot-green"></span>Total sales</div>
+            <div class="eos-metric-value">₦{{ total_sales|floatformat:2 }}</div>
+            <div class="eos-metric-note">Recorded positive POS charges</div>
+        </div>
+        <div class="eos-card">
+            <div class="eos-metric-label"><span class="eos-dot eos-dot-red"></span>Total refunds</div>
+            <div class="eos-metric-value">₦{{ total_refunds|floatformat:2 }}</div>
+            <div class="eos-metric-note">Recorded POS charge reversals</div>
+        </div>
+        <div class="eos-card">
+            <div class="eos-metric-label"><span class="eos-dot eos-dot-amber"></span>Net sales</div>
+            <div class="eos-metric-value">₦{{ net_sales|floatformat:2 }}</div>
+            <div class="eos-metric-note">Sales less recorded refunds</div>
+        </div>
+    </div>
 
-    <label style="margin-left:15px;">
-        Staff:
-        <select name="staff">
-            <option value="">All Staff</option>
+    <div class="eos-section-heading">
+        <div><h2>Sales & settlement</h2><p>Compare walk-in transactions, room folio charges and payment collection.</p></div>
+    </div>
+    <div class="eos-two-col">
+        <section class="eos-panel">
+            <div class="eos-panel-head"><h3>Sales type breakdown</h3><p>Based on settled POS orders for the selected date.</p></div>
+            <div class="eos-rows">
+                <div class="eos-row"><span class="eos-row-label">Walk-in sales</span><span class="eos-row-value">₦{{ walkin_sales|floatformat:2 }}</span></div>
+                <div class="eos-row"><span class="eos-row-label">Room charges</span><span class="eos-row-value">₦{{ room_charge_sales|floatformat:2 }}</span></div>
+                <div class="eos-row"><span class="eos-row-label">Unsettled orders</span><span class="eos-row-value">{{ unsettled_orders }}</span></div>
+            </div>
+        </section>
+        <section class="eos-panel">
+            <div class="eos-panel-head"><h3>Payment breakdown</h3><p>Payments collected on the selected date.</p></div>
+            <div class="eos-rows">
+                <div class="eos-row"><span class="eos-row-label">Cash</span><span class="eos-row-value">₦{{ payment_summary.CASH|floatformat:2 }}</span></div>
+                <div class="eos-row"><span class="eos-row-label">POS / card</span><span class="eos-row-value">₦{{ payment_summary.POS|floatformat:2 }}</span></div>
+                <div class="eos-row"><span class="eos-row-label">Bank transfer</span><span class="eos-row-value">₦{{ payment_summary.TRANSFER|floatformat:2 }}</span></div>
+            </div>
+        </section>
+    </div>
 
-            {% for staff in staff_list %}
-                <option value="{{ staff.id }}"
-                    {% if staff.id|stringformat:"s" == selected_staff %}selected{% endif %}
-                >
-                    {{ staff.username }}
-                </option>
-            {% endfor %}
-        </select>
-    </label>
+    {% if unsettled_orders %}
+        <div class="eos-warning"><strong>Action required:</strong> {{ unsettled_orders }} order(s) remain open for this date. Review them before finalizing cashier reconciliation.</div>
+    {% endif %}
 
-    <button type="submit">Generate</button>
-
-</form>
-
-<hr>
-
-<h3>Shift Summary</h3>
-
-<table class="table table-bordered" cellpadding="8">
-
-<tr>
-<td><strong>Total Orders</strong></td>
-<td>{{ order_count }}</td>
-</tr>
-
-<tr>
-<td>Total Sales</td>
-<td>₦{{ total_sales }}</td>
-</tr>
-
-<tr>
-<td>Total Refunds</td>
-<td>₦{{ total_refunds }}</td>
-</tr>
-
-<tr>
-<td><strong>Net Sales</strong></td>
-<td><strong>₦{{ net_sales }}</strong></td>
-</tr>
-
-</table>
-
-<hr>
-
-<h3>Sales Type Breakdown</h3>
-
-<table class="table table-bordered" cellpadding="8">
-<tr>
-    <td>Walk-in Sales</td>
-    <td>₦{{ walkin_sales|floatformat:2 }}</td>
-</tr>
-<tr>
-    <td>Room Charges</td>
-    <td>₦{{ room_charge_sales|floatformat:2 }}</td>
-</tr>
-<tr>
-    <td>Unsettled Orders</td>
-    <td>{{ unsettled_orders }}</td>
-</tr>
-</table>
-
-{% if unsettled_orders %}
-<div class="alert alert-warning" role="alert">
-    <strong>Attention:</strong> {{ unsettled_orders }} order(s) are still open.
-    Review them before completing shift handover.
+    <footer class="eos-footer">
+        <span>Generated for {{ date|date:"d M Y" }} · Figures reflect recorded POS data.</span>
+        <span class="eos-no-print">Use Print report to print or save as PDF.</span>
+    </footer>
 </div>
-{% endif %}
-
-<hr>
-
-<h3>Payment Breakdown</h3>
-
-<table class="table table-bordered" cellpadding="8">
-
-<tr>
-<td>Cash</td>
-<td>₦{{ payment_summary.CASH }}</td>
-</tr>
-
-<tr>
-<td>POS</td>
-<td>₦{{ payment_summary.POS }}</td>
-</tr>
-
-<tr>
-<td>Transfer</td>
-<td>₦{{ payment_summary.TRANSFER }}</td>
-</tr>
-
-</table>
-
-<hr>
-
-<button onclick="window.print()">🖨 Print Report</button>
-
 {% endblock %}
