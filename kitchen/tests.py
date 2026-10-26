@@ -803,7 +803,10 @@ class ProductionOverrideSecurityTests(TestCase):
         batch.save(update_fields=["override_status", "override_approved_by", "override_approved_at"])
 
         with self.assertRaisesMessage(ValidationError, "variance requires an authorized manager override"):
-            batch._collect_ingredient_rows({str(self.ingredient.pk): {"quantity": "2.500", "reason": "Test"}})
+            batch._collect_ingredient_rows(
+                {str(self.ingredient.pk): {"quantity": "2.500", "reason": "Test"}},
+                allow_strict_override=True,
+            )
 
     def test_batch_execution_pins_version_before_validating_recipe_ingredients(self):
         batch = ProductionBatch.objects.create(
