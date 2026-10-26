@@ -354,10 +354,16 @@
                         <td>{{ pending.override_requested_by|default:pending.produced_by }}</td>
                         <td>{{ pending.override_reason|default:"—" }}</td>
                         <td>
-                            <form method="post" action="{% url 'production_override_approve' pending.id %}">
-                                {% csrf_token %}
-                                <button class="btn btn-primary" type="submit">Approve &amp; Produce</button>
-                            </form>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <form method="post" action="{% url 'production_override_approve' pending.id %}">
+                                    {% csrf_token %}
+                                    <button class="btn btn-primary" type="submit">Approve &amp; Produce</button>
+                                </form>
+                                <form method="post" action="{% url 'production_override_reject' pending.id %}">
+                                    {% csrf_token %}
+                                    <button class="btn btn-secondary" type="submit">Reject</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 {% endfor %}
