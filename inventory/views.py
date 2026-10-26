@@ -492,6 +492,20 @@ def product_create(request):
         )
 
     if form.is_valid():
+        # RAW products are kitchen ingredients. Their creation is owned by
+        # the Kitchen Department Head; other product types retain the normal
+        # product-master permissions.
+        if (
+            form.cleaned_data.get("product_type") == "RAW"
+            and not (
+                request.user.role == "KITCHEN"
+                and is_department_head(request.user)
+            )
+        ):
+            raise PermissionDenied(
+                "Only the Kitchen Department Head can create ingredients."
+            )
+
         selected_departments = form.cleaned_data.get(
             "departments"
         )
