@@ -11,6 +11,11 @@ from kitchen.models import (
     DirectPurchaseItem,
     IngredientRestockItem,
     IngredientRestockRequest,
+    ProductionBatch,
+    Recipe,
+    RecipeItem,
+    RecipeVersion,
+    RecipeVersionItem,
 )
 
 
@@ -700,3 +705,98 @@ class IngredientRequestApprovalTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f"DP-{purchase.pk}")
         self.assertContains(response, "Record received quantities")
+
+
+class ProductionOverrideSecurityTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.organization = Organization.objects.create(name="Recipe Override Org")
+        cls.hotel = Hotel.objects.create(organization=cls.organization, name="Recipe Override Hotel")
+        cls.kitchen = Department.objects.create(
+            hotel=cls.hotel, department_type="KITCHEN", code="ROK", name="Override Kitchen"
+        )
+        cls.producer = User.objects.create_user(
+            username="override_kitchen", password="test-password", role="KITCHEN",
+            hotel=cls.hotel, department=cls.kitchen,
+        )
+        cls.manager = User.objects.create_user(
+            username="override_manager", password="test-password", role="MANAGER", hotel=cls.hotel,
+        )
+        cls.ingredient = Product.objects.create(
+            hotel=cls.hotel, name="Override Flour", sku="OVERRIDE-FLOUR",
+            product_type="RAW", base_unit="kg", cost_price=Decimal("10.00"),
+        )
+        cls.ingredient.departments.add(cls.kitchen)
+        cls.finished = Product.objects.create(
+            hotel=cls.hotel, name="Override Bread", sku="OVERRIDE-BREAD",
+            product_type="FOOD", base_unit="each", cost_price=Decimal("0.00"),
+        )
+        cls.recipe = Recipe.objects.create(name="Override Bread Recipe", product=cls.finished)
+        cls.version = RecipeVersion.objects.create(
+            recipe=cls.recipe, version_number=1, status="APPROVED",
+            created_by=cls.producer, approved_by=cls.manager,
+        )
+        RecipeVersionItem.objects.create(
+            recipe_version=cls.version, ingredient=cls.ingredient,
+            quantity=Decimal("1.000"), unit="kg", control_mode="STRICT",
+        )
+        cls.recipe.active_version = cls.version
+        cls.recipe.version = 1
+        cls.recipe.save(update_fields=["active_version", "version"])
+
+    def make_pending_batch(self, *, requester=None, producer=None):
+        return ProductionBatch.objects.create(
+            recipe=self.recipe,
+            recipe_version=self.version,
+            quantity_produced=2,
+            produced_by=producer or self.producer,
+            override_status="PENDING",
+            override_requested_by=requester or self.producer,
+            override_reason="Approved variance test",
+            pending_actual_quantities={
+                str(self.ingredient.pk): {"quantity": "2.500", "reason": "Documented variance"}
+            },
+        )
+
+    def test_kitchen_user_cannot_approve_strict_override(self):
+        batch = self.make_pending_batch()
+        self.client.force_login(self.producer)
+        response = self.client.post(reverse("production_override_approve", args=[batch.pk]))
+        batch.refresh_from_db()
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(batch.override_status, "PENDING")
+        self.assertFalse(batch.is_executed)
+
+    def test_requester_cannot_approve_own_strict_override(self):
+        batch = self.make_pending_batch()
+        self.client.force_login(self.manager)
+        # The requester's identity is also checked independently of producer.
+        batch.override_requested_by = self.manager
+        batch.save(update_fields=["override_requested_by"])
+        response = self.client.post(reverse("production_override_approve", args=[batch.pk]))
+        batch.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(batch.override_status, "PENDING")
+        self.assertFalse(batch.is_executed)
+
+    def test_manager_cannot_reject_request_they_submitted(self):
+        batch = self.make_pending_batch()
+        batch.override_requested_by = self.manager
+        batch.save(update_fields=["override_requested_by"])
+        self.client.force_login(self.manager)
+        response = self.client.post(reverse("production_override_reject", args=[batch.pk]))
+        batch.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(batch.override_status, "PENDING")
+        self.assertIsNone(batch.override_rejected_by)
+
+    def test_batch_execution_pins_version_before_validating_recipe_ingredients(self):
+        batch = ProductionBatch.objects.create(
+            recipe=self.recipe, quantity_produced=1, produced_by=self.producer,
+        )
+        # If validation uses mutable RecipeItem rows first, the empty source
+        # recipe could bypass validation of the approved snapshot's ingredient.
+        with self.assertRaises(Exception):
+            batch.execute(actual_quantities={str(self.ingredient.pk): "1.000"})
+        batch.refresh_from_db()
+        self.assertEqual(batch.recipe_version_id, self.version.pk)
