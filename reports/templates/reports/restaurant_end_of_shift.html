@@ -61,6 +61,32 @@
 
 <hr>
 
+<h3>Sales Type Breakdown</h3>
+
+<table class="table table-bordered" cellpadding="8">
+<tr>
+    <td>Walk-in Sales</td>
+    <td>₦{{ walkin_sales|floatformat:2 }}</td>
+</tr>
+<tr>
+    <td>Room Charges</td>
+    <td>₦{{ room_charge_sales|floatformat:2 }}</td>
+</tr>
+<tr>
+    <td>Unsettled Orders</td>
+    <td>{{ unsettled_orders }}</td>
+</tr>
+</table>
+
+{% if unsettled_orders %}
+<div class="alert alert-warning" role="alert">
+    <strong>Attention:</strong> {{ unsettled_orders }} order(s) are still open.
+    Review them before completing shift handover.
+</div>
+{% endif %}
+
+<hr>
+
 <h3>Payment Breakdown</h3>
 
 <table class="table table-bordered" cellpadding="8">
