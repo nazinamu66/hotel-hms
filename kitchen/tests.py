@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement, StockTransfer, Supplier
-from accounting.models import StaffReimbursement
+from accounting.models import Account, StaffReimbursement
 from kitchen.models import (
     DirectPurchase,
     DirectPurchaseItem,
@@ -807,6 +807,63 @@ class ProductionOverrideSecurityTests(TestCase):
                 {str(self.ingredient.pk): {"quantity": "2.500", "reason": "Test"}},
                 allow_strict_override=True,
             )
+
+    def test_independent_manager_approval_executes_strict_override_and_records_usage(self):
+        from inventory.models import Stock
+
+        # The production finalizer requires these hotel inventory accounts,
+        # even when the consumed ingredient has no available FIFO cost layer.
+        Account.objects.create(
+            hotel=self.hotel, code="INV-RAW-OVR", name="Inventory Asset",
+            slug="inventory-asset", account_type="inventory",
+        )
+        Account.objects.create(
+            hotel=self.hotel, code="INV-FG-OVR", name="Finished Goods Inventory",
+            slug="finished-goods-inventory", account_type="inventory",
+        )
+        Stock.objects.create(
+            product=self.ingredient, department=self.kitchen,
+            quantity=Decimal("10.000"),
+        )
+        batch = self.make_pending_batch()
+        self.client.force_login(self.manager)
+
+        response = self.client.post(
+            reverse("production_override_approve", args=[batch.pk])
+        )
+
+        batch.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(batch.override_status, "APPROVED")
+        self.assertEqual(batch.override_approved_by, self.manager)
+        self.assertIsNotNone(batch.override_approved_at)
+        self.assertTrue(batch.is_executed)
+
+        usage = batch.ingredient_usages.get(ingredient=self.ingredient)
+        self.assertEqual(usage.expected_quantity, Decimal("2.000"))
+        self.assertEqual(usage.actual_quantity, Decimal("2.500"))
+        self.assertEqual(usage.variance, Decimal("0.500"))
+        self.assertEqual(usage.variance_reason, "Documented variance")
+        self.assertEqual(usage.shortage_quantity, Decimal("0.000"))
+
+        self.assertTrue(
+            StockMovement.objects.filter(
+                reference=f"PROD-{batch.pk}",
+                movement_type="OUT",
+                product=self.ingredient,
+            ).exists()
+        )
+        finished_stock = Stock.objects.get(
+            product=self.finished, department=self.kitchen
+        )
+        self.assertEqual(finished_stock.quantity, Decimal("2"))
+        self.assertTrue(
+            StockMovement.objects.filter(
+                reference=f"PROD-{batch.pk}",
+                movement_type="IN",
+                product=self.finished,
+            ).exists()
+        )
 
     def test_batch_execution_pins_version_before_validating_recipe_ingredients(self):
         batch = ProductionBatch.objects.create(
