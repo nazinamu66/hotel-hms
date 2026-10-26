@@ -293,6 +293,9 @@
                 <a href="{% url 'urgent_purchase_create' %}">
                     ⚡ Record Urgent Purchase
                 </a>
+                <a href="{% url 'urgent_purchase_history' %}">
+                    🗂️ My Urgent Purchase History
+                </a>
             {% endif %}
 
             {% if user|has_role:"MANAGER,DIRECTOR,ADMIN" %}
