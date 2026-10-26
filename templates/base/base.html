@@ -286,6 +286,9 @@
                 <a href="{% url 'kitchen_incoming_deliveries' %}">
                     🧾 Direct Purchase Deliveries
                 </a>
+                <a href="{% url 'urgent_purchase_create' %}">
+                    ⚡ Record Urgent Purchase
+                </a>
             {% endif %}
 
             {% if user|has_role:"MANAGER,DIRECTOR,ADMIN" %}
@@ -678,6 +681,9 @@
                  because management approval happens there -->
 
             {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
+            <a href="{% url 'urgent_purchase_review' %}">
+                ⚡ Urgent Purchase Reconciliation
+            </a>
             <a href="{% url 'direct_purchase_list' %}">
                 🧾 Direct Purchases
 
