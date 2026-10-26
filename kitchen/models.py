@@ -224,6 +224,25 @@ class ProductionBatch(models.Model):
 
     is_executed = models.BooleanField(default=False)
 
+    OVERRIDE_STATUS_CHOICES = (
+        ("NONE", "No override requested"),
+        ("PENDING", "Awaiting manager approval"),
+        ("APPROVED", "Override approved"),
+        ("REJECTED", "Override rejected"),
+    )
+    override_status = models.CharField(max_length=12, choices=OVERRIDE_STATUS_CHOICES, default="NONE")
+    pending_actual_quantities = models.JSONField(default=dict, blank=True)
+    override_reason = models.TextField(blank=True)
+    override_requested_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="requested_production_overrides",
+    )
+    override_approved_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="approved_production_overrides",
+    )
+    override_approved_at = models.DateTimeField(null=True, blank=True)
+
     def __str__(self):
         return f"{self.recipe} x {self.quantity_produced}"
 
@@ -321,7 +340,7 @@ class ProductionBatch(models.Model):
     # EXECUTE PRODUCTION
     # =====================================
     @transaction.atomic
-    def execute(self, actual_quantities: dict | None = None):
+    def execute(self, actual_quantities: dict | None = None, allow_strict_override=False):
         # Lock the batch itself before checking is_executed. Locking only the
         # stock rows is insufficient: two requests could otherwise both pass
         # the idempotency check and produce the same batch twice.
@@ -468,10 +487,18 @@ class ProductionBatch(models.Model):
                 if expected_qty > 0 else Decimal("0")
             )
             if item.control_mode == "STRICT" and variance != 0:
-                raise ValidationError(
-                    f"{item.ingredient}: STRICT recipe requires exactly {expected_qty}; "
-                    "variance is blocked until an authorized override is available."
+                approved_override = (
+                    allow_strict_override
+                    and self.override_status == "APPROVED"
+                    and self.override_approved_by_id
+                    and self.override_approved_by.role in ("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+                    and self.override_approved_by_id != self.produced_by_id
                 )
+                if not approved_override:
+                    raise ValidationError(
+                        f"{item.ingredient}: STRICT recipe requires exactly {expected_qty}; "
+                        "variance requires an authorized manager override."
+                    )
             if (
                 item.control_mode == "TOLERANCE"
                 and variance_percent > Decimal(item.tolerance_percent)
