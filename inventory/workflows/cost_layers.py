@@ -141,58 +141,56 @@ def transfer_cost_layers(
     return allocations
 
 @transaction.atomic
+@transaction.atomic
 def consume_cost_layers(
     *,
     product,
     department,
     quantity,
+    allow_uncosted_shortage=False,
 ):
     """
-    Consume inventory from a department using FIFO cost layers.
-
-    Quantity is always expressed in the product's BASE UNIT.
-
-    The layers are reduced in FIFO order.
-
-    Returns:
-        {
-            "allocations": [...],
-            "total_cost": Decimal(...),
-        }
-
-    Does NOT change physical Stock.quantity.
-    Physical stock deduction is handled by the inventory
-    consumption workflow so both operations can be kept atomic.
+    Consume FIFO cost layers. Production may opt to continue when physical
+    stock or historical cost layers are short; any quantity without a cost
+    layer is returned explicitly and is never assigned a fabricated cost.
     """
-
     quantity = Decimal(quantity)
-
     if quantity <= 0:
-        raise ValidationError(
-            "Quantity must be greater than zero."
-        )
+        raise ValidationError("Quantity must be greater than zero.")
 
-    allocations = allocate_fifo_layers(
-        product=product,
-        department=department,
-        quantity=quantity,
+    layers = (
+        StockCostLayer.objects.select_for_update()
+        .filter(product=product, department=department, quantity_remaining__gt=0)
+        .order_by("received_at", "id")
     )
-
+    remaining = quantity
+    allocations = []
     total_cost = Decimal("0.00")
 
-    for allocation in allocations:
-        layer = allocation["layer"]
-        allocated = allocation["quantity"]
-
+    for layer in layers:
+        if remaining <= 0:
+            break
+        allocated = min(layer.quantity_remaining, remaining)
+        amount = allocated * layer.unit_cost
+        allocations.append({
+            "layer": layer,
+            "quantity": allocated,
+            "unit_cost": layer.unit_cost,
+            "total_cost": amount,
+        })
         layer.quantity_remaining -= allocated
+        layer.save(update_fields=["quantity_remaining"])
+        total_cost += amount
+        remaining -= allocated
 
-        layer.save(
-            update_fields=["quantity_remaining"]
+    if remaining > 0 and not allow_uncosted_shortage:
+        raise ValidationError(
+            f"Insufficient cost-layer stock for {product.name} in {department.name}. "
+            f"Missing {remaining} {product.base_unit}."
         )
-
-        total_cost += allocation["total_cost"]
 
     return {
         "allocations": allocations,
         "total_cost": total_cost,
+        "uncosted_quantity": max(remaining, Decimal("0")),
     }
