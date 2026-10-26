@@ -258,6 +258,9 @@
                         <th>Expected</th>
                         <th>Actual Used</th>
                         <th>Variance</th>
+                        <th>Stock Shortage</th>
+                        <th>Uncosted Qty</th>
+                        <th>Variance Reason</th>
                     </tr>
                 </thead>
 
@@ -313,6 +316,25 @@
                             {% endif %}
 
                         </td>
+
+                        <td>
+                            {% if usage.shortage_quantity > 0 %}
+                                <span class="variance variance-positive">{{ usage.shortage_quantity }} {{ usage.ingredient.base_unit }}</span>
+                            {% else %}
+                                <span class="variance variance-zero">None</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if usage.uncosted_quantity > 0 %}
+                                <span class="variance variance-positive">{{ usage.uncosted_quantity }} {{ usage.ingredient.base_unit }}</span>
+                                <div style="font-size:12px;color:#b91c1c;margin-top:5px;">Cost reconciliation required</div>
+                            {% else %}
+                                <span class="variance variance-zero">Costed</span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ usage.variance_reason|default:"—" }}</td>
 
                     </tr>
 
