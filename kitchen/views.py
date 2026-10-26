@@ -1662,10 +1662,21 @@ def recipe_version_history(request, recipe_id):
         .prefetch_related("items__ingredient")
         .order_by("-version_number")
     )
+    available_ingredients = Product.objects.filter(
+        hotel_id=recipe.product.hotel_id,
+        product_type="RAW",
+    ).order_by("name")
+    if hasattr(Product, "is_active"):
+        available_ingredients = available_ingredients.filter(is_active=True)
+
     return render(
         request,
         "kitchen/recipe_version_history.html",
-        {"recipe": recipe, "versions": versions},
+        {
+            "recipe": recipe,
+            "versions": versions,
+            "available_ingredients": available_ingredients,
+        },
     )
 
 
