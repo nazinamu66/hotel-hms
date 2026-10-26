@@ -1,0 +1,33 @@
+{% extends "base/base.html" %}
+{% block title %}Staff Reimbursements | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.sr-page{max-width:1400px;margin:0 auto;padding:28px 20px 48px;color:#172033}.sr-title{font-size:clamp(1.7rem,2.4vw,2.25rem);font-weight:800;letter-spacing:-.03em;margin:0}.sr-sub{color:#64748b;margin:8px 0 22px;max-width:850px}.sr-card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;overflow:hidden;margin-bottom:16px;box-shadow:0 5px 20px rgba(15,23,42,.035)}.sr-wrap{overflow-x:auto}.sr-table{width:100%;border-collapse:collapse;min-width:1050px}.sr-table th{text-align:left;padding:12px 14px;background:#f8fafc;color:#64748b;font-size:.72rem;letter-spacing:.05em;text-transform:uppercase}.sr-table td{padding:14px;border-top:1px solid #eef2f7;font-size:.88rem;vertical-align:top}.sr-muted{color:#64748b;font-size:.8rem;line-height:1.5}.sr-status{display:inline-block;border-radius:999px;padding:5px 9px;background:#f1f5f9;color:#334155;font-size:.75rem;font-weight:800}.sr-form{min-width:230px;display:grid;gap:7px}.sr-form textarea,.sr-form input,.sr-form select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font:inherit;font-size:.82rem}.sr-btn{border:0;border-radius:8px;padding:8px 10px;font-weight:700;cursor:pointer;background:#dbeafe;color:#1d4ed8}.sr-btn-danger{background:#fee2e2;color:#991b1b}.sr-empty{padding:42px;text-align:center;color:#64748b}
+</style>
+<div class="sr-page">
+<h1 class="sr-title">Staff Reimbursements</h1>
+<p class="sr-sub">Review personally funded urgent purchases and record actual reimbursement payments. Claims are created once per eligible purchase. Payment is only available after the purchase is fully received; payment posts a journal entry and records the cash/bank account and reference.</p>
+<div class="sr-card"><div class="sr-wrap"><table class="sr-table"><thead><tr><th>Claim</th><th>Staff member</th><th>Purchase / supplier</th><th>Claim amount</th><th>Purchase status</th><th>Reimbursement status</th><th>Review / payment</th></tr></thead><tbody>
+{% for claim in claims %}
+<tr>
+<td><strong>RB-{{ claim.pk }}</strong><div class="sr-muted">{{ claim.created_at|date:"d M Y H:i" }}</div></td>
+<td>{{ claim.claimant.get_full_name|default:claim.claimant.username }}</td>
+<td><strong>DP-{{ claim.direct_purchase_id }}</strong><div class="sr-muted">{{ claim.direct_purchase.supplier.name }}</div><div class="sr-muted">{{ claim.direct_purchase.purchase_date|date:"d M Y" }}</div></td>
+<td><strong>₦{{ claim.amount|floatformat:2 }}</strong></td>
+<td>{{ claim.direct_purchase.get_status_display }}<div class="sr-muted">{% if claim.direct_purchase.status == "RECEIVED" %}All goods received{% else %}Goods must be fully received before reimbursement payment{% endif %}</div></td>
+<td><span class="sr-status">{{ claim.get_status_display }}</span>{% if claim.review_note %}<div class="sr-muted">{{ claim.review_note }}</div>{% endif %}{% if claim.reviewed_by %}<div class="sr-muted">Reviewed by {{ claim.reviewed_by.get_full_name|default:claim.reviewed_by.username }}{% if claim.reviewed_at %} · {{ claim.reviewed_at|date:"d M Y H:i" }}{% endif %}</div>{% endif %}{% if claim.payment_reference %}<div class="sr-muted">Payment ref: {{ claim.payment_reference }}</div>{% endif %}</td>
+<td>
+{% if claim.status == "PENDING" %}
+<form class="sr-form" method="post">{% csrf_token %}<input type="hidden" name="claim_id" value="{{ claim.pk }}"><textarea name="review_note" required placeholder="Required review note"></textarea><button class="sr-btn" name="action" value="APPROVE">Approve claim</button><button class="sr-btn sr-btn-danger" name="action" value="REJECT" onclick="return confirm('Reject this reimbursement claim?')">Reject claim</button></form>
+{% elif claim.status == "APPROVED" %}
+{% if claim.direct_purchase.status == "RECEIVED" %}
+<form class="sr-form" method="post">{% csrf_token %}<input type="hidden" name="claim_id" value="{{ claim.pk }}"><label class="sr-muted">Pay from</label><select name="payment_account" required><option value="">Choose cash/bank account</option>{% for account in payment_accounts %}<option value="{{ account.pk }}">{{ account.code }} · {{ account.name }}</option>{% endfor %}</select><input name="payment_reference" required placeholder="Transfer / payment reference"><button class="sr-btn" name="action" value="PAY">Record reimbursement payment</button></form>
+{% else %}<span class="sr-muted">Awaiting full goods receipt</span>{% endif %}
+{% elif claim.status == "PAID" %}
+<div class="sr-muted">Paid {{ claim.paid_at|date:"d M Y H:i" }}{% if claim.paid_by %} by {{ claim.paid_by.get_full_name|default:claim.paid_by.username }}{% endif %}</div>{% if claim.payment_account %}<div class="sr-muted">{{ claim.payment_account.name }}</div>{% endif %}
+{% else %}<span class="sr-muted">No further action</span>{% endif %}
+</td>
+</tr>
+{% empty %}<tr><td colspan="7"><div class="sr-empty">No staff reimbursement claims for this hotel yet. Eligible staff-funded urgent purchases will appear after management approval.</div></td></tr>{% endfor %}
+</tbody></table></div></div></div>
+{% endblock %}
