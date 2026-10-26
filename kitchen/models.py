@@ -441,9 +441,13 @@ class ProductionBatch(models.Model):
 
             # Actual quantity entered by the kitchen.
             # If nothing was supplied, use expected as the fallback.
-            raw_actual_qty = actual_quantities.get(
+            raw_entry = actual_quantities.get(
                 str(item.ingredient.id),
                 actual_quantities.get(item.ingredient.id, expected_qty),
+            )
+            raw_actual_qty = (
+                raw_entry.get("quantity", expected_qty)
+                if isinstance(raw_entry, dict) else raw_entry
             )
             try:
                 actual_qty = Decimal(str(raw_actual_qty))
@@ -476,10 +480,6 @@ class ProductionBatch(models.Model):
                     f"{item.ingredient}: variance exceeds the configured tolerance."
                 )
 
-            raw_entry = actual_quantities.get(
-                str(item.ingredient.id),
-                actual_quantities.get(item.ingredient.id, expected_qty),
-            )
             variance_reason = (
                 str(raw_entry.get("reason", "")).strip()
                 if isinstance(raw_entry, dict) else ""
