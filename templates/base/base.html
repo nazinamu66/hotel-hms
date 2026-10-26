@@ -281,7 +281,10 @@
             {% endif %}
             {% if user.role == "KITCHEN" and user.is_department_head %}
                 <a href="{% url 'inventory:department_incoming_pos' %}">
-                    📦 Incoming Deliveries
+                    📦 Store Deliveries
+                </a>
+                <a href="{% url 'kitchen_incoming_deliveries' %}">
+                    🧾 Direct Purchase Deliveries
                 </a>
             {% endif %}
 
@@ -674,6 +677,7 @@
             <!-- Manager MUST see Direct Purchases
                  because management approval happens there -->
 
+            {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
             <a href="{% url 'direct_purchase_list' %}">
                 🧾 Direct Purchases
 
@@ -684,7 +688,8 @@
                         </span>
                     {% endif %}
                 {% endfor %}
-            </a> 
+            </a>
+            {% endif %}
 </div>
 
         {% endif %}
