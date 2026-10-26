@@ -684,3 +684,19 @@ class IngredientRequestApprovalTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f"DP-{purchase.pk}")
         self.assertContains(response, "Awaiting Reconciliation")
+
+    def test_approved_urgent_purchase_appears_in_incoming_deliveries(self):
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=None, supplier=self.supplier, requested_by=self.requester,
+            status="APPROVED", urgent_purchase=True, payment_source="STAFF_FUNDS",
+            urgent_reason="Emergency", total_cost=Decimal("20.00"),
+        )
+        DirectPurchaseItem.objects.create(
+            purchase=purchase, product=self.ingredient,
+            quantity=Decimal("2.000"), unit_cost=Decimal("10.00"),
+        )
+        self.client.force_login(self.requester)
+        response = self.client.get(reverse("kitchen_incoming_deliveries"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"DP-{purchase.pk}")
+        self.assertContains(response, "Record received quantities")
