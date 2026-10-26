@@ -329,9 +329,12 @@ class POSOrderItem(models.Model):
     menu_item = models.ForeignKey(MenuItem, on_delete=models.PROTECT)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    # Preserve fractional unit costs from FIFO allocations. Currency totals
+    # are rounded by the accounting layer, but unit cost must retain enough
+    # precision for small quantities and recipe-produced food.
     cost_at_sale = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
+        max_digits=18,
+        decimal_places=6,
         default=0
     )
 
