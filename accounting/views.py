@@ -1320,6 +1320,7 @@ def staff_reimbursements(request):
     from accounting.models import StaffReimbursement
     from kitchen.models import DirectPurchase
     from accounting.services.journal import record_transaction, get_system_account
+    from core.utils import get_user_hotels
 
     hotels = get_user_hotels(request.user)
     selected_hotel_id = request.GET.get("hotel") or request.POST.get("hotel") or ""
