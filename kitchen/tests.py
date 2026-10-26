@@ -538,3 +538,72 @@ class IngredientRequestApprovalTests(TestCase):
         self.assertEqual(request_obj.status, "RECEIVED")
         self.assertIsNotNone(request_obj.received_at)
 
+
+
+    def test_management_approval_records_audit_note_without_posting_stock(self):
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=None, supplier=self.supplier,
+            requested_by=self.requester, status="RECONCILIATION_PENDING",
+            urgent_purchase=True, payment_source="STAFF_FUNDS",
+            urgent_reason="Urgent need", total_cost=Decimal("25.00"),
+            goods_already_received=True,
+        )
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            reverse("urgent_purchase_reconcile", args=[purchase.pk]),
+            {"decision": "APPROVE", "reconciliation_note": "Receipt and cost checked."},
+        )
+        purchase.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(purchase.status, "APPROVED")
+        self.assertEqual(purchase.reconciled_by, self.manager)
+        self.assertIsNotNone(purchase.reconciled_at)
+        self.assertEqual(purchase.reconciliation_note, "Receipt and cost checked.")
+        self.assertFalse(StockMovement.objects.filter(reference__contains=f"DP-{purchase.pk}").exists())
+        self.assertFalse(Stock.objects.filter(product=self.ingredient, department=self.kitchen_department).exists())
+
+    def test_management_can_reject_urgent_purchase_with_reason(self):
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=None, supplier=self.supplier,
+            requested_by=self.requester, status="RECONCILIATION_PENDING",
+            urgent_purchase=True, payment_source="UNPAID",
+            urgent_reason="Urgent need", total_cost=Decimal("25.00"),
+        )
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            reverse("urgent_purchase_reconcile", args=[purchase.pk]),
+            {"decision": "REJECT", "reconciliation_note": "Supplier receipt could not be verified."},
+        )
+        purchase.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(purchase.status, "REJECTED")
+        self.assertEqual(purchase.reconciliation_note, "Supplier receipt could not be verified.")
+        self.assertFalse(StockMovement.objects.filter(reference__contains=f"DP-{purchase.pk}").exists())
+
+    def test_approved_urgent_purchase_can_be_received_once_and_partial_delivery_is_supported(self):
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=None, supplier=self.supplier,
+            requested_by=self.requester, status="APPROVED",
+            urgent_purchase=True, payment_source="STAFF_FUNDS",
+            urgent_reason="Urgent need", total_cost=Decimal("25.00"),
+        )
+        item = DirectPurchaseItem.objects.create(
+            purchase=purchase, product=self.ingredient,
+            quantity=Decimal("2.000"), unit_cost=Decimal("12.50"),
+        )
+        self.client.force_login(self.requester)
+        url = reverse("direct_purchase_receive", args=[purchase.pk])
+        response = self.client.post(url, {f"received_{item.pk}": "1.000"})
+        item.refresh_from_db()
+        purchase.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(item.quantity_received, Decimal("1.000"))
+        self.assertEqual(purchase.status, "PARTIALLY_RECEIVED")
+        self.assertEqual(
+            Stock.objects.get(product=self.ingredient, department=self.kitchen_department).quantity,
+            Decimal("1.000"),
+        )
+        self.assertEqual(
+            StockMovement.objects.filter(reference__contains=f"DP-{purchase.pk}").count(),
+            1,
+        )
