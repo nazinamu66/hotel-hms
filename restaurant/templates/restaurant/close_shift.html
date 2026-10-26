@@ -265,6 +265,37 @@
 
     <div class="section-card">
 
+        <h2 class="section-title">Sales Type Breakdown</h2>
+        <p class="section-description">
+            Separate walk-in settlements from charges posted to guest room folios.
+        </p>
+
+        <div class="reconciliation">
+            <div class="reconciliation-item">
+                <div class="reconciliation-label">Walk-in Sales</div>
+                <div class="reconciliation-value">₦{{ walkin_sales|floatformat:2 }}</div>
+            </div>
+            <div class="reconciliation-item">
+                <div class="reconciliation-label">Room Charges</div>
+                <div class="reconciliation-value">₦{{ room_charge_sales|floatformat:2 }}</div>
+            </div>
+            <div class="reconciliation-item">
+                <div class="reconciliation-label">Unsettled Orders</div>
+                <div class="reconciliation-value">{{ unsettled_orders }}</div>
+            </div>
+        </div>
+
+        {% if unsettled_orders %}
+            <div class="pending-box" style="margin-top:18px;">
+                <strong>Attention:</strong> {{ unsettled_orders }} order(s) are still open.
+                Resolve them before handing over the shift so they are not missed in reconciliation.
+            </div>
+        {% endif %}
+
+    </div>
+
+    <div class="section-card">
+
         <h2 class="section-title">Payment Reconciliation</h2>
 
         <p class="section-description">
