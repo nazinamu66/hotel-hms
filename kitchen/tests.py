@@ -632,3 +632,43 @@ class IngredientRequestApprovalTests(TestCase):
         self.assertEqual(claim.amount, Decimal("312.50"))
         self.assertEqual(claim.status, "PENDING")
         self.assertEqual(StaffReimbursement.objects.filter(direct_purchase=purchase).count(), 1)
+
+
+    def test_full_staff_funded_receipt_posts_inventory_and_payable_once(self):
+        from accounting.models import Account, BusinessDay, JournalEntry, JournalLine, StaffReimbursement
+        from django.utils import timezone
+        from datetime import date
+
+        for code, name, key, kind in [
+            ("1200", "Inventory Asset", "inventory_asset", "inventory"),
+            ("2000", "Accounts Payable", "accounts_payable", "current_liability"),
+        ]:
+            Account.objects.get_or_create(
+                hotel=self.hotel, system_key=key,
+                defaults={"code": code, "name": name, "account_type": kind, "is_system": True, "allow_posting": True},
+            )
+        BusinessDay.objects.get_or_create(hotel=self.hotel, date=date.today())
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=None, supplier=self.supplier, requested_by=self.requester,
+            status="APPROVED", urgent_purchase=True, payment_source="STAFF_FUNDS",
+            urgent_reason="Emergency purchase", total_cost=Decimal("25.00"),
+        )
+        item = DirectPurchaseItem.objects.create(
+            purchase=purchase, product=self.ingredient,
+            quantity=Decimal("2.000"), unit_cost=Decimal("12.50"),
+        )
+        self.client.force_login(self.requester)
+        response = self.client.post(reverse("direct_purchase_receive", args=[purchase.pk]), {f"received_{item.pk}": "2.000"})
+        self.assertEqual(response.status_code, 302)
+        purchase.refresh_from_db()
+        self.assertEqual(purchase.status, "RECEIVED")
+        claim = StaffReimbursement.objects.get(direct_purchase=purchase)
+        self.assertIsNotNone(claim.liability_journal_id)
+        journal = claim.liability_journal
+        lines = list(JournalLine.objects.filter(journal_entry=journal).select_related("account"))
+        self.assertEqual(sum((line.debit for line in lines), Decimal("0.00")), Decimal("25.00"))
+        self.assertEqual(sum((line.credit for line in lines), Decimal("0.00")), Decimal("25.00"))
+        self.assertTrue(any(line.account.system_key == "inventory_asset" and line.debit == Decimal("25.00") for line in lines))
+        self.assertTrue(any(line.account.system_key == "accounts_payable" and line.credit == Decimal("25.00") for line in lines))
+        self.client.post(reverse("direct_purchase_receive", args=[purchase.pk]), {f"received_{item.pk}": "1.000"})
+        self.assertEqual(JournalEntry.objects.filter(hotel=self.hotel, reference=f"STAFF-REIMB-{claim.pk}-OBL", entry_type="PURCHASE").count(), 1)
