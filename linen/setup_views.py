@@ -8,7 +8,7 @@ from accounts.services.access import get_accessible_hotels
 from inventory.models import Product
 from rooms.models import Room, RoomCategory
 
-from .models import LinenItem, RoomLinenRequirement, RoomLinenState
+from .models import LinenItem, RoomLinenRequirement, RoomLinenState, RoomLinenSetup
 
 
 MANAGEMENT_ROLES = ("ADMIN", "DIRECTOR", "GENERAL_MANAGER", "MANAGER")
@@ -115,8 +115,9 @@ def linen_room_setup(request, pk):
     # Copy defaults only when the room has never been configured. A missing
     # state after configuration is meaningful: the item was intentionally
     # excluded from that room's checklist and must not be re-created on GET.
+    setup, _ = RoomLinenSetup.objects.get_or_create(room=room)
     states_qs = RoomLinenState.objects.filter(room=room)
-    if not states_qs.exists():
+    if not states_qs.exists() and not setup.is_configured:
         category_defaults = RoomLinenRequirement.objects.filter(
             category=room.category,
             linen_item__in=linen_items,
@@ -150,6 +151,8 @@ def linen_room_setup(request, pk):
             submitted_quantities[item.pk] = quantity
 
         with transaction.atomic():
+            setup.is_configured = True
+            setup.save(update_fields=["is_configured", "configured_at"])
             for item_id, quantity in submitted_quantities.items():
                 if quantity is None:
                     RoomLinenState.objects.filter(
