@@ -881,3 +881,68 @@ class ProductionOverrideSecurityTests(TestCase):
         batch.refresh_from_db()
         self.assertIsNone(batch.recipe_version_id)
         self.assertFalse(batch.is_executed)
+
+
+class DraftRecipeUnitEditingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.organization = Organization.objects.create(name="Draft Unit Org")
+        cls.hotel = Hotel.objects.create(organization=cls.organization, name="Draft Unit Hotel")
+        cls.kitchen = Department.objects.create(
+            hotel=cls.hotel, department_type="KITCHEN", code="DUK", name="Draft Unit Kitchen"
+        )
+        cls.head = User.objects.create_user(
+            username="draft_unit_head", password="test-password", role="KITCHEN",
+            hotel=cls.hotel, department=cls.kitchen, is_department_head=True,
+        )
+        cls.ingredient = Product.objects.create(
+            hotel=cls.hotel, name="Draft Unit Flour", sku="DRAFT-UNIT-FLOUR",
+            product_type="RAW", base_unit="kg", cost_price=Decimal("10.00"),
+        )
+        cls.ingredient.departments.add(cls.kitchen)
+        cls.finished = Product.objects.create(
+            hotel=cls.hotel, name="Draft Unit Bread", sku="DRAFT-UNIT-BREAD",
+            product_type="FOOD", base_unit="each", cost_price=Decimal("0.00"),
+        )
+        cls.recipe = Recipe.objects.create(name="Draft Unit Bread Recipe", product=cls.finished)
+        cls.draft = RecipeVersion.objects.create(
+            recipe=cls.recipe, version_number=1, status="DRAFT", created_by=cls.head,
+        )
+        cls.item = RecipeVersionItem.objects.create(
+            recipe_version=cls.draft, ingredient=cls.ingredient,
+            quantity=Decimal("1.000"), unit="kg", control_mode="STRICT",
+        )
+
+    def setUp(self):
+        self.client.force_login(self.head)
+
+    def test_draft_quantity_in_grams_is_saved_in_inventory_kilograms(self):
+        response = self.client.post(
+            reverse("kitchen_recipe_version_item_update", args=[self.draft.pk, self.item.pk]),
+            {"quantity": "250", "unit": "g"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, Decimal("0.250"))
+        self.assertEqual(self.item.unit, "kg")
+
+    def test_incompatible_unit_is_rejected_without_changing_draft(self):
+        response = self.client.post(
+            reverse("kitchen_recipe_version_item_update", args=[self.draft.pk, self.item.pk]),
+            {"quantity": "250", "unit": "ml"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, Decimal("1.000"))
+        self.assertEqual(self.item.unit, "kg")
+
+    def test_approved_recipe_version_cannot_be_edited(self):
+        self.draft.status = "APPROVED"
+        self.draft.save(update_fields=["status"])
+        response = self.client.post(
+            reverse("kitchen_recipe_version_item_update", args=[self.draft.pk, self.item.pk]),
+            {"quantity": "250", "unit": "g"},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, Decimal("1.000"))
