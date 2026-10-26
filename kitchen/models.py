@@ -523,6 +523,7 @@ class IngredientRestockRequest(models.Model):
     STATUS_CHOICES = (
         ("PENDING", "Pending"),
         ("APPROVED", "Approved"),
+        ("RECONCILIATION_PENDING", "Awaiting Reconciliation"),
         ("PARTIALLY_ISSUED", "Partially Issued"),   # 🔑 NEW
         ("REJECTED", "Rejected"),
         ("RECEIVED", "Received"),
@@ -721,6 +722,15 @@ class DirectPurchase(models.Model):
 
     note = models.TextField(blank=True)
     payment_reference = models.CharField(max_length=100, blank=True)
+    purchase_date = models.DateField(null=True, blank=True)
+    payment_source = models.CharField(max_length=20, choices=(("HOTEL_FUNDS", "Hotel funds"), ("STAFF_FUNDS", "Staff funds"), ("UNPAID", "Not yet paid")), blank=True)
+    receipt_reference = models.CharField(max_length=120, blank=True)
+    urgent_reason = models.TextField(blank=True)
+    urgent_purchase = models.BooleanField(default=False)
+    goods_already_received = models.BooleanField(default=False)
+    reconciliation_note = models.TextField(blank=True)
+    reconciled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="reconciled_direct_purchases")
+    reconciled_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     approved_at = models.DateTimeField(auto_now_add=True)
