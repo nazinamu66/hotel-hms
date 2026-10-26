@@ -94,7 +94,7 @@
                   <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569;">Tolerance %
                     <input type="number" name="tolerance_percent" min="0" max="100" step="0.01" value="{{ item.tolerance_percent }}" style="padding:8px; border:1px solid #cbd5e1; border-radius:7px; width:95px;">
                   </label>
-                  <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569;">Max absolute variance ({{ item.unit }})
+                  <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569;">Max absolute variance per batch ({{ item.unit }})
                     <input type="number" name="tolerance_quantity" min="0" step="0.001" value="{% if item.tolerance_quantity != None %}{{ item.tolerance_quantity }}{% endif %}" placeholder="Disabled" style="padding:8px; border:1px solid #cbd5e1; border-radius:7px; width:120px;">
                   </label>
                   <button type="submit" style="padding:9px 12px; border:0; border-radius:7px; background:#334155; color:#fff; font-weight:700; cursor:pointer;">Save draft settings</button>
@@ -138,7 +138,7 @@
           <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#334155;">Tolerance %
             <input type="number" name="tolerance_percent" min="0" max="100" step="0.01" value="0" style="padding:9px; border:1px solid #cbd5e1; border-radius:7px; width:100px;">
           </label>
-          <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#334155;">Max absolute variance (base unit)
+          <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#334155;">Max absolute variance per batch (base unit)
             <input type="number" name="tolerance_quantity" min="0" step="0.001" placeholder="Optional" style="padding:9px; border:1px solid #cbd5e1; border-radius:7px; width:130px;">
           </label>
           <button type="submit" style="padding:10px 14px; border:0; border-radius:8px; background:#1d4ed8; color:#fff; font-weight:700; cursor:pointer;">Add ingredient</button>
