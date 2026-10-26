@@ -523,9 +523,16 @@ class ProductionBatch(models.Model):
                 )
 
             variance = actual_qty - expected_qty
+            absolute_variance = abs(variance)
             variance_percent = (
-                abs(variance) / expected_qty * Decimal("100")
+                absolute_variance / expected_qty * Decimal("100")
                 if expected_qty > 0 else Decimal("0")
+            )
+            absolute_limit = getattr(item, "tolerance_quantity", None)
+            percentage_exceeded = variance_percent > Decimal(item.tolerance_percent)
+            absolute_exceeded = (
+                absolute_limit is not None
+                and absolute_variance > Decimal(absolute_limit)
             )
             if item.control_mode == "STRICT" and variance != 0:
                 approved_override = (
@@ -542,12 +549,18 @@ class ProductionBatch(models.Model):
                         f"{item.ingredient}: STRICT recipe requires exactly {expected_qty}; "
                         "variance requires an authorized manager override."
                     )
-            if (
-                item.control_mode == "TOLERANCE"
-                and variance_percent > Decimal(item.tolerance_percent)
+            if item.control_mode == "TOLERANCE" and (
+                percentage_exceeded or absolute_exceeded
             ):
+                limits = []
+                if percentage_exceeded:
+                    limits.append(f"{variance_percent:.2f}% exceeds {item.tolerance_percent}%")
+                if absolute_exceeded:
+                    limits.append(
+                        f"absolute variance {absolute_variance} exceeds {absolute_limit} {inventory_unit}"
+                    )
                 raise ValidationError(
-                    f"{item.ingredient}: variance exceeds the configured tolerance."
+                    f"{item.ingredient}: variance exceeds the configured tolerance ({'; '.join(limits)})."
                 )
 
             variance_reason = (
@@ -556,12 +569,15 @@ class ProductionBatch(models.Model):
             )
             if (
                 item.control_mode == "FLEXIBLE"
-                and variance_percent > Decimal(item.tolerance_percent)
+                and (percentage_exceeded or absolute_exceeded)
                 and not variance_reason
             ):
+                thresholds = [f"{item.tolerance_percent}%"]
+                if absolute_limit is not None:
+                    thresholds.append(f"{absolute_limit} {inventory_unit}")
                 raise ValidationError(
                     f"{item.ingredient}: provide a reason when variance exceeds "
-                    f"the configured {item.tolerance_percent}% threshold."
+                    f"the configured threshold ({' or '.join(thresholds)})."
                 )
 
             # Kitchen must have enough working stock.
