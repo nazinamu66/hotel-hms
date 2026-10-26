@@ -2,7 +2,7 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
 from accounting.services.postings.cogs import post_cogs_for_order
 from accounting.services.postings.cogs_reversal import reverse_cogs_for_order
@@ -41,7 +41,7 @@ def make_order(items, cogs_posted=False):
     )
 
 
-class POSCOGSCurrencyPrecisionTests(SimpleTestCase):
+class POSCOGSCurrencyPrecisionTests(TestCase):
     @patch("accounting.services.postings.cogs.record_transaction")
     def test_cogs_rounds_category_totals_once_to_currency_precision(self, record):
         order = make_order([
