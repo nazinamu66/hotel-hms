@@ -1483,6 +1483,108 @@ def recipe_version_item_update(request, version_id, item_id):
 @role_required("KITCHEN")
 @require_POST
 @transaction.atomic
+def recipe_version_item_add(request, version_id):
+    """Add an ingredient to a draft snapshot without modifying the live recipe."""
+    if not request.user.is_department_head:
+        raise PermissionDenied("Only the Kitchen Department Head can edit recipe drafts.")
+
+    hotels = get_accessible_hotels(request.user)
+    version = get_object_or_404(
+        RecipeVersion.objects.select_for_update().select_related("recipe__product"),
+        pk=version_id,
+        recipe__product__hotel__in=hotels,
+    )
+    if (
+        version.status != "DRAFT"
+        or not request.user.department
+        or request.user.department.department_type != "KITCHEN"
+        or request.user.department.hotel_id != version.recipe.product.hotel_id
+    ):
+        raise PermissionDenied("Only your hotel's Kitchen Head can edit draft recipe versions.")
+
+    try:
+        ingredient = Product.objects.get(
+            pk=request.POST.get("ingredient_id", ""),
+            hotel_id=version.recipe.product.hotel_id,
+            product_type="RAW",
+        )
+    except (Product.DoesNotExist, ValueError, TypeError):
+        messages.error(request, "Choose a valid raw ingredient from this hotel.")
+        return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+
+    if version.items.filter(ingredient=ingredient).exists():
+        messages.error(request, f"{ingredient.name} is already in this draft version.")
+        return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+
+    try:
+        quantity = Decimal(request.POST.get("quantity", ""))
+        entered_unit = request.POST.get("unit", "").strip()
+        base_unit = (ingredient.base_unit or "").strip()
+        from .unit_conversion import convert_quantity
+        if not quantity.is_finite() or quantity <= 0:
+            raise ValidationError("Quantity must be a finite number greater than zero.")
+        base_quantity = convert_quantity(quantity, entered_unit, base_unit)
+        if base_quantity <= 0:
+            raise ValidationError("Converted quantity must be greater than zero.")
+
+        control_mode = request.POST.get("control_mode", "STRICT").strip()
+        if control_mode not in {"STRICT", "TOLERANCE", "FLEXIBLE"}:
+            raise ValidationError("Choose a valid recipe control mode.")
+        tolerance = Decimal(request.POST.get("tolerance_percent", "0"))
+        if not tolerance.is_finite() or tolerance < 0 or tolerance > 100:
+            raise ValidationError("Tolerance must be between 0 and 100 percent.")
+    except (InvalidOperation, TypeError, ValueError, ValidationError) as exc:
+        messages.error(request, str(exc) or "Check the ingredient quantity, unit, and control settings.")
+        return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+
+    RecipeVersionItem.objects.create(
+        recipe_version=version,
+        ingredient=ingredient,
+        quantity=base_quantity,
+        unit=base_unit,
+        control_mode=control_mode,
+        tolerance_percent=tolerance,
+    )
+    messages.success(request, f"Added {ingredient.name} to draft version {version.version_number}.")
+    return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+
+
+@role_required("KITCHEN")
+@require_POST
+@transaction.atomic
+def recipe_version_item_remove(request, version_id, item_id):
+    """Remove an ingredient from a draft snapshot only."""
+    if not request.user.is_department_head:
+        raise PermissionDenied("Only the Kitchen Department Head can edit recipe drafts.")
+
+    hotels = get_accessible_hotels(request.user)
+    version = get_object_or_404(
+        RecipeVersion.objects.select_for_update().select_related("recipe__product"),
+        pk=version_id,
+        recipe__product__hotel__in=hotels,
+    )
+    if (
+        version.status != "DRAFT"
+        or not request.user.department
+        or request.user.department.department_type != "KITCHEN"
+        or request.user.department.hotel_id != version.recipe.product.hotel_id
+    ):
+        raise PermissionDenied("Only your hotel's Kitchen Head can edit draft recipe versions.")
+
+    item = get_object_or_404(
+        RecipeVersionItem.objects.select_for_update(),
+        pk=item_id,
+        recipe_version=version,
+    )
+    ingredient_name = item.ingredient.name
+    item.delete()
+    messages.success(request, f"Removed {ingredient_name} from draft version {version.version_number}.")
+    return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+
+
+@role_required("KITCHEN")
+@require_POST
+@transaction.atomic
 def recipe_version_approve(request, version_id):
     if not request.user.is_department_head:
         raise PermissionDenied("Only the Kitchen Department Head can approve recipe versions.")
