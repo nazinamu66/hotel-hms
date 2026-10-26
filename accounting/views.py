@@ -1308,3 +1308,133 @@ def supplier_payments(request):
         "payment_history": payment_history, "payment_accounts": payment_accounts,
         "today": date.today(),
     })
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def staff_reimbursements(request):
+    """Review staff-funded urgent purchases and record actual reimbursements."""
+    from datetime import date
+    from decimal import Decimal, InvalidOperation
+    from django.db import transaction
+    from django.utils import timezone
+    from accounting.models import StaffReimbursement
+    from kitchen.models import DirectPurchase
+    from accounting.services.journal import record_transaction, get_system_account
+
+    hotels = get_user_hotels(request.user)
+    selected_hotel_id = request.GET.get("hotel") or request.POST.get("hotel") or ""
+    if request.user.role != "DIRECTOR" and getattr(request.user, "hotel_id", None):
+        hotels = hotels.filter(pk=request.user.hotel_id)
+    hotel = hotels.filter(pk=selected_hotel_id).first() if selected_hotel_id else hotels.first()
+    if not hotel:
+        messages.error(request, "No accessible hotel is available for reimbursements.")
+        return redirect("accounting:chart")
+
+    if request.method == "POST":
+        try:
+            claim = StaffReimbursement.objects.select_for_update().select_related(
+                "direct_purchase", "hotel", "claimant"
+            ).get(pk=request.POST.get("claim_id"), hotel=hotel)
+            action = request.POST.get("action", "").strip().upper()
+            note = request.POST.get("review_note", "").strip()
+            if action in {"APPROVE", "REJECT"}:
+                if claim.status != "PENDING":
+                    raise ValueError("Only pending reimbursement claims can be reviewed.")
+                if not note:
+                    raise ValueError("A review note is required.")
+                if action == "REJECT":
+                    claim.status = "REJECTED"
+                else:
+                    if claim.direct_purchase.payment_source != "STAFF_FUNDS":
+                        raise ValueError("Only staff-funded purchases can be reimbursed.")
+                    claim.status = "APPROVED"
+                claim.review_note = note
+                claim.reviewed_by = request.user
+                claim.reviewed_at = timezone.now()
+                claim.save(update_fields=["status", "review_note", "reviewed_by", "reviewed_at"])
+                messages.success(request, f"Reimbursement claim #{claim.pk}: {claim.get_status_display().lower()}.")
+            elif action == "PAY":
+                if claim.status != "APPROVED":
+                    raise ValueError("Only approved reimbursement claims can be paid.")
+                if claim.direct_purchase.status != "RECEIVED":
+                    raise ValueError("Receive all purchased goods before paying the reimbursement.")
+                reference = request.POST.get("payment_reference", "").strip()
+                if not reference:
+                    raise ValueError("Enter a unique payment reference.")
+                if StaffReimbursement.objects.filter(hotel=hotel, payment_reference=reference).exclude(pk=claim.pk).exists():
+                    raise ValueError("That reimbursement payment reference is already used.")
+                account = Account.objects.select_for_update().get(
+                    pk=request.POST.get("payment_account"), hotel=hotel,
+                    is_active=True, allow_posting=True, account_type__in=("cash", "bank")
+                )
+                with transaction.atomic():
+                    payable = get_system_account(hotel, "accounts_payable")
+                    inventory_account = get_system_account(hotel, "inventory_asset")
+                    liability_reference = f"STAFF-REIMB-{claim.pk}-OBL"
+                    liability = JournalEntry.objects.filter(
+                        hotel=hotel, reference=liability_reference, entry_type="PURCHASE"
+                    ).first()
+                    if not liability:
+                        liability = record_transaction(
+                            debit_account=inventory_account, credit_account=payable,
+                            amount=claim.amount,
+                            description=f"Staff-funded urgent purchase reimbursement #{claim.pk}",
+                            hotel=hotel, created_by=request.user, entry_type="PURCHASE",
+                            reference=liability_reference,
+                        )
+                    payment_journal = record_transaction(
+                        debit_account=payable, credit_account=account,
+                        amount=claim.amount,
+                        description=f"Staff reimbursement #{claim.pk} paid to {claim.claimant}",
+                        hotel=hotel, created_by=request.user, entry_type="NORMAL",
+                        reference=f"STAFF-REIMB-{claim.pk}-PAY",
+                    )
+                    claim.liability_journal = liability
+                    claim.payment_journal = payment_journal
+                    claim.payment_account = account
+                    claim.payment_reference = reference
+                    claim.paid_by = request.user
+                    claim.paid_at = timezone.now()
+                    claim.status = "PAID"
+                    claim.save(update_fields=[
+                        "liability_journal", "payment_journal", "payment_account",
+                        "payment_reference", "paid_by", "paid_at", "status"
+                    ])
+                messages.success(request, f"Reimbursement #{claim.pk} paid and journaled.")
+            else:
+                raise ValueError("Choose a valid reimbursement action.")
+        except StaffReimbursement.DoesNotExist:
+            messages.error(request, "Reimbursement claim not found for this hotel.")
+        except (ValueError, InvalidOperation, TypeError, Account.DoesNotExist) as exc:
+            messages.error(request, str(exc))
+        except Exception as exc:
+            messages.error(request, f"Reimbursement action failed; no payment was confirmed: {exc}")
+        return redirect(f"{request.path}?hotel={hotel.pk}")
+
+    # Create a claim for each staff-funded urgent purchase approved by
+    # management. OneToOne keeps a purchase from being claimed twice.
+    for purchase in DirectPurchase.objects.filter(
+        supplier__hotel=hotel, urgent_purchase=True, payment_source="STAFF_FUNDS",
+        status__in=("APPROVED", "PARTIALLY_RECEIVED", "RECEIVED"),
+    ).select_related("requested_by"):
+        if purchase.requested_by_id:
+            StaffReimbursement.objects.get_or_create(
+                hotel=hotel, direct_purchase=purchase,
+                defaults={
+                    "claimant": purchase.requested_by,
+                    "amount": purchase.total_cost,
+                    "status": "PENDING",
+                },
+            )
+
+    claims = StaffReimbursement.objects.filter(hotel=hotel).select_related(
+        "direct_purchase", "direct_purchase__supplier", "claimant", "reviewed_by",
+        "payment_account", "paid_by",
+    )
+    payment_accounts = Account.objects.filter(
+        hotel=hotel, account_type__in=("cash", "bank"), is_active=True, allow_posting=True
+    ).order_by("code")
+    return render(request, "accounting/staff_reimbursements.html", {
+        "hotel": hotel, "hotels": hotels, "claims": claims,
+        "payment_accounts": payment_accounts, "today": date.today(),
+    })
