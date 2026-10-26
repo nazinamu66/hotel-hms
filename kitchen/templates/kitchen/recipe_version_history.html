@@ -8,7 +8,16 @@
       <h1 style="margin:0; color:#172033;">Recipe version history</h1>
       <p style="margin:8px 0 0; color:#64748b;">{{ recipe.name }} · {{ recipe.product.name }}</p>
     </div>
-    <a href="{% url 'kitchen_food_list' %}" style="text-decoration:none; padding:10px 14px; border:1px solid #cbd5e1; border-radius:9px; color:#334155;">Back to prepared foods</a>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      {% if request.user.role == "KITCHEN" and request.user.is_department_head %}
+      <form method="post" action="{% url 'kitchen_recipe_version_draft_create' recipe.id %}" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        {% csrf_token %}
+        <input name="change_note" placeholder="Change note (optional)" style="min-height:38px; padding:0 10px; border:1px solid #cbd5e1; border-radius:8px; max-width:240px;">
+        <button type="submit" style="padding:10px 14px; border:0; border-radius:9px; background:#2563eb; color:#fff; font-weight:700; cursor:pointer;">Create draft version</button>
+      </form>
+      {% endif %}
+      <a href="{% url 'kitchen_food_list' %}" style="text-decoration:none; padding:10px 14px; border:1px solid #cbd5e1; border-radius:9px; color:#334155;">Back to prepared foods</a>
+    </div>
   </div>
 
   <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:18px 20px; margin-bottom:18px;">
@@ -57,6 +66,12 @@
           </tbody>
         </table>
       </div>
+      {% if version.status == "DRAFT" and request.user.role == "KITCHEN" and request.user.is_department_head %}
+      <form method="post" action="{% url 'kitchen_recipe_version_approve' version.id %}" style="margin-top:16px;">
+        {% csrf_token %}
+        <button type="submit" style="padding:10px 15px; border:0; border-radius:9px; background:#15803d; color:#fff; font-weight:700; cursor:pointer;" onclick="return confirm('Approve and activate recipe version {{ version.version_number }}?');">Approve and activate version</button>
+      </form>
+      {% endif %}
       {% if version.approved_at %}<p style="margin:12px 0 0; color:#64748b; font-size:13px;">Approved {{ version.approved_at|date:"d M Y, H:i" }}{% if version.approved_by %} by {{ version.approved_by.get_full_name|default:version.approved_by.username }}{% endif %}</p>{% endif %}
     </div>
   </section>
