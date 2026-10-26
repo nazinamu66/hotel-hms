@@ -308,6 +308,32 @@ class IngredientRequestApprovalTests(TestCase):
         )
         return request_obj, purchase, item
 
+    def test_approved_direct_request_links_kitchen_to_incoming_deliveries(self):
+        request_obj = self.make_direct_request()
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=request_obj,
+            supplier=self.supplier,
+            requested_by=self.requester,
+            approved_by=self.manager,
+            status="PAID",
+            total_cost=Decimal("12.50"),
+        )
+        request_obj.status = "APPROVED"
+        request_obj.approved_by = self.manager
+        request_obj.save(update_fields=["status", "approved_by"])
+
+        self.client.force_login(self.requester)
+        response = self.client.get(
+            reverse("kitchen_ingredient_request_detail", args=[request_obj.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, reverse("kitchen_incoming_deliveries"))
+        self.assertNotContains(
+            response,
+            reverse("direct_purchase_detail", args=[purchase.pk]),
+        )
+
     def test_kitchen_uses_delivery_queue_not_financial_purchase_pages(self):
         _, purchase, item = self.make_paid_direct_purchase()
         self.client.force_login(self.requester)
