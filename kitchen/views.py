@@ -28,6 +28,8 @@ from inventory.models import (
 from .models import (
     Recipe,
     RecipeItem,
+    RecipeVersion,
+    RecipeVersionItem,
     ProductionBatch,
     IngredientRestockRequest,
     IngredientRestockItem,
