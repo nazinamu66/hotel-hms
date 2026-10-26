@@ -458,6 +458,24 @@ class ProductionBatch(models.Model):
                     f"{item.ingredient}."
                 )
 
+            variance = actual_qty - expected_qty
+            variance_percent = (
+                abs(variance) / expected_qty * Decimal("100")
+                if expected_qty > 0 else Decimal("0")
+            )
+            if item.control_mode == "STRICT" and variance != 0:
+                raise ValidationError(
+                    f"{item.ingredient}: STRICT recipe requires exactly {expected_qty}; "
+                    "variance is blocked until an authorized override is available."
+                )
+            if (
+                item.control_mode == "TOLERANCE"
+                and variance_percent > Decimal(item.tolerance_percent)
+            ):
+                raise ValidationError(
+                    f"{item.ingredient}: variance exceeds the configured tolerance."
+                )
+
             # Kitchen must have enough working stock.
             stock = (
                 Stock.objects
