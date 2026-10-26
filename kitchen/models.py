@@ -317,7 +317,12 @@ class ProductionBatch(models.Model):
         batch = (
             self.__class__.objects
             .select_for_update()
-            .select_related("recipe__product", "produced_by__department__hotel")
+            .select_related(
+                "recipe__product",
+                "recipe__active_version",
+                "recipe_version",
+                "produced_by__department__hotel",
+            )
             .get(pk=self.pk)
         )
         self.__dict__.update(batch.__dict__)
@@ -326,6 +331,20 @@ class ProductionBatch(models.Model):
 
         if not self.recipe.is_active:
             raise ValidationError("Cannot produce inactive recipe.")
+
+        # Pin the currently approved immutable snapshot exactly once. If a
+        # batch was already pinned, never silently move it to a newer version.
+        if not self.recipe_version_id:
+            version = self.recipe.active_version
+            if not version or version.status != "APPROVED":
+                raise ValidationError(
+                    "This recipe has no approved version. Ask the Head Chef to approve it."
+                )
+            self.recipe_version = version
+            self.save(update_fields=["recipe_version"])
+
+        if self.recipe_version.recipe_id != self.recipe_id:
+            raise ValidationError("The pinned recipe version does not match this recipe.")
 
         if self.is_executed:
             raise ValidationError("This production batch is already executed.")
@@ -371,7 +390,12 @@ class ProductionBatch(models.Model):
                 "The recipe's finished product must belong to the kitchen's hotel."
             )
 
-        for recipe_item in self.recipe.items.select_related("ingredient"):
+        version_items = (
+            self.recipe_version.items.select_related("ingredient")
+            if self.recipe_version_id
+            else self.recipe.items.select_related("ingredient")
+        )
+        for recipe_item in version_items:
             if recipe_item.ingredient.hotel_id != kitchen.hotel_id:
                 raise ValidationError(
                     f"Ingredient {recipe_item.ingredient} belongs to another hotel."
@@ -390,9 +414,15 @@ class ProductionBatch(models.Model):
         kitchen = self.produced_by.department
         ingredient_rows = []
 
-        for item in self.recipe.items.select_related("ingredient"):
+        recipe_items = (
+            self.recipe_version.items.select_related("ingredient")
+            if self.recipe_version_id
+            else self.recipe.items.select_related("ingredient")
+        )
+        for item in recipe_items:
 
-            # Recipe standard × number of portions
+            # Recipe standard × number of portions, from the immutable
+            # snapshot pinned to this production batch.
             expected_qty = (
                 Decimal(item.quantity)
                 * Decimal(self.quantity_produced)
