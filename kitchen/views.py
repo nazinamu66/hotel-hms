@@ -825,9 +825,9 @@ def production_override_reject(request, pk):
         messages.error(request, "You cannot reject your own production variance request.")
         return redirect("kitchen_production_history")
     batch.override_status = "REJECTED"
-    batch.override_approved_by = request.user
-    batch.override_approved_at = timezone.now()
-    batch.save(update_fields=["override_status", "override_approved_by", "override_approved_at"])
+    batch.override_rejected_by = request.user
+    batch.override_rejected_at = timezone.now()
+    batch.save(update_fields=["override_status", "override_rejected_by", "override_rejected_at"])
     messages.warning(request, f"Production #{batch.pk} variance request rejected. No stock was deducted.")
     return redirect("kitchen_production_history")
 
