@@ -790,8 +790,12 @@ def production_override_approve(request, pk):
     except ValidationError as exc:
         # Atomic transaction ensures the approval and any stock/accounting
         # changes are rolled back together if execution cannot complete.
+        batch.override_status = "PENDING"
+        batch.override_approved_by = None
+        batch.override_approved_at = None
+        batch.save(update_fields=["override_status", "override_approved_by", "override_approved_at"])
         messages.error(request, "Approval could not be executed: " + ", ".join(exc.messages))
-        raise
+        return redirect("kitchen_production_history")
 
     messages.success(request, f"Production #{batch.pk} approved and completed.")
     return redirect("kitchen_production_detail", pk=batch.pk)
@@ -1305,6 +1309,19 @@ def production_history(request):
 
     batches = batches.order_by(ordering)
 
+    pending_overrides = ProductionBatch.objects.none()
+    if request.user.role in ("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN"):
+        pending_overrides = (
+            ProductionBatch.objects
+            .filter(
+                override_status="PENDING",
+                is_executed=False,
+                recipe__product__hotel__in=hotels,
+            )
+            .select_related("recipe", "produced_by", "override_requested_by")
+            .order_by("created_at")
+        )
+
     # -----------------------------
     # Filter options must follow
     # the same hotel scope.
@@ -1329,6 +1346,7 @@ def production_history(request):
             "users": users,
             "filters": request.GET,
             "ordering": ordering,
+            "pending_overrides": pending_overrides,
         }
     )
 
