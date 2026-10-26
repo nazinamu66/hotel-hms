@@ -155,6 +155,19 @@ def restaurant_end_of_shift(request):
 
     order_ids = list(orders.values_list("id", flat=True))
 
+    settled_orders = orders.filter(status__in=["CHARGED", "PAID"])
+    walkin_sales = (
+        settled_orders.filter(folio__folio_type="WALKIN")
+        .aggregate(total=Sum("total_amount"))["total"]
+        or Decimal("0.00")
+    )
+    room_charge_sales = (
+        settled_orders.filter(folio__folio_type="ROOM")
+        .aggregate(total=Sum("total_amount"))["total"]
+        or Decimal("0.00")
+    )
+    unsettled_orders = orders.filter(status="OPEN").count()
+
     # -----------------------------
     # Charges
     # -----------------------------
@@ -205,7 +218,9 @@ def restaurant_end_of_shift(request):
     # Staff list
     # -----------------------------
     staff_list = User.objects.filter(
-        role="RESTAURANT"
+        role="RESTAURANT",
+        department__hotel=hotel,
+        department__department_type="RESTAURANT",
     ).order_by("username")
 
     context = {
@@ -214,6 +229,9 @@ def restaurant_end_of_shift(request):
         "total_sales": total_sales,
         "total_refunds": total_refunds,
         "net_sales": net_sales,
+        "walkin_sales": walkin_sales,
+        "room_charge_sales": room_charge_sales,
+        "unsettled_orders": unsettled_orders,
         "payment_summary": payment_summary,
         "staff_list": staff_list,
         "selected_staff": staff_id,
