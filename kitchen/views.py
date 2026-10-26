@@ -1052,6 +1052,39 @@ def direct_purchase_receive(request, pk):
     if all_received:
         dp.received_at = timezone.now()
         update_fields.append("received_at")
+
+        # Recognize staff-funded urgent purchases only after all goods are verified.
+        if dp.urgent_purchase and dp.payment_source == "STAFF_FUNDS":
+            from accounting.models import JournalEntry, StaffReimbursement
+            from accounting.services.journal import get_system_account, record_transaction
+
+            hotel = dp.supplier.hotel
+            reimbursement = StaffReimbursement.objects.select_for_update().filter(
+                direct_purchase=dp, hotel=hotel
+            ).first()
+            if reimbursement is None and dp.requested_by_id:
+                reimbursement = StaffReimbursement.objects.create(
+                    hotel=hotel, direct_purchase=dp, claimant=dp.requested_by,
+                    amount=dp.total_cost, status="PENDING",
+                )
+            if reimbursement is not None:
+                amount = Decimal(str(dp.total_cost or "0.00"))
+                if amount <= 0:
+                    raise ValidationError("The verified purchase total must be positive before accounting recognition.")
+                reference = f"STAFF-REIMB-{reimbursement.pk}-OBL"
+                liability = JournalEntry.objects.filter(
+                    hotel=hotel, reference=reference, entry_type="PURCHASE"
+                ).first()
+                if liability is None:
+                    inventory_account = get_system_account(hotel, "inventory_asset")
+                    payable_account = get_system_account(hotel, "accounts_payable")
+                    liability = record_transaction(
+                        debit_account=inventory_account, credit_account=payable_account,
+                        amount=amount, description=f"Verified staff-funded urgent purchase DP-{dp.pk}",
+                        hotel=hotel, created_by=request.user, entry_type="PURCHASE", reference=reference,
+                    )
+                reimbursement.liability_journal = liability
+                reimbursement.save(update_fields=["liability_journal"])
     else:
         dp.received_at = None
         update_fields.append("received_at")
