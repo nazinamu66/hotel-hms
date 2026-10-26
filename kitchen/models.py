@@ -107,6 +107,14 @@ class RecipeItem(models.Model):
         default=0,
         help_text="Allowed variance % (only for TOLERANCE mode)"
     )
+    tolerance_quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Optional maximum absolute variance in the ingredient's inventory base unit."
+    )
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -179,6 +187,14 @@ class RecipeVersionItem(models.Model):
     )
     tolerance_percent = models.DecimalField(
         max_digits=5, decimal_places=2, default=0
+    )
+    tolerance_quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Optional maximum absolute variance in the ingredient's inventory base unit."
     )
 
     class Meta:
