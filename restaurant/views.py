@@ -556,13 +556,23 @@ def close_shift(request):
 
     order_count = orders.count()
 
+    settled_orders = orders.filter(status__in=["CHARGED", "PAID"])
+
     total_sales = (
-        orders
-        .filter(status__in=["CHARGED", "PAID"])
-        .aggregate(total=Sum("total_amount"))
-        ["total"]
+        settled_orders.aggregate(total=Sum("total_amount"))["total"]
         or Decimal("0.00")
     )
+    walkin_sales = (
+        settled_orders.filter(folio__folio_type="WALKIN")
+        .aggregate(total=Sum("total_amount"))["total"]
+        or Decimal("0.00")
+    )
+    room_charge_sales = (
+        settled_orders.filter(folio__folio_type="ROOM")
+        .aggregate(total=Sum("total_amount"))["total"]
+        or Decimal("0.00")
+    )
+    unsettled_orders = orders.filter(status="OPEN").count()
 
     # --------------------------------------------------
     # Payments
@@ -641,6 +651,9 @@ def close_shift(request):
                     "shift": shift,
                     "order_count": order_count,
                     "total_sales": total_sales,
+                    "walkin_sales": walkin_sales,
+                    "room_charge_sales": room_charge_sales,
+                    "unsettled_orders": unsettled_orders,
                     "payment_summary": payment_summary,
                     "expected_cash": expected_cash,
                     "recipients": recipients,
@@ -758,6 +771,9 @@ def close_shift(request):
             "shift": shift,
             "order_count": order_count,
             "total_sales": total_sales,
+            "walkin_sales": walkin_sales,
+            "room_charge_sales": room_charge_sales,
+            "unsettled_orders": unsettled_orders,
             "payment_summary": payment_summary,
             "expected_cash": expected_cash,
             "recipients": recipients,
