@@ -113,7 +113,7 @@ class RecipeItem(models.Model):
         null=True,
         blank=True,
         default=None,
-        help_text="Optional maximum absolute variance in the ingredient's inventory base unit."
+        help_text="Optional maximum absolute variance per production batch, in the ingredient's inventory base unit."
     )
     class Meta:
         constraints = [
