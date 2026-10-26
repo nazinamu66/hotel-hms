@@ -480,6 +480,21 @@ class ProductionBatch(models.Model):
             )
             try:
                 actual_qty = Decimal(str(raw_actual_qty))
+                # Optional unit-aware input is converted into the snapshot's
+                # inventory base unit before variance, stock, and costing logic.
+                submitted_unit = (
+                    raw_entry.get("unit")
+                    if isinstance(raw_entry, dict) else None
+                )
+                inventory_unit = (
+                    getattr(item, "unit", "")
+                    or getattr(item.ingredient, "base_unit", "")
+                )
+                if submitted_unit:
+                    from .unit_conversion import convert_quantity
+                    actual_qty = convert_quantity(
+                        actual_qty, submitted_unit, inventory_unit
+                    )
             except (InvalidOperation, TypeError, ValueError):
                 raise ValidationError(
                     f"Enter a valid actual quantity for {item.ingredient}."
