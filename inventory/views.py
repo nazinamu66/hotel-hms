@@ -1192,11 +1192,11 @@ def recipe_item_delete(request, item_id):
     recipe = item.recipe
 
     # 🔒 Soft Lock
-    if recipe.productionbatch_set.exists():
+    if recipe.productionbatch_set.exists() and not recipe.active_version_id:
         messages.error(
             request,
-            "This recipe has production history. "
-            "Create a new version instead of modifying it."
+            "This recipe has production history but no approved snapshot. "
+            "An approved version must be established before editing the recipe."
         )
         return redirect("inventory:kitchen_recipe_edit", food_id=recipe.product.id)
 
