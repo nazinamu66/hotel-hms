@@ -665,7 +665,7 @@ class IngredientRequestApprovalTests(TestCase):
         claim = StaffReimbursement.objects.get(direct_purchase=purchase)
         self.assertIsNotNone(claim.liability_journal_id)
         journal = claim.liability_journal
-        lines = list(JournalLine.objects.filter(journal_entry=journal).select_related("account"))
+        lines = list(JournalLine.objects.filter(journal=journal).select_related("account"))
         self.assertEqual(sum((line.debit for line in lines), Decimal("0.00")), Decimal("25.00"))
         self.assertEqual(sum((line.credit for line in lines), Decimal("0.00")), Decimal("25.00"))
         self.assertTrue(any(line.account.system_key == "inventory_asset" and line.debit == Decimal("25.00") for line in lines))
