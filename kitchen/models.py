@@ -476,6 +476,24 @@ class ProductionBatch(models.Model):
                     f"{item.ingredient}: variance exceeds the configured tolerance."
                 )
 
+            raw_entry = actual_quantities.get(
+                str(item.ingredient.id),
+                actual_quantities.get(item.ingredient.id, expected_qty),
+            )
+            variance_reason = (
+                str(raw_entry.get("reason", "")).strip()
+                if isinstance(raw_entry, dict) else ""
+            )
+            if (
+                item.control_mode == "FLEXIBLE"
+                and variance_percent > Decimal(item.tolerance_percent)
+                and not variance_reason
+            ):
+                raise ValidationError(
+                    f"{item.ingredient}: provide a reason when variance exceeds "
+                    f"the configured {item.tolerance_percent}% threshold."
+                )
+
             # Kitchen must have enough working stock.
             stock = (
                 Stock.objects
@@ -495,7 +513,7 @@ class ProductionBatch(models.Model):
             # Keep both expected and actual so the production record
             # can retain the variance.
             ingredient_rows.append(
-                (item, expected_qty, actual_qty)
+                (item, expected_qty, actual_qty, variance_reason)
             )
 
         return ingredient_rows
@@ -509,7 +527,7 @@ class ProductionBatch(models.Model):
 
         total_cost = Decimal("0.00")
 
-        for item, expected_qty, actual_qty in ingredient_rows:
+        for item, expected_qty, actual_qty, variance_reason in ingredient_rows:
 
             # Production quantities are already expressed in
             # the ingredient's BASE UNIT.
@@ -529,7 +547,8 @@ class ProductionBatch(models.Model):
                 ingredient=item.ingredient,
                 expected_quantity=expected_qty,
                 actual_quantity=actual_qty,
-                variance=actual_qty - expected_qty
+                variance=actual_qty - expected_qty,
+                variance_reason=variance_reason,
             )
 
         return total_cost
