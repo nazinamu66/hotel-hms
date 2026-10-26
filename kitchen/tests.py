@@ -999,6 +999,23 @@ class DraftRecipeUnitEditingTests(TestCase):
         self.assertFalse(RecipeVersionItem.objects.filter(recipe_version=self.draft, ingredient=salt).exists())
         self.assertTrue(RecipeVersionItem.objects.filter(pk=self.item.pk).exists())
 
+    def test_draft_item_update_saves_absolute_tolerance(self):
+        response = self.client.post(
+            reverse("kitchen_recipe_version_item_update", args=[self.draft.pk, self.item.pk]),
+            {
+                "quantity": "1",
+                "unit": "kg",
+                "control_mode": "TOLERANCE",
+                "tolerance_percent": "10",
+                "tolerance_quantity": "0.250",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.control_mode, "TOLERANCE")
+        self.assertEqual(self.item.tolerance_percent, Decimal("10"))
+        self.assertEqual(self.item.tolerance_quantity, Decimal("0.250"))
+
     def test_absolute_tolerance_blocks_tolerance_mode_even_when_percentage_passes(self):
         self.item.control_mode = "TOLERANCE"
         self.item.tolerance_percent = Decimal("100.00")
