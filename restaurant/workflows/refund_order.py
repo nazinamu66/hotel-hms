@@ -81,17 +81,18 @@ def restore_inventory(order, user, kitchen, restaurant):
             reference=f"POS-REFUND-{order.id}",
         )
 
-        # Restore the inventory value at the exact historical
-        # cost recorded when the sale occurred.
-        StockCostLayer.objects.create(
-            product=product,
-            department=target_department,
-            purchase_item=None,
-            quantity_received=qty,
-            quantity_remaining=qty,
-            unit_cost=item.cost_at_sale,
-            is_opening_balance=False,
-        )
+        # Restore valuation only when a reliable historical cost exists.
+        # Never create a synthetic zero-cost layer for uncosted stock.
+        if item.cost_at_sale > 0:
+            StockCostLayer.objects.create(
+                product=product,
+                department=target_department,
+                purchase_item=None,
+                quantity_received=qty,
+                quantity_remaining=qty,
+                unit_cost=item.cost_at_sale,
+                is_opening_balance=False,
+            )
 
 def reverse_revenue(order, hotel, user):
     record_transaction(
@@ -156,8 +157,11 @@ def refund_order(order, user, reason=""):
     restaurant = order.department
     kitchen = get_kitchen_department(restaurant)
 
+    # A successful charge deducts physical stock regardless of whether
+    # its accounting COGS posting completed. Restore physical quantities on
+    # every valid refund; reverse journal COGS only when it was posted.
+    restore_inventory(order, user, kitchen, restaurant)
     if order.is_cogs_posted:
-        restore_inventory(order, user, kitchen, restaurant)
         reverse_cogs_for_order(order)
 
     reverse_revenue(order, hotel, user)
