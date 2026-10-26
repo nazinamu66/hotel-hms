@@ -7,6 +7,7 @@ app_name = "accounting"
 
 urlpatterns = [
     path("supplier-payments/", views.supplier_payments, name="supplier_payments"),
+    path("staff-reimbursements/", views.staff_reimbursements, name="staff_reimbursements"),
     path("chart/", views.chart_of_accounts, name="chart"),
     path("ledger/<int:account_id>/", views.account_ledger, name="ledger"),
     path("reports/pnl/", views.profit_and_loss, name="pnl"),
