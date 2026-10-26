@@ -425,8 +425,11 @@ def kitchen_incoming_deliveries(request):
         DirectPurchase.objects
         .filter(
             requested_by=request.user,
-            status__in=("PAID", "PARTIALLY_RECEIVED"),
             supplier__hotel__in=get_accessible_hotels(request.user),
+        )
+        .filter(
+            Q(status__in=("PAID", "PARTIALLY_RECEIVED"))
+            | Q(urgent_purchase=True, status="APPROVED")
         )
         .select_related("supplier", "ingredient_request")
         .prefetch_related("items__product")
