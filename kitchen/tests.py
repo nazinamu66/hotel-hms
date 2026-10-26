@@ -946,3 +946,53 @@ class DraftRecipeUnitEditingTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.item.refresh_from_db()
         self.assertEqual(self.item.quantity, Decimal("1.000"))
+    def test_can_add_ingredient_to_draft_without_changing_live_recipe(self):
+        salt = Product.objects.create(
+            hotel=self.hotel, name="Draft Unit Salt", sku="DRAFT-UNIT-SALT",
+            product_type="RAW", base_unit="kg", cost_price=Decimal("2.00"),
+        )
+        response = self.client.post(
+            reverse("kitchen_recipe_version_item_add", args=[self.draft.pk]),
+            {
+                "ingredient_id": str(salt.pk),
+                "quantity": "500",
+                "unit": "g",
+                "control_mode": "TOLERANCE",
+                "tolerance_percent": "5",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        added = RecipeVersionItem.objects.get(recipe_version=self.draft, ingredient=salt)
+        self.assertEqual(added.quantity, Decimal("0.500"))
+        self.assertEqual(added.unit, "kg")
+        self.assertEqual(added.control_mode, "TOLERANCE")
+        self.assertEqual(added.tolerance_percent, Decimal("5.00"))
+        self.assertFalse(self.recipe.items.filter(ingredient=salt).exists())
+
+    def test_can_remove_ingredient_from_draft_without_changing_live_recipe(self):
+        response = self.client.post(
+            reverse("kitchen_recipe_version_item_remove", args=[self.draft.pk, self.item.pk]),
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(RecipeVersionItem.objects.filter(pk=self.item.pk).exists())
+        self.assertFalse(self.recipe.items.exists())
+
+    def test_approved_recipe_version_cannot_add_or_remove_ingredients(self):
+        salt = Product.objects.create(
+            hotel=self.hotel, name="Draft Unit Salt Approved", sku="DRAFT-UNIT-SALT-APP",
+            product_type="RAW", base_unit="kg", cost_price=Decimal("2.00"),
+        )
+        self.draft.status = "APPROVED"
+        self.draft.save(update_fields=["status"])
+        add_response = self.client.post(
+            reverse("kitchen_recipe_version_item_add", args=[self.draft.pk]),
+            {"ingredient_id": str(salt.pk), "quantity": "1", "unit": "kg"},
+        )
+        remove_response = self.client.post(
+            reverse("kitchen_recipe_version_item_remove", args=[self.draft.pk, self.item.pk]),
+        )
+        self.assertEqual(add_response.status_code, 403)
+        self.assertEqual(remove_response.status_code, 403)
+        self.assertFalse(RecipeVersionItem.objects.filter(recipe_version=self.draft, ingredient=salt).exists())
+        self.assertTrue(RecipeVersionItem.objects.filter(pk=self.item.pk).exists())
+
