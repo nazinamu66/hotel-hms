@@ -324,6 +324,13 @@
                                 >
                                     🧾 Edit Recipe
                                 </a>
+                                <a
+                                    class="recipe-link"
+                                    style="margin-left:6px;"
+                                    href="{% url 'kitchen_recipe_version_history' item.product.recipe.id %}"
+                                >
+                                    🕘 Version History
+                                </a>
 
                             {% else %}
 
