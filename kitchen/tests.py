@@ -672,3 +672,15 @@ class IngredientRequestApprovalTests(TestCase):
         self.assertTrue(any(line.account.system_key == "accounts_payable" and line.credit == Decimal("25.00") for line in lines))
         self.client.post(reverse("direct_purchase_receive", args=[purchase.pk]), {f"received_{item.pk}": "1.000"})
         self.assertEqual(JournalEntry.objects.filter(hotel=self.hotel, reference=f"STAFF-REIMB-{claim.pk}-OBL", entry_type="PURCHASE").count(), 1)
+
+    def test_kitchen_head_can_view_urgent_purchase_history(self):
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=None, supplier=self.supplier, requested_by=self.requester,
+            status="RECONCILIATION_PENDING", urgent_purchase=True,
+            payment_source="STAFF_FUNDS", urgent_reason="Emergency", total_cost=Decimal("10.00"),
+        )
+        self.client.force_login(self.requester)
+        response = self.client.get(reverse("urgent_purchase_history"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"DP-{purchase.pk}")
+        self.assertContains(response, "Awaiting Reconciliation")
