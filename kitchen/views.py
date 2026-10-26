@@ -341,8 +341,7 @@ def kitchen_ingredient_request_detail(request, pk):
         req.approved_by = request.user
         req.save(update_fields=["status", "note", "approved_by"])
         messages.success(request, "Ingredient request approved.")
-        # Once a direct-purchase request is approved, continue in the
-        # purchase workspace instead of leaving it in the approval queue.
+        # Managers stay in the financial purchase workspace after approval.
         if req.has_direct_items() and hasattr(req, "direct_purchase"):
             return redirect("direct_purchase_detail", pk=req.direct_purchase.pk)
         return redirect("manager_ingredient_requests")
@@ -383,7 +382,7 @@ def kitchen_confirm_direct_ingredients(request, pk):
         messages.error(request, "Direct purchase not created yet.")
         return redirect("kitchen_ingredient_requests")
 
-    return redirect("direct_purchase_receive", pk=direct_purchase.pk)
+    return redirect("kitchen_incoming_deliveries")
 
 
 @role_required("ACCOUNTANT", "CHIEF_ACCOUNTANT", "DIRECTOR", "ADMIN")
