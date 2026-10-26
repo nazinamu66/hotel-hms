@@ -63,6 +63,28 @@
               <td style="padding:10px;">{{ item.get_control_mode_display }}</td>
               <td style="padding:10px;">{{ item.tolerance_percent|floatformat:2 }}%</td>
             </tr>
+            {% if version.status == "DRAFT" and request.user.role == "KITCHEN" and request.user.is_department_head %}
+            <tr style="border-top:1px dashed #cbd5e1; background:#f8fafc;">
+              <td colspan="4" style="padding:10px;">
+                <form method="post" action="{% url 'kitchen_recipe_version_item_update' version.id item.id %}" style="display:flex; align-items:end; gap:10px; flex-wrap:wrap;">
+                  {% csrf_token %}
+                  <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569;">Recipe quantity
+                    <input type="number" name="quantity" min="0.001" step="0.001" required value="{{ item.quantity|floatformat:3 }}" style="padding:8px; border:1px solid #cbd5e1; border-radius:7px; width:130px;">
+                  </label>
+                  <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569;">Unit (converted to {{ item.ingredient.base_unit }})
+                    <select name="unit" required style="padding:8px; border:1px solid #cbd5e1; border-radius:7px;">
+                      <option value="{{ item.ingredient.base_unit }}">{{ item.ingredient.base_unit }} (base)</option>
+                      <option value="mg">mg</option><option value="g">g</option><option value="kg">kg</option>
+                      <option value="ml">ml</option><option value="cl">cl</option><option value="l">litre</option>
+                      <option value="pcs">pcs</option>
+                    </select>
+                  </label>
+                  <button type="submit" style="padding:9px 12px; border:0; border-radius:7px; background:#334155; color:#fff; font-weight:700; cursor:pointer;">Save draft quantity</button>
+                </form>
+                <p style="font-size:12px; color:#64748b; margin:8px 0 0;">Enter the amount per portion. The saved draft quantity is converted to the ingredient's inventory base unit.</p>
+              </td>
+            </tr>
+            {% endif %}
             {% empty %}
             <tr><td colspan="4" style="padding:14px; color:#64748b;">No ingredient snapshot is recorded for this version.</td></tr>
             {% endfor %}
