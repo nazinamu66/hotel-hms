@@ -505,15 +505,17 @@ class ProductionBatch(models.Model):
                 .first()
             )
 
-            if not stock or stock.quantity < actual_qty:
-                raise ValidationError(
-                    f"Insufficient {item.ingredient}."
-                )
+            available_qty = stock.quantity if stock else Decimal("0")
+            shortage_qty = max(actual_qty - available_qty, Decimal("0"))
 
-            # Keep both expected and actual so the production record
-            # can retain the variance.
+            # Production is allowed to proceed even when working stock is
+            # insufficient. The shortage is captured and any uncosted
+            # quantity is reported separately; no synthetic cost is created.
+
+            # Keep expected, actual, and shortage so the production record
+            # can retain the variance and stock exception.
             ingredient_rows.append(
-                (item, expected_qty, actual_qty, variance_reason)
+                (item, expected_qty, actual_qty, variance_reason, shortage_qty)
             )
 
         return ingredient_rows
@@ -527,7 +529,7 @@ class ProductionBatch(models.Model):
 
         total_cost = Decimal("0.00")
 
-        for item, expected_qty, actual_qty, variance_reason in ingredient_rows:
+        for item, expected_qty, actual_qty, variance_reason, shortage_qty in ingredient_rows:
 
             # Production quantities are already expressed in
             # the ingredient's BASE UNIT.
@@ -538,6 +540,7 @@ class ProductionBatch(models.Model):
                 user=self.produced_by,
                 reason="Kitchen production",
                 reference=f"PROD-{self.id}",
+                allow_negative=True,
             )
 
             total_cost += result["total_cost"]
@@ -549,6 +552,8 @@ class ProductionBatch(models.Model):
                 actual_quantity=actual_qty,
                 variance=actual_qty - expected_qty,
                 variance_reason=variance_reason,
+                shortage_quantity=shortage_qty,
+                uncosted_quantity=result.get("uncosted_quantity", Decimal("0")),
             )
 
         return total_cost
@@ -682,6 +687,15 @@ class ProductionIngredientUsage(models.Model):
     )
 
     variance_reason = models.TextField(blank=True, help_text="Reason for a material FLEXIBLE-mode variance.")
+
+    shortage_quantity = models.DecimalField(
+        max_digits=10, decimal_places=3, default=0,
+        help_text="Quantity consumed beyond recorded physical stock at production time."
+    )
+    uncosted_quantity = models.DecimalField(
+        max_digits=10, decimal_places=3, default=0,
+        help_text="Consumed quantity without a matching FIFO cost layer; requires costing reconciliation."
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
