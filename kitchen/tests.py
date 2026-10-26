@@ -866,6 +866,32 @@ class ProductionOverrideSecurityTests(TestCase):
             ).exists()
         )
 
+    def test_insufficient_ingredient_stock_blocks_batch_without_partial_changes(self):
+        from inventory.models import Stock
+
+        batch = ProductionBatch.objects.create(
+            recipe=self.recipe,
+            recipe_version=self.version,
+            quantity_produced=1,
+            produced_by=self.producer,
+        )
+
+        with self.assertRaisesMessage(ValidationError, "Insufficient stock"):
+            batch.execute(actual_quantities={
+                str(self.ingredient.pk): {"quantity": "1.000", "unit": "kg"}
+            })
+
+        batch.refresh_from_db()
+        self.assertFalse(batch.is_executed)
+        self.assertEqual(batch.ingredient_usages.count(), 0)
+        self.assertFalse(StockMovement.objects.filter(reference=f"PROD-{batch.pk}").exists())
+        self.assertFalse(Stock.objects.filter(
+            product=self.finished, department=self.kitchen
+        ).exists())
+        self.assertFalse(Stock.objects.filter(
+            product=self.ingredient, department=self.kitchen
+        ).exists())
+
     def test_batch_execution_pins_version_before_validating_recipe_ingredients(self):
         batch = ProductionBatch.objects.create(
             recipe=self.recipe, quantity_produced=1, produced_by=self.producer,
