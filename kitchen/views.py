@@ -641,17 +641,26 @@ def recipe_ingredients_api(request, recipe_id):
     if not qty.is_finite() or qty <= 0 or qty > Decimal("10000"):
         return JsonResponse({"error": "Quantity must be positive and within the allowed range."}, status=400)
 
+    # Production must be based on the approved immutable version, not
+    # the editable working recipe. This keeps the form and the batch aligned.
+    version = recipe.active_version
+    if not version or version.status != "APPROVED":
+        return JsonResponse(
+            {"error": "This food has no approved recipe version. Ask the Kitchen Head to approve one."},
+            status=409,
+        )
+
     data = [
         {
             "ingredient_id": item.ingredient.id,
             "ingredient": item.ingredient.name,
-            "expected_quantity": float(item.quantity) * qty,  # 🔥 FIX
-            "per_unit_quantity": float(item.quantity),        # 🔥 OPTIONAL
+            "expected_quantity": float(item.quantity) * float(qty),
+            "per_unit_quantity": float(item.quantity),
             "control_mode": item.control_mode,
-            "unit": item.ingredient.base_unit,
+            "unit": item.unit or item.ingredient.base_unit,
             "tolerance_percent": float(item.tolerance_percent),
         }
-        for item in recipe.items.select_related("ingredient")
+        for item in version.items.select_related("ingredient")
     ]
 
     return JsonResponse(data, safe=False)
@@ -675,8 +684,15 @@ def kitchen_quick_production(request):
             recipe = batch_form.cleaned_data["recipe"]
             qty = batch_form.cleaned_data["quantity_produced"]
 
-            if not recipe.items.exists():
-                messages.error(request, "Recipe has no ingredients.")
+            if not recipe.active_version_id or recipe.active_version.status != "APPROVED":
+                messages.error(
+                    request,
+                    f"{recipe.name} has no approved recipe version. Ask the Kitchen Head to approve one."
+                )
+                return redirect("kitchen_quick_production")
+
+            if not recipe.active_version.items.exists():
+                messages.error(request, "The approved recipe version has no ingredients.")
                 return redirect("kitchen_quick_production")
 
             batch = ProductionBatch.objects.create(
