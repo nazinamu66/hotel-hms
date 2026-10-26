@@ -702,7 +702,10 @@ def kitchen_quick_production(request):
             )
 
             actual_quantities = {
-                str(f.cleaned_data["ingredient_id"]): f.cleaned_data["actual_quantity"]
+                str(f.cleaned_data["ingredient_id"]): {
+                    "quantity": f.cleaned_data["actual_quantity"],
+                    "reason": f.cleaned_data.get("variance_reason", ""),
+                }
                 for f in formset
             }
 
