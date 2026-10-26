@@ -437,3 +437,59 @@ class SupplierPayment(models.Model):
 
     def __str__(self):
         return f"Supplier payment #{self.pk} - {self.supplier} - {self.amount}"
+
+
+class StaffReimbursement(models.Model):
+    """Auditable reimbursement claim for an urgent purchase paid personally."""
+    STATUS_CHOICES = (
+        ("PENDING", "Awaiting reimbursement review"),
+        ("APPROVED", "Approved for reimbursement"),
+        ("PAID", "Reimbursed"),
+        ("REJECTED", "Rejected"),
+    )
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="staff_reimbursements")
+    direct_purchase = models.OneToOneField(
+        "kitchen.DirectPurchase", on_delete=models.PROTECT,
+        related_name="staff_reimbursement",
+    )
+    claimant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="reimbursement_claims",
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="PENDING")
+    review_note = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="reviewed_reimbursements",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    payment_account = models.ForeignKey(
+        Account, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="staff_reimbursements",
+    )
+    payment_reference = models.CharField(max_length=100, blank=True)
+    paid_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="paid_reimbursements",
+    )
+    paid_at = models.DateTimeField(null=True, blank=True)
+    liability_journal = models.ForeignKey(
+        JournalEntry, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="staff_reimbursement_liabilities",
+    )
+    payment_journal = models.ForeignKey(
+        JournalEntry, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="staff_reimbursement_payments",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name="staff_reimbursement_amount_positive"),
+        ]
+
+    def __str__(self):
+        return f"Reimbursement #{self.pk} - {self.claimant} - {self.amount} ({self.status})"
