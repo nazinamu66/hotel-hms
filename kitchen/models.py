@@ -594,12 +594,16 @@ class ProductionBatch(models.Model):
             available_qty = stock.quantity if stock else Decimal("0")
             shortage_qty = max(actual_qty - available_qty, Decimal("0"))
 
-            # Production is allowed to proceed even when working stock is
-            # insufficient. The shortage is captured and any uncosted
-            # quantity is reported separately; no synthetic cost is created.
+            # Enforce the zero-negative-stock policy before any ingredient
+            # is deducted. This method validates and locks every ingredient
+            # first; execute() only starts deductions after this full pass
+            # succeeds, so a shortage cannot leave a partially consumed batch.
+            if shortage_qty > 0:
+                raise ValidationError(
+                    f"Insufficient stock for {item.ingredient}: "
+                    f"need {actual_qty}, available {available_qty}."
+                )
 
-            # Keep expected, actual, and shortage so the production record
-            # can retain the variance and stock exception.
             ingredient_rows.append(
                 (item, expected_qty, actual_qty, variance_reason, shortage_qty)
             )
@@ -626,7 +630,7 @@ class ProductionBatch(models.Model):
                 user=self.produced_by,
                 reason="Kitchen production",
                 reference=f"PROD-{self.id}",
-                allow_negative=True,
+                allow_negative=False,
             )
 
             total_cost += result["total_cost"]
