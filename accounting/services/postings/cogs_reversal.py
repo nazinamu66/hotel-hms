@@ -1,53 +1,72 @@
+from decimal import Decimal, ROUND_HALF_UP
+
+from django.db import transaction
+
 from accounting.services.journal import record_transaction
 
 
-def _inventory_system_key(product):
+CURRENCY_QUANTUM = Decimal("0.01")
 
-    if product.product_type == "DRINK":
-        return "inventory_asset"
 
-    return "finished_goods_inventory"
+def _money(value):
+    return Decimal(value).quantize(CURRENCY_QUANTUM, rounding=ROUND_HALF_UP)
 
 
 def reverse_cogs_for_order(order):
     """
-    Reverse COGS using the historical cost stored on
-    each POS order item.
-
-    Never recalculates costing.
+    Reverse the same currency-rounded category totals used by COGS posting.
+    Uses historical sale-time costs only; never recalculates FIFO costs.
     """
-
     if not order.is_cogs_posted:
-        return
+        return {"drink_cogs": Decimal("0.00"), "food_cogs": Decimal("0.00")}
 
     hotel = order.department.hotel
+    drink_cogs = Decimal("0")
+    food_cogs = Decimal("0")
 
     for item in order.items.select_related("menu_item__product"):
-
         product = item.menu_item.product
-
         if not product.is_stock_item():
             continue
 
-        unit_cost = item.cost_at_sale
+        if item.cost_at_sale <= 0:
+            raise ValueError(f"Missing historical cost for {product.name}")
 
-        if unit_cost <= 0:
-            raise ValueError(
-                f"Missing historical cost for {product.name}"
+        amount = item.cost_at_sale * item.quantity
+        if product.product_type == "DRINK":
+            drink_cogs += amount
+        elif product.product_type == "FOOD":
+            food_cogs += amount
+
+    drink_cogs = _money(drink_cogs)
+    food_cogs = _money(food_cogs)
+
+    with transaction.atomic():
+        if drink_cogs > 0:
+            record_transaction(
+                debit_system_key="inventory_asset",
+                credit_system_key="cost_of_goods_sold",
+                amount=drink_cogs,
+                description=f"Drink COGS reversal for POS Order #{order.id}",
+                hotel=hotel,
+                created_by=order.created_by,
+                entry_type="COGS_REVERSAL",
+                reference=f"COGS-REV-DRINK-{order.id}",
             )
 
-        amount = unit_cost * item.quantity
+        if food_cogs > 0:
+            record_transaction(
+                debit_system_key="finished_goods_inventory",
+                credit_system_key="cost_of_goods_sold",
+                amount=food_cogs,
+                description=f"Food COGS reversal for POS Order #{order.id}",
+                hotel=hotel,
+                created_by=order.created_by,
+                entry_type="COGS_REVERSAL",
+                reference=f"COGS-REV-FOOD-{order.id}",
+            )
 
-        record_transaction(
-            debit_system_key=_inventory_system_key(product),
-            credit_system_key="cost_of_goods_sold",
-            amount=amount,
-            description=f"COGS REVERSAL for POS Order #{order.id}",
-            hotel=hotel,
-            created_by=order.created_by,
-            entry_type="COGS_REVERSAL",
-            reference=f"COGS-REV-{order.id}-{product.id}",
-        )
+        order.is_cogs_posted = False
+        order.save(update_fields=["is_cogs_posted"])
 
-    order.is_cogs_posted = False
-    order.save(update_fields=["is_cogs_posted"])
+    return {"drink_cogs": drink_cogs, "food_cogs": food_cogs}
