@@ -668,38 +668,28 @@ def recipe_ingredients_api(request, recipe_id):
 
 @role_required("KITCHEN")
 def kitchen_quick_production(request):
-
-    IngredientFormSet = formset_factory(
-        IngredientUsageForm,
-        extra=0
-    )
+    IngredientFormSet = formset_factory(IngredientUsageForm, extra=0)
 
     if request.method == "POST":
-
         batch_form = ProductionBatchForm(request.POST)
         formset = IngredientFormSet(request.POST, prefix="ingredients")
 
         if batch_form.is_valid() and formset.is_valid():
-
             recipe = batch_form.cleaned_data["recipe"]
             qty = batch_form.cleaned_data["quantity_produced"]
+            version = recipe.active_version
 
-            if not recipe.active_version_id or recipe.active_version.status != "APPROVED":
-                messages.error(
-                    request,
-                    f"{recipe.name} has no approved recipe version. Ask the Kitchen Head to approve one."
-                )
+            if not version or version.status != "APPROVED" or not version.items.exists():
+                messages.error(request, f"{recipe.name} needs an approved recipe version with ingredients.")
                 return redirect("kitchen_quick_production")
 
-            if not recipe.active_version.items.exists():
-                messages.error(request, "The approved recipe version has no ingredients.")
+            # Do not trust ingredient IDs supplied by the browser. They must
+            # exactly match the approved snapshot for this recipe.
+            expected_ids = set(version.items.values_list("ingredient_id", flat=True))
+            submitted_ids = [f.cleaned_data["ingredient_id"] for f in formset]
+            if len(submitted_ids) != len(set(submitted_ids)) or set(submitted_ids) != expected_ids:
+                messages.error(request, "Ingredient list changed or is incomplete. Reload the recipe and try again.")
                 return redirect("kitchen_quick_production")
-
-            batch = ProductionBatch.objects.create(
-                recipe=recipe,
-                quantity_produced=qty,
-                produced_by=request.user
-            )
 
             actual_quantities = {
                 str(f.cleaned_data["ingredient_id"]): {
@@ -708,42 +698,103 @@ def kitchen_quick_production(request):
                 }
                 for f in formset
             }
+            strict_variances = []
+            for item in version.items.select_related("ingredient"):
+                entry = actual_quantities[str(item.ingredient_id)]
+                actual = Decimal(str(entry["quantity"]))
+                expected = Decimal(item.quantity) * Decimal(qty)
+                if item.control_mode == "STRICT" and actual != expected:
+                    reason = str(entry.get("reason", "")).strip()
+                    if not reason:
+                        messages.error(request, f"Provide a reason for the STRICT variance on {item.ingredient}.")
+                        return redirect("kitchen_quick_production")
+                    strict_variances.append(item.ingredient.name)
 
+            batch = ProductionBatch.objects.create(
+                recipe=recipe,
+                recipe_version=version,
+                quantity_produced=qty,
+                produced_by=request.user,
+            )
             try:
-
                 batch.execute(actual_quantities=actual_quantities)
-
-                messages.success(
-                    request,
-                    f"{qty} portions of {recipe.name} produced successfully."
-                )
-
-            except ValidationError as e:
-
-                messages.error(
-                    request,
-                    "Production failed: " + ", ".join(e.messages)
-                )
-
-                batch.delete()
-
+                messages.success(request, f"{qty} portions of {recipe.name} produced successfully.")
+            except ValidationError as exc:
+                if any("STRICT recipe requires exactly" in message for message in exc.messages) and strict_variances:
+                    batch.override_status = "PENDING"
+                    batch.pending_actual_quantities = actual_quantities
+                    batch.override_requested_by = request.user
+                    batch.override_reason = "; ".join(
+                        f"{name}: {actual_quantities[str(item.ingredient_id)].get('reason', '').strip()}"
+                        for item in version.items.select_related("ingredient")
+                        if item.ingredient.name in strict_variances
+                    )
+                    batch.save(update_fields=[
+                        "override_status", "pending_actual_quantities",
+                        "override_requested_by", "override_reason",
+                    ])
+                    messages.warning(
+                        request,
+                        f"Production #{batch.pk} is awaiting manager approval for STRICT recipe variance. "
+                        "No stock has been deducted yet."
+                    )
+                else:
+                    messages.error(request, "Production failed: " + ", ".join(exc.messages))
+                    batch.delete()
             return redirect("kitchen_quick_production")
-
         messages.error(request, "Invalid production data.")
-
     else:
-
         batch_form = ProductionBatchForm()
         formset = IngredientFormSet(prefix="ingredients")
 
-    return render(
-        request,
-        "kitchen/quick_production.html",
-        {
-            "batch_form": batch_form,
-            "formset": formset,
-        }
+    return render(request, "kitchen/quick_production.html", {
+        "batch_form": batch_form,
+        "formset": formset,
+    })
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+@require_POST
+@transaction.atomic
+def production_override_approve(request, pk):
+    hotels = get_accessible_hotels(request.user)
+    batch = get_object_or_404(
+        ProductionBatch.objects.select_for_update().select_related(
+            "recipe__product", "recipe_version", "produced_by",
+            "produced_by__department__hotel",
+        ),
+        pk=pk,
+        override_status="PENDING",
+        is_executed=False,
+        recipe__product__hotel__in=hotels,
     )
+
+    if batch.override_requested_by_id == request.user.pk or batch.produced_by_id == request.user.pk:
+        messages.error(request, "You cannot approve your own production variance request.")
+        return redirect("kitchen_production_history")
+
+    if not batch.pending_actual_quantities:
+        messages.error(request, "This request has no saved ingredient quantities.")
+        return redirect("kitchen_production_history")
+
+    batch.override_status = "APPROVED"
+    batch.override_approved_by = request.user
+    batch.override_approved_at = timezone.now()
+    batch.save(update_fields=["override_status", "override_approved_by", "override_approved_at"])
+
+    try:
+        batch.execute(
+            actual_quantities=batch.pending_actual_quantities,
+            allow_strict_override=True,
+        )
+    except ValidationError as exc:
+        # Atomic transaction ensures the approval and any stock/accounting
+        # changes are rolled back together if execution cannot complete.
+        messages.error(request, "Approval could not be executed: " + ", ".join(exc.messages))
+        raise
+
+    messages.success(request, f"Production #{batch.pk} approved and completed.")
+    return redirect("kitchen_production_detail", pk=batch.pk)
 
 @role_required("KITCHEN")
 def kitchen_dashboard(request):
