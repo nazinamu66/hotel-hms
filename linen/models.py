@@ -654,3 +654,17 @@ class LinenCustody(models.Model):
             f"Clean: {self.clean_quantity} - "
             f"Dirty: {self.dirty_quantity}"
         )
+
+class RoomLinenSetup(models.Model):
+    """Persistent marker distinguishing an unconfigured room from an intentionally empty setup."""
+
+    room = models.OneToOneField(
+        "rooms.Room",
+        on_delete=models.CASCADE,
+        related_name="linen_setup",
+    )
+    is_configured = models.BooleanField(default=False)
+    configured_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Linen setup for room {self.room.room_number}"
