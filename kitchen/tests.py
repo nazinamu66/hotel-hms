@@ -790,6 +790,21 @@ class ProductionOverrideSecurityTests(TestCase):
         self.assertEqual(batch.override_status, "PENDING")
         self.assertIsNone(batch.override_rejected_by)
 
+
+
+    def test_strict_override_cannot_be_executed_by_its_requester(self):
+        from django.core.exceptions import ValidationError
+        from django.utils import timezone
+
+        batch = self.make_pending_batch(requester=self.manager)
+        batch.override_status = "APPROVED"
+        batch.override_approved_by = self.manager
+        batch.override_approved_at = timezone.now()
+        batch.save(update_fields=["override_status", "override_approved_by", "override_approved_at"])
+
+        with self.assertRaisesMessage(ValidationError, "variance requires an authorized manager override"):
+            batch._collect_ingredient_rows({str(self.ingredient.pk): {"quantity": "2.500", "reason": "Test"}})
+
     def test_batch_execution_pins_version_before_validating_recipe_ingredients(self):
         batch = ProductionBatch.objects.create(
             recipe=self.recipe, quantity_produced=1, produced_by=self.producer,
