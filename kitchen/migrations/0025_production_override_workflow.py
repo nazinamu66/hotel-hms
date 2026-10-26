@@ -14,4 +14,6 @@ class Migration(migrations.Migration):
         migrations.AddField(model_name="productionbatch", name="override_requested_by", field=models.ForeignKey(to=settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=django.db.models.deletion.SET_NULL, related_name="requested_production_overrides")),
         migrations.AddField(model_name="productionbatch", name="override_approved_by", field=models.ForeignKey(to=settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=django.db.models.deletion.SET_NULL, related_name="approved_production_overrides")),
         migrations.AddField(model_name="productionbatch", name="override_approved_at", field=models.DateTimeField(null=True, blank=True)),
+        migrations.AddField(model_name="productionbatch", name="override_rejected_by", field=models.ForeignKey(to=settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=django.db.models.deletion.SET_NULL, related_name="rejected_production_overrides")),
+        migrations.AddField(model_name="productionbatch", name="override_rejected_at", field=models.DateTimeField(null=True, blank=True)),
     ]
