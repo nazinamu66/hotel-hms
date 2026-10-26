@@ -28,6 +28,7 @@ urlpatterns = [
     path("incoming-deliveries/", views.kitchen_incoming_deliveries, name="kitchen_incoming_deliveries"),
     path("urgent-purchase/new/", views.urgent_purchase_create, name="urgent_purchase_create"),
     path("urgent-purchases/review/", views.urgent_purchase_review, name="urgent_purchase_review"),
+    path("urgent-purchases/<int:pk>/reconcile/", views.urgent_purchase_reconcile, name="urgent_purchase_reconcile"),
     path("direct-purchases/",views.direct_purchase_list,name="direct_purchase_list"),
     path("direct-purchase/<int:pk>/", views.direct_purchase_detail, name="direct_purchase_detail"),
     path("direct-purchase/<int:pk>/pay/", views.direct_purchase_pay, name="direct_purchase_pay"),
