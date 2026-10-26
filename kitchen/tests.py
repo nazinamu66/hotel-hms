@@ -794,9 +794,12 @@ class ProductionOverrideSecurityTests(TestCase):
         batch = ProductionBatch.objects.create(
             recipe=self.recipe, quantity_produced=1, produced_by=self.producer,
         )
-        # If validation uses mutable RecipeItem rows first, the empty source
-        # recipe could bypass validation of the approved snapshot's ingredient.
-        with self.assertRaises(Exception):
+        # The source recipe has no mutable RecipeItem rows. Validation must
+        # still enforce department assignment from the pinned approved snapshot.
+        self.ingredient.departments.remove(self.kitchen)
+        from django.core.exceptions import ValidationError
+        with self.assertRaises(ValidationError):
             batch.execute(actual_quantities={str(self.ingredient.pk): "1.000"})
         batch.refresh_from_db()
         self.assertEqual(batch.recipe_version_id, self.version.pk)
+        self.assertFalse(batch.is_executed)
