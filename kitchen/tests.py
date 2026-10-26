@@ -1073,6 +1073,11 @@ class DraftRecipeUnitEditingTests(TestCase):
             batch._collect_ingredient_rows({
                 str(self.ingredient.pk): {"quantity": "1.200", "unit": "kg"}
             })
+        Stock.objects.create(
+            product=self.ingredient,
+            department=self.kitchen,
+            quantity=Decimal("2.000"),
+        )
         rows = batch._collect_ingredient_rows({
             str(self.ingredient.pk): {
                 "quantity": "1.200",
