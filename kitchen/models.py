@@ -665,6 +665,7 @@ class IngredientRestockItem(models.Model):
 class DirectPurchase(models.Model):
     STATUS_CHOICES = (
         ("APPROVED", "Approved"),
+        ("RECONCILIATION_PENDING", "Awaiting Reconciliation"),
         ("PAID", "Paid"),
         ("PARTIALLY_RECEIVED", "Partially Received"),
         ("RECEIVED", "Received"),
