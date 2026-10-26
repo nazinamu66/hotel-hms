@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
                 blank=True,
                 decimal_places=3,
                 default=None,
-                help_text="Optional maximum absolute variance in the ingredient's inventory base unit.",
+                help_text="Optional maximum absolute variance per production batch, in the ingredient's inventory base unit.",
                 max_digits=10,
                 null=True,
             ),
