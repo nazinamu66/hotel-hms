@@ -242,6 +242,11 @@ class ProductionBatch(models.Model):
         related_name="approved_production_overrides",
     )
     override_approved_at = models.DateTimeField(null=True, blank=True)
+    override_rejected_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="rejected_production_overrides",
+    )
+    override_rejected_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.recipe} x {self.quantity_produced}"
