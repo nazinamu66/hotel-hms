@@ -1373,19 +1373,14 @@ def staff_reimbursements(request):
                 )
                 with transaction.atomic():
                     payable = get_system_account(hotel, "accounts_payable")
-                    inventory_account = get_system_account(hotel, "inventory_asset")
                     liability_reference = f"STAFF-REIMB-{claim.pk}-OBL"
                     liability = JournalEntry.objects.filter(
                         hotel=hotel, reference=liability_reference, entry_type="PURCHASE"
                     ).first()
                     if not liability:
-                        liability = record_transaction(
-                            debit_account=inventory_account, credit_account=payable,
-                            amount=claim.amount,
-                            description=f"Staff-funded urgent purchase reimbursement #{claim.pk}",
-                            hotel=hotel, created_by=request.user, entry_type="PURCHASE",
-                            reference=liability_reference,
-                        )
+                        raise ValueError("The verified purchase has no inventory/liability journal. Reconcile the received purchase before paying the claim.")
+                    if claim.liability_journal_id != liability.pk:
+                        claim.liability_journal = liability
                     payment_journal = record_transaction(
                         debit_account=payable, credit_account=account,
                         amount=claim.amount,
