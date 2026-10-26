@@ -324,6 +324,7 @@
                                 >
                                     🧾 Edit Recipe
                                 </a>
+                                {% if item.product.recipe %}
                                 <a
                                     class="recipe-link"
                                     style="margin-left:6px;"
@@ -331,6 +332,7 @@
                                 >
                                     🕘 Version History
                                 </a>
+                                {% endif %}
 
                             {% else %}
 
