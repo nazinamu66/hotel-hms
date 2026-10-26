@@ -1420,6 +1420,7 @@ def recipe_version_draft_create(request, recipe_id):
             unit=getattr(item.ingredient, "base_unit", "") or "",
             control_mode=item.control_mode,
             tolerance_percent=item.tolerance_percent,
+            tolerance_quantity=item.tolerance_quantity,
         )
 
     messages.success(
@@ -1470,9 +1471,44 @@ def recipe_version_item_update(request, version_id, item_id):
         messages.error(request, str(exc) or "Enter a valid quantity and unit.")
         return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
 
+    update_fields = ["quantity", "unit"]
     item.quantity = base_quantity
     item.unit = base_unit
-    item.save(update_fields=["quantity", "unit"])
+
+    # Keep compatibility with existing quantity-only forms, while allowing
+    # the recipe editor to update variance controls when those fields are posted.
+    if "control_mode" in request.POST:
+        control_mode = request.POST.get("control_mode", "").strip()
+        if control_mode not in {"STRICT", "TOLERANCE", "FLEXIBLE"}:
+            messages.error(request, "Choose a valid recipe control mode.")
+            return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+        item.control_mode = control_mode
+        update_fields.append("control_mode")
+    if "tolerance_percent" in request.POST:
+        try:
+            tolerance = Decimal(request.POST.get("tolerance_percent", "0"))
+            if not tolerance.is_finite() or tolerance < 0 or tolerance > 100:
+                raise ValidationError("Percentage tolerance must be between 0 and 100.")
+        except (InvalidOperation, TypeError, ValueError, ValidationError) as exc:
+            messages.error(request, str(exc) or "Enter a valid percentage tolerance.")
+            return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+        item.tolerance_percent = tolerance
+        update_fields.append("tolerance_percent")
+    if "tolerance_quantity" in request.POST:
+        try:
+            absolute_raw = request.POST.get("tolerance_quantity", "").strip()
+            absolute_tolerance = Decimal(absolute_raw) if absolute_raw else None
+            if absolute_tolerance is not None and (
+                not absolute_tolerance.is_finite() or absolute_tolerance < 0
+            ):
+                raise ValidationError("Absolute quantity tolerance must be finite and non-negative.")
+        except (InvalidOperation, TypeError, ValueError, ValidationError) as exc:
+            messages.error(request, str(exc) or "Enter a valid absolute tolerance.")
+            return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+        item.tolerance_quantity = absolute_tolerance
+        update_fields.append("tolerance_quantity")
+
+    item.save(update_fields=update_fields)
     messages.success(
         request,
         f"Updated {item.ingredient.name}: {base_quantity} {base_unit} per portion."
@@ -1532,7 +1568,13 @@ def recipe_version_item_add(request, version_id):
             raise ValidationError("Choose a valid recipe control mode.")
         tolerance = Decimal(request.POST.get("tolerance_percent", "0"))
         if not tolerance.is_finite() or tolerance < 0 or tolerance > 100:
-            raise ValidationError("Tolerance must be between 0 and 100 percent.")
+            raise ValidationError("Percentage tolerance must be between 0 and 100.")
+        absolute_raw = request.POST.get("tolerance_quantity", "").strip()
+        absolute_tolerance = Decimal(absolute_raw) if absolute_raw else None
+        if absolute_tolerance is not None and (
+            not absolute_tolerance.is_finite() or absolute_tolerance < 0
+        ):
+            raise ValidationError("Absolute quantity tolerance must be finite and non-negative.")
     except (InvalidOperation, TypeError, ValueError, ValidationError) as exc:
         messages.error(request, str(exc) or "Check the ingredient quantity, unit, and control settings.")
         return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
@@ -1544,6 +1586,7 @@ def recipe_version_item_add(request, version_id):
         unit=base_unit,
         control_mode=control_mode,
         tolerance_percent=tolerance,
+        tolerance_quantity=absolute_tolerance,
     )
     messages.success(request, f"Added {ingredient.name} to draft version {version.version_number}.")
     return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
