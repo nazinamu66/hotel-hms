@@ -24,6 +24,7 @@ urlpatterns = [
 
     # Recipes
     path("foods/", views.prepared_food_list, name="kitchen_food_list"),
+    path("recipes/<int:recipe_id>/versions/", views.recipe_version_history, name="kitchen_recipe_version_history"),
 
     path("incoming-deliveries/", views.kitchen_incoming_deliveries, name="kitchen_incoming_deliveries"),
     path("urgent-purchase/new/", views.urgent_purchase_create, name="urgent_purchase_create"),
