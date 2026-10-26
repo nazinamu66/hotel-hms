@@ -362,13 +362,12 @@ class ProductionBatch(models.Model):
         )
         self.__dict__.update(batch.__dict__)
 
-        self._validate_producer()
-
         if not self.recipe.is_active:
             raise ValidationError("Cannot produce inactive recipe.")
 
-        # Pin the currently approved immutable snapshot exactly once. If a
-        # batch was already pinned, never silently move it to a newer version.
+        # Pin the approved immutable snapshot before validating ingredients.
+        # Validation must never fall back to mutable RecipeItem rows when this
+        # batch is about to use an approved version.
         if not self.recipe_version_id:
             version = self.recipe.active_version
             if not version or version.status != "APPROVED":
@@ -380,6 +379,9 @@ class ProductionBatch(models.Model):
 
         if self.recipe_version.recipe_id != self.recipe_id:
             raise ValidationError("The pinned recipe version does not match this recipe.")
+
+        # Validate hotel and kitchen assignments against the pinned snapshot.
+        self._validate_producer()
 
         if self.is_executed:
             raise ValidationError("This production batch is already executed.")
