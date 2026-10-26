@@ -662,6 +662,8 @@ class ProductionIngredientUsage(models.Model):
         help_text="actual - expected"
     )
 
+    variance_reason = models.TextField(blank=True, help_text="Reason for a material FLEXIBLE-mode variance.")
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
