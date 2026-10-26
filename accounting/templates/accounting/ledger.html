@@ -510,7 +510,11 @@
                             padding:13px 14px;
                             white-space:nowrap;
                         ">
-                            {{ line.user.get_full_name|default:line.user.username }}
+                            {% if line.user %}
+                                {{ line.user.get_full_name|default:line.user.username }}
+                            {% else %}
+                                System
+                            {% endif %}
                         </td>
 
 
