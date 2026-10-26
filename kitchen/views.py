@@ -1260,6 +1260,34 @@ def production_history(request):
         }
     )
 
+@role_required("KITCHEN", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
+def recipe_version_history(request, recipe_id):
+    hotels = get_accessible_hotels(request.user)
+    recipe = get_object_or_404(
+        Recipe.objects.select_related("product", "active_version"),
+        pk=recipe_id,
+        product__hotel__in=hotels,
+    )
+
+    # Kitchen users can only view recipes belonging to their own hotel.
+    if request.user.role == "KITCHEN":
+        department = request.user.department
+        if not department or department.hotel_id != recipe.product.hotel_id:
+            raise PermissionDenied
+
+    versions = (
+        recipe.versions
+        .select_related("created_by", "approved_by")
+        .prefetch_related("items__ingredient")
+        .order_by("-version_number")
+    )
+    return render(
+        request,
+        "kitchen/recipe_version_history.html",
+        {"recipe": recipe, "versions": versions},
+    )
+
+
 @role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
 def production_detail(request, pk):
 
