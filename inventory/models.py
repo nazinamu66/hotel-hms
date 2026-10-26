@@ -1132,6 +1132,7 @@ def stock_out(
     user,
     reason="",
     reference="",
+    allow_negative=False,
 ):
     """
     Remove stock from a department.
@@ -1167,16 +1168,19 @@ def stock_out(
         .first()
     )
 
-    if not stock:
+    if not stock and not allow_negative:
         raise ValidationError(
             f"No stock record exists for {product.name} "
             f"in {department.name}."
         )
 
-    if stock.quantity < quantity:
-        raise ValidationError(
-            f"Insufficient stock for {product.name}."
+    if not stock:
+        stock = Stock.objects.create(
+            product=product, department=department, quantity=Decimal("0")
         )
+
+    if stock.quantity < quantity and not allow_negative:
+        raise ValidationError(f"Insufficient stock for {product.name}.")
 
     # --------------------------------------------------
     # Determine and consume FIFO cost layers.
@@ -1186,6 +1190,7 @@ def stock_out(
         product=product,
         department=department,
         quantity=quantity,
+        allow_uncosted_shortage=allow_negative,
     )
 
     # --------------------------------------------------
@@ -1230,6 +1235,7 @@ def stock_out(
         "movement": movement,
         "allocations": cost_result["allocations"],
         "total_cost": cost_result["total_cost"],
+        "uncosted_quantity": cost_result.get("uncosted_quantity", Decimal("0")),
     }
 
 @transaction.atomic
