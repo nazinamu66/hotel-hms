@@ -1133,6 +1133,7 @@ def stock_out(
     reason="",
     reference="",
     allow_negative=False,
+    allow_uncosted_shortage=False,
 ):
     """
     Remove stock from a department.
@@ -1190,7 +1191,7 @@ def stock_out(
         product=product,
         department=department,
         quantity=quantity,
-        allow_uncosted_shortage=allow_negative,
+        allow_uncosted_shortage=allow_uncosted_shortage,
     )
 
     # --------------------------------------------------
