@@ -54,7 +54,7 @@
       {% if version.change_note %}<p style="margin:0 0 12px; color:#475569;">{{ version.change_note }}</p>{% endif %}
       <div style="overflow-x:auto;">
         <table style="width:100%; border-collapse:collapse; font-size:14px;">
-          <thead><tr style="text-align:left; background:#f8fafc; color:#64748b;"><th style="padding:10px;">Ingredient</th><th style="padding:10px;">Quantity per portion</th><th style="padding:10px;">Control</th><th style="padding:10px;">Tolerance</th></tr></thead>
+          <thead><tr style="text-align:left; background:#f8fafc; color:#64748b;"><th style="padding:10px;">Ingredient</th><th style="padding:10px;">Quantity per portion</th><th style="padding:10px;">Control</th><th style="padding:10px;">Tolerance</th>{% if version.status == "DRAFT" and request.user.role == "KITCHEN" and request.user.is_department_head %}<th style="padding:10px;">Action</th>{% endif %}</tr></thead>
           <tbody>
             {% for item in version.items.all %}
             <tr style="border-top:1px solid #e2e8f0;">
@@ -62,10 +62,18 @@
               <td style="padding:10px;">{{ item.quantity|floatformat:3 }} {{ item.unit }}</td>
               <td style="padding:10px;">{{ item.get_control_mode_display }}</td>
               <td style="padding:10px;">{{ item.tolerance_percent|floatformat:2 }}%</td>
+              {% if version.status == "DRAFT" and request.user.role == "KITCHEN" and request.user.is_department_head %}
+              <td style="padding:10px;">
+                <form method="post" action="{% url 'kitchen_recipe_version_item_remove' version.id item.id %}" onsubmit="return confirm('Remove ingredient from this draft version?');">
+                  {% csrf_token %}
+                  <button type="submit" style="padding:6px 9px; border:1px solid #fecaca; border-radius:7px; background:#fff; color:#b91c1c; cursor:pointer;">Remove</button>
+                </form>
+              </td>
+              {% endif %}
             </tr>
             {% if version.status == "DRAFT" and request.user.role == "KITCHEN" and request.user.is_department_head %}
             <tr style="border-top:1px dashed #cbd5e1; background:#f8fafc;">
-              <td colspan="4" style="padding:10px;">
+              <td colspan="{% if version.status == 'DRAFT' and request.user.role == 'KITCHEN' and request.user.is_department_head %}5{% else %}4{% endif %}" style="padding:10px;">
                 <form method="post" action="{% url 'kitchen_recipe_version_item_update' version.id item.id %}" style="display:flex; align-items:end; gap:10px; flex-wrap:wrap;">
                   {% csrf_token %}
                   <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#475569;">Recipe quantity
@@ -91,6 +99,42 @@
           </tbody>
         </table>
       </div>
+      {% if version.status == "DRAFT" and request.user.role == "KITCHEN" and request.user.is_department_head %}
+      <div style="margin-top:18px; padding:16px; border:1px solid #bfdbfe; background:#eff6ff; border-radius:10px;">
+        <h3 style="margin:0 0 12px; color:#1e3a8a; font-size:15px;">Add ingredient to this draft</h3>
+        <form method="post" action="{% url 'kitchen_recipe_version_item_add' version.id %}" style="display:flex; align-items:end; gap:10px; flex-wrap:wrap;">
+          {% csrf_token %}
+          <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#334155;">Raw ingredient
+            <select name="ingredient_id" required style="padding:9px; border:1px solid #cbd5e1; border-radius:7px; min-width:190px;">
+              <option value="">Choose ingredient</option>
+              {% for ingredient in available_ingredients %}
+              <option value="{{ ingredient.id }}">{{ ingredient.name }} ({{ ingredient.base_unit }})</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#334155;">Quantity per portion
+            <input type="number" name="quantity" min="0.001" step="0.001" placeholder="e.g. 250" required style="padding:9px; border:1px solid #cbd5e1; border-radius:7px; width:125px;">
+          </label>
+          <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#334155;">Unit
+            <select name="unit" required style="padding:9px; border:1px solid #cbd5e1; border-radius:7px;">
+              <option value="mg">mg</option><option value="g">g</option><option value="kg">kg</option>
+              <option value="ml">ml</option><option value="cl">cl</option><option value="l">litre</option>
+              <option value="pcs">pcs</option><option value="each">each</option>
+            </select>
+          </label>
+          <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#334155;">Control mode
+            <select name="control_mode" style="padding:9px; border:1px solid #cbd5e1; border-radius:7px;">
+              <option value="STRICT">Strict</option><option value="TOLERANCE">Tolerance</option><option value="FLEXIBLE">Flexible</option>
+            </select>
+          </label>
+          <label style="display:flex; flex-direction:column; gap:4px; font-size:12px; color:#334155;">Tolerance %
+            <input type="number" name="tolerance_percent" min="0" max="100" step="0.01" value="0" style="padding:9px; border:1px solid #cbd5e1; border-radius:7px; width:100px;">
+          </label>
+          <button type="submit" style="padding:10px 14px; border:0; border-radius:8px; background:#1d4ed8; color:#fff; font-weight:700; cursor:pointer;">Add ingredient</button>
+        </form>
+        <p style="margin:9px 0 0; font-size:12px; color:#475569;">The ingredient is added only to this draft. Quantity is converted to the ingredient's inventory base unit; the live recipe and approved versions remain unchanged.</p>
+      </div>
+      {% endif %}
       {% if version.status == "DRAFT" and request.user.role == "KITCHEN" and request.user.is_department_head %}
       <form method="post" action="{% url 'kitchen_recipe_version_approve' version.id %}" style="margin-top:16px;">
         {% csrf_token %}
