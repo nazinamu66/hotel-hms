@@ -1,0 +1,23 @@
+{% extends "base/base.html" %}
+{% block title %}My Urgent Purchases | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.uh-page{max-width:1400px;margin:0 auto;padding:28px 20px 48px;color:#172033}.uh-title{font-size:clamp(1.7rem,2.4vw,2.25rem);font-weight:800;letter-spacing:-.03em;margin:0}.uh-sub{color:#64748b;margin:8px 0 22px;max-width:900px}.uh-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}.uh-btn{display:inline-block;text-decoration:none;border-radius:9px;padding:10px 14px;font-weight:750;background:#1d4ed8;color:white}.uh-btn.alt{background:#e2e8f0;color:#1e293b}.uh-card{background:white;border:1px solid #e2e8f0;border-radius:15px;overflow:hidden;box-shadow:0 5px 20px #0f172a08}.uh-wrap{overflow-x:auto}.uh-table{width:100%;border-collapse:collapse;min-width:1000px}.uh-table th{text-align:left;padding:12px 14px;background:#f8fafc;color:#64748b;font-size:.72rem;letter-spacing:.05em;text-transform:uppercase}.uh-table td{padding:14px;border-top:1px solid #eef2f7;font-size:.88rem;vertical-align:top}.uh-muted{color:#64748b;font-size:.8rem;line-height:1.55}.uh-status{display:inline-block;border-radius:999px;padding:5px 9px;background:#f1f5f9;color:#334155;font-size:.75rem;font-weight:800}.uh-pending{background:#fff7ed;color:#9a3412}.uh-approved{background:#dcfce7;color:#166534}.uh-rejected{background:#fee2e2;color:#991b1b}.uh-empty{padding:45px;text-align:center;color:#64748b}
+</style>
+<div class="uh-page">
+<h1 class="uh-title">My Urgent Purchases</h1>
+<p class="uh-sub">Track urgent ingredient purchases submitted for management reconciliation, including review decisions, receipt progress and reimbursement status. Approval authorizes controlled receiving; it does not itself post stock or payment.</p>
+<div class="uh-actions"><a class="uh-btn" href="{% url 'urgent_purchase_create' %}">+ Record Urgent Purchase</a><a class="uh-btn alt" href="{% url 'kitchen_incoming_deliveries' %}">Incoming Deliveries</a></div>
+<div class="uh-card"><div class="uh-wrap"><table class="uh-table"><thead><tr><th>Purchase</th><th>Supplier / date</th><th>Items</th><th>Total</th><th>Review status</th><th>Receiving / reimbursement</th></tr></thead><tbody>
+{% for purchase in purchases %}
+<tr>
+<td><strong>DP-{{ purchase.pk }}</strong><div class="uh-muted">Submitted {{ purchase.created_at|date:"d M Y H:i" }}</div>{% if purchase.receipt_reference %}<div class="uh-muted">Receipt: {{ purchase.receipt_reference }}</div>{% endif %}</td>
+<td><strong>{{ purchase.supplier.name }}</strong><div class="uh-muted">{{ purchase.purchase_date|date:"d M Y" }}</div></td>
+<td>{% for item in purchase.items.all %}<div>{{ item.product.name }} — {{ item.quantity }} {{ item.product.base_unit }} × ₦{{ item.unit_cost|floatformat:2 }}<div class="uh-muted">Received {{ item.quantity_received }} / {{ item.quantity }}</div></div>{% if not forloop.last %}<hr>{% endif %}{% empty %}No items{% endfor %}</td>
+<td><strong>₦{{ purchase.total_cost|floatformat:2 }}</strong><div class="uh-muted">{{ purchase.get_payment_source_display }}</div></td>
+<td>{% if purchase.status == "RECONCILIATION_PENDING" %}<span class="uh-status uh-pending">{{ purchase.get_status_display }}</span>{% elif purchase.status == "REJECTED" %}<span class="uh-status uh-rejected">{{ purchase.get_status_display }}</span>{% else %}<span class="uh-status uh-approved">{{ purchase.get_status_display }}</span>{% endif %}{% if purchase.reconciliation_note %}<div class="uh-muted">Management note: {{ purchase.reconciliation_note }}</div>{% endif %}{% if purchase.reconciled_by %}<div class="uh-muted">Reviewed by {{ purchase.reconciled_by.get_full_name|default:purchase.reconciled_by.username }}{% if purchase.reconciled_at %} · {{ purchase.reconciled_at|date:"d M Y H:i" }}{% endif %}</div>{% endif %}</td>
+<td>{% if purchase.status == "RECEIVED" %}<strong>Fully received</strong>{% elif purchase.status == "PARTIALLY_RECEIVED" %}<strong>Partially received</strong><div class="uh-muted">Continue in Incoming Deliveries</div>{% elif purchase.status == "APPROVED" %}<div class="uh-muted">Approved. Use Incoming Deliveries to record verified goods.</div>{% else %}<div class="uh-muted">Awaiting management reconciliation before receiving.</div>{% endif %}{% if purchase.payment_source == "STAFF_FUNDS" %}{% if purchase.staff_reimbursement %}<div class="uh-muted">Reimbursement: {{ purchase.staff_reimbursement.get_status_display }}</div>{% else %}<div class="uh-muted">Reimbursement record will be created after full receipt.</div>{% endif %}{% endif %}</td>
+</tr>
+{% empty %}<tr><td colspan="6"><div class="uh-empty">You have not submitted any urgent purchases yet.</div></td></tr>{% endfor %}
+</tbody></table></div></div></div>
+{% endblock %}
