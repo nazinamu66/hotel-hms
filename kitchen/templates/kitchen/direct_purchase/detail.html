@@ -113,6 +113,7 @@ table.dp-table{width:100%;border-collapse:collapse;min-width:660px}
       </section>
     </main>
 
+    {% if request.user.role != "KITCHEN" %}
     <aside>
       <section class="dp-card">
         <h2>Payment summary</h2>
@@ -151,6 +152,7 @@ table.dp-table{width:100%;border-collapse:collapse;min-width:660px}
         {% endif %}
       </section>
     </aside>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
