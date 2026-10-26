@@ -208,6 +208,24 @@
                 </div>
             </div>
 
+            <div class="form-group">
+                <label for="{{ form.control_mode.id_for_label }}">Usage Control</label>
+                {{ form.control_mode }}
+                {{ form.control_mode.errors }}
+                <div class="help-text">
+                    STRICT blocks quantity variance unless an authorized manager approves an override.
+                    TOLERANCE permits variance within the configured percentage.
+                    FLEXIBLE records actual usage and flags material variance for explanation.
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.tolerance_percent.id_for_label }}">Allowed Variance (%)</label>
+                {{ form.tolerance_percent }}
+                {{ form.tolerance_percent.errors }}
+                <div class="help-text">Used when Usage Control is TOLERANCE.</div>
+            </div>
+
             <div class="actions">
                 <a
                     href="{% url 'inventory:kitchen_recipe_edit' recipe.product.id %}"
