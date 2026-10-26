@@ -806,6 +806,32 @@ def production_override_approve(request, pk):
     messages.success(request, f"Production #{batch.pk} approved and completed.")
     return redirect("kitchen_production_detail", pk=batch.pk)
 
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+@require_POST
+@transaction.atomic
+def production_override_reject(request, pk):
+    hotels = get_accessible_hotels(request.user)
+    batch = get_object_or_404(
+        ProductionBatch.objects.select_for_update().select_related(
+            "recipe__product", "produced_by"
+        ),
+        pk=pk,
+        override_status="PENDING",
+        is_executed=False,
+        recipe__product__hotel__in=hotels,
+    )
+    if batch.override_requested_by_id == request.user.pk or batch.produced_by_id == request.user.pk:
+        messages.error(request, "You cannot reject your own production variance request.")
+        return redirect("kitchen_production_history")
+    batch.override_status = "REJECTED"
+    batch.override_approved_by = request.user
+    batch.override_approved_at = timezone.now()
+    batch.save(update_fields=["override_status", "override_approved_by", "override_approved_at"])
+    messages.warning(request, f"Production #{batch.pk} variance request rejected. No stock was deducted.")
+    return redirect("kitchen_production_history")
+
+
 @role_required("KITCHEN")
 def kitchen_dashboard(request):
 
@@ -1251,7 +1277,7 @@ def direct_purchase_detail(request, pk):
         },
     )
 
-@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
+@role_required("KITCHEN", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 def production_history(request):
 
     hotels = get_accessible_hotels(request.user)
