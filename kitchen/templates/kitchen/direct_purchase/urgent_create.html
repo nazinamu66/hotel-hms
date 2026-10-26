@@ -1,0 +1,37 @@
+{% extends "base/base.html" %}
+{% block title %}Record Urgent Purchase | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.up-page{max-width:1120px;margin:0 auto;padding:28px 20px 48px;color:#172033}.up-head{margin-bottom:22px}.up-title{font-size:clamp(1.7rem,2.4vw,2.2rem);font-weight:800;letter-spacing:-.03em;margin:0}.up-sub{color:#64748b;margin:8px 0 0}.up-card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;padding:22px;margin-bottom:16px;box-shadow:0 5px 20px rgba(15,23,42,.035)}.up-card h2{font-size:1.05rem;margin:0 0 15px}.up-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.up-field label{display:block;font-size:.82rem;font-weight:700;color:#475569;margin-bottom:6px}.up-field input,.up-field select,.up-field textarea,.up-row select,.up-row input{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#172033}.up-field textarea{min-height:90px;resize:vertical}.up-table{width:100%;border-collapse:collapse;min-width:650px}.up-table th{text-align:left;font-size:.72rem;color:#64748b;background:#f8fafc;text-transform:uppercase;padding:11px}.up-table td{padding:9px;border-top:1px solid #eef2f7}.up-table-wrap{overflow-x:auto}.up-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:0;border-radius:9px;background:#1d4ed8;color:#fff;text-decoration:none;font-weight:750;cursor:pointer}.up-btn-secondary{background:#eef2f7;color:#334155}.up-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.up-note{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:13px 15px;line-height:1.5}.up-check{display:flex;gap:9px;align-items:center;margin-top:14px;color:#334155;font-size:.9rem}.up-check input{width:auto}@media(max-width:650px){.up-page{padding:20px 12px}.up-grid{grid-template-columns:1fr}.up-card{padding:16px}}
+</style>
+<div class="up-page">
+<header class="up-head"><h1 class="up-title">Record Urgent Purchase</h1><p class="up-sub">Record an ingredient purchase already made outside the normal approval process for management reconciliation.</p></header>
+<div class="up-note">Submitting this record does not add stock or post accounting entries. Management must review it first. Enter quantities and actual costs from the purchase.</div>
+<form method="post" id="urgent-purchase-form">
+{% csrf_token %}
+<section class="up-card"><h2>Purchase details</h2><div class="up-grid">
+<div class="up-field"><label for="supplier">Supplier *</label><select id="supplier" name="supplier" required><option value="">Choose supplier</option>{% for supplier in suppliers %}<option value="{{ supplier.pk }}">{{ supplier.name }}</option>{% endfor %}</select></div>
+<div class="up-field"><label for="purchase_date">Purchase date *</label><input id="purchase_date" type="date" name="purchase_date" value="{{ today }}" required></div>
+<div class="up-field"><label for="payment_source">Who paid? *</label><select id="payment_source" name="payment_source" required><option value="">Choose payment source</option><option value="STAFF_FUNDS">Staff member paid personally (reimbursement review)</option><option value="HOTEL_FUNDS">Hotel funds were used</option><option value="UNPAID">Supplier has not been paid</option></select></div>
+<div class="up-field"><label for="receipt_reference">Receipt / invoice reference</label><input id="receipt_reference" name="receipt_reference" maxlength="120" placeholder="Receipt number or invoice reference"></div>
+<div class="up-field" style="grid-column:1/-1"><label for="urgent_reason">Why was this purchase urgent? *</label><textarea id="urgent_reason" name="urgent_reason" required placeholder="Explain why normal approval could not be obtained first"></textarea></div>
+<div class="up-field" style="grid-column:1/-1"><label for="note">Additional notes</label><textarea id="note" name="note" placeholder="Optional context"></textarea></div>
+</div><label class="up-check"><input type="checkbox" name="goods_already_received"> The ingredients have already physically arrived in the kitchen</label></section>
+<section class="up-card"><h2>Purchased ingredients</h2><p class="up-sub">Use the product's base unit. Enter actual quantity bought and cost per base unit.</p><div class="up-table-wrap"><table class="up-table"><thead><tr><th>Ingredient *</th><th>Quantity *</th><th>Unit cost *</th><th>Line total</th><th></th></tr></thead><tbody id="urgent-lines"></tbody></table></div><div class="up-actions"><button class="up-btn up-btn-secondary" type="button" id="add-line">+ Add ingredient</button><strong style="margin-left:auto;align-self:center">Estimated total: ₦<span id="grand-total">0.00</span></strong></div></section>
+<div class="up-actions"><button class="up-btn" type="submit">Submit for reconciliation</button><a class="up-btn up-btn-secondary" href="{% url 'kitchen_ingredient_requests' %}">Cancel</a></div>
+</form>
+</div>
+<script>
+(function(){
+ const body=document.getElementById('urgent-lines');
+ const add=document.getElementById('add-line');
+ const total=document.getElementById('grand-total');
+ const products=[{% for product in ingredients %}{id:"{{ product.pk }}",name:"{{ product.name|escapejs }}",unit:"{{ product.base_unit|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}];
+ let count=0;
+ function recalc(){let sum=0;body.querySelectorAll('tr').forEach(row=>{const q=parseFloat(row.querySelector('[name^="quantity_"]').value)||0;const c=parseFloat(row.querySelector('[name^="unit_cost_"]').value)||0;const line=q*c;row.querySelector('.line-total').textContent=line.toFixed(2);sum+=line;});total.textContent=sum.toFixed(2);}
+ function addRow(){const i=count++;const row=document.createElement('tr');const options=products.map(p=>'<option value="'+p.id+'">'+p.name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;')+' ('+p.unit+')</option>').join('');row.innerHTML='<td><select required name="product_'+i+'"><option value="">Choose ingredient</option>'+options+'</select></td><td><input required type="number" min="0.001" step="0.001" name="quantity_'+i+'" value="1"></td><td><input required type="number" min="0" step="0.01" name="unit_cost_'+i+'" value="0"></td><td>₦<span class="line-total">0.00</span></td><td><button type="button" class="up-btn up-btn-secondary remove-line">Remove</button></td>';row.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',recalc));row.querySelector('.remove-line').addEventListener('click',()=>{row.remove();reindex();recalc();});body.appendChild(row);reindex();}
+ function reindex(){body.querySelectorAll('tr').forEach((row,index)=>row.querySelectorAll('[name]').forEach(el=>{const suffix=el.name.split('_').slice(1).join('_');el.name=el.name.replace(/_\d+$/,'_'+index);}));}
+ add.addEventListener('click',addRow);addRow();
+})();
+</script>
+{% endblock %}
