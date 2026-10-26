@@ -176,8 +176,9 @@
     const dim = dimension(base);
     select.replaceChildren();
     const choices = dim ? unitOptions[dim].slice() : [];
-    if (base && !choices.some(pair => normalized(pair[0]) === normalized(base))) {
-      choices.unshift([base, base + " (base)"]);
+    const matchingBase = choices.find(pair => normalized(pair[0]) === normalized(base));
+    if (base && matchingBase) {
+      matchingBase[1] = base + " (base)";
     } else if (base) {
       choices.unshift([base, base + " (base)"]);
     }
