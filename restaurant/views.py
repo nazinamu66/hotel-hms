@@ -626,6 +626,28 @@ def close_shift(request):
     # --------------------------------------------------
     if request.method == "POST":
 
+        if unsettled_orders:
+            messages.error(
+                request,
+                f"Cannot hand over this shift while {unsettled_orders} order(s) remain open. Resolve them first."
+            )
+            return render(
+                request,
+                "restaurant/close_shift.html",
+                {
+                    "shift": shift,
+                    "order_count": order_count,
+                    "total_sales": total_sales,
+                    "walkin_sales": walkin_sales,
+                    "room_charge_sales": room_charge_sales,
+                    "unsettled_orders": unsettled_orders,
+                    "payment_summary": payment_summary,
+                    "expected_cash": expected_cash,
+                    "recipients": recipients,
+                    "pending_handover": pending_handover,
+                },
+            )
+
         if pending_handover:
             messages.error(
                 request,
