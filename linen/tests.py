@@ -5,7 +5,7 @@ from django.urls import reverse
 from inventory.models import Department, Hotel, Organization, Product
 from rooms.models import Room, RoomCategory
 
-from .models import LinenItem, RoomLinenRequirement, RoomLinenState
+from .models import LinenItem, RoomLinenRequirement, RoomLinenState, RoomLinenSetup
 
 
 class RoomSpecificLinenSetupTests(TestCase):
@@ -39,7 +39,8 @@ class RoomSpecificLinenSetupTests(TestCase):
         cls.user = User.objects.create_user(
             username="linen-setup-admin",
             password="test-password",
-            role="ADMIN",
+            role="MANAGER",
+            hotel=cls.hotel,
         )
         cls.product_a = Product.objects.create(
             hotel=cls.hotel,
