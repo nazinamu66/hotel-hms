@@ -1183,6 +1183,8 @@ def supplier_payments(request):
             return source, source.supplier, total, f"PO #{source.pk} · {source.department.name}"
         if source_type == "DIRECT":
             source = get_object_or_404(DirectPurchase.objects.select_for_update().select_related("supplier"), pk=source_id, supplier__hotel=hotel)
+            if source.payment_source == "STAFF_FUNDS":
+                raise ValueError("Staff-funded urgent purchases must be handled through Staff Reimbursements, not supplier payments.")
             if source.status not in ("APPROVED", "PAID", "RECEIVED"):
                 raise ValueError("Only approved direct purchases can be paid.")
             return source, source.supplier, Decimal(str(source.total_cost)), f"Direct purchase #{source.pk}"
@@ -1288,7 +1290,7 @@ def supplier_payments(request):
             continue
         if total > paid:
             obligations.append({"source_type":"PO","source_id":po.pk,"supplier":po.supplier,"label":f"PO #{po.pk} · {po.department.name}","total":total,"paid":paid,"outstanding":total-paid})
-    for dp in DirectPurchase.objects.filter(supplier__hotel=hotel, status__in=("APPROVED","PAID","RECEIVED")).select_related("supplier"):
+    for dp in DirectPurchase.objects.filter(supplier__hotel=hotel, status__in=("APPROVED","PAID","RECEIVED")).exclude(payment_source="STAFF_FUNDS").select_related("supplier"):
         total = Decimal(str(dp.total_cost)); paid = paid_to_date("DIRECT", dp.pk)
         if dp.status == "PAID" and paid == 0:
             continue
@@ -1311,6 +1313,7 @@ def supplier_payments(request):
 
 
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+@transaction.atomic
 def staff_reimbursements(request):
     """Review staff-funded urgent purchases and record actual reimbursements."""
     from datetime import date
