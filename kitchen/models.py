@@ -263,7 +263,12 @@ class ProductionBatch(models.Model):
 
         variance_data = []
 
-        for item in self.recipe.items.all():
+        recipe_items = (
+            self.recipe_version.items.all()
+            if self.recipe_version_id
+            else self.recipe.items.all()
+        )
+        for item in recipe_items:
 
             expected = item.quantity * self.quantity_produced
 
