@@ -2,12 +2,12 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.db.models import Sum
 
+from accounting.constants import SUPPLIER_ADVANCES
 from accounting.models import Account, JournalEntry, SupplierLedger, SupplierPayment
 from accounting.services.journal import get_system_account, post_journal_entry
 
 
 CENT = Decimal("0.01")
-SUPPLIER_ADVANCES = "supplier_advances"
 
 
 def money(value):
