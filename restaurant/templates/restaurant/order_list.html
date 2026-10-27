@@ -1,100 +1,91 @@
 {% extends "base/base.html" %}
-{% block title %}Restaurant Orders{% endblock %}
+{% block title %}Previous Orders | Restaurant{% endblock %}
 {% block content %}
-
-<h2 style="margin-bottom:20px;">Restaurant Orders</h2>
-
-<form method="get" class="card">
-
-    <div class="grid-4">
-
-        <div>
-            <label>Date</label>
-            <input type="date" name="date" value="{{ selected_date|default:'' }}">
+<style>
+.orders-page{max-width:1480px;margin:0 auto;padding:28px 24px 48px}
+.orders-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px}
+.orders-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#64748b;margin-bottom:7px}
+.orders-title{margin:0;color:#172033;font-size:30px;line-height:1.15;font-weight:800;letter-spacing:-.035em}
+.orders-subtitle{margin:8px 0 0;color:#64748b;font-size:14px}
+.orders-actions{display:flex;gap:10px;flex-wrap:wrap}
+.orders-btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:10px 15px;border-radius:10px;border:1px solid #dbe2ea;text-decoration:none;font-size:13px;font-weight:750;cursor:pointer}
+.orders-btn-primary{background:#2563eb;border-color:#2563eb;color:#fff}
+.orders-btn-primary:hover{background:#1d4ed8;color:#fff}
+.orders-btn-secondary{background:#fff;color:#334155}
+.orders-panel{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.045);overflow:hidden;margin-bottom:20px}
+.orders-panel-head{padding:19px 22px;border-bottom:1px solid #edf1f5;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.orders-panel-head h2{margin:0;color:#1e293b;font-size:16px;font-weight:800}
+.orders-panel-head p{margin:5px 0 0;color:#64748b;font-size:13px}
+.orders-count{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:800}
+.orders-filters{padding:22px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:17px}
+.orders-field label{display:block;color:#334155;font-size:12px;font-weight:750;margin-bottom:7px}
+.orders-field input,.orders-field select{width:100%;min-height:43px;box-sizing:border-box;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#0f172a;font:inherit;font-size:13px}
+.orders-field input:focus,.orders-field select:focus{outline:0;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.orders-filter-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
+.orders-table-wrap{overflow-x:auto}
+.orders-table{width:100%;min-width:850px;border-collapse:collapse}
+.orders-table th{background:#f8fafc;padding:13px 17px;text-align:left;color:#64748b;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+.orders-table td{padding:15px 17px;border-bottom:1px solid #eef2f6;color:#334155;font-size:13px;vertical-align:middle}
+.orders-table tbody tr:hover{background:#f8fafc}
+.orders-table tbody tr:last-child td{border-bottom:0}
+.order-id{font-weight:800;color:#172033}
+.order-date{white-space:nowrap;color:#475569}
+.order-total{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;color:#172033}
+.order-staff{font-weight:650;color:#1e293b}
+.order-hotel{display:block;color:#94a3b8;font-size:11px;margin-top:4px}
+.order-status{display:inline-flex;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:850;letter-spacing:.04em}
+.status-paid{background:#dcfce7;color:#166534}.status-charged{background:#dbeafe;color:#1d4ed8}.status-open{background:#fef3c7;color:#92400e}.status-cancelled{background:#fee2e2;color:#991b1b}
+.orders-empty{text-align:center;padding:54px 20px}
+.orders-empty-icon{font-size:30px;margin-bottom:10px}
+.orders-empty h3{margin:0 0 6px;color:#334155;font-size:16px}
+.orders-empty p{margin:0;color:#64748b;font-size:13px}
+.orders-row-action{display:inline-flex;align-items:center;justify-content:center;padding:8px 11px;border:1px solid #dbe2ea;border-radius:8px;color:#1d4ed8;text-decoration:none;font-weight:750;font-size:12px;white-space:nowrap}
+.orders-row-action:hover{background:#eff6ff}
+@media(max-width:950px){.orders-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.orders-page{padding:20px 13px 32px}.orders-title{font-size:25px}.orders-filters{grid-template-columns:1fr;padding:17px}.orders-filter-actions{grid-column:auto;justify-content:stretch}.orders-filter-actions .orders-btn{flex:1}.orders-panel-head{padding:16px}}
+</style>
+<div class="orders-page">
+    <header class="orders-header">
+        <div><div class="orders-eyebrow">Restaurant operations</div><h1 class="orders-title">Previous Orders</h1><p class="orders-subtitle">Search sales, review settlement status and reopen order details or receipts.</p></div>
+        <div class="orders-actions">
+            {% if request.user.role == "RESTAURANT" %}<a href="{% url 'restaurant_pos' %}" class="orders-btn orders-btn-primary">＋ New Sale</a>{% endif %}
+            <a href="{% url 'restaurant_shift_list' %}" class="orders-btn orders-btn-secondary">Shift History</a>
         </div>
-
-        <div>
-            <label>Staff</label>
-            <select name="staff">
-                <option value="">All</option>
-                {% for staff in staff_list %}
-                    <option value="{{ staff.id }}"
-                        {% if staff.id|stringformat:"s" == selected_staff %}selected{% endif %}
-                    >
-                        {{ staff.username }}
-                    </option>
+    </header>
+    <section class="orders-panel">
+        <div class="orders-panel-head"><div><h2>Find an order</h2><p>Combine date, cashier, order number and status filters.</p></div><span class="orders-count">{{ result_count }} result{{ result_count|pluralize }}</span></div>
+        <form method="get" class="orders-filters">
+            <div class="orders-field"><label for="filter-date">Exact date</label><input id="filter-date" type="date" name="date" value="{{ selected_date|default:'' }}"></div>
+            <div class="orders-field"><label for="filter-from">From date</label><input id="filter-from" type="date" name="date_from" value="{{ date_from|default:'' }}"></div>
+            <div class="orders-field"><label for="filter-to">To date</label><input id="filter-to" type="date" name="date_to" value="{{ date_to|default:'' }}"></div>
+            <div class="orders-field"><label for="filter-staff">Cashier</label><select id="filter-staff" name="staff"><option value="">All cashiers</option>{% for staff in staff_list %}<option value="{{ staff.id }}" {% if staff.id|stringformat:"s" == selected_staff %}selected{% endif %}>{{ staff.get_full_name|default:staff.username }}</option>{% endfor %}</select></div>
+            <div class="orders-field"><label for="filter-order">Order number</label><input id="filter-order" type="number" min="1" name="order" value="{{ order_number|default:'' }}" placeholder="e.g. 125"></div>
+            <div class="orders-field"><label for="filter-status">Settlement status</label><select id="filter-status" name="status"><option value="">All statuses</option>{% for code,label in status_choices %}<option value="{{ code }}" {% if code == selected_status %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+            <div class="orders-filter-actions"><a href="{% url 'restaurant_order_list' %}" class="orders-btn orders-btn-secondary">Clear filters</a><button type="submit" class="orders-btn orders-btn-primary">Apply filters</button></div>
+        </form>
+    </section>
+    <section class="orders-panel">
+        <div class="orders-panel-head"><div><h2>Order directory</h2><p>Most recent transactions appear first.</p></div></div>
+        <div class="orders-table-wrap">
+            <table class="orders-table">
+                <thead><tr><th>Order</th><th>Date &amp; time</th><th>Cashier</th><th>Sale type</th><th>Status</th><th>Total</th><th>Action</th></tr></thead>
+                <tbody>
+                {% for order in orders %}
+                    <tr>
+                        <td><span class="order-id">#{{ order.id }}</span>{% if request.user.role != "RESTAURANT" %}<span class="order-hotel">{{ order.department.hotel.name }}</span>{% endif %}</td>
+                        <td class="order-date">{{ order.created_at|date:"d M Y, H:i" }}</td>
+                        <td><span class="order-staff">{{ order.created_by.get_full_name|default:order.created_by.username|default:"—" }}</span></td>
+                        <td>{% if order.folio.folio_type == "ROOM" %}Room charge{% else %}Walk-in{% endif %}</td>
+                        <td><span class="order-status status-{{ order.status|lower }}">{{ order.get_status_display }}</span></td>
+                        <td class="order-total">{{ order.department.hotel.business_profile.currency|default:"₦" }}{{ order.total_amount|floatformat:2 }}</td>
+                        <td><a class="orders-row-action" href="{% url 'restaurant_order_detail' order.id %}">View order →</a></td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="7"><div class="orders-empty"><div class="orders-empty-icon">⌕</div><h3>No orders match these filters</h3><p>Try widening the date range or clearing one or more filters.</p></div></td></tr>
                 {% endfor %}
-            </select>
+                </tbody>
+            </table>
         </div>
-
-        <div>
-            <label>Order #</label>
-            <input type="text" name="order" value="{{ order_number|default:'' }}">
-        </div>
-
-        <div>
-            <label>Status</label>
-            <select name="status">
-                <option value="">All</option>
-                {% for code,label in status_choices %}
-                    <option value="{{ code }}"
-                        {% if code == selected_status %}selected{% endif %}
-                    >
-                        {{ label }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-    </div>
-
-    <div style="margin-top:15px;">
-        <button type="submit" class="btn-primary">Filter</button>
-        <a href="{% url 'restaurant_order_list' %}" class="btn-secondary">Reset</a>
-    </div>
-
-</form>
-
-<br>
-
-{% if orders %}
-<table class="table">
-
-    <thead>
-        <tr>
-            <th>#</th>
-            <th>Date</th>
-            <th>Staff</th>
-            <th>Status</th>
-            <th>Total</th>
-            <th></th>
-        </tr>
-    </thead>
-
-    <tbody>
-    {% for order in orders %}
-        <tr>
-            <td>{{ order.id }}</td>
-            <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
-            <td>{{ order.created_by.username }}</td>
-            <td>
-                <span class="badge badge-{{ order.status|lower }}">
-                    {{ order.status }}
-                </span>
-            </td>
-            <td>₦{{ order.total_amount }}</td>
-            <td>
-                <a href="{% url 'restaurant_order_detail' order.id %}" class="link-btn">
-                    View
-                </a>
-            </td>
-        </tr>
-    {% endfor %}
-    </tbody>
-
-</table>
-{% else %}
-<p>No orders found.</p>
-{% endif %}
-
+    </section>
+</div>
 {% endblock %}
