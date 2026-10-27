@@ -11,6 +11,7 @@ from .views import (
     pos_commit,
     pos_order_list,
     pos_order_detail,
+    pos_order_receipt,
     open_shift,
     close_shift,
     shift_list,
