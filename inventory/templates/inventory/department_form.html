@@ -1,165 +1,79 @@
 {% extends "base/base.html" %}
-
-{% block title %}
-    {% if edit_mode %}
-        Edit Department
-    {% else %}
-        Create Department
-    {% endif %}
-{% endblock %}
-
+{% block title %}{% if edit_mode %}Edit Department{% else %}Create Department{% endif %} | Hotel HMS{% endblock %}
 {% block content %}
-
-<h2>
-    {% if edit_mode %}
-        Edit Department
-    {% else %}
-        Create Department
-    {% endif %}
-</h2>
-
-<div class="card">
-
-    <form method="POST">
-        {% csrf_token %}
-
-        <!-- HOTEL -->
-        <label for="hotel">
-            Hotel
-        </label>
-
-        <select
-            id="hotel"
-            name="hotel"
-            required
-        >
-            <option value="">
-                -- Select Hotel --
-            </option>
-
-            {% for hotel in hotels %}
-                <option
-                    value="{{ hotel.id }}"
-                    {% if dept and dept.hotel_id == hotel.id %}
-                        selected
-                    {% endif %}
-                >
-                    {{ hotel.name }}
-                    {% if hotel.location %}
-                        — {{ hotel.location }}
-                    {% endif %}
-                </option>
-            {% endfor %}
-        </select>
-
-        <br><br>
-
-        <!-- DEPARTMENT CODE -->
-        <label for="code">
-            Department Code
-        </label>
-
-        <input
-            id="code"
-            type="text"
-            name="code"
-            value="{{ dept.code|default:'' }}"
-            placeholder="e.g. FD, HK, KIT, ACC"
-            maxlength="10"
-            required
-        >
-
-        <small>
-            Short unique code for this department within the hotel.
-        </small>
-
-        <br><br>
-
-        <!-- DEPARTMENT NAME -->
-        <label for="name">
-            Department Name
-        </label>
-
-        <input
-            id="name"
-            type="text"
-            name="name"
-            value="{{ dept.name|default:'' }}"
-            placeholder="e.g. Front Desk, Kitchen, Accounting"
-            maxlength="100"
-            required
-        >
-
-        <br><br>
-
-        <!-- DEPARTMENT TYPE -->
-        <label for="department_type">
-            Department Type
-        </label>
-
-        <select
-            id="department_type"
-            name="department_type"
-            required
-        >
-            <option value="">
-                -- Select Type --
-            </option>
-
-            {% for value, label in types %}
-                <option
-                    value="{{ value }}"
-                    {% if dept and dept.department_type == value %}
-                        selected
-                    {% endif %}
-                >
-                    {{ label }}
-                </option>
-            {% endfor %}
-        </select>
-
-        <br><br>
-
-        <!-- STATUS -->
-        <label>
-            <input
-                type="checkbox"
-                name="is_active"
-                {% if not edit_mode or dept.is_active %}
-                    checked
-                {% endif %}
-            >
-
-            Active Department
-        </label>
-
-        <br><br>
-
-        <!-- ACTIONS -->
-        <div style="display:flex; gap:10px;">
-
-            <button
-                class="btn btn-primary"
-                type="submit"
-            >
-                {% if edit_mode %}
-                    Update Department
-                {% else %}
-                    Create Department
-                {% endif %}
-            </button>
-
-            <a
-                href="{% url 'inventory:department_list' %}"
-                class="btn btn-secondary"
-            >
-                Cancel
-            </a>
-
+<style>
+.dept-form-page{max-width:1000px;margin:0 auto;padding:30px 24px 48px}
+.dept-form-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px}
+.dept-form-kicker{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
+.dept-form-head h1{font-size:1.85rem;font-weight:760;color:#172033;margin:4px 0 7px}
+.dept-form-head p{color:#64748b;margin:0}
+.dept-form-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 26px rgba(15,23,42,.05);overflow:hidden}
+.dept-form-card-head{padding:22px 25px;border-bottom:1px solid #edf1f5}
+.dept-form-card-head h2{font-size:1.05rem;font-weight:700;color:#1e293b;margin:0 0 5px}
+.dept-form-card-head p{font-size:.9rem;color:#64748b;margin:0}
+.dept-form-body{padding:25px}
+.dept-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.dept-field{min-width:0}
+.dept-field.full{grid-column:1/-1}
+.dept-field label{display:block;font-size:.86rem;font-weight:650;color:#334155;margin-bottom:8px}
+.dept-field input:not([type=checkbox]),.dept-field select{display:block;width:100%;box-sizing:border-box;min-height:46px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#0f172a;font:inherit}
+.dept-field input:focus,.dept-field select:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.13)}
+.dept-field small{display:block;margin-top:7px;color:#64748b;font-size:.81rem;line-height:1.45}
+.dept-active{display:flex;align-items:center;gap:12px;padding:16px;border:1px solid #e2e8f0;border-radius:11px;background:#f8fafc}
+.dept-active input{width:18px;height:18px;accent-color:#2563eb}
+.dept-active label{margin:0;color:#334155;font-weight:650}
+.dept-form-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px;padding-top:22px;border-top:1px solid #edf1f5}
+.dept-form-actions .btn{min-height:44px;padding:10px 18px;border-radius:9px;font-weight:650}
+@media(max-width:650px){.dept-form-page{padding:22px 14px 32px}.dept-form-head h1{font-size:1.55rem}.dept-form-card-head,.dept-form-body{padding:18px}.dept-form-grid{grid-template-columns:1fr;gap:18px}.dept-field.full{grid-column:auto}.dept-form-actions .btn{flex:1}}
+</style>
+<div class="dept-form-page">
+    {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}{% endif %}
+    <div class="dept-form-head">
+        <div><div class="dept-form-kicker">Business setup</div><h1>{% if edit_mode %}Edit Department{% else %}Create Department{% endif %}</h1><p>Configure the department's hotel, identifier and operating status.</p></div>
+    </div>
+    <section class="dept-form-card">
+        <div class="dept-form-card-head"><h2>Department details</h2><p>Department codes must be unique within their hotel.</p></div>
+        <div class="dept-form-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="dept-form-grid">
+                    <div class="dept-field full">
+                        <label for="hotel">Hotel <span class="text-danger">*</span></label>
+                        <select id="hotel" name="hotel" required>
+                            <option value="">Select a hotel…</option>
+                            {% for hotel in hotels %}
+                                <option value="{{ hotel.id }}" {% if dept and dept.hotel_id == hotel.id %}selected{% elif not dept and selected_hotel_id == hotel.id|stringformat:"s" %}selected{% endif %}>{{ hotel.name }}{% if hotel.location %} — {{ hotel.location }}{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                        <small>Choose the property this department belongs to.</small>
+                    </div>
+                    <div class="dept-field">
+                        <label for="code">Department code <span class="text-danger">*</span></label>
+                        <input id="code" type="text" name="code" value="{{ dept.code|default:'' }}" placeholder="e.g. FD, HK, KIT, ACC" maxlength="10" required>
+                        <small>Short identifier used in reports and internal workflows.</small>
+                    </div>
+                    <div class="dept-field">
+                        <label for="name">Department name <span class="text-danger">*</span></label>
+                        <input id="name" type="text" name="name" value="{{ dept.name|default:'' }}" placeholder="e.g. Front Desk, Kitchen" maxlength="100" required>
+                    </div>
+                    <div class="dept-field full">
+                        <label for="department_type">Department type <span class="text-danger">*</span></label>
+                        <select id="department_type" name="department_type" required>
+                            <option value="">Select a department type…</option>
+                            {% for value,label in types %}<option value="{{ value }}" {% if dept and dept.department_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="dept-field full">
+                        <div class="dept-active"><input id="is_active" type="checkbox" name="is_active" {% if not edit_mode or dept.is_active %}checked{% endif %}><label for="is_active">Active department</label></div>
+                        <small>Inactive departments are retained for historical records but should not be used for new operations.</small>
+                    </div>
+                </div>
+                <div class="dept-form-actions">
+                    <button class="btn btn-primary" type="submit">{% if edit_mode %}Save Department Changes{% else %}Create Department{% endif %}</button>
+                    <a href="{% url 'inventory:department_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
         </div>
-
-    </form>
-
+    </section>
 </div>
-
 {% endblock %}
