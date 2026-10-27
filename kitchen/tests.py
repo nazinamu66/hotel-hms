@@ -1088,3 +1088,84 @@ class DraftRecipeUnitEditingTests(TestCase):
         self.assertEqual(rows[0][2], Decimal("1.200"))
         self.assertEqual(rows[0][3], "Ingredient spilled during preparation")
 
+
+
+class RecipeVersionSourceOfTruthTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.organization = Organization.objects.create(name="Recipe Version Regression Org")
+        cls.hotel = Hotel.objects.create(
+            organization=cls.organization, name="Recipe Version Regression Hotel"
+        )
+        cls.kitchen = Department.objects.create(
+            hotel=cls.hotel, department_type="KITCHEN",
+            code="RVRK", name="Recipe Version Regression Kitchen",
+        )
+        cls.head = User.objects.create_user(
+            username="recipe_version_regression_head", password="test-password",
+            role="KITCHEN", hotel=cls.hotel, department=cls.kitchen,
+            is_department_head=True,
+        )
+        cls.ingredient = Product.objects.create(
+            hotel=cls.hotel, name="Regression Flour", sku="RVR-FLOUR",
+            product_type="RAW", base_unit="kg", cost_price=Decimal("5.00"),
+        )
+        cls.ingredient.departments.add(cls.kitchen)
+        cls.finished = Product.objects.create(
+            hotel=cls.hotel, name="Regression Bread", sku="RVR-BREAD",
+            product_type="FOOD", base_unit="each", cost_price=Decimal("0.00"),
+        )
+        cls.recipe = Recipe.objects.create(name="Regression Bread Recipe", product=cls.finished)
+        cls.version_one = RecipeVersion.objects.create(
+            recipe=cls.recipe, version_number=1, status="APPROVED", created_by=cls.head,
+            approved_by=cls.head,
+        )
+        RecipeVersionItem.objects.create(
+            recipe_version=cls.version_one, ingredient=cls.ingredient,
+            quantity=Decimal("0.750"), unit="kg", control_mode="TOLERANCE",
+            tolerance_percent=Decimal("5.00"), tolerance_quantity=Decimal("0.100"),
+        )
+        cls.recipe.active_version = cls.version_one
+        cls.recipe.version = 1
+        cls.recipe.save(update_fields=["active_version", "version"])
+        # Deliberately stale legacy data: it must not override the approved snapshot.
+        RecipeItem.objects.create(
+            recipe=cls.recipe, ingredient=cls.ingredient, quantity=Decimal("9.000"),
+            control_mode="STRICT", created_by=cls.head,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.head)
+
+    def test_new_draft_copies_active_approved_snapshot_not_stale_legacy_items(self):
+        response = self.client.post(
+            reverse("kitchen_recipe_version_draft_create", args=[self.recipe.pk]),
+            {"change_note": "Test next revision"},
+        )
+        self.assertEqual(response.status_code, 302)
+        new_version = RecipeVersion.objects.get(recipe=self.recipe, version_number=2)
+        copied = new_version.items.get(ingredient=self.ingredient)
+        self.assertEqual(copied.quantity, Decimal("0.750"))
+        self.assertEqual(copied.unit, "kg")
+        self.assertEqual(copied.control_mode, "TOLERANCE")
+        self.assertEqual(copied.tolerance_percent, Decimal("5.00"))
+        self.assertEqual(copied.tolerance_quantity, Decimal("0.100"))
+
+    def test_approval_rejects_ingredient_not_assigned_to_kitchen(self):
+        draft = RecipeVersion.objects.create(
+            recipe=self.recipe, version_number=2, status="DRAFT", created_by=self.head,
+        )
+        RecipeVersionItem.objects.create(
+            recipe_version=draft, ingredient=self.ingredient,
+            quantity=Decimal("1.000"), unit="kg", control_mode="STRICT",
+        )
+        self.ingredient.departments.remove(self.kitchen)
+
+        response = self.client.post(
+            reverse("kitchen_recipe_version_approve", args=[draft.pk]),
+        )
+        self.assertEqual(response.status_code, 302)
+        draft.refresh_from_db()
+        self.recipe.refresh_from_db()
+        self.assertEqual(draft.status, "DRAFT")
+        self.assertEqual(self.recipe.active_version_id, self.version_one.pk)
