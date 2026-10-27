@@ -21,6 +21,7 @@ urlpatterns = [
     path("manager/room-activity/", manager_room_activity_today),
     path("manager/payments/", manager_payments_today),
     path("users/<int:user_id>/edit/",user_edit,name="accounts_user_edit"),
+    path("organization/profile/", views.organization_profile, name="organization_profile"),
     path("setup/",views.initial_setup,name="initial_setup",),
     path("users/<int:user_id>/toggle-active/",views.user_toggle_active,name="accounts_user_toggle_active",),
 
