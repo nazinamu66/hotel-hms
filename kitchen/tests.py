@@ -708,6 +708,123 @@ class IngredientRequestApprovalTests(TestCase):
         self.assertContains(response, "Record received quantities")
 
 
+    def test_real_partial_store_transfers_update_stock_fifo_and_request_status(self):
+        request_obj = self.make_store_request(
+            quantities=(("Rice", Decimal("5.000")),)
+        )
+        item = request_obj.items.get()
+        store, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            department_type="STORE",
+            defaults={"code": "STK", "name": "Approval Test Store"},
+        )
+        Stock.objects.create(
+            product=self.ingredient, department=store, quantity=Decimal("10.000")
+        )
+        StockCostLayer.objects.create(
+            product=self.ingredient, department=store,
+            quantity_received=Decimal("10.000"), quantity_remaining=Decimal("10.000"),
+            unit_cost=Decimal("100.0000"),
+        )
+
+        first = StockTransfer.objects.create(
+            product=self.ingredient, from_department=store,
+            to_department=self.kitchen_department, quantity=Decimal("2.000"),
+            created_by=self.manager, ingredient_request_item=item,
+        )
+        first.execute()
+        request_obj.refresh_from_db()
+        self.assertEqual(request_obj.status, "PARTIALLY_ISSUED")
+        self.assertEqual(
+            Stock.objects.get(product=self.ingredient, department=store).quantity,
+            Decimal("8.000"),
+        )
+        self.assertEqual(
+            Stock.objects.get(product=self.ingredient, department=self.kitchen_department).quantity,
+            Decimal("2.000"),
+        )
+        self.assertEqual(
+            StockCostLayer.objects.get(product=self.ingredient, department=store).quantity_remaining,
+            Decimal("8.000"),
+        )
+        self.assertEqual(
+            StockCostLayer.objects.get(product=self.ingredient, department=self.kitchen_department).quantity_remaining,
+            Decimal("2.000"),
+        )
+
+        second = StockTransfer.objects.create(
+            product=self.ingredient, from_department=store,
+            to_department=self.kitchen_department, quantity=Decimal("3.000"),
+            created_by=self.manager, ingredient_request_item=item,
+        )
+        second.execute()
+        request_obj.refresh_from_db()
+        self.assertEqual(request_obj.status, "RECEIVED")
+        self.assertIsNotNone(request_obj.received_at)
+        self.assertEqual(
+            Stock.objects.get(product=self.ingredient, department=store).quantity,
+            Decimal("5.000"),
+        )
+        self.assertEqual(
+            Stock.objects.get(product=self.ingredient, department=self.kitchen_department).quantity,
+            Decimal("5.000"),
+        )
+        self.assertEqual(
+            StockMovement.objects.filter(
+                reference__in=[f"TRANSFER-{first.pk}", f"TRANSFER-{second.pk}"],
+                movement_type="TRANSFER",
+            ).count(),
+            2,
+        )
+
+    def test_store_transfer_cannot_over_issue_remaining_request_quantity(self):
+        request_obj = self.make_store_request(
+            quantities=(("Rice", Decimal("5.000")),)
+        )
+        item = request_obj.items.get()
+        store, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            department_type="STORE",
+            defaults={"code": "STK", "name": "Approval Test Store"},
+        )
+        Stock.objects.create(
+            product=self.ingredient, department=store, quantity=Decimal("10.000")
+        )
+        StockCostLayer.objects.create(
+            product=self.ingredient, department=store,
+            quantity_received=Decimal("10.000"), quantity_remaining=Decimal("10.000"),
+            unit_cost=Decimal("100.0000"),
+        )
+        first = StockTransfer.objects.create(
+            product=self.ingredient, from_department=store,
+            to_department=self.kitchen_department, quantity=Decimal("2.000"),
+            created_by=self.manager, ingredient_request_item=item,
+        )
+        first.execute()
+
+        over_issue = StockTransfer.objects.create(
+            product=self.ingredient, from_department=store,
+            to_department=self.kitchen_department, quantity=Decimal("4.000"),
+            created_by=self.manager, ingredient_request_item=item,
+        )
+        with self.assertRaisesMessage(ValidationError, "exceeds the remaining requested quantity"):
+            over_issue.execute()
+
+        request_obj.refresh_from_db()
+        self.assertEqual(request_obj.status, "PARTIALLY_ISSUED")
+        self.assertEqual(
+            Stock.objects.get(product=self.ingredient, department=store).quantity,
+            Decimal("8.000"),
+        )
+        self.assertEqual(
+            Stock.objects.get(product=self.ingredient, department=self.kitchen_department).quantity,
+            Decimal("2.000"),
+        )
+        self.assertFalse(
+            StockMovement.objects.filter(reference=f"TRANSFER-{over_issue.pk}").exists()
+        )
+
+
 class ProductionOverrideSecurityTests(TestCase):
     @classmethod
     def setUpTestData(cls):
