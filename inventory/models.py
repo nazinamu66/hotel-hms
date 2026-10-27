@@ -21,6 +21,12 @@ class Organization(models.Model):
         unique=True,
     )
 
+    logo = models.ImageField(
+        upload_to="organization_logos/",
+        blank=True,
+        null=True,
+    )
+
     slug = models.SlugField(
         max_length=150,
         unique=True,
