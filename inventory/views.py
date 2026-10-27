@@ -736,11 +736,14 @@ def hotel_create(request):
             request.FILES,
             instance=profile,
         )
+        # Hotel name is collected once above; the profile uses that same name.
+        form.fields["name"].required = False
 
         if form.is_valid():
             hotel.save()
             profile = form.save(commit=False)
             profile.hotel = hotel
+            profile.name = name
             profile.save()
             setup_new_hotel(hotel)
 
