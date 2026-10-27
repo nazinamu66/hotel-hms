@@ -983,3 +983,47 @@ def user_toggle_active(request, user_id):
         )
 
     return redirect("accounts_users")
+
+
+@login_required
+def hotel_business_profile(request, hotel_id):
+    if request.user.role not in {"ADMIN", "DIRECTOR"}:
+        raise PermissionDenied
+
+    hotels = Hotel.objects.filter(
+        organization_id=request.user.organization_id,
+    )
+    hotel = get_object_or_404(hotels, pk=hotel_id)
+
+    profile, _ = BusinessProfile.objects.get_or_create(
+        hotel=hotel,
+        defaults={
+            "name": hotel.name,
+            "country": "Nigeria",
+            "currency": "₦",
+        },
+    )
+
+    from .forms import HotelBusinessProfileForm
+
+    if request.method == "POST":
+        form = HotelBusinessProfileForm(
+            request.POST,
+            request.FILES,
+            instance=profile,
+        )
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                f"Business profile for {hotel.name} saved successfully.",
+            )
+            return redirect("hotel_business_profile", hotel_id=hotel.pk)
+    else:
+        form = HotelBusinessProfileForm(instance=profile)
+
+    return render(request, "accounts/hotel_business_profile.html", {
+        "hotel": hotel,
+        "form": form,
+        "profile": profile,
+    })
