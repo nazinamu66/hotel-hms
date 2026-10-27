@@ -475,6 +475,58 @@ def pos_commit(request):
 
 
 @role_required("RESTAURANT", "MANAGER", "ADMIN")
+def pos_order_receipt(request, order_id):
+    if request.user.role == "RESTAURANT":
+        if not request.user.department_id:
+            raise PermissionDenied("Restaurant staff must be assigned to a department.")
+        order = get_object_or_404(
+            POSOrder.objects.select_related(
+                "department__hotel", "created_by", "folio__room", "folio__guest", "shift",
+            ).prefetch_related("items__menu_item"),
+            id=order_id,
+            department=request.user.department,
+        )
+    else:
+        order = get_object_or_404(
+            POSOrder.objects.select_related(
+                "department__hotel", "created_by", "folio__room", "folio__guest", "shift",
+            ).prefetch_related("items__menu_item"),
+            id=order_id,
+            department__hotel__in=get_accessible_hotels(request.user),
+        )
+
+    hotel = order.department.hotel
+    from core.models import BusinessProfile
+    business_profile = BusinessProfile.objects.filter(hotel=hotel).first()
+    organization = hotel.organization
+    receipt_items = [
+        {
+            "name": item.menu_item.name,
+            "quantity": item.quantity,
+            "unit_price": item.price,
+            "line_total": item.quantity * item.price,
+        }
+        for item in order.items.all()
+    ]
+
+    payment_label = "ROOM CHARGE" if order.folio.folio_type == "ROOM" else "WALK-IN SALE"
+    if order.status == "OPEN":
+        payment_label = "UNSETTLED"
+    elif order.status == "CANCELLED":
+        payment_label = "CANCELLED"
+
+    return render(request, "restaurant/receipt.html", {
+        "order": order,
+        "hotel": hotel,
+        "organization": organization,
+        "business_profile": business_profile,
+        "receipt_items": receipt_items,
+        "payment_label": payment_label,
+        "currency": business_profile.currency if business_profile else "₦",
+    })
+
+
+@role_required("RESTAURANT", "MANAGER", "ADMIN")
 def pos_order_detail(request, order_id):
     if request.user.role == "RESTAURANT":
         order = get_object_or_404(
