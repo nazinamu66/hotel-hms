@@ -43,51 +43,69 @@ def is_manager(user):
 
 @role_required("RESTAURANT", "MANAGER", "ADMIN")
 def pos_order_list(request):
-
     user = request.user
-
     orders = POSOrder.objects.select_related(
-        "created_by",
-        "department",
-        "folio"
+        "created_by", "department", "department__hotel", "folio", "shift"
     )
 
-    # Scope every role to the departments/hotels it may access.
+    # Enforce hotel/department boundaries before applying user-supplied filters.
     if user.role == "RESTAURANT":
         if not user.department_id:
             raise PermissionDenied("Restaurant staff must be assigned to a department.")
-        orders = orders.filter(department=user.department)
+        orders = orders.filter(department_id=user.department_id)
+        staff_list = User.objects.filter(
+            role="RESTAURANT", department_id=user.department_id, is_active=True
+        )
     else:
-        orders = orders.filter(department__hotel__in=get_accessible_hotels(user))
+        accessible_hotels = get_accessible_hotels(user)
+        orders = orders.filter(department__hotel__in=accessible_hotels)
+        staff_list = User.objects.filter(
+            role="RESTAURANT", department__hotel__in=accessible_hotels, is_active=True
+        )
 
-    # 🔍 Filters
-    selected_date = request.GET.get("date")
-    staff_id = request.GET.get("staff")
-    order_number = request.GET.get("order")
-    status = request.GET.get("status")
+    selected_date = request.GET.get("date", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    staff_id = request.GET.get("staff", "").strip()
+    order_number = request.GET.get("order", "").strip()
+    status = request.GET.get("status", "").strip()
 
     if selected_date:
         try:
-            parsed_date = date.fromisoformat(selected_date)
-            orders = orders.filter(created_at__date=parsed_date)
+            orders = orders.filter(created_at__date=date.fromisoformat(selected_date))
         except ValueError:
-            selected_date = None
+            selected_date = ""
 
-    if staff_id:
-        orders = orders.filter(created_by_id=staff_id)
+    if date_from:
+        try:
+            orders = orders.filter(created_at__date__gte=date.fromisoformat(date_from))
+        except ValueError:
+            date_from = ""
+
+    if date_to:
+        try:
+            orders = orders.filter(created_at__date__lte=date.fromisoformat(date_to))
+        except ValueError:
+            date_to = ""
+
+    if staff_id and staff_id.isdigit():
+        orders = orders.filter(created_by_id=int(staff_id))
+    else:
+        staff_id = ""
 
     if order_number:
-        orders = orders.filter(id__icontains=order_number)
+        if order_number.isdigit():
+            orders = orders.filter(id=int(order_number))
+        else:
+            order_number = ""
 
-    if status:
+    valid_statuses = {choice[0] for choice in POSOrder.STATUS_CHOICES}
+    if status in valid_statuses:
         orders = orders.filter(status=status)
+    else:
+        status = ""
 
-    orders = orders.order_by("-created_at")
-
-    staff_list = User.objects.filter(
-        role="RESTAURANT",
-        department=user.department if user.role == "RESTAURANT" else None
-    ).order_by("username")
+    orders = orders.order_by("-created_at", "-id")
 
     return render(
         request,
@@ -95,12 +113,15 @@ def pos_order_list(request):
         {
             "orders": orders,
             "selected_date": selected_date,
-            "staff_list": staff_list,
+            "date_from": date_from,
+            "date_to": date_to,
+            "staff_list": staff_list.order_by("username"),
             "selected_staff": staff_id,
             "order_number": order_number,
             "selected_status": status,
             "status_choices": POSOrder.STATUS_CHOICES,
-        }
+            "result_count": orders.count(),
+        },
     )
 
 def get_cart(session):
