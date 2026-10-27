@@ -1,67 +1,80 @@
 {% extends "base/base.html" %}
-
 {% block title %}Add Hotel{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+<style>
+.hotel-setup-page{max-width:1120px;margin:0 auto;padding:28px 22px 48px}
+.hotel-setup-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:24px;flex-wrap:wrap}
+.hotel-setup-eyebrow{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
+.hotel-setup-head h1{font-size:1.8rem;font-weight:750;margin:5px 0 7px;color:#172033}
+.hotel-setup-subtitle{color:#64748b;margin:0;max-width:680px}
+.hotel-setup-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 26px rgba(15,23,42,.055);overflow:hidden;margin-bottom:20px}
+.hotel-setup-card-head{padding:21px 24px 16px;border-bottom:1px solid #edf1f5}
+.hotel-setup-card-head h2{font-size:1.08rem;font-weight:700;color:#1e293b;margin:0 0 5px}
+.hotel-setup-card-head p{font-size:.9rem;color:#64748b;margin:0}
+.hotel-setup-card-body{padding:24px}
+.hotel-setup-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px}
+.hotel-setup-field{min-width:0}
+.hotel-setup-field.full{grid-column:1/-1}
+.hotel-setup-field label{display:block;font-size:.9rem;font-weight:650;color:#334155;margin-bottom:7px}
+.hotel-setup-field input,.hotel-setup-field select,.hotel-setup-field textarea{display:block;width:100%;max-width:100%;min-height:44px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:10px 12px;background:#fff;color:#0f172a;font:inherit}
+.hotel-setup-field textarea{min-height:96px;resize:vertical}
+.hotel-setup-field input[type=file]{padding:8px;background:#f8fafc}
+.hotel-setup-field input:focus,.hotel-setup-field textarea:focus,.hotel-setup-field select:focus{outline:3px solid rgba(37,99,235,.14);border-color:#3b82f6}
+.hotel-setup-required{color:#dc2626}
+.hotel-setup-actions{display:flex;gap:10px;flex-wrap:wrap;padding:0 0 4px}
+.hotel-setup-actions .btn{min-height:44px;padding:10px 18px;border-radius:9px;font-weight:650;text-decoration:none}
+@media(max-width:700px){.hotel-setup-page{padding:20px 14px 32px}.hotel-setup-grid{grid-template-columns:minmax(0,1fr);gap:16px}.hotel-setup-field.full{grid-column:auto}.hotel-setup-card-head,.hotel-setup-card-body{padding:18px}.hotel-setup-head h1{font-size:1.5rem}}
+</style>
+<div class="hotel-setup-page">
+    <div class="hotel-setup-head">
         <div>
-            <div class="text-uppercase small text-muted fw-semibold mb-1">Business setup</div>
-            <h1 class="h3 mb-1">Add a Hotel</h1>
-            <p class="text-muted mb-0">Create the hotel and enter the business details used on its receipts.</p>
+            <div class="hotel-setup-eyebrow">Business setup</div>
+            <h1>Add a Hotel</h1>
+            <p class="hotel-setup-subtitle">Create the property and enter the business details that will appear on its receipts.</p>
         </div>
         <a class="btn btn-outline-secondary" href="{% url 'inventory:hotel_list' %}">← Back to Hotels</a>
     </div>
 
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+        {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}{% endif %}
 
-        {% if form.non_field_errors %}
-            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-        {% endif %}
-
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h2 class="h5 mb-1">Hotel details</h2>
-                <p class="small text-muted mb-0">Used to identify this property in the system.</p>
-            </div>
-            <div class="card-body px-4 pb-4">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="id_name" class="form-label">Hotel Name <span class="text-danger">*</span></label>
-                        <input id="id_name" class="form-control" type="text" name="name" value="{{ request.POST.name|default:'' }}" required>
+        <section class="hotel-setup-card">
+            <div class="hotel-setup-card-head"><h2>Hotel details</h2><p>Basic identification used throughout Hotel HMS.</p></div>
+            <div class="hotel-setup-card-body">
+                <div class="hotel-setup-grid">
+                    <div class="hotel-setup-field">
+                        <label for="id_name">Hotel name <span class="hotel-setup-required">*</span></label>
+                        <input id="id_name" type="text" name="name" value="{{ request.POST.name|default:'' }}" placeholder="e.g. City Center Hotels Kano" required>
                     </div>
-                    <div class="col-md-6">
-                        <label for="id_location" class="form-label">Location / Short Description</label>
-                        <input id="id_location" class="form-control" type="text" name="location" value="{{ request.POST.location|default:'' }}" placeholder="e.g. Kano, Nigeria">
+                    <div class="hotel-setup-field">
+                        <label for="id_location">Location / short description</label>
+                        <input id="id_location" type="text" name="location" value="{{ request.POST.location|default:'' }}" placeholder="e.g. Farm Centre, Kano">
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h2 class="h5 mb-1">Business profile & receipt details</h2>
-                <p class="small text-muted mb-0">These details are specific to this hotel. The organization logo is managed separately.</p>
-            </div>
-            <div class="card-body px-4 pb-4">
-                <div class="row g-3">
+        <section class="hotel-setup-card">
+            <div class="hotel-setup-card-head"><h2>Business profile & receipt details</h2><p>These details belong to this hotel. Organization branding is managed separately.</p></div>
+            <div class="hotel-setup-card-body">
+                <div class="hotel-setup-grid">
                     {% for field in form %}
                         {% if field.name != "name" %}
-                        <div class="{% if field.name == 'address' %}col-12{% elif field.name == 'logo' %}col-12{% else %}col-md-6{% endif %}">
-                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
-                            {{ field }}
-                            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
-                        </div>
+                            <div class="hotel-setup-field {% if field.name == 'address' or field.name == 'logo' %}full{% endif %}">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="hotel-setup-required">*</span>{% endif %}</label>
+                                {{ field }}
+                                {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                                {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            </div>
                         {% endif %}
                     {% endfor %}
                 </div>
             </div>
-        </div>
-
-        <div class="d-flex flex-wrap gap-2 mb-4">
-            <button class="btn btn-primary px-4" type="submit">Create Hotel & Save Profile</button>
+        </section>
+        <div class="hotel-setup-actions">
+            <button class="btn btn-primary" type="submit">Create Hotel & Save Profile</button>
             <a class="btn btn-light border" href="{% url 'inventory:hotel_list' %}">Cancel</a>
         </div>
     </form>
