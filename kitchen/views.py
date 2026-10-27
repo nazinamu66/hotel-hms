@@ -1409,15 +1409,20 @@ def recipe_version_draft_create(request, recipe_id):
         change_note=request.POST.get("change_note", "").strip(),
     )
 
-    # Initial draft is seeded from the currently configured recipe.
-    # Draft-specific ingredient editing is the next step; never edit a
-    # previously approved snapshot in place.
-    for item in recipe.items.select_related("ingredient").all():
+    # Once a recipe has an approved snapshot, that snapshot is the source
+    # of truth for the next draft. Legacy RecipeItem rows are only the
+    # bootstrap source for recipes that have never been versioned.
+    if recipe.active_version_id:
+        source_items = recipe.active_version.items.select_related("ingredient").all()
+    else:
+        source_items = recipe.items.select_related("ingredient").all()
+
+    for item in source_items:
         RecipeVersionItem.objects.create(
             recipe_version=version,
             ingredient=item.ingredient,
             quantity=item.quantity,
-            unit=getattr(item.ingredient, "base_unit", "") or "",
+            unit=(getattr(item, "unit", "") or getattr(item.ingredient, "base_unit", "") or ""),
             control_mode=item.control_mode,
             tolerance_percent=item.tolerance_percent,
             tolerance_quantity=item.tolerance_quantity,
@@ -1663,6 +1668,12 @@ def recipe_version_approve(request, version_id):
             return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
         if item.ingredient.hotel_id != version.recipe.product.hotel_id:
             messages.error(request, "Recipe ingredients and finished food must belong to the same hotel.")
+            return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
+        if not item.ingredient.departments.filter(pk=request.user.department_id).exists():
+            messages.error(
+                request,
+                f"{item.ingredient.name} is not assigned to this kitchen.",
+            )
             return redirect("kitchen_recipe_version_history", recipe_id=version.recipe_id)
 
     now = timezone.now()
