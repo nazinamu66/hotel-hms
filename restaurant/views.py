@@ -670,6 +670,7 @@ def close_shift(request):
         "CASH": Decimal("0.00"),
         "POS": Decimal("0.00"),
         "TRANSFER": Decimal("0.00"),
+        "REFUND": Decimal("0.00"),
     }
 
     for payment in payments:
