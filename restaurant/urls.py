@@ -27,6 +27,7 @@ urlpatterns = [
     path("cart/clear/", cart_clear, name="cart_clear"),
     path("pos/commit/", pos_commit, name="restaurant_pos_commit"),
     path("orders/", pos_order_list, name="restaurant_order_list"),
+    path("orders/<int:order_id>/receipt/", pos_order_receipt, name="restaurant_order_receipt"),
     path("orders/<int:order_id>/", pos_order_detail, name="restaurant_order_detail"),
     path("shift/open/", open_shift, name="restaurant_shift_open"),
     path("shift/close/", close_shift, name="restaurant_shift_close"),
