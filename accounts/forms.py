@@ -18,6 +18,11 @@ class InitialOrganizationForm(forms.Form):
         label="Organization Name",
     )
 
+    logo = forms.ImageField(
+        required=False,
+        label="Organization Logo",
+    )
+
 
 class InitialHotelProfileForm(forms.Form):
 
