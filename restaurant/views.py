@@ -509,7 +509,16 @@ def pos_order_receipt(request, order_id):
         for item in order.items.all()
     ]
 
-    payment_label = "ROOM CHARGE" if order.folio.folio_type == "ROOM" else "WALK-IN SALE"
+    payment = Payment.objects.filter(
+        reference=f"POS-{order.id}",
+    ).order_by("-collected_at").first()
+    if order.folio.folio_type == "ROOM":
+        payment_label = "ROOM CHARGE"
+    elif payment:
+        payment_label = payment.get_method_display()
+    else:
+        payment_label = "NOT RECORDED"
+
     if order.status == "OPEN":
         payment_label = "UNSETTLED"
     elif order.status == "CANCELLED":
@@ -522,6 +531,7 @@ def pos_order_receipt(request, order_id):
         "business_profile": business_profile,
         "receipt_items": receipt_items,
         "payment_label": payment_label,
+        "generated_at": timezone.now(),
         "currency": business_profile.currency if business_profile else "₦",
     })
 
