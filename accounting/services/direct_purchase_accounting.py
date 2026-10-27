@@ -16,23 +16,28 @@ def money(value):
 
 def get_supplier_advances_account(hotel):
     """Return the hotel's system account for payments made before receipt."""
-    try:
-        return get_system_account(hotel, SUPPLIER_ADVANCES)
-    except Account.DoesNotExist:
-        account, _ = Account.objects.get_or_create(
-            hotel=hotel,
-            system_key=SUPPLIER_ADVANCES,
-            defaults={
-                "code": "1220",
-                "name": "Supplier Advances",
-                "account_type": "current_asset",
-                "is_system": True,
-                "allow_posting": True,
-                "allow_manual_entries": False,
-                "is_active": True,
-            },
-        )
+    account = Account.objects.filter(
+        hotel=hotel, system_key=SUPPLIER_ADVANCES, is_system=True
+    ).first()
+    if account:
         return account
+
+    # Existing hotels may have been set up before this control account existed.
+    # Use 1220 when available, otherwise select the next unused nearby code.
+    code = 1220
+    while Account.objects.filter(hotel=hotel, code=str(code)).exists():
+        code += 1
+    return Account.objects.create(
+        hotel=hotel,
+        code=str(code),
+        name="Supplier Advances",
+        account_type="current_asset",
+        system_key=SUPPLIER_ADVANCES,
+        is_system=True,
+        allow_posting=True,
+        allow_manual_entries=False,
+        is_active=True,
+    )
 
 
 def direct_purchase_received_value(purchase):
