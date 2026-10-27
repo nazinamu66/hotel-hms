@@ -2,60 +2,82 @@
 {% block title %}Organization Profile | Hotel HMS{% endblock %}
 {% block content %}
 <style>
-.org-profile-page{max-width:1040px;margin:0 auto;padding:30px 24px 48px}
-.org-profile-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px}
-.org-profile-kicker{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
-.org-profile-head h1{font-size:1.85rem;font-weight:760;color:#172033;margin:4px 0 7px}
-.org-profile-head p{color:#64748b;margin:0;max-width:700px}
-.org-profile-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 26px rgba(15,23,42,.055);overflow:hidden}
-.org-profile-card-head{padding:22px 24px 17px;border-bottom:1px solid #edf1f5}
-.org-profile-card-head h2{font-size:1.08rem;font-weight:700;color:#1e293b;margin:0 0 5px}
-.org-profile-card-head p{font-size:.9rem;color:#64748b;margin:0}
-.org-profile-card-body{padding:24px}
-.org-profile-field{margin-bottom:22px;max-width:100%}
-.org-profile-field label{display:block;font-size:.9rem;font-weight:650;color:#334155;margin-bottom:8px}
-.org-profile-field input,.org-profile-field select,.org-profile-field textarea{display:block;width:100%;max-width:100%;min-height:46px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:11px 13px;background:#fff;color:#0f172a;font:inherit}
-.org-profile-field input[type=file]{padding:9px;background:#f8fafc}
-.org-profile-field input:focus{outline:3px solid rgba(37,99,235,.14);border-color:#3b82f6}
-.org-profile-logo{display:inline-flex;align-items:center;justify-content:center;min-width:140px;min-height:100px;padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;margin-bottom:22px}
-.org-profile-logo img{max-width:240px;max-height:140px;object-fit:contain}
-.org-profile-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:6px}
-.org-profile-actions .btn{min-height:44px;padding:10px 18px;border-radius:9px;font-weight:650;text-decoration:none}
-.org-profile-note{display:flex;gap:12px;align-items:flex-start;margin-top:18px;padding:15px 17px;background:#eff6ff;border:1px solid #dbeafe;border-radius:12px;color:#1e40af;font-size:.9rem}
-@media(max-width:700px){.org-profile-page{padding:22px 14px 32px}.org-profile-head h1{font-size:1.55rem}.org-profile-card-head,.org-profile-card-body{padding:18px}}
+.org-page{max-width:1040px;margin:0 auto;padding:30px 24px 48px}
+.org-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:25px}
+.org-kicker{font-size:.75rem;font-weight:750;letter-spacing:.11em;text-transform:uppercase;color:#64748b}
+.org-head h1{font-size:1.9rem;font-weight:780;letter-spacing:-.035em;color:#172033;margin:5px 0 8px}
+.org-head p{color:#64748b;margin:0;max-width:680px;line-height:1.55}
+.org-card{background:#fff;border:1px solid #e2e8f0;border-radius:17px;box-shadow:0 10px 30px rgba(15,23,42,.055);overflow:hidden}
+.org-card-head{padding:23px 26px 19px;border-bottom:1px solid #edf1f5}
+.org-card-head h2{font-size:1.08rem;font-weight:750;color:#1e293b;margin:0 0 5px}
+.org-card-head p{font-size:.9rem;color:#64748b;margin:0;line-height:1.5}
+.org-card-body{padding:26px}
+.org-field{margin-bottom:24px}
+.org-field label{display:block;font-size:.88rem;font-weight:700;color:#334155;margin-bottom:8px}
+.org-field input:not([type=checkbox]),.org-field select,.org-field textarea{display:block;width:100%;max-width:100%;min-height:47px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:11px 13px;background:#fff;color:#0f172a;font:inherit;transition:border-color .15s,box-shadow .15s}
+.org-field input:focus,.org-field select:focus,.org-field textarea:focus{outline:0;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.13)}
+.org-field input[type=file]{padding:10px;background:#f8fafc}
+.org-help{margin-top:7px;color:#64748b;font-size:.82rem;line-height:1.5}
+.org-logo-panel{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:18px;border:1px solid #e2e8f0;border-radius:13px;background:#f8fafc;margin-bottom:25px}
+.org-logo-preview{display:flex;align-items:center;justify-content:center;width:190px;height:125px;border:1px dashed #cbd5e1;border-radius:11px;background:#fff;overflow:hidden;flex-shrink:0}
+.org-logo-preview img{max-width:100%;max-height:100%;object-fit:contain;padding:8px}
+.org-logo-placeholder{display:flex;flex-direction:column;align-items:center;gap:7px;color:#94a3b8;font-size:.8rem;text-align:center;padding:12px}
+.org-logo-copy{flex:1;min-width:220px}
+.org-logo-copy strong{display:block;color:#1e293b;font-size:.92rem;margin-bottom:5px}
+.org-logo-copy p{margin:0;color:#64748b;font-size:.85rem;line-height:1.5}
+.org-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:20px;border-top:1px solid #edf1f5}
+.org-actions .btn{min-height:44px;padding:10px 18px;border-radius:9px;font-weight:700;text-decoration:none}
+.org-note{display:flex;align-items:flex-start;gap:12px;margin-top:18px;padding:16px 18px;background:#eff6ff;border:1px solid #dbeafe;border-radius:12px;color:#1e40af;font-size:.89rem;line-height:1.55}
+.org-note-icon{font-size:1.15rem;line-height:1.2}
+@media(max-width:700px){.org-page{padding:22px 14px 32px}.org-head h1{font-size:1.58rem}.org-card-head,.org-card-body{padding:18px}.org-logo-panel{padding:14px}.org-logo-preview{width:100%;height:150px}.org-actions{justify-content:stretch}.org-actions .btn{flex:1;text-align:center}}
 </style>
-<div class="org-profile-page">
+<div class="org-page">
     {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}{% endif %}
-    <div class="org-profile-head">
-        <div>
-            <div class="org-profile-kicker">Organization settings</div>
-            <h1>Organization Profile</h1>
-            <p>Manage the shared identity displayed across your hotels and their customer receipts.</p>
-        </div>
+    <header class="org-head">
+        <div><div class="org-kicker">Organization settings</div><h1>Organization Profile</h1><p>Manage the shared name and branding used across your hotel properties and customer receipts.</p></div>
         <a href="{% url 'hotel_dashboard' %}" class="btn btn-outline-secondary">← Back to Dashboard</a>
-    </div>
-
+    </header>
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
-        <section class="org-profile-card">
-            <div class="org-profile-card-head"><h2>Organization identity</h2><p>The organization name and logo are shared. Each hotel maintains its own address and contact details.</p></div>
-            <div class="org-profile-card-body">
-                {% if organization.logo %}
-                    <div class="org-profile-logo"><img src="{{ organization.logo.url }}" alt="{{ organization.name }} logo"></div>
-                {% endif %}
+        <section class="org-card">
+            <div class="org-card-head"><h2>Organization identity</h2><p>These details belong to the organization, not to an individual hotel.</p></div>
+            <div class="org-card-body">
+                <div class="org-logo-panel">
+                    <div class="org-logo-preview">
+                        {% if organization.logo %}<img id="org-logo-image" src="{{ organization.logo.url }}" alt="{{ organization.name }} logo">
+                        {% else %}<img id="org-logo-image" alt="Organization logo preview" hidden><div id="org-logo-placeholder" class="org-logo-placeholder"><span style="font-size:1.7rem">▧</span><span>No logo uploaded</span></div>{% endif %}
+                    </div>
+                    <div class="org-logo-copy"><strong>Shared organization logo</strong><p>Use a clear logo image. It will be available for receipts across the organization's hotels. Hotel-specific logos can still be managed in each Business Profile.</p></div>
+                </div>
                 {% for field in form %}
-                    <div class="org-profile-field">
+                    <div class="org-field">
                         <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
                         {{ field }}
-                        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-                        {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        {% if field.help_text %}<div class="org-help">{{ field.help_text }}</div>{% endif %}
+                        {% for error in field.errors %}<div class="text-danger small mt-2">{{ error }}</div>{% endfor %}
                     </div>
                 {% endfor %}
-                <div class="org-profile-actions"><button type="submit" class="btn btn-primary">Save Organization Profile</button></div>
+                <div class="org-actions"><a href="{% url 'hotel_dashboard' %}" class="btn btn-outline-secondary">Cancel</a><button type="submit" class="btn btn-primary">Save Organization Profile</button></div>
             </div>
         </section>
     </form>
-    <div class="org-profile-note"><span aria-hidden="true">ⓘ</span><div><strong>Shared branding</strong><br>This logo belongs to the organization and can be shared by all hotels. Update hotel addresses, telephone numbers, emails and tax details from each hotel's Business Profile.</div></div>
+    <aside class="org-note"><span class="org-note-icon" aria-hidden="true">ⓘ</span><div><strong>Organization vs. hotel information</strong><br>The organization name and logo are shared. Address, phone, email, website, currency and tax/registration number are maintained separately in each hotel's Business Profile.</div></aside>
 </div>
+<script>
+(function(){
+    const input = document.getElementById("id_logo");
+    const preview = document.getElementById("org-logo-image");
+    const placeholder = document.getElementById("org-logo-placeholder");
+    if (!input || !preview) return;
+    input.addEventListener("change", function(){
+        const file = input.files && input.files[0];
+        if (!file) return;
+        if (!file.type || !file.type.startsWith("image/")) return;
+        preview.src = URL.createObjectURL(file);
+        preview.hidden = false;
+        if (placeholder) placeholder.style.display = "none";
+    });
+})();
+</script>
 {% endblock %}
