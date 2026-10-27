@@ -5,6 +5,8 @@ from django.db import transaction
 from django.views.decorators.http import require_POST
 from django.core.exceptions import PermissionDenied, ValidationError
 from accounts.decorators import role_required
+from accounts.forms import HotelBusinessProfileForm
+from core.models import BusinessProfile
 from decimal import Decimal, InvalidOperation
 from .services.setup_hotel import setup_new_hotel
 from .models import (
@@ -696,83 +698,69 @@ def hotel_list(request):
 @role_required("ADMIN", "DIRECTOR")
 @transaction.atomic
 def hotel_create(request):
+    if request.user.role not in {"ADMIN", "DIRECTOR"}:
+        raise PermissionDenied
+
+    if not request.user.organization_id:
+        raise PermissionDenied(
+            "Your account must be assigned to an organization before creating a hotel."
+        )
 
     if request.method == "POST":
-
-        name = request.POST.get(
-            "name",
-            "",
-        ).strip()
-
-        location = request.POST.get(
-            "location",
-            "",
-        ).strip()
+        name = request.POST.get("name", "").strip()
+        location = request.POST.get("location", "").strip()
 
         if not name:
-            messages.error(
-                request,
-                "Hotel name is required.",
-            )
+            messages.error(request, "Hotel name is required.")
             return redirect(request.path)
 
-        if Hotel.objects.filter(
-            name__iexact=name,
-        ).exists():
-
-            messages.error(
-                request,
-                "A hotel with this name already exists.",
-            )
+        if Hotel.objects.filter(name__iexact=name).exists():
+            messages.error(request, "A hotel with this name already exists.")
             return redirect(request.path)
 
-        # -------------------------------------------------
-        # Determine organization
-        # -------------------------------------------------
-
-        if request.user.role == "DIRECTOR":
-
-            if not request.user.organization_id:
-                raise PermissionDenied(
-                    "Director is not assigned to an organization."
-                )
-
-            organization = request.user.organization
-
-        elif request.user.role == "ADMIN":
-
-            # A platform ADMIN creating a hotel must belong
-            # to an organization first.
-            if not request.user.organization_id:
-                raise PermissionDenied(
-                    "Administrator must be assigned to an organization before creating a hotel."
-                )
-
-            organization = request.user.organization
-
-        else:
-            raise PermissionDenied
-
-        hotel = Hotel.objects.create(
-            organization=organization,
+        # Validate the complete hotel business profile before persisting
+        # the hotel, so a bad email/URL/image does not leave a partial record.
+        hotel = Hotel(
+            organization=request.user.organization,
             name=name,
             location=location,
         )
-
-        setup_new_hotel(hotel)
-
-        messages.success(
-            request,
-            f"Hotel '{hotel.name}' created and initialized successfully.",
+        profile = BusinessProfile(
+            hotel=hotel,
+            name=name,
+            country="Nigeria",
+            currency="₦",
+        )
+        form = HotelBusinessProfileForm(
+            request.POST,
+            request.FILES,
+            instance=profile,
         )
 
-        return redirect(
-            "inventory:hotel_list",
-        )
+        if form.is_valid():
+            hotel.save()
+            profile = form.save(commit=False)
+            profile.hotel = hotel
+            profile.save()
+            setup_new_hotel(hotel)
+
+            messages.success(
+                request,
+                f"Hotel '{hotel.name}' and its business profile were created successfully.",
+            )
+            return redirect("inventory:hotel_list")
+    else:
+        form = HotelBusinessProfileForm(initial={
+            "country": "Nigeria",
+            "currency": "₦",
+        })
 
     return render(
         request,
         "inventory/hotel_form.html",
+        {
+            "form": form,
+        },
     )
 
 
