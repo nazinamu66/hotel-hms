@@ -108,7 +108,7 @@ table.dp-table{width:100%;border-collapse:collapse;min-width:660px}
         {% elif dp.status == "RECEIVED" %}
           <div class="dp-note">All ordered quantities have been received.</div>
         {% elif dp.status == "APPROVED" %}
-          <div class="dp-note">This purchase is approved. Record supplier payment through Accounting when payment is made; delivery entry becomes available after the payment is recorded.</div>
+          <div class="dp-note">This purchase is approved. Record the quantities physically received now, whether or not the supplier has been paid. Record any supplier payment through Accounting when it is made.</div>
         {% endif %}
       </section>
     </main>
