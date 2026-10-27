@@ -325,6 +325,13 @@
                 </div>
             </div>
 
+            <div class="reconciliation-item">
+                <div class="reconciliation-label">Refund transactions</div>
+                <div class="reconciliation-value">
+                    ₦{{ payment_summary.REFUND|floatformat:2 }}
+                </div>
+            </div>
+
         </div>
 
     </div>
@@ -344,10 +351,12 @@
                 Expected physical cash: ₦{{ expected_cash|floatformat:2 }}
             </strong><br>
 
-            This is your opening cash plus net cash payments recorded during
-            the shift. Count the physical cash yourself and enter the actual
-            amount below. Any difference will be recorded as a variance and
-            must be explained by the recipient.
+            This is your opening cash plus payments explicitly recorded as Cash.
+            Refund transactions are listed separately below because the system
+            does not yet record which original tender was used to return the money.
+            Reconcile any cash refund against the physical till before entering
+            your count. Any difference will be recorded as a variance and must
+            be explained by the recipient.
         </div>
 
         <form method="post">
