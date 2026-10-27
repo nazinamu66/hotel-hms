@@ -67,7 +67,7 @@ def has_legacy_direct_purchase_obligation(purchase):
 
 
 def post_direct_purchase_receipt(
-    *, purchase, item, received_now, prior_received_value,
+    *, purchase, item, received_now,
     advance_available, created_by,
 ):
     """
