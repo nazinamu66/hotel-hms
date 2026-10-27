@@ -1,486 +1,79 @@
 {% extends "base/base.html" %}
-
-{% block title %}User Management{% endblock %}
-
-
-
+{% block title %}Staff Users | Hotel HMS{% endblock %}
 {% block content %}
-
 <style>
-    .user-page {
-        max-width: 1400px;
-        margin: 0 auto;
-    }
-
-    .filter-card,
-    .table-card {
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    }
-
-    .filter-card {
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-
-    .filter-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
-        gap: 12px;
-        align-items: end;
-    }
-
-    .filter-group label {
-        display: block;
-        font-size: 13px;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 6px;
-    }
-
-    .filter-group input,
-    .filter-group select {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 10px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        background: #fff;
-        font-size: 14px;
-    }
-
-    .filter-actions {
-        display: flex;
-        gap: 8px;
-    }
-
-    .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 9px 14px;
-        border-radius: 8px;
-        border: 1px solid transparent;
-        text-decoration: none;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        white-space: nowrap;
-    }
-
-    .btn-primary {
-        background: #2563eb;
-        color: #fff;
-    }
-
-    .btn-secondary {
-        background: #fff;
-        color: #374151;
-        border-color: #d1d5db;
-    }
-
-    .btn-edit {
-        background: #eff6ff;
-        color: #1d4ed8;
-        border-color: #bfdbfe;
-    }
-
-    .btn-danger {
-        background: #fef2f2;
-        color: #b91c1c;
-        border-color: #fecaca;
-    }
-
-    .btn-success {
-        background: #f0fdf4;
-        color: #15803d;
-        border-color: #bbf7d0;
-    }
-
-    .table-wrapper {
-        overflow-x: auto;
-    }
-
-    .users-table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 900px;
-    }
-
-    .users-table th {
-        padding: 13px 16px;
-        text-align: left;
-        background: #f9fafb;
-        color: #6b7280;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: .04em;
-        border-bottom: 1px solid #e5e7eb;
-    }
-
-    .users-table td {
-        padding: 15px 16px;
-        border-bottom: 1px solid #f0f0f0;
-        vertical-align: middle;
-        font-size: 14px;
-    }
-
-    .users-table tr:last-child td {
-        border-bottom: none;
-    }
-
-    .user-name {
-        font-weight: 700;
-        color: #111827;
-    }
-
-    .user-email {
-        color: #6b7280;
-        font-size: 13px;
-    }
-
-    .role-badge,
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 5px 9px;
-        border-radius: 999px;
-        font-size: 12px;
-        font-weight: 700;
-    }
-
-    .role-badge {
-        background: #f3f4f6;
-        color: #374151;
-    }
-
-    .status-active {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .status-inactive {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-
-    .actions {
-        display: flex;
-        gap: 7px;
-        flex-wrap: wrap;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 50px 20px;
-        color: #6b7280;
-    }
-
-    .filter-title {
-        font-size: 15px;
-        font-weight: 700;
-        color: #111827;
-        margin-bottom: 14px;
-    }
-
-    @media (max-width: 1100px) {
-        .filter-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .filter-actions {
-            grid-column: span 2;
-        }
-    }
-
-    @media (max-width: 650px) {
-        .filter-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .filter-actions {
-            grid-column: auto;
-        }
-
-        .filter-actions .btn {
-            flex: 1;
-        }
-    }
+.staff-page{max-width:1240px;margin:0 auto;padding:30px 24px 48px}
+.staff-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px}
+.staff-kicker{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
+.staff-head h1{font-size:1.85rem;font-weight:760;color:#172033;margin:4px 0 7px}
+.staff-head p{color:#64748b;margin:0}
+.staff-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 14px;border-radius:9px;font-size:.86rem;font-weight:650;text-decoration:none;white-space:nowrap;cursor:pointer}
+.staff-btn-primary{background:#2563eb;color:#fff;border:1px solid #2563eb}
+.staff-btn-primary:hover{background:#1d4ed8;color:#fff}
+.staff-btn-secondary{background:#fff;color:#334155;border:1px solid #cbd5e1}
+.staff-btn-edit{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.staff-btn-danger{background:#fff1f2;color:#be123c;border:1px solid #fecdd3}
+.staff-btn-success{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+.staff-filter,.staff-table-card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;box-shadow:0 8px 26px rgba(15,23,42,.045);overflow:hidden;margin-bottom:20px}
+.staff-section-head{padding:20px 22px;border-bottom:1px solid #edf1f5}
+.staff-section-head h2{font-size:1.03rem;font-weight:700;color:#1e293b;margin:0 0 4px}
+.staff-section-head p{font-size:.88rem;color:#64748b;margin:0}
+.staff-filter-body{padding:20px 22px}
+.staff-filter-grid{display:grid;grid-template-columns:minmax(190px,2fr) repeat(4,minmax(125px,1fr)) auto;gap:13px;align-items:end}
+.staff-field{min-width:0}
+.staff-field label{display:block;font-size:.82rem;font-weight:650;color:#475569;margin-bottom:7px}
+.staff-field input,.staff-field select{display:block;width:100%;min-height:43px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:9px 11px;background:#fff;color:#0f172a;font:inherit}
+.staff-filter-actions{display:flex;gap:8px}
+.staff-table-wrap{overflow-x:auto}
+.staff-table{width:100%;border-collapse:separate;border-spacing:0;min-width:900px}
+.staff-table th{padding:14px 17px;text-align:left;background:#f8fafc;color:#64748b;font-size:.73rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e8edf3}
+.staff-table td{padding:15px 17px;border-bottom:1px solid #edf1f5;vertical-align:middle;color:#334155}
+.staff-table tbody tr:last-child td{border-bottom:0}
+.staff-table tbody tr:hover{background:#fbfdff}
+.staff-name{font-weight:700;color:#172033}
+.staff-email{font-size:.82rem;color:#64748b;margin-top:3px}
+.staff-chip{display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:.77rem;font-weight:700}
+.staff-chip.active{background:#dcfce7;color:#166534}
+.staff-chip.inactive{background:#fee2e2;color:#991b1b}
+.staff-actions{display:flex;gap:7px;flex-wrap:wrap}
+.staff-empty{text-align:center;padding:40px 20px;color:#64748b}
+@media(max-width:1150px){.staff-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.staff-filter-actions{grid-column:1/-1}}
+@media(max-width:700px){.staff-page{padding:22px 14px 32px}.staff-head h1{font-size:1.55rem}.staff-filter-grid{grid-template-columns:1fr}.staff-filter-actions{grid-column:auto}.staff-filter-actions .staff-btn{flex:1}.staff-section-head,.staff-filter-body{padding:17px}}
 </style>
-
-<div class="user-page">
-
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:20px;">
-        <div>
-            <h2 style="margin:0;">User Management</h2>
-            <p style="margin:6px 0 0; color:#6b7280;">
-                Manage users, roles, access and account status.
-            </p>
-        </div>
-
-        <a href="{% url 'accounts_user_create' %}" class="btn btn-primary">
-            + Create User
-        </a>
+<div class="staff-page">
+    {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}{% endif %}
+    <div class="staff-head">
+        <div><div class="staff-kicker">Access administration</div><h1>Staff Users</h1><p>Manage accounts, roles, hotel assignments, departments and account status.</p></div>
+        <a href="{% url 'accounts_user_create' %}" class="staff-btn staff-btn-primary">＋ Create User</a>
     </div>
-
-    <!-- FILTERS -->
-
-
-<div class="user-page">
-
-    <!-- FILTERS -->
-    <div class="filter-card">
-
-        <div class="filter-title">
-            Filter Users
+    <section class="staff-filter">
+        <div class="staff-section-head"><h2>Find staff users</h2><p>Filter by identity, role, hotel, department or account status.</p></div>
+        <div class="staff-filter-body">
+            <form method="get"><div class="staff-filter-grid">
+                <div class="staff-field"><label for="search">Search</label><input type="text" id="search" name="search" value="{{ filter_search }}" placeholder="Username or email"></div>
+                <div class="staff-field"><label for="role">Role</label><select id="role" name="role"><option value="">All roles</option>{% for value,label in roles %}<option value="{{ value }}" {% if filter_role == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                <div class="staff-field"><label for="hotel">Hotel</label><select id="hotel" name="hotel"><option value="">All hotels</option>{% for hotel in hotels %}<option value="{{ hotel.id }}" {% if filter_hotel == hotel.id|stringformat:"s" %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}</select></div>
+                <div class="staff-field"><label for="department">Department</label><select id="department" name="department"><option value="">All departments</option>{% for department in departments %}<option value="{{ department.id }}" {% if filter_department == department.id|stringformat:"s" %}selected{% endif %}>{{ department.hotel.name }} — {{ department.name }}</option>{% endfor %}</select></div>
+                <div class="staff-field"><label for="status">Status</label><select id="status" name="status"><option value="">All statuses</option><option value="active" {% if filter_status == "active" %}selected{% endif %}>Active</option><option value="inactive" {% if filter_status == "inactive" %}selected{% endif %}>Inactive</option></select></div>
+                <div class="staff-filter-actions"><button type="submit" class="staff-btn staff-btn-primary">Apply filters</button><a href="{% url 'accounts_users' %}" class="staff-btn staff-btn-secondary">Clear</a></div>
+            </div></form>
         </div>
-
-        <form method="get">
-
-            <div class="filter-grid">
-
-                <div class="filter-group">
-                    <label for="search">Search</label>
-                    <input
-                        type="text"
-                        id="search"
-                        name="search"
-                        value="{{ filter_search }}"
-                        placeholder="Username or email"
-                    >
-                </div>
-
-
-                <div class="filter-group">
-                    <label for="role">Role</label>
-                    <select id="role" name="role">
-                        <option value="">All Roles</option>
-
-                        {% for value, label in roles %}
-                            <option
-                                value="{{ value }}"
-                                {% if filter_role == value %}selected{% endif %}
-                            >
-                                {{ label }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-
-                <div class="filter-group">
-                    <label for="hotel">Hotel</label>
-                    <select id="hotel" name="hotel">
-                        <option value="">All Hotels</option>
-
-                        {% for hotel in hotels %}
-                            <option
-                                value="{{ hotel.id }}"
-                                {% if filter_hotel == hotel.id|stringformat:"s" %}selected{% endif %}
-                            >
-                                {{ hotel.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-
-                <div class="filter-group">
-                    <label for="department">Department</label>
-                    <select id="department" name="department">
-                        <option value="">All Departments</option>
-
-                        {% for department in departments %}
-                            <option
-                                value="{{ department.id }}"
-                                {% if filter_department == department.id|stringformat:"s" %}selected{% endif %}
-                            >
-                                {{ department.hotel.name }} — {{ department.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-
-                <div class="filter-group">
-                    <label for="status">Status</label>
-                    <select id="status" name="status">
-                        <option value="">All Statuses</option>
-                        <option value="active" {% if filter_status == "active" %}selected{% endif %}>
-                            Active
-                        </option>
-                        <option value="inactive" {% if filter_status == "inactive" %}selected{% endif %}>
-                            Inactive
-                        </option>
-                    </select>
-                </div>
-
-
-                <div class="filter-actions">
-                    <button type="submit" class="btn btn-primary">
-                        Filter
-                    </button>
-
-                    <a href="{% url 'accounts_users' %}" class="btn btn-secondary">
-                        Clear
-                    </a>
-                </div>
-
-            </div>
-
-        </form>
-
-    </div>
-
-
-    <!-- USERS TABLE -->
-    <div class="table-card">
-
-        <div class="table-wrapper">
-
-            <table class="users-table">
-
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Role</th>
-                        <th>Hotel</th>
-                        <th>Department</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-
-
-                <tbody>
-
-                    {% for user in users %}
-
-                        <tr>
-
-                            <td>
-                                <div class="user-name">
-                                    {{ user.username }}
-                                </div>
-
-                                {% if user.email %}
-                                    <div class="user-email">
-                                        {{ user.email }}
-                                    </div>
-                                {% endif %}
-                            </td>
-
-
-                            <td>
-                                <span class="role-badge">
-                                    {{ user.get_role_display }}
-                                </span>
-                            </td>
-
-
-                            <td>
-                                {% if user.hotel %}
-                                    {{ user.hotel.name }}
-                                {% elif user.assigned_hotels.all %}
-                                    Multiple Hotels
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
-
-
-                            <td>
-                                {% if user.department %}
-                                    {{ user.department.name }}
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
-
-
-                            <td>
-                                {% if user.is_active %}
-                                    <span class="status-badge status-active">
-                                        Active
-                                    </span>
-                                {% else %}
-                                    <span class="status-badge status-inactive">
-                                        Inactive
-                                    </span>
-                                {% endif %}
-                            </td>
-
-
-                            <td>
-
-                                <div class="actions">
-
-                                    <a
-                                        href="{% url 'accounts_user_edit' user.id %}"
-                                        class="btn btn-edit"
-                                    >
-                                        Edit
-                                    </a>
-
-
-                                    {% if user != request.user %}
-
-                                        <form
-                                            method="post"
-                                            action="{% url 'accounts_user_toggle_active' user.id %}"
-                                            style="display:inline;"
-                                            onsubmit="return confirm('{% if user.is_active %}Make this user inactive?{% else %}Activate this user?{% endif %}');"
-                                        >
-                                            {% csrf_token %}
-
-                                            {% if user.is_active %}
-                                                <button
-                                                    type="submit"
-                                                    class="btn btn-danger"
-                                                >
-                                                    Make Inactive
-                                                </button>
-                                            {% else %}
-                                                <button
-                                                    type="submit"
-                                                    class="btn btn-success"
-                                                >
-                                                    Activate
-                                                </button>
-                                            {% endif %}
-
-                                        </form>
-
-                                    {% endif %}
-
-                                </div>
-
-                            </td>
-
-                        </tr>
-
-                    {% empty %}
-
-                        <tr>
-                            <td colspan="6">
-                                <div class="empty-state">
-                                    No users match the current filters.
-                                </div>
-                            </td>
-                        </tr>
-
-                    {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </div>
-
+    </section>
+    <section class="staff-table-card">
+        <div class="staff-section-head"><h2>User directory <span class="staff-email">({{ users|length }})</span></h2><p>Use Edit to update a user's access. Activation changes are available for other accounts.</p></div>
+        <div class="staff-table-wrap"><table class="staff-table">
+            <thead><tr><th>User</th><th>Role</th><th>Hotel</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>{% for user in users %}
+                <tr>
+                    <td><div class="staff-name">{{ user.username }}</div>{% if user.email %}<div class="staff-email">{{ user.email }}</div>{% endif %}</td>
+                    <td><span class="staff-chip">{{ user.get_role_display }}</span></td>
+                    <td>{% if user.hotel %}{{ user.hotel.name }}{% elif user.assigned_hotels.all %}Multiple hotels{% else %}<span class="staff-email">Not assigned</span>{% endif %}</td>
+                    <td>{% if user.department %}{{ user.department.name }}{% else %}<span class="staff-email">—</span>{% endif %}</td>
+                    <td>{% if user.is_active %}<span class="staff-chip active">Active</span>{% else %}<span class="staff-chip inactive">Inactive</span>{% endif %}</td>
+                    <td><div class="staff-actions"><a href="{% url 'accounts_user_edit' user.id %}" class="staff-btn staff-btn-edit">Edit</a>{% if user != request.user %}<form method="post" action="{% url 'accounts_user_toggle_active' user.id %}" onsubmit="return confirm('{% if user.is_active %}Make this user inactive?{% else %}Activate this user?{% endif %}');">{% csrf_token %}{% if user.is_active %}<button type="submit" class="staff-btn staff-btn-danger">Deactivate</button>{% else %}<button type="submit" class="staff-btn staff-btn-success">Activate</button>{% endif %}</form>{% endif %}</div></td>
+                </tr>
+            {% empty %}<tr><td colspan="6"><div class="staff-empty"><strong>No users found</strong><p class="mb-3">Try adjusting the filters or create a staff account.</p><a href="{% url 'accounts_user_create' %}" class="staff-btn staff-btn-primary">＋ Create User</a></div></td></tr>{% endfor %}</tbody>
+        </table></div>
+    </section>
 </div>
-
 {% endblock %}
