@@ -95,7 +95,6 @@ class DirectPurchaseAccountingOrderTests(TestCase):
             purchase=purchase,
             item=item,
             received_now=Decimal("6.000"),
-            prior_received_value=Decimal("0.00"),
             advance_available=Decimal("0.00"),
             created_by=self.manager,
         )
@@ -194,7 +193,6 @@ class DirectPurchaseAccountingOrderTests(TestCase):
             purchase=purchase,
             item=item,
             received_now=Decimal("4.000"),
-            prior_received_value=Decimal("6000.00"),
             advance_available=Decimal("4000.00"),
             created_by=self.manager,
         )
