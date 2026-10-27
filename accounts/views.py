@@ -88,20 +88,33 @@ def initial_setup(request):
     # STEP 1 — ORGANIZATION
     # ---------------------------------------------------------
     if step == 1:
-        form = InitialOrganizationForm(
-            initial=setup_data.get("organization", {})
-        )
+        organization_data = setup_data.get("organization", {})
+        form_initial = {
+            key: value
+            for key, value in organization_data.items()
+            if key != "logo_temp_path"
+        }
+        form = InitialOrganizationForm(initial=form_initial)
 
         if request.method == "POST":
-            form = InitialOrganizationForm(request.POST)
+            form = InitialOrganizationForm(request.POST, request.FILES)
 
             if form.is_valid():
-                setup_data["organization"] = {
-                    "organization_name": (
-                        form.cleaned_data["organization_name"]
-                    ),
+                new_organization_data = {
+                    "organization_name": form.cleaned_data["organization_name"],
                 }
+                logo = form.cleaned_data.get("logo")
+                if logo:
+                    temp_name = f"setup_uploads/{uuid4().hex}_{os.path.basename(logo.name)}"
+                    temp_path = default_storage.save(temp_name, logo)
+                    old_logo = organization_data.get("logo_temp_path")
+                    if old_logo and old_logo != temp_path and default_storage.exists(old_logo):
+                        default_storage.delete(old_logo)
+                    new_organization_data["logo_temp_path"] = temp_path
+                elif organization_data.get("logo_temp_path"):
+                    new_organization_data["logo_temp_path"] = organization_data["logo_temp_path"]
 
+                setup_data["organization"] = new_organization_data
                 request.session["initial_setup"] = setup_data
                 request.session.modified = True
 
@@ -471,11 +484,24 @@ def initial_setup(request):
                             # ---------------------------------
                             # ORGANIZATION
                             # ---------------------------------
-                            organization = (
-                                Organization.objects.create(
-                                    name=organization_name
-                                )
+                            organization = Organization.objects.create(
+                                name=organization_name
                             )
+
+                            organization_logo_temp_path = organization_data.get(
+                                "logo_temp_path"
+                            )
+                            if organization_logo_temp_path:
+                                if not default_storage.exists(organization_logo_temp_path):
+                                    raise ValidationError(
+                                        "The uploaded organization logo could not be found. Please upload it again."
+                                    )
+                                with default_storage.open(organization_logo_temp_path, "rb") as logo_file:
+                                    organization.logo.save(
+                                        os.path.basename(organization_logo_temp_path),
+                                        File(logo_file),
+                                        save=True,
+                                    )
 
                             # ---------------------------------
                             # HOTEL
@@ -577,19 +603,12 @@ def initial_setup(request):
                         # -------------------------------------
                         # CLEANUP TEMPORARY LOGO
                         # -------------------------------------
-                        logo_temp_path = hotel_data.get(
-                            "logo_temp_path"
-                        )
-
-                        if (
-                            logo_temp_path
-                            and default_storage.exists(
-                                logo_temp_path
-                            )
+                        for logo_temp_path in (
+                            hotel_data.get("logo_temp_path"),
+                            setup_data.get("organization", {}).get("logo_temp_path"),
                         ):
-                            default_storage.delete(
-                                logo_temp_path
-                            )
+                            if logo_temp_path and default_storage.exists(logo_temp_path):
+                                default_storage.delete(logo_temp_path)
 
                         # -------------------------------------
                         # CLEAR WIZARD SESSION
