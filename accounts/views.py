@@ -42,6 +42,7 @@ User = get_user_model()
 from django.core.exceptions import ValidationError
 
 from .forms import (
+    OrganizationProfileForm,
     InitialOrganizationForm,
     InitialHotelProfileForm,
     InitialFeaturesForm,
@@ -65,6 +66,32 @@ class CustomLoginView(LoginView):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+@login_required
+def organization_profile(request):
+    if request.user.role not in {"ADMIN", "DIRECTOR"}:
+        raise PermissionDenied
+
+    organization_id = request.user.organization_id
+    if not organization_id:
+        messages.error(request, "Your account is not assigned to an organization yet.")
+        return redirect("initial_setup")
+
+    organization = get_object_or_404(Organization, pk=organization_id)
+    if request.method == "POST":
+        form = OrganizationProfileForm(request.POST, request.FILES, instance=organization)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Organization profile updated successfully.")
+            return redirect("organization_profile")
+    else:
+        form = OrganizationProfileForm(instance=organization)
+
+    return render(request, "accounts/organization_profile.html", {
+        "form": form,
+        "organization": organization,
+    })
+
 
 @login_required
 def initial_setup(request):
