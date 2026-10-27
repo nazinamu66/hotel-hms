@@ -1,49 +1,61 @@
 {% extends "base/base.html" %}
-
-{% block title %}Organization Profile{% endblock %}
-
+{% block title %}Organization Profile | Hotel HMS{% endblock %}
 {% block content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="h3 mb-1">Organization Profile</h1>
-                    <p class="text-muted mb-0">Manage the shared identity used across your hotels.</p>
-                </div>
-                <a href="{% url 'hotel_dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    {% if organization.logo %}
-                        <div class="mb-4">
-                            <div class="text-muted small mb-2">Current organization logo</div>
-                            <img src="{{ organization.logo.url }}" alt="{{ organization.name }} logo" style="max-width: 180px; max-height: 110px; object-fit: contain;">
-                        </div>
-                    {% endif %}
-
-                    <form method="post" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-                        {% endif %}
-                        {% for field in form %}
-                            <div class="mb-3">
-                                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                                {{ field }}
-                                {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-                                {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-                            </div>
-                        {% endfor %}
-                        <div class="d-flex justify-content-end gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary">Save Organization Profile</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <p class="text-muted small mt-3">This logo belongs to the organization and can be shared by all hotels. Hotel addresses and contact details remain configured separately in each hotel's Business Profile.</p>
+<style>
+.org-profile-page{max-width:1040px;margin:0 auto;padding:30px 24px 48px}
+.org-profile-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px}
+.org-profile-kicker{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
+.org-profile-head h1{font-size:1.85rem;font-weight:760;color:#172033;margin:4px 0 7px}
+.org-profile-head p{color:#64748b;margin:0;max-width:700px}
+.org-profile-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 26px rgba(15,23,42,.055);overflow:hidden}
+.org-profile-card-head{padding:22px 24px 17px;border-bottom:1px solid #edf1f5}
+.org-profile-card-head h2{font-size:1.08rem;font-weight:700;color:#1e293b;margin:0 0 5px}
+.org-profile-card-head p{font-size:.9rem;color:#64748b;margin:0}
+.org-profile-card-body{padding:24px}
+.org-profile-field{margin-bottom:22px;max-width:100%}
+.org-profile-field label{display:block;font-size:.9rem;font-weight:650;color:#334155;margin-bottom:8px}
+.org-profile-field input,.org-profile-field select,.org-profile-field textarea{display:block;width:100%;max-width:100%;min-height:46px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:11px 13px;background:#fff;color:#0f172a;font:inherit}
+.org-profile-field input[type=file]{padding:9px;background:#f8fafc}
+.org-profile-field input:focus{outline:3px solid rgba(37,99,235,.14);border-color:#3b82f6}
+.org-profile-logo{display:inline-flex;align-items:center;justify-content:center;min-width:140px;min-height:100px;padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;margin-bottom:22px}
+.org-profile-logo img{max-width:240px;max-height:140px;object-fit:contain}
+.org-profile-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding-top:6px}
+.org-profile-actions .btn{min-height:44px;padding:10px 18px;border-radius:9px;font-weight:650;text-decoration:none}
+.org-profile-note{display:flex;gap:12px;align-items:flex-start;margin-top:18px;padding:15px 17px;background:#eff6ff;border:1px solid #dbeafe;border-radius:12px;color:#1e40af;font-size:.9rem}
+@media(max-width:700px){.org-profile-page{padding:22px 14px 32px}.org-profile-head h1{font-size:1.55rem}.org-profile-card-head,.org-profile-card-body{padding:18px}}
+</style>
+<div class="org-profile-page">
+    {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}{% endif %}
+    <div class="org-profile-head">
+        <div>
+            <div class="org-profile-kicker">Organization settings</div>
+            <h1>Organization Profile</h1>
+            <p>Manage the shared identity displayed across your hotels and their customer receipts.</p>
         </div>
+        <a href="{% url 'hotel_dashboard' %}" class="btn btn-outline-secondary">← Back to Dashboard</a>
     </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+        <section class="org-profile-card">
+            <div class="org-profile-card-head"><h2>Organization identity</h2><p>The organization name and logo are shared. Each hotel maintains its own address and contact details.</p></div>
+            <div class="org-profile-card-body">
+                {% if organization.logo %}
+                    <div class="org-profile-logo"><img src="{{ organization.logo.url }}" alt="{{ organization.name }} logo"></div>
+                {% endif %}
+                {% for field in form %}
+                    <div class="org-profile-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
+                        {{ field }}
+                        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                        {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endfor %}
+                <div class="org-profile-actions"><button type="submit" class="btn btn-primary">Save Organization Profile</button></div>
+            </div>
+        </section>
+    </form>
+    <div class="org-profile-note"><span aria-hidden="true">ⓘ</span><div><strong>Shared branding</strong><br>This logo belongs to the organization and can be shared by all hotels. Update hotel addresses, telephone numbers, emails and tax details from each hotel's Business Profile.</div></div>
 </div>
 {% endblock %}
