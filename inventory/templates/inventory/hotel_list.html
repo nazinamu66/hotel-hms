@@ -19,6 +19,7 @@
 <th>Name</th>
 <th>Location</th>
 <th>Status</th>
+<th>Business Profile</th>
 </tr>
 </thead>
 
@@ -35,10 +36,13 @@ Active
 Inactive
 {% endif %}
 </td>
+<td>
+    <a class="btn btn-sm btn-outline-primary" href="{% url 'hotel_business_profile' hotel.id %}">Edit Profile</a>
+</td>
 </tr>
 {% empty %}
 <tr>
-<td colspan="3">No hotels found.</td>
+<td colspan="4">No hotels found.</td>
 </tr>
 {% endfor %}
 
