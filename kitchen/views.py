@@ -1181,7 +1181,6 @@ def direct_purchase_receive(request, pk):
             purchase=dp,
             item=item,
             received_now=received_now,
-            prior_received_value=prior_received_value,
             advance_available=advance_remaining,
             created_by=request.user,
         )
