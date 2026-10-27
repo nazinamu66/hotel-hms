@@ -45,15 +45,9 @@
         </div>
     </div>
 
-    <div class="hotel-list-stats">
-        <div class="hotel-list-stat"><div class="hotel-list-stat-label">Total hotels</div><div class="hotel-list-stat-value">{{ hotels|length }}</div></div>
-        <div class="hotel-list-stat"><div class="hotel-list-stat-label">Active hotels</div><div class="hotel-list-stat-value">{{ hotels|length }}</div></div>
-        <div class="hotel-list-stat"><div class="hotel-list-stat-label">Business profiles</div><div class="hotel-list-stat-value">{{ hotels|length }}</div></div>
-    </div>
-
     <section class="hotel-list-card">
         <div class="hotel-list-card-head">
-            <h2>Hotel directory</h2>
+            <h2>Hotel directory <span class="text-muted small fw-normal">({{ hotels|length }})</span></h2>
             <span class="text-muted small">Select Edit Profile to update receipt details</span>
         </div>
         <div class="hotel-list-table-wrap">
