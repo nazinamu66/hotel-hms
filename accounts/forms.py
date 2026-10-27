@@ -594,3 +594,32 @@ class OrganizationProfileForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["name"].widget.attrs.setdefault("class", "form-control")
         self.fields["logo"].widget.attrs.setdefault("class", "form-control")
+
+
+
+class HotelBusinessProfileForm(forms.ModelForm):
+    class Meta:
+        from core.models import BusinessProfile
+        model = BusinessProfile
+        fields = [
+            "name", "address", "city", "state", "country",
+            "phone", "email", "website", "tax_number", "currency", "logo",
+        ]
+        labels = {
+            "name": "Hotel / Business Name",
+            "tax_number": "Tax / Registration Number",
+            "logo": "Hotel-specific Logo (optional)",
+        }
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "address": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "city": forms.TextInput(attrs={"class": "form-control"}),
+            "state": forms.TextInput(attrs={"class": "form-control"}),
+            "country": forms.TextInput(attrs={"class": "form-control"}),
+            "phone": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "website": forms.URLInput(attrs={"class": "form-control"}),
+            "tax_number": forms.TextInput(attrs={"class": "form-control"}),
+            "currency": forms.TextInput(attrs={"class": "form-control"}),
+            "logo": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
