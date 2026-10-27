@@ -1,37 +1,67 @@
 {% extends "base/base.html" %}
 
-{% block title %}Create Hotel{% endblock %}
+{% block title %}Add Hotel{% endblock %}
 
 {% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <div class="text-uppercase small text-muted fw-semibold mb-1">Business setup</div>
+            <h1 class="h3 mb-1">Add a Hotel</h1>
+            <p class="text-muted mb-0">Create the hotel and enter the business details used on its receipts.</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="{% url 'inventory:hotel_list' %}">← Back to Hotels</a>
+    </div>
 
-<h2>Create Hotel</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
 
-<form method="POST">
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
 
-{% csrf_token %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h2 class="h5 mb-1">Hotel details</h2>
+                <p class="small text-muted mb-0">Used to identify this property in the system.</p>
+            </div>
+            <div class="card-body px-4 pb-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="id_name" class="form-label">Hotel Name <span class="text-danger">*</span></label>
+                        <input id="id_name" class="form-control" type="text" name="name" value="{{ request.POST.name|default:'' }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="id_location" class="form-label">Location / Short Description</label>
+                        <input id="id_location" class="form-control" type="text" name="location" value="{{ request.POST.location|default:'' }}" placeholder="e.g. Kano, Nigeria">
+                    </div>
+                </div>
+            </div>
+        </div>
 
-<div class="card">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h2 class="h5 mb-1">Business profile & receipt details</h2>
+                <p class="small text-muted mb-0">These details are specific to this hotel. The organization logo is managed separately.</p>
+            </div>
+            <div class="card-body px-4 pb-4">
+                <div class="row g-3">
+                    {% for field in form %}
+                        <div class="{% if field.name == 'address' %}col-12{% elif field.name == 'logo' %}col-12{% else %}col-md-6{% endif %}">
+                            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
+                            {{ field }}
+                            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
 
-<label>Name</label><br>
-<input type="text" name="name" required>
-
-<br><br>
-
-<label>Location</label><br>
-<input type="text" name="location">
-
-<br><br>
-
-<button class="btn btn-primary" type="submit">
-Save
-</button>
-
-<a class="btn btn-secondary" href="{% url 'inventory:hotel_list' %}">
-Cancel
-</a>
-
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <button class="btn btn-primary px-4" type="submit">Create Hotel & Save Profile</button>
+            <a class="btn btn-light border" href="{% url 'inventory:hotel_list' %}">Cancel</a>
+        </div>
+    </form>
 </div>
-
-</form>
-
 {% endblock %}
