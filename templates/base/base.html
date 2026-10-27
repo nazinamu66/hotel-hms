@@ -86,6 +86,17 @@
 
 
 
+        {% if user|has_role:"ADMIN,DIRECTOR" and user.organization_id %}
+        <h4 class="menu-toggle {% if request.resolver_match.url_name == 'organization_profile' %}active-menu{% endif %}"
+            onclick="toggleMenu('organization_menu', this)">
+            <span class="arrow">▸</span>
+            Organization
+        </h4>
+        <div id="organization_menu" class="menu-section {% if request.resolver_match.url_name == 'organization_profile' %}open{% endif %}">
+            <a href="{% url 'organization_profile' %}">Organization Profile</a>
+        </div>
+        {% endif %}
+
         <!-- ========================= -->
         <!-- EXECUTIVE -->
         <!-- ========================= -->
