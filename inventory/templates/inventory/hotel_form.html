@@ -47,12 +47,14 @@
             <div class="card-body px-4 pb-4">
                 <div class="row g-3">
                     {% for field in form %}
+                        {% if field.name != "name" %}
                         <div class="{% if field.name == 'address' %}col-12{% elif field.name == 'logo' %}col-12{% else %}col-md-6{% endif %}">
                             <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
                             {{ field }}
                             {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
                             {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                         </div>
+                        {% endif %}
                     {% endfor %}
                 </div>
             </div>
