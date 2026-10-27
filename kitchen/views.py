@@ -1087,6 +1087,18 @@ def direct_purchase_receive(request, pk):
         messages.error(request, "This direct purchase has no items to receive.")
         return redirect("kitchen_incoming_deliveries")
 
+    from accounting.services.direct_purchase_accounting import (
+        direct_purchase_paid_value,
+        direct_purchase_received_value,
+        post_direct_purchase_receipt,
+    )
+    prior_received_value = direct_purchase_received_value(dp)
+    paid_to_date = direct_purchase_paid_value(dp.supplier.hotel, dp)
+    advance_remaining = max(
+        paid_to_date - prior_received_value,
+        Decimal("0.00"),
+    )
+
     # Validate every submitted quantity before changing any stock.
     receipt_quantities = {}
     total_to_receive = Decimal("0.000")
@@ -1161,6 +1173,21 @@ def direct_purchase_receive(request, pk):
             quantity_remaining=received_now,
             unit_cost=item.unit_cost,
             is_opening_balance=False,
+        )
+
+        # Recognize only goods physically received. If the supplier was paid
+        # in advance, apply that asset first; any remaining value becomes AP.
+        advance_applied = post_direct_purchase_receipt(
+            purchase=dp,
+            item=item,
+            received_now=received_now,
+            prior_received_value=prior_received_value,
+            advance_available=advance_remaining,
+            created_by=request.user,
+        )
+        advance_remaining = max(
+            advance_remaining - advance_applied,
+            Decimal("0.00"),
         )
 
         item.quantity_received = new_total_received
