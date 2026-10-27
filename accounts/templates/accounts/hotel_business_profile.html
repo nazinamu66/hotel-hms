@@ -1,33 +1,68 @@
 {% extends "base/base.html" %}
-
 {% block title %}Hotel Business Profile{% endblock %}
-
 {% block content %}
-<div class="container py-4">
-    <h2>Business Profile: {{ hotel.name }}</h2>
-    <p class="text-muted">These details appear on receipts for this hotel. The organization name and shared logo are managed separately.</p>
-
-    {% if profile.logo %}
-        <div class="mb-3">
-            <strong>Current hotel-specific logo</strong><br>
-            <img src="{{ profile.logo.url }}" alt="Hotel logo" style="max-width: 180px; max-height: 100px; object-fit: contain;">
+<style>
+.business-profile-page{max-width:1120px;margin:0 auto;padding:28px 22px 48px}
+.business-profile-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px}
+.business-profile-eyebrow{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
+.business-profile-head h1{font-size:1.8rem;font-weight:750;margin:5px 0 7px;color:#172033}
+.business-profile-subtitle{color:#64748b;margin:0;max-width:720px}
+.business-profile-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 26px rgba(15,23,42,.055);overflow:hidden}
+.business-profile-card-head{padding:21px 24px 16px;border-bottom:1px solid #edf1f5}
+.business-profile-card-head h2{font-size:1.08rem;font-weight:700;color:#1e293b;margin:0 0 5px}
+.business-profile-card-head p{font-size:.9rem;color:#64748b;margin:0}
+.business-profile-card-body{padding:24px}
+.business-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px}
+.business-profile-field{min-width:0}
+.business-profile-field.full{grid-column:1/-1}
+.business-profile-field label{display:block;font-size:.9rem;font-weight:650;color:#334155;margin-bottom:7px}
+.business-profile-field input,.business-profile-field select,.business-profile-field textarea{display:block;width:100%;max-width:100%;min-height:44px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:10px 12px;background:#fff;color:#0f172a;font:inherit}
+.business-profile-field textarea{min-height:96px;resize:vertical}
+.business-profile-field input[type=file]{padding:8px;background:#f8fafc}
+.business-profile-field input:focus,.business-profile-field textarea:focus,.business-profile-field select:focus{outline:3px solid rgba(37,99,235,.14);border-color:#3b82f6}
+.business-profile-logo{display:inline-flex;align-items:center;justify-content:center;min-width:120px;min-height:90px;padding:12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;margin-top:12px}
+.business-profile-logo img{max-width:220px;max-height:120px;object-fit:contain}
+.business-profile-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.business-profile-actions .btn{min-height:44px;padding:10px 18px;border-radius:9px;font-weight:650;text-decoration:none}
+@media(max-width:700px){.business-profile-page{padding:20px 14px 32px}.business-profile-grid{grid-template-columns:minmax(0,1fr);gap:16px}.business-profile-field.full{grid-column:auto}.business-profile-card-head,.business-profile-card-body{padding:18px}.business-profile-head h1{font-size:1.5rem}}
+</style>
+<div class="business-profile-page">
+    <div class="business-profile-head">
+        <div>
+            <div class="business-profile-eyebrow">Hotel configuration</div>
+            <h1>Business Profile</h1>
+            <p class="business-profile-subtitle">{{ hotel.name }} — these details appear on this hotel's receipts. The organization name and shared logo are managed separately.</p>
         </div>
-    {% endif %}
+        <a class="btn btn-outline-secondary" href="{% url 'inventory:hotel_list' %}">← Back to Hotels</a>
+    </div>
 
-    <form method="post" enctype="multipart/form-data" class="card p-4">
+    {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}{% endif %}
+    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-        {% for field in form %}
-            <div class="mb-3">
-                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-                {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        <section class="business-profile-card">
+            <div class="business-profile-card-head"><h2>Business and receipt information</h2><p>Keep the address, contact details and tax registration accurate for this property.</p></div>
+            <div class="business-profile-card-body">
+                <div class="business-profile-grid">
+                    {% for field in form %}
+                        <div class="business-profile-field {% if field.name == 'address' or field.name == 'logo' %}full{% endif %}">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
+                            {{ field }}
+                            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                            {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            {% if field.name == 'logo' and profile.logo %}
+                                <div class="business-profile-logo"><img src="{{ profile.logo.url }}" alt="Current hotel-specific logo"></div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="business-profile-actions">
+                    <button type="submit" class="btn btn-primary">Save Business Profile</button>
+                    <a class="btn btn-light border" href="{% url 'inventory:hotel_list' %}">Cancel</a>
+                </div>
             </div>
-        {% endfor %}
-        <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">Save Business Profile</button>
-            <a class="btn btn-secondary" href="{% url 'inventory:hotel_list' %}">Back to Hotels</a>
-        </div>
+        </section>
     </form>
 </div>
 {% endblock %}
