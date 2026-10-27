@@ -251,6 +251,15 @@
             </a>
 
             <a
+                href="{% url 'restaurant_order_receipt' order.id %}"
+                class="btn btn-primary"
+                target="_blank"
+                rel="noopener"
+            >
+                Print Receipt
+            </a>
+
+            <a
                 href="{% url 'restaurant_order_list' %}"
                 class="btn"
             >
