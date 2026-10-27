@@ -1185,7 +1185,7 @@ def supplier_payments(request):
             source = get_object_or_404(DirectPurchase.objects.select_for_update().select_related("supplier"), pk=source_id, supplier__hotel=hotel)
             if source.payment_source == "STAFF_FUNDS":
                 raise ValueError("Staff-funded urgent purchases must be handled through Staff Reimbursements, not supplier payments.")
-            if source.status not in ("APPROVED", "PAID", "RECEIVED"):
+            if source.status not in ("APPROVED", "PAID", "PARTIALLY_RECEIVED", "RECEIVED"):
                 raise ValueError("Only approved direct purchases can be paid.")
             return source, source.supplier, Decimal(str(source.total_cost)), f"Direct purchase #{source.pk}"
         if source_type == "LABOUR":
@@ -1223,45 +1223,35 @@ def supplier_payments(request):
             if total <= 0:
                 raise ValueError("This obligation has no payable value.")
             with transaction.atomic():
-                # Direct kitchen purchases currently do not create an AP
-                # liability at approval. Establish it exactly once before
-                # recording the first payment so the payment can clear AP.
-                if source_type == "DIRECT":
-                    obligation_reference = f"DP-{source.pk}-OBL"
-                    obligation_journal = JournalEntry.objects.filter(
-                        hotel=hotel, reference=obligation_reference, entry_type="PURCHASE"
-                    ).first()
-                    if not obligation_journal:
-                        inventory_account = get_system_account(hotel, "inventory_asset")
-                        payable_account = get_system_account(hotel, "accounts_payable")
-                        obligation_journal = record_transaction(
-                            debit_account=inventory_account,
-                            credit_account=payable_account,
-                            amount=total,
-                            description=f"Direct purchase obligation #{source.pk}",
-                            hotel=hotel, created_by=request.user,
-                            entry_type="PURCHASE", reference=obligation_reference,
-                        )
-                        SupplierLedger.objects.create(
-                            supplier=supplier, journal_entry=obligation_journal,
-                            amount=total, entry_type="credit",
-                        )
                 payment = SupplierPayment.objects.create(
                     hotel=hotel, supplier=supplier, source_type=source_type,
                     source_id=source.pk, amount=amount, payment_account=payment_account,
                     payment_date=payment_date, reference=reference, notes=notes,
                     created_by=request.user,
                 )
-                payable = get_system_account(hotel, "accounts_payable")
-                journal = record_transaction(
-                    debit_account=payable, credit_account=payment_account,
-                    amount=amount, description=f"Supplier payment · {label}",
-                    hotel=hotel, created_by=request.user, entry_type="NORMAL",
-                    reference=f"SUPPAY-{payment.pk}",
-                )
+                if source_type == "DIRECT":
+                    from accounting.services.direct_purchase_accounting import post_direct_purchase_payment
+                    journal = post_direct_purchase_payment(
+                        purchase=source,
+                        payment=payment,
+                        amount=amount,
+                        paid_before=already_paid,
+                        created_by=request.user,
+                    )
+                else:
+                    payable = get_system_account(hotel, "accounts_payable")
+                    journal = record_transaction(
+                        debit_account=payable, credit_account=payment_account,
+                        amount=amount, description=f"Supplier payment · {label}",
+                        hotel=hotel, created_by=request.user, entry_type="NORMAL",
+                        reference=f"SUPPAY-{payment.pk}",
+                    )
+                    SupplierLedger.objects.create(
+                        supplier=supplier, journal_entry=journal,
+                        amount=amount, entry_type="debit",
+                    )
                 payment.journal_entry = journal
                 payment.save(update_fields=["journal_entry"])
-                SupplierLedger.objects.create(supplier=supplier, journal_entry=journal, amount=amount, entry_type="debit")
                 if source_type == "PO":
                     source.payment_status = "PAID" if amount + already_paid == total else "PARTIAL"
                     if source.payment_status == "PAID":
@@ -1290,7 +1280,7 @@ def supplier_payments(request):
             continue
         if total > paid:
             obligations.append({"source_type":"PO","source_id":po.pk,"supplier":po.supplier,"label":f"PO #{po.pk} · {po.department.name}","total":total,"paid":paid,"outstanding":total-paid})
-    for dp in DirectPurchase.objects.filter(supplier__hotel=hotel, status__in=("APPROVED","PAID","RECEIVED")).exclude(payment_source="STAFF_FUNDS").select_related("supplier"):
+    for dp in DirectPurchase.objects.filter(supplier__hotel=hotel, status__in=("APPROVED","PAID","PARTIALLY_RECEIVED","RECEIVED")).exclude(payment_source="STAFF_FUNDS").select_related("supplier"):
         total = Decimal(str(dp.total_cost)); paid = paid_to_date("DIRECT", dp.pk)
         if dp.status == "PAID" and paid == 0:
             continue
