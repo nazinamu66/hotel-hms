@@ -576,3 +576,21 @@ class UserCreateForm(forms.ModelForm):
                 user.assigned_hotels.clear()
 
         return user
+
+class OrganizationProfileForm(forms.ModelForm):
+    class Meta:
+        model = Organization
+        fields = ["name", "logo"]
+        labels = {
+            "name": "Organization Name",
+            "logo": "Organization Logo",
+        }
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "logo": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["name"].widget.attrs.setdefault("class", "form-control")
+        self.fields["logo"].widget.attrs.setdefault("class", "form-control")
