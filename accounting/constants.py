@@ -43,6 +43,8 @@ FINISHED_GOODS_INVENTORY = "finished_goods_inventory"
 
 ACCOUNTS_PAYABLE = "accounts_payable"
 
+SUPPLIER_ADVANCES = "supplier_advances"
+
 GUEST_DEPOSITS = "guest_deposits"
 
 OWNER_CAPITAL = "owner_capital"
@@ -199,6 +201,16 @@ DEFAULT_ACCOUNTS = [
         "name": "Equipment and Fixed Assets",
         "system_key": EQUIPMENT_ASSET,
         "type": FIXED_ASSET,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": False,
+    },
+
+    {
+        "code": "1220",
+        "name": "Supplier Advances",
+        "system_key": SUPPLIER_ADVANCES,
+        "type": CURRENT_ASSET,
         "is_system": True,
         "allow_posting": True,
         "allow_manual_entries": False,
