@@ -79,7 +79,7 @@
             {% for item in receipt_items %}
                 <tr>
                     <td class="item-name">{{ item.name }}</td>
-                    <td class="qty">{{ item.quantity|floatformat:2 }}</td>
+                    <td class="qty">{{ item.quantity|floatformat:'-2' }}</td>
                     <td class="price">{{ currency }}{{ item.unit_price|floatformat:2 }}</td>
                     <td class="line">{{ currency }}{{ item.line_total|floatformat:2 }}</td>
                 </tr>
@@ -96,7 +96,7 @@
         <hr class="rule">
         <div class="footer">
             {% if order.status == "OPEN" %}<p class="status">NOT YET SETTLED</p>{% elif order.status == "CANCELLED" %}<p class="status">CANCELLED</p>{% else %}<p>Thank you. Please visit us again.</p>{% endif %}
-            <p class="muted">Receipt generated {{ now|date:"Y-m-d H:i" }}</p>
+            <p class="muted">Receipt generated {{ generated_at|date:"Y-m-d H:i" }}</p>
         </div>
     </main>
 </body>
