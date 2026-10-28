@@ -1,0 +1,43 @@
+{% extends "base/base.html" %}
+{% block title %}Restaurant Food Sales Audit{% endblock %}
+{% block content %}
+<style>
+.sales-page{max-width:1500px;margin:0 auto}.sales-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}.sales-header h1{margin:0 0 6px;font-size:28px;color:#172033}.muted{color:#64748b}.filters,.summary,.table-panel{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px;margin-bottom:18px}.filters form{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.filters label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px}.filters input{padding:9px 10px;border:1px solid #cbd5e1;border-radius:7px}.btn{padding:10px 15px;border:0;border-radius:7px;background:#1d4ed8;color:white;font-weight:700;text-decoration:none;cursor:pointer}.summary{display:flex;gap:40px;flex-wrap:wrap}.metric small{display:block;color:#64748b;font-weight:700;text-transform:uppercase;font-size:11px}.metric strong{display:block;font-size:24px;color:#0f172a;margin-top:4px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:1050px}th,td{text-align:left;padding:12px 10px;border-bottom:1px solid #e2e8f0;font-size:13px}th{background:#f8fafc;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:.03em}tbody tr:hover{background:#f8fafc}.pill{display:inline-block;border-radius:20px;padding:4px 8px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700}.empty{text-align:center;padding:35px;color:#64748b}@media(max-width:650px){.sales-header h1{font-size:23px}.summary{gap:22px}}
+</style>
+<div class="sales-page">
+  <div class="sales-header">
+    <div><div class="muted" style="font-size:12px;font-weight:700;letter-spacing:.08em">KITCHEN CONTROL · AUDIT TRAIL</div><h1>Restaurant Food Sales Audit</h1><p class="muted">Food sales across restaurant shifts for your hotel's Kitchen.</p></div>
+  </div>
+  <div class="filters"><form method="get">
+    <div><label for="date-from">From date</label><input id="date-from" type="date" name="from" value="{{ date_from }}"></div>
+    <div><label for="date-to">To date</label><input id="date-to" type="date" name="to" value="{{ date_to }}"></div>
+    <button class="btn" type="submit">Apply filters</button><a href="{% url 'kitchen_food_sales_report' %}" class="btn" style="background:#475569">Reset</a>
+  </form></div>
+  <div class="summary">
+    <div class="metric"><small>Food portions sold</small><strong>{{ total_quantity }}</strong></div>
+    <div class="metric"><small>Food sales revenue</small><strong>₦{{ total_revenue|floatformat:2 }}</strong></div>
+    <div class="metric"><small>Food sale lines</small><strong>{{ sales_rows|length }}</strong></div>
+  </div>
+  <div class="table-panel">
+    <div style="font-size:17px;font-weight:700;margin-bottom:5px">Sales and staff attribution</div>
+    <p class="muted" style="font-size:13px;margin-top:0">Kitchen staff is the person recorded as accepting/starting the ticket. This is an accountability record, not proof that one person alone cooked every item.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Date / time</th><th>Order</th><th>Shift</th><th>Food item</th><th>Qty</th><th>Unit price</th><th>Revenue</th><th>Restaurant staff</th><th>Kitchen staff recorded</th></tr></thead>
+      <tbody>
+      {% for row in sales_rows %}
+        <tr>
+          <td>{{ row.order.created_at|date:"d M Y, H:i" }}</td>
+          <td><strong>#{{ row.order_id }}</strong><br><span class="pill">{{ row.order.get_status_display }}</span></td>
+          <td>{% if row.order.shift_id %}#{{ row.order.shift_id }}{% else %}—{% endif %}</td>
+          <td>{{ row.item }}</td><td>{{ row.quantity }}</td><td>₦{{ row.unit_price|floatformat:2 }}</td><td><strong>₦{{ row.revenue|floatformat:2 }}</strong></td>
+          <td>{% if row.restaurant_staff %}{{ row.restaurant_staff.get_full_name|default:row.restaurant_staff.username }}{% else %}User account unavailable{% endif %}</td>
+          <td>{% if row.kitchen_staff %}{{ row.kitchen_staff.get_full_name|default:row.kitchen_staff.username }}{% else %}<span class="muted">Not recorded</span>{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="9" class="empty">No completed, non-refunded food sales match these dates.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div>
+{% endblock %}
