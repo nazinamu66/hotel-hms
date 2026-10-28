@@ -1478,6 +1478,40 @@ class KitchenSpoilageWorkflowTests(TestCase):
             ("inventory_asset", Decimal("0.00"), Decimal("10.00")),
         )
 
+    def test_partially_uncosted_spoilage_rolls_back_stock_layers_and_records(self):
+        stock = Stock.objects.create(
+            product=self.ingredient,
+            department=self.kitchen,
+            quantity=Decimal("10.000"),
+        )
+        layer = StockCostLayer.objects.create(
+            product=self.ingredient,
+            department=self.kitchen,
+            quantity_received=Decimal("1.000"),
+            quantity_remaining=Decimal("1.000"),
+            unit_cost=Decimal("5.0000"),
+        )
+
+        response = self.client.post(
+            reverse("kitchen_spoilage"),
+            self.spoilage_payload(quantity="2.000"),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        stock.refresh_from_db()
+        layer.refresh_from_db()
+        self.assertEqual(stock.quantity, Decimal("10.000"))
+        self.assertEqual(layer.quantity_remaining, Decimal("1.000"))
+        self.assertEqual(KitchenSpoilageRecord.objects.count(), 0)
+        self.assertEqual(
+            StockMovement.objects.filter(reference__startswith="SPOILAGE-").count(),
+            0,
+        )
+        self.assertEqual(
+            JournalEntry.objects.filter(reference__startswith="SPOILAGE-").count(),
+            0,
+        )
+
     def test_insufficient_stock_creates_no_record_movement_or_journal(self):
         stock = self.add_stock(quantity="2.000")
         response = self.client.post(
