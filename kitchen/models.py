@@ -637,6 +637,17 @@ class ProductionBatch(models.Model):
                 allow_uncosted_shortage=True,
             )
 
+            uncosted_quantity = Decimal(
+                str(result.get("uncosted_quantity", "0"))
+            )
+            if uncosted_quantity > 0:
+                raise ValidationError(
+                    f"Cannot complete production: {uncosted_quantity} "
+                    f"{item.ingredient.base_unit} of {item.ingredient.name} "
+                    "has no FIFO cost-layer coverage. Reconcile inventory "
+                    "costing before producing finished goods."
+                )
+
             total_cost += result["total_cost"]
 
             ProductionIngredientUsage.objects.create(
