@@ -1365,6 +1365,37 @@ if (menuSearch) {
     const bell = document.getElementById("restaurant-ready-bell");
     const storageKey = "restaurant_ready_food_ticket_ids";
     let initialized = false;
+    let audioUnlocked = false;
+
+    // Safari may block alert audio until the user interacts with the page.
+    // Unlock the audio element silently on the first click/tap or key press.
+    function unlockRestaurantBell() {
+        if (audioUnlocked || !bell) return;
+
+        const wasMuted = bell.muted;
+        bell.muted = true;
+        const unlockAttempt = bell.play();
+
+        if (unlockAttempt && typeof unlockAttempt.then === "function") {
+            unlockAttempt.then(() => {
+                bell.pause();
+                bell.currentTime = 0;
+                bell.muted = wasMuted;
+                audioUnlocked = true;
+            }).catch(() => {
+                bell.muted = wasMuted;
+            });
+        } else {
+            bell.pause();
+            bell.currentTime = 0;
+            bell.muted = wasMuted;
+            audioUnlocked = true;
+        }
+    }
+
+    document.addEventListener("pointerdown", unlockRestaurantBell, {once: true});
+    document.addEventListener("keydown", unlockRestaurantBell, {once: true});
+
     async function checkReadyFood() {
         try {
             const response = await fetch(endpoint, {cache: "no-store"});
@@ -1372,9 +1403,11 @@ if (menuSearch) {
             const tickets = (await response.json()).tickets || [];
             const ids = tickets.map(ticket => String(ticket.id));
             const previous = JSON.parse(localStorage.getItem(storageKey) || "[]");
-            if (initialized && ids.some(id => !previous.includes(id)) && bell) {
+            if (initialized && ids.some(id => !previous.includes(id)) && bell && audioUnlocked) {
                 bell.currentTime = 0;
-                bell.play().catch(() => {});
+                bell.play().catch(error => {
+                    console.warn("Restaurant ready-food bell could not play:", error);
+                });
             }
             initialized = true;
             localStorage.setItem(storageKey, JSON.stringify(ids));
