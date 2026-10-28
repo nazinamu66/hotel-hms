@@ -27,7 +27,7 @@
       {% for row in sales_rows %}
         <tr>
           <td>{{ row.order.created_at|date:"d M Y, H:i" }}</td>
-          <td><strong>#{{ row.order_id }}</strong><br><span class="pill">{{ row.order.get_status_display }}</span></td>
+          <td><strong>#{{ row.order.id }}</strong><br><span class="pill">{{ row.order.get_status_display }}</span></td>
           <td>{% if row.order.shift_id %}#{{ row.order.shift_id }}{% else %}—{% endif %}</td>
           <td>{{ row.item }}</td><td>{{ row.quantity }}</td><td>₦{{ row.unit_price|floatformat:2 }}</td><td><strong>₦{{ row.revenue|floatformat:2 }}</strong></td>
           <td>{% if row.restaurant_staff %}{{ row.restaurant_staff.get_full_name|default:row.restaurant_staff.username }}{% else %}User account unavailable{% endif %}</td>
