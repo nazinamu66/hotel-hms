@@ -422,25 +422,39 @@ def direct_purchase_pay(request, pk):
 
 @role_required("KITCHEN")
 def kitchen_incoming_deliveries(request):
-    """Kitchen-only operational view of purchases awaiting physical receipt."""
+    """Kitchen-only queue for eligible regular and reconciled urgent purchases."""
+    kitchen = request.user.department
+    if not kitchen or kitchen.department_type != "KITCHEN":
+        raise PermissionDenied("You must be assigned to a Kitchen department.")
+
+    purchases = DirectPurchase.objects.filter(
+        supplier__hotel__in=get_accessible_hotels(request.user),
+        requested_by__department=kitchen,
+    ).filter(
+        Q(
+            urgent_purchase=False,
+            status__in=("APPROVED", "PAID", "PARTIALLY_RECEIVED"),
+        )
+        | Q(urgent_purchase=True, status="APPROVED")
+    )
+
+    # Kitchen staff see their own purchases. The Head Chef can coordinate
+    # receiving for all eligible purchases requested by this Kitchen.
+    if not request.user.is_department_head:
+        purchases = purchases.filter(requested_by=request.user)
+
     purchases = (
-        DirectPurchase.objects
-        .filter(
-            requested_by=request.user,
-            supplier__hotel__in=get_accessible_hotels(request.user),
-        )
-        .filter(
-            Q(status__in=("PAID", "PARTIALLY_RECEIVED"))
-            | Q(urgent_purchase=True, status="APPROVED")
-        )
-        .select_related("supplier", "ingredient_request")
+        purchases.select_related("supplier", "ingredient_request", "requested_by")
         .prefetch_related("items__product")
         .order_by("-created_at")
     )
     return render(
         request,
         "kitchen/incoming_deliveries.html",
-        {"purchases": purchases},
+        {
+            "purchases": purchases,
+            "can_view_purchase_orders": request.user.is_department_head,
+        },
     )
 
 
@@ -1071,15 +1085,16 @@ def direct_purchase_receive(request, pk):
         supplier__hotel__in=get_accessible_hotels(request.user),
     )
 
-    if dp.requested_by != request.user:
-        raise PermissionDenied
-
     kitchen = request.user.department
     if (
         not kitchen
         or kitchen.department_type != "KITCHEN"
         or kitchen.hotel_id != dp.supplier.hotel_id
+        or dp.requested_by.department_id != kitchen.id
     ):
+        raise PermissionDenied
+
+    if dp.requested_by_id != request.user.id and not request.user.is_department_head:
         raise PermissionDenied
 
     items = list(dp.items.select_for_update().select_related("product"))
