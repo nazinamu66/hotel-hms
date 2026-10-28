@@ -991,8 +991,8 @@ class ProductionOverrideSecurityTests(TestCase):
     def test_independent_manager_approval_executes_strict_override_and_records_usage(self):
         from inventory.models import Stock
 
-        # The production finalizer requires these hotel inventory accounts,
-        # even when the consumed ingredient has no available FIFO cost layer.
+        # Production requires cost-layer coverage so the finished-food layer
+        # and subsequent POS COGS cannot be understated.
         Account.objects.create(
             hotel=self.hotel, code="INV-RAW-OVR", name="Inventory Asset",
             slug="inventory-asset", account_type="inventory",
@@ -1004,6 +1004,11 @@ class ProductionOverrideSecurityTests(TestCase):
         Stock.objects.create(
             product=self.ingredient, department=self.kitchen,
             quantity=Decimal("10.000"),
+        )
+        StockCostLayer.objects.create(
+            product=self.ingredient, department=self.kitchen,
+            quantity_received=Decimal("10.000"), quantity_remaining=Decimal("10.000"),
+            unit_cost=Decimal("10.0000"),
         )
         batch = self.make_pending_batch()
         self.client.force_login(self.manager)
@@ -1044,6 +1049,38 @@ class ProductionOverrideSecurityTests(TestCase):
                 product=self.finished,
             ).exists()
         )
+
+    def test_uncosted_ingredient_stock_blocks_production_and_rolls_back_all_changes(self):
+        from inventory.models import Stock
+
+        stock = Stock.objects.create(
+            product=self.ingredient, department=self.kitchen,
+            quantity=Decimal("10.000"),
+        )
+        batch = ProductionBatch.objects.create(
+            recipe=self.recipe,
+            recipe_version=self.version,
+            quantity_produced=2,
+            produced_by=self.producer,
+        )
+
+        with self.assertRaisesMessage(ValidationError, "has no FIFO cost-layer coverage"):
+            batch.execute(actual_quantities={
+                str(self.ingredient.pk): {"quantity": "2.000", "unit": "kg"}
+            })
+
+        stock.refresh_from_db()
+        batch.refresh_from_db()
+        self.assertEqual(stock.quantity, Decimal("10.000"))
+        self.assertFalse(batch.is_executed)
+        self.assertEqual(batch.ingredient_usages.count(), 0)
+        self.assertFalse(StockMovement.objects.filter(reference=f"PROD-{batch.pk}").exists())
+        self.assertFalse(Stock.objects.filter(
+            product=self.finished, department=self.kitchen
+        ).exists())
+        self.assertFalse(StockCostLayer.objects.filter(
+            product=self.finished, department=self.kitchen
+        ).exists())
 
     def test_insufficient_ingredient_stock_blocks_batch_without_partial_changes(self):
         from inventory.models import Stock
