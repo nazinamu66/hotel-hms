@@ -22,7 +22,8 @@ from inventory.models import (
     Supplier,
     StockMovement,
     StockCostLayer,
-    StockTransfer
+    StockTransfer,
+    stock_out,
 )
 
 from .models import (
@@ -36,7 +37,8 @@ from .models import (
     DirectPurchase,
     DirectPurchaseItem,
     KitchenTicket,
-    KitchenTicketItem
+    KitchenTicketItem,
+    KitchenSpoilageRecord,
 )
 
 from .forms import (
@@ -844,6 +846,132 @@ def production_override_reject(request, pk):
     batch.save(update_fields=["override_status", "override_rejected_by", "override_rejected_at"])
     messages.warning(request, f"Production #{batch.pk} variance request rejected. No stock was deducted.")
     return redirect("kitchen_production_history")
+
+
+
+@role_required("KITCHEN")
+def kitchen_spoilage(request):
+    """Record kitchen stock spoilage immediately and retain it for manager review."""
+    kitchen = request.user.department
+    if not kitchen or kitchen.department_type != "KITCHEN":
+        raise PermissionDenied("You must be assigned to a Kitchen department.")
+
+    products = Product.objects.filter(
+        hotel_id=kitchen.hotel_id,
+        product_type__in=("RAW", "FOOD"),
+        is_active=True,
+    ).order_by("name")
+    records = KitchenSpoilageRecord.objects.filter(
+        department=kitchen,
+    ).select_related("product", "recorded_by", "reviewed_by", "stock_movement")
+
+    if request.method == "POST":
+        try:
+            product = products.get(pk=request.POST.get("product", ""))
+        except (Product.DoesNotExist, ValueError, TypeError):
+            messages.error(request, "Select a valid Kitchen ingredient or prepared food.")
+            return redirect("kitchen_spoilage")
+
+        try:
+            quantity = Decimal(request.POST.get("quantity", "").strip())
+        except (InvalidOperation, TypeError, ValueError):
+            messages.error(request, "Enter a valid spoilage quantity.")
+            return redirect("kitchen_spoilage")
+        if not quantity.is_finite() or quantity <= 0:
+            messages.error(request, "Spoilage quantity must be greater than zero.")
+            return redirect("kitchen_spoilage")
+
+        reason_code = request.POST.get("reason_code", "").strip()
+        valid_reasons = {value for value, _label in KitchenSpoilageRecord.REASON_CHOICES}
+        if reason_code not in valid_reasons:
+            messages.error(request, "Choose a valid spoilage reason.")
+            return redirect("kitchen_spoilage")
+        notes = request.POST.get("notes", "").strip()
+
+        try:
+            with transaction.atomic():
+                record = KitchenSpoilageRecord.objects.create(
+                    product=product,
+                    department=kitchen,
+                    quantity=quantity,
+                    reason_code=reason_code,
+                    notes=notes,
+                    recorded_by=request.user,
+                )
+                result = stock_out(
+                    product=product,
+                    department=kitchen,
+                    quantity=quantity,
+                    user=request.user,
+                    reason=f"Kitchen spoilage #{record.pk}",
+                    reference=f"SPOILAGE-{record.pk}",
+                    allow_negative=False,
+                    allow_uncosted_shortage=True,
+                )
+                cost = Decimal(str(result["total_cost"] or "0.00")).quantize(Decimal("0.01"))
+                record.stock_movement = result["movement"]
+                record.cost_amount = cost
+                record.save(update_fields=["stock_movement", "cost_amount"])
+
+                if cost > 0:
+                    from accounting.services.journal import get_system_account, post_journal_entry
+                    hotel = kitchen.hotel
+                    expense = get_system_account(hotel, "spoilage_expense")
+                    inventory_key = "finished_goods_inventory" if product.product_type == "FOOD" else "inventory_asset"
+                    inventory_account = get_system_account(hotel, inventory_key)
+                    post_journal_entry(
+                        hotel=hotel,
+                        description=f"Kitchen spoilage #{record.pk} - {product.name}",
+                        created_by=request.user,
+                        entry_type="SPOILAGE",
+                        reference=f"SPOILAGE-{record.pk}",
+                        lines=[
+                            {"account": expense, "debit": cost},
+                            {"account": inventory_account, "credit": cost},
+                        ],
+                    )
+        except ValidationError as exc:
+            messages.error(request, str(exc))
+            return redirect("kitchen_spoilage")
+
+        messages.success(
+            request,
+            f"Logged {quantity} {product.base_unit} of {product.name} as spoilage. Stock was deducted and the record is pending management review.",
+        )
+        return redirect("kitchen_spoilage")
+
+    return render(
+        request,
+        "kitchen/spoilage.html",
+        {
+            "products": products,
+            "records": records,
+            "reason_choices": KitchenSpoilageRecord.REASON_CHOICES,
+            "can_review": request.user.role in {"MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR"},
+        },
+    )
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
+@require_POST
+@transaction.atomic
+def kitchen_spoilage_review(request, pk):
+    hotels = get_accessible_hotels(request.user)
+    record = get_object_or_404(
+        KitchenSpoilageRecord.objects.select_for_update().select_related("department"),
+        pk=pk,
+        department__hotel__in=hotels,
+    )
+    if record.review_status == "REVIEWED":
+        messages.info(request, "This spoilage record has already been reviewed.")
+        return redirect("kitchen_spoilage")
+    record.review_status = "REVIEWED"
+    record.reviewed_by = request.user
+    record.reviewed_at = timezone.now()
+    record.review_note = request.POST.get("review_note", "").strip()
+    record.save(update_fields=["review_status", "reviewed_by", "reviewed_at", "review_note"])
+    messages.success(request, f"Spoilage record #{record.pk} marked as reviewed.")
+    return redirect("kitchen_spoilage")
 
 
 @role_required("KITCHEN")
