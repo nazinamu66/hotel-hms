@@ -692,6 +692,16 @@
 
                         <div class="ticket-footer">
 
+                            <a
+                                href="{% url 'restaurant_ready_food_ticket_print' ticket.id %}"
+                                target="_blank"
+                                rel="noopener"
+                                class="ticket-action"
+                                style="display:flex;align-items:center;justify-content:center;text-decoration:none;background:#14532d;color:#fff;margin-bottom:8px;"
+                            >
+                                🖨 Print Collection Ticket
+                            </a>
+
                             <form
                                 method="post"
                                 action="{% url 'kitchen_ticket_served' ticket.id %}"
