@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path("", views.kitchen_dashboard, name="kitchen_dashboard"),
+    path("food-sales/", views.kitchen_food_sales_report, name="kitchen_food_sales_report"),
 
     # Ingredients
     path("ingredients/", views.kitchen_ingredients, name="kitchen_ingredients"),
