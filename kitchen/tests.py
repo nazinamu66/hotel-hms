@@ -1479,6 +1479,37 @@ class KitchenSpoilageWorkflowTests(TestCase):
             ("inventory_asset", Decimal("0.00"), Decimal("10.00")),
         )
 
+    def test_reposting_same_spoilage_journal_reference_returns_existing_entry(self):
+        self.add_stock()
+        response = self.client.post(
+            reverse("kitchen_spoilage"),
+            self.spoilage_payload(quantity="2.000"),
+        )
+        self.assertEqual(response.status_code, 302)
+
+        record = KitchenSpoilageRecord.objects.get()
+        original = JournalEntry.objects.get(reference=f"SPOILAGE-{record.pk}")
+        from accounting.services.journal import post_journal_entry
+
+        duplicate_attempt = post_journal_entry(
+            hotel=self.hotel,
+            description="Duplicate attempt for test",
+            created_by=self.kitchen_user,
+            entry_type="NORMAL",
+            reference=f"SPOILAGE-{record.pk}",
+            lines=[
+                {"account": self.spoilage_expense, "debit": Decimal("10.00")},
+                {"account": self.inventory_asset, "credit": Decimal("10.00")},
+            ],
+        )
+
+        self.assertEqual(duplicate_attempt.pk, original.pk)
+        self.assertEqual(
+            JournalEntry.objects.filter(reference=f"SPOILAGE-{record.pk}").count(),
+            1,
+        )
+        self.assertEqual(original.lines.count(), 2)
+
     def test_journal_posting_failure_rolls_back_spoilage_stock_and_records(self):
         stock = self.add_stock()
         layer = StockCostLayer.objects.get(
