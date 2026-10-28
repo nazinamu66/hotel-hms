@@ -146,12 +146,16 @@ def ready_food_alerts(request):
     return JsonResponse({"tickets": payload})
 
 
-@role_required("RESTAURANT")
+@role_required("RESTAURANT", "KITCHEN")
 def ready_food_ticket_print(request, ticket_id):
     """Printable 80mm kitchen collection slip, scoped to the user's hotel."""
     department = request.user.department
-    if not department or department.department_type != "RESTAURANT":
-        raise PermissionDenied("Restaurant department access is required.")
+    allowed_department = (
+        department.department_type in ("RESTAURANT", "KITCHEN")
+        if department else False
+    )
+    if not department or not allowed_department:
+        raise PermissionDenied("Restaurant or Kitchen department access is required.")
     ticket = get_object_or_404(
         KitchenTicket.objects.select_related(
             "order", "order__department__hotel", "order__table", "room", "accepted_by"
