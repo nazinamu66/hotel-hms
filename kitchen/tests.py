@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -1476,6 +1477,39 @@ class KitchenSpoilageWorkflowTests(TestCase):
         self.assertEqual(
             (lines[1].account.system_key, lines[1].debit, lines[1].credit),
             ("inventory_asset", Decimal("0.00"), Decimal("10.00")),
+        )
+
+    def test_journal_posting_failure_rolls_back_spoilage_stock_and_records(self):
+        stock = self.add_stock()
+        layer = StockCostLayer.objects.get(
+            product=self.ingredient,
+            department=self.kitchen,
+        )
+
+        with patch(
+            "accounting.services.journal.post_journal_entry",
+            side_effect=RuntimeError("Simulated journal posting failure"),
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError, "Simulated journal posting failure"
+            ):
+                self.client.post(
+                    reverse("kitchen_spoilage"),
+                    self.spoilage_payload(quantity="2.000"),
+                )
+
+        stock.refresh_from_db()
+        layer.refresh_from_db()
+        self.assertEqual(stock.quantity, Decimal("10.000"))
+        self.assertEqual(layer.quantity_remaining, Decimal("10.000"))
+        self.assertEqual(KitchenSpoilageRecord.objects.count(), 0)
+        self.assertEqual(
+            StockMovement.objects.filter(reference__startswith="SPOILAGE-").count(),
+            0,
+        )
+        self.assertEqual(
+            JournalEntry.objects.filter(reference__startswith="SPOILAGE-").count(),
+            0,
         )
 
     def test_partially_uncosted_spoilage_rolls_back_stock_layers_and_records(self):
