@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ready Food Ticket #{{ ticket.id }}</title>
+<style>
+@page{size:80mm auto;margin:4mm}
+*{box-sizing:border-box}
+body{margin:0;background:#f1f5f9;color:#111;font-family:Arial,Helvetica,sans-serif}
+.ticket{width:72mm;max-width:100%;margin:18px auto;padding:5mm;background:#fff}
+.center{text-align:center}
+.hotel-name{font-size:17px;font-weight:800;margin:3px 0}
+.location{font-size:11px;color:#444;margin:2px 0 8px}
+.rule{border:0;border-top:1px dashed #222;margin:10px 0}
+.headline{font-size:20px;font-weight:900;letter-spacing:.5px;margin:8px 0}
+.meta{font-size:12px;line-height:1.55}
+.item{display:flex;justify-content:space-between;gap:8px;font-size:15px;font-weight:700;padding:6px 0;border-bottom:1px dotted #aaa}
+.qty{white-space:nowrap;font-size:16px}
+.footer{font-size:10px;line-height:1.4;color:#333}
+.controls{display:flex;justify-content:center;gap:8px;margin:14px auto}
+.controls button{padding:10px 16px;border:0;border-radius:7px;background:#1d4ed8;color:white;font-weight:700;cursor:pointer}
+.controls a{padding:10px 16px;border-radius:7px;background:#e2e8f0;color:#111;text-decoration:none;font-size:13px}
+@media print{body{background:#fff}.ticket{width:auto;max-width:none;margin:0;padding:0}.controls{display:none}}
+</style>
+</head>
+<body>
+<main class="ticket">
+  <div class="center">
+    {% if hotel.organization and hotel.organization.logo %}
+      <img src="{{ hotel.organization.logo.url }}" alt="" style="max-width:30mm;max-height:16mm;object-fit:contain">
+    {% endif %}
+    <div class="hotel-name">{{ hotel.name }}</div>
+    {% if hotel.location %}<div class="location">{{ hotel.location }}</div>{% endif %}
+    <hr class="rule">
+    <div class="headline">READY FOR COLLECTION</div>
+    <div class="meta"><strong>KITCHEN TICKET #{{ ticket.id }}</strong><br>Order #{{ order.id }}<br>{{ location }}</div>
+  </div>
+  <hr class="rule">
+  <div class="meta"><strong>READY AT:</strong> {% now "d M Y, H:i" %}</div>
+  <div class="meta"><strong>ORDER PLACED:</strong> {{ order.created_at|date:"d M Y, H:i" }}</div>
+  <hr class="rule">
+  {% for item in food_items %}
+    <div class="item"><span>{{ item.menu_item.name }}</span><span class="qty">× {{ item.quantity }}</span></div>
+  {% empty %}
+    <div class="meta">No food items on this ticket.</div>
+  {% endfor %}
+  <hr class="rule">
+  <div class="footer center">
+    {% if ticket.accepted_by %}Kitchen staff recorded: {{ ticket.accepted_by.get_full_name|default:ticket.accepted_by.username }}<br>{% endif %}
+    Collected by: ___________________<br>
+    Collection time: _________________<br><br>
+    Please pin this ticket for service verification.
+  </div>
+</main>
+<div class="controls">
+  <button type="button" onclick="window.print()">Print ticket</button>
+  <a href="{% url 'restaurant_pos' %}">Back to POS</a>
+</div>
+<script>
+window.addEventListener("load", function () {
+  setTimeout(function () { window.print(); }, 350);
+});
+</script>
+</body>
+</html>
