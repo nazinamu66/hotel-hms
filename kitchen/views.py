@@ -849,21 +849,31 @@ def production_override_reject(request, pk):
 
 
 
-@role_required("KITCHEN")
+@role_required("KITCHEN", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 def kitchen_spoilage(request):
     """Record kitchen stock spoilage immediately and retain it for manager review."""
     kitchen = request.user.department
-    if not kitchen or kitchen.department_type != "KITCHEN":
+    is_kitchen_user = request.user.role == "KITCHEN"
+    hotels = get_accessible_hotels(request.user)
+    if is_kitchen_user and (not kitchen or kitchen.department_type != "KITCHEN"):
         raise PermissionDenied("You must be assigned to a Kitchen department.")
+    if request.method == "POST" and not is_kitchen_user:
+        raise PermissionDenied("Only Kitchen staff can record spoilage.")
 
     products = Product.objects.filter(
-        hotel_id=kitchen.hotel_id,
+        hotel_id=kitchen.hotel_id if is_kitchen_user else None,
+        product_type__in=("RAW", "FOOD"),
+        is_active=True,
+    ).order_by("name") if is_kitchen_user else Product.objects.filter(
+        hotel__in=hotels,
         product_type__in=("RAW", "FOOD"),
         is_active=True,
     ).order_by("name")
     records = KitchenSpoilageRecord.objects.filter(
         department=kitchen,
-    ).select_related("product", "recorded_by", "reviewed_by", "stock_movement")
+    ).select_related("product", "recorded_by", "reviewed_by", "stock_movement") if is_kitchen_user else KitchenSpoilageRecord.objects.filter(
+        department__hotel__in=hotels,
+    ).select_related("product", "department", "recorded_by", "reviewed_by", "stock_movement")
 
     if request.method == "POST":
         try:
