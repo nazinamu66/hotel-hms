@@ -147,6 +147,40 @@ def ready_food_alerts(request):
 
 
 @role_required("RESTAURANT")
+def ready_food_ticket_print(request, ticket_id):
+    """Printable 80mm kitchen collection slip, scoped to the user's hotel."""
+    department = request.user.department
+    if not department or department.department_type != "RESTAURANT":
+        raise PermissionDenied("Restaurant department access is required.")
+    ticket = get_object_or_404(
+        KitchenTicket.objects.select_related(
+            "order", "order__department__hotel", "order__table", "room", "accepted_by"
+        ).prefetch_related("items__menu_item__product"),
+        pk=ticket_id,
+        status="READY",
+        order__department__hotel_id=department.hotel_id,
+        items__menu_item__product__product_type="FOOD",
+    )
+    food_items = [
+        item for item in ticket.items.all()
+        if item.menu_item.product.product_type == "FOOD"
+    ]
+    location = (
+        f"Table {ticket.order.table.name}" if ticket.order.table_id
+        else f"Room {ticket.room.room_number}" if ticket.room_id
+        else "Walk-in"
+    )
+    return render(request, "restaurant/ready_food_ticket_print.html", {
+        "ticket": ticket,
+        "order": ticket.order,
+        "hotel": ticket.order.department.hotel,
+        "food_items": food_items,
+        "location": location,
+        "printed_by": request.user,
+    })
+
+
+@role_required("RESTAURANT")
 def pos_v2(request):
 
     user = request.user
