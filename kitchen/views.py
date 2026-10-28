@@ -933,7 +933,7 @@ def kitchen_spoilage(request):
                         hotel=hotel,
                         description=f"Kitchen spoilage #{record.pk} - {product.name}",
                         created_by=request.user,
-                        entry_type="SPOILAGE",
+                        entry_type="NORMAL",
                         reference=f"SPOILAGE-{record.pk}",
                         lines=[
                             {"account": expense, "debit": cost},
