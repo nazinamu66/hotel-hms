@@ -918,6 +918,15 @@ def kitchen_spoilage(request):
                     allow_negative=False,
                     allow_uncosted_shortage=True,
                 )
+                uncosted_quantity = Decimal(
+                    str(result.get("uncosted_quantity", "0"))
+                )
+                if uncosted_quantity > 0:
+                    raise ValidationError(
+                        f"Cannot record spoilage: {uncosted_quantity} {product.base_unit} "
+                        "has no FIFO cost-layer coverage. Reconcile inventory costing first; "
+                        "no stock or spoilage record was changed."
+                    )
                 cost = Decimal(str(result["total_cost"] or "0.00")).quantize(Decimal("0.01"))
                 record.stock_movement = result["movement"]
                 record.cost_amount = cost
