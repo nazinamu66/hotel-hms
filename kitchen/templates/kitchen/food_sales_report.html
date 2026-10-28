@@ -2,42 +2,120 @@
 {% block title %}Restaurant Food Sales Audit{% endblock %}
 {% block content %}
 <style>
-.sales-page{max-width:1500px;margin:0 auto}.sales-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}.sales-header h1{margin:0 0 6px;font-size:28px;color:#172033}.muted{color:#64748b}.filters,.summary,.table-panel{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px;margin-bottom:18px}.filters form{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.filters label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px}.filters input{padding:9px 10px;border:1px solid #cbd5e1;border-radius:7px}.btn{padding:10px 15px;border:0;border-radius:7px;background:#1d4ed8;color:white;font-weight:700;text-decoration:none;cursor:pointer}.summary{display:flex;gap:40px;flex-wrap:wrap}.metric small{display:block;color:#64748b;font-weight:700;text-transform:uppercase;font-size:11px}.metric strong{display:block;font-size:24px;color:#0f172a;margin-top:4px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:1050px}th,td{text-align:left;padding:12px 10px;border-bottom:1px solid #e2e8f0;font-size:13px}th{background:#f8fafc;color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:.03em}tbody tr:hover{background:#f8fafc}.pill{display:inline-block;border-radius:20px;padding:4px 8px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700}.empty{text-align:center;padding:35px;color:#64748b}@media(max-width:650px){.sales-header h1{font-size:23px}.summary{gap:22px}}
+.audit-page{max-width:1600px;margin:0 auto;color:#172033}
+.audit-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:20px}
+.audit-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;color:#64748b;text-transform:uppercase}
+.audit-heading h1{margin:5px 0 7px;font-size:28px;line-height:1.2}
+.audit-muted{color:#64748b}
+.audit-panel,.audit-metric{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 3px 12px rgba(15,23,42,.035)}
+.audit-panel{padding:18px;margin-bottom:18px}
+.audit-filters{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:14px}
+.audit-field label{display:block;font-size:12px;font-weight:750;color:#475569;margin-bottom:6px}
+.audit-field input,.audit-field select{width:100%;box-sizing:border-box;min-height:41px;padding:9px 11px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#0f172a;font-size:13px}
+.audit-field input:focus,.audit-field select:focus{outline:2px solid #bfdbfe;border-color:#2563eb}
+.audit-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:16px}
+.audit-btn{display:inline-flex;justify-content:center;align-items:center;min-height:39px;padding:9px 14px;border:0;border-radius:9px;background:#1d4ed8;color:#fff;font-weight:750;font-size:13px;text-decoration:none;cursor:pointer}
+.audit-btn.secondary{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+.audit-btn.export{background:#047857}
+.audit-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.audit-metric{padding:18px}
+.audit-metric-label{display:flex;align-items:center;gap:8px;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.audit-metric-value{display:block;margin-top:8px;font-size:26px;line-height:1.15;font-weight:800;color:#0f172a}
+.audit-table-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.audit-table-heading h2{font-size:18px;margin:0 0 5px}
+.audit-table-wrap{overflow-x:auto}
+.audit-table{width:100%;border-collapse:separate;border-spacing:0;min-width:1120px}
+.audit-table th{background:#f8fafc;color:#475569;font-size:10px;letter-spacing:.055em;text-transform:uppercase;text-align:left;padding:12px 11px;white-space:nowrap;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0}
+.audit-table td{padding:13px 11px;font-size:13px;border-bottom:1px solid #e8edf3;vertical-align:middle}
+.audit-table tbody tr:hover{background:#f8fafc}
+.audit-table th:first-child{border-radius:8px 0 0 0}.audit-table th:last-child{border-radius:0 8px 0 0}
+.audit-order{font-weight:800;color:#1d4ed8}
+.audit-status{display:inline-block;margin-top:4px;padding:3px 7px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:800}
+.audit-staff{font-weight:650;color:#1e293b}
+.audit-missing{display:inline-block;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:4px 7px;font-size:11px;font-weight:700}
+.audit-empty{text-align:center!important;padding:38px 16px!important;color:#64748b}
+.audit-note{font-size:12px;line-height:1.5;margin:0;color:#64748b}
+@media(max-width:900px){.audit-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.audit-heading h1{font-size:23px}.audit-filters,.audit-metrics{grid-template-columns:1fr}.audit-panel{padding:14px}.audit-metric{padding:15px}}
 </style>
-<div class="sales-page">
-  <div class="sales-header">
-    <div><div class="muted" style="font-size:12px;font-weight:700;letter-spacing:.08em">KITCHEN CONTROL · AUDIT TRAIL</div><h1>Restaurant Food Sales Audit</h1><p class="muted">Food sales across restaurant shifts for your hotel's Kitchen.</p></div>
-  </div>
-  <div class="filters"><form method="get">
-    <div><label for="date-from">From date</label><input id="date-from" type="date" name="from" value="{{ date_from }}"></div>
-    <div><label for="date-to">To date</label><input id="date-to" type="date" name="to" value="{{ date_to }}"></div>
-    <button class="btn" type="submit">Apply filters</button><a href="{% url 'kitchen_food_sales_report' %}" class="btn" style="background:#475569">Reset</a>
-  </form></div>
-  <div class="summary">
-    <div class="metric"><small>Food portions sold</small><strong>{{ total_quantity }}</strong></div>
-    <div class="metric"><small>Food sales revenue</small><strong>₦{{ total_revenue|floatformat:2 }}</strong></div>
-    <div class="metric"><small>Food sale lines</small><strong>{{ sales_rows|length }}</strong></div>
-  </div>
-  <div class="table-panel">
-    <div style="font-size:17px;font-weight:700;margin-bottom:5px">Sales and staff attribution</div>
-    <p class="muted" style="font-size:13px;margin-top:0">Kitchen staff is the person recorded as accepting/starting the ticket. This is an accountability record, not proof that one person alone cooked every item.</p>
-    <div class="table-wrap"><table>
-      <thead><tr><th>Date / time</th><th>Order</th><th>Shift</th><th>Food item</th><th>Qty</th><th>Unit price</th><th>Revenue</th><th>Restaurant staff</th><th>Kitchen staff recorded</th></tr></thead>
-      <tbody>
-      {% for row in sales_rows %}
-        <tr>
-          <td>{{ row.order.created_at|date:"d M Y, H:i" }}</td>
-          <td><strong>#{{ row.order.id }}</strong><br><span class="pill">{{ row.order.get_status_display }}</span></td>
-          <td>{% if row.order.shift_id %}#{{ row.order.shift_id }}{% else %}—{% endif %}</td>
-          <td>{{ row.item }}</td><td>{{ row.quantity }}</td><td>₦{{ row.unit_price|floatformat:2 }}</td><td><strong>₦{{ row.revenue|floatformat:2 }}</strong></td>
-          <td>{% if row.restaurant_staff %}{{ row.restaurant_staff.get_full_name|default:row.restaurant_staff.username }}{% else %}User account unavailable{% endif %}</td>
-          <td>{% if row.kitchen_staff %}{{ row.kitchen_staff.get_full_name|default:row.kitchen_staff.username }}{% else %}<span class="muted">Not recorded</span>{% endif %}</td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="9" class="empty">No completed, non-refunded food sales match these dates.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table></div>
-  </div>
+<div class="audit-page">
+  <header class="audit-heading">
+    <div>
+      <div class="audit-eyebrow">Kitchen control · Audit trail</div>
+      <h1>Restaurant Food Sales Audit</h1>
+      <p class="audit-muted" style="margin:0">Review food sales across shifts and compare recorded Restaurant and Kitchen staff for your hotel's operations.</p>
+    </div>
+  </header>
+
+  <section class="audit-panel">
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">Filter sales</div>
+    <p class="audit-muted" style="font-size:12px;margin:0 0 16px">Combine filters to narrow the audit. Staff and food options are limited to your hotel.</p>
+    <form method="get">
+      <div class="audit-filters">
+        <div class="audit-field"><label for="date-from">From date</label><input id="date-from" type="date" name="from" value="{{ date_from }}"></div>
+        <div class="audit-field"><label for="date-to">To date</label><input id="date-to" type="date" name="to" value="{{ date_to }}"></div>
+        <div class="audit-field"><label for="restaurant-staff">Restaurant staff</label>
+          <select id="restaurant-staff" name="restaurant_staff">
+            <option value="">All Restaurant staff</option>
+            {% for person in restaurant_staff_options %}<option value="{{ person.id }}" {% if selected_restaurant_staff == person.id|stringformat:"s" %}selected{% endif %}>{{ person.get_full_name|default:person.username }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="audit-field"><label for="kitchen-staff">Kitchen staff recorded</label>
+          <select id="kitchen-staff" name="kitchen_staff">
+            <option value="">All Kitchen staff</option>
+            <option value="unrecorded" {% if selected_kitchen_staff == "unrecorded" %}selected{% endif %}>Not recorded</option>
+            {% for person in kitchen_staff_options %}<option value="{{ person.id }}" {% if selected_kitchen_staff == person.id|stringformat:"s" %}selected{% endif %}>{{ person.get_full_name|default:person.username }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="audit-field"><label for="food-item">Food item</label>
+          <select id="food-item" name="food_item">
+            <option value="">All food items</option>
+            {% for item in food_item_options %}<option value="{{ item.id }}" {% if selected_food_item == item.id|stringformat:"s" %}selected{% endif %}>{{ item.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="audit-field"><label for="order-number">Order number</label><input id="order-number" type="number" min="1" name="order_number" value="{{ order_number }}" placeholder="e.g. 104"></div>
+      </div>
+      <div class="audit-actions">
+        <button class="audit-btn" type="submit">Apply filters</button>
+        <button class="audit-btn export" type="submit" name="export" value="csv">Export CSV</button>
+        <a href="{% url 'kitchen_food_sales_report' %}" class="audit-btn secondary">Reset</a>
+      </div>
+    </form>
+  </section>
+
+  <section class="audit-metrics">
+    <div class="audit-metric"><div class="audit-metric-label">Food portions sold</div><strong class="audit-metric-value">{{ total_quantity }}</strong></div>
+    <div class="audit-metric"><div class="audit-metric-label">Food sales revenue</div><strong class="audit-metric-value">₦{{ total_revenue|floatformat:2 }}</strong></div>
+    <div class="audit-metric"><div class="audit-metric-label">Food sale lines</div><strong class="audit-metric-value">{{ sales_rows|length }}</strong></div>
+  </section>
+
+  <section class="audit-panel">
+    <div class="audit-table-heading">
+      <div><h2>Sales and staff attribution</h2><p class="audit-note">Kitchen staff means the person recorded as accepting/starting the ticket. It is an accountability clue, not proof that the person alone cooked every item.</p></div>
+      <div class="audit-muted" style="font-size:12px">{{ sales_rows|length }} matching sale line{{ sales_rows|length|pluralize }}</div>
+    </div>
+    <div class="audit-table-wrap">
+      <table class="audit-table">
+        <thead><tr><th>Date / time</th><th>Order</th><th>Shift</th><th>Food item</th><th>Qty</th><th>Unit price</th><th>Revenue</th><th>Restaurant staff</th><th>Kitchen staff recorded</th></tr></thead>
+        <tbody>
+          {% for row in sales_rows %}
+          <tr>
+            <td>{{ row.order.created_at|date:"d M Y, H:i" }}</td>
+            <td><span class="audit-order">#{{ row.order.id }}</span><br><span class="audit-status">{{ row.order.get_status_display }}</span></td>
+            <td>{% if row.order.shift_id %}#{{ row.order.shift_id }}{% else %}—{% endif %}</td>
+            <td><strong>{{ row.item }}</strong></td>
+            <td>{{ row.quantity }}</td>
+            <td>₦{{ row.unit_price|floatformat:2 }}</td>
+            <td><strong>₦{{ row.revenue|floatformat:2 }}</strong></td>
+            <td>{% if row.restaurant_staff %}<span class="audit-staff">{{ row.restaurant_staff.get_full_name|default:row.restaurant_staff.username }}</span>{% else %}<span class="audit-muted">User account unavailable</span>{% endif %}</td>
+            <td>{% if row.kitchen_staff %}<span class="audit-staff">{{ row.kitchen_staff.get_full_name|default:row.kitchen_staff.username }}</span>{% else %}<span class="audit-missing">Not recorded</span>{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="audit-empty">No completed, non-refunded food sales match these filters.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 </div>
 {% endblock %}
