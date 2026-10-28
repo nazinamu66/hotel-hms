@@ -534,6 +534,12 @@
     </div>
 
 
+    <audio id="restaurant-ready-bell" preload="auto"><source src="/static/sounds/kitchen-bell.mp3" type="audio/mpeg"></audio>
+    <section id="ready-food-alerts" aria-live="polite" style="display:none;margin:16px 0;padding:16px;border:2px solid #16a34a;border-radius:12px;background:#f0fdf4;color:#14532d;">
+        <strong style="font-size:18px;">🔔 Food ready for collection</strong>
+        <div id="ready-food-alert-list" style="margin-top:8px;"></div>
+    </section>
+
     {% if messages %}
         <div class="message-box">
             {% for message in messages %}
@@ -1350,6 +1356,43 @@ if (menuSearch) {
         });
     });
 }
+
+// Poll Kitchen tickets and ring when a ticket first becomes ready.
+(function () {
+    const endpoint = "{% url 'restaurant_ready_food_alerts' %}";
+    const alertBox = document.getElementById("ready-food-alerts");
+    const alertList = document.getElementById("ready-food-alert-list");
+    const bell = document.getElementById("restaurant-ready-bell");
+    const storageKey = "restaurant_ready_food_ticket_ids";
+    let initialized = false;
+    async function checkReadyFood() {
+        try {
+            const response = await fetch(endpoint, {cache: "no-store"});
+            if (!response.ok) return;
+            const tickets = (await response.json()).tickets || [];
+            const ids = tickets.map(ticket => String(ticket.id));
+            const previous = JSON.parse(localStorage.getItem(storageKey) || "[]");
+            if (initialized && ids.some(id => !previous.includes(id)) && bell) {
+                bell.currentTime = 0;
+                bell.play().catch(() => {});
+            }
+            initialized = true;
+            localStorage.setItem(storageKey, JSON.stringify(ids));
+            alertBox.style.display = tickets.length ? "block" : "none";
+            alertList.replaceChildren();
+            tickets.forEach(ticket => {
+                const row = document.createElement("div");
+                row.style.padding = "8px 0";
+                row.style.borderTop = "1px solid #bbf7d0";
+                const items = ticket.items.map(item => item.quantity + " × " + item.name).join(", ");
+                row.textContent = "Order #" + ticket.order_id + " · " + ticket.location + " — " + items;
+                alertList.appendChild(row);
+            });
+        } catch (error) { /* Temporary network errors should not interrupt POS. */ }
+    }
+    checkReadyFood();
+    setInterval(checkReadyFood, 5000);
+})();
 
 </script>
 
