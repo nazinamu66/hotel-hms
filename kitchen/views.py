@@ -1205,7 +1205,7 @@ def kitchen_food_sales_report(request):
         summary = Table(
             [[
                 Paragraph(f"<b>Food portions sold</b><br/>{total_quantity}", styles["Normal"]),
-                Paragraph(f"<b>Food sales revenue</b><br/>₦{total_revenue:,.2f}", styles["Normal"]),
+                Paragraph(f"<b>Food sales revenue</b><br/>NGN {total_revenue:,.2f}", styles["Normal"]),
                 Paragraph(f"<b>Sale lines</b><br/>{len(sales_rows)}", styles["Normal"]),
             ]],
             colWidths=[doc.width / 3] * 3,
@@ -1233,7 +1233,7 @@ def kitchen_food_sales_report(request):
                 f"#{row['order'].id} ({row['order'].get_status_display()})",
                 f"#{row['order'].shift_id}" if row["order"].shift_id else "—",
                 row["item"], str(row["quantity"]),
-                f"₦{row['unit_price']:,.2f}", f"₦{row['revenue']:,.2f}",
+                f"NGN {row['unit_price']:,.2f}", f"NGN {row['revenue']:,.2f}",
                 restaurant_name, kitchen_name,
             ]
             data.append([Paragraph(str(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"), styles["AuditCell"]) for value in values])
