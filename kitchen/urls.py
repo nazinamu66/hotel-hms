@@ -6,6 +6,8 @@ urlpatterns = [
 
     # Ingredients
     path("ingredients/", views.kitchen_ingredients, name="kitchen_ingredients"),
+    path("spoilage/", views.kitchen_spoilage, name="kitchen_spoilage"),
+    path("spoilage/<int:pk>/review/", views.kitchen_spoilage_review, name="kitchen_spoilage_review"),
 
     # Ingredient Requests
     path("ingredients/request/", views.kitchen_ingredient_request_create, name="kitchen_ingredient_request_create"),
