@@ -17,6 +17,7 @@ from kitchen.models import (
     RecipeItem,
     RecipeVersion,
     RecipeVersionItem,
+    KitchenSpoilageRecord,
 )
 
 
@@ -1395,23 +1396,29 @@ class KitchenSpoilageWorkflowTests(TestCase):
             base_unit="kg", cost_price=Decimal("5.00"),
         )
 
-        cls.spoilage_expense = Account.objects.create(
-            hotel=cls.hotel, code="SP-EXP", name="Spoilage Expense",
-            slug="spoilage-expense-workflow-test",
-            account_type="expense", system_key="spoilage_expense",
-            is_system=True,
+        cls.spoilage_expense, _ = Account.objects.get_or_create(
+            hotel=cls.hotel, system_key="spoilage_expense", is_system=True,
+            defaults={
+                "code": "SP-EXP", "name": "Spoilage Expense",
+                "slug": "spoilage-expense-workflow-test",
+                "account_type": "expense",
+            },
         )
-        cls.inventory_asset = Account.objects.create(
-            hotel=cls.hotel, code="SP-INV", name="Inventory Asset",
-            slug="inventory-asset-workflow-test",
-            account_type="inventory", system_key="inventory_asset",
-            is_system=True,
+        cls.inventory_asset, _ = Account.objects.get_or_create(
+            hotel=cls.hotel, system_key="inventory_asset", is_system=True,
+            defaults={
+                "code": "SP-INV", "name": "Inventory Asset",
+                "slug": "inventory-asset-workflow-test",
+                "account_type": "inventory",
+            },
         )
-        cls.finished_goods = Account.objects.create(
-            hotel=cls.hotel, code="SP-FG", name="Finished Goods Inventory",
-            slug="finished-goods-workflow-test",
-            account_type="inventory", system_key="finished_goods_inventory",
-            is_system=True,
+        cls.finished_goods, _ = Account.objects.get_or_create(
+            hotel=cls.hotel, system_key="finished_goods_inventory", is_system=True,
+            defaults={
+                "code": "SP-FG", "name": "Finished Goods Inventory",
+                "slug": "finished-goods-workflow-test",
+                "account_type": "inventory",
+            },
         )
 
     def setUp(self):
