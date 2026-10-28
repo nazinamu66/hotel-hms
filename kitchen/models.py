@@ -804,6 +804,44 @@ class ProductionIngredientUsage(models.Model):
         )
 
 # kitchen/models.py
+
+class KitchenSpoilageRecord(models.Model):
+    """Immediate stock write-off with an auditable management review trail."""
+
+    REASON_CHOICES = (
+        ("EXPIRED", "Expired"),
+        ("SPOILED", "Spoiled / contaminated"),
+        ("DAMAGED", "Damaged"),
+        ("OVERPRODUCTION", "Overproduction"),
+        ("PREPARATION_ERROR", "Preparation error"),
+        ("OTHER", "Other"),
+    )
+    REVIEW_STATUS_CHOICES = (
+        ("PENDING", "Pending review"),
+        ("REVIEWED", "Reviewed"),
+    )
+
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="kitchen_spoilage_records")
+    department = models.ForeignKey(Department, on_delete=models.PROTECT, related_name="kitchen_spoilage_records")
+    quantity = models.DecimalField(max_digits=12, decimal_places=3)
+    reason_code = models.CharField(max_length=24, choices=REASON_CHOICES)
+    notes = models.TextField(blank=True)
+    recorded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="recorded_kitchen_spoilage")
+    recorded_at = models.DateTimeField(default=timezone.now)
+    stock_movement = models.OneToOneField(StockMovement, on_delete=models.PROTECT, null=True, blank=True, related_name="spoilage_record")
+    cost_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    review_status = models.CharField(max_length=12, choices=REVIEW_STATUS_CHOICES, default="PENDING")
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="reviewed_kitchen_spoilage")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-recorded_at", "-id"]
+
+    def __str__(self):
+        return f"Spoilage #{self.pk}: {self.product} x {self.quantity}"
+
+
 class IngredientRestockRequest(models.Model):
     STATUS_CHOICES = (
         ("PENDING", "Pending"),
