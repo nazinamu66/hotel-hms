@@ -55,7 +55,7 @@ body{margin:0;background:#f1f5f9;color:#111;font-family:Arial,Helvetica,sans-ser
 </main>
 <div class="controls">
   <button type="button" onclick="window.print()">Print ticket</button>
-  <a href="{% url 'restaurant_pos' %}">Back to POS</a>
+{% if user.role == "KITCHEN" %}<a href="{% url 'kitchen_dashboard' %}">Back to Kitchen Board</a>{% else %}<a href="{% url 'restaurant_pos' %}">Back to POS</a>{% endif %}
 </div>
 <script>
 window.addEventListener("load", function () {
