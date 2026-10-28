@@ -9,7 +9,8 @@ def get_latest_cost(product, kitchen):
         ProductionBatch.objects
         .filter(
             recipe__product=product,
-            is_executed=True
+            produced_by__department=kitchen,
+            is_executed=True,
         )
         .order_by("-id")
         .first()
