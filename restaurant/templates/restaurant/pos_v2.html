@@ -1417,8 +1417,21 @@ if (menuSearch) {
                 const row = document.createElement("div");
                 row.style.padding = "8px 0";
                 row.style.borderTop = "1px solid #bbf7d0";
+                row.style.display = "flex";
+                row.style.justifyContent = "space-between";
+                row.style.alignItems = "center";
+                row.style.gap = "12px";
+                const details = document.createElement("span");
                 const items = ticket.items.map(item => item.quantity + " × " + item.name).join(", ");
-                row.textContent = "Order #" + ticket.order_id + " · " + ticket.location + " — " + items;
+                details.textContent = "Order #" + ticket.order_id + " · " + ticket.location + " — " + items;
+                row.appendChild(details);
+                const printLink = document.createElement("a");
+                printLink.href = "/restaurant/ready-food/" + ticket.id + "/print/";
+                printLink.target = "_blank";
+                printLink.rel = "noopener";
+                printLink.textContent = "🖨 Print ticket";
+                printLink.style.cssText = "flex-shrink:0;padding:7px 10px;border-radius:7px;background:#14532d;color:#fff;text-decoration:none;font-size:12px;font-weight:700;white-space:nowrap";
+                row.appendChild(printLink);
                 alertList.appendChild(row);
             });
         } catch (error) { /* Temporary network errors should not interrupt POS. */ }
