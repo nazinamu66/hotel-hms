@@ -1016,25 +1016,37 @@ def kitchen_spoilage_review(request, pk):
 @role_required("KITCHEN")
 def kitchen_food_sales_report(request):
     """Head-chef-only food sales audit for this Kitchen's own hotel."""
+    import csv
+    from django.http import HttpResponse
+    from django.contrib.auth import get_user_model
+    from restaurant.models import POSOrderItem, MenuItem
+
     user = request.user
     kitchen = user.department
     if not user.is_department_head or not kitchen or kitchen.department_type != "KITCHEN":
         raise PermissionDenied("Only the Head Chef can access this report.")
 
-    from restaurant.models import POSOrderItem
+    UserModel = get_user_model()
+    hotel_id = kitchen.hotel_id
 
     rows = POSOrderItem.objects.filter(
-        order__department__hotel_id=kitchen.hotel_id,
+        order__department__hotel_id=hotel_id,
         menu_item__product__product_type="FOOD",
         order__status__in=["CHARGED", "PAID"],
         order__is_refunded=False,
     ).select_related(
         "order", "order__created_by", "order__shift",
         "menu_item", "menu_item__product",
+        "order__kitchen_ticket", "order__kitchen_ticket__accepted_by",
     ).order_by("-order__created_at", "-order_id", "menu_item__name")
 
     date_from = request.GET.get("from", "").strip()
     date_to = request.GET.get("to", "").strip()
+    restaurant_staff_id = request.GET.get("restaurant_staff", "").strip()
+    kitchen_staff_id = request.GET.get("kitchen_staff", "").strip()
+    food_item_id = request.GET.get("food_item", "").strip()
+    order_number = request.GET.get("order_number", "").strip()
+
     if date_from:
         try:
             rows = rows.filter(order__created_at__date__gte=date.fromisoformat(date_from))
@@ -1046,12 +1058,46 @@ def kitchen_food_sales_report(request):
         except ValueError:
             date_to = ""
 
+    restaurant_staff = UserModel.objects.filter(
+        role="RESTAURANT", department__hotel_id=hotel_id
+    ).order_by("first_name", "last_name", "username")
+    kitchen_staff = UserModel.objects.filter(
+        role="KITCHEN", department__hotel_id=hotel_id
+    ).order_by("first_name", "last_name", "username")
+    food_items = MenuItem.objects.filter(
+        product__hotel_id=hotel_id,
+        product__product_type="FOOD",
+    ).order_by("name")
+
+    if restaurant_staff_id.isdigit():
+        rows = rows.filter(order__created_by_id=int(restaurant_staff_id))
+    else:
+        restaurant_staff_id = ""
+
+    if kitchen_staff_id == "unrecorded":
+        rows = rows.filter(order__kitchen_ticket__accepted_by__isnull=True)
+    elif kitchen_staff_id.isdigit():
+        rows = rows.filter(order__kitchen_ticket__accepted_by_id=int(kitchen_staff_id))
+    else:
+        kitchen_staff_id = ""
+
+    if food_item_id.isdigit():
+        rows = rows.filter(menu_item_id=int(food_item_id))
+    else:
+        food_item_id = ""
+
+    if order_number:
+        if order_number.isdigit():
+            rows = rows.filter(order_id=int(order_number))
+        else:
+            rows = rows.none()
+
     sales_rows = []
     total_quantity = 0
     total_revenue = Decimal("0.00")
     for row in rows:
         ticket = getattr(row.order, "kitchen_ticket", None)
-        kitchen_staff = ticket.accepted_by if ticket and ticket.accepted_by_id else None
+        kitchen_person = ticket.accepted_by if ticket and ticket.accepted_by_id else None
         revenue = row.quantity * row.price
         total_quantity += row.quantity
         total_revenue += revenue
@@ -1062,13 +1108,49 @@ def kitchen_food_sales_report(request):
             "revenue": revenue,
             "order": row.order,
             "restaurant_staff": row.order.created_by,
-            "kitchen_staff": kitchen_staff,
+            "kitchen_staff": kitchen_person,
         })
+
+    if request.GET.get("export") == "csv":
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="restaurant-food-sales-audit.csv"'
+        response.write("\\ufeff")
+        writer = csv.writer(response)
+        writer.writerow([
+            "Date/time", "Order number", "Order status", "Shift ID",
+            "Food item", "Quantity", "Unit price", "Revenue",
+            "Restaurant staff", "Kitchen staff recorded",
+        ])
+        for row in sales_rows:
+            restaurant_person = row["restaurant_staff"]
+            kitchen_person = row["kitchen_staff"]
+            writer.writerow([
+                row["order"].created_at.strftime("%Y-%m-%d %H:%M"),
+                row["order"].id,
+                row["order"].get_status_display(),
+                row["order"].shift_id or "",
+                row["item"],
+                row["quantity"],
+                row["unit_price"],
+                row["revenue"],
+                (restaurant_person.get_full_name() or restaurant_person.username)
+                if restaurant_person else "User account unavailable",
+                (kitchen_person.get_full_name() or kitchen_person.username)
+                if kitchen_person else "Not recorded",
+            ])
+        return response
 
     return render(request, "kitchen/food_sales_report.html", {
         "sales_rows": sales_rows,
         "date_from": date_from,
         "date_to": date_to,
+        "restaurant_staff_options": restaurant_staff,
+        "kitchen_staff_options": kitchen_staff,
+        "food_item_options": food_items,
+        "selected_restaurant_staff": restaurant_staff_id,
+        "selected_kitchen_staff": kitchen_staff_id,
+        "selected_food_item": food_item_id,
+        "order_number": order_number,
         "total_quantity": total_quantity,
         "total_revenue": total_revenue,
     })
