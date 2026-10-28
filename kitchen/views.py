@@ -966,12 +966,20 @@ def kitchen_spoilage(request):
             "products": products,
             "records": records,
             "reason_choices": KitchenSpoilageRecord.REASON_CHOICES,
-            "can_review": request.user.role in {"MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR"},
+            "can_review": (
+                request.user.role in {"MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR"}
+                or (
+                    is_kitchen_user
+                    and request.user.is_department_head
+                    and kitchen is not None
+                    and kitchen.department_type == "KITCHEN"
+                )
+            ),
         },
     )
 
 
-@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
+@role_required("KITCHEN", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 @require_POST
 @transaction.atomic
 def kitchen_spoilage_review(request, pk):
@@ -981,6 +989,17 @@ def kitchen_spoilage_review(request, pk):
         pk=pk,
         department__hotel__in=hotels,
     )
+    if request.user.role == "KITCHEN":
+        kitchen = request.user.department
+        if (
+            not request.user.is_department_head
+            or not kitchen
+            or kitchen.department_type != "KITCHEN"
+            or record.department_id != kitchen.pk
+        ):
+            raise PermissionDenied(
+                "Only your Kitchen Head can review spoilage records for this kitchen."
+            )
     if record.review_status == "REVIEWED":
         messages.info(request, "This spoilage record has already been reviewed.")
         return redirect("kitchen_spoilage")
