@@ -1,0 +1,107 @@
+{% extends "base/base.html" %}
+{% block title %}Kitchen Spoilage | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.sp-page{max-width:1180px;margin:0 auto;padding:28px 20px 48px;color:#172033}
+.sp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px}
+.sp-title{font-size:clamp(1.7rem,2.4vw,2.2rem);font-weight:800;letter-spacing:-.03em;margin:0}
+.sp-muted{color:#64748b;font-size:.88rem;line-height:1.5}
+.sp-card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;overflow:hidden;box-shadow:0 5px 20px rgba(15,23,42,.035);margin-bottom:20px}
+.sp-card-head{padding:17px 20px;border-bottom:1px solid #edf0f4;font-weight:800}
+.sp-body{padding:20px}
+.sp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.sp-field{display:flex;flex-direction:column;gap:7px}
+.sp-field label{font-size:.82rem;font-weight:750;color:#475569}
+.sp-field input,.sp-field select,.sp-field textarea{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font:inherit}
+.sp-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border:0;border-radius:9px;background:#1d4ed8;color:#fff;text-decoration:none;font-weight:750;cursor:pointer}
+.sp-table-wrap{overflow-x:auto}.sp-table{width:100%;border-collapse:collapse;min-width:820px}
+.sp-table th{text-align:left;padding:12px 14px;background:#f8fafc;color:#64748b;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+.sp-table td{padding:13px 14px;border-top:1px solid #eef2f7;vertical-align:top;font-size:.88rem}
+.sp-pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:#fff7ed;color:#9a3412;font-size:.75rem;font-weight:800;white-space:nowrap}
+.sp-pill.done{background:#dcfce7;color:#166534}
+.sp-empty{text-align:center;padding:35px 16px;color:#64748b}
+.sp-message{padding:12px 15px;margin-bottom:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;color:#166534}
+@media(max-width:650px){.sp-page{padding:20px 12px 36px}.sp-grid{grid-template-columns:1fr}.sp-head{flex-direction:column}}
+</style>
+<div class="sp-page">
+  <header class="sp-head">
+    <div>
+      <h1 class="sp-title">Kitchen Spoilage Log</h1>
+      <p class="sp-muted">Record wasted ingredients or prepared food. Stock is deducted immediately and each entry remains available for management review.</p>
+    </div>
+  </header>
+  {% if messages %}{% for message in messages %}<div class="sp-message">{{ message }}</div>{% endfor %}{% endif %}
+  {% if request.user.role == "KITCHEN" %}
+  <section class="sp-card">
+    <div class="sp-card-head">Record spoilage</div>
+    <div class="sp-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="sp-grid">
+          <div class="sp-field">
+            <label for="product">Ingredient or prepared food</label>
+            <select id="product" name="product" required>
+              <option value="">Select item</option>
+              {% for product in products %}<option value="{{ product.pk }}">{{ product.name }} ({{ product.base_unit }})</option>{% endfor %}
+            </select>
+          </div>
+          <div class="sp-field">
+            <label for="quantity">Quantity wasted (base unit)</label>
+            <input id="quantity" name="quantity" type="number" min="0.001" step="0.001" required>
+          </div>
+          <div class="sp-field">
+            <label for="reason_code">Reason</label>
+            <select id="reason_code" name="reason_code" required>
+              <option value="">Select reason</option>
+              {% for value,label in reason_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="sp-field">
+            <label for="notes">Notes (optional)</label>
+            <textarea id="notes" name="notes" rows="3" placeholder="Add context, batch, or other details"></textarea>
+          </div>
+        </div>
+        <p class="sp-muted">Submitting this form immediately deducts the quantity from Kitchen stock. Enter only the amount physically wasted.</p>
+        <button class="sp-btn" type="submit">Record spoilage and deduct stock</button>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+  <section class="sp-card">
+    <div class="sp-card-head">Spoilage history</div>
+    <div class="sp-table-wrap">
+      <table class="sp-table">
+        <thead><tr><th>Date</th><th>Item</th><th>Quantity</th><th>Reason / Notes</th><th>Recorded by</th><th>Cost</th><th>Review</th></tr></thead>
+        <tbody>
+        {% for record in records %}
+          <tr>
+            <td>{{ record.recorded_at|date:"d M Y H:i" }}</td>
+            <td><strong>{{ record.product.name }}</strong><div class="sp-muted">{{ record.department.name }}</div></td>
+            <td>{{ record.quantity|floatformat:3 }} {{ record.product.base_unit }}</td>
+            <td>{{ record.get_reason_code_display }}{% if record.notes %}<div class="sp-muted">{{ record.notes }}</div>{% endif %}</td>
+            <td>{{ record.recorded_by|default:"Unknown" }}</td>
+            <td>{{ record.cost_amount|floatformat:2 }}</td>
+            <td>
+              {% if record.review_status == "REVIEWED" %}
+                <span class="sp-pill done">Reviewed</span><div class="sp-muted">{{ record.reviewed_by }}{% if record.review_note %}<br>{{ record.review_note }}{% endif %}</div>
+              {% else %}
+                <span class="sp-pill">Pending review</span>
+                {% if can_review %}
+                <form method="post" action="{% url 'kitchen_spoilage_review' record.pk %}" style="margin-top:8px">
+                  {% csrf_token %}
+                  <input type="text" name="review_note" placeholder="Review note (optional)" style="width:170px;max-width:100%;padding:7px;border:1px solid #cbd5e1;border-radius:7px;margin-bottom:6px">
+                  <button class="sp-btn" type="submit">Mark reviewed</button>
+                </form>
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="sp-empty">No spoilage records yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
