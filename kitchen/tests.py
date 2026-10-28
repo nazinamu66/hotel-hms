@@ -417,6 +417,66 @@ class IngredientRequestApprovalTests(TestCase):
         self.assertNotContains(deliveries_response, "Payment summary")
         self.assertNotContains(deliveries_response, "Balance due")
 
+    def test_approved_regular_direct_purchase_appears_in_incoming_deliveries(self):
+        request_obj = self.make_direct_request()
+        request_obj.status = "APPROVED"
+        request_obj.approved_by = self.manager
+        request_obj.save(update_fields=["status", "approved_by"])
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=request_obj,
+            supplier=self.supplier,
+            requested_by=self.requester,
+            approved_by=self.manager,
+            status="APPROVED",
+            urgent_purchase=False,
+            total_cost=Decimal("25.00"),
+        )
+        item = DirectPurchaseItem.objects.create(
+            purchase=purchase,
+            product=self.ingredient,
+            quantity=Decimal("2.000"),
+            unit_cost=Decimal("12.50"),
+        )
+        self.client.force_login(self.requester)
+
+        response = self.client.get(reverse("kitchen_incoming_deliveries"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"DP-{purchase.pk}")
+        self.assertContains(response, f"received_{item.pk}")
+        self.assertContains(response, "Incoming Purchase Orders")
+
+    def test_kitchen_head_can_view_same_department_purchase_from_another_staff_member(self):
+        colleague = User.objects.create_user(
+            username="kitchen_colleague",
+            password="test-password",
+            role="KITCHEN",
+            hotel=self.hotel,
+            department=self.kitchen_department,
+            is_department_head=False,
+        )
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=None,
+            supplier=self.supplier,
+            requested_by=colleague,
+            approved_by=self.manager,
+            status="APPROVED",
+            urgent_purchase=False,
+            total_cost=Decimal("25.00"),
+        )
+        DirectPurchaseItem.objects.create(
+            purchase=purchase,
+            product=self.ingredient,
+            quantity=Decimal("2.000"),
+            unit_cost=Decimal("12.50"),
+        )
+        self.client.force_login(self.requester)
+
+        response = self.client.get(reverse("kitchen_incoming_deliveries"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"DP-{purchase.pk}")
+
     def test_kitchen_receipt_redirects_to_incoming_deliveries(self):
         _, purchase, item = self.make_paid_direct_purchase()
         self.client.force_login(self.requester)
