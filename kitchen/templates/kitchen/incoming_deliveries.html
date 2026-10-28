@@ -29,7 +29,6 @@
       <p class="id-subtitle">Record ingredients physically delivered for approved direct purchases. Supplier payments and accounting are managed separately.</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
-      {% if can_view_purchase_orders %}<a class="id-btn" href="{% url 'inventory:department_incoming_pos' %}">Incoming Purchase Orders</a>{% endif %}
       <a class="id-btn" href="{% url 'kitchen_ingredient_requests' %}">My ingredient requests</a>
     </div>
   </header>
