@@ -1111,6 +1111,156 @@ def kitchen_food_sales_report(request):
             "kitchen_staff": kitchen_person,
         })
 
+    if request.GET.get("export") == "pdf":
+        from io import BytesIO
+        from django.http import HttpResponse
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import mm
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+
+        response = HttpResponse(content_type="application/pdf")
+        response["Content-Disposition"] = 'attachment; filename="restaurant-food-sales-audit.pdf"'
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(
+            buffer, pagesize=landscape(A4),
+            rightMargin=12 * mm, leftMargin=12 * mm,
+            topMargin=10 * mm, bottomMargin=12 * mm,
+            title="Restaurant Food Sales Audit",
+        )
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(
+            name="AuditHotel", parent=styles["Title"], fontName="Helvetica-Bold",
+            fontSize=17, leading=20, alignment=TA_LEFT, textColor=colors.HexColor("#172033"),
+            spaceAfter=3,
+        ))
+        styles.add(ParagraphStyle(
+            name="AuditSmall", parent=styles["Normal"], fontSize=8, leading=10,
+            textColor=colors.HexColor("#475569"),
+        ))
+        styles.add(ParagraphStyle(
+            name="AuditCell", parent=styles["Normal"], fontSize=7, leading=8,
+        ))
+        styles.add(ParagraphStyle(
+            name="AuditCellBold", parent=styles["Normal"], fontName="Helvetica-Bold",
+            fontSize=7, leading=8,
+        ))
+        story = []
+        hotel = kitchen.hotel
+        organization = hotel.organization
+        header_left = []
+        if organization and organization.logo:
+            try:
+                organization.logo.open("rb")
+                logo_bytes = organization.logo.read()
+                organization.logo.close()
+                logo = Image(BytesIO(logo_bytes), width=24 * mm, height=18 * mm, kind="proportional")
+                header_left.append(logo)
+            except Exception:
+                pass
+        header_left.extend([
+            Paragraph(hotel.name, styles["AuditHotel"]),
+            Paragraph(hotel.location or "Hotel address/location not configured", styles["AuditSmall"]),
+            Paragraph(organization.name if organization else "", styles["AuditSmall"]),
+        ])
+        header = Table([[header_left]], colWidths=[doc.width])
+        header.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LINEBELOW", (0, 0), (-1, -1), 1, colors.HexColor("#cbd5e1")),
+        ]))
+        story.append(header)
+        story.append(Spacer(1, 5 * mm))
+        story.append(Paragraph("RESTAURANT FOOD SALES AUDIT", styles["Heading1"]))
+        story.append(Paragraph(
+            f"Generated {timezone.localtime().strftime('%d %b %Y, %H:%M')} · "
+            f"Reporting period: {date_from or 'Beginning'} to {date_to or 'Today'}",
+            styles["AuditSmall"],
+        ))
+        filter_parts = []
+        if restaurant_staff_id:
+            selected = restaurant_staff.filter(pk=restaurant_staff_id).first()
+            filter_parts.append("Restaurant staff: " + (selected.get_full_name() or selected.username if selected else restaurant_staff_id))
+        if kitchen_staff_id:
+            if kitchen_staff_id == "unrecorded":
+                filter_parts.append("Kitchen staff: Not recorded")
+            else:
+                selected = kitchen_staff.filter(pk=kitchen_staff_id).first()
+                filter_parts.append("Kitchen staff: " + (selected.get_full_name() or selected.username if selected else kitchen_staff_id))
+        if food_item_id:
+            selected = food_items.filter(pk=food_item_id).first()
+            filter_parts.append("Food item: " + (selected.name if selected else food_item_id))
+        if order_number:
+            filter_parts.append("Order: #" + order_number)
+        story.append(Paragraph(
+            "Applied filters: " + (" · ".join(filter_parts) if filter_parts else "None"),
+            styles["AuditSmall"],
+        ))
+        story.append(Spacer(1, 4 * mm))
+        summary = Table(
+            [[
+                Paragraph(f"<b>Food portions sold</b><br/>{total_quantity}", styles["Normal"]),
+                Paragraph(f"<b>Food sales revenue</b><br/>₦{total_revenue:,.2f}", styles["Normal"]),
+                Paragraph(f"<b>Sale lines</b><br/>{len(sales_rows)}", styles["Normal"]),
+            ]],
+            colWidths=[doc.width / 3] * 3,
+        )
+        summary.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f1f5f9")),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ("TOPPADDING", (0, 0), (-1, -1), 7),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ]))
+        story.append(summary)
+        story.append(Spacer(1, 5 * mm))
+        headers = ["Date / time", "Order", "Shift", "Food item", "Qty", "Unit price", "Revenue", "Restaurant staff", "Kitchen staff recorded"]
+        data = [[Paragraph(f"<b>{h}</b>", styles["AuditCell"]) for h in headers]]
+        for row in sales_rows:
+            restaurant_person = row["restaurant_staff"]
+            kitchen_person = row["kitchen_staff"]
+            restaurant_name = (restaurant_person.get_full_name() or restaurant_person.username) if restaurant_person else "Account unavailable"
+            kitchen_name = (kitchen_person.get_full_name() or kitchen_person.username) if kitchen_person else "Not recorded"
+            values = [
+                row["order"].created_at.strftime("%d %b %Y %H:%M"),
+                f"#{row['order'].id} ({row['order'].get_status_display()})",
+                f"#{row['order'].shift_id}" if row["order"].shift_id else "—",
+                row["item"], str(row["quantity"]),
+                f"₦{row['unit_price']:,.2f}", f"₦{row['revenue']:,.2f}",
+                restaurant_name, kitchen_name,
+            ]
+            data.append([Paragraph(str(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"), styles["AuditCell"]) for value in values])
+        widths = [25*mm, 22*mm, 13*mm, 27*mm, 10*mm, 22*mm, 23*mm, 35*mm, 35*mm]
+        table = Table(data, colWidths=widths, repeatRows=1, hAlign="LEFT")
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#334155")),
+            ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#cbd5e1")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
+        ]))
+        story.append(table)
+        story.append(Spacer(1, 3 * mm))
+        story.append(Paragraph(
+            "Audit note: Kitchen staff identifies the person recorded as accepting/starting the ticket. "
+            "It is not proof that this person alone cooked every item. Historical records may not contain attribution.",
+            styles["AuditSmall"],
+        ))
+        doc.build(story)
+        response.write(buffer.getvalue())
+        return response
+
     if request.GET.get("export") == "csv":
         response = HttpResponse(content_type="text/csv; charset=utf-8")
         response["Content-Disposition"] = 'attachment; filename="restaurant-food-sales-audit.csv"'
