@@ -2,7 +2,9 @@ from types import SimpleNamespace
 
 from decimal import Decimal
 
+from django.contrib.auth import get_user_model
 from django.test import RequestFactory, SimpleTestCase, TestCase
+from unittest.mock import patch
 
 from inventory.models import (
     Department,
@@ -17,6 +19,11 @@ from inventory.models import (
 )
 from inventory.forms import PurchaseItemForm, PurchaseOrderForm
 from inventory.views import po_submit, product_delete
+from inventory.services.costing import get_latest_cost
+from kitchen.models import ProductionBatch, Recipe
+
+
+User = get_user_model()
 
 
 class PurchaseOrderMethodTests(SimpleTestCase):
@@ -199,3 +206,86 @@ class PurchaseOrderHotelIsolationTests(TestCase):
                 pk=self.product_b.pk
             ).exists()
         )
+
+
+
+class KitchenScopedLatestCostTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        organization = Organization.objects.create(name="Kitchen Cost Scope Org")
+        cls.hotel = Hotel.objects.create(
+            organization=organization,
+            name="Kitchen Cost Scope Hotel",
+        )
+        cls.kitchen_a = Department.objects.create(
+            hotel=cls.hotel,
+            code="KCA",
+            name="Cost Scope Kitchen A",
+            department_type="KITCHEN",
+        )
+        cls.kitchen_b = Department.objects.create(
+            hotel=cls.hotel,
+            code="KCB",
+            name="Cost Scope Kitchen B",
+            department_type="KITCHEN",
+        )
+        cls.user_a = User.objects.create_user(
+            username="cost_scope_kitchen_a",
+            password="test-password",
+            role="KITCHEN",
+            hotel=cls.hotel,
+            department=cls.kitchen_a,
+        )
+        cls.user_b = User.objects.create_user(
+            username="cost_scope_kitchen_b",
+            password="test-password",
+            role="KITCHEN",
+            hotel=cls.hotel,
+            department=cls.kitchen_b,
+        )
+        cls.product = Product.objects.create(
+            hotel=cls.hotel,
+            name="Cost Scope Jollof Rice",
+            sku="COST-SCOPE-JOLLOF",
+            product_type="FOOD",
+            usage_type="RESALE",
+            base_unit="portion",
+        )
+        cls.recipe = Recipe.objects.create(
+            name="Cost Scope Jollof Recipe",
+            product=cls.product,
+        )
+
+    def test_latest_cost_uses_only_the_requested_kitchen(self):
+        batch_a = ProductionBatch.objects.create(
+            recipe=self.recipe,
+            quantity_produced=10,
+            produced_by=self.user_a,
+            is_executed=True,
+        )
+        batch_b = ProductionBatch.objects.create(
+            recipe=self.recipe,
+            quantity_produced=10,
+            produced_by=self.user_b,
+            is_executed=True,
+        )
+
+        def cost_for_batch(batch):
+            return {
+                batch_a.pk: Decimal("12.00"),
+                batch_b.pk: Decimal("25.00"),
+            }[batch.pk]
+
+        with patch.object(ProductionBatch, "cost_per_unit", autospec=True, side_effect=cost_for_batch):
+            self.assertEqual(get_latest_cost(self.product, self.kitchen_a), Decimal("12.00"))
+            self.assertEqual(get_latest_cost(self.product, self.kitchen_b), Decimal("25.00"))
+
+    def test_latest_cost_returns_zero_when_requested_kitchen_has_no_batch(self):
+        ProductionBatch.objects.create(
+            recipe=self.recipe,
+            quantity_produced=10,
+            produced_by=self.user_a,
+            is_executed=True,
+        )
+
+        self.assertEqual(get_latest_cost(self.product, self.kitchen_b), Decimal("0.00"))
