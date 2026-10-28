@@ -444,7 +444,7 @@ class IngredientRequestApprovalTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f"DP-{purchase.pk}")
         self.assertContains(response, f"received_{item.pk}")
-        self.assertContains(response, "Incoming Purchase Orders")
+        self.assertNotContains(response, "Incoming Purchase Orders")
 
     def test_kitchen_head_can_view_same_department_purchase_from_another_staff_member(self):
         colleague = User.objects.create_user(
