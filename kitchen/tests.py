@@ -1397,16 +1397,19 @@ class KitchenSpoilageWorkflowTests(TestCase):
 
         cls.spoilage_expense = Account.objects.create(
             hotel=cls.hotel, code="SP-EXP", name="Spoilage Expense",
+            slug="spoilage-expense-workflow-test",
             account_type="expense", system_key="spoilage_expense",
             is_system=True,
         )
         cls.inventory_asset = Account.objects.create(
             hotel=cls.hotel, code="SP-INV", name="Inventory Asset",
+            slug="inventory-asset-workflow-test",
             account_type="inventory", system_key="inventory_asset",
             is_system=True,
         )
         cls.finished_goods = Account.objects.create(
             hotel=cls.hotel, code="SP-FG", name="Finished Goods Inventory",
+            slug="finished-goods-workflow-test",
             account_type="inventory", system_key="finished_goods_inventory",
             is_system=True,
         )
