@@ -1565,3 +1565,25 @@ class KitchenSpoilageWorkflowTests(TestCase):
         record.refresh_from_db()
         self.assertEqual(record.review_status, "PENDING")
         self.assertIsNone(record.reviewed_by)
+
+
+    def test_prepared_food_spoilage_credits_finished_goods_inventory(self):
+        stock = self.add_stock(
+            product=self.finished_food, quantity="4.000", unit_cost="12.5000",
+        )
+        response = self.client.post(
+            reverse("kitchen_spoilage"),
+            self.spoilage_payload(product=self.finished_food, quantity="1.000"),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        stock.refresh_from_db()
+        self.assertEqual(stock.quantity, Decimal("3.000"))
+        record = KitchenSpoilageRecord.objects.get()
+        self.assertEqual(record.cost_amount, Decimal("12.50"))
+        journal = JournalEntry.objects.get(reference=f"SPOILAGE-{record.pk}")
+        lines = list(journal.lines.select_related("account"))
+        self.assertEqual(len(lines), 2)
+        credit_line = next(line for line in lines if line.credit > 0)
+        self.assertEqual(credit_line.account.system_key, "finished_goods_inventory")
+        self.assertEqual(credit_line.credit, Decimal("12.50"))
