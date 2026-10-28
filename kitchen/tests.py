@@ -1410,6 +1410,16 @@ class KitchenSpoilageWorkflowTests(TestCase):
             username="spoilage_kitchen", password="test-password",
             role="KITCHEN", hotel=cls.hotel, department=cls.kitchen,
         )
+        cls.kitchen_head = User.objects.create_user(
+            username="spoilage_kitchen_head", password="test-password",
+            role="KITCHEN", hotel=cls.hotel, department=cls.kitchen,
+            is_department_head=True,
+        )
+        cls.other_kitchen_head = User.objects.create_user(
+            username="other_spoilage_kitchen_head", password="test-password",
+            role="KITCHEN", hotel=cls.other_hotel, department=cls.other_kitchen,
+            is_department_head=True,
+        )
         cls.manager = User.objects.create_user(
             username="spoilage_manager", password="test-password",
             role="MANAGER", hotel=cls.hotel,
@@ -1663,6 +1673,47 @@ class KitchenSpoilageWorkflowTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+        record.refresh_from_db()
+        self.assertEqual(record.review_status, "PENDING")
+        self.assertIsNone(record.reviewed_by)
+
+    def test_kitchen_head_can_review_spoilage_they_personally_recorded(self):
+        self.add_stock()
+        self.client.force_login(self.kitchen_head)
+        self.client.post(
+            reverse("kitchen_spoilage"),
+            self.spoilage_payload(quantity="1.000"),
+        )
+        record = KitchenSpoilageRecord.objects.get()
+        self.assertEqual(record.recorded_by, self.kitchen_head)
+        self.assertEqual(record.review_status, "PENDING")
+
+        response = self.client.post(
+            reverse("kitchen_spoilage_review", args=[record.pk]),
+            {"review_note": "Kitchen Head verified the spoilage."},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        record.refresh_from_db()
+        self.assertEqual(record.review_status, "REVIEWED")
+        self.assertEqual(record.reviewed_by, self.kitchen_head)
+        self.assertEqual(record.review_note, "Kitchen Head verified the spoilage.")
+
+    def test_kitchen_head_cannot_review_spoilage_from_another_kitchen(self):
+        self.add_stock()
+        record = KitchenSpoilageRecord.objects.create(
+            product=self.ingredient, department=self.kitchen,
+            quantity=Decimal("1.000"), reason_code="SPOILED",
+            recorded_by=self.kitchen_user,
+        )
+        self.client.force_login(self.other_kitchen_head)
+
+        response = self.client.post(
+            reverse("kitchen_spoilage_review", args=[record.pk]),
+            {"review_note": "Cross-kitchen attempt"},
+        )
+
+        self.assertEqual(response.status_code, 404)
         record.refresh_from_db()
         self.assertEqual(record.review_status, "PENDING")
         self.assertIsNone(record.reviewed_by)
