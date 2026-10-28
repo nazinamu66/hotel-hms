@@ -294,11 +294,7 @@
                     🧾 My Ingredient Requests
                 </a>
             {% endif %}
-            {% if user.role == "KITCHEN" and user.is_department_head %}
-                <a href="{% url 'inventory:department_incoming_pos' %}">
-                    📦 Store Deliveries
-                </a>
-                <a href="{% url 'kitchen_incoming_deliveries' %}">
+            {% if user.role == "KITCHEN" and user.is_department_head %}<a href="{% url 'kitchen_incoming_deliveries' %}">
                     🧾 Direct Purchase Deliveries
                 </a>
                 <a href="{% url 'urgent_purchase_create' %}">
