@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse
 
 from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement, StockTransfer, Supplier
-from accounting.models import Account, StaffReimbursement
+from accounting.models import Account, StaffReimbursement, JournalEntry
 from kitchen.models import (
     DirectPurchase,
     DirectPurchaseItem,
@@ -1346,3 +1346,222 @@ class RecipeVersionSourceOfTruthTests(TestCase):
         self.recipe.refresh_from_db()
         self.assertEqual(draft.status, "DRAFT")
         self.assertEqual(self.recipe.active_version_id, self.version_one.pk)
+
+
+
+class KitchenSpoilageWorkflowTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.organization = Organization.objects.create(name="Spoilage Test Org")
+        cls.hotel = Hotel.objects.create(
+            organization=cls.organization, name="Spoilage Test Hotel",
+        )
+        cls.other_hotel = Hotel.objects.create(
+            organization=cls.organization, name="Other Spoilage Hotel",
+        )
+        cls.kitchen = Department.objects.create(
+            hotel=cls.hotel, department_type="KITCHEN",
+            code="SPK", name="Spoilage Test Kitchen",
+        )
+        cls.other_kitchen = Department.objects.create(
+            hotel=cls.other_hotel, department_type="KITCHEN",
+            code="OSPK", name="Other Spoilage Kitchen",
+        )
+        cls.kitchen_user = User.objects.create_user(
+            username="spoilage_kitchen", password="test-password",
+            role="KITCHEN", hotel=cls.hotel, department=cls.kitchen,
+        )
+        cls.manager = User.objects.create_user(
+            username="spoilage_manager", password="test-password",
+            role="MANAGER", hotel=cls.hotel,
+        )
+        cls.other_manager = User.objects.create_user(
+            username="other_spoilage_manager", password="test-password",
+            role="MANAGER", hotel=cls.other_hotel,
+        )
+        cls.ingredient = Product.objects.create(
+            hotel=cls.hotel, name="Spoilage Flour", sku="SPOILAGE-FLOUR",
+            product_type="RAW", base_unit="kg", cost_price=Decimal("5.00"),
+        )
+        cls.ingredient.departments.add(cls.kitchen)
+        cls.finished_food = Product.objects.create(
+            hotel=cls.hotel, name="Spoilage Bread", sku="SPOILAGE-BREAD",
+            product_type="FOOD", base_unit="each", cost_price=Decimal("0.00"),
+        )
+        cls.finished_food.departments.add(cls.kitchen)
+        cls.other_ingredient = Product.objects.create(
+            hotel=cls.other_hotel, name="Other Hotel Flour",
+            sku="OTHER-SPOILAGE-FLOUR", product_type="RAW",
+            base_unit="kg", cost_price=Decimal("5.00"),
+        )
+
+        cls.spoilage_expense = Account.objects.create(
+            hotel=cls.hotel, code="SP-EXP", name="Spoilage Expense",
+            account_type="expense", system_key="spoilage_expense",
+            is_system=True,
+        )
+        cls.inventory_asset = Account.objects.create(
+            hotel=cls.hotel, code="SP-INV", name="Inventory Asset",
+            account_type="inventory", system_key="inventory_asset",
+            is_system=True,
+        )
+        cls.finished_goods = Account.objects.create(
+            hotel=cls.hotel, code="SP-FG", name="Finished Goods Inventory",
+            account_type="inventory", system_key="finished_goods_inventory",
+            is_system=True,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.kitchen_user)
+
+    def add_stock(self, product=None, quantity="10.000", unit_cost="5.0000"):
+        product = product or self.ingredient
+        stock = Stock.objects.create(
+            product=product, department=self.kitchen, quantity=Decimal(quantity),
+        )
+        StockCostLayer.objects.create(
+            product=product, department=self.kitchen,
+            quantity_received=Decimal(quantity),
+            quantity_remaining=Decimal(quantity),
+            unit_cost=Decimal(unit_cost),
+        )
+        return stock
+
+    def spoilage_payload(self, product=None, quantity="2.000"):
+        return {
+            "product": str((product or self.ingredient).pk),
+            "quantity": quantity,
+            "reason_code": "SPOILED",
+            "notes": "Automated workflow test",
+        }
+
+    def test_valid_spoilage_deducts_stock_and_posts_fifo_cost_journal(self):
+        stock = self.add_stock()
+        response = self.client.post(
+            reverse("kitchen_spoilage"), self.spoilage_payload(quantity="2.000"),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        stock.refresh_from_db()
+        self.assertEqual(stock.quantity, Decimal("8.000"))
+
+        record = KitchenSpoilageRecord.objects.get()
+        self.assertEqual(record.quantity, Decimal("2.000"))
+        self.assertEqual(record.cost_amount, Decimal("10.00"))
+        self.assertEqual(record.recorded_by, self.kitchen_user)
+        self.assertEqual(record.review_status, "PENDING")
+        self.assertIsNotNone(record.stock_movement)
+        self.assertEqual(record.stock_movement.movement_type, "OUT")
+        self.assertEqual(record.stock_movement.quantity, Decimal("2.000"))
+        self.assertEqual(record.stock_movement.reference, f"SPOILAGE-{record.pk}")
+        self.assertEqual(record.stock_movement.cost_allocations.count(), 1)
+
+        journal = JournalEntry.objects.get(reference=f"SPOILAGE-{record.pk}")
+        lines = list(journal.lines.select_related("account").order_by("id"))
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(
+            (lines[0].account.system_key, lines[0].debit, lines[0].credit),
+            ("spoilage_expense", Decimal("10.00"), Decimal("0.00")),
+        )
+        self.assertEqual(
+            (lines[1].account.system_key, lines[1].debit, lines[1].credit),
+            ("inventory_asset", Decimal("0.00"), Decimal("10.00")),
+        )
+
+    def test_insufficient_stock_creates_no_record_movement_or_journal(self):
+        stock = self.add_stock(quantity="2.000")
+        response = self.client.post(
+            reverse("kitchen_spoilage"), self.spoilage_payload(quantity="3.000"),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        stock.refresh_from_db()
+        self.assertEqual(stock.quantity, Decimal("2.000"))
+        self.assertEqual(KitchenSpoilageRecord.objects.count(), 0)
+        self.assertEqual(StockMovement.objects.filter(reference__startswith="SPOILAGE-").count(), 0)
+        self.assertEqual(JournalEntry.objects.filter(reference__startswith="SPOILAGE-").count(), 0)
+
+    def test_zero_cost_spoilage_deducts_stock_without_creating_zero_value_journal(self):
+        stock = self.add_stock(unit_cost="0.0000")
+        response = self.client.post(
+            reverse("kitchen_spoilage"), self.spoilage_payload(quantity="1.000"),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        stock.refresh_from_db()
+        self.assertEqual(stock.quantity, Decimal("9.000"))
+        record = KitchenSpoilageRecord.objects.get()
+        self.assertEqual(record.cost_amount, Decimal("0.00"))
+        self.assertFalse(JournalEntry.objects.filter(reference=f"SPOILAGE-{record.pk}").exists())
+
+    def test_kitchen_user_cannot_submit_product_from_another_hotel(self):
+        self.add_stock()
+        response = self.client.post(
+            reverse("kitchen_spoilage"),
+            self.spoilage_payload(product=self.other_ingredient),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(KitchenSpoilageRecord.objects.count(), 0)
+        stock = Stock.objects.get(product=self.ingredient, department=self.kitchen)
+        self.assertEqual(stock.quantity, Decimal("10.000"))
+
+    def test_kitchen_user_cannot_review_spoilage(self):
+        self.add_stock()
+        self.client.post(reverse("kitchen_spoilage"), self.spoilage_payload())
+        record = KitchenSpoilageRecord.objects.get()
+
+        response = self.client.post(
+            reverse("kitchen_spoilage_review", args=[record.pk]),
+            {"review_note": "Not authorized"},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        record.refresh_from_db()
+        self.assertEqual(record.review_status, "PENDING")
+        self.assertIsNone(record.reviewed_by)
+
+    def test_manager_can_review_once_and_existing_review_cannot_be_overwritten(self):
+        self.add_stock()
+        self.client.post(reverse("kitchen_spoilage"), self.spoilage_payload())
+        record = KitchenSpoilageRecord.objects.get()
+        self.client.force_login(self.manager)
+
+        first_response = self.client.post(
+            reverse("kitchen_spoilage_review", args=[record.pk]),
+            {"review_note": "Checked against kitchen log"},
+        )
+        self.assertEqual(first_response.status_code, 302)
+        record.refresh_from_db()
+        self.assertEqual(record.review_status, "REVIEWED")
+        self.assertEqual(record.reviewed_by, self.manager)
+        self.assertEqual(record.review_note, "Checked against kitchen log")
+        reviewed_at = record.reviewed_at
+
+        second_response = self.client.post(
+            reverse("kitchen_spoilage_review", args=[record.pk]),
+            {"review_note": "Attempt to overwrite"},
+        )
+        self.assertEqual(second_response.status_code, 302)
+        record.refresh_from_db()
+        self.assertEqual(record.review_note, "Checked against kitchen log")
+        self.assertEqual(record.reviewed_at, reviewed_at)
+
+    def test_manager_cannot_review_spoilage_from_another_hotel(self):
+        self.add_stock()
+        record = KitchenSpoilageRecord.objects.create(
+            product=self.other_ingredient, department=self.other_kitchen,
+            quantity=Decimal("1.000"), reason_code="SPOILED",
+            recorded_by=self.kitchen_user,
+        )
+        self.client.force_login(self.manager)
+
+        response = self.client.post(
+            reverse("kitchen_spoilage_review", args=[record.pk]),
+            {"review_note": "Cross-hotel attempt"},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        record.refresh_from_db()
+        self.assertEqual(record.review_status, "PENDING")
+        self.assertIsNone(record.reviewed_by)
