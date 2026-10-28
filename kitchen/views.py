@@ -1991,8 +1991,9 @@ def kitchen_ticket_start(request, ticket_id):
 
     ticket.status = "PREPARING"
     ticket.eta_minutes = request.POST.get("eta_minutes")
+    ticket.accepted_by = request.user
 
-    ticket.save()
+    ticket.save(update_fields=["status", "eta_minutes", "accepted_by"])
 
     return redirect("kitchen_dashboard")
 
