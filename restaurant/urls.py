@@ -18,10 +18,12 @@ from .views import (
     shift_detail,
     table_list,
     restaurant_select_table,
+    ready_food_alerts,
 )
 
 urlpatterns = [
     path("pos/", pos_v2, name="restaurant_pos"),
+    path("ready-food-alerts/", ready_food_alerts, name="restaurant_ready_food_alerts"),
     path("pos-v2/", pos_v2, name="restaurant_pos_v2"),
     path("cart/add/<int:item_id>/", cart_add, name="cart_add"),
     path("cart/update/<int:item_id>/", cart_update, name="cart_update"),
