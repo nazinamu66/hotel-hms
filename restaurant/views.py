@@ -135,6 +135,18 @@ def get_cart(session):
 
 
 @role_required("RESTAURANT")
+def ready_food_alerts(request):
+    department = request.user.department
+    if not department or department.department_type != "RESTAURANT":
+        raise PermissionDenied("Restaurant department access is required.")
+    tickets = KitchenTicket.objects.filter(status="READY", order__department__hotel_id=department.hotel_id, items__menu_item__product__product_type="FOOD").select_related("order", "order__table", "room").prefetch_related("items__menu_item__product").distinct().order_by("created_at")
+    payload = []
+    for ticket in tickets:
+        payload.append({"id": ticket.id, "order_id": ticket.order_id, "location": (f"Table {ticket.order.table.name}" if ticket.order.table_id else f"Room {ticket.room.room_number}" if ticket.room_id else "Walk-in"), "items": [{"name": item.menu_item.name, "quantity": item.quantity} for item in ticket.items.all() if item.menu_item.product.product_type == "FOOD"]})
+    return JsonResponse({"tickets": payload})
+
+
+@role_required("RESTAURANT")
 def pos_v2(request):
 
     user = request.user
