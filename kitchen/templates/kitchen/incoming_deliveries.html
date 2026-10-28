@@ -26,9 +26,12 @@
   <header class="id-header">
     <div>
       <h1 class="id-title">Incoming Deliveries</h1>
-      <p class="id-subtitle">Record ingredients physically delivered for your approved direct purchases. Finance and payment details are managed separately.</p>
+      <p class="id-subtitle">Record ingredients physically delivered for approved direct purchases. Supplier payments and accounting are managed separately.</p>
     </div>
-    <a class="id-btn" href="{% url 'kitchen_ingredient_requests' %}">My ingredient requests</a>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+      {% if can_view_purchase_orders %}<a class="id-btn" href="{% url 'inventory:department_incoming_pos' %}">Incoming Purchase Orders</a>{% endif %}
+      <a class="id-btn" href="{% url 'kitchen_ingredient_requests' %}">My ingredient requests</a>
+    </div>
   </header>
   {% if messages %}{% for message in messages %}<div class="id-message">{{ message }}</div>{% endfor %}{% endif %}
   <section class="id-card">
@@ -61,7 +64,7 @@
             <td><strong>DP-{{ dp.id }}</strong><div class="id-muted">Delivery only</div></td>
           </tr>
         {% empty %}
-          <tr><td colspan="6"><div class="id-empty"><strong>No deliveries awaiting receipt</strong>Approved urgent purchases appear here after management reconciliation. Record only quantities physically received; regular direct purchases appear when they are ready for receipt.</div></td></tr>
+          <tr><td colspan="6"><div class="id-empty"><strong>No deliveries awaiting receipt</strong>Approved regular direct purchases and urgent purchases approved through management reconciliation appear here. Record only quantities physically received.</div></td></tr>
         {% endfor %}
         </tbody>
       </table>
