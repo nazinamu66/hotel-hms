@@ -1090,6 +1090,7 @@ def direct_purchase_receive(request, pk):
         not kitchen
         or kitchen.department_type != "KITCHEN"
         or kitchen.hotel_id != dp.supplier.hotel_id
+        or not dp.requested_by
         or dp.requested_by.department_id != kitchen.id
     ):
         raise PermissionDenied
