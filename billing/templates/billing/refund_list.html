@@ -90,6 +90,9 @@
                                     Approved
                                 </span>
 
+                            {% elif refund.status == "KITCHEN_CONFIRMATION" %}
+                                <span class="badge badge-warning">Awaiting Kitchen Confirmation</span>
+
                             {% elif refund.status == "REJECTED" %}
                                 <span class="badge badge-danger">
                                     Rejected
@@ -174,6 +177,9 @@
                                     </form>
 
                                 {% endif %}
+
+                            {% elif refund.status == "KITCHEN_CONFIRMATION" %}
+                                Awaiting Kitchen confirmation before stock and accounting are finalized.
 
                             {% elif refund.status == "REJECTED" %}
 
