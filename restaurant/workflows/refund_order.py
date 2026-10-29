@@ -40,7 +40,7 @@ def get_kitchen_department(restaurant):
         )
     return kitchen
 
-def restore_inventory(order, user, kitchen, restaurant):
+def restore_inventory(order, user, kitchen, restaurant, *, include_food=True):
 
     for item in order.items.select_related("menu_item__product"):
 
@@ -54,6 +54,8 @@ def restore_inventory(order, user, kitchen, restaurant):
             target_department = restaurant
 
         elif product.product_type == "FOOD":
+            if not include_food:
+                continue
             target_department = kitchen
 
         else:
@@ -147,10 +149,36 @@ def finalize_refund(order, user, reason):
         ]
     )
 
+def record_refunded_food_waste(order, user, kitchen, reason):
+    """Audit prepared food retained as waste without deducting stock twice."""
+    from kitchen.models import KitchenSpoilageRecord
+
+    for item in order.items.select_related("menu_item__product"):
+        product = item.menu_item.product
+        if product.product_type != "FOOD" or not product.is_stock_item():
+            continue
+        cost = item.cost_at_sale * item.quantity
+        KitchenSpoilageRecord.objects.create(
+            product=product,
+            department=kitchen,
+            quantity=item.quantity,
+            reason_code="OTHER",
+            notes=(
+                f"Refunded POS Order #{order.id}; prepared food was not "
+                f"returned to usable stock. {reason}".strip()
+            ),
+            recorded_by=user,
+            cost_amount=cost,
+            stock_movement=None,
+        )
+
+
 @transaction.atomic
-def refund_order(order, user, reason=""):
+def refund_order(order, user, reason="", *, kitchen_outcome="UNPREPARED_RESTOCK"):
 
     validate_refund(order, user)
+    if kitchen_outcome not in {"UNPREPARED_RESTOCK", "PREPARED_WASTE"}:
+        raise ValidationError("A valid Kitchen outcome is required.")
 
     hotel = order._validate_hotel_integrity()
 
@@ -160,9 +188,14 @@ def refund_order(order, user, reason=""):
     # A successful charge deducts physical stock regardless of whether
     # its accounting COGS posting completed. Restore physical quantities on
     # every valid refund; reverse journal COGS only when it was posted.
-    restore_inventory(order, user, kitchen, restaurant)
+    include_food = kitchen_outcome == "UNPREPARED_RESTOCK"
+    restore_inventory(
+        order, user, kitchen, restaurant, include_food=include_food
+    )
+    if kitchen_outcome == "PREPARED_WASTE":
+        record_refunded_food_waste(order, user, kitchen, reason)
     if order.is_cogs_posted:
-        reverse_cogs_for_order(order)
+        reverse_cogs_for_order(order, include_food=include_food)
 
     reverse_revenue(order, hotel, user)
     reverse_payment(order, user)
