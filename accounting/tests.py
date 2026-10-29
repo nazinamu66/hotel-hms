@@ -83,3 +83,19 @@ class POSCOGSCurrencyPrecisionTests(TestCase):
         self.assertEqual(amounts["COGS-REV-DRINK-123"], Decimal("3.70"))
         self.assertEqual(amounts["COGS-REV-FOOD-123"], Decimal("4.69"))
         self.assertFalse(order.is_cogs_posted)
+
+
+    @patch("accounting.services.postings.cogs_reversal.record_transaction")
+    def test_prepared_food_waste_refund_reverses_drinks_but_retains_food_cogs(self, record):
+        order = make_order([
+            make_item("DRINK", "5.00", 2, "Soda"),
+            make_item("FOOD", "12.00", 1, "Meal"),
+        ], cogs_posted=True)
+
+        result = reverse_cogs_for_order(order, include_food=False)
+
+        self.assertEqual(result["drink_cogs"], Decimal("10.00"))
+        self.assertEqual(result["food_cogs"], Decimal("0.00"))
+        self.assertEqual(record.call_count, 1)
+        self.assertEqual(record.call_args.kwargs["reference"], "COGS-REV-DRINK-123")
+        self.assertTrue(order.is_cogs_posted)
