@@ -1784,3 +1784,72 @@ class KitchenSpoilageWorkflowTests(TestCase):
         credit_line = next(line for line in lines if line.credit > 0)
         self.assertEqual(credit_line.account.system_key, "finished_goods_inventory")
         self.assertEqual(credit_line.credit, Decimal("12.50"))
+
+
+
+class KitchenManagementReportAccessTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.organization = Organization.objects.create(name="Management Reports Org")
+        cls.hotel = Hotel.objects.create(
+            organization=cls.organization,
+            name="Management Reports Hotel",
+        )
+        cls.other_organization = Organization.objects.create(name="Other Management Org")
+        cls.other_hotel = Hotel.objects.create(
+            organization=cls.other_organization,
+            name="Other Management Hotel",
+        )
+        cls.kitchen = Department.objects.create(
+            hotel=cls.hotel,
+            code="KMR",
+            name="Management Reports Kitchen",
+            department_type="KITCHEN",
+        )
+        cls.manager = User.objects.create_user(
+            username="management_report_manager",
+            password="test-password",
+            role="MANAGER",
+            hotel=cls.hotel,
+        )
+        cls.director = User.objects.create_user(
+            username="management_report_director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=cls.organization,
+        )
+        cls.kitchen_head = User.objects.create_user(
+            username="management_report_head",
+            password="test-password",
+            role="KITCHEN",
+            hotel=cls.hotel,
+            department=cls.kitchen,
+            is_department_head=True,
+        )
+
+    def test_manager_can_open_management_report(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("kitchen_management_report"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Kitchen Management Reports")
+        self.assertContains(response, "Food sales revenue")
+
+    def test_kitchen_head_cannot_open_management_report(self):
+        self.client.force_login(self.kitchen_head)
+        response = self.client.get(reverse("kitchen_management_report"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_manager_cannot_select_another_hotel(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(
+            reverse("kitchen_management_report"),
+            {"hotel": self.other_hotel.pk},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_director_sees_only_hotels_in_their_organization(self):
+        self.client.force_login(self.director)
+        response = self.client.get(reverse("kitchen_management_report"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.hotel.name)
+        self.assertNotContains(response, self.other_hotel.name)
