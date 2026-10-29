@@ -41,3 +41,184 @@ class RefundKitchenGateTests(TestCase):
         self.assertIsNotNone(request.director_authorized_at)
         refund_order.assert_not_called()
 
+
+from decimal import Decimal
+
+from django.contrib.auth import get_user_model
+
+from accounting.models import Account, JournalEntry
+from billing.models import Folio, RefundRequest
+from inventory.models import Department, Hotel, Organization, Product, Stock
+from kitchen.models import KitchenSpoilageRecord
+from restaurant.models import MenuItem, POSOrder, POSOrderItem
+from billing.workflows.refunds import confirm_kitchen_refund
+
+
+class PreparedFoodRefundIntegrationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        organization = Organization.objects.create(name="Prepared Refund Test Org")
+        cls.hotel = Hotel.objects.create(
+            organization=organization,
+            name="Prepared Refund Test Hotel",
+        )
+        cls.restaurant = Department.objects.create(
+            hotel=cls.hotel,
+            code="PRR",
+            name="Prepared Refund Restaurant",
+            department_type="RESTAURANT",
+        )
+        cls.kitchen = Department.objects.create(
+            hotel=cls.hotel,
+            code="PRK",
+            name="Prepared Refund Kitchen",
+            department_type="KITCHEN",
+        )
+        cls.restaurant_user = User.objects.create_user(
+            username="prepared_refund_cashier",
+            password="test-password",
+            role="RESTAURANT",
+            hotel=cls.hotel,
+            department=cls.restaurant,
+        )
+        cls.director = User.objects.create_user(
+            username="prepared_refund_director",
+            password="test-password",
+            role="DIRECTOR",
+            hotel=cls.hotel,
+        )
+        cls.kitchen_user = User.objects.create_user(
+            username="prepared_refund_kitchen",
+            password="test-password",
+            role="KITCHEN",
+            hotel=cls.hotel,
+            department=cls.kitchen,
+        )
+
+        cls.food = Product.objects.create(
+            hotel=cls.hotel,
+            name="Prepared Refund Fried Rice",
+            sku="PREP-REFUND-RICE",
+            product_type="FOOD",
+            usage_type="RESALE",
+            base_unit="portion",
+        )
+        cls.menu_item = MenuItem.objects.create(
+            name="Prepared Refund Fried Rice",
+            product=cls.food,
+            price=Decimal("3000.00"),
+        )
+        cls.folio = Folio.objects.create(
+            hotel=cls.hotel,
+            folio_type="WALKIN",
+        )
+        cls.order = POSOrder.objects.create(
+            department=cls.restaurant,
+            created_by=cls.restaurant_user,
+            folio=cls.folio,
+            total_amount=Decimal("3000.00"),
+            status="CHARGED",
+            is_cogs_posted=True,
+        )
+        cls.order_item = POSOrderItem.objects.create(
+            order=cls.order,
+            menu_item=cls.menu_item,
+            quantity=1,
+            price=Decimal("3000.00"),
+            cost_at_sale=Decimal("2000.000000"),
+        )
+
+        # This is the remaining stock after the original POS charge.
+        cls.kitchen_stock = Stock.objects.create(
+            product=cls.food,
+            department=cls.kitchen,
+            quantity=Decimal("4.000"),
+        )
+
+        account_specs = [
+            ("5000", "Cost of Goods Sold", "cogs", "cost_of_goods_sold"),
+            ("5001", "Spoilage Expense", "expense", "spoilage_expense"),
+            ("1100", "Accounts Receivable", "current_asset", "accounts_receivable"),
+            ("4100", "Restaurant Revenue", "income", "restaurant_revenue"),
+        ]
+        for code, name, account_type, system_key in account_specs:
+            Account.objects.create(
+                hotel=cls.hotel,
+                code=code,
+                name=name,
+                account_type=account_type,
+                system_key=system_key,
+                is_system=True,
+            )
+
+    def test_prepared_waste_confirmation_posts_spoilage_and_does_not_restore_food_stock(self):
+        refund = RefundRequest.objects.create(
+            source_type="POS_ORDER",
+            pos_order=self.order,
+            reason="Prepared food returned by guest",
+            requested_by=self.restaurant_user,
+            status="KITCHEN_CONFIRMATION",
+            director_authorized_by=self.director,
+        )
+
+        completed = confirm_kitchen_refund(
+            refund_request=refund,
+            kitchen_user=self.kitchen_user,
+            outcome="PREPARED_WASTE",
+            note="Food was prepared and cannot be resold.",
+        )
+
+        self.assertEqual(completed.status, "COMPLETED")
+        self.assertEqual(completed.kitchen_outcome, "PREPARED_WASTE")
+        self.assertEqual(completed.kitchen_confirmed_by, self.kitchen_user)
+
+        self.order.refresh_from_db()
+        self.assertTrue(self.order.is_refunded)
+        self.assertEqual(self.order.status, "CANCELLED")
+        self.assertTrue(self.order.is_cogs_posted)
+
+        self.kitchen_stock.refresh_from_db()
+        self.assertEqual(self.kitchen_stock.quantity, Decimal("4.000"))
+
+        spoilage = KitchenSpoilageRecord.objects.get(
+            notes__contains=f"Refunded POS Order #{self.order.pk}"
+        )
+        self.assertEqual(spoilage.product, self.food)
+        self.assertEqual(spoilage.quantity, Decimal("1.000"))
+        self.assertEqual(spoilage.cost_amount, Decimal("2000.00"))
+        self.assertIsNone(spoilage.stock_movement)
+
+        journal = JournalEntry.objects.get(
+            hotel=self.hotel,
+            reference=f"SPOILAGE-REFUND-{self.order.pk}-{self.order_item.pk}",
+            entry_type="NORMAL",
+        )
+        lines = {
+            line.account.system_key: (line.debit, line.credit)
+            for line in journal.lines.select_related("account")
+        }
+        self.assertEqual(
+            lines["spoilage_expense"],
+            (Decimal("2000.00"), Decimal("0.00")),
+        )
+        self.assertEqual(
+            lines["cost_of_goods_sold"],
+            (Decimal("0.00"), Decimal("2000.00")),
+        )
+
+        # A completed request cannot be confirmed again to create duplicate waste.
+        with self.assertRaisesMessage(Exception, "not awaiting Kitchen confirmation"):
+            confirm_kitchen_refund(
+                refund_request=completed,
+                kitchen_user=self.kitchen_user,
+                outcome="PREPARED_WASTE",
+                note="Duplicate confirmation attempt",
+            )
+
+        self.assertEqual(
+            KitchenSpoilageRecord.objects.filter(
+                notes__contains=f"Refunded POS Order #{self.order.pk}"
+            ).count(),
+            1,
+        )
