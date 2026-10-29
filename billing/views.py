@@ -298,6 +298,10 @@ def reject_refund(request, request_id):
     return redirect("refund_list")
 
 
+@role_required(
+    "DIRECTOR",
+    "ADMIN",
+)
 def execute_refund(request, request_id):
     refund_request = get_object_or_404(
         RefundRequest.objects.select_related(
