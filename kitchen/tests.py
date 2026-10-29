@@ -1854,6 +1854,7 @@ class KitchenManagementReportAccessTests(TestCase):
         accessible_hotels = list(response.context["hotels"])
         self.assertIn(self.hotel, accessible_hotels)
         self.assertNotIn(self.other_hotel, accessible_hotels)
-        # The template intentionally hides the hotel selector when there is
-        # only one accessible hotel, so assert the scoped context rather than
-        # requiring the hotel's name to appear in rendered HTML.
+        # The authorized scope should be visible even when only one hotel
+        # is available, without exposing hotels from another organization.
+        self.assertContains(response, self.hotel.name)
+        self.assertNotContains(response, self.other_hotel.name)
