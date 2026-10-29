@@ -1170,7 +1170,6 @@ def kitchen_management_report(request):
     })
 
 
-@role_required("KITCHEN")
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def kitchen_spoilage_report(request):
     """Management audit register for recorded Kitchen spoilage within authorized hotel scope."""
