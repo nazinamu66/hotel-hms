@@ -4,6 +4,8 @@ from billing import views
 
 
 urlpatterns = [
+    path("refunds/kitchen/", views.kitchen_refund_queue, name="kitchen_refund_queue"),
+    path("refunds/<int:request_id>/kitchen-confirm/", views.confirm_kitchen_refund_view, name="confirm_kitchen_refund"),
     path(
         "refunds/",
         views.refund_list,
