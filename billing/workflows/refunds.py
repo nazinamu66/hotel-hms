@@ -408,14 +408,27 @@ def execute_refund_request(
     )
 
     if refund_request.source_type == "POS_ORDER":
-        from restaurant.workflows.refund_order import (
-            refund_order,
+        order = refund_request.pos_order
+        has_food = any(
+            item.menu_item.product.product_type == "FOOD"
+            for item in order.items.select_related("menu_item__product")
         )
+        has_ticket = hasattr(order, "kitchen_ticket")
+        if has_food and has_ticket:
+            refund_request.status = "KITCHEN_CONFIRMATION"
+            refund_request.director_authorized_by = director
+            refund_request.director_authorized_at = timezone.now()
+            refund_request.save(update_fields=[
+                "status", "director_authorized_by", "director_authorized_at",
+            ])
+            return refund_request
 
+        from restaurant.workflows.refund_order import refund_order
         refund_order(
-            order=refund_request.pos_order,
+            order=order,
             user=director,
             reason=refund_request.reason,
+            kitchen_outcome="UNPREPARED_RESTOCK",
         )
 
     elif refund_request.source_type == "CHARGE":
@@ -442,3 +455,52 @@ def execute_refund_request(
     )
 
     return refund_request
+
+
+@transaction.atomic
+def confirm_kitchen_refund(refund_request, kitchen_user, outcome, note=""):
+    """Complete a Director-authorized Restaurant refund after Kitchen confirms disposition."""
+    locked = RefundRequest.objects.select_for_update().select_related(
+        "pos_order__department__hotel",
+        "director_authorized_by",
+    ).get(pk=refund_request.pk)
+
+    if locked.status != "KITCHEN_CONFIRMATION":
+        raise ValidationError("This refund is not awaiting Kitchen confirmation.")
+    if locked.source_type != "POS_ORDER" or not locked.pos_order_id:
+        raise ValidationError("Kitchen confirmation is only valid for Restaurant orders.")
+    if outcome not in {"UNPREPARED_RESTOCK", "PREPARED_WASTE"}:
+        raise ValidationError("Choose a valid physical outcome.")
+    if not kitchen_user or not kitchen_user.is_active:
+        raise ValidationError("An active Kitchen user is required.")
+
+    order = locked.pos_order
+    department = getattr(kitchen_user, "department", None)
+    if (
+        not department
+        or department.department_type != "KITCHEN"
+        or department.hotel_id != order.department.hotel_id
+    ):
+        raise ValidationError("Kitchen staff can only confirm refunds for their own hotel's Kitchen.")
+
+    from restaurant.workflows.refund_order import refund_order
+    refund_order(
+        order=order,
+        user=locked.director_authorized_by or kitchen_user,
+        reason=locked.reason,
+        kitchen_outcome=outcome,
+    )
+
+    locked.status = "COMPLETED"
+    locked.kitchen_outcome = outcome
+    locked.kitchen_confirmed_by = kitchen_user
+    locked.kitchen_confirmed_at = timezone.now()
+    locked.kitchen_confirmation_note = (note or "").strip()
+    locked.executed_by = locked.director_authorized_by or kitchen_user
+    locked.executed_at = timezone.now()
+    locked.save(update_fields=[
+        "status", "kitchen_outcome", "kitchen_confirmed_by",
+        "kitchen_confirmed_at", "kitchen_confirmation_note",
+        "executed_by", "executed_at",
+    ])
+    return locked
