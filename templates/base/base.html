@@ -836,7 +836,7 @@
 
             {% endif %}
 
-            {% if kitchen_enabled and user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
+            {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
             <a href="{% url 'kitchen_management_report' %}">
                 🍳 Kitchen Management Reports
             </a>
