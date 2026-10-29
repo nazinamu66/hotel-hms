@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from django.test import SimpleTestCase
+from django.test import TestCase
 
 from billing.workflows.refunds import execute_refund_request
 
@@ -14,7 +14,7 @@ class FakeItems:
         return self.items
 
 
-class RefundKitchenGateTests(SimpleTestCase):
+class RefundKitchenGateTests(TestCase):
     @patch("billing.workflows.refunds.validate_execution")
     @patch("restaurant.workflows.refund_order.refund_order")
     def test_food_order_waits_for_kitchen_after_director_authorization(self, refund_order, validate):
