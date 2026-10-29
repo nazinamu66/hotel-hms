@@ -72,7 +72,17 @@
                 <textarea id="execution_note" name="execution_note" class="form-control" rows="3">{{ refund.execution_note }}</textarea>
             </div>
             {% if order.status == "PAID" %}
-                <p><strong>Original payment:</strong> Review the payment record for POS-{{ order.id }} before executing.</p>
+                <div class="alert alert-info">
+                    <strong>Original settlement:</strong>
+                    {% if original_payment %}
+                        {{ original_payment.get_method_display|default:original_payment.method }}
+                        {% if original_payment.account %} — {{ original_payment.account.name }} ({{ original_payment.account.code }}){% endif %}
+                        — ₦{{ original_payment.amount|floatformat:2 }}
+                        {% if original_payment.reference %} — Reference {{ original_payment.reference }}{% endif %}
+                    {% else %}
+                        No matching positive payment record was found for POS-{{ order.id }}. Verify the original settlement before proceeding.
+                    {% endif %}
+                </div>
             {% endif %}
         {% else %}
             <div class="alert alert-warning">
