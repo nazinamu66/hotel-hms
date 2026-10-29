@@ -12,7 +12,7 @@ def _money(value):
     return Decimal(value).quantize(CURRENCY_QUANTUM, rounding=ROUND_HALF_UP)
 
 
-def reverse_cogs_for_order(order):
+def reverse_cogs_for_order(order, *, include_food=True):
     """
     Reverse the same currency-rounded category totals used by COGS posting.
     Uses historical sale-time costs only; never recalculates FIFO costs.
@@ -35,7 +35,7 @@ def reverse_cogs_for_order(order):
         amount = item.cost_at_sale * item.quantity
         if product.product_type == "DRINK":
             drink_cogs += amount
-        elif product.product_type == "FOOD":
+        elif product.product_type == "FOOD" and include_food:
             food_cogs += amount
 
     drink_cogs = _money(drink_cogs)
@@ -66,7 +66,10 @@ def reverse_cogs_for_order(order):
                 reference=f"COGS-REV-FOOD-{order.id}",
             )
 
-        order.is_cogs_posted = False
-        order.save(update_fields=["is_cogs_posted"])
+        # Prepared food retained as waste keeps its original COGS expensed.
+        # Keep the flag set while that food COGS remains posted.
+        if include_food:
+            order.is_cogs_posted = False
+            order.save(update_fields=["is_cogs_posted"])
 
     return {"drink_cogs": drink_cogs, "food_cogs": food_cogs}
