@@ -1018,7 +1018,6 @@ def kitchen_management_report(request):
     """Management-only overview of Kitchen sales, production, waste and fulfillment."""
     from restaurant.models import POSOrder, POSOrderItem
     from django.db.models import Sum
-    from django.utils.dateparse import parse_date
 
     hotels = get_accessible_hotels(request.user)
     if not hotels.exists():
@@ -1047,7 +1046,6 @@ def kitchen_management_report(request):
         scoped_hotels = hotels
         selected_hotel = ""
 
-    period = {"created_at__date__gte": date_from, "created_at__date__lte": date_to}
     sales_items = POSOrderItem.objects.filter(
         order__department__hotel__in=scoped_hotels,
         order__created_at__date__gte=date_from,
