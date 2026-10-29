@@ -14,6 +14,7 @@ from billing.workflows.refunds import (
     approve_refund_request,
     create_refund_request,
     execute_refund_request,
+    confirm_kitchen_refund,
     reject_refund_request,
 )
 from restaurant.models import POSOrder
@@ -332,3 +333,50 @@ def execute_refund(request, request_id):
         )
 
     return redirect("refund_list")
+
+
+
+@role_required("KITCHEN")
+def kitchen_refund_queue(request):
+    department = request.user.department
+    if not department or department.department_type != "KITCHEN":
+        raise PermissionDenied("You must be assigned to a Kitchen department.")
+
+    refunds = RefundRequest.objects.filter(
+        source_type="POS_ORDER",
+        status="KITCHEN_CONFIRMATION",
+        pos_order__department__hotel_id=department.hotel_id,
+    ).select_related(
+        "pos_order__department__hotel",
+        "director_authorized_by",
+        "requested_by",
+    ).prefetch_related("pos_order__items__menu_item__product").order_by("director_authorized_at")
+
+    return render(request, "billing/kitchen_refund_queue.html", {"refund_requests": refunds})
+
+
+@role_required("KITCHEN")
+@require_POST
+def confirm_kitchen_refund_view(request, request_id):
+    department = request.user.department
+    if not department or department.department_type != "KITCHEN":
+        raise PermissionDenied("You must be assigned to a Kitchen department.")
+
+    refund_request = get_object_or_404(
+        RefundRequest.objects.select_related("pos_order__department__hotel"),
+        pk=request_id,
+        source_type="POS_ORDER",
+        status="KITCHEN_CONFIRMATION",
+        pos_order__department__hotel_id=department.hotel_id,
+    )
+    try:
+        confirm_kitchen_refund(
+            refund_request,
+            request.user,
+            request.POST.get("kitchen_outcome", ""),
+            request.POST.get("kitchen_confirmation_note", ""),
+        )
+        messages.success(request, f"Refund #{refund_request.pk} confirmed and completed.")
+    except (ValidationError, ValueError) as exc:
+        messages.error(request, str(exc))
+    return redirect("kitchen_refund_queue")
