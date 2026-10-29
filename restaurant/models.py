@@ -174,7 +174,7 @@ class POSOrder(models.Model):
         if self.status != "OPEN":
             raise ValidationError("Only OPEN orders can be charged.")
 
-        self._validate_hotel_integrity()
+        hotel = self._validate_hotel_integrity()
 
         total = Decimal("0.00")
 
@@ -200,6 +200,10 @@ class POSOrder(models.Model):
         for item in self.items.select_related("menu_item__product"):
 
             product = item.menu_item.product
+            if product.hotel_id != hotel.pk:
+                raise ValidationError(
+                    "Every POS menu item must belong to the same hotel as the order."
+                )
             qty = item.quantity
 
             line_total = qty * item.price
