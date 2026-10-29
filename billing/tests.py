@@ -138,13 +138,21 @@ class PreparedFoodRefundIntegrationTests(TestCase):
         )
 
         account_specs = [
-            ("5000", "Cost of Goods Sold", "cogs", "cost_of_goods_sold"),
-            ("5001", "Spoilage Expense", "expense", "spoilage_expense"),
-            ("1210", "Finished Goods Inventory", "inventory", "finished_goods_inventory"),
-            ("1100", "Accounts Receivable", "current_asset", "accounts_receivable"),
-            ("4100", "Restaurant Revenue", "income", "restaurant_revenue"),
+            ("9500", "Prepared Refund Test COGS", "cogs", "cost_of_goods_sold"),
+            ("9501", "Prepared Refund Test Spoilage", "expense", "spoilage_expense"),
+            ("9521", "Prepared Refund Test Finished Goods", "inventory", "finished_goods_inventory"),
+            ("9510", "Prepared Refund Test Receivable", "current_asset", "accounts_receivable"),
+            ("9540", "Prepared Refund Test Revenue", "income", "restaurant_revenue"),
         ]
         for code, name, account_type, system_key in account_specs:
+            account = Account.objects.filter(
+                hotel=cls.hotel,
+                system_key=system_key,
+                is_system=True,
+            ).first()
+            if account:
+                continue
+
             Account.objects.create(
                 hotel=cls.hotel,
                 code=code,
