@@ -430,6 +430,10 @@ def execute_refund_request(
             user=director,
             reason=refund_request.reason,
             kitchen_outcome="UNPREPARED_RESTOCK",
+            refund_method=refund_request.execution_method or "CASH",
+            refund_account=refund_request.execution_account,
+            refund_reference=refund_request.execution_reference,
+            refund_note=refund_request.execution_note,
         )
 
     elif refund_request.source_type == "CHARGE":
@@ -490,6 +494,10 @@ def confirm_kitchen_refund(refund_request, kitchen_user, outcome, note=""):
         user=locked.director_authorized_by or kitchen_user,
         reason=locked.reason,
         kitchen_outcome=outcome,
+        refund_method=locked.execution_method or "CASH",
+        refund_account=locked.execution_account,
+        refund_reference=locked.execution_reference,
+        refund_note=locked.execution_note,
     )
 
     locked.status = "COMPLETED"
