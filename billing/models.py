@@ -630,6 +630,7 @@ class RefundRequest(models.Model):
     STATUS_CHOICES = (
         ("PENDING", "Pending"),
         ("APPROVED", "Approved"),
+        ("KITCHEN_CONFIRMATION", "Awaiting Kitchen Confirmation"),
         ("REJECTED", "Rejected"),
         ("COMPLETED", "Completed"),
     )
@@ -705,6 +706,16 @@ class RefundRequest(models.Model):
         null=True,
         blank=True,
     )
+
+    KITCHEN_OUTCOME_CHOICES = (
+        ("UNPREPARED_RESTOCK", "Unprepared — return to stock"),
+        ("PREPARED_WASTE", "Prepared — record as waste"),
+    )
+
+    kitchen_outcome = models.CharField(max_length=24, choices=KITCHEN_OUTCOME_CHOICES, blank=True)
+    kitchen_confirmed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="kitchen_confirmed_refunds")
+    kitchen_confirmed_at = models.DateTimeField(null=True, blank=True)
+    kitchen_confirmation_note = models.TextField(blank=True)
 
     def __str__(self):
         if self.source_type == "POS_ORDER" and self.pos_order_id:
