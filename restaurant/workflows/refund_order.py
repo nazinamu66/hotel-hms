@@ -8,6 +8,7 @@ from inventory.models import (
     StockCostLayer,
 )
 from billing.models import (Charge,Payment,)
+from accounting.models import Account
 from accounting.services.journal import record_transaction, get_system_account
 from accounting.services.postings.cogs_reversal import (reverse_cogs_for_order,)
 
@@ -101,7 +102,10 @@ def reverse_revenue(order, hotel, user, refund_account=None):
     # receivable, not cash. A PAID order requires the Director's
     # selected payout account so the journal reflects the real outflow.
     if order.status == "CHARGED":
-        credit_account = get_system_account(hotel, "accounts_receivable")
+        try:
+            credit_account = get_system_account(hotel, "accounts_receivable")
+        except Account.DoesNotExist as exc:
+            raise ValidationError("The hotel Accounts Receivable account is not configured.") from exc
     else:
         if refund_account is None:
             raise ValidationError(
