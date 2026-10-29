@@ -1873,3 +1873,65 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertContains(response, "Production output")
         self.assertContains(response, "Spoilage cost")
         self.assertNotContains(response, self.other_hotel.name)
+
+    def test_spoilage_report_shows_audit_fields_and_only_authorized_hotel_records(self):
+        own_product = Product.objects.create(
+            hotel=self.hotel,
+            name="Report Test Chicken",
+            sku="RPT-CHICKEN",
+            base_unit="kg",
+            product_type="RAW",
+        )
+        own_record = KitchenSpoilageRecord.objects.create(
+            product=own_product,
+            department=self.kitchen,
+            quantity=Decimal("2.500"),
+            reason_code="SPOILED",
+            notes="Temperature issue",
+            recorded_by=self.manager,
+            cost_amount=Decimal("1250.00"),
+            review_status="REVIEWED",
+            reviewed_by=self.director,
+        )
+
+        other_kitchen = Department.objects.create(
+            hotel=self.other_hotel,
+            code="OTHK",
+            name="Other Hotel Kitchen",
+            department_type="KITCHEN",
+        )
+        other_product = Product.objects.create(
+            hotel=self.other_hotel,
+            name="Other Hotel Spoilage Product",
+            sku="OTHER-SPOIL",
+            base_unit="kg",
+            product_type="RAW",
+        )
+        KitchenSpoilageRecord.objects.create(
+            product=other_product,
+            department=other_kitchen,
+            quantity=Decimal("9.000"),
+            reason_code="EXPIRED",
+            cost_amount=Decimal("9999.00"),
+        )
+
+        self.client.force_login(self.director)
+        response = self.client.get(reverse("kitchen_spoilage_report"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Kitchen Spoilage Report")
+        self.assertContains(response, "Report Test Chicken")
+        self.assertContains(response, "Temperature issue")
+        self.assertContains(response, self.manager.username)
+        self.assertContains(response, self.director.username)
+        self.assertContains(response, "1250.00")
+        self.assertNotContains(response, "Other Hotel Spoilage Product")
+        self.assertEqual(list(response.context["records"]), [own_record])
+
+    def test_spoilage_report_rejects_hotel_outside_director_scope(self):
+        self.client.force_login(self.director)
+        response = self.client.get(
+            reverse("kitchen_spoilage_report"),
+            {"hotel": self.other_hotel.pk},
+        )
+        self.assertEqual(response.status_code, 403)
