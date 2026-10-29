@@ -159,22 +159,9 @@
 
                                 {% if user.role == "DIRECTOR" or user.role == "ADMIN" %}
 
-                                    <form
-                                        method="post"
-                                        action="{% url 'execute_refund' refund.id %}"
-                                        style="display:inline;"
-                                        onsubmit="return confirm('Execute this refund? This will reverse the transaction.');"
-                                    >
-                                        {% csrf_token %}
-
-                                        <button
-                                            type="submit"
-                                            class="btn btn-primary"
-                                        >
-                                            Execute Refund
-                                        </button>
-
-                                    </form>
+                                    <a href="{% url 'execute_refund' refund.id %}" class="btn btn-primary">
+                                        Review &amp; Execute
+                                    </a>
 
                                 {% endif %}
 
