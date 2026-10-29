@@ -1013,6 +1013,122 @@ def kitchen_spoilage_review(request, pk):
     return redirect("kitchen_spoilage")
 
 
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def kitchen_management_report(request):
+    """Management-only overview of Kitchen sales, production, waste and fulfillment."""
+    from restaurant.models import POSOrder, POSOrderItem
+    from django.db.models import Sum
+    from django.utils.dateparse import parse_date
+
+    hotels = get_accessible_hotels(request.user)
+    if not hotels.exists():
+        raise PermissionDenied("You do not have access to Kitchen management reports.")
+
+    today = timezone.localdate()
+    date_from_raw = request.GET.get("from", "").strip()
+    date_to_raw = request.GET.get("to", "").strip()
+    try:
+        date_from = date.fromisoformat(date_from_raw) if date_from_raw else today.replace(day=1)
+    except ValueError:
+        date_from = today.replace(day=1)
+    try:
+        date_to = date.fromisoformat(date_to_raw) if date_to_raw else today
+    except ValueError:
+        date_to = today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel.isdigit():
+        scoped_hotels = hotels.filter(pk=int(selected_hotel))
+        if not scoped_hotels.exists():
+            raise PermissionDenied("You do not have access to that hotel.")
+    else:
+        scoped_hotels = hotels
+        selected_hotel = ""
+
+    period = {"created_at__date__gte": date_from, "created_at__date__lte": date_to}
+    sales_items = POSOrderItem.objects.filter(
+        order__department__hotel__in=scoped_hotels,
+        order__created_at__date__gte=date_from,
+        order__created_at__date__lte=date_to,
+        order__status__in=("CHARGED", "PAID"),
+        order__is_refunded=False,
+        menu_item__product__product_type="FOOD",
+    ).select_related("order", "menu_item", "menu_item__product", "order__department__hotel")
+
+    total_sales = Decimal("0.00")
+    sales_cogs = Decimal("0.00")
+    total_sold = 0
+    for item in sales_items:
+        total_sold += item.quantity
+        total_sales += item.price * item.quantity
+        sales_cogs += (item.cost_at_sale or Decimal("0")) * item.quantity
+
+    batches = ProductionBatch.objects.filter(
+        produced_by__department__hotel__in=scoped_hotels,
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+        is_executed=True,
+    ).select_related("recipe", "produced_by", "produced_by__department__hotel")
+    production_count = batches.count()
+    portions_produced = batches.aggregate(total=Sum("quantity_produced"))["total"] or 0
+    production_cost = sum((batch.total_cost() for batch in batches), Decimal("0.00"))
+
+    spoilage_records = KitchenSpoilageRecord.objects.filter(
+        department__hotel__in=scoped_hotels,
+        recorded_at__date__gte=date_from,
+        recorded_at__date__lte=date_to,
+    )
+    spoilage_cost = spoilage_records.aggregate(total=Sum("cost_amount"))["total"] or Decimal("0.00")
+    spoilage_quantity = spoilage_records.aggregate(total=Sum("quantity"))["total"] or Decimal("0.000")
+    pending_spoilage = spoilage_records.filter(review_status="PENDING").count()
+
+    requests = IngredientRestockRequest.objects.filter(
+        requested_by__department__hotel__in=scoped_hotels,
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+    )
+    pending_requests = requests.filter(status__in=("PENDING", "APPROVED", "RECONCILIATION_PENDING", "PARTIALLY_ISSUED")).count()
+
+    direct_purchases = DirectPurchase.objects.filter(
+        supplier__hotel__in=scoped_hotels,
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+    )
+    pending_purchases = direct_purchases.filter(
+        status__in=("RECONCILIATION_PENDING", "APPROVED", "PAID", "PARTIALLY_RECEIVED")
+    ).count()
+    outstanding_delivery_quantity = sum(
+        (item.outstanding_quantity for item in DirectPurchaseItem.objects.filter(
+            purchase__in=direct_purchases,
+            purchase__status__in=("APPROVED", "PAID", "PARTIALLY_RECEIVED"),
+        )),
+        Decimal("0.000"),
+    )
+
+    return render(request, "kitchen/management_report.html", {
+        "hotels": hotels.order_by("name"),
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "total_sales": total_sales,
+        "sales_cogs": sales_cogs,
+        "estimated_gross_profit": total_sales - sales_cogs,
+        "total_sold": total_sold,
+        "production_count": production_count,
+        "portions_produced": portions_produced,
+        "production_cost": production_cost,
+        "spoilage_cost": spoilage_cost,
+        "spoilage_quantity": spoilage_quantity,
+        "pending_spoilage": pending_spoilage,
+        "pending_requests": pending_requests,
+        "pending_purchases": pending_purchases,
+        "outstanding_delivery_quantity": outstanding_delivery_quantity,
+        "uncosted_sales_items": sales_items.filter(cost_at_sale__lte=0).count(),
+    })
+
+
 @role_required("KITCHEN")
 def kitchen_food_sales_report(request):
     """Head-chef-only food sales audit for this Kitchen's own hotel."""
