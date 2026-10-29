@@ -75,6 +75,7 @@ def create_refund_request(
                 status__in=[
                     "PENDING",
                     "APPROVED",
+                    "KITCHEN_CONFIRMATION",
                     "COMPLETED",
                 ],
             )
