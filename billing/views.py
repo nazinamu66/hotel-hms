@@ -318,6 +318,11 @@ def execute_refund(request, request_id):
     is_paid_pos = bool(order and order.status == "PAID")
     bank_accounts = []
     cash_account = None
+    original_payment = None
+    if order:
+        original_payment = Payment.objects.filter(
+            folio=order.folio, reference=f"POS-{order.id}", amount__gt=0,
+        ).select_related("account").order_by("collected_at", "id").first()
     if order and is_paid_pos:
         bank_accounts = BankAccount.objects.filter(
             hotel=hotel, is_active=True, account__is_active=True,
@@ -325,13 +330,14 @@ def execute_refund(request, request_id):
         ).select_related("account").order_by("bank_name", "account_name")
         try:
             cash_account = get_system_account(hotel, "cash")
-        except (ValueError, Exception):
+        except (ValidationError, ValueError):
             cash_account = None
 
     if request.method == "GET":
         return render(request, "billing/refund_execute.html", {
             "refund": refund_request, "order": order, "is_paid_pos": is_paid_pos,
             "bank_accounts": bank_accounts, "cash_account": cash_account,
+            "original_payment": original_payment,
         })
 
     if order:
@@ -382,6 +388,7 @@ def execute_refund(request, request_id):
             return render(request, "billing/refund_execute.html", {
                 "refund": refund_request, "order": order, "is_paid_pos": is_paid_pos,
                 "bank_accounts": bank_accounts, "cash_account": cash_account,
+                "original_payment": original_payment,
                 "form_error": str(exc),
             })
         return redirect("refund_list")
