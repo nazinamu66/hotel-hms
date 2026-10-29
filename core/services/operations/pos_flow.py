@@ -28,6 +28,9 @@ def process_pos_order(
         raise ValueError("Cart is empty")
 
     restaurant = user.department
+    if not restaurant or restaurant.department_type != "RESTAURANT" or not restaurant.hotel_id:
+        raise ValueError("Your account must be assigned to a hotel restaurant.")
+
     hotel = restaurant.hotel
 
     shift = Shift.objects.filter(
@@ -55,7 +58,7 @@ def process_pos_order(
         if not room_id:
             raise ValueError("Room is required")
 
-        room = get_object_or_404(Room, id=room_id)
+        room = get_object_or_404(Room, id=room_id, hotel_id=hotel.pk)
         folio = get_active_room_folio_or_fail(room)
     else:
         folio = get_or_create_walkin_folio(restaurant)
@@ -65,9 +68,20 @@ def process_pos_order(
     # ------------------------------
     for item_id, data in cart["items"].items():
 
-        menu_item = get_object_or_404(MenuItem, id=item_id)
+        # Cart data is untrusted: scope menu lookup to this hotel and active resale items.
+        menu_item = MenuItem.objects.filter(
+            id=item_id,
+            is_active=True,
+            product__hotel_id=hotel.pk,
+            product__usage_type="RESALE",
+        ).select_related("product").first()
+        if not menu_item:
+            raise ValueError("One of the selected menu items is unavailable in this hotel. Refresh the POS and try again.")
+
         product = menu_item.product
         qty = int(data["qty"])
+        if qty <= 0:
+            raise ValueError(f"Quantity must be greater than zero for {product.name}.")
 
         if not product.is_stock_item():
             continue
