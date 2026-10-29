@@ -248,6 +248,7 @@ def pos_v2(request):
         .filter(
             is_active=True,
             category="FOOD",
+            product__hotel_id=restaurant.hotel_id,
             product__usage_type="RESALE",
         )
         .select_related("product")
@@ -262,6 +263,7 @@ def pos_v2(request):
         .filter(
             is_active=True,
             category="DRINK",
+            product__hotel_id=restaurant.hotel_id,
             product__usage_type="RESALE",
         )
         .select_related("product")
