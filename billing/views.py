@@ -10,7 +10,7 @@ from accounts.services.access import (
 )
 from accounts.services.decorators import role_required
 from billing.models import Charge, RefundRequest
-from accounting.models import BankAccount
+from accounting.models import Account, BankAccount
 from accounting.services.journal import get_system_account
 from billing.workflows.refunds import (
     approve_refund_request,
@@ -334,7 +334,7 @@ def execute_refund(request, request_id):
         ).select_related("account").order_by("bank_name", "account_name")
         try:
             cash_account = get_system_account(hotel, "cash")
-        except (ValidationError, ValueError):
+        except (ValidationError, ValueError, Account.DoesNotExist):
             cash_account = None
 
     if request.method == "GET":
