@@ -1858,3 +1858,18 @@ class KitchenManagementReportAccessTests(TestCase):
         # is available, without exposing hotels from another organization.
         self.assertContains(response, self.hotel.name)
         self.assertNotContains(response, self.other_hotel.name)
+
+    def test_management_overview_renders_daily_trend_series_with_selected_hotel_scope(self):
+        self.client.force_login(self.director)
+        response = self.client.get(
+            reverse("kitchen_management_report"),
+            {"from": "2026-10-01", "to": "2026-10-14"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["trend_rows"]), 14)
+        self.assertContains(response, "Daily trends")
+        self.assertContains(response, "Food sales")
+        self.assertContains(response, "Production output")
+        self.assertContains(response, "Spoilage cost")
+        self.assertNotContains(response, self.other_hotel.name)
