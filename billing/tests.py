@@ -52,6 +52,7 @@ from inventory.models import Department, Hotel, Organization, Product, Stock
 from kitchen.models import KitchenSpoilageRecord
 from restaurant.models import MenuItem, POSOrder, POSOrderItem
 from billing.workflows.refunds import confirm_kitchen_refund
+from accounting.services.journal import record_transaction
 
 
 class PreparedFoodRefundIntegrationTests(TestCase):
@@ -139,6 +140,7 @@ class PreparedFoodRefundIntegrationTests(TestCase):
         account_specs = [
             ("5000", "Cost of Goods Sold", "cogs", "cost_of_goods_sold"),
             ("5001", "Spoilage Expense", "expense", "spoilage_expense"),
+            ("1210", "Finished Goods Inventory", "inventory", "finished_goods_inventory"),
             ("1100", "Accounts Receivable", "current_asset", "accounts_receivable"),
             ("4100", "Restaurant Revenue", "income", "restaurant_revenue"),
         ]
@@ -153,6 +155,17 @@ class PreparedFoodRefundIntegrationTests(TestCase):
             )
 
     def test_prepared_waste_confirmation_posts_spoilage_and_does_not_restore_food_stock(self):
+        record_transaction(
+            debit_system_key="cost_of_goods_sold",
+            credit_system_key="finished_goods_inventory",
+            amount=Decimal("2000.00"),
+            description=f"Food COGS for POS Order #{self.order.pk}",
+            hotel=self.hotel,
+            created_by=self.restaurant_user,
+            entry_type="COGS",
+            reference=f"FOOD-COGS-{self.order.pk}",
+        )
+
         refund = RefundRequest.objects.create(
             source_type="POS_ORDER",
             pos_order=self.order,
@@ -188,6 +201,16 @@ class PreparedFoodRefundIntegrationTests(TestCase):
         self.assertEqual(spoilage.quantity, Decimal("1.000"))
         self.assertEqual(spoilage.cost_amount, Decimal("2000.00"))
         self.assertIsNone(spoilage.stock_movement)
+
+        original_cogs = JournalEntry.objects.get(
+            hotel=self.hotel,
+            reference=f"FOOD-COGS-{self.order.pk}",
+            entry_type="COGS",
+        )
+        self.assertEqual(
+            sum(line.debit for line in original_cogs.lines.all()),
+            Decimal("2000.00"),
+        )
 
         journal = JournalEntry.objects.get(
             hotel=self.hotel,
