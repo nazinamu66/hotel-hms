@@ -1171,6 +1171,84 @@ def kitchen_management_report(request):
 
 
 @role_required("KITCHEN")
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def kitchen_spoilage_report(request):
+    """Management audit register for recorded Kitchen spoilage within authorized hotel scope."""
+    from django.db.models import Sum
+
+    hotels = get_accessible_hotels(request.user)
+    if not hotels.exists():
+        raise PermissionDenied("You do not have access to Kitchen reports.")
+
+    today = timezone.localdate()
+    try:
+        date_from = date.fromisoformat(request.GET.get("from", "").strip()) if request.GET.get("from") else today.replace(day=1)
+    except ValueError:
+        date_from = today.replace(day=1)
+    try:
+        date_to = date.fromisoformat(request.GET.get("to", "").strip()) if request.GET.get("to") else today
+    except ValueError:
+        date_to = today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel.isdigit():
+        scoped_hotels = hotels.filter(pk=int(selected_hotel))
+        if not scoped_hotels.exists():
+            raise PermissionDenied("You do not have access to that hotel.")
+    else:
+        scoped_hotels, selected_hotel = hotels, ""
+
+    records = KitchenSpoilageRecord.objects.filter(
+        department__hotel__in=scoped_hotels,
+        recorded_at__date__gte=date_from,
+        recorded_at__date__lte=date_to,
+    ).select_related(
+        "product", "department", "department__hotel",
+        "recorded_by", "reviewed_by", "stock_movement",
+    )
+
+    status_filter = request.GET.get("status", "").strip()
+    valid_statuses = {value for value, _ in KitchenSpoilageRecord.REVIEW_STATUS_CHOICES}
+    if status_filter in valid_statuses:
+        records = records.filter(review_status=status_filter)
+    else:
+        status_filter = ""
+
+    reason_filter = request.GET.get("reason", "").strip()
+    valid_reasons = {value for value, _ in KitchenSpoilageRecord.REASON_CHOICES}
+    if reason_filter in valid_reasons:
+        records = records.filter(reason_code=reason_filter)
+    else:
+        reason_filter = ""
+
+    product_filter = request.GET.get("product", "").strip()
+    if product_filter.isdigit():
+        records = records.filter(product_id=int(product_filter))
+    else:
+        product_filter = ""
+
+    summary = records.aggregate(total_cost=Sum("cost_amount"), total_quantity=Sum("quantity"))
+    return render(request, "kitchen/reports/spoilage_report.html", {
+        "hotels": hotels.order_by("name"),
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "records": records.order_by("-recorded_at", "-id"),
+        "total_records": records.count(),
+        "total_cost": summary["total_cost"] or Decimal("0.00"),
+        "total_quantity": summary["total_quantity"] or Decimal("0.000"),
+        "pending_count": records.filter(review_status="PENDING").count(),
+        "status_filter": status_filter,
+        "reason_filter": reason_filter,
+        "product_filter": product_filter,
+        "status_choices": KitchenSpoilageRecord.REVIEW_STATUS_CHOICES,
+        "reason_choices": KitchenSpoilageRecord.REASON_CHOICES,
+        "products": Product.objects.filter(hotel__in=scoped_hotels, product_type__in=("RAW", "FOOD")).order_by("name").distinct(),
+    })
+
+
 def kitchen_food_sales_report(request):
     """Head-chef-only food sales audit for this Kitchen's own hotel."""
     import csv
