@@ -169,15 +169,31 @@ def finalize_refund(order, user, reason):
     )
 
 def record_refunded_food_waste(order, user, kitchen, reason):
-    """Audit prepared food retained as waste without deducting stock twice."""
+    """
+    Audit prepared food retained as waste and post its accounting treatment.
+
+    If sale-time COGS was already posted, reclassify that food cost from COGS
+    to Spoilage Expense. Otherwise, recognize the loss against finished-goods
+    inventory. The stock was already deducted when the POS order was charged,
+    so never credit inventory a second time when COGS exists.
+    """
+    from decimal import Decimal, ROUND_HALF_UP
     from kitchen.models import KitchenSpoilageRecord
+
+    hotel = kitchen.hotel
+    cogs_was_posted = order.is_cogs_posted
 
     for item in order.items.select_related("menu_item__product"):
         product = item.menu_item.product
         if product.product_type != "FOOD" or not product.is_stock_item():
             continue
-        cost = item.cost_at_sale * item.quantity
-        KitchenSpoilageRecord.objects.create(
+
+        cost = (
+            Decimal(str(item.cost_at_sale or "0"))
+            * Decimal(str(item.quantity))
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+        record = KitchenSpoilageRecord.objects.create(
             product=product,
             department=kitchen,
             quantity=item.quantity,
@@ -189,6 +205,28 @@ def record_refunded_food_waste(order, user, kitchen, reason):
             recorded_by=user,
             cost_amount=cost,
             stock_movement=None,
+        )
+
+        if cost <= 0:
+            continue
+
+        credit_key = (
+            "cost_of_goods_sold"
+            if cogs_was_posted
+            else "finished_goods_inventory"
+        )
+        record_transaction(
+            debit_system_key="spoilage_expense",
+            credit_system_key=credit_key,
+            amount=cost,
+            description=(
+                f"Refunded POS Order #{order.id} - prepared food spoilage "
+                f"#{record.pk} - {product.name}"
+            ),
+            hotel=hotel,
+            created_by=user,
+            entry_type="NORMAL",
+            reference=f"SPOILAGE-REFUND-{order.id}-{item.pk}",
         )
 
 
