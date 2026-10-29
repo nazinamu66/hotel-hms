@@ -719,6 +719,23 @@ class RefundRequest(models.Model):
     director_authorized_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="refunds_authorized")
     director_authorized_at = models.DateTimeField(null=True, blank=True)
 
+    EXECUTION_METHOD_CHOICES = (
+        ("CASH", "Cash"),
+        ("POS", "POS terminal"),
+        ("TRANSFER", "Bank transfer"),
+        ("ROOM_REVERSAL", "Reverse unpaid room charge"),
+    )
+    execution_method = models.CharField(
+        max_length=20, choices=EXECUTION_METHOD_CHOICES, blank=True
+    )
+    execution_account = models.ForeignKey(
+        "accounting.Account", null=True, blank=True,
+        on_delete=models.PROTECT, related_name="refund_executions"
+    )
+    execution_reference = models.CharField(max_length=100, blank=True)
+    execution_note = models.TextField(blank=True)
+    external_refund_confirmed = models.BooleanField(default=False)
+
     def __str__(self):
         if self.source_type == "POS_ORDER" and self.pos_order_id:
             source = f"POS Order #{self.pos_order_id}"
