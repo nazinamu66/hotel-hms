@@ -117,11 +117,20 @@ def process_pos_order(
     # ADD ITEMS
     # ------------------------------
     for item_id, data in cart["items"].items():
+        # Use the current server-side menu price, never the cached client/session price.
+        menu_item = MenuItem.objects.filter(
+            id=item_id,
+            is_active=True,
+            product__hotel_id=hotel.pk,
+            product__usage_type="RESALE",
+        ).first()
+        if not menu_item:
+            raise ValueError("One of the selected menu items is unavailable in this hotel. Refresh the POS and try again.")
         POSOrderItem.objects.create(
             order=order,
-            menu_item_id=item_id,
+            menu_item=menu_item,
             quantity=int(data["qty"]),
-            price=Decimal(data["price"])
+            price=menu_item.price,
         )
 
     # ------------------------------
