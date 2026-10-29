@@ -9,7 +9,7 @@ from accounts.services.access import (
     user_can_access_hotel,
 )
 from accounts.services.decorators import role_required
-from billing.models import Charge, RefundRequest
+from billing.models import Charge, Payment, RefundRequest
 from accounting.models import Account, BankAccount
 from accounting.services.journal import get_system_account
 from billing.workflows.refunds import (
