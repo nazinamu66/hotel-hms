@@ -1063,6 +1063,24 @@ def kitchen_management_report(request):
         total_sales += item.price * item.quantity
         sales_cogs += (item.cost_at_sale or Decimal("0")) * item.quantity
 
+    # Keep the overview chart readable even when users select a long period:
+    # show the latest 14 calendar days within the selected range.
+    trend_end = date_to
+    trend_start = max(date_from, trend_end - timezone.timedelta(days=13))
+    trend_days = []
+    cursor_day = trend_start
+    while cursor_day <= trend_end:
+        trend_days.append(cursor_day)
+        cursor_day += timezone.timedelta(days=1)
+    daily = {
+        day: {"sales": Decimal("0.00"), "production": 0, "spoilage": Decimal("0.00")}
+        for day in trend_days
+    }
+    for item in sales_items:
+        day = item.order.created_at.date()
+        if day in daily:
+            daily[day]["sales"] += item.price * item.quantity
+
     batches = ProductionBatch.objects.filter(
         produced_by__department__hotel__in=scoped_hotels,
         created_at__date__gte=date_from,
@@ -1072,6 +1090,10 @@ def kitchen_management_report(request):
     production_count = batches.count()
     portions_produced = batches.aggregate(total=Sum("quantity_produced"))["total"] or 0
     production_cost = sum((batch.total_cost() for batch in batches), Decimal("0.00"))
+    for batch in batches:
+        day = batch.created_at.date()
+        if day in daily:
+            daily[day]["production"] += batch.quantity_produced
 
     spoilage_records = KitchenSpoilageRecord.objects.filter(
         department__hotel__in=scoped_hotels,
@@ -1081,6 +1103,26 @@ def kitchen_management_report(request):
     spoilage_cost = spoilage_records.aggregate(total=Sum("cost_amount"))["total"] or Decimal("0.00")
     spoilage_quantity = spoilage_records.aggregate(total=Sum("quantity"))["total"] or Decimal("0.000")
     pending_spoilage = spoilage_records.filter(review_status="PENDING").count()
+    for record in spoilage_records:
+        day = record.recorded_at.date()
+        if day in daily:
+            daily[day]["spoilage"] += record.cost_amount
+
+    trend_rows = []
+    max_sales = max((row["sales"] for row in daily.values()), default=Decimal("0.00"))
+    max_production = max((row["production"] for row in daily.values()), default=0)
+    max_spoilage = max((row["spoilage"] for row in daily.values()), default=Decimal("0.00"))
+    for day, values in daily.items():
+        trend_rows.append({
+            "date": day,
+            "label": day.strftime("%b %d"),
+            "sales": values["sales"],
+            "production": values["production"],
+            "spoilage": values["spoilage"],
+            "sales_width": int(values["sales"] / max_sales * 100) if max_sales else 0,
+            "production_width": int(values["production"] / max_production * 100) if max_production else 0,
+            "spoilage_width": int(values["spoilage"] / max_spoilage * 100) if max_spoilage else 0,
+        })
 
     requests = IngredientRestockRequest.objects.filter(
         requested_by__department__hotel__in=scoped_hotels,
@@ -1124,6 +1166,7 @@ def kitchen_management_report(request):
         "pending_purchases": pending_purchases,
         "outstanding_delivery_quantity": outstanding_delivery_quantity,
         "uncosted_sales_items": sales_items.filter(cost_at_sale__lte=0).count(),
+        "trend_rows": trend_rows,
     })
 
 
