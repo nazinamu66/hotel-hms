@@ -716,6 +716,8 @@ class RefundRequest(models.Model):
     kitchen_confirmed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="kitchen_confirmed_refunds")
     kitchen_confirmed_at = models.DateTimeField(null=True, blank=True)
     kitchen_confirmation_note = models.TextField(blank=True)
+    director_authorized_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="refunds_authorized")
+    director_authorized_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         if self.source_type == "POS_ORDER" and self.pos_order_id:
