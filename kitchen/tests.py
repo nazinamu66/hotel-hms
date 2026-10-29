@@ -1851,5 +1851,9 @@ class KitchenManagementReportAccessTests(TestCase):
         self.client.force_login(self.director)
         response = self.client.get(reverse("kitchen_management_report"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, self.hotel.name)
-        self.assertNotContains(response, self.other_hotel.name)
+        accessible_hotels = list(response.context["hotels"])
+        self.assertIn(self.hotel, accessible_hotels)
+        self.assertNotIn(self.other_hotel, accessible_hotels)
+        # The template intentionally hides the hotel selector when there is
+        # only one accessible hotel, so assert the scoped context rather than
+        # requiring the hotel's name to appear in rendered HTML.
