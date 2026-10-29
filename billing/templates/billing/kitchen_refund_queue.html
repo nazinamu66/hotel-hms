@@ -1,0 +1,56 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Kitchen Refund Confirmations</h1>
+        <p>Confirm whether refunded food was still unprepared or had already been prepared and must be recorded as waste.</p>
+    </div>
+</div>
+
+<div class="card">
+    {% if refund_requests %}
+        <div style="overflow-x:auto;">
+            <table class="table">
+                <thead>
+                    <tr><th>Request</th><th>Order</th><th>Items</th><th>Reason</th><th>Director authorized</th><th>Physical outcome</th></tr>
+                </thead>
+                <tbody>
+                {% for refund in refund_requests %}
+                    <tr>
+                        <td>#{{ refund.id }}</td>
+                        <td>POS-{{ refund.pos_order_id }}</td>
+                        <td>
+                            {% for item in refund.pos_order.items.all %}
+                                {{ item.menu_item.name }} × {{ item.quantity }}{% if not forloop.last %}<br>{% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>{{ refund.reason }}</td>
+                        <td>{{ refund.director_authorized_at|date:"Y-m-d H:i" }}<br>{{ refund.director_authorized_by.get_full_name|default:refund.director_authorized_by.username }}</td>
+                        <td>
+                            <form method="post" action="{% url 'confirm_kitchen_refund' refund.id %}">
+                                {% csrf_token %}
+                                <label for="outcome-{{ refund.id }}">Outcome</label>
+                                <select id="outcome-{{ refund.id }}" name="kitchen_outcome" required>
+                                    <option value="">Select outcome</option>
+                                    <option value="UNPREPARED_RESTOCK">Not prepared — return food to stock</option>
+                                    <option value="PREPARED_WASTE">Prepared — record as waste</option>
+                                </select>
+                                <label for="note-{{ refund.id }}">Kitchen note</label>
+                                <textarea id="note-{{ refund.id }}" name="kitchen_confirmation_note" rows="2" placeholder="Optional details"></textarea>
+                                <button type="submit" class="btn btn-primary">Confirm outcome</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div style="padding:32px;text-align:center;">
+            <h3>No refunds awaiting Kitchen confirmation</h3>
+            <p>Director-authorized Restaurant food refunds will appear here.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
