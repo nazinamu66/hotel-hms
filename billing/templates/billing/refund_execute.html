@@ -1,0 +1,115 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Execute Refund #{{ refund.id }}</h1>
+        <p>Review the original transaction and record the refund execution.</p>
+    </div>
+</div>
+
+<div class="card" style="padding:24px;max-width:850px;">
+    <h3>Refund summary</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:20px;">
+        <div><strong>Source</strong><br>
+            {% if order %}Restaurant Order #{{ order.id }}{% else %}Charge #{{ refund.charge_id }}{% endif %}
+        </div>
+        <div><strong>Amount</strong><br>
+            ₦{% if order %}{{ order.total_amount|floatformat:2 }}{% else %}{{ refund.charge.amount|floatformat:2 }}{% endif %}
+        </div>
+        <div><strong>Requested by</strong><br>{{ refund.requested_by.get_full_name|default:refund.requested_by.username }}</div>
+        <div><strong>Approved by</strong><br>{{ refund.approved_by.get_full_name|default:refund.approved_by.username|default:"—" }}</div>
+    </div>
+    <p><strong>Reason:</strong> {{ refund.reason }}</p>
+
+    {% if form_error %}<div class="alert alert-danger">{{ form_error }}</div>{% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        {% if order %}
+            {% if is_paid_pos %}
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label for="execution_method"><strong>Refund method</strong></label>
+                    <select id="execution_method" name="execution_method" class="form-control" required>
+                        <option value="">Select refund method</option>
+                        <option value="CASH" {% if refund.execution_method == "CASH" %}selected{% endif %}>Cash</option>
+                        <option value="POS" {% if refund.execution_method == "POS" %}selected{% endif %}>POS terminal reversal</option>
+                        <option value="TRANSFER" {% if refund.execution_method == "TRANSFER" %}selected{% endif %}>Bank transfer</option>
+                    </select>
+                </div>
+                <div id="account-field" class="form-group" style="margin-bottom:16px;">
+                    <label for="execution_account"><strong>Bank account</strong></label>
+                    <select id="execution_account" name="execution_account" class="form-control">
+                        <option value="">Select the bank account used for payout</option>
+                        {% for bank in bank_accounts %}
+                            <option value="{{ bank.id }}" {% if refund.execution_account_id == bank.account_id %}selected{% endif %}>
+                                {{ bank.bank_name }} — {{ bank.account_name }} ({{ bank.account.code }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small>Required for POS and bank-transfer refunds. Cash uses the hotel's Cash account.</small>
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label for="execution_reference"><strong>Transaction reference</strong></label>
+                    <input id="execution_reference" name="execution_reference" class="form-control" maxlength="100"
+                           value="{{ refund.execution_reference }}" placeholder="POS reversal ID or bank transfer reference">
+                    <small>Required for POS and bank-transfer refunds.</small>
+                </div>
+                <div id="external-confirmation" class="form-group" style="margin-bottom:16px;">
+                    <label>
+                        <input type="checkbox" name="external_refund_confirmed" {% if refund.external_refund_confirmed %}checked{% endif %}>
+                        I confirm the POS terminal/provider reversal has actually been completed.
+                    </label>
+                    <p><small>The system records the confirmation; it does not execute the external terminal reversal.</small></p>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    This order is charged to a room folio and has not been paid at the Restaurant POS. The system will reverse the receivable without recording a cash payout.
+                </div>
+            {% endif %}
+            <div class="form-group" style="margin-bottom:16px;">
+                <label for="execution_note"><strong>Execution note</strong></label>
+                <textarea id="execution_note" name="execution_note" class="form-control" rows="3">{{ refund.execution_note }}</textarea>
+            </div>
+            {% if order.status == "PAID" %}
+                <p><strong>Original payment:</strong> Review the payment record for POS-{{ order.id }} before executing.</p>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-warning">
+                This is a Charge refund. The existing charge-refund workflow will run; its payment-allocation logic is not changed by this execution form.
+            </div>
+            <label for="execution_note"><strong>Execution note</strong></label>
+            <textarea id="execution_note" name="execution_note" class="form-control" rows="3">{{ refund.execution_note }}</textarea>
+        {% endif %}
+        <div style="display:flex;gap:10px;margin-top:24px;">
+            <button type="submit" class="btn btn-primary"
+                    onclick="return confirm('Proceed with this refund execution?');">
+                Confirm and Execute
+            </button>
+            <a href="{% url 'refund_list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    const method = document.getElementById("execution_method");
+    const account = document.getElementById("account-field");
+    const accountSelect = document.getElementById("execution_account");
+    const reference = document.getElementById("execution_reference");
+    const confirmation = document.getElementById("external-confirmation");
+    function updateFields() {
+        if (!method) return;
+        const needsBank = method.value === "POS" || method.value === "TRANSFER";
+        if (account) account.style.display = needsBank ? "block" : "none";
+        if (accountSelect) accountSelect.required = needsBank;
+        if (reference) reference.required = needsBank;
+        if (confirmation) confirmation.style.display = method.value === "POS" ? "block" : "none";
+    }
+    if (method) {
+        method.addEventListener("change", updateFields);
+        updateFields();
+    }
+})();
+</script>
+{% endblock %}
