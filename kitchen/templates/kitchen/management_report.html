@@ -18,6 +18,16 @@
 .kmr-value{font-size:clamp(1.35rem,2vw,1.9rem);font-weight:850;color:#0f172a;overflow-wrap:anywhere}
 .kmr-note{font-size:.8rem;color:#64748b;margin-top:8px;line-height:1.45}
 .kmr-section{font-size:1.1rem;font-weight:800;margin:26px 0 12px}
+.kmr-trends{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.kmr-chart{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px;min-width:0}
+.kmr-chart-title{font-weight:800;margin-bottom:4px}
+.kmr-chart-subtitle{font-size:.78rem;color:#64748b;margin-bottom:16px}
+.kmr-trend-row{display:grid;grid-template-columns:48px minmax(0,1fr) 74px;gap:8px;align-items:center;margin:9px 0;font-size:.76rem}
+.kmr-track{height:9px;background:#e2e8f0;border-radius:99px;overflow:hidden}
+.kmr-bar{height:100%;background:#2563eb;border-radius:99px;min-width:0}
+.kmr-bar.production{background:#0f766e}.kmr-bar.spoilage{background:#ea580c}
+.kmr-trend-value{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+@media(max-width:1000px){.kmr-trends{grid-template-columns:1fr}}
 .kmr-alert{border:1px solid #fed7aa;background:#fff7ed;border-radius:12px;padding:14px 16px;color:#9a3412;margin:14px 0}
 .kmr-foot{font-size:.8rem;color:#64748b;margin-top:22px;line-height:1.6}
 @media(max-width:1000px){.kmr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -60,6 +70,31 @@
     {% endif %}
     <button class="kmr-btn" type="submit">Apply filters</button>
   </form>
+
+  <h2 class="kmr-section">Daily trends <span class="kmr-muted">(latest 14 days in selected period)</span></h2>
+  <div class="kmr-trends">
+    <section class="kmr-chart">
+      <div class="kmr-chart-title">Food sales</div>
+      <div class="kmr-chart-subtitle">Recorded food revenue by order date</div>
+      {% for row in trend_rows %}
+      <div class="kmr-trend-row"><span>{{ row.label }}</span><div class="kmr-track"><div class="kmr-bar" style="width:{{ row.sales_width }}%"></div></div><span class="kmr-trend-value">{{ row.sales|floatformat:0 }}</span></div>
+      {% empty %}<p class="kmr-muted">No daily data for this period.</p>{% endfor %}
+    </section>
+    <section class="kmr-chart">
+      <div class="kmr-chart-title">Production output</div>
+      <div class="kmr-chart-subtitle">Units from executed batches by creation date</div>
+      {% for row in trend_rows %}
+      <div class="kmr-trend-row"><span>{{ row.label }}</span><div class="kmr-track"><div class="kmr-bar production" style="width:{{ row.production_width }}%"></div></div><span class="kmr-trend-value">{{ row.production }}</span></div>
+      {% empty %}<p class="kmr-muted">No daily data for this period.</p>{% endfor %}
+    </section>
+    <section class="kmr-chart">
+      <div class="kmr-chart-title">Spoilage cost</div>
+      <div class="kmr-chart-subtitle">Recorded spoilage cost by recorded date</div>
+      {% for row in trend_rows %}
+      <div class="kmr-trend-row"><span>{{ row.label }}</span><div class="kmr-track"><div class="kmr-bar spoilage" style="width:{{ row.spoilage_width }}%"></div></div><span class="kmr-trend-value">{{ row.spoilage|floatformat:0 }}</span></div>
+      {% empty %}<p class="kmr-muted">No daily data for this period.</p>{% endfor %}
+    </section>
+  </div>
 
   <h2 class="kmr-section">Food sales</h2>
   <div class="kmr-grid">
