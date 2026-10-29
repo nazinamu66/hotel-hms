@@ -8,7 +8,7 @@ from inventory.models import (
     StockCostLayer,
 )
 from billing.models import (Charge,Payment,)
-from accounting.services.journal import record_transaction
+from accounting.services.journal import record_transaction, get_system_account
 from accounting.services.postings.cogs_reversal import (reverse_cogs_for_order,)
 
 def validate_refund(order, user):
@@ -96,10 +96,22 @@ def restore_inventory(order, user, kitchen, restaurant, *, include_food=True):
                 is_opening_balance=False,
             )
 
-def reverse_revenue(order, hotel, user):
+def reverse_revenue(order, hotel, user, refund_account=None):
+    # A CHARGED order was settled to the room folio: reverse the
+    # receivable, not cash. A PAID order requires the Director's
+    # selected payout account so the journal reflects the real outflow.
+    if order.status == "CHARGED":
+        credit_account = get_system_account(hotel, "accounts_receivable")
+    else:
+        if refund_account is None:
+            raise ValidationError(
+                "Select the account the refund will be paid from."
+            )
+        credit_account = refund_account
+
     record_transaction(
         debit_system_key="restaurant_revenue",
-        credit_system_key="pos_clearing",
+        credit_account=credit_account,
         amount=order.total_amount,
         description=f"Refund for POS Order #{order.id}",
         hotel=hotel,
@@ -108,17 +120,20 @@ def reverse_revenue(order, hotel, user):
         reference=f"POS-REFUND-{order.id}",
     )
 
-def reverse_payment(order, user):
 
+def reverse_payment(order, user, *, method="CASH", account=None,
+                    reference="", note=""):
     if order.status != "PAID":
         return
 
     Payment.objects.create(
         folio=order.folio,
         amount=-order.total_amount,
-        method="REFUND",
+        method=method,
+        account=account,
         collected_by=user,
-        reference=f"POS-REFUND-{order.id}",
+        reference=reference or f"POS-REFUND-{order.id}",
+        note=note,
     )
 
 def reverse_folio(order):
@@ -174,7 +189,7 @@ def record_refunded_food_waste(order, user, kitchen, reason):
 
 
 @transaction.atomic
-def refund_order(order, user, reason="", *, kitchen_outcome="UNPREPARED_RESTOCK"):
+def refund_order(order, user, reason="", *, kitchen_outcome="UNPREPARED_RESTOCK", refund_method="CASH", refund_account=None, refund_reference="", refund_note=""):
 
     validate_refund(order, user)
     if kitchen_outcome not in {"UNPREPARED_RESTOCK", "PREPARED_WASTE"}:
@@ -197,8 +212,11 @@ def refund_order(order, user, reason="", *, kitchen_outcome="UNPREPARED_RESTOCK"
     if order.is_cogs_posted:
         reverse_cogs_for_order(order, include_food=include_food)
 
-    reverse_revenue(order, hotel, user)
-    reverse_payment(order, user)
+    reverse_revenue(order, hotel, user, refund_account=refund_account)
+    reverse_payment(
+        order, user, method=refund_method, account=refund_account,
+        reference=refund_reference, note=refund_note,
+    )
     reverse_folio(order)
 
     finalize_refund(order, user, reason)
