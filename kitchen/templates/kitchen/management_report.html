@@ -50,6 +50,13 @@
         {% endfor %}
       </select>
     </div>
+    {% elif hotels|length == 1 %}
+    {% for hotel in hotels %}
+    <div class="kmr-field" aria-label="Report hotel scope">
+      <label>Hotel scope</label>
+      <div>{{ hotel.name }}</div>
+    </div>
+    {% endfor %}
     {% endif %}
     <button class="kmr-btn" type="submit">Apply filters</button>
   </form>
