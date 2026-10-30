@@ -237,6 +237,68 @@
 
     </div>
 
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="summary-label">Actual FIFO production cost</div>
+            <div class="summary-value">{{ production_cost|floatformat:2 }}</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">Cost per portion</div>
+            <div class="summary-value">{{ cost_per_portion|floatformat:2 }}</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">Estimated excess-usage cost</div>
+            <div class="summary-value">{{ variance_cost_estimate|floatformat:2 }}</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">Recipe snapshot</div>
+            <div class="summary-value">{% if batch.recipe_version %}Version {{ batch.recipe_version.version_number }}{% else %}Legacy recipe{% endif %}</div>
+        </div>
+    </div>
+
+    {% if has_uncosted_usage %}
+    <div class="info-card" style="padding:18px;border-color:#fbbf24;background:#fffbeb;color:#92400e;">
+        <strong>Costing attention required.</strong> At least one ingredient usage contains an uncosted quantity. The FIFO production cost shown above includes only recorded cost allocations.
+    </div>
+    {% endif %}
+
+    <div class="info-card">
+        <div class="card-header">
+            <h2>Ingredient Cost &amp; Variance Analysis</h2>
+            <p>Actual ingredient cost is taken from FIFO allocations consumed by this batch. Excess-usage cost is an estimate using current ingredient cost prices, not an accounting valuation.</p>
+        </div>
+        <div class="table-wrap">
+            <table class="usage-table">
+                <thead>
+                    <tr>
+                        <th>Ingredient</th>
+                        <th>Expected qty</th>
+                        <th>Actual qty</th>
+                        <th>Variance</th>
+                        <th>FIFO cost</th>
+                        <th>Costed qty</th>
+                        <th>Estimated excess cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in ingredient_cost_rows %}
+                    <tr>
+                        <td><span class="ingredient-name">{{ row.usage.ingredient.name }}</span></td>
+                        <td>{{ row.usage.expected_quantity }} {{ row.usage.ingredient.base_unit }}</td>
+                        <td>{{ row.usage.actual_quantity }} {{ row.usage.ingredient.base_unit }}</td>
+                        <td>{{ row.usage.variance }} {{ row.usage.ingredient.base_unit }}</td>
+                        <td>{{ row.fifo_cost|floatformat:2 }}</td>
+                        <td>{{ row.costed_quantity|floatformat:3 }}</td>
+                        <td>{{ row.estimated_variance_cost|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7"><div class="empty-state">No ingredient cost allocations or usage rows are available for this batch.</div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="info-card">
 
         <div class="card-header">
