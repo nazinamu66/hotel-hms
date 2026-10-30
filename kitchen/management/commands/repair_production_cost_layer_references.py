@@ -2,7 +2,6 @@ from datetime import timedelta
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import Q
 
 from inventory.models import StockCostLayer, StockMovement
 from kitchen.models import ProductionBatch
