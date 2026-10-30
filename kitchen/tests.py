@@ -1841,6 +1841,8 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Kitchen Management Reports")
         self.assertContains(response, "Food sales revenue")
+        self.assertContains(response, "Production batch profitability")
+        self.assertEqual(response.context["batch_profitability_rows"], [])
 
     def test_kitchen_head_cannot_open_management_report(self):
         self.client.force_login(self.kitchen_head)
