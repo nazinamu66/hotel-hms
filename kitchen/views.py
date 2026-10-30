@@ -1262,7 +1262,10 @@ def kitchen_management_report(request):
         })
 
     requests = IngredientRestockRequest.objects.filter(
-        requested_by__department__hotel__in=scoped_hotels,
+        (
+            Q(requested_by__hotel__in=scoped_hotels)
+            | Q(requested_by__department__hotel__in=scoped_hotels)
+        ),
         created_at__date__gte=date_from,
         created_at__date__lte=date_to,
     )
