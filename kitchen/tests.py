@@ -2009,6 +2009,156 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertEqual(row["remaining_value"], Decimal("40.00"))
         self.assertEqual(row["reconciliation_gap"], Decimal("0.000"))
 
+    def test_batch_profitability_attributes_sales_to_oldest_fifo_batch_first(self):
+        restaurant = Department.objects.create(
+            hotel=self.hotel,
+            code="RPF",
+            name="FIFO Report Restaurant",
+            department_type="RESTAURANT",
+        )
+        food_product = Product.objects.create(
+            hotel=self.hotel,
+            name="FIFO Test Rice Bowl",
+            sku="FIFO-TEST-RICE-BOWL",
+            product_type="FOOD",
+            base_unit="unit",
+            cost_price=Decimal("0.00"),
+        )
+        recipe = Recipe.objects.create(
+            name="FIFO Test Rice Bowl Recipe",
+            product=food_product,
+        )
+        first_batch = ProductionBatch.objects.create(
+            recipe=recipe,
+            quantity_produced=5,
+            produced_by=self.kitchen_head,
+            is_executed=True,
+        )
+        second_batch = ProductionBatch.objects.create(
+            recipe=recipe,
+            quantity_produced=5,
+            produced_by=self.kitchen_head,
+            is_executed=True,
+        )
+
+        # Each batch has its own actual ingredient-cost movement and finished
+        # goods layer. The first layer is received before the second.
+        for batch, cost in (
+            (first_batch, Decimal("50.00")),
+            (second_batch, Decimal("70.00")),
+        ):
+            ingredient = Product.objects.create(
+                hotel=self.hotel,
+                name=f"Ingredient for batch {batch.pk}",
+                sku=f"FIFO-ING-{batch.pk}",
+                product_type="RAW",
+                base_unit="kg",
+                cost_price=cost / Decimal("5.000"),
+            )
+            ingredient_layer = StockCostLayer.objects.create(
+                product=ingredient,
+                department=self.kitchen,
+                quantity_received=Decimal("5.000"),
+                quantity_remaining=Decimal("0.000"),
+                unit_cost=cost / Decimal("5.000"),
+            )
+            production_movement = StockMovement.objects.create(
+                product=ingredient,
+                from_department=self.kitchen,
+                quantity=Decimal("5.000"),
+                movement_type="OUT",
+                created_by=self.kitchen_head,
+                reference=f"PROD-{batch.pk}",
+            )
+            StockMovementCostAllocation.objects.create(
+                movement=production_movement,
+                cost_layer=ingredient_layer,
+                quantity=Decimal("5.000"),
+                unit_cost=cost / Decimal("5.000"),
+                total_cost=cost,
+            )
+            StockCostLayer.objects.create(
+                product=food_product,
+                department=self.kitchen,
+                source_reference=f"PROD-{batch.pk}",
+                quantity_received=Decimal("5.000"),
+                quantity_remaining=Decimal("5.000"),
+                unit_cost=cost / Decimal("5.000"),
+            )
+
+        menu_item = MenuItem.objects.create(
+            name="FIFO Test Rice Bowl",
+            product=food_product,
+            price=Decimal("25.00"),
+            category="FOOD",
+        )
+        folio = Folio.objects.create(hotel=self.hotel, folio_type="WALKIN")
+        order = POSOrder.objects.create(
+            department=restaurant,
+            created_by=self.manager,
+            folio=folio,
+            status="CHARGED",
+            total_amount=Decimal("175.00"),
+        )
+        POSOrderItem.objects.create(
+            order=order,
+            menu_item=menu_item,
+            quantity=7,
+            price=Decimal("25.00"),
+            cost_at_sale=Decimal("10.000000"),
+        )
+        Stock.objects.create(
+            product=food_product,
+            department=self.kitchen,
+            quantity=Decimal("10.000"),
+        )
+        sale_result = stock_out(
+            product=food_product,
+            department=self.kitchen,
+            quantity=Decimal("7.000"),
+            user=self.manager,
+            reference=f"POS-{order.pk}",
+        )
+        self.assertEqual(sale_result["total_cost"], Decimal("78.00"))
+        self.assertEqual(
+            list(
+                sale_result["movement"].cost_allocations.order_by("id").values_list(
+                    "cost_layer__source_reference", "quantity", "total_cost"
+                )
+            ),
+            [
+                (f"PROD-{first_batch.pk}", Decimal("5.000"), Decimal("50.00")),
+                (f"PROD-{second_batch.pk}", Decimal("2.000"), Decimal("28.00")),
+            ],
+        )
+
+        self.client.force_login(self.manager)
+        response = self.client.get(
+            reverse("kitchen_management_report"),
+            {"from": "2026-01-01", "to": "2026-12-31"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        rows = {
+            row["batch_id"]: row
+            for row in response.context["batch_profitability_rows"]
+        }
+        first = rows[first_batch.pk]
+        second = rows[second_batch.pk]
+        self.assertEqual(first["quantity_sold"], Decimal("5.000"))
+        self.assertEqual(first["sales_revenue"], Decimal("125.00"))
+        self.assertEqual(first["sales_cogs"], Decimal("50.00"))
+        self.assertEqual(first["gross_profit"], Decimal("75.00"))
+        self.assertEqual(first["remaining_quantity"], Decimal("0.000"))
+        self.assertEqual(first["reconciliation_gap"], Decimal("0.000"))
+        self.assertEqual(second["quantity_sold"], Decimal("2.000"))
+        self.assertEqual(second["sales_revenue"], Decimal("50.00"))
+        self.assertEqual(second["sales_cogs"], Decimal("28.00"))
+        self.assertEqual(second["gross_profit"], Decimal("22.00"))
+        self.assertEqual(second["remaining_quantity"], Decimal("3.000"))
+        self.assertEqual(second["remaining_value"], Decimal("42.00"))
+        self.assertEqual(second["reconciliation_gap"], Decimal("0.000"))
+
     def test_kitchen_head_cannot_open_management_report(self):
         self.client.force_login(self.kitchen_head)
         response = self.client.get(reverse("kitchen_management_report"))
