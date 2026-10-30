@@ -259,7 +259,7 @@
 
         {% feature_enabled user "KITCHEN" as kitchen_enabled %}
 
-        {% if kitchen_enabled and user|has_role:"KITCHEN,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" or kitchen_enabled and user|has_role:"KITCHEN" %}
 
         <h4 class="menu-toggle"
             onclick="toggleMenu('kitchen_menu', this)">
