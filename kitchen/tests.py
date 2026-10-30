@@ -2159,6 +2159,41 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertEqual(second["remaining_value"], Decimal("42.00"))
         self.assertEqual(second["reconciliation_gap"], Decimal("0.000"))
 
+    def test_batch_without_identifiable_finished_layer_is_marked_unattributed(self):
+        food_product = Product.objects.create(
+            hotel=self.hotel,
+            name="Legacy Unattributed Food",
+            sku="LEGACY-UNATTRIBUTED-FOOD",
+            product_type="FOOD",
+            base_unit="unit",
+            cost_price=Decimal("0.00"),
+        )
+        recipe = Recipe.objects.create(
+            name="Legacy Unattributed Recipe",
+            product=food_product,
+        )
+        batch = ProductionBatch.objects.create(
+            recipe=recipe,
+            quantity_produced=10,
+            produced_by=self.kitchen_head,
+            is_executed=True,
+        )
+
+        self.client.force_login(self.manager)
+        response = self.client.get(
+            reverse("kitchen_management_report"),
+            {"from": "2026-01-01", "to": "2026-12-31"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        row = next(
+            row for row in response.context["batch_profitability_rows"]
+            if row["batch_id"] == batch.pk
+        )
+        self.assertEqual(row["traceability_status"], "UNATTRIBUTED")
+        self.assertIsNone(row["reconciliation_gap"])
+        self.assertContains(response, "Unattributed legacy")
+
     def test_kitchen_head_cannot_open_management_report(self):
         self.client.force_login(self.kitchen_head)
         response = self.client.get(reverse("kitchen_management_report"))
