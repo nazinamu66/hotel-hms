@@ -554,6 +554,16 @@ class StockCostLayer(models.Model):
         related_name="cost_layers",
     )
 
+    # Stable origin identifier for traceability across production, transfers,
+    # refunds, and other inventory workflows. Examples: PROD-42, PO-18.
+    source_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Originating workflow reference for this FIFO cost layer.",
+    )
+
     quantity_received = models.DecimalField(
         max_digits=12,
         decimal_places=3,
