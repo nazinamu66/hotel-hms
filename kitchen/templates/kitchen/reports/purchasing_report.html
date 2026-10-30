@@ -1,0 +1,99 @@
+{% extends "base/base.html" %}
+{% block title %}Kitchen Purchasing & Fulfilment | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.kpr{max-width:1550px;margin:auto;padding:26px 20px 48px;color:#172033}
+.kpr-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:20px}
+.kpr h1{font-size:clamp(1.7rem,2.5vw,2.2rem);font-weight:850;letter-spacing:-.035em;margin:0 0 6px}
+.kpr-muted{color:#64748b;font-size:.84rem;line-height:1.5}
+.kpr-btn{display:inline-block;background:#1d4ed8;color:white;text-decoration:none;border-radius:9px;padding:10px 14px;font-weight:750}
+.kpr-btn.secondary{background:#334155}
+.kpr-filter,.kpr-panel,.kpr-card{background:white;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 4px 18px rgba(15,23,42,.035)}
+.kpr-filter{display:flex;gap:13px;align-items:end;flex-wrap:wrap;padding:17px;margin-bottom:20px}
+.kpr-field{display:flex;flex-direction:column;gap:6px;min-width:160px}
+.kpr-field label{font-size:.76rem;font-weight:750;color:#475569}
+.kpr-field input,.kpr-field select{padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:white}
+.kpr-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:22px}
+.kpr-card{padding:16px;min-width:0}
+.kpr-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;font-weight:800}
+.kpr-value{font-size:1.55rem;font-weight:850;margin-top:8px;overflow-wrap:anywhere}
+.kpr-section{font-size:1.12rem;font-weight:850;margin:26px 0 12px}
+.kpr-panel{overflow:hidden;margin-bottom:18px}
+.kpr-panel-head{padding:17px 19px;border-bottom:1px solid #e2e8f0}
+.kpr-panel-head h2{font-size:1rem;margin:0;font-weight:850}
+.kpr-panel-head p{font-size:.8rem;color:#64748b;margin:5px 0 0}
+.kpr-scroll{overflow-x:auto}
+.kpr table{width:100%;border-collapse:collapse;min-width:1050px;font-size:.8rem}
+.kpr th{background:#f8fafc;text-align:left;text-transform:uppercase;letter-spacing:.04em;font-size:.68rem;color:#64748b;padding:11px;white-space:nowrap}
+.kpr td{padding:11px;border-top:1px solid #e8edf3;vertical-align:top}
+.kpr tr:hover{background:#fafcff}
+.kpr-pill{display:inline-block;border-radius:99px;padding:4px 8px;background:#e2e8f0;color:#334155;font-size:.68rem;font-weight:800;white-space:nowrap}
+.kpr-pill.warn{background:#ffedd5;color:#9a3412}
+.kpr-pill.good{background:#dcfce7;color:#166534}
+.kpr-note{font-size:.76rem;color:#64748b;line-height:1.5;margin-top:18px}
+@media(max-width:1000px){.kpr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.kpr{padding:16px 11px 30px}.kpr-grid{grid-template-columns:1fr}.kpr-head{flex-direction:column}.kpr-field{min-width:100%}}
+</style>
+<div class="kpr">
+  <header class="kpr-head">
+    <div><h1>Kitchen Purchasing & Fulfilment</h1><p class="kpr-muted">Audit trail from ingredient request through Store issue, direct purchasing, supplier settlement and urgent-purchase reimbursement.</p></div>
+    <a class="kpr-btn secondary" href="{% url 'kitchen_management_report' %}">Management Overview</a>
+  </header>
+
+  <form method="get" class="kpr-filter">
+    <div class="kpr-field"><label for="from">From date</label><input id="from" type="date" name="from" value="{{ date_from }}"></div>
+    <div class="kpr-field"><label for="to">To date</label><input id="to" type="date" name="to" value="{{ date_to }}"></div>
+    {% if hotels|length > 1 %}<div class="kpr-field"><label for="hotel">Hotel</label><select id="hotel" name="hotel"><option value="">All authorized hotels</option>{% for hotel in hotels %}<option value="{{ hotel.pk }}" {% if selected_hotel == hotel.pk|stringformat:"s" %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}</select></div>{% endif %}
+    <button class="kpr-btn" type="submit">Apply filters</button>
+  </form>
+
+  <div class="kpr-grid">
+    <article class="kpr-card"><div class="kpr-label">Ingredient requests</div><div class="kpr-value">{{ request_count }}</div></article>
+    <article class="kpr-card"><div class="kpr-label">Requested quantity</div><div class="kpr-value">{{ request_quantity|floatformat:3 }}</div></article>
+    <article class="kpr-card"><div class="kpr-label">Store quantity issued</div><div class="kpr-value">{{ store_issued|floatformat:3 }}</div></article>
+    <article class="kpr-card"><div class="kpr-label">Store quantity outstanding</div><div class="kpr-value">{{ store_outstanding|floatformat:3 }}</div></article>
+    <article class="kpr-card"><div class="kpr-label">Direct purchases</div><div class="kpr-value">{{ purchase_count }}</div></article>
+    <article class="kpr-card"><div class="kpr-label">Ordered value</div><div class="kpr-value">{{ ordered_value|floatformat:2 }}</div></article>
+    <article class="kpr-card"><div class="kpr-label">Received goods value</div><div class="kpr-value">{{ received_value|floatformat:2 }}</div></article>
+    <article class="kpr-card"><div class="kpr-label">Outstanding delivery value</div><div class="kpr-value">{{ outstanding_delivery_value|floatformat:2 }}</div></article>
+    <article class="kpr-card"><div class="kpr-label">Supplier payments recorded</div><div class="kpr-value">{{ paid_value|floatformat:2 }}</div></article>
+    <article class="kpr-card"><div class="kpr-label">Received value less payments</div><div class="kpr-value">{{ supplier_balance|floatformat:2 }}</div></article>
+    <article class="kpr-card"><div class="kpr-label">Awaiting reconciliation</div><div class="kpr-value">{{ pending_reconciliation_count }}</div></article>
+    <article class="kpr-card"><div class="kpr-label">Pending staff reimbursement</div><div class="kpr-value">{{ reimbursement_pending|floatformat:2 }}</div></article>
+  </div>
+
+  <h2 class="kpr-section">1. Ingredient request register</h2>
+  <section class="kpr-panel"><div class="kpr-panel-head"><h2>Requests and Store fulfilment</h2><p>Only executed transfers count as issued. Direct-purchase lines are shown as a separate source.</p></div><div class="kpr-scroll"><table>
+    <thead><tr><th>Request</th><th>Date</th><th>Hotel / Requester</th><th>Status</th><th>Ingredient</th><th>Source</th><th>Requested</th><th>Issued from Store</th><th>Outstanding Store qty</th><th>Approved by</th></tr></thead>
+    <tbody>{% for row in request_rows %}{% for line in row.items %}<tr>
+      <td>#{{ row.request.pk }}</td><td>{{ row.request.created_at|date:"d M Y H:i" }}</td>
+      <td>{{ row.request.requested_by.hotel.name|default:row.request.requested_by.department.hotel.name }}<br>{{ row.request.requested_by }}</td>
+      <td><span class="kpr-pill {% if row.request.status == 'REJECTED' %}warn{% elif row.request.status == 'RECEIVED' %}good{% endif %}">{{ row.request.get_status_display }}</span></td>
+      <td>{{ line.item.ingredient.name }}</td><td>{{ line.item.get_source_display }}</td><td>{{ line.item.quantity|floatformat:3 }} {{ line.item.ingredient.base_unit }}</td>
+      <td>{% if line.item.source == "STORE" %}{{ line.issued|floatformat:3 }}{% else %}—{% endif %}</td>
+      <td>{% if line.item.source == "STORE" %}{{ line.outstanding|floatformat:3 }}{% else %}—{% endif %}</td><td>{{ row.request.approved_by|default:"—" }}</td>
+    </tr>{% empty %}<tr><td colspan="10">No ingredient requests in this period.</td></tr>{% endfor %}{% empty %}<tr><td colspan="10">No ingredient requests in this period.</td></tr>{% endfor %}</tbody>
+  </table></div></section>
+
+  <h2 class="kpr-section">2. Direct purchase and delivery register</h2>
+  <section class="kpr-panel"><div class="kpr-panel-head"><h2>Supplier orders, receipts and balances</h2><p>Ordered value is based on purchase lines. Received value uses cumulative quantities received. Supplier payment values come from Accounting payment records.</p></div><div class="kpr-scroll"><table>
+    <thead><tr><th>Purchase</th><th>Date</th><th>Supplier</th><th>Route</th><th>Status</th><th>Product</th><th>Ordered qty</th><th>Received qty</th><th>Outstanding qty</th><th>Line value</th><th>Paid</th><th>Received less paid</th><th>Reimbursement</th></tr></thead>
+    <tbody>{% for row in purchase_rows %}{% for item in row.items %}<tr>
+      <td>#{{ row.purchase.pk }}</td><td>{{ row.purchase.purchase_date|default:row.purchase.created_at|date:"d M Y" }}</td><td>{{ row.purchase.supplier.name }}</td>
+      <td>{% if row.purchase.urgent_purchase %}Urgent{% else %}Approved request{% endif %}<br>{{ row.purchase.get_payment_source_display|default:"—" }}</td>
+      <td><span class="kpr-pill {% if row.purchase.status == 'RECONCILIATION_PENDING' or row.purchase.status == 'REJECTED' %}warn{% elif row.purchase.status == 'RECEIVED' %}good{% endif %}">{{ row.purchase.get_status_display }}</span></td>
+      <td>{{ item.product.name }}</td><td>{{ item.quantity|floatformat:3 }}</td><td>{{ item.quantity_received|floatformat:3 }}</td><td>{{ item.outstanding_quantity|floatformat:3 }}</td>
+      <td>{{ item.total_cost|floatformat:2 }}</td><td>{{ row.paid_value|floatformat:2 }}</td><td>{{ row.supplier_balance|floatformat:2 }}</td>
+      <td>{% if row.reimbursement %}{{ row.reimbursement.get_status_display }} · {{ row.reimbursement.amount|floatformat:2 }}{% else %}—{% endif %}</td>
+    </tr>{% empty %}<tr><td colspan="13">No direct purchase lines in this period.</td></tr>{% endfor %}{% empty %}<tr><td colspan="13">No direct purchases in this period.</td></tr>{% endfor %}</tbody>
+  </table></div></section>
+
+  <h2 class="kpr-section">3. Supplier payment audit</h2>
+  <section class="kpr-panel"><div class="kpr-panel-head"><h2>Payment records by purchase</h2><p>Payments are linked by Accounting source type and purchase ID. A zero balance here does not mean a purchase is fully settled if it has not yet been received.</p></div><div class="kpr-scroll"><table>
+    <thead><tr><th>Purchase</th><th>Supplier</th><th>Payment date</th><th>Amount</th><th>Reference</th><th>Payment account</th><th>Recorded by</th></tr></thead>
+    <tbody>{% for row in purchase_rows %}{% for payment in row.payments %}<tr><td>#{{ row.purchase.pk }}</td><td>{{ row.purchase.supplier.name }}</td><td>{{ payment.payment_date|date:"d M Y" }}</td><td>{{ payment.amount|floatformat:2 }}</td><td>{{ payment.reference|default:"—" }}</td><td>{{ payment.payment_account.name }}</td><td>{{ payment.created_by|default:"System" }}</td></tr>{% empty %}{% endfor %}{% empty %}<tr><td colspan="7">No supplier payments recorded against direct purchases in this period.</td></tr>{% endfor %}</tbody>
+  </table></div></section>
+
+  <p class="kpr-note">Reporting notes: Store fulfilment counts only StockTransfer records with a matching executed TRANSFER StockMovement. Direct purchase ordered value is calculated from item quantity × unit cost. Received value is calculated from cumulative received quantity × unit cost. Supplier payments are actual Accounting SupplierPayment entries. The received-value-less-payments figure is an operational comparison, not a substitute for the supplier ledger balance. Staff-funded reimbursements are shown separately and are not included in supplier payments.</p>
+</div>
+{% endblock %}
