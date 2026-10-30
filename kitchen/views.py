@@ -1555,9 +1555,8 @@ def kitchen_food_sales_report(request):
     from restaurant.models import POSOrderItem, MenuItem
 
     user = request.user
-    kitchen = user.department
-    if not user.is_department_head or not kitchen or kitchen.department_type != "KITCHEN":
-        raise PermissionDenied("Only the Head Chef can access this report.")
+    if user.role not in {"MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT"}:
+        raise PermissionDenied("Kitchen sales audit is restricted to management and accounting roles.")
 
     UserModel = get_user_model()
     hotel_id = kitchen.hotel_id
