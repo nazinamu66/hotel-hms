@@ -52,6 +52,14 @@
     <p class="audit-muted" style="font-size:12px;margin:0 0 16px">Combine filters to narrow the audit. Staff and food options are limited to your hotel.</p>
     <form method="get">
       <div class="audit-filters">
+        {% if hotels|length > 1 %}
+        <div class="audit-field"><label for="hotel">Hotel</label>
+          <select id="hotel" name="hotel">
+            <option value="">All authorized hotels</option>
+            {% for hotel in hotels %}<option value="{{ hotel.pk }}" {% if selected_hotel == hotel.pk|stringformat:"s" %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}
+          </select>
+        </div>
+        {% endif %}
         <div class="audit-field"><label for="date-from">From date</label><input id="date-from" type="date" name="from" value="{{ date_from }}"></div>
         <div class="audit-field"><label for="date-to">To date</label><input id="date-to" type="date" name="to" value="{{ date_to }}"></div>
         <div class="audit-field"><label for="restaurant-staff">Restaurant staff</label>
