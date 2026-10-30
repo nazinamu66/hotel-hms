@@ -2560,3 +2560,101 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Other Hotel Inventory Rice")
         self.assertEqual(response.context["inventory_rows"], [])
+
+
+class KitchenPurchasingReportTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.organization = Organization.objects.create(name="Purchasing Report Org")
+        cls.hotel = Hotel.objects.create(organization=cls.organization, name="Purchasing Report Hotel")
+        cls.other_org = Organization.objects.create(name="Other Purchasing Org")
+        cls.other_hotel = Hotel.objects.create(organization=cls.other_org, name="Other Purchasing Hotel")
+        cls.kitchen = Department.objects.create(
+            hotel=cls.hotel, code="KPR", name="Purchasing Report Kitchen",
+            department_type="KITCHEN",
+        )
+        cls.manager = User.objects.create_user(
+            username="purchasing_report_manager", password="test-password",
+            role="MANAGER", hotel=cls.hotel,
+        )
+        cls.director = User.objects.create_user(
+            username="purchasing_report_director", password="test-password",
+            role="DIRECTOR", organization=cls.organization,
+        )
+        cls.kitchen_user = User.objects.create_user(
+            username="purchasing_report_kitchen", password="test-password",
+            role="KITCHEN", hotel=cls.hotel, department=cls.kitchen,
+            is_department_head=True,
+        )
+
+    def test_management_user_can_open_purchasing_report(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("kitchen_purchasing_report"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Kitchen Purchasing &amp; Fulfilment")
+        self.assertEqual(response.context["request_count"], 0)
+        self.assertEqual(response.context["purchase_count"], 0)
+
+    def test_kitchen_staff_cannot_open_management_purchasing_report(self):
+        self.client.force_login(self.kitchen_user)
+        response = self.client.get(reverse("kitchen_purchasing_report"))
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_director_cannot_select_another_organization_hotel(self):
+        self.client.force_login(self.director)
+        response = self.client.get(
+            reverse("kitchen_purchasing_report"),
+            {"hotel": self.other_hotel.pk},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_report_shows_request_store_issue_and_direct_purchase_values(self):
+        supplier = Supplier.objects.create(
+            hotel=self.hotel, name="Purchasing Report Supplier", is_active=True
+        )
+        ingredient = Product.objects.create(
+            hotel=self.hotel, name="Report Rice", sku="KPR-RICE",
+            product_type="RAW", base_unit="kg", cost_price=Decimal("10.00"),
+        )
+        request_obj = IngredientRestockRequest.objects.create(
+            requested_by=self.manager, status="APPROVED"
+        )
+        store_item = IngredientRestockItem.objects.create(
+            request=request_obj, ingredient=ingredient,
+            quantity=Decimal("10.000"), source="STORE",
+        )
+        direct_item = IngredientRestockItem.objects.create(
+            request=request_obj, ingredient=ingredient,
+            quantity=Decimal("4.000"), source="DIRECT",
+        )
+        transfer = StockTransfer.objects.create(
+            product=ingredient, from_department=self.kitchen,
+            to_department=self.kitchen, quantity=Decimal("3.000"),
+            created_by=self.manager, ingredient_request_item=store_item,
+        )
+        StockMovement.objects.create(
+            product=ingredient, from_department=self.kitchen,
+            to_department=self.kitchen, quantity=Decimal("3.000"),
+            movement_type="TRANSFER", created_by=self.manager,
+            reference=f"TRANSFER-{transfer.pk}",
+        )
+        purchase = DirectPurchase.objects.create(
+            ingredient_request=request_obj, supplier=supplier,
+            requested_by=self.manager, status="PARTIALLY_RECEIVED",
+            total_cost=Decimal("40.00"), payment_source="HOTEL_FUNDS",
+        )
+        DirectPurchaseItem.objects.create(
+            purchase=purchase, product=ingredient,
+            quantity=Decimal("4.000"), quantity_received=Decimal("2.000"),
+            unit_cost=Decimal("10.00"),
+        )
+
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("kitchen_purchasing_report"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["store_requested"], Decimal("10.000"))
+        self.assertEqual(response.context["store_issued"], Decimal("3.000"))
+        self.assertEqual(response.context["store_outstanding"], Decimal("7.000"))
+        self.assertEqual(response.context["ordered_value"], Decimal("40.00"))
+        self.assertEqual(response.context["received_value"], Decimal("20.000"))
+        self.assertEqual(response.context["outstanding_delivery_value"], Decimal("20.000"))
