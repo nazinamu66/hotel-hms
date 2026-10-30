@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 
-from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement, StockMovementCostAllocation, StockTransfer, Supplier
+from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement, StockMovementCostAllocation, StockTransfer, Supplier, stock_out
 from accounting.models import Account, StaffReimbursement, JournalEntry
 from billing.models import Folio
 from restaurant.models import MenuItem, POSOrder, POSOrderItem
@@ -1938,37 +1938,36 @@ class KitchenManagementReportAccessTests(TestCase):
             price=Decimal("25.00"),
             cost_at_sale=Decimal("10.000000"),
         )
-        sale_movement = StockMovement.objects.create(
+        # Exercise the real FIFO consumer rather than inserting allocations
+        # by hand. This must reduce both the physical stock and the batch layer.
+        Stock.objects.create(
             product=food_product,
-            from_department=self.kitchen,
+            department=self.kitchen,
+            quantity=Decimal("10.000"),
+        )
+        sale_result = stock_out(
+            product=food_product,
+            department=self.kitchen,
             quantity=Decimal("4.000"),
-            movement_type="OUT",
-            created_by=self.manager,
+            user=self.manager,
             reference=f"POS-{order.pk}",
         )
-        StockMovementCostAllocation.objects.create(
-            movement=sale_movement,
-            cost_layer=finished_layer,
-            quantity=Decimal("4.000"),
-            unit_cost=Decimal("10.0000"),
-            total_cost=Decimal("40.00"),
+        sale_movement = sale_result["movement"]
+        self.assertEqual(sale_result["total_cost"], Decimal("40.00"))
+        self.assertEqual(
+            list(sale_movement.cost_allocations.values_list("quantity", flat=True)),
+            [Decimal("4.000")],
         )
 
-        spoilage_movement = StockMovement.objects.create(
+        spoilage_result = stock_out(
             product=food_product,
-            from_department=self.kitchen,
+            department=self.kitchen,
             quantity=Decimal("2.000"),
-            movement_type="OUT",
-            created_by=self.manager,
+            user=self.manager,
             reference="SPOILAGE-BATCH-TEST",
         )
-        StockMovementCostAllocation.objects.create(
-            movement=spoilage_movement,
-            cost_layer=finished_layer,
-            quantity=Decimal("2.000"),
-            unit_cost=Decimal("10.0000"),
-            total_cost=Decimal("20.00"),
-        )
+        spoilage_movement = spoilage_result["movement"]
+        self.assertEqual(spoilage_result["total_cost"], Decimal("20.00"))
         KitchenSpoilageRecord.objects.create(
             product=food_product,
             department=self.kitchen,
@@ -1979,6 +1978,13 @@ class KitchenManagementReportAccessTests(TestCase):
             stock_movement=spoilage_movement,
             cost_amount=Decimal("20.00"),
         )
+
+        self.assertEqual(
+            Stock.objects.get(product=food_product, department=self.kitchen).quantity,
+            Decimal("4.000"),
+        )
+        finished_layer.refresh_from_db()
+        self.assertEqual(finished_layer.quantity_remaining, Decimal("4.000"))
 
         self.client.force_login(self.manager)
         response = self.client.get(
