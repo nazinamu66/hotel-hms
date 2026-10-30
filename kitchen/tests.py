@@ -1848,6 +1848,16 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertContains(response, "Production batch profitability")
         self.assertEqual(response.context["batch_profitability_rows"], [])
 
+    def test_open_request_from_hotel_assigned_user_is_counted_without_department(self):
+        IngredientRestockRequest.objects.create(
+            requested_by=self.manager,
+            status="PENDING",
+        )
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("kitchen_management_report"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["pending_requests"], 1)
+
     def test_batch_profitability_reconciles_fifo_sales_spoilage_and_remaining_stock(self):
         restaurant = Department.objects.create(
             hotel=self.hotel,
