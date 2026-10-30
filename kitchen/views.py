@@ -1298,6 +1298,7 @@ def kitchen_management_report(request):
         "outstanding_delivery_quantity": outstanding_delivery_quantity,
         "uncosted_sales_items": sales_items.filter(cost_at_sale__lte=0).count(),
         "trend_rows": trend_rows,
+        "batch_profitability_rows": batch_profitability_rows,
     })
 
 
