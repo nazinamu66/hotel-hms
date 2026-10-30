@@ -2634,10 +2634,54 @@ def production_detail(request, pk):
     ):
         raise PermissionDenied
 
+    from django.db.models import Sum
+
+    production_cost = batch.total_cost()
+    variance_cost_estimate = batch.calculate_variance_cost()
+    production_movement = StockMovement.objects.filter(
+        reference=f"PROD-{batch.pk}",
+        movement_type="OUT",
+    ).first()
+
+    allocations_by_ingredient = {}
+    if production_movement:
+        allocations = (
+            StockMovementCostAllocation.objects
+            .filter(movement=production_movement)
+            .values("cost_layer__product_id")
+            .annotate(total_cost=Sum("total_cost"), total_quantity=Sum("quantity"))
+        )
+        allocations_by_ingredient = {
+            row["cost_layer__product_id"]: row
+            for row in allocations
+        }
+
+    ingredient_cost_rows = []
+    for usage in batch.ingredient_usages.all():
+        allocation = allocations_by_ingredient.get(usage.ingredient_id, {})
+        ingredient_cost_rows.append({
+            "usage": usage,
+            "fifo_cost": allocation.get("total_cost") or Decimal("0.00"),
+            "costed_quantity": allocation.get("total_quantity") or Decimal("0.000"),
+            "estimated_variance_cost": (
+                max(usage.variance, Decimal("0.000")) * usage.ingredient.cost_price
+            ),
+        })
+
     return render(
         request,
         "kitchen/production/detail.html",
-        {"batch": batch}
+        {
+            "batch": batch,
+            "production_cost": production_cost,
+            "cost_per_portion": (
+                production_cost / Decimal(batch.quantity_produced)
+                if batch.quantity_produced else Decimal("0.00")
+            ),
+            "variance_cost_estimate": variance_cost_estimate,
+            "ingredient_cost_rows": ingredient_cost_rows,
+            "has_uncosted_usage": batch.ingredient_usages.filter(uncosted_quantity__gt=0).exists(),
+        }
     )
 
 
