@@ -707,6 +707,7 @@ class ProductionBatch(models.Model):
                 product=self.recipe.product,
                 department=kitchen,
                 purchase_item=None,
+                source_reference=f"PROD-{self.id}",
                 quantity_received=self.quantity_produced,
                 quantity_remaining=self.quantity_produced,
                 unit_cost=unit_cost,
