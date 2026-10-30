@@ -67,7 +67,7 @@
     <thead><tr><th>Request</th><th>Date</th><th>Hotel / Requester</th><th>Status</th><th>Ingredient</th><th>Source</th><th>Requested</th><th>Issued from Store</th><th>Outstanding Store qty</th><th>Approved by</th></tr></thead>
     <tbody>{% for row in request_rows %}{% for line in row.items %}<tr>
       <td>#{{ row.request.pk }}</td><td>{{ row.request.created_at|date:"d M Y H:i" }}</td>
-      <td>{{ row.request.requested_by.hotel.name|default:row.request.requested_by.department.hotel.name }}<br>{{ row.request.requested_by }}</td>
+      <td>{{ row.requester_hotel.name|default:"—" }}<br>{{ row.request.requested_by|default:"—" }}</td>
       <td><span class="kpr-pill {% if row.request.status == 'REJECTED' %}warn{% elif row.request.status == 'RECEIVED' %}good{% endif %}">{{ row.request.get_status_display }}</span></td>
       <td>{{ line.item.ingredient.name }}</td><td>{{ line.item.get_source_display }}</td><td>{{ line.item.quantity|floatformat:3 }} {{ line.item.ingredient.base_unit }}</td>
       <td>{% if line.item.source == "STORE" %}{{ line.issued|floatformat:3 }}{% else %}—{% endif %}</td>
