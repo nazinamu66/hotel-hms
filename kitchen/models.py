@@ -276,23 +276,18 @@ class ProductionBatch(models.Model):
         The authoritative monetary cost comes from the FIFO allocations
         attached to the production StockMovement.
         """
-        movement = (
-            StockMovement.objects
-            .filter(
-                reference=f"PROD-{self.id}",
-                movement_type="OUT",
-            )
-            .prefetch_related("cost_allocations")
-            .first()
-        )
+        # Each ingredient is consumed through its own stock_out call, so a
+        # production batch can have multiple OUT movements with the same
+        # PROD reference. Aggregate every FIFO allocation, not just the
+        # first ingredient movement.
+        from django.db.models import Sum
 
-        if not movement:
-            return Decimal("0.00")
+        total = StockMovementCostAllocation.objects.filter(
+            movement__reference=f"PROD-{self.id}",
+            movement__movement_type="OUT",
+        ).aggregate(total=Sum("total_cost"))["total"]
 
-        return sum(
-            allocation.total_cost
-            for allocation in movement.cost_allocations.all()
-        )
+        return total or Decimal("0.00")
 
     def cost_per_unit(self):
         if self.quantity_produced == 0:
