@@ -129,7 +129,7 @@
       <tbody>
       {% for row in batch_profitability_rows %}
         <tr style="border-top:1px solid #e2e8f0">
-          <td style="padding:10px">#{{ row.batch_id }}<br><span class="kmr-muted">{{ row.produced_at|date:"d M Y H:i" }}</span></td>
+          <td style="padding:10px"><a href="{% url 'kitchen_production_detail' row.batch_id %}" style="font-weight:800;color:#1d4ed8;text-decoration:none">#{{ row.batch_id }} · View breakdown</a><br><span class="kmr-muted">{{ row.produced_at|date:"d M Y H:i" }}</span></td>
           <td style="padding:10px">{{ row.food_item }}</td>
           <td style="padding:10px">{{ row.quantity_produced }}</td>
           <td style="padding:10px">{{ row.production_cost|floatformat:2 }}</td>
