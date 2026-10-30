@@ -2254,14 +2254,57 @@ class KitchenManagementReportAccessTests(TestCase):
             total_cost=Decimal("250.00"),
         )
 
+        second_ingredient = Product.objects.create(
+            hotel=self.hotel,
+            name="Detail Report Oil",
+            sku="DETAIL-REPORT-OIL",
+            product_type="RAW",
+            base_unit="litre",
+            cost_price=Decimal("50.00"),
+        )
+        RecipeItem.objects.create(
+            recipe=recipe,
+            ingredient=second_ingredient,
+            quantity=Decimal("0.500"),
+        )
+        ProductionIngredientUsage.objects.create(
+            production=batch,
+            ingredient=second_ingredient,
+            expected_quantity=Decimal("1.000"),
+            actual_quantity=Decimal("1.000"),
+            variance=Decimal("0.000"),
+        )
+        second_layer = StockCostLayer.objects.create(
+            product=second_ingredient,
+            department=self.kitchen,
+            quantity_received=Decimal("2.000"),
+            quantity_remaining=Decimal("1.000"),
+            unit_cost=Decimal("50.0000"),
+        )
+        second_movement = StockMovement.objects.create(
+            product=second_ingredient,
+            from_department=self.kitchen,
+            quantity=Decimal("1.000"),
+            movement_type="OUT",
+            created_by=self.kitchen_head,
+            reference=f"PROD-{batch.pk}",
+        )
+        StockMovementCostAllocation.objects.create(
+            movement=second_movement,
+            cost_layer=second_layer,
+            quantity=Decimal("1.000"),
+            unit_cost=Decimal("50.0000"),
+            total_cost=Decimal("50.00"),
+        )
+
         self.client.force_login(self.manager)
         response = self.client.get(reverse("kitchen_production_detail", args=[batch.pk]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["production_cost"], Decimal("250.00"))
-        self.assertEqual(response.context["cost_per_portion"], Decimal("125.00"))
+        self.assertEqual(response.context["production_cost"], Decimal("300.00"))
+        self.assertEqual(response.context["cost_per_portion"], Decimal("150.00"))
         self.assertEqual(response.context["variance_cost_estimate"], Decimal("50.000"))
-        self.assertEqual(len(response.context["ingredient_cost_rows"]), 1)
+        self.assertEqual(len(response.context["ingredient_cost_rows"]), 2)
         row = response.context["ingredient_cost_rows"][0]
         self.assertEqual(row["fifo_cost"], Decimal("250.00"))
         self.assertEqual(row["costed_quantity"], Decimal("2.500"))
