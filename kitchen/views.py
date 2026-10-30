@@ -2608,7 +2608,7 @@ def recipe_version_history(request, recipe_id):
     )
 
 
-@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
+@role_required("KITCHEN", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def production_detail(request, pk):
 
     hotels = get_accessible_hotels(request.user)
