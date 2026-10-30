@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse
 
 from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement, StockMovementCostAllocation, StockTransfer, Supplier, stock_out
-from accounting.models import Account, StaffReimbursement, JournalEntry
+from accounting.models import Account, StaffReimbursement, JournalEntry, SupplierPayment
 from billing.models import Folio
 from restaurant.models import MenuItem, POSOrder, POSOrderItem
 
