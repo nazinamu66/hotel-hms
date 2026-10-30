@@ -1195,9 +1195,16 @@ def kitchen_management_report(request):
             Decimal("0.00"),
         )
         actual_production_cost = batch.total_cost()
+        # A batch without a confidently identified finished-goods FIFO layer
+        # cannot be reconciled from allocations. This is common in legacy
+        # records created before production provenance was recorded; do not
+        # present the full batch quantity as a stock discrepancy.
+        traceability_status = "TRACEABLE" if layers.exists() else "UNATTRIBUTED"
         reconciliation_gap = (
             Decimal(batch.quantity_produced)
             - sold_qty - spoiled_qty - remaining_qty
+            if traceability_status == "TRACEABLE"
+            else None
         )
         batch_profitability_rows.append({
             "batch_id": batch.pk,
@@ -1214,6 +1221,7 @@ def kitchen_management_report(request):
             "remaining_quantity": remaining_qty,
             "remaining_value": remaining_value,
             "reconciliation_gap": reconciliation_gap,
+            "traceability_status": traceability_status,
         })
 
     production_count = batches.count()
