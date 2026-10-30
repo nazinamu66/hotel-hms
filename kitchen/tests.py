@@ -1848,6 +1848,15 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertContains(response, "Production batch profitability")
         self.assertEqual(response.context["batch_profitability_rows"], [])
 
+    def test_director_sees_kitchen_reports_but_not_operational_ingredient_requests_link(self):
+        self.client.force_login(self.director)
+        response = self.client.get(reverse("kitchen_management_report"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Kitchen Reports")
+        self.assertContains(response, "Management Overview")
+        self.assertContains(response, "Purchasing &amp; Fulfilment")
+        self.assertNotContains(response, "manager_ingredient_requests")
+
     def test_open_request_from_hotel_assigned_user_is_counted_without_department(self):
         IngredientRestockRequest.objects.create(
             requested_by=self.manager,
