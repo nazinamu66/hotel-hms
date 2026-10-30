@@ -293,12 +293,6 @@
                 📊 Production History
             </a>
 
-            {% if user.role == "KITCHEN" and user.is_department_head and user.department and user.department.department_type == "KITCHEN" %}
-                <a href="{% url 'kitchen_food_sales_report' %}">
-                    🍽️ Restaurant Food Sales Audit
-                </a>
-            {% endif %}
-
             {% if user.is_department_head %}
                 <a href="{% url 'kitchen_ingredient_requests' %}">
                     🧾 My Ingredient Requests
