@@ -17,6 +17,7 @@ from kitchen.models import (
     IngredientRestockItem,
     IngredientRestockRequest,
     ProductionBatch,
+    ProductionIngredientUsage,
     Recipe,
     RecipeItem,
     RecipeVersion,
@@ -2193,6 +2194,115 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertEqual(row["traceability_status"], "UNATTRIBUTED")
         self.assertIsNone(row["reconciliation_gap"])
         self.assertContains(response, "Unattributed legacy")
+
+    def test_production_detail_shows_fifo_cost_and_recipe_variance_analysis(self):
+        ingredient = Product.objects.create(
+            hotel=self.hotel,
+            name="Detail Report Rice",
+            sku="DETAIL-REPORT-RICE",
+            product_type="RAW",
+            base_unit="kg",
+            cost_price=Decimal("100.00"),
+        )
+        food = Product.objects.create(
+            hotel=self.hotel,
+            name="Detail Report Meal",
+            sku="DETAIL-REPORT-MEAL",
+            product_type="FOOD",
+            base_unit="portion",
+        )
+        recipe = Recipe.objects.create(name="Detail Report Recipe", product=food)
+        RecipeItem.objects.create(
+            recipe=recipe,
+            ingredient=ingredient,
+            quantity=Decimal("1.000"),
+        )
+        batch = ProductionBatch.objects.create(
+            recipe=recipe,
+            quantity_produced=2,
+            produced_by=self.kitchen_head,
+            is_executed=True,
+        )
+        ProductionIngredientUsage.objects.create(
+            production=batch,
+            ingredient=ingredient,
+            expected_quantity=Decimal("2.000"),
+            actual_quantity=Decimal("2.500"),
+            variance=Decimal("0.500"),
+            variance_reason="Extra liquid absorption",
+        )
+        layer = StockCostLayer.objects.create(
+            product=ingredient,
+            department=self.kitchen,
+            quantity_received=Decimal("5.000"),
+            quantity_remaining=Decimal("2.500"),
+            unit_cost=Decimal("100.0000"),
+        )
+        movement = StockMovement.objects.create(
+            product=ingredient,
+            from_department=self.kitchen,
+            quantity=Decimal("2.500"),
+            movement_type="OUT",
+            created_by=self.kitchen_head,
+            reference=f"PROD-{batch.pk}",
+        )
+        StockMovementCostAllocation.objects.create(
+            movement=movement,
+            cost_layer=layer,
+            quantity=Decimal("2.500"),
+            unit_cost=Decimal("100.0000"),
+            total_cost=Decimal("250.00"),
+        )
+
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("kitchen_production_detail", args=[batch.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["production_cost"], Decimal("250.00"))
+        self.assertEqual(response.context["cost_per_portion"], Decimal("125.00"))
+        self.assertEqual(response.context["variance_cost_estimate"], Decimal("50.000"))
+        self.assertEqual(len(response.context["ingredient_cost_rows"]), 1)
+        row = response.context["ingredient_cost_rows"][0]
+        self.assertEqual(row["fifo_cost"], Decimal("250.00"))
+        self.assertEqual(row["costed_quantity"], Decimal("2.500"))
+        self.assertEqual(row["estimated_variance_cost"], Decimal("50.000"))
+        self.assertContains(response, "Ingredient Cost")
+        self.assertContains(response, "Extra liquid absorption")
+
+    def test_manager_cannot_open_production_detail_from_another_hotel(self):
+        other_food = Product.objects.create(
+            hotel=self.other_hotel,
+            name="Other Hotel Food",
+            sku="OTHER-HOTEL-DETAIL-FOOD",
+            product_type="FOOD",
+            base_unit="portion",
+        )
+        other_recipe = Recipe.objects.create(
+            name="Other Hotel Detail Recipe",
+            product=other_food,
+        )
+        other_kitchen = Department.objects.create(
+            hotel=self.other_hotel,
+            code="OKD",
+            name="Other Hotel Detail Kitchen",
+            department_type="KITCHEN",
+        )
+        other_producer = User.objects.create_user(
+            username="other_hotel_detail_producer",
+            password="test-password",
+            role="KITCHEN",
+            hotel=self.other_hotel,
+            department=other_kitchen,
+        )
+        batch = ProductionBatch.objects.create(
+            recipe=other_recipe,
+            quantity_produced=1,
+            produced_by=other_producer,
+            is_executed=True,
+        )
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("kitchen_production_detail", args=[batch.pk]))
+        self.assertEqual(response.status_code, 404)
 
     def test_kitchen_head_cannot_open_management_report(self):
         self.client.force_login(self.kitchen_head)
