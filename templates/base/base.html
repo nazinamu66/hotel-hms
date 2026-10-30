@@ -269,6 +269,7 @@
 
         <div id="kitchen_menu" class="menu-section">
 
+            {% if user.role != "DIRECTOR" %}
             <a href="{% url 'kitchen_dashboard' %}">
                 Dashboard
             </a>
@@ -307,6 +308,8 @@
                 <a href="{% url 'urgent_purchase_history' %}">
                     🗂️ My Urgent Purchase History
                 </a>
+            {% endif %}
+
             {% endif %}
 
             {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
