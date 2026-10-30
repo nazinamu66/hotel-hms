@@ -1911,7 +1911,7 @@ class KitchenManagementReportAccessTests(TestCase):
             department=self.kitchen,
             source_reference=f"PROD-{batch.pk}",
             quantity_received=Decimal("10.000"),
-            quantity_remaining=Decimal("4.000"),
+            quantity_remaining=Decimal("10.000"),
             unit_cost=Decimal("10.0000"),
         )
         menu_item = MenuItem.objects.create(
