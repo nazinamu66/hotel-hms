@@ -1559,10 +1559,19 @@ def kitchen_food_sales_report(request):
         raise PermissionDenied("Kitchen sales audit is restricted to management and accounting roles.")
 
     UserModel = get_user_model()
-    hotel_id = kitchen.hotel_id
+    hotels = get_accessible_hotels(user)
+    if not hotels.exists():
+        raise PermissionDenied("No authorized hotel is available for this report.")
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel.isdigit():
+        scoped_hotels = hotels.filter(pk=int(selected_hotel))
+        if not scoped_hotels.exists():
+            raise PermissionDenied("You do not have access to that hotel.")
+    else:
+        scoped_hotels, selected_hotel = hotels, ""
 
     rows = POSOrderItem.objects.filter(
-        order__department__hotel_id=hotel_id,
+        order__department__hotel__in=scoped_hotels,
         menu_item__product__product_type="FOOD",
         order__status__in=["CHARGED", "PAID"],
         order__is_refunded=False,
@@ -1591,13 +1600,13 @@ def kitchen_food_sales_report(request):
             date_to = ""
 
     restaurant_staff = UserModel.objects.filter(
-        role="RESTAURANT", department__hotel_id=hotel_id
+        role="RESTAURANT", department__hotel__in=scoped_hotels
     ).order_by("first_name", "last_name", "username")
     kitchen_staff = UserModel.objects.filter(
-        role="KITCHEN", department__hotel_id=hotel_id
+        role="KITCHEN", department__hotel__in=scoped_hotels
     ).order_by("first_name", "last_name", "username")
     food_items = MenuItem.objects.filter(
-        product__hotel_id=hotel_id,
+        product__hotel__in=scoped_hotels,
         product__product_type="FOOD",
     ).order_by("name")
 
@@ -1680,8 +1689,8 @@ def kitchen_food_sales_report(request):
             fontSize=7, leading=8,
         ))
         story = []
-        hotel = kitchen.hotel
-        organization = hotel.organization
+        hotel = scoped_hotels.order_by("name").first()
+        organization = hotel.organization if scoped_hotels.count() == 1 else None
         header_left = []
         if organization and organization.logo:
             try:
@@ -1693,8 +1702,8 @@ def kitchen_food_sales_report(request):
             except Exception:
                 pass
         header_left.extend([
-            Paragraph(hotel.name, styles["AuditHotel"]),
-            Paragraph(hotel.location or "Hotel address/location not configured", styles["AuditSmall"]),
+            Paragraph(hotel.name if scoped_hotels.count() == 1 else "Authorized Hotels", styles["AuditHotel"]),
+            Paragraph((hotel.location or "Hotel address/location not configured") if scoped_hotels.count() == 1 else "Combined food sales audit", styles["AuditSmall"]),
             Paragraph(organization.name if organization else "", styles["AuditSmall"]),
         ])
         header = Table([[header_left]], colWidths=[doc.width])
@@ -1824,6 +1833,8 @@ def kitchen_food_sales_report(request):
 
     return render(request, "kitchen/food_sales_report.html", {
         "sales_rows": sales_rows,
+        "hotels": hotels.order_by("name"),
+        "selected_hotel": selected_hotel,
         "date_from": date_from,
         "date_to": date_to,
         "restaurant_staff_options": restaurant_staff,
