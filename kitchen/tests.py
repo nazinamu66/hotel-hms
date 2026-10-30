@@ -2712,7 +2712,7 @@ class KitchenPurchasingReportTests(TestCase):
             supplier=supplier,
             source_type="DIRECT",
             source_id=purchase.pk,
-            amount=Decimal("30.00"),
+            amount=Decimal("100.00"),
             payment_account=cash_account,
             payment_date="2026-10-20",
             reference="KPR-PAY-001",
@@ -2729,15 +2729,15 @@ class KitchenPurchasingReportTests(TestCase):
         self.client.force_login(self.manager)
         response = self.client.get(
             reverse("kitchen_purchasing_report"),
-            {"from": "2026-10-01", "to": "2026-10-31"},
+            
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["ordered_value"], Decimal("150.000"))
         self.assertEqual(response.context["received_value"], Decimal("90.000"))
         self.assertEqual(response.context["outstanding_delivery_value"], Decimal("60.000"))
-        self.assertEqual(response.context["paid_value"], Decimal("30.00"))
-        self.assertEqual(response.context["supplier_balance"], Decimal("60.000"))
+        self.assertEqual(response.context["paid_value"], Decimal("100.00"))
+        self.assertEqual(response.context["supplier_balance"], Decimal("-10.000"))
         self.assertEqual(response.context["reimbursement_pending"], Decimal("150.00"))
         row = response.context["purchase_rows"][0]
         self.assertEqual(row["payments"].count(), 1)
