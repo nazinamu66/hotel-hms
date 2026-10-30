@@ -6,8 +6,11 @@ from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 
-from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement, StockTransfer, Supplier
+from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement, StockMovementCostAllocation, StockTransfer, Supplier
 from accounting.models import Account, StaffReimbursement, JournalEntry
+from billing.models import Folio
+from restaurant.models import MenuItem, POSOrder, POSOrderItem
+
 from kitchen.models import (
     DirectPurchase,
     DirectPurchaseItem,
@@ -1843,6 +1846,162 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertContains(response, "Food sales revenue")
         self.assertContains(response, "Production batch profitability")
         self.assertEqual(response.context["batch_profitability_rows"], [])
+
+    def test_batch_profitability_reconciles_fifo_sales_spoilage_and_remaining_stock(self):
+        restaurant = Department.objects.create(
+            hotel=self.hotel,
+            code="RPT",
+            name="Management Reports Restaurant",
+            department_type="RESTAURANT",
+        )
+        raw_product = Product.objects.create(
+            hotel=self.hotel,
+            name="Batch Test Flour",
+            sku="BATCH-TEST-FLOUR",
+            product_type="RAW",
+            base_unit="kg",
+            cost_price=Decimal("10.00"),
+        )
+        food_product = Product.objects.create(
+            hotel=self.hotel,
+            name="Batch Test Bread",
+            sku="BATCH-TEST-BREAD",
+            product_type="FOOD",
+            base_unit="unit",
+            cost_price=Decimal("0.00"),
+        )
+        recipe = Recipe.objects.create(
+            name="Batch Test Bread Recipe",
+            product=food_product,
+        )
+        batch = ProductionBatch.objects.create(
+            recipe=recipe,
+            quantity_produced=10,
+            produced_by=self.kitchen_head,
+            is_executed=True,
+        )
+
+        # The production movement records the actual FIFO ingredient cost.
+        raw_layer = StockCostLayer.objects.create(
+            product=raw_product,
+            department=self.kitchen,
+            quantity_received=Decimal("10.000"),
+            quantity_remaining=Decimal("0.000"),
+            unit_cost=Decimal("10.0000"),
+        )
+        production_movement = StockMovement.objects.create(
+            product=raw_product,
+            from_department=self.kitchen,
+            quantity=Decimal("10.000"),
+            movement_type="OUT",
+            created_by=self.kitchen_head,
+            reference=f"PROD-{batch.pk}",
+        )
+        StockMovementCostAllocation.objects.create(
+            movement=production_movement,
+            cost_layer=raw_layer,
+            quantity=Decimal("10.000"),
+            unit_cost=Decimal("10.0000"),
+            total_cost=Decimal("100.00"),
+        )
+
+        # Finished output layer: 4 sold, 2 spoiled, 4 still on hand.
+        finished_layer = StockCostLayer.objects.create(
+            product=food_product,
+            department=self.kitchen,
+            source_reference=f"PROD-{batch.pk}",
+            quantity_received=Decimal("10.000"),
+            quantity_remaining=Decimal("4.000"),
+            unit_cost=Decimal("10.0000"),
+        )
+        menu_item = MenuItem.objects.create(
+            name="Batch Test Bread",
+            product=food_product,
+            price=Decimal("25.00"),
+            category="FOOD",
+        )
+        folio = Folio.objects.create(
+            hotel=self.hotel,
+            folio_type="WALKIN",
+        )
+        order = POSOrder.objects.create(
+            department=restaurant,
+            created_by=self.manager,
+            folio=folio,
+            status="CHARGED",
+            total_amount=Decimal("100.00"),
+        )
+        POSOrderItem.objects.create(
+            order=order,
+            menu_item=menu_item,
+            quantity=4,
+            price=Decimal("25.00"),
+            cost_at_sale=Decimal("10.000000"),
+        )
+        sale_movement = StockMovement.objects.create(
+            product=food_product,
+            from_department=self.kitchen,
+            quantity=Decimal("4.000"),
+            movement_type="OUT",
+            created_by=self.manager,
+            reference=f"POS-{order.pk}",
+        )
+        StockMovementCostAllocation.objects.create(
+            movement=sale_movement,
+            cost_layer=finished_layer,
+            quantity=Decimal("4.000"),
+            unit_cost=Decimal("10.0000"),
+            total_cost=Decimal("40.00"),
+        )
+
+        spoilage_movement = StockMovement.objects.create(
+            product=food_product,
+            from_department=self.kitchen,
+            quantity=Decimal("2.000"),
+            movement_type="OUT",
+            created_by=self.manager,
+            reference="SPOILAGE-BATCH-TEST",
+        )
+        StockMovementCostAllocation.objects.create(
+            movement=spoilage_movement,
+            cost_layer=finished_layer,
+            quantity=Decimal("2.000"),
+            unit_cost=Decimal("10.0000"),
+            total_cost=Decimal("20.00"),
+        )
+        KitchenSpoilageRecord.objects.create(
+            product=food_product,
+            department=self.kitchen,
+            quantity=Decimal("2.000"),
+            reason_code="SPOILED",
+            notes="Batch profitability regression fixture",
+            recorded_by=self.manager,
+            stock_movement=spoilage_movement,
+            cost_amount=Decimal("20.00"),
+        )
+
+        self.client.force_login(self.manager)
+        response = self.client.get(
+            reverse("kitchen_management_report"),
+            {"from": "2026-01-01", "to": "2026-12-31"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        rows = response.context["batch_profitability_rows"]
+        self.assertEqual(len(rows), 1)
+        row = rows[0]
+        self.assertEqual(row["batch_id"], batch.pk)
+        self.assertEqual(row["quantity_produced"], 10)
+        self.assertEqual(row["production_cost"], Decimal("100.00"))
+        self.assertEqual(row["quantity_sold"], Decimal("4.000"))
+        self.assertEqual(row["sales_revenue"], Decimal("100.00"))
+        self.assertEqual(row["sales_cogs"], Decimal("40.00"))
+        self.assertEqual(row["gross_profit"], Decimal("60.00"))
+        self.assertEqual(row["quantity_spoiled"], Decimal("2.000"))
+        self.assertEqual(row["spoilage_cost"], Decimal("20.00"))
+        self.assertEqual(row["remaining_quantity"], Decimal("4.000"))
+        self.assertEqual(row["remaining_value"], Decimal("40.00"))
+        self.assertEqual(row["reconciliation_gap"], Decimal("0.000"))
 
     def test_kitchen_head_cannot_open_management_report(self):
         self.client.force_login(self.kitchen_head)
