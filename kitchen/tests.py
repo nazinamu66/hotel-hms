@@ -1854,7 +1854,7 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Kitchen Reports")
         self.assertContains(response, "Management Overview")
-        self.assertContains(response, "Purchasing &amp; Fulfilment")
+        self.assertContains(response, "Purchasing & Fulfilment", html=False)
         self.assertNotContains(response, "manager_ingredient_requests")
 
     def test_open_request_from_hotel_assigned_user_is_counted_without_department(self):
@@ -2677,3 +2677,69 @@ class KitchenPurchasingReportTests(TestCase):
         self.assertEqual(response.context["ordered_value"], Decimal("40.00"))
         self.assertEqual(response.context["received_value"], Decimal("20.000"))
         self.assertEqual(response.context["outstanding_delivery_value"], Decimal("20.000"))
+
+    def test_report_reconciles_supplier_payments_and_staff_reimbursement_separately(self):
+        supplier = Supplier.objects.create(
+            hotel=self.hotel, name="Financial Audit Supplier", is_active=True
+        )
+        ingredient = Product.objects.create(
+            hotel=self.hotel, name="Financial Audit Oil", sku="KPR-OIL",
+            product_type="RAW", base_unit="litre", cost_price=Decimal("15.00"),
+        )
+        purchase = DirectPurchase.objects.create(
+            supplier=supplier,
+            requested_by=self.kitchen_user,
+            status="PARTIALLY_RECEIVED",
+            urgent_purchase=True,
+            payment_source="STAFF_FUNDS",
+            total_cost=Decimal("150.00"),
+        )
+        DirectPurchaseItem.objects.create(
+            purchase=purchase,
+            product=ingredient,
+            quantity=Decimal("10.000"),
+            quantity_received=Decimal("6.000"),
+            unit_cost=Decimal("15.00"),
+        )
+        cash_account = Account.objects.create(
+            hotel=self.hotel,
+            code="KPR-CASH",
+            name="Purchasing Report Cash",
+            account_type="cash",
+        )
+        SupplierPayment.objects.create(
+            hotel=self.hotel,
+            supplier=supplier,
+            source_type="DIRECT",
+            source_id=purchase.pk,
+            amount=Decimal("30.00"),
+            payment_account=cash_account,
+            payment_date="2026-10-20",
+            reference="KPR-PAY-001",
+            created_by=self.manager,
+        )
+        StaffReimbursement.objects.create(
+            hotel=self.hotel,
+            direct_purchase=purchase,
+            claimant=self.kitchen_user,
+            amount=Decimal("150.00"),
+            status="PENDING",
+        )
+
+        self.client.force_login(self.manager)
+        response = self.client.get(
+            reverse("kitchen_purchasing_report"),
+            {"from": "2026-10-01", "to": "2026-10-31"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["ordered_value"], Decimal("150.000"))
+        self.assertEqual(response.context["received_value"], Decimal("90.000"))
+        self.assertEqual(response.context["outstanding_delivery_value"], Decimal("60.000"))
+        self.assertEqual(response.context["paid_value"], Decimal("30.00"))
+        self.assertEqual(response.context["supplier_balance"], Decimal("60.000"))
+        self.assertEqual(response.context["reimbursement_pending"], Decimal("150.00"))
+        row = response.context["purchase_rows"][0]
+        self.assertEqual(row["payments"].count(), 1)
+        self.assertEqual(row["payments"].get().reference, "KPR-PAY-001")
+        self.assertEqual(row["reimbursement"].status, "PENDING")
