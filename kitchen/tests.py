@@ -2460,3 +2460,103 @@ class KitchenManagementReportAccessTests(TestCase):
             {"hotel": self.other_hotel.pk},
         )
         self.assertEqual(response.status_code, 403)
+
+
+    def test_kitchen_inventory_report_uses_fifo_layers_and_flags_quantity_gap(self):
+        product = Product.objects.create(
+            hotel=self.hotel,
+            name="Inventory Report Rice",
+            sku="INV-REPORT-RICE",
+            product_type="RAW",
+            base_unit="kg",
+            cost_price=Decimal("999.00"),
+            reorder_level=5,
+        )
+        stock = Stock.objects.create(
+            product=product,
+            department=self.kitchen,
+            quantity=Decimal("5.000"),
+            reorder_level=5,
+        )
+        first_layer = StockCostLayer.objects.create(
+            product=product,
+            department=self.kitchen,
+            quantity_received=Decimal("2.000"),
+            quantity_remaining=Decimal("2.000"),
+            unit_cost=Decimal("10.0000"),
+        )
+        second_layer = StockCostLayer.objects.create(
+            product=product,
+            department=self.kitchen,
+            quantity_received=Decimal("1.000"),
+            quantity_remaining=Decimal("1.000"),
+            unit_cost=Decimal("20.0000"),
+        )
+        movement = StockMovement.objects.create(
+            product=product,
+            from_department=self.kitchen,
+            quantity=Decimal("1.000"),
+            movement_type="OUT",
+            created_by=self.manager,
+            reference="INV-REPORT-ISSUE",
+        )
+        StockMovementCostAllocation.objects.create(
+            movement=movement,
+            cost_layer=first_layer,
+            quantity=Decimal("1.000"),
+            unit_cost=Decimal("10.0000"),
+            total_cost=Decimal("10.00"),
+        )
+
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("kitchen_inventory_report"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Kitchen Inventory Report")
+        self.assertEqual(response.context["total_products"], 1)
+        self.assertEqual(response.context["total_physical_quantity"], Decimal("5.000"))
+        self.assertEqual(response.context["total_layer_quantity"], Decimal("3.000"))
+        self.assertEqual(response.context["total_fifo_value"], Decimal("40.00"))
+        self.assertEqual(response.context["unvalued_quantity"], Decimal("2.000"))
+        self.assertEqual(response.context["low_stock_count"], 1)
+        self.assertEqual(response.context["discrepancy_count"], 1)
+        row = response.context["inventory_rows"][0]
+        self.assertEqual(row["physical_quantity"], stock.quantity)
+        self.assertEqual(row["fifo_value"], Decimal("40.000000"))
+        self.assertEqual(row["reconciliation_status"], "MISSING_LAYERS")
+        self.assertEqual(response.context["movement_count"], 1)
+        self.assertEqual(response.context["movement_rows"][0]["fifo_cost"], Decimal("10.00"))
+
+    def test_kitchen_inventory_report_rejects_hotel_outside_director_scope(self):
+        self.client.force_login(self.director)
+        response = self.client.get(
+            reverse("kitchen_inventory_report"),
+            {"hotel": self.other_hotel.pk},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_kitchen_inventory_report_excludes_other_hotel_stock(self):
+        other_kitchen = Department.objects.create(
+            hotel=self.other_hotel,
+            code="OTHINV",
+            name="Other Inventory Kitchen",
+            department_type="KITCHEN",
+        )
+        other_product = Product.objects.create(
+            hotel=self.other_hotel,
+            name="Other Hotel Inventory Rice",
+            sku="OTHER-INV-RICE",
+            product_type="RAW",
+            base_unit="kg",
+            cost_price=Decimal("10.00"),
+        )
+        Stock.objects.create(
+            product=other_product,
+            department=other_kitchen,
+            quantity=Decimal("99.000"),
+        )
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("kitchen_inventory_report"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Other Hotel Inventory Rice")
+        self.assertEqual(response.context["inventory_rows"], [])
