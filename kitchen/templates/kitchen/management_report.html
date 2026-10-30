@@ -113,6 +113,44 @@
     <article class="kmr-card"><div class="kmr-label">Recorded spoilage cost</div><div class="kmr-value">{{ spoilage_cost|floatformat:2 }}</div><div class="kmr-note">{{ spoilage_quantity|floatformat:3 }} units recorded as wasted.</div></article>
   </div>
 
+  <h2 class="kmr-section">Production batch profitability &amp; traceability</h2>
+  <p class="kmr-muted">Batches are selected by production date. Their later sales and normal spoilage allocations are traced through FIFO, regardless of the transaction date.</p>
+  <div style="overflow-x:auto;background:#fff;border:1px solid #e2e8f0;border-radius:14px">
+    <table style="width:100%;border-collapse:collapse;min-width:1450px;font-size:.82rem">
+      <thead><tr style="background:#f8fafc;text-align:left">
+        <th style="padding:11px">Batch / produced</th><th style="padding:11px">Food item</th>
+        <th style="padding:11px">Qty produced</th><th style="padding:11px">Production cost</th>
+        <th style="padding:11px">Qty sold</th><th style="padding:11px">Sales revenue</th>
+        <th style="padding:11px">Sales COGS</th><th style="padding:11px">Gross profit</th>
+        <th style="padding:11px">Qty spoiled</th><th style="padding:11px">Spoilage cost</th>
+        <th style="padding:11px">Remaining qty</th><th style="padding:11px">Remaining value</th>
+        <th style="padding:11px">Unreconciled qty</th>
+      </tr></thead>
+      <tbody>
+      {% for row in batch_profitability_rows %}
+        <tr style="border-top:1px solid #e2e8f0">
+          <td style="padding:10px">#{{ row.batch_id }}<br><span class="kmr-muted">{{ row.produced_at|date:"d M Y H:i" }}</span></td>
+          <td style="padding:10px">{{ row.food_item }}</td>
+          <td style="padding:10px">{{ row.quantity_produced }}</td>
+          <td style="padding:10px">{{ row.production_cost|floatformat:2 }}</td>
+          <td style="padding:10px">{{ row.quantity_sold|floatformat:3 }}</td>
+          <td style="padding:10px">{{ row.sales_revenue|floatformat:2 }}</td>
+          <td style="padding:10px">{{ row.sales_cogs|floatformat:2 }}</td>
+          <td style="padding:10px">{{ row.gross_profit|floatformat:2 }}</td>
+          <td style="padding:10px">{{ row.quantity_spoiled|floatformat:3 }}</td>
+          <td style="padding:10px">{{ row.spoilage_cost|floatformat:2 }}</td>
+          <td style="padding:10px">{{ row.remaining_quantity|floatformat:3 }}</td>
+          <td style="padding:10px">{{ row.remaining_value|floatformat:2 }}</td>
+          <td style="padding:10px;{% if row.reconciliation_gap != 0 %}color:#b45309;font-weight:800{% endif %}">{{ row.reconciliation_gap|floatformat:3 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="13" style="padding:18px;text-align:center;color:#64748b">No executed production batches in this production-date range.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="kmr-foot">Batch gross profit is allocated from POS line revenue according to FIFO quantity consumed from that batch, less the batch's FIFO sales COGS. Refunds are excluded from sales; refund-restored stock and prepared-food refund waste are not batch-attributed by the current refund records and therefore may appear in the unreconciled quantity. A non-zero unreconciled quantity requires review.</p>
+
   <h2 class="kmr-section">Items requiring attention</h2>
   <div class="kmr-grid">
     <article class="kmr-card"><div class="kmr-label">Pending spoilage reviews</div><div class="kmr-value">{{ pending_spoilage }}</div><div class="kmr-note">Records in the selected period awaiting review.</div></article>
