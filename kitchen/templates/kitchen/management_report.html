@@ -124,7 +124,7 @@
         <th style="padding:11px">Sales COGS</th><th style="padding:11px">Gross profit</th>
         <th style="padding:11px">Qty spoiled</th><th style="padding:11px">Spoilage cost</th>
         <th style="padding:11px">Remaining qty</th><th style="padding:11px">Remaining value</th>
-        <th style="padding:11px">Unreconciled qty</th>
+        <th style="padding:11px">Traceability</th><th style="padding:11px">Unreconciled qty</th>
       </tr></thead>
       <tbody>
       {% for row in batch_profitability_rows %}
@@ -141,15 +141,15 @@
           <td style="padding:10px">{{ row.spoilage_cost|floatformat:2 }}</td>
           <td style="padding:10px">{{ row.remaining_quantity|floatformat:3 }}</td>
           <td style="padding:10px">{{ row.remaining_value|floatformat:2 }}</td>
-          <td style="padding:10px;{% if row.reconciliation_gap != 0 %}color:#b45309;font-weight:800{% endif %}">{{ row.reconciliation_gap|floatformat:3 }}</td>
+          <td style="padding:10px">{% if row.traceability_status == "TRACEABLE" %}<span style="color:#15803d;font-weight:700">Traceable</span>{% else %}<span style="color:#92400e;font-weight:700">Unattributed legacy</span>{% endif %}</td>\n          <td style="padding:10px;{% if row.reconciliation_gap != None and row.reconciliation_gap != 0 %}color:#b45309;font-weight:800{% endif %}">{% if row.reconciliation_gap != None %}{{ row.reconciliation_gap|floatformat:3 }}{% else %}—{% endif %}</td>
         </tr>
       {% empty %}
-        <tr><td colspan="13" style="padding:18px;text-align:center;color:#64748b">No executed production batches in this production-date range.</td></tr>
+        <tr><td colspan="14" style="padding:18px;text-align:center;color:#64748b">No executed production batches in this production-date range.</td></tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
-  <p class="kmr-foot">Batch gross profit is allocated from POS line revenue according to FIFO quantity consumed from that batch, less the batch's FIFO sales COGS. Refunds are excluded from sales; refund-restored stock and prepared-food refund waste are not batch-attributed by the current refund records and therefore may appear in the unreconciled quantity. A non-zero unreconciled quantity requires review.</p>
+  <p class="kmr-foot">Batch gross profit is allocated from POS line revenue according to FIFO quantity consumed from that batch, less the batch's FIFO sales COGS. Refunds are excluded from sales; refund-restored stock and prepared-food refund waste are not batch-attributed by the current refund records and therefore may appear in the unreconciled quantity. A non-zero unreconciled quantity on a traceable batch requires review. Batches without a reliably identified finished-goods cost layer are marked Unattributed legacy; their quantities are not presented as confirmed stock discrepancies.</p>
 
   <h2 class="kmr-section">Items requiring attention</h2>
   <div class="kmr-grid">
