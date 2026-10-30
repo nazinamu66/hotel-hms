@@ -23,6 +23,7 @@ from inventory.models import (
     Supplier,
     StockMovement,
     StockCostLayer,
+    StockMovementCostAllocation,
     StockTransfer,
     stock_out,
 )
@@ -1087,6 +1088,136 @@ def kitchen_management_report(request):
         created_at__date__lte=date_to,
         is_executed=True,
     ).select_related("recipe", "produced_by", "produced_by__department__hotel")
+    # Batch-level traceability: follow the finished-food FIFO layer created
+    # by each production batch through later POS sales and normal spoilage.
+    batch_profitability_rows = []
+    for batch in batches:
+        kitchen = batch.produced_by.department if batch.produced_by_id else None
+        product = batch.recipe.product
+        source_ref = f"PROD-{batch.pk}"
+        layers = StockCostLayer.objects.filter(
+            source_reference=source_ref,
+            product=product,
+            department=kitchen,
+        )
+        layer_ids = list(layers.values_list("pk", flat=True))
+        layer_allocations = list(
+            StockMovementCostAllocation.objects
+            .filter(cost_layer_id__in=layer_ids)
+            .select_related("movement", "cost_layer")
+        ) if layer_ids else []
+
+        sold_qty = Decimal("0.000")
+        sold_cogs = Decimal("0.00")
+        spoiled_qty = Decimal("0.000")
+        spoiled_cost = Decimal("0.00")
+        sales_by_order = {}
+        spoilage_movement_ids = set(
+            KitchenSpoilageRecord.objects.filter(
+                department__hotel__in=scoped_hotels,
+                stock_movement__isnull=False,
+            ).values_list("stock_movement_id", flat=True)
+        )
+
+        for allocation in layer_allocations:
+            movement = allocation.movement
+            if movement.movement_type != "OUT":
+                continue
+            if movement.reference.startswith("POS-"):
+                try:
+                    order_id = int(movement.reference[4:])
+                except ValueError:
+                    continue
+                sales_by_order.setdefault(order_id, []).append(allocation)
+            elif movement.pk in spoilage_movement_ids:
+                spoiled_qty += allocation.quantity
+                spoiled_cost += allocation.total_cost
+
+        if sales_by_order:
+            valid_orders = {
+                order.pk: order
+                for order in POSOrder.objects.filter(
+                    pk__in=sales_by_order,
+                    department__hotel__in=scoped_hotels,
+                    status__in=("CHARGED", "PAID"),
+                    is_refunded=False,
+                )
+            }
+            for order_id, allocations in sales_by_order.items():
+                order = valid_orders.get(order_id)
+                if not order:
+                    continue
+                allocated_qty = sum(
+                    (allocation.quantity for allocation in allocations),
+                    Decimal("0.000"),
+                )
+                if allocated_qty <= 0:
+                    continue
+                # MenuItem is unique per product, so an order has one line
+                # per product. Allocate that line's revenue in proportion
+                # to the FIFO quantity sourced from this production batch.
+                line = POSOrderItem.objects.filter(
+                    order_id=order_id,
+                    menu_item__product=product,
+                ).first()
+                if not line:
+                    continue
+                sold_qty += allocated_qty
+                sold_cogs += sum(
+                    (allocation.total_cost for allocation in allocations),
+                    Decimal("0.00"),
+                )
+                total_product_allocated = StockMovementCostAllocation.objects.filter(
+                    movement__reference=f"POS-{order_id}",
+                    movement__product=product,
+                    movement__movement_type="OUT",
+                ).aggregate(total=Sum("quantity"))["total"] or Decimal("0.000")
+                if total_product_allocated > 0:
+                    batch_profit_revenue = (
+                        line.price * line.quantity * allocated_qty
+                        / total_product_allocated
+                    )
+                else:
+                    batch_profit_revenue = Decimal("0.00")
+                sales_by_order[order_id] = (allocations, batch_profit_revenue)
+
+        sales_revenue = sum(
+            (value[1] for value in sales_by_order.values() if isinstance(value, tuple)),
+            Decimal("0.00"),
+        )
+        remaining_qty = sum(
+            (layer.quantity_remaining for layer in layers),
+            Decimal("0.000"),
+        )
+        remaining_value = sum(
+            (
+                layer.quantity_remaining * layer.unit_cost
+                for layer in layers
+            ),
+            Decimal("0.00"),
+        )
+        actual_production_cost = batch.total_cost()
+        reconciliation_gap = (
+            Decimal(batch.quantity_produced)
+            - sold_qty - spoiled_qty - remaining_qty
+        )
+        batch_profitability_rows.append({
+            "batch_id": batch.pk,
+            "food_item": product.name,
+            "produced_at": batch.created_at,
+            "quantity_produced": batch.quantity_produced,
+            "production_cost": actual_production_cost,
+            "quantity_sold": sold_qty,
+            "sales_revenue": sales_revenue,
+            "sales_cogs": sold_cogs,
+            "gross_profit": sales_revenue - sold_cogs,
+            "quantity_spoiled": spoiled_qty,
+            "spoilage_cost": spoiled_cost,
+            "remaining_quantity": remaining_qty,
+            "remaining_value": remaining_value,
+            "reconciliation_gap": reconciliation_gap,
+        })
+
     production_count = batches.count()
     portions_produced = batches.aggregate(total=Sum("quantity_produced"))["total"] or 0
     production_cost = sum((batch.total_cost() for batch in batches), Decimal("0.00"))
