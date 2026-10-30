@@ -10,6 +10,7 @@ from inventory.models import (
     Department,
     StockMovement,
     StockCostLayer,
+    StockMovementCostAllocation,
     stock_out,
 )
 
