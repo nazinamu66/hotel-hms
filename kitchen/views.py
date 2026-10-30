@@ -1435,7 +1435,8 @@ def kitchen_purchasing_report(request):
             (item.outstanding_quantity * item.unit_cost for item in items),
             Decimal("0.00"),
         )
-        balance = max(purchase_received - paid, Decimal("0.00"))
+        # Preserve negative balances: payments ahead of receipts are supplier advances/credits.
+        balance = purchase_received - paid
         reimbursement = getattr(purchase, "staff_reimbursement", None)
         if purchase.status == "REJECTED":
             # Rejected reconciliation is retained in the audit register but is
