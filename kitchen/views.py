@@ -1309,6 +1309,177 @@ def kitchen_management_report(request):
 
 
 
+
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def kitchen_purchasing_report(request):
+    """Management audit of Kitchen requests, executed Store issues, direct purchases and settlement."""
+    from django.db.models import Q, Sum
+    from accounting.models import SupplierPayment, StaffReimbursement
+
+    hotels = get_accessible_hotels(request.user).order_by("name", "pk")
+    if not hotels.exists():
+        raise PermissionDenied("You do not have access to Kitchen purchasing reports.")
+
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit():
+            raise PermissionDenied("Invalid hotel selection.")
+        scoped_hotels = hotels.filter(pk=int(selected_hotel))
+        if not scoped_hotels.exists():
+            raise PermissionDenied("You do not have access to that hotel.")
+    else:
+        scoped_hotels = hotels
+
+    today = timezone.localdate()
+    try:
+        date_from = date.fromisoformat(request.GET.get("from", "").strip()) if request.GET.get("from") else today.replace(day=1)
+    except ValueError:
+        date_from = today.replace(day=1)
+    try:
+        date_to = date.fromisoformat(request.GET.get("to", "").strip()) if request.GET.get("to") else today
+    except ValueError:
+        date_to = today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    requests_qs = IngredientRestockRequest.objects.filter(
+        Q(requested_by__hotel__in=scoped_hotels)
+        | Q(requested_by__department__hotel__in=scoped_hotels),
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+    ).select_related(
+        "requested_by", "requested_by__department", "requested_by__hotel", "approved_by"
+    ).prefetch_related("items__ingredient", "items__transfers").order_by("-created_at", "-pk")
+
+    request_rows = []
+    request_count = 0
+    request_quantity = Decimal("0.000")
+    store_requested = Decimal("0.000")
+    store_issued = Decimal("0.000")
+    store_outstanding = Decimal("0.000")
+    for req in requests_qs:
+        items = []
+        req_store_requested = Decimal("0.000")
+        req_store_issued = Decimal("0.000")
+        for item in req.items.all():
+            item_issued = Decimal("0.000")
+            if item.source == "STORE":
+                for transfer in item.transfers.all():
+                    if StockMovement.objects.filter(
+                        reference=f"TRANSFER-{transfer.pk}",
+                        movement_type="TRANSFER",
+                    ).exists():
+                        item_issued += transfer.quantity
+                req_store_requested += item.quantity
+                req_store_issued += item_issued
+                store_requested += item.quantity
+                store_issued += item_issued
+            request_quantity += item.quantity
+            items.append({
+                "item": item,
+                "issued": item_issued,
+                "outstanding": max(item.quantity - item_issued, Decimal("0.000")) if item.source == "STORE" else None,
+            })
+        store_outstanding += max(req_store_requested - req_store_issued, Decimal("0.000"))
+        request_rows.append({
+            "request": req,
+            "items": items,
+            "store_requested": req_store_requested,
+            "store_issued": req_store_issued,
+            "store_outstanding": max(req_store_requested - req_store_issued, Decimal("0.000")),
+        })
+        request_count += 1
+
+    purchases = DirectPurchase.objects.filter(
+        supplier__hotel__in=scoped_hotels,
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+    ).select_related(
+        "supplier", "requested_by", "approved_by", "reconciled_by", "ingredient_request"
+    ).prefetch_related("items__product").order_by("-created_at", "-pk")
+
+    purchase_rows = []
+    purchase_count = 0
+    ordered_value = Decimal("0.00")
+    received_value = Decimal("0.00")
+    outstanding_delivery_value = Decimal("0.00")
+    paid_value = Decimal("0.00")
+    supplier_balance = Decimal("0.00")
+    reimbursement_pending = Decimal("0.00")
+    for purchase in purchases:
+        payments = SupplierPayment.objects.filter(
+            hotel=purchase.supplier.hotel,
+            supplier=purchase.supplier,
+            source_type="DIRECT",
+            source_id=purchase.pk,
+        )
+        paid = payments.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+        items = list(purchase.items.select_related("product").all())
+        purchase_ordered = sum((item.total_cost for item in items), Decimal("0.00"))
+        purchase_received = sum(
+            (item.quantity_received * item.unit_cost for item in items),
+            Decimal("0.00"),
+        )
+        outstanding = sum(
+            (item.outstanding_quantity * item.unit_cost for item in items),
+            Decimal("0.00"),
+        )
+        balance = max(purchase_received - paid, Decimal("0.00"))
+        reimbursement = getattr(purchase, "staff_reimbursement", None)
+        if purchase.status == "REJECTED":
+            # Rejected reconciliation is retained in the audit register but is
+            # not counted as approved procurement or outstanding delivery.
+            outstanding = Decimal("0.00")
+        if reimbursement and reimbursement.status == "PENDING":
+            reimbursement_pending += reimbursement.amount
+
+        ordered_value += purchase_ordered if purchase.status != "REJECTED" else Decimal("0.00")
+        received_value += purchase_received if purchase.status != "REJECTED" else Decimal("0.00")
+        outstanding_delivery_value += outstanding
+        paid_value += paid
+        supplier_balance += balance
+        purchase_rows.append({
+            "purchase": purchase,
+            "items": items,
+            "ordered_value": purchase_ordered,
+            "received_value": purchase_received,
+            "outstanding_value": outstanding,
+            "paid_value": paid,
+            "supplier_balance": balance,
+            "payments": payments.order_by("-payment_date", "-pk"),
+            "reimbursement": reimbursement,
+        })
+        purchase_count += 1
+
+    pending_reconciliation_count = purchases.filter(status="RECONCILIATION_PENDING").count()
+    partial_delivery_count = purchases.filter(status="PARTIALLY_RECEIVED").count()
+    unpaid_or_balance_count = sum(1 for row in purchase_rows if row["supplier_balance"] > 0)
+
+    return render(request, "kitchen/reports/purchasing_report.html", {
+        "hotels": hotels,
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "request_rows": request_rows,
+        "purchase_rows": purchase_rows,
+        "request_count": request_count,
+        "request_quantity": request_quantity,
+        "store_requested": store_requested,
+        "store_issued": store_issued,
+        "store_outstanding": store_outstanding,
+        "purchase_count": purchase_count,
+        "ordered_value": ordered_value,
+        "received_value": received_value,
+        "outstanding_delivery_value": outstanding_delivery_value,
+        "paid_value": paid_value,
+        "supplier_balance": supplier_balance,
+        "reimbursement_pending": reimbursement_pending,
+        "pending_reconciliation_count": pending_reconciliation_count,
+        "partial_delivery_count": partial_delivery_count,
+        "unpaid_or_balance_count": unpaid_or_balance_count,
+    })
+
+
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def kitchen_inventory_report(request):
     """Current Kitchen stock position and FIFO valuation with a dated movement register."""
