@@ -52,6 +52,8 @@ from .forms import (
     IngredientRestockItemFormSet
 )
 
+from restaurant.models import POSOrder, POSOrderItem
+
 from django.contrib.auth import get_user_model
 User = get_user_model()
     
@@ -1091,14 +1093,18 @@ def kitchen_management_report(request):
     # Batch-level traceability: follow the finished-food FIFO layer created
     # by each production batch through later POS sales and normal spoilage.
     batch_profitability_rows = []
+    spoilage_movement_ids = set(
+        KitchenSpoilageRecord.objects.filter(
+            department__hotel__in=scoped_hotels,
+            stock_movement__isnull=False,
+        ).values_list("stock_movement_id", flat=True)
+    )
     for batch in batches:
-        kitchen = batch.produced_by.department if batch.produced_by_id else None
         product = batch.recipe.product
         source_ref = f"PROD-{batch.pk}"
         layers = StockCostLayer.objects.filter(
             source_reference=source_ref,
             product=product,
-            department=kitchen,
         )
         layer_ids = list(layers.values_list("pk", flat=True))
         layer_allocations = list(
@@ -1112,12 +1118,6 @@ def kitchen_management_report(request):
         spoiled_qty = Decimal("0.000")
         spoiled_cost = Decimal("0.00")
         sales_by_order = {}
-        spoilage_movement_ids = set(
-            KitchenSpoilageRecord.objects.filter(
-                department__hotel__in=scoped_hotels,
-                stock_movement__isnull=False,
-            ).values_list("stock_movement_id", flat=True)
-        )
 
         for allocation in layer_allocations:
             movement = allocation.movement
