@@ -52,8 +52,6 @@ from .forms import (
     IngredientRestockItemFormSet
 )
 
-from restaurant.models import POSOrder, POSOrderItem
-
 from django.contrib.auth import get_user_model
 User = get_user_model()
     
