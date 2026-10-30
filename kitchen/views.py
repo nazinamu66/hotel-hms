@@ -1345,6 +1345,7 @@ def kitchen_inventory_report(request):
 
     stock_records = Stock.objects.filter(
         department_id__in=department_ids,
+        product__hotel__in=scoped_hotels,
         product__product_type__in=("RAW", "FOOD"),
     ).select_related("product", "department", "department__hotel")
 
@@ -1361,6 +1362,7 @@ def kitchen_inventory_report(request):
 
     layers = StockCostLayer.objects.filter(
         department_id__in=department_ids,
+        product__hotel__in=scoped_hotels,
         product__product_type__in=("RAW", "FOOD"),
         quantity_remaining__gt=0,
     ).select_related("product", "department", "department__hotel")
@@ -1421,6 +1423,7 @@ def kitchen_inventory_report(request):
         Q(from_department_id__in=department_ids) | Q(to_department_id__in=department_ids),
         created_at__date__gte=date_from,
         created_at__date__lte=date_to,
+        product__hotel__in=scoped_hotels,
         product__product_type__in=("RAW", "FOOD"),
     ).select_related(
         "product", "from_department", "to_department",
