@@ -1381,8 +1381,16 @@ def kitchen_purchasing_report(request):
                 "outstanding": max(item.quantity - item_issued, Decimal("0.000")) if item.source == "STORE" else None,
             })
         store_outstanding += max(req_store_requested - req_store_issued, Decimal("0.000"))
+        requester_hotel = None
+        if req.requested_by:
+            requester_hotel = (
+                getattr(req.requested_by, "hotel", None)
+                or getattr(getattr(req.requested_by, "department", None), "hotel", None)
+            )
+
         request_rows.append({
             "request": req,
+            "requester_hotel": requester_hotel,
             "items": items,
             "store_requested": req_store_requested,
             "store_issued": req_store_issued,
