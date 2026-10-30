@@ -259,7 +259,7 @@
 
         {% feature_enabled user "KITCHEN" as kitchen_enabled %}
 
-        {% if kitchen_enabled and user|has_role:"KITCHEN,MANAGER,ADMIN,DIRECTOR" %}
+        {% if kitchen_enabled and user|has_role:"KITCHEN,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
 
         <h4 class="menu-toggle"
             onclick="toggleMenu('kitchen_menu', this)">
@@ -313,6 +313,15 @@
                 <a href="{% url 'urgent_purchase_history' %}">
                     🗂️ My Urgent Purchase History
                 </a>
+            {% endif %}
+
+            {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
+            <hr>
+            <strong>Kitchen Reports</strong>
+            <a href="{% url 'kitchen_management_report' %}">📊 Management Overview</a>
+            <a href="{% url 'kitchen_inventory_report' %}">📦 Inventory Report</a>
+            <a href="{% url 'kitchen_spoilage_report' %}">🗑️ Spoilage Report</a>
+            <a href="{% url 'kitchen_food_sales_report' %}">🍽️ Food Sales Audit</a>
             {% endif %}
 
             {% if user|has_role:"MANAGER,DIRECTOR,ADMIN" %}
@@ -834,12 +843,6 @@
                 🏭 Department Consumption
             </a>
 
-            {% endif %}
-
-            {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
-            <a href="{% url 'kitchen_management_report' %}">
-                🍳 Kitchen Management Reports
-            </a>
             {% endif %}
 
         </div>
