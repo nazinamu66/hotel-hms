@@ -1308,6 +1308,164 @@ def kitchen_management_report(request):
     })
 
 
+
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def kitchen_inventory_report(request):
+    """Current Kitchen stock position and FIFO valuation with a dated movement register."""
+    from django.db.models import Q
+
+    hotels = get_accessible_hotels(request.user)
+    if not hotels.exists():
+        raise PermissionDenied("You do not have access to Kitchen inventory reports.")
+
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel.isdigit():
+        scoped_hotels = hotels.filter(pk=int(selected_hotel))
+        if not scoped_hotels.exists():
+            raise PermissionDenied("You do not have access to that hotel.")
+    else:
+        scoped_hotels, selected_hotel = hotels, ""
+
+    today = timezone.localdate()
+    try:
+        date_from = date.fromisoformat(request.GET.get("from", "").strip()) if request.GET.get("from") else today.replace(day=1)
+    except ValueError:
+        date_from = today.replace(day=1)
+    try:
+        date_to = date.fromisoformat(request.GET.get("to", "").strip()) if request.GET.get("to") else today
+    except ValueError:
+        date_to = today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    kitchen_departments = Department.objects.filter(
+        hotel__in=scoped_hotels, department_type="KITCHEN"
+    ).select_related("hotel").order_by("hotel__name", "name")
+    department_ids = list(kitchen_departments.values_list("pk", flat=True))
+
+    stock_records = Stock.objects.filter(
+        department_id__in=department_ids,
+        product__product_type__in=("RAW", "FOOD"),
+    ).select_related("product", "department", "department__hotel")
+
+    rows_by_key = {}
+    for stock in stock_records:
+        rows_by_key[(stock.product_id, stock.department_id)] = {
+            "product": stock.product,
+            "department": stock.department,
+            "physical_quantity": stock.quantity,
+            "reorder_level": stock.reorder_level,
+            "layer_quantity": Decimal("0.000"),
+            "fifo_value": Decimal("0.00"),
+        }
+
+    layers = StockCostLayer.objects.filter(
+        department_id__in=department_ids,
+        product__product_type__in=("RAW", "FOOD"),
+        quantity_remaining__gt=0,
+    ).select_related("product", "department", "department__hotel")
+
+    for layer in layers:
+        key = (layer.product_id, layer.department_id)
+        if key not in rows_by_key:
+            rows_by_key[key] = {
+                "product": layer.product,
+                "department": layer.department,
+                "physical_quantity": Decimal("0.000"),
+                "reorder_level": layer.product.reorder_level,
+                "layer_quantity": Decimal("0.000"),
+                "fifo_value": Decimal("0.00"),
+            }
+        rows_by_key[key]["layer_quantity"] += layer.quantity_remaining
+        rows_by_key[key]["fifo_value"] += layer.quantity_remaining * layer.unit_cost
+
+    inventory_rows = []
+    total_physical_quantity = Decimal("0.000")
+    total_layer_quantity = Decimal("0.000")
+    total_fifo_value = Decimal("0.00")
+    low_stock_count = 0
+    discrepancy_count = 0
+    unvalued_quantity = Decimal("0.000")
+
+    for row in rows_by_key.values():
+        physical = row["physical_quantity"]
+        layer_qty = row["layer_quantity"]
+        difference = physical - layer_qty
+        if difference == 0:
+            status = "MATCH"
+        elif difference > 0:
+            status = "MISSING_LAYERS"
+        else:
+            status = "LAYERS_EXCEED_STOCK"
+        row.update({
+            "difference": difference,
+            "unvalued_quantity": max(difference, Decimal("0.000")),
+            "reconciliation_status": status,
+            "is_low_stock": physical <= row["reorder_level"],
+        })
+        low_stock_count += int(row["is_low_stock"])
+        discrepancy_count += int(status != "MATCH")
+        total_physical_quantity += physical
+        total_layer_quantity += layer_qty
+        total_fifo_value += row["fifo_value"]
+        unvalued_quantity += row["unvalued_quantity"]
+        inventory_rows.append(row)
+
+    inventory_rows.sort(key=lambda item: (
+        item["department"].hotel.name,
+        item["department"].name,
+        item["product"].name,
+    ))
+
+    movement_records = StockMovement.objects.filter(
+        Q(from_department_id__in=department_ids) | Q(to_department_id__in=department_ids),
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+        product__product_type__in=("RAW", "FOOD"),
+    ).select_related(
+        "product", "from_department", "to_department",
+        "from_department__hotel", "to_department__hotel", "created_by",
+    ).prefetch_related("cost_allocations").order_by("-created_at", "-pk")
+
+    movement_rows = []
+    for movement in movement_records:
+        from_is_kitchen = movement.from_department_id in department_ids
+        if movement.movement_type == "TRANSFER":
+            direction = "TRANSFER OUT" if from_is_kitchen else "TRANSFER IN"
+            department = movement.from_department if from_is_kitchen else movement.to_department
+        elif movement.movement_type == "IN":
+            direction, department = "RECEIPT", movement.to_department
+        else:
+            direction, department = "ISSUE / CONSUMPTION", movement.from_department
+        movement_cost = sum(
+            (allocation.total_cost for allocation in movement.cost_allocations.all()),
+            Decimal("0.00"),
+        )
+        movement_rows.append({
+            "movement": movement,
+            "direction": direction,
+            "department": department,
+            "fifo_cost": movement_cost,
+        })
+
+    return render(request, "kitchen/reports/inventory_report.html", {
+        "hotels": hotels.order_by("name"),
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "inventory_rows": inventory_rows,
+        "movement_rows": movement_rows,
+        "total_products": len(inventory_rows),
+        "total_physical_quantity": total_physical_quantity,
+        "total_layer_quantity": total_layer_quantity,
+        "total_fifo_value": total_fifo_value,
+        "low_stock_count": low_stock_count,
+        "discrepancy_count": discrepancy_count,
+        "unvalued_quantity": unvalued_quantity,
+        "movement_count": len(movement_rows),
+    })
+
+
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def kitchen_spoilage_report(request):
     """Management audit register for recorded Kitchen spoilage within authorized hotel scope."""
