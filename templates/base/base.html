@@ -322,7 +322,7 @@
             <a href="{% url 'kitchen_food_sales_report' %}">🍽️ Food Sales Audit</a>
             {% endif %}
 
-            {% if user|has_role:"MANAGER,DIRECTOR,ADMIN" %}
+            {% if user|has_role:"MANAGER,ADMIN" %}
 
             <a href="{% url 'manager_ingredient_requests' %}">
                 🧂 Ingredient Requests
