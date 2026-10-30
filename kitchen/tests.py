@@ -2305,10 +2305,22 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertEqual(response.context["cost_per_portion"], Decimal("150.00"))
         self.assertEqual(response.context["variance_cost_estimate"], Decimal("50.000"))
         self.assertEqual(len(response.context["ingredient_cost_rows"]), 2)
-        row = response.context["ingredient_cost_rows"][0]
+        row = next(
+            item
+            for item in response.context["ingredient_cost_rows"]
+            if item["usage"].ingredient_id == ingredient.pk
+        )
         self.assertEqual(row["fifo_cost"], Decimal("250.00"))
         self.assertEqual(row["costed_quantity"], Decimal("2.500"))
         self.assertEqual(row["estimated_variance_cost"], Decimal("50.000"))
+
+        oil_row = next(
+            item
+            for item in response.context["ingredient_cost_rows"]
+            if item["usage"].ingredient_id == second_ingredient.pk
+        )
+        self.assertEqual(oil_row["fifo_cost"], Decimal("50.00"))
+        self.assertEqual(oil_row["costed_quantity"], Decimal("1.000"))
         self.assertContains(response, "Ingredient Cost")
         self.assertContains(response, "Extra liquid absorption")
 
