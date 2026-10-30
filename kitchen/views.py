@@ -2638,23 +2638,19 @@ def production_detail(request, pk):
 
     production_cost = batch.total_cost()
     variance_cost_estimate = batch.calculate_variance_cost()
-    production_movement = StockMovement.objects.filter(
-        reference=f"PROD-{batch.pk}",
-        movement_type="OUT",
-    ).first()
-
-    allocations_by_ingredient = {}
-    if production_movement:
-        allocations = (
-            StockMovementCostAllocation.objects
-            .filter(movement=production_movement)
-            .values("cost_layer__product_id")
-            .annotate(total_cost=Sum("total_cost"), total_quantity=Sum("quantity"))
+    allocations = (
+        StockMovementCostAllocation.objects
+        .filter(
+            movement__reference=f"PROD-{batch.pk}",
+            movement__movement_type="OUT",
         )
-        allocations_by_ingredient = {
-            row["cost_layer__product_id"]: row
-            for row in allocations
-        }
+        .values("cost_layer__product_id")
+        .annotate(total_cost=Sum("total_cost"), total_quantity=Sum("quantity"))
+    )
+    allocations_by_ingredient = {
+        row["cost_layer__product_id"]: row
+        for row in allocations
+    }
 
     ingredient_cost_rows = []
     for usage in batch.ingredient_usages.all():
