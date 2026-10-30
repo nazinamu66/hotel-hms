@@ -141,7 +141,8 @@
           <td style="padding:10px">{{ row.spoilage_cost|floatformat:2 }}</td>
           <td style="padding:10px">{{ row.remaining_quantity|floatformat:3 }}</td>
           <td style="padding:10px">{{ row.remaining_value|floatformat:2 }}</td>
-          <td style="padding:10px">{% if row.traceability_status == "TRACEABLE" %}<span style="color:#15803d;font-weight:700">Traceable</span>{% else %}<span style="color:#92400e;font-weight:700">Unattributed legacy</span>{% endif %}</td>\n          <td style="padding:10px;{% if row.reconciliation_gap != None and row.reconciliation_gap != 0 %}color:#b45309;font-weight:800{% endif %}">{% if row.reconciliation_gap != None %}{{ row.reconciliation_gap|floatformat:3 }}{% else %}—{% endif %}</td>
+          <td style="padding:10px">{% if row.traceability_status == "TRACEABLE" %}<span style="color:#15803d;font-weight:700">Traceable</span>{% else %}<span style="color:#92400e;font-weight:700">Unattributed legacy</span>{% endif %}</td>
+          <td style="padding:10px;{% if row.reconciliation_gap != None and row.reconciliation_gap != 0 %}color:#b45309;font-weight:800{% endif %}">{% if row.reconciliation_gap != None %}{{ row.reconciliation_gap|floatformat:3 }}{% else %}—{% endif %}</td>
         </tr>
       {% empty %}
         <tr><td colspan="14" style="padding:18px;text-align:center;color:#64748b">No executed production batches in this production-date range.</td></tr>
