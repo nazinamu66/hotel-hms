@@ -2591,7 +2591,7 @@ class KitchenPurchasingReportTests(TestCase):
         self.client.force_login(self.manager)
         response = self.client.get(reverse("kitchen_purchasing_report"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Kitchen Purchasing &amp; Fulfilment")
+        self.assertContains(response, "Kitchen Purchasing & Fulfilment")
         self.assertEqual(response.context["request_count"], 0)
         self.assertEqual(response.context["purchase_count"], 0)
 
