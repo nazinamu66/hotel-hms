@@ -1049,6 +1049,14 @@ class ProductionOverrideSecurityTests(TestCase):
                 product=self.finished,
             ).exists()
         )
+        finished_layer = StockCostLayer.objects.get(
+            product=self.finished,
+            department=self.kitchen,
+            source_reference=f"PROD-{batch.pk}",
+        )
+        self.assertEqual(finished_layer.quantity_received, Decimal("2.000"))
+        self.assertEqual(finished_layer.quantity_remaining, Decimal("2.000"))
+        self.assertEqual(finished_layer.unit_cost, Decimal("12.5000"))
 
     def test_uncosted_ingredient_stock_blocks_production_and_rolls_back_all_changes(self):
         from inventory.models import Stock
