@@ -1,0 +1,157 @@
+{% extends "base/base.html" %}
+{% block title %}Kitchen Inventory Report | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.kir-page{max-width:1500px;margin:0 auto;padding:26px 20px 48px;color:#172033}
+.kir-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:22px}
+.kir-title{font-size:clamp(1.7rem,2.4vw,2.2rem);font-weight:800;letter-spacing:-.035em;margin:0 0 6px}
+.kir-muted{color:#64748b;font-size:.88rem;line-height:1.5}
+.kir-actions{display:flex;gap:9px;flex-wrap:wrap}
+.kir-btn{display:inline-block;border:0;border-radius:9px;background:#1d4ed8;color:#fff;text-decoration:none;padding:11px 15px;font-weight:750}
+.kir-btn.secondary{background:#334155}
+.kir-filter,.kir-card,.kir-panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 4px 18px rgba(15,23,42,.035)}
+.kir-filter{padding:18px;margin-bottom:20px;display:flex;align-items:end;gap:14px;flex-wrap:wrap}
+.kir-field{display:flex;flex-direction:column;gap:6px;min-width:170px}
+.kir-field label{font-size:.78rem;font-weight:750;color:#475569}
+.kir-field input,.kir-field select{padding:10px 11px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font:inherit}
+.kir-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.kir-card{padding:18px;min-width:0}
+.kir-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.055em;font-weight:800;color:#64748b;margin-bottom:9px}
+.kir-value{font-size:clamp(1.3rem,2vw,1.85rem);font-weight:850;color:#0f172a;overflow-wrap:anywhere}
+.kir-note{font-size:.78rem;color:#64748b;margin-top:8px;line-height:1.45}
+.kir-section{font-size:1.1rem;font-weight:800;margin:26px 0 12px}
+.kir-panel{overflow:hidden;margin-bottom:18px}
+.kir-panel-head{padding:18px 20px;border-bottom:1px solid #e2e8f0}
+.kir-panel-head h2{margin:0;font-size:1.05rem;font-weight:800}
+.kir-panel-head p{margin:5px 0 0;color:#64748b;font-size:.82rem}
+.kir-table-wrap{overflow-x:auto}
+.kir-table{width:100%;border-collapse:collapse;min-width:1050px;font-size:.82rem}
+.kir-table th{background:#f8fafc;text-align:left;color:#64748b;font-size:.7rem;letter-spacing:.045em;text-transform:uppercase;white-space:nowrap;padding:12px}
+.kir-table td{padding:12px;border-top:1px solid #e8edf3;vertical-align:top}
+.kir-table tr:hover{background:#fafcff}
+.kir-status{display:inline-block;padding:4px 8px;border-radius:99px;font-size:.7rem;font-weight:800;white-space:nowrap}
+.kir-status.match{background:#dcfce7;color:#166534}
+.kir-status.warn{background:#ffedd5;color:#9a3412}
+.kir-alert{border:1px solid #fed7aa;background:#fff7ed;border-radius:12px;padding:14px 16px;color:#9a3412;margin:14px 0}
+.kir-foot{font-size:.78rem;color:#64748b;margin-top:18px;line-height:1.6}
+@media(max-width:1000px){.kir-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.kir-page{padding:18px 12px 32px}.kir-grid{grid-template-columns:1fr}.kir-head{flex-direction:column}.kir-filter{align-items:stretch}.kir-field{min-width:100%}}
+</style>
+<div class="kir-page">
+  <header class="kir-head">
+    <div>
+      <h1 class="kir-title">Kitchen Inventory Report</h1>
+      <p class="kir-muted">Current raw-ingredient and prepared-food stock across your authorized Kitchen departments, with FIFO valuation and reconciliation checks.</p>
+    </div>
+    <div class="kir-actions">
+      <a class="kir-btn secondary" href="{% url 'kitchen_management_report' %}">Management Overview</a>
+      <a class="kir-btn secondary" href="{% url 'kitchen_spoilage_report' %}">Spoilage Report</a>
+    </div>
+  </header>
+
+  <form class="kir-filter" method="get">
+    <div class="kir-field">
+      <label for="from">Movement from</label>
+      <input id="from" type="date" name="from" value="{{ date_from }}">
+    </div>
+    <div class="kir-field">
+      <label for="to">Movement to</label>
+      <input id="to" type="date" name="to" value="{{ date_to }}">
+    </div>
+    {% if hotels|length > 1 %}
+    <div class="kir-field">
+      <label for="hotel">Hotel</label>
+      <select id="hotel" name="hotel">
+        <option value="">All authorized hotels</option>
+        {% for hotel in hotels %}
+        <option value="{{ hotel.pk }}" {% if selected_hotel == hotel.pk|stringformat:"s" %}selected{% endif %}>{{ hotel.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% elif hotels|length == 1 %}
+      {% for hotel in hotels %}
+      <div class="kir-field"><label>Hotel scope</label><div>{{ hotel.name }}</div></div>
+      {% endfor %}
+    {% endif %}
+    <button class="kir-btn" type="submit">Apply filters</button>
+  </form>
+
+  <div class="kir-grid">
+    <article class="kir-card"><div class="kir-label">Stock records</div><div class="kir-value">{{ total_products }}</div><div class="kir-note">Product and Kitchen department combinations.</div></article>
+    <article class="kir-card"><div class="kir-label">Physical stock quantity</div><div class="kir-value">{{ total_physical_quantity|floatformat:3 }}</div><div class="kir-note">Sum of recorded Stock quantities in product base units.</div></article>
+    <article class="kir-card"><div class="kir-label">FIFO inventory value</div><div class="kir-value">{{ total_fifo_value|floatformat:2 }}</div><div class="kir-note">Remaining cost-layer quantities multiplied by their recorded unit costs.</div></article>
+    <article class="kir-card"><div class="kir-label">Reconciliation exceptions</div><div class="kir-value">{{ discrepancy_count }}</div><div class="kir-note">Product/department balances where physical quantity differs from remaining FIFO layer quantity.</div></article>
+    <article class="kir-card"><div class="kir-label">Low-stock records</div><div class="kir-value">{{ low_stock_count }}</div><div class="kir-note">Physical quantity at or below the department stock reorder level.</div></article>
+    <article class="kir-card"><div class="kir-label">Unvalued physical quantity</div><div class="kir-value">{{ unvalued_quantity|floatformat:3 }}</div><div class="kir-note">Physical stock in excess of the remaining FIFO layer quantity.</div></article>
+    <article class="kir-card"><div class="kir-label">FIFO layer quantity</div><div class="kir-value">{{ total_layer_quantity|floatformat:3 }}</div><div class="kir-note">Sum of remaining FIFO quantities; shown separately from physical stock.</div></article>
+    <article class="kir-card"><div class="kir-label">Movements in period</div><div class="kir-value">{{ movement_count }}</div><div class="kir-note">Receipts, issues/consumption and transfers dated by movement creation.</div></article>
+  </div>
+
+  {% if discrepancy_count %}
+  <div class="kir-alert"><strong>Reconciliation attention:</strong> {{ discrepancy_count }} product/department balance(s) do not match their remaining FIFO layers. The report does not substitute Product.cost_price for missing layer valuation.</div>
+  {% endif %}
+
+  <h2 class="kir-section">Current stock by Kitchen department</h2>
+  <section class="kir-panel">
+    <div class="kir-panel-head">
+      <h2>Physical quantity and FIFO valuation</h2>
+      <p>Snapshot as of now. The date filter below applies to the movement register, not to this current stock snapshot.</p>
+    </div>
+    <div class="kir-table-wrap">
+      <table class="kir-table">
+        <thead><tr><th>Hotel / Department</th><th>Product</th><th>Type</th><th>Physical qty</th><th>FIFO layer qty</th><th>Difference</th><th>FIFO value</th><th>Reorder level</th><th>Stock status</th><th>Reconciliation</th></tr></thead>
+        <tbody>
+        {% for row in inventory_rows %}
+          <tr>
+            <td>{{ row.department.hotel.name }}<br><strong>{{ row.department.name }}</strong></td>
+            <td><strong>{{ row.product.name }}</strong><br><span class="kir-muted">{{ row.product.sku }} · {{ row.product.base_unit }}</span></td>
+            <td>{{ row.product.get_product_type_display }}</td>
+            <td>{{ row.physical_quantity|floatformat:3 }}</td>
+            <td>{{ row.layer_quantity|floatformat:3 }}</td>
+            <td>{{ row.difference|floatformat:3 }}</td>
+            <td>{{ row.fifo_value|floatformat:2 }}</td>
+            <td>{{ row.reorder_level }}</td>
+            <td>{% if row.is_low_stock %}<span class="kir-status warn">At / below reorder</span>{% else %}<span class="kir-status match">In range</span>{% endif %}</td>
+            <td>{% if row.reconciliation_status == "MATCH" %}<span class="kir-status match">Matched</span>{% elif row.reconciliation_status == "MISSING_LAYERS" %}<span class="kir-status warn">Missing FIFO layers</span>{% else %}<span class="kir-status warn">Layers exceed stock</span>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="10" style="padding:20px;text-align:center;color:#64748b">No Kitchen stock records or remaining FIFO layers found for this hotel scope.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <h2 class="kir-section">Stock movement register</h2>
+  <section class="kir-panel">
+    <div class="kir-panel-head">
+      <h2>Kitchen stock movements</h2>
+      <p>{{ date_from }} to {{ date_to }} · FIFO cost is the sum of recorded cost allocations; zero means no allocation was recorded.</p>
+    </div>
+    <div class="kir-table-wrap">
+      <table class="kir-table">
+        <thead><tr><th>Date</th><th>Product</th><th>Movement</th><th>Quantity</th><th>From</th><th>To</th><th>Reference</th><th>Recorded by</th><th>FIFO cost</th></tr></thead>
+        <tbody>
+        {% for row in movement_rows %}
+          <tr>
+            <td>{{ row.movement.created_at|date:"d M Y H:i" }}</td>
+            <td>{{ row.movement.product.name }}</td>
+            <td>{{ row.direction }}</td>
+            <td>{{ row.movement.quantity|floatformat:3 }} {{ row.movement.product.base_unit }}</td>
+            <td>{{ row.movement.from_department.name|default:"—" }}</td>
+            <td>{{ row.movement.to_department.name|default:"—" }}</td>
+            <td>{{ row.movement.reference|default:"—" }}</td>
+            <td>{{ row.movement.created_by|default:"System" }}</td>
+            <td>{{ row.fifo_cost|floatformat:2 }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="9" style="padding:20px;text-align:center;color:#64748b">No Kitchen stock movements in this date range.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="kir-foot">Important: this is an operational inventory report, not a posted accounting valuation. FIFO value includes only remaining cost layers. Physical stock without matching layers is identified as unvalued; layers exceeding physical stock are separately flagged. No estimated cost based on the product master is added. The stock snapshot is current, while the movement register uses the selected date range. Products shown are raw materials and prepared food held in Kitchen departments; other hotel departments and product categories are excluded.</p>
+</div>
+{% endblock %}
