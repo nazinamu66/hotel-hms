@@ -39,7 +39,7 @@
       <h1 class="kmr-title">Kitchen Management Reports</h1>
       <p class="kmr-muted">A management-level view of food sales, production, spoilage and purchasing fulfillment for your authorized hotel scope.</p>
     </div>
-    <a class="kmr-btn" href="{% url 'kitchen_spoilage_report' %}">Open Spoilage Report</a>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="kmr-btn" href="{% url 'kitchen_spoilage_report' %}">Open Spoilage Report</a><a class="kmr-btn" href="{% url 'kitchen_inventory_report' %}">Kitchen Inventory Report</a></div>
   </header>
 
   <form class="kmr-filter" method="get">
