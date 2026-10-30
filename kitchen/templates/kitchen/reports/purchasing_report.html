@@ -83,8 +83,10 @@
       <td>{% if row.purchase.urgent_purchase %}Urgent{% else %}Approved request{% endif %}<br>{{ row.purchase.get_payment_source_display|default:"—" }}</td>
       <td><span class="kpr-pill {% if row.purchase.status == 'RECONCILIATION_PENDING' or row.purchase.status == 'REJECTED' %}warn{% elif row.purchase.status == 'RECEIVED' %}good{% endif %}">{{ row.purchase.get_status_display }}</span></td>
       <td>{{ item.product.name }}</td><td>{{ item.quantity|floatformat:3 }}</td><td>{{ item.quantity_received|floatformat:3 }}</td><td>{{ item.outstanding_quantity|floatformat:3 }}</td>
-      <td>{{ item.total_cost|floatformat:2 }}</td><td>{{ row.paid_value|floatformat:2 }}</td><td>{{ row.supplier_balance|floatformat:2 }}</td>
-      <td>{% if row.reimbursement %}{{ row.reimbursement.get_status_display }} · {{ row.reimbursement.amount|floatformat:2 }}{% else %}—{% endif %}</td>
+      <td>{{ item.total_cost|floatformat:2 }}</td>
+      <td>{% if forloop.first %}{{ row.paid_value|floatformat:2 }}{% else %}<span class="kpr-muted">—</span>{% endif %}</td>
+      <td>{% if forloop.first %}{{ row.supplier_balance|floatformat:2 }}{% else %}<span class="kpr-muted">—</span>{% endif %}</td>
+      <td>{% if forloop.first %}{% if row.reimbursement %}{{ row.reimbursement.get_status_display }} · {{ row.reimbursement.amount|floatformat:2 }}{% else %}—{% endif %}{% else %}<span class="kpr-muted">—</span>{% endif %}</td>
     </tr>{% empty %}<tr><td colspan="13">No direct purchase lines in this period.</td></tr>{% endfor %}{% empty %}<tr><td colspan="13">No direct purchases in this period.</td></tr>{% endfor %}</tbody>
   </table></div></section>
 
