@@ -1232,8 +1232,6 @@ def kitchen_management_report(request):
         created_at__date__lte=date_to,
         is_executed=True,
     ).select_related("recipe", "produced_by", "produced_by__department__hotel")
-    batch_profitability_rows = _build_batch_profitability_rows(batches, scoped_hotels)
-
     production_count = batches.count()
     portions_produced = batches.aggregate(total=Sum("quantity_produced"))["total"] or 0
     production_cost = sum((batch.total_cost() for batch in batches), Decimal("0.00"))
@@ -1319,9 +1317,6 @@ def kitchen_management_report(request):
         "trend_rows": trend_rows,
     })
 
-
-
-        return batch_profitability_rows
 
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def kitchen_purchasing_report(request):
