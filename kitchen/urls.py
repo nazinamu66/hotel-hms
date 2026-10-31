@@ -51,6 +51,7 @@ urlpatterns = [
 
 
     path("production/history/", views.production_history, name="kitchen_production_history"),
+    path("production/overrides/", views.production_override_queue, name="production_override_queue"),
     path("production/<int:pk>/override/approve/", views.production_override_approve, name="production_override_approve"),
     path("production/<int:pk>/override/reject/", views.production_override_reject, name="production_override_reject"),
     path("production/<int:pk>/", views.production_detail, name="kitchen_production_detail"),
