@@ -36,6 +36,7 @@ urlpatterns = [
     path("inventory/",include(("inventory.urls", "inventory"), namespace="inventory"),),
     path("maintenance/",include("maintenance.urls")),
     path("accounting/", include("accounting.urls")),
+    path("opening-stock/", include("opening_stock.urls")),
     path("wifi/",include("wifi.urls"),),
     path("laundry/", include("laundry.urls")),
     path("linen/",include("linen.urls"),),
