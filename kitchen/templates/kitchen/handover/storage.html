@@ -1,0 +1,8 @@
+{% extends "base/base.html" %}
+{% block title %}Kitchen Storage Register{% endblock %}
+{% block content %}
+<div class="container py-4"><h2>Kitchen Storage Register</h2><p class="text-muted">Only the Head Chef can manage this register. Restricted storage is not available to other kitchen staff.</p>
+<form method="post" class="card card-body mb-4">{% csrf_token %}<div class="row g-2"><div class="col-md-6"><input class="form-control" name="name" placeholder="Storage name" required></div><div class="col-md-4"><select class="form-select" name="access_level"><option value="SHARED">Shared kitchen access</option><option value="RESTRICTED">Head Chef only</option></select></div><div class="col-md-2"><button class="btn btn-primary w-100">Add location</button></div></div></form>
+<div class="card"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Location</th><th>Access</th><th>Status</th></tr></thead><tbody>{% for loc in locations %}<tr><td>{{ loc.name }}</td><td>{{ loc.get_access_level_display }}</td><td>{% if loc.is_active %}Active{% else %}Inactive{% endif %}</td></tr>{% empty %}<tr><td colspan="3" class="text-muted text-center py-3">No storage locations configured.</td></tr>{% endfor %}</tbody></table></div></div>
+</div>
+{% endblock %}
