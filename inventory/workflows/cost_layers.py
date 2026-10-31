@@ -132,10 +132,12 @@ def transfer_cost_layers(
             product=product,
             department=to_department,
             purchase_item=layer.purchase_item,
+            source_reference=layer.source_reference,
             quantity_received=allocated,
             quantity_remaining=allocated,
             unit_cost=layer.unit_cost,
             is_opening_balance=layer.is_opening_balance,
+            received_at=layer.received_at,
         )
 
     return allocations
