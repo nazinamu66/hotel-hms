@@ -2397,6 +2397,23 @@ class KitchenManagementReportAccessTests(TestCase):
         response = self.client.get(reverse("kitchen_production_detail", args=[batch.pk]))
         self.assertEqual(response.status_code, 404)
 
+    def test_management_users_cannot_open_kitchen_production_history(self):
+        for user in (self.manager, self.director):
+            self.client.force_login(user)
+            response = self.client.get(reverse("kitchen_production_history"))
+            self.assertEqual(response.status_code, 403)
+
+    def test_kitchen_head_can_open_own_production_history(self):
+        self.client.force_login(self.kitchen_head)
+        response = self.client.get(reverse("kitchen_production_history"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_management_users_can_open_separate_production_variance_approval_queue(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("production_override_queue"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "kitchen/production/override_queue.html")
+
     def test_kitchen_head_cannot_open_management_report(self):
         self.client.force_login(self.kitchen_head)
         response = self.client.get(reverse("kitchen_management_report"))
