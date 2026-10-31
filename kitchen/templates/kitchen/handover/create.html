@@ -1,0 +1,41 @@
+{% extends "base/base.html" %}
+{% block title %}New Kitchen Handover{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h2>Close Shift & Hand Over</h2>
+  <p class="text-muted">Record the items physically available in shared kitchen storage. Restricted freezers are excluded.</p>
+  {% if not locations %}<div class="alert alert-warning">No shared storage locations have been configured. Ask the Head Chef to configure the kitchen storage register.</div>{% else %}
+  <form method="post" class="card card-body">{% csrf_token %}
+    <div class="mb-3"><label class="form-label">Incoming staff member</label><select class="form-select" name="incoming_user" required><option value="">Select staff member</option>{% for u in colleagues %}<option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></div>
+    <h5>Handover items</h5>
+    <div id="handover-lines">
+      <div class="row g-2 mb-2 handover-line">
+        <div class="col-md-3"><input class="form-control" name="item_name_0" placeholder="Item (e.g. Fish portions)" required></div>
+        <div class="col-md-2"><input class="form-control" type="number" min="0" step="0.001" name="quantity_0" placeholder="Quantity" required></div>
+        <div class="col-md-2"><input class="form-control" name="unit_0" placeholder="Unit (portions, kg)" required></div>
+        <div class="col-md-3"><select class="form-select" name="location_0" required>{% for loc in locations %}<option value="{{ loc.pk }}">{{ loc.name }}</option>{% endfor %}</select></div>
+      </div>
+    </div>
+    <button type="button" class="btn btn-outline-secondary mb-3" id="add-line">Add another item</button>
+    <div class="mb-3"><label class="form-label">Outgoing shift notes</label><textarea class="form-control" name="outgoing_note" rows="3"></textarea></div>
+    <div class="d-flex gap-2"><button class="btn btn-primary" type="submit">Submit handover</button><a class="btn btn-light" href="{% url 'kitchen_handover_list' %}">Cancel</a></div>
+  </form>{% endif %}
+</div>
+<script>
+(function(){
+ const wrap=document.getElementById("handover-lines");
+ const add=document.getElementById("add-line");
+ if(!wrap||!add)return;
+ let index=1;
+ add.addEventListener("click",function(){
+   const first=wrap.querySelector(".handover-line");
+   const row=first.cloneNode(true);
+   row.querySelectorAll("input,select").forEach(function(el){
+     el.name=el.name.replace(/_0$/,"_"+index);
+     el.value="";
+   });
+   wrap.appendChild(row); index++;
+ });
+})();
+</script>
+{% endblock %}
