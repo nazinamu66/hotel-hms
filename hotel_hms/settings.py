@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "accounting",
     "wifi",
     "laundry",
+    "opening_stock",
 ]
 
 MIDDLEWARE = [
