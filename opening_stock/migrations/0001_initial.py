@@ -45,7 +45,7 @@ class Migration(migrations.Migration):
                 ("serial_number", models.CharField(blank=True, max_length=100)),
                 ("manufacturer", models.CharField(blank=True, max_length=100)),
                 ("model_number", models.CharField(blank=True, max_length=100)),
-                ("asset_condition", models.CharField(blank=True, max_length=12)),
+                ("asset_condition", models.CharField(blank=True, choices=[("NEW", "New"), ("GOOD", "Good"), ("FAIR", "Fair"), ("POOR", "Poor"), ("DAMAGED", "Damaged")], max_length=12)),
                 ("asset_purchase_date", models.DateField(blank=True, null=True)),
                 ("asset_value", models.DecimalField(decimal_places=2, default=decimal.Decimal("0.00"), max_digits=12)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
