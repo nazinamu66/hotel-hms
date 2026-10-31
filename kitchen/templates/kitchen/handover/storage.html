@@ -1,8 +1,25 @@
 {% extends "base/base.html" %}
 {% block title %}Kitchen Storage Register{% endblock %}
 {% block content %}
-<div class="container py-4"><h2>Kitchen Storage Register</h2><p class="text-muted">Only the Head Chef can manage this register. Restricted storage is not available to other kitchen staff.</p>
-<form method="post" class="card card-body mb-4">{% csrf_token %}<div class="row g-2"><div class="col-md-6"><input class="form-control" name="name" placeholder="Storage name" required></div><div class="col-md-4"><select class="form-select" name="access_level"><option value="SHARED">Shared kitchen access</option><option value="RESTRICTED">Head Chef only</option></select></div><div class="col-md-2"><button class="btn btn-primary w-100">Add location</button></div></div></form>
-<div class="card"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Location</th><th>Access</th><th>Status</th></tr></thead><tbody>{% for loc in locations %}<tr><td>{{ loc.name }}</td><td>{{ loc.get_access_level_display }}</td><td>{% if loc.is_active %}Active{% else %}Inactive{% endif %}</td></tr>{% empty %}<tr><td colspan="3" class="text-muted text-center py-3">No storage locations configured.</td></tr>{% endfor %}</tbody></table></div></div>
+<style>
+.ks-page{max-width:1300px;margin:0 auto;color:#172033}.ks-head{margin-bottom:24px}.ks-kicker{display:inline-block;padding:6px 10px;border-radius:999px;background:#edf3ff;border:1px solid #dce7ff;color:#3157a4;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase}.ks-head h1{margin:11px 0 6px;font-size:clamp(1.55rem,2.5vw,2rem);font-weight:850;letter-spacing:-.04em}.ks-head p{margin:0;color:#64748b;line-height:1.55}.ks-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.045);overflow:hidden;margin-bottom:20px}.ks-card-head{padding:18px 21px;border-bottom:1px solid #edf0f5}.ks-card-head strong{font-size:.95rem;font-weight:850}.ks-card-head p{margin:4px 0 0;color:#8793a4;font-size:.8rem}.ks-form{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:16px;align-items:end;padding:21px}.ks-field label{display:block;margin-bottom:7px;color:#344256;font-size:.82rem;font-weight:750}.ks-field input,.ks-field select{width:100%;min-width:0;min-height:45px;box-sizing:border-box;padding:10px 12px;border:1px solid #d6deea;border-radius:10px;background:#fff;color:#172033;font:inherit;font-size:.9rem}.ks-field input:focus,.ks-field select:focus{outline:0;border-color:#7aa7f8;box-shadow:0 0 0 4px rgba(37,99,235,.11)}.ks-submit{min-height:45px;padding:10px 17px;border:0;border-radius:10px;background:#2459d3;color:#fff;font:inherit;font-size:.84rem;font-weight:800;cursor:pointer;white-space:nowrap}.ks-submit:hover{background:#1d4ed8}.ks-table-wrap{overflow-x:auto}.ks-table{width:100%;min-width:580px;border-collapse:collapse}.ks-table th{padding:13px 18px;background:#f8fafc;color:#718096;font-size:.7rem;font-weight:850;letter-spacing:.06em;text-align:left;text-transform:uppercase}.ks-table td{padding:15px 18px;border-top:1px solid #edf0f5;color:#475569;font-size:.85rem}.ks-access{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eef3ff;color:#3157a4;font-size:.73rem;font-weight:800}.ks-state{display:inline-flex;align-items:center;gap:7px;font-weight:750;font-size:.8rem}.ks-state:before{content:"";width:7px;height:7px;border-radius:50%;background:#22c55e}.ks-empty{padding:36px 18px!important;text-align:center;color:#8793a4!important}
+@media(max-width:700px){.ks-form{grid-template-columns:1fr;padding:17px}.ks-submit{width:100%}.ks-card-head{padding:16px}}
+</style>
+<div class="ks-page">
+  <header class="ks-head"><span class="ks-kicker">Kitchen setup · Head Chef</span><h1>Storage Register</h1><p>Configure the kitchen storage locations used for shift handovers and restricted inventory. Restricted storage remains visible only to the Head Chef.</p></header>
+  <section class="ks-card">
+    <div class="ks-card-head"><strong>Add a storage location</strong><p>Choose whether the location is shared with kitchen staff or restricted to the Head Chef.</p></div>
+    <form method="post" class="ks-form">{% csrf_token %}
+      <div class="ks-field"><label for="ks-name">Storage name</label><input id="ks-name" name="name" maxlength="120" placeholder="e.g. Main Kitchen Store, Walk-in Freezer" required></div>
+      <div class="ks-field"><label for="ks-access">Access level</label><select id="ks-access" name="access_level"><option value="SHARED">Shared kitchen access</option><option value="RESTRICTED">Head Chef only · Restricted</option></select></div>
+      <button class="ks-submit" type="submit">＋ Add location</button>
+    </form>
+  </section>
+  <section class="ks-card">
+    <div class="ks-card-head"><strong>Configured storage locations</strong><p>Locations assigned to this kitchen department.</p></div>
+    <div class="ks-table-wrap"><table class="ks-table"><thead><tr><th>Location</th><th>Access</th><th>Status</th></tr></thead><tbody>
+    {% for loc in locations %}<tr><td><strong>{{ loc.name }}</strong></td><td><span class="ks-access">{{ loc.get_access_level_display }}</span></td><td><span class="ks-state">{% if loc.is_active %}Active{% else %}Inactive{% endif %}</span></td></tr>{% empty %}<tr><td colspan="3" class="ks-empty">No storage locations configured yet. Add your first location above.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
 </div>
 {% endblock %}
