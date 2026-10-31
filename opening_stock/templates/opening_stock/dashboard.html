@@ -3,126 +3,204 @@
 {% block title %}Opening Stock Management{% endblock %}
 
 {% block content %}
-<div style="max-width:1500px;margin:0 auto;padding:28px 22px;">
-    <div style="margin-bottom:24px;">
-        <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#777;">Inventory Setup</div>
-        <h1 style="margin:5px 0;">Opening Stock Management</h1>
-        <p style="color:#777;margin:0;">Record the hotel's existing stock, linen and equipment as at the opening date. Posting updates the operational ledgers and accounting together.</p>
-    </div>
+<div class="opening-page">
+    <header class="opening-page__header">
+        <div>
+            <div class="opening-eyebrow">Inventory setup</div>
+            <h1>Opening Stock Management</h1>
+            <p>Bring the hotel's existing stock, linen and equipment into Hotel HMS with a traceable opening date and balanced accounting entry.</p>
+        </div>
+        {% if selected_hotel %}
+        <div class="opening-hotel-chip"><span class="opening-hotel-chip__dot"></span>{{ selected_hotel.name }}</div>
+        {% endif %}
+    </header>
 
     {% if messages %}
-        {% for message in messages %}
-            <div style="padding:12px 15px;margin:10px 0;border-radius:7px;background:#f2f4f7;">{{ message }}</div>
-        {% endfor %}
+        <div class="opening-messages">
+            {% for message in messages %}
+                <div class="opening-alert opening-alert--{{ message.tags|default:'info' }}">{{ message }}</div>
+            {% endfor %}
+        </div>
     {% endif %}
 
-    <section style="background:white;border:1px solid #ddd;border-radius:10px;padding:18px;margin-bottom:20px;">
-        <form method="get" style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
-            <div style="min-width:280px;flex:1;">
-                <label for="hotel" style="display:block;font-weight:600;margin-bottom:6px;">Hotel</label>
-                <select id="hotel" name="hotel" required style="width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;">
+    <section class="opening-card opening-hotel-select">
+        <form method="get" class="opening-inline-form">
+            <div class="opening-field opening-field--grow">
+                <label for="hotel">Hotel</label>
+                <select id="hotel" name="hotel" required>
                     <option value="">Select hotel</option>
                     {% for hotel in hotels %}
                         <option value="{{ hotel.pk }}" {% if selected_hotel.pk == hotel.pk %}selected{% endif %}>{{ hotel.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <button type="submit" style="padding:10px 18px;border:0;border-radius:6px;background:#174ea6;color:white;">View batches</button>
+            <button class="opening-btn opening-btn--secondary" type="submit">View batches</button>
         </form>
     </section>
 
     {% if selected_hotel %}
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;">
-        <section style="background:white;border:1px solid #ddd;border-radius:10px;padding:20px;">
-            <h2 style="font-size:19px;margin-top:0;">Create opening batch</h2>
-            <form method="post">
+    <div class="opening-overview-grid">
+        <section class="opening-card">
+            <div class="opening-card__heading">
+                <div>
+                    <div class="opening-eyebrow">Start here</div>
+                    <h2>Create opening batch</h2>
+                    <p>Create a draft first. Nothing is added to inventory or accounting until posting.</p>
+                </div>
+            </div>
+            <form method="post" class="opening-form-grid opening-batch-form">
                 {% csrf_token %}
                 <input type="hidden" name="hotel" value="{{ selected_hotel.pk }}">
                 <input type="hidden" name="action" value="CREATE_BATCH">
-                {{ batch_form.as_p }}
-                <button type="submit" style="padding:10px 16px;border:0;border-radius:6px;background:#174ea6;color:white;">Create draft batch</button>
+                {% for field in batch_form %}
+                    <div class="opening-field {% if field.name == 'notes' %}opening-field--full{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                        {% for error in field.errors %}<span class="opening-field__error">{{ error }}</span>{% endfor %}
+                    </div>
+                {% endfor %}
+                <div class="opening-form-actions opening-field--full">
+                    <button class="opening-btn opening-btn--primary" type="submit">Create draft batch</button>
+                </div>
             </form>
         </section>
 
-        <section style="background:white;border:1px solid #ddd;border-radius:10px;padding:20px;">
-            <h2 style="font-size:19px;margin-top:0;">Existing batches</h2>
-            {% for batch in batches %}
-                <div style="padding:11px 0;border-bottom:1px solid #eee;">
-                    <a href="?hotel={{ selected_hotel.pk }}&batch={{ batch.pk }}" style="font-weight:600;">{{ batch.reference }}</a>
-                    <div style="font-size:13px;color:#777;">{{ batch.opening_date }} · {{ batch.get_status_display }} · {{ batch.lines.count }} lines</div>
+        <section class="opening-card">
+            <div class="opening-card__heading">
+                <div>
+                    <div class="opening-eyebrow">History</div>
+                    <h2>Existing batches</h2>
+                    <p>Open a batch to review its lines and posting status.</p>
                 </div>
-            {% empty %}
-                <p style="color:#777;">No opening batches have been created for this hotel.</p>
-            {% endfor %}
+                <span class="opening-count">{{ batches|length }}</span>
+            </div>
+            <div class="opening-batch-list">
+                {% for batch in batches %}
+                    <a class="opening-batch-item" href="?hotel={{ selected_hotel.pk }}&batch={{ batch.pk }}">
+                        <span class="opening-batch-item__icon">OB</span>
+                        <span class="opening-batch-item__body">
+                            <strong>{{ batch.reference }}</strong>
+                            <small>{{ batch.opening_date }} · {{ batch.lines.count }} lines</small>
+                        </span>
+                        <span class="opening-status opening-status--{{ batch.status|lower }}">{{ batch.get_status_display }}</span>
+                        <span class="opening-batch-item__arrow">›</span>
+                    </a>
+                {% empty %}
+                    <div class="opening-empty opening-empty--compact">
+                        <span class="opening-empty__icon">＋</span>
+                        <strong>No opening batches yet</strong>
+                        <small>Create a draft batch to begin recording balances.</small>
+                    </div>
+                {% endfor %}
+            </div>
         </section>
     </div>
 
     {% if selected_batch %}
-    <section style="background:white;border:1px solid #ddd;border-radius:10px;padding:20px;margin-top:20px;">
-        <div style="display:flex;justify-content:space-between;gap:15px;align-items:start;flex-wrap:wrap;">
+    <section class="opening-card opening-batch-detail">
+        <div class="opening-detail-header">
             <div>
-                <h2 style="font-size:20px;margin:0 0 5px;">{{ selected_batch.reference }}</h2>
-                <div style="color:#777;">Opening date: {{ selected_batch.opening_date }} · Status: {{ selected_batch.get_status_display }}</div>
+                <div class="opening-eyebrow">Opening batch · {{ selected_batch.opening_date }}</div>
+                <div class="opening-detail-title-row">
+                    <h2>{{ selected_batch.reference }}</h2>
+                    <span class="opening-status opening-status--{{ selected_batch.status|lower }}">{{ selected_batch.get_status_display }}</span>
+                </div>
+                {% if selected_batch.notes %}<p>{{ selected_batch.notes }}</p>{% endif %}
             </div>
             {% if selected_batch.status == "DRAFT" %}
-            <form method="post" onsubmit="return confirm('Post this opening batch? This will update stock, FIFO, linen, equipment and accounting and cannot be undone through this screen.');">
+            <form method="post" onsubmit="return confirm('Post this opening batch? This updates inventory, FIFO, linen, equipment and accounting. This action cannot be undone through this screen.');">
                 {% csrf_token %}
                 <input type="hidden" name="hotel" value="{{ selected_hotel.pk }}">
                 <input type="hidden" name="batch_id" value="{{ selected_batch.pk }}">
                 <input type="hidden" name="action" value="POST_BATCH">
-                <button type="submit" style="padding:10px 16px;border:0;border-radius:6px;background:#147d45;color:white;">Post opening balances</button>
+                <button class="opening-btn opening-btn--post" type="submit">Post opening balances</button>
             </form>
+            {% elif selected_batch.journal_entry_id %}
+            <div class="opening-posted-note">Journal entry #{{ selected_batch.journal_entry_id }}</div>
             {% endif %}
         </div>
 
-        <div style="overflow-x:auto;margin-top:18px;">
-            <table style="width:100%;border-collapse:collapse;">
-                <thead><tr style="text-align:left;border-bottom:1px solid #ddd;"><th style="padding:10px;">Type</th><th style="padding:10px;">Item</th><th style="padding:10px;">Quantity / Value</th><th style="padding:10px;">Location / Department</th>{% if selected_batch.status == "DRAFT" %}<th style="padding:10px;">Action</th>{% endif %}</tr></thead>
+        <div class="opening-table-wrap">
+            <table class="opening-table">
+                <thead>
+                    <tr>
+                        <th>Category</th><th>Item</th><th>Quantity / Value</th><th>Location / Department</th>
+                        {% if selected_batch.status == "DRAFT" %}<th></th>{% endif %}
+                    </tr>
+                </thead>
                 <tbody>
                 {% for line in selected_batch.lines.all %}
-                    <tr style="border-bottom:1px solid #eee;">
-                        <td style="padding:10px;">{{ line.get_line_type_display }}</td>
-                        <td style="padding:10px;">{% if line.line_type == "STOCK" %}{{ line.product.name }}{% elif line.line_type == "LINEN" %}{{ line.linen_item.product.name }}{% else %}{{ line.asset_name }}{% endif %}</td>
-                        <td style="padding:10px;">{% if line.line_type == "EQUIPMENT" %}{{ line.asset_value }}{% else %}{{ line.quantity }}{% endif %}</td>
-                        <td style="padding:10px;">{% if line.line_type == "STOCK" %}{{ line.department.name }}{% elif line.line_type == "LINEN" %}{{ line.get_linen_location_display }} / {{ line.get_linen_condition_display }}{% else %}{% if line.room %}Room {{ line.room.room_number }}{% elif line.maintenance_location %}{{ line.maintenance_location.name }}{% else %}Unassigned{% endif %}{% endif %}</td>
+                    <tr>
+                        <td><span class="opening-type-tag opening-type-tag--{{ line.line_type|lower }}">{{ line.get_line_type_display }}</span></td>
+                        <td><strong>{% if line.line_type == "STOCK" %}{{ line.product.name }}{% elif line.line_type == "LINEN" %}{{ line.linen_item.product.name }}{% else %}{{ line.asset_name }}{% endif %}</strong></td>
+                        <td>{% if line.line_type == "EQUIPMENT" %}₦{{ line.asset_value|floatformat:2 }}{% else %}{{ line.quantity }}{% endif %}</td>
+                        <td>{% if line.line_type == "STOCK" %}{{ line.department.name }}{% elif line.line_type == "LINEN" %}{{ line.get_linen_location_display }} · {{ line.get_linen_condition_display }}{% else %}{% if line.room %}Room {{ line.room.room_number }}{% elif line.maintenance_location %}{{ line.maintenance_location.name }}{% else %}Unassigned{% endif %}{% endif %}</td>
                         {% if selected_batch.status == "DRAFT" %}
-                        <td style="padding:10px;"><form method="post">{% csrf_token %}<input type="hidden" name="hotel" value="{{ selected_hotel.pk }}"><input type="hidden" name="batch_id" value="{{ selected_batch.pk }}"><input type="hidden" name="line_id" value="{{ line.pk }}"><input type="hidden" name="action" value="DELETE_LINE"><button type="submit" style="border:0;background:none;color:#b42318;cursor:pointer;">Remove</button></form></td>
+                        <td>
+                            <form method="post" onsubmit="return confirm('Remove this draft line?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="hotel" value="{{ selected_hotel.pk }}">
+                                <input type="hidden" name="batch_id" value="{{ selected_batch.pk }}">
+                                <input type="hidden" name="line_id" value="{{ line.pk }}">
+                                <input type="hidden" name="action" value="DELETE_LINE">
+                                <button class="opening-remove-btn" type="submit">Remove</button>
+                            </form>
+                        </td>
                         {% endif %}
                     </tr>
                 {% empty %}
-                    <tr><td colspan="{% if selected_batch.status == 'DRAFT' %}5{% else %}4{% endif %}" style="padding:20px;color:#777;">No lines added yet.</td></tr>
+                    <tr><td colspan="{% if selected_batch.status == 'DRAFT' %}5{% else %}4{% endif %}">
+                        <div class="opening-empty">
+                            <span class="opening-empty__icon">▤</span>
+                            <strong>No lines added yet</strong>
+                            <small>Add stock, linen or equipment below. The batch remains a draft until you post it.</small>
+                        </div>
+                    </td></tr>
                 {% endfor %}
                 </tbody>
             </table>
         </div>
 
         {% if selected_batch.status == "DRAFT" %}
-        <div style="border-top:1px solid #ddd;margin-top:20px;padding-top:18px;">
-            <h3 style="font-size:18px;margin-top:0;">Add an opening balance line</h3>
-            <p style="font-size:13px;color:#777;">Stock quantity and unit cost must be entered in the product's base unit. Add one equipment asset per line. Linen quantities are whole pieces and include a location and condition.</p>
-            <form method="post" id="opening-line-form">
+        <div class="opening-line-editor">
+            <div class="opening-card__heading">
+                <div>
+                    <div class="opening-eyebrow">Batch entry</div>
+                    <h3>Add an opening balance line</h3>
+                    <p>Choose a category to show only the fields needed for that type of opening balance.</p>
+                </div>
+            </div>
+
+            <form method="post" id="opening-line-form" novalidate>
                 {% csrf_token %}
                 <input type="hidden" name="hotel" value="{{ selected_hotel.pk }}">
                 <input type="hidden" name="batch_id" value="{{ selected_batch.pk }}">
                 <input type="hidden" name="action" value="ADD_LINE">
 
+                {% if line_form.non_field_errors %}
+                    <div class="opening-form-error">{{ line_form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="opening-form-grid">
                 {% for field in line_form %}
-                    <div class="opening-line-field" data-field-name="{{ field.name }}"
+                    <div class="opening-field opening-line-field {% if field.name == 'line_type' %}opening-field--full opening-field--category{% endif %}"
+                        data-field-name="{{ field.name }}"
                         {% if field.name == "product" or field.name == "department" %}data-line-types="STOCK"
                         {% elif field.name == "quantity" or field.name == "unit_cost" %}data-line-types="STOCK,LINEN"
                         {% elif field.name == "linen_item" or field.name == "linen_location" or field.name == "linen_condition" %}data-line-types="LINEN"
-                        {% else %}data-line-types="EQUIPMENT"{% endif %}
-                        style="margin-bottom:14px;">
-                        <label for="{{ field.id_for_label }}" style="display:block;font-weight:600;margin-bottom:5px;">{{ field.label }}</label>
+                        {% elif field.name == "line_type" %}data-line-types="STOCK,LINEN,EQUIPMENT"
+                        {% else %}data-line-types="EQUIPMENT"{% endif %}>
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
-                        {% if field.help_text %}<div style="font-size:12px;color:#777;margin-top:4px;">{{ field.help_text }}</div>{% endif %}
-                        {% for error in field.errors %}<div style="font-size:12px;color:#b42318;margin-top:4px;">{{ error }}</div>{% endfor %}
+                        {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+                        {% for error in field.errors %}<span class="opening-field__error">{{ error }}</span>{% endfor %}
                     </div>
                 {% endfor %}
-                {% if line_form.non_field_errors %}
-                    <div style="color:#b42318;margin-bottom:12px;">{{ line_form.non_field_errors }}</div>
-                {% endif %}
-                <button type="submit" style="padding:10px 16px;border:0;border-radius:6px;background:#174ea6;color:white;">Add line</button>
+                </div>
+                <div class="opening-form-actions">
+                    <button class="opening-btn opening-btn--primary" type="submit">Add line to batch</button>
+                </div>
             </form>
         </div>
         {% endif %}
@@ -132,15 +210,111 @@
 </div>
 
 <style>
-    #opening-line-form select,
-    #opening-line-form input,
-    #opening-line-form textarea {
-        max-width:100%;
-    }
-    #opening-line-form .opening-line-field[hidden] {
-        display:none !important;
-    }
+.opening-page {
+    --opening-ink: var(--hms-ink, #172033);
+    --opening-muted: var(--hms-muted, #64748b);
+    --opening-border: var(--hms-border, #e2e8f0);
+    --opening-primary: var(--hms-primary, #2563eb);
+    max-width: 1480px;
+    margin: 0 auto;
+    color: var(--opening-ink);
+}
+.opening-page__header {
+    display:flex; justify-content:space-between; align-items:flex-start;
+    gap:20px; flex-wrap:wrap; margin:4px 0 24px;
+}
+.opening-page__header h1 { margin:5px 0 7px; font-size:clamp(26px,3vw,34px); letter-spacing:-.035em; }
+.opening-page__header p,.opening-card__heading p,.opening-detail-header p {
+    margin:0; color:var(--opening-muted); line-height:1.55;
+}
+.opening-eyebrow { color:var(--opening-muted); text-transform:uppercase; font-size:11px; font-weight:750; letter-spacing:.1em; }
+.opening-hotel-chip { display:flex; align-items:center; gap:9px; padding:9px 13px; border:1px solid var(--opening-border); border-radius:999px; background:#fff; font-size:13px; font-weight:650; }
+.opening-hotel-chip__dot { width:8px; height:8px; border-radius:50%; background:#16a36a; }
+.opening-messages { margin-bottom:16px; }
+.opening-alert,.opening-form-error { padding:12px 15px; border-radius:10px; background:#fff1f1; color:#a52828; border:1px solid #ffd5d5; margin-bottom:14px; }
+.opening-alert--success { background:#ecfdf3; border-color:#b7ebca; color:#17633a; }
+.opening-alert--info { background:#eff6ff; border-color:#cfe2ff; color:#1e4e8c; }
+.opening-card { background:var(--hms-surface,#fff); border:1px solid var(--opening-border); border-radius:16px; padding:22px; box-shadow:var(--hms-shadow,0 8px 24px rgba(15,23,42,.055)); min-width:0; }
+.opening-hotel-select { margin-bottom:18px; }
+.opening-inline-form { display:flex; align-items:end; gap:14px; flex-wrap:wrap; }
+.opening-overview-grid { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(300px,.95fr); gap:18px; }
+.opening-card__heading { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:20px; }
+.opening-card__heading h2 { margin:5px 0 6px; font-size:19px; letter-spacing:-.02em; }
+.opening-card__heading h3 { margin:5px 0 6px; font-size:18px; }
+.opening-count { display:grid; place-items:center; min-width:34px; height:34px; padding:0 9px; border-radius:10px; background:#eff6ff; color:#2457a6; font-weight:750; }
+.opening-field { min-width:0; display:flex; flex-direction:column; gap:7px; }
+.opening-field label { font-size:13px; font-weight:700; color:#344054; }
+.opening-field small { color:var(--opening-muted); font-size:12px; line-height:1.45; }
+.opening-field input,.opening-field select,.opening-field textarea {
+    box-sizing:border-box; width:100%; max-width:100%; min-height:43px;
+    padding:10px 12px; border:1px solid #d0d8e5; border-radius:9px;
+    background:#fff; color:var(--opening-ink); font:inherit; font-size:14px;
+    transition:border-color .15s,box-shadow .15s;
+}
+.opening-field textarea { min-height:88px; resize:vertical; }
+.opening-field input:focus,.opening-field select:focus,.opening-field textarea:focus {
+    outline:none; border-color:var(--opening-primary); box-shadow:0 0 0 3px rgba(37,99,235,.12);
+}
+.opening-field__error { color:#b42318; font-size:12px; }
+.opening-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:17px 20px; }
+.opening-field--full { grid-column:1/-1; }
+.opening-field--category { padding:15px; border:1px solid #cfe0ff; border-radius:12px; background:#f5f8ff; }
+.opening-field--category label { color:#1d4f91; }
+.opening-form-actions { display:flex; justify-content:flex-start; margin-top:20px; }
+.opening-btn { display:inline-flex; justify-content:center; align-items:center; min-height:42px; padding:10px 17px; border:0; border-radius:9px; font-size:13px; font-weight:750; cursor:pointer; text-decoration:none; transition:transform .15s,background .15s; }
+.opening-btn:hover { transform:translateY(-1px); }
+.opening-btn--primary { background:var(--opening-primary); color:#fff; }
+.opening-btn--primary:hover { background:var(--hms-primary-dark,#1d4ed8); }
+.opening-btn--secondary { background:#eef2f7; color:#344054; border:1px solid var(--opening-border); }
+.opening-btn--post { background:#12804a; color:#fff; }
+.opening-batch-list { display:flex; flex-direction:column; }
+.opening-batch-item { display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid #edf0f4; color:inherit; text-decoration:none; min-width:0; }
+.opening-batch-item:last-child { border-bottom:0; }
+.opening-batch-item__icon { display:grid; place-items:center; width:38px; height:38px; flex:0 0 38px; border-radius:11px; background:#eff6ff; color:#2457a6; font-size:11px; font-weight:800; }
+.opening-batch-item__body { display:flex; flex:1; flex-direction:column; gap:4px; min-width:0; }
+.opening-batch-item__body strong { font-size:14px; }
+.opening-batch-item__body small { color:var(--opening-muted); font-size:12px; }
+.opening-batch-item__arrow { color:#98a2b3; font-size:23px; }
+.opening-status { display:inline-flex; align-items:center; padding:5px 9px; border-radius:999px; font-size:11px; font-weight:750; white-space:nowrap; }
+.opening-status--draft { background:#fff7e6; color:#93620c; }
+.opening-status--posted { background:#eaf8ef; color:#17633a; }
+.opening-batch-detail { margin-top:18px; }
+.opening-detail-header { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; flex-wrap:wrap; }
+.opening-detail-title-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:5px 0 7px; }
+.opening-detail-title-row h2 { margin:0; font-size:22px; }
+.opening-posted-note { color:#17633a; background:#eaf8ef; border-radius:9px; padding:10px 13px; font-size:12px; font-weight:700; }
+.opening-table-wrap { overflow-x:auto; margin-top:20px; border:1px solid #edf0f4; border-radius:12px; }
+.opening-table { width:100%; border-collapse:collapse; min-width:650px; }
+.opening-table th { background:#f7f9fc; color:#667085; text-transform:uppercase; letter-spacing:.045em; font-size:10px; font-weight:800; text-align:left; padding:13px 15px; }
+.opening-table td { padding:14px 15px; border-top:1px solid #edf0f4; font-size:13px; color:#475467; }
+.opening-table td strong { color:var(--opening-ink); }
+.opening-type-tag { display:inline-flex; padding:5px 8px; border-radius:7px; background:#eef2f7; color:#475467; font-size:11px; font-weight:700; }
+.opening-type-tag--stock { background:#edf5ff; color:#2457a6; }
+.opening-type-tag--linen { background:#f3efff; color:#6741a5; }
+.opening-type-tag--equipment { background:#eaf8ef; color:#17633a; }
+.opening-remove-btn { border:0; background:transparent; color:#b42318; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.opening-line-editor { border-top:1px solid var(--opening-border); margin-top:22px; padding-top:22px; }
+.opening-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; min-height:125px; text-align:center; color:var(--opening-muted); }
+.opening-empty--compact { min-height:160px; }
+.opening-empty strong { color:#344054; font-size:13px; }
+.opening-empty small { font-size:12px; }
+.opening-empty__icon { display:grid; place-items:center; width:35px; height:35px; border-radius:10px; background:#f1f5f9; color:#64748b; font-size:20px; }
+.opening-line-field[hidden] { display:none !important; }
+
+@media (max-width:900px) {
+    .opening-overview-grid { grid-template-columns:1fr; }
+}
+@media (max-width:600px) {
+    .opening-page__header h1 { font-size:25px; }
+    .opening-card { padding:16px; border-radius:13px; }
+    .opening-form-grid { grid-template-columns:1fr; gap:14px; }
+    .opening-field--full { grid-column:auto; }
+    .opening-inline-form { align-items:stretch; }
+    .opening-inline-form .opening-btn { width:100%; }
+    .opening-detail-header form,.opening-detail-header .opening-btn { width:100%; }
+}
 </style>
+
 <script>
 (function () {
     const form = document.getElementById("opening-line-form");
@@ -149,16 +323,27 @@
     const typeSelect = form.querySelector('[name="line_type"]');
     const fields = form.querySelectorAll(".opening-line-field");
 
+    function clearField(wrapper) {
+        wrapper.querySelectorAll("input, select, textarea").forEach(function (control) {
+            if (control.type === "checkbox" || control.type === "radio") {
+                control.checked = false;
+            } else {
+                control.value = "";
+            }
+        });
+    }
+
     function updateLineFields() {
         const selectedType = typeSelect ? typeSelect.value : "";
         fields.forEach(function (wrapper) {
-            // The category selector must remain visible so the user can choose a type.
             if (wrapper.dataset.fieldName === "line_type") {
                 wrapper.hidden = false;
                 return;
             }
             const allowedTypes = (wrapper.dataset.lineTypes || "").split(",");
-            wrapper.hidden = !allowedTypes.includes(selectedType);
+            const shouldShow = allowedTypes.includes(selectedType);
+            if (!shouldShow && !wrapper.hidden) clearField(wrapper);
+            wrapper.hidden = !shouldShow;
         });
     }
 
