@@ -86,6 +86,17 @@
 
 
 
+        {% if user|has_role:"ADMIN,DIRECTOR,GENERAL_MANAGER,MANAGER,CHIEF_ACCOUNTANT,ACCOUNTANT" %}
+        <h4 class="menu-toggle {% if request.resolver_match.namespace == 'opening_stock' %}active-menu{% endif %}"
+            onclick="toggleMenu('opening_stock_menu', this)">
+            <span class="arrow">{% if request.resolver_match.namespace == "opening_stock" %}▾{% else %}▸{% endif %}</span>
+            Opening Balances
+        </h4>
+        <div id="opening_stock_menu" class="menu-section {% if request.resolver_match.namespace == 'opening_stock' %}open{% endif %}">
+            <a href="{% url 'opening_stock:dashboard' %}">Opening Stock Management</a>
+        </div>
+        {% endif %}
+
         {% if user|has_role:"ADMIN,DIRECTOR" and user.organization_id %}
         <h4 class="menu-toggle {% if request.resolver_match.url_name == 'organization_profile' %}active-menu{% endif %}"
             onclick="toggleMenu('organization_menu', this)">
