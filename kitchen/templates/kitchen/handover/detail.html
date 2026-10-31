@@ -1,0 +1,14 @@
+{% extends "base/base.html" %}
+{% block title %}Kitchen Handover #{{ handover.pk }}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-start mb-3"><div><h2>Kitchen Handover #{{ handover.pk }}</h2><p class="text-muted">{{ handover.created_at|date:"d M Y H:i" }} · {{ handover.get_status_display }}</p></div><a class="btn btn-outline-secondary" href="{% url 'kitchen_handover_list' %}">Back</a></div>
+  <div class="card card-body mb-3"><div><strong>Outgoing:</strong> {{ handover.outgoing_user.get_full_name|default:handover.outgoing_user.username }}</div><div><strong>Incoming:</strong> {{ handover.incoming_user.get_full_name|default:handover.incoming_user.username }}</div>{% if handover.outgoing_note %}<p class="mt-2 mb-0">{{ handover.outgoing_note }}</p>{% endif %}</div>
+  <form method="post" class="card card-body">{% csrf_token %}
+    <div class="table-responsive"><table class="table align-middle"><thead><tr><th>Storage</th><th>Item</th><th>Outgoing count</th><th>Incoming count</th><th>Difference / note</th></tr></thead><tbody>
+    {% for line in handover.lines.all %}<tr><td>{{ line.location.name }}</td><td>{{ line.item_name }}</td><td>{{ line.outgoing_quantity }} {{ line.unit }}</td><td>{% if can_confirm %}<input class="form-control" type="number" min="0" step="0.001" name="received_{{ line.pk }}" required>{% else %}{{ line.incoming_quantity|default:"—" }}{% endif %}</td><td>{% if can_confirm %}<input class="form-control mb-1" name="note_{{ line.pk }}" placeholder="Required if count differs">{% else %}{{ line.discrepancy_note|default:"—" }}{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>
+    {% if can_confirm %}<div class="mb-3"><label class="form-label">Incoming shift notes</label><textarea class="form-control" name="incoming_note"></textarea></div><button class="btn btn-primary">Confirm received quantities</button>{% endif %}
+  </form>
+</div>
+{% endblock %}
