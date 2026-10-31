@@ -1,12 +1,12 @@
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 
 from accounts.decorators import role_required
 from accounts.services.access import get_accessible_hotels
+
 from .forms import OpeningStockBatchForm, OpeningStockLineForm
-from .models import OpeningStockBatch
+from .models import OpeningStockBatch, OpeningStockLine
 from .services import post_opening_stock_batch
 
 
@@ -34,6 +34,9 @@ def opening_stock_dashboard(request):
             pk=request.GET["batch"], hotel=hotel,
         )
 
+    batch_form = OpeningStockBatchForm()
+    line_form = OpeningStockLineForm(hotel=hotel)
+
     if request.method == "POST":
         action = request.POST.get("action")
         if hotel is None:
@@ -41,34 +44,44 @@ def opening_stock_dashboard(request):
             return redirect("opening_stock:dashboard")
 
         if action == "CREATE_BATCH":
-            form = OpeningStockBatchForm(request.POST)
-            if form.is_valid():
-                batch = form.save(commit=False)
+            batch_form = OpeningStockBatchForm(request.POST)
+            if batch_form.is_valid():
+                batch = batch_form.save(commit=False)
                 batch.hotel = hotel
                 batch.created_by = request.user
                 batch.save()
                 messages.success(request, "Opening balance batch created. Add its stock, linen and equipment lines.")
                 return redirect(f"/opening-stock/?hotel={hotel.pk}&batch={batch.pk}")
             messages.error(request, "Please correct the opening batch details.")
+
         elif action == "ADD_LINE":
-            batch = get_object_or_404(OpeningStockBatch, pk=request.POST.get("batch_id"), hotel=hotel, status="DRAFT")
-            from .models import OpeningStockLine
-            form = OpeningStockLineForm(request.POST, hotel=hotel, instance=OpeningStockLine(batch=batch))
-            if form.is_valid():
-                line = form.save(commit=False)
+            batch = get_object_or_404(
+                OpeningStockBatch, pk=request.POST.get("batch_id"),
+                hotel=hotel, status="DRAFT",
+            )
+            line_form = OpeningStockLineForm(
+                request.POST,
+                hotel=hotel,
+                instance=OpeningStockLine(batch=batch),
+            )
+            if line_form.is_valid():
+                line = line_form.save(commit=False)
                 line.batch = batch
                 try:
                     line.full_clean()
                     line.save()
                 except ValidationError as exc:
-                    form.add_error(None, " ".join(exc.messages))
+                    line_form.add_error(None, " ".join(exc.messages))
                 else:
                     messages.success(request, "Opening balance line added.")
                     return redirect(f"/opening-stock/?hotel={hotel.pk}&batch={batch.pk}")
-            messages.error(request, "Please correct the opening line details.")
             selected_batch = batch
+            messages.error(request, "Please correct the opening line details.")
+
         elif action == "POST_BATCH":
-            batch = get_object_or_404(OpeningStockBatch, pk=request.POST.get("batch_id"), hotel=hotel)
+            batch = get_object_or_404(
+                OpeningStockBatch, pk=request.POST.get("batch_id"), hotel=hotel,
+            )
             try:
                 post_opening_stock_batch(batch=batch, user=request.user)
             except (ValidationError, ValueError) as exc:
@@ -78,11 +91,13 @@ def opening_stock_dashboard(request):
                 messages.success(request, f"Opening balances posted successfully. Journal: {batch.journal_entry_id}.")
             return redirect(f"/opening-stock/?hotel={hotel.pk}&batch={batch.pk}")
 
-    batches = OpeningStockBatch.objects.filter(hotel=hotel).select_related("created_by", "posted_by").order_by("-opening_date", "-id") if hotel else OpeningStockBatch.objects.none()
-    batch_form = OpeningStockBatchForm()
-    line_form = OpeningStockLineForm(hotel=hotel)
-    if selected_batch:
-        line_form = OpeningStockLineForm(hotel=hotel)
+    batches = (
+        OpeningStockBatch.objects.filter(hotel=hotel)
+        .select_related("created_by", "posted_by")
+        .order_by("-opening_date", "-id")
+        if hotel else OpeningStockBatch.objects.none()
+    )
+
     return render(request, "opening_stock/dashboard.html", {
         "hotels": hotels,
         "selected_hotel": hotel,
