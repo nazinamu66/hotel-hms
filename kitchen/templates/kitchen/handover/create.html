@@ -24,7 +24,7 @@
     </section>
     <section class="khc-section"><h2>Outgoing shift notes</h2><p>Share anything the incoming colleague should know.</p><div class="khc-field"><label for="khc-notes">Handover notes (optional)</label><textarea id="khc-notes" name="outgoing_note" rows="4" placeholder="Outstanding preparation, low stock, items requiring attention..."></textarea></div></section>
     <div class="khc-actions"><a class="khc-cancel" href="{% url 'kitchen_handover_list' %}">Cancel</a><button class="khc-submit" type="submit">Submit handover →</button></div>
-  </form>{% endif %}
+  </form>
 </div>
 <script>
 (function(){const wrap=document.getElementById("handover-lines"),add=document.getElementById("add-line");if(!wrap||!add)return;let index=1;function updateRemoveButtons(){const rows=wrap.querySelectorAll(".handover-line");rows.forEach(row=>{const button=row.querySelector(".khc-remove");if(button)button.disabled=rows.length===1;});}add.addEventListener("click",function(){const first=wrap.querySelector(".handover-line"),row=first.cloneNode(true);row.querySelectorAll("input,select").forEach(function(el){el.name=el.name.replace(/_\d+$/,"_"+index);el.value="";});const remove=row.querySelector(".khc-remove");remove.disabled=false;remove.addEventListener("click",function(){row.remove();updateRemoveButtons();});wrap.appendChild(row);index++;updateRemoveButtons();});updateRemoveButtons();})();
