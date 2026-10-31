@@ -312,6 +312,12 @@
 
             {% endif %}
 
+            {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
+            <a href="{% url 'production_override_queue' %}">
+                ⚖️ Production Variance Approvals
+            </a>
+            {% endif %}
+
             {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
             <hr>
             <strong>Kitchen Reports</strong>
