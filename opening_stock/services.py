@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from accounting.models import Account, BusinessDay, JournalEntry, JournalLine
 from accounting.utils import is_date_locked
+from accounts.services.access import user_can_access_hotel
 from inventory.models import Stock, StockCostLayer, StockMovement
 from linen.models import LinenTransaction
 from maintenance.models import MaintenanceAsset
@@ -40,6 +41,8 @@ def post_opening_stock_batch(*, batch, user):
     """
     batch = OpeningStockBatch.objects.select_for_update().get(pk=batch.pk)
 
+    if not user_can_access_hotel(user, batch.hotel):
+        raise ValidationError("You do not have access to this hotel's opening balances.")
     if batch.status != "DRAFT":
         raise ValidationError("Only a draft opening stock batch can be posted.")
     if not batch.lines.exists():
