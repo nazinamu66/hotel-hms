@@ -1020,7 +1020,7 @@ def _build_batch_profitability_rows(batches, scoped_hotels):
     from restaurant.models import POSOrder, POSOrderItem
     from django.db.models import Sum
     batch_profitability_rows = []
-# Batch-level traceability: follow the finished-food FIFO layer created
+    # Batch-level traceability: follow the finished-food FIFO layer created
     # by each production batch through later POS sales and normal spoilage.
     spoilage_movement_ids = set(
         KitchenSpoilageRecord.objects.filter(
@@ -1156,7 +1156,7 @@ def _build_batch_profitability_rows(batches, scoped_hotels):
         })
 
 
-return batch_profitability_rows
+    return batch_profitability_rows
 
 
 def kitchen_management_report(request):
