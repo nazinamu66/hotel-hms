@@ -1262,10 +1262,47 @@ class KitchenShiftHandoverLine(models.Model):
         return f"{self.item_name}: {self.outgoing_quantity} {self.unit}"
 
 
+
+class KitchenRestrictedStockLayer(models.Model):
+    """
+    FIFO cost layer held in a Head-Chef-only physical storage location.
+    Kept separate from department stock so ordinary kitchen stock-outs cannot consume it.
+    """
+    department = models.ForeignKey(
+        Department, on_delete=models.PROTECT, related_name="restricted_stock_layers"
+    )
+    location = models.ForeignKey(
+        KitchenStorageLocation, on_delete=models.PROTECT, related_name="restricted_stock_layers"
+    )
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, related_name="restricted_stock_layers"
+    )
+    source_cost_layer = models.ForeignKey(
+        StockCostLayer, on_delete=models.PROTECT, related_name="restricted_stock_layers"
+    )
+    source_reference = models.CharField(max_length=100, blank=True, default="", db_index=True)
+    quantity_received = models.DecimalField(max_digits=12, decimal_places=3)
+    quantity_remaining = models.DecimalField(max_digits=12, decimal_places=3)
+    unit_cost = models.DecimalField(max_digits=12, decimal_places=4)
+    received_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["received_at", "pk"]
+        indexes = [
+            models.Index(
+                fields=["product", "location", "quantity_remaining", "received_at"],
+                name="kitch_restrict_fifo_idx",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.product} — {self.location}: {self.quantity_remaining}"
+
+
 class KitchenRestrictedStockRecord(models.Model):
     """
-    Head-Chef-only physical count and location-transfer audit record.
-    These records describe custody/location, not inventory valuation.
+    Head-Chef-only physical count and restricted/general inventory transfer audit record.
     """
     RECORD_TYPES = (
         ("COUNT", "Physical count"),
