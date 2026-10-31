@@ -1162,3 +1162,101 @@ class KitchenTicketItem(models.Model):
 
     def __str__(self):
         return f"{self.menu_item.name} x {self.quantity}"
+
+class KitchenStorageLocation(models.Model):
+    """
+    Physical kitchen storage area. RESTRICTED locations are visible only to
+    the Kitchen Department Head; shared locations are visible to kitchen staff.
+    """
+    ACCESS_CHOICES = (
+        ("SHARED", "Shared kitchen access"),
+        ("RESTRICTED", "Head Chef only"),
+    )
+
+    department = models.ForeignKey(
+        Department, on_delete=models.CASCADE, related_name="kitchen_storage_locations"
+    )
+    name = models.CharField(max_length=100)
+    access_level = models.CharField(max_length=12, choices=ACCESS_CHOICES, default="SHARED")
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="created_kitchen_storage_locations",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["access_level", "name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["department", "name"],
+                name="unique_kitchen_storage_location",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.department.name} — {self.name}"
+
+
+class KitchenShiftHandover(models.Model):
+    STATUS_CHOICES = (
+        ("DRAFT", "Draft"),
+        ("AWAITING_RECEIPT", "Awaiting incoming staff confirmation"),
+        ("CONFIRMED", "Confirmed"),
+        ("VARIANCE", "Discrepancy recorded"),
+        ("CANCELLED", "Cancelled"),
+    )
+
+    department = models.ForeignKey(
+        Department, on_delete=models.PROTECT, related_name="shift_handovers"
+    )
+    outgoing_user = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name="kitchen_handovers_sent"
+    )
+    incoming_user = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name="kitchen_handovers_received"
+    )
+    status = models.CharField(max_length=24, choices=STATUS_CHOICES, default="DRAFT")
+    outgoing_note = models.TextField(blank=True)
+    incoming_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Kitchen handover #{self.pk} — {self.department}"
+
+
+class KitchenShiftHandoverLine(models.Model):
+    handover = models.ForeignKey(
+        KitchenShiftHandover, on_delete=models.CASCADE, related_name="lines"
+    )
+    location = models.ForeignKey(
+        KitchenStorageLocation, on_delete=models.PROTECT, related_name="handover_lines"
+    )
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="kitchen_handover_lines",
+    )
+    item_name = models.CharField(max_length=150)
+    unit = models.CharField(max_length=20)
+    outgoing_quantity = models.DecimalField(max_digits=12, decimal_places=3)
+    incoming_quantity = models.DecimalField(
+        max_digits=12, decimal_places=3, null=True, blank=True
+    )
+    discrepancy_note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["location__name", "item_name"]
+
+    @property
+    def variance(self):
+        if self.incoming_quantity is None:
+            return None
+        return self.incoming_quantity - self.outgoing_quantity
+
+    def __str__(self):
+        return f"{self.item_name}: {self.outgoing_quantity} {self.unit}"
