@@ -123,3 +123,56 @@ class RefundedFoodWasteAccountingTests(SimpleTestCase):
         )
 
         record_transaction.assert_not_called()
+
+
+
+class RefundShiftReconciliationTests(SimpleTestCase):
+    @patch("restaurant.workflows.refund_order.Payment.objects.create")
+    def test_refund_payment_is_linked_to_originating_shift_and_keeps_actual_payout_method(
+        self, create_payment
+    ):
+        shift = SimpleNamespace(pk=31)
+        folio = SimpleNamespace(pk=42)
+        order = SimpleNamespace(
+            status="PAID",
+            id=77,
+            total_amount=Decimal("1250.00"),
+            folio=folio,
+            shift=shift,
+        )
+        user = SimpleNamespace(pk=9)
+        account = SimpleNamespace(pk=15)
+
+        from restaurant.workflows.refund_order import reverse_payment
+
+        reverse_payment(
+            order,
+            user,
+            method="TRANSFER",
+            account=account,
+            reference="BANK-REFUND-778",
+            note="Refund sent by bank transfer",
+        )
+
+        create_payment.assert_called_once_with(
+            folio=folio,
+            amount=Decimal("-1250.00"),
+            method="TRANSFER",
+            account=account,
+            shift=shift,
+            collected_by=user,
+            reference="BANK-REFUND-778",
+            note="Refund sent by bank transfer",
+        )
+
+    @patch("restaurant.workflows.refund_order.Payment.objects.create")
+    def test_room_charge_refund_does_not_create_a_cash_payment(
+        self, create_payment
+    ):
+        order = SimpleNamespace(status="CHARGED")
+
+        from restaurant.workflows.refund_order import reverse_payment
+
+        reverse_payment(order, SimpleNamespace(pk=9), method="CASH")
+
+        create_payment.assert_not_called()
