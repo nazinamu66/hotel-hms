@@ -1,0 +1,52 @@
+{% extends "base/base.html" %}
+{% block title %}Kitchen Batch Profitability | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.kbp-page{max-width:1600px;margin:0 auto;padding:26px 20px 48px;color:#172033}
+.kbp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:22px}
+.kbp-title{font-size:clamp(1.7rem,2.4vw,2.2rem);font-weight:800;letter-spacing:-.035em;margin:0 0 6px}
+.kbp-muted{color:#64748b;font-size:.88rem;line-height:1.5}
+.kbp-btn{display:inline-block;border:0;border-radius:9px;background:#1d4ed8;color:#fff;text-decoration:none;padding:11px 15px;font-weight:750}
+.kbp-btn.secondary{background:#334155}
+.kbp-filter,.kbp-card,.kbp-panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 4px 18px rgba(15,23,42,.035)}
+.kbp-filter{padding:18px;margin-bottom:20px;display:flex;align-items:end;gap:14px;flex-wrap:wrap}
+.kbp-field{display:flex;flex-direction:column;gap:6px;min-width:170px}
+.kbp-field label{font-size:.78rem;font-weight:750;color:#475569}
+.kbp-field input,.kbp-field select{padding:10px 11px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font:inherit}
+.kbp-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.kbp-card{padding:17px;min-width:0}
+.kbp-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;font-weight:800;color:#64748b;margin-bottom:8px}
+.kbp-value{font-size:1.55rem;font-weight:850;overflow-wrap:anywhere}
+.kbp-note{font-size:.77rem;color:#64748b;margin-top:7px}
+.kbp-panel{overflow:hidden}.kbp-wrap{overflow-x:auto}
+.kbp-table{width:100%;border-collapse:collapse;min-width:1450px;font-size:.8rem}
+.kbp-table th{padding:11px;background:#f8fafc;text-align:left;color:#64748b;font-size:.68rem;text-transform:uppercase;white-space:nowrap}
+.kbp-table td{padding:10px;border-top:1px solid #e2e8f0;vertical-align:top}
+.kbp-foot{font-size:.78rem;color:#64748b;line-height:1.6;margin-top:16px}
+@media(max-width:1000px){.kbp-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.kbp-page{padding:18px 12px 32px}.kbp-grid{grid-template-columns:1fr}.kbp-head{flex-direction:column}}
+</style>
+<div class="kbp-page">
+  <header class="kbp-head"><div><h1 class="kbp-title">Production Batch Profitability &amp; Traceability</h1><p class="kbp-muted">Follow each executed batch through finished-food FIFO layers, POS sales, spoilage and remaining stock. Batches are selected by production date; later sales and spoilage allocations are included.</p></div><a class="kbp-btn secondary" href="{% url 'kitchen_management_report' %}?from={{ date_from }}&amp;to={{ date_to }}{% if selected_hotel %}&amp;hotel={{ selected_hotel }}{% endif %}">Management Overview</a></header>
+  <form class="kbp-filter" method="get">
+    <div class="kbp-field"><label for="from">Production from</label><input id="from" type="date" name="from" value="{{ date_from }}"></div>
+    <div class="kbp-field"><label for="to">Production to</label><input id="to" type="date" name="to" value="{{ date_to }}"></div>
+    {% if hotels|length > 1 %}<div class="kbp-field"><label for="hotel">Hotel</label><select id="hotel" name="hotel"><option value="">All authorized hotels</option>{% for hotel in hotels %}<option value="{{ hotel.pk }}" {% if selected_hotel == hotel.pk|stringformat:"s" %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}</select></div>{% elif hotels|length == 1 %}{% for hotel in hotels %}<div class="kbp-field"><label>Hotel scope</label><div>{{ hotel.name }}</div></div>{% endfor %}{% endif %}
+    <button class="kbp-btn" type="submit">Apply filters</button>
+  </form>
+  <div class="kbp-grid">
+    <article class="kbp-card"><div class="kbp-label">Executed batches</div><div class="kbp-value">{{ batch_count }}</div></article>
+    <article class="kbp-card"><div class="kbp-label">Produced quantity</div><div class="kbp-value">{{ totals.produced|floatformat:3 }}</div></article>
+    <article class="kbp-card"><div class="kbp-label">Sales revenue</div><div class="kbp-value">{{ totals.revenue|floatformat:2 }}</div></article>
+    <article class="kbp-card"><div class="kbp-label">Sales COGS</div><div class="kbp-value">{{ totals.cogs|floatformat:2 }}</div></article>
+    <article class="kbp-card"><div class="kbp-label">Batch gross profit</div><div class="kbp-value">{{ totals.gross_profit|floatformat:2 }}</div><div class="kbp-note">FIFO-attributed revenue less batch-attributed sales COGS.</div></article>
+    <article class="kbp-card"><div class="kbp-label">Production cost</div><div class="kbp-value">{{ totals.production_cost|floatformat:2 }}</div></article>
+    <article class="kbp-card"><div class="kbp-label">Spoilage cost</div><div class="kbp-value">{{ totals.spoilage_cost|floatformat:2 }}</div><div class="kbp-note">{{ totals.spoiled|floatformat:3 }} units spoiled.</div></article>
+    <article class="kbp-card"><div class="kbp-label">Remaining FIFO value</div><div class="kbp-value">{{ totals.remaining_value|floatformat:2 }}</div><div class="kbp-note">{{ totals.remaining|floatformat:3 }} units remain in batch layers.</div></article>
+  </div>
+  <section class="kbp-panel"><div class="kbp-wrap"><table class="kbp-table"><thead><tr><th>Batch / produced</th><th>Food item</th><th>Qty produced</th><th>Production cost</th><th>Qty sold</th><th>Sales revenue</th><th>Sales COGS</th><th>Gross profit</th><th>Qty spoiled</th><th>Spoilage cost</th><th>Remaining qty</th><th>Remaining value</th><th>Traceability</th><th>Unreconciled qty</th></tr></thead><tbody>
+  {% for row in batch_rows %}<tr><td><a href="{% url 'kitchen_production_detail' row.batch_id %}">#{{ row.batch_id }} · View breakdown</a><br>{{ row.produced_at|date:"d M Y H:i" }}</td><td>{{ row.food_item }}</td><td>{{ row.quantity_produced }}</td><td>{{ row.production_cost|floatformat:2 }}</td><td>{{ row.quantity_sold|floatformat:3 }}</td><td>{{ row.sales_revenue|floatformat:2 }}</td><td>{{ row.sales_cogs|floatformat:2 }}</td><td>{{ row.gross_profit|floatformat:2 }}</td><td>{{ row.quantity_spoiled|floatformat:3 }}</td><td>{{ row.spoilage_cost|floatformat:2 }}</td><td>{{ row.remaining_quantity|floatformat:3 }}</td><td>{{ row.remaining_value|floatformat:2 }}</td><td>{% if row.traceability_status == "TRACEABLE" %}<strong style="color:#15803d">Traceable</strong>{% else %}<strong style="color:#92400e">Unattributed legacy</strong>{% endif %}</td><td>{% if row.reconciliation_gap != None %}{{ row.reconciliation_gap|floatformat:3 }}{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="14" style="padding:20px;text-align:center;color:#64748b">No executed production batches in this production-date range.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+  <p class="kbp-foot">Batch gross profit is allocated from POS line revenue according to FIFO quantity consumed from that batch, less the batch's FIFO sales COGS. Refunds are excluded from sales; refund-restored stock and prepared-food refund waste are not batch-attributed by the current refund records and therefore may appear in the unreconciled quantity. A non-zero unreconciled quantity on a traceable batch requires review. Batches without a reliably identified finished-goods cost layer are marked Unattributed legacy; their quantities are not presented as confirmed stock discrepancies. Monetary values use the hotel's configured accounting currency.</p>
+</div>
+{% endblock %}
