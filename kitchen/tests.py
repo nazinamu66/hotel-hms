@@ -2845,7 +2845,7 @@ class KitchenRestrictedStockAccessTests(TestCase):
         movement_count = StockMovement.objects.count()
         self.client.force_login(self.head)
         response = self.client.post(reverse("kitchen_restricted_stock"), {
-            "record_type": "COUNT",
+            "action": "COUNT",
             "source_location": str(self.freezer.pk),
             "item_name": "Raw fish",
             "quantity": "5.000",
