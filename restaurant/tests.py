@@ -179,6 +179,8 @@ class RefundShiftReconciliationTests(SimpleTestCase):
 
 
 class PendingShiftHandoverPOSGuardTests(SimpleTestCase):
+    databases = {"default"}
+
     @patch("core.services.operations.pos_flow.CashHandover.objects.filter")
     @patch("core.services.operations.pos_flow.Shift.objects.select_for_update")
     def test_pos_order_is_rejected_while_its_shift_handover_is_pending(
