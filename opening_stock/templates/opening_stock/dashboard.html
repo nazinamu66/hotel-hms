@@ -1,0 +1,114 @@
+{% extends "base/base.html" %}
+
+{% block title %}Opening Stock Management{% endblock %}
+
+{% block content %}
+<div style="max-width:1500px;margin:0 auto;padding:28px 22px;">
+    <div style="margin-bottom:24px;">
+        <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#777;">Inventory Setup</div>
+        <h1 style="margin:5px 0;">Opening Stock Management</h1>
+        <p style="color:#777;margin:0;">Record the hotel's existing stock, linen and equipment as at the opening date. Posting updates the operational ledgers and accounting together.</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding:12px 15px;margin:10px 0;border-radius:7px;background:#f2f4f7;">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <section style="background:white;border:1px solid #ddd;border-radius:10px;padding:18px;margin-bottom:20px;">
+        <form method="get" style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
+            <div style="min-width:280px;flex:1;">
+                <label for="hotel" style="display:block;font-weight:600;margin-bottom:6px;">Hotel</label>
+                <select id="hotel" name="hotel" required style="width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;">
+                    <option value="">Select hotel</option>
+                    {% for hotel in hotels %}
+                        <option value="{{ hotel.pk }}" {% if selected_hotel.pk == hotel.pk %}selected{% endif %}>{{ hotel.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" style="padding:10px 18px;border:0;border-radius:6px;background:#174ea6;color:white;">View batches</button>
+        </form>
+    </section>
+
+    {% if selected_hotel %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;">
+        <section style="background:white;border:1px solid #ddd;border-radius:10px;padding:20px;">
+            <h2 style="font-size:19px;margin-top:0;">Create opening batch</h2>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="hotel" value="{{ selected_hotel.pk }}">
+                <input type="hidden" name="action" value="CREATE_BATCH">
+                {{ batch_form.as_p }}
+                <button type="submit" style="padding:10px 16px;border:0;border-radius:6px;background:#174ea6;color:white;">Create draft batch</button>
+            </form>
+        </section>
+
+        <section style="background:white;border:1px solid #ddd;border-radius:10px;padding:20px;">
+            <h2 style="font-size:19px;margin-top:0;">Existing batches</h2>
+            {% for batch in batches %}
+                <div style="padding:11px 0;border-bottom:1px solid #eee;">
+                    <a href="?hotel={{ selected_hotel.pk }}&batch={{ batch.pk }}" style="font-weight:600;">{{ batch.reference }}</a>
+                    <div style="font-size:13px;color:#777;">{{ batch.opening_date }} · {{ batch.get_status_display }} · {{ batch.lines.count }} lines</div>
+                </div>
+            {% empty %}
+                <p style="color:#777;">No opening batches have been created for this hotel.</p>
+            {% endfor %}
+        </section>
+    </div>
+
+    {% if selected_batch %}
+    <section style="background:white;border:1px solid #ddd;border-radius:10px;padding:20px;margin-top:20px;">
+        <div style="display:flex;justify-content:space-between;gap:15px;align-items:start;flex-wrap:wrap;">
+            <div>
+                <h2 style="font-size:20px;margin:0 0 5px;">{{ selected_batch.reference }}</h2>
+                <div style="color:#777;">Opening date: {{ selected_batch.opening_date }} · Status: {{ selected_batch.get_status_display }}</div>
+            </div>
+            {% if selected_batch.status == "DRAFT" %}
+            <form method="post" onsubmit="return confirm('Post this opening batch? This will update stock, FIFO, linen, equipment and accounting and cannot be undone through this screen.');">
+                {% csrf_token %}
+                <input type="hidden" name="hotel" value="{{ selected_hotel.pk }}">
+                <input type="hidden" name="batch_id" value="{{ selected_batch.pk }}">
+                <input type="hidden" name="action" value="POST_BATCH">
+                <button type="submit" style="padding:10px 16px;border:0;border-radius:6px;background:#147d45;color:white;">Post opening balances</button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div style="overflow-x:auto;margin-top:18px;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="text-align:left;border-bottom:1px solid #ddd;"><th style="padding:10px;">Type</th><th style="padding:10px;">Item</th><th style="padding:10px;">Quantity / Value</th><th style="padding:10px;">Location / Department</th></tr></thead>
+                <tbody>
+                {% for line in selected_batch.lines.all %}
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:10px;">{{ line.get_line_type_display }}</td>
+                        <td style="padding:10px;">{% if line.line_type == "STOCK" %}{{ line.product.name }}{% elif line.line_type == "LINEN" %}{{ line.linen_item.product.name }}{% else %}{{ line.asset_name }}{% endif %}</td>
+                        <td style="padding:10px;">{% if line.line_type == "EQUIPMENT" %}{{ line.asset_value }}{% else %}{{ line.quantity }}{% endif %}</td>
+                        <td style="padding:10px;">{% if line.line_type == "STOCK" %}{{ line.department.name }}{% elif line.line_type == "LINEN" %}{{ line.get_linen_location_display }} / {{ line.get_linen_condition_display }}{% else %}{% if line.room %}Room {{ line.room.room_number }}{% elif line.maintenance_location %}{{ line.maintenance_location.name }}{% else %}Unassigned{% endif %}{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="4" style="padding:20px;color:#777;">No lines added yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if selected_batch.status == "DRAFT" %}
+        <div style="border-top:1px solid #ddd;margin-top:20px;padding-top:18px;">
+            <h3 style="font-size:18px;margin-top:0;">Add an opening balance line</h3>
+            <p style="font-size:13px;color:#777;">Stock quantity and unit cost must be entered in the product's base unit. Add one equipment asset per line. Linen quantities are whole pieces and include a location and condition.</p>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="hotel" value="{{ selected_hotel.pk }}">
+                <input type="hidden" name="batch_id" value="{{ selected_batch.pk }}">
+                <input type="hidden" name="action" value="ADD_LINE">
+                {{ line_form.as_p }}
+                <button type="submit" style="padding:10px 16px;border:0;border-radius:6px;background:#174ea6;color:white;">Add line</button>
+            </form>
+        </div>
+        {% endif %}
+    </section>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
