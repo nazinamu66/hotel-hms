@@ -1846,7 +1846,26 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertContains(response, "Kitchen Management Reports")
         self.assertContains(response, "Food sales revenue")
         self.assertContains(response, "Production batch profitability")
-        self.assertEqual(response.context["batch_profitability_rows"], [])
+        self.assertContains(response, "Open Batch Profitability Report")
+        self.assertNotIn("batch_profitability_rows", response.context)
+
+    def test_batch_profitability_report_is_management_only_and_hotel_scoped(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("kitchen_batch_profitability_report"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Production Batch Profitability")
+        self.assertEqual(response.context["batch_count"], 0)
+
+        self.client.force_login(self.kitchen_head)
+        denied = self.client.get(reverse("kitchen_batch_profitability_report"))
+        self.assertEqual(denied.status_code, 403)
+
+        self.client.force_login(self.director)
+        denied_hotel = self.client.get(
+            reverse("kitchen_batch_profitability_report"),
+            {"hotel": self.other_hotel.pk},
+        )
+        self.assertEqual(denied_hotel.status_code, 403)
 
     def test_director_sees_kitchen_reports_but_not_operational_ingredient_requests_link(self):
         self.client.force_login(self.director)
