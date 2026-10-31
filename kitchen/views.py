@@ -778,6 +778,29 @@ def kitchen_quick_production(request):
 
 
 @role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def production_override_queue(request):
+    hotels = get_accessible_hotels(request.user)
+    pending_overrides = (
+        ProductionBatch.objects
+        .filter(
+            override_status="PENDING",
+            is_executed=False,
+            recipe__product__hotel__in=hotels,
+        )
+        .select_related(
+            "recipe", "recipe__product", "produced_by",
+            "override_requested_by", "produced_by__department__hotel",
+        )
+        .order_by("created_at")
+    )
+    return render(
+        request,
+        "kitchen/production/override_queue.html",
+        {"pending_overrides": pending_overrides},
+    )
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
 @require_POST
 @transaction.atomic
 def production_override_approve(request, pk):
@@ -795,11 +818,11 @@ def production_override_approve(request, pk):
 
     if batch.override_requested_by_id == request.user.pk or batch.produced_by_id == request.user.pk:
         messages.error(request, "You cannot approve your own production variance request.")
-        return redirect("kitchen_production_history")
+        return redirect("production_override_queue")
 
     if not batch.pending_actual_quantities:
         messages.error(request, "This request has no saved ingredient quantities.")
-        return redirect("kitchen_production_history")
+        return redirect("production_override_queue")
 
     batch.override_status = "APPROVED"
     batch.override_approved_by = request.user
@@ -819,7 +842,7 @@ def production_override_approve(request, pk):
         batch.override_approved_at = None
         batch.save(update_fields=["override_status", "override_approved_by", "override_approved_at"])
         messages.error(request, "Approval could not be executed: " + ", ".join(exc.messages))
-        return redirect("kitchen_production_history")
+        return redirect("production_override_queue")
 
     messages.success(request, f"Production #{batch.pk} approved and completed.")
     return redirect("kitchen_production_detail", pk=batch.pk)
@@ -841,13 +864,13 @@ def production_override_reject(request, pk):
     )
     if batch.override_requested_by_id == request.user.pk or batch.produced_by_id == request.user.pk:
         messages.error(request, "You cannot reject your own production variance request.")
-        return redirect("kitchen_production_history")
+        return redirect("production_override_queue")
     batch.override_status = "REJECTED"
     batch.override_rejected_by = request.user
     batch.override_rejected_at = timezone.now()
     batch.save(update_fields=["override_status", "override_rejected_by", "override_rejected_at"])
     messages.warning(request, f"Production #{batch.pk} variance request rejected. No stock was deducted.")
-    return redirect("kitchen_production_history")
+    return redirect("production_override_queue")
 
 
 
@@ -2573,7 +2596,7 @@ def direct_purchase_detail(request, pk):
         },
     )
 
-@role_required("KITCHEN", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
+@role_required("KITCHEN")
 def production_history(request):
 
     hotels = get_accessible_hotels(request.user)
@@ -2637,19 +2660,6 @@ def production_history(request):
 
     batches = batches.order_by(ordering)
 
-    pending_overrides = ProductionBatch.objects.none()
-    if request.user.role in ("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN"):
-        pending_overrides = (
-            ProductionBatch.objects
-            .filter(
-                override_status="PENDING",
-                is_executed=False,
-                recipe__product__hotel__in=hotels,
-            )
-            .select_related("recipe", "produced_by", "override_requested_by")
-            .order_by("created_at")
-        )
-
     # -----------------------------
     # Filter options must follow
     # the same hotel scope.
@@ -2674,7 +2684,6 @@ def production_history(request):
             "users": users,
             "filters": request.GET,
             "ordering": ordering,
-            "pending_overrides": pending_overrides,
         }
     )
 
