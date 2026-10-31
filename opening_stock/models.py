@@ -73,7 +73,14 @@ class OpeningStockLine(models.Model):
     serial_number = models.CharField(max_length=100, blank=True)
     manufacturer = models.CharField(max_length=100, blank=True)
     model_number = models.CharField(max_length=100, blank=True)
-    asset_condition = models.CharField(max_length=12, blank=True)
+    ASSET_CONDITIONS = (
+        ("NEW", "New"),
+        ("GOOD", "Good"),
+        ("FAIR", "Fair"),
+        ("POOR", "Poor"),
+        ("DAMAGED", "Damaged"),
+    )
+    asset_condition = models.CharField(max_length=12, choices=ASSET_CONDITIONS, blank=True)
     asset_purchase_date = models.DateField(null=True, blank=True)
     asset_value = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
 
@@ -105,8 +112,8 @@ class OpeningStockLine(models.Model):
         elif self.line_type == "LINEN":
             if not self.linen_item_id or not self.linen_location or not self.linen_condition:
                 raise ValidationError("Linen lines require an item, location and condition.")
-            if self.quantity <= 0 or self.unit_cost <= 0:
-                raise ValidationError("Linen quantity and unit cost must be greater than zero.")
+            if self.quantity <= 0 or self.quantity != self.quantity.to_integral_value() or self.unit_cost <= 0:
+                raise ValidationError("Linen quantity must be a positive whole number and unit cost must be greater than zero.")
             if self.linen_item.product.hotel_id != self.batch.hotel_id:
                 raise ValidationError("Linen item must belong to the batch hotel.")
             if self.product_id or self.department_id or self.asset_product_id or self.asset_name:
