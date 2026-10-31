@@ -1,5 +1,22 @@
 {% extends "base/base.html" %}
-{% block title %}Head Chef Restricted Stock{% endblock %}
+{% block title %}Head Chef Restricted Stock<script>
+(function () {
+  const source = document.querySelector('form input[name="action"][value="RELEASE"]')?.closest("form")?.querySelector('select[name="source_location"]');
+  const product = document.querySelector('form input[name="action"][value="RELEASE"]')?.closest("form")?.querySelector('select[name="product"]');
+  if (!source || !product) return;
+  function filterProducts() {
+    const locationId = source.value;
+    Array.from(product.options).forEach(option => {
+      if (!option.value) return;
+      option.hidden = !!locationId && option.dataset.location !== locationId;
+      if (option.hidden && option.selected) product.value = "";
+    });
+  }
+  source.addEventListener("change", filterProducts);
+  filterProducts();
+})();
+</script>
+{% endblock %}
 {% block content %}
 <div class="container-fluid py-4">
   <div class="mb-4">
@@ -44,7 +61,7 @@
             <option value="">Choose shared location</option>{% for loc in shared_locations %}<option value="{{ loc.pk }}">{{ loc.name }}</option>{% endfor %}
           </select></div>
           <div class="col-md-6"><label class="form-label">Product</label><select class="form-select" name="product" required>
-            <option value="">Choose product</option>{% for item in restricted_stock %}<option value="{{ item.product_id }}">{{ item.product__name }} — {{ item.location__name }}: {{ item.quantity }} {{ item.product__base_unit }}</option>{% endfor %}
+            <option value="">Choose product</option>{% for item in restricted_stock %}<option value="{{ item.product_id }}" data-location="{{ item.location_id }}">{{ item.product__name }} — {{ item.location__name }}: {{ item.quantity }} {{ item.product__base_unit }}</option>{% endfor %}
           </select></div>
           <div class="col-md-6"><label class="form-label">Quantity (base unit)</label><input class="form-control" type="number" name="quantity" min="0.001" step="0.001" required></div>
           <div class="col-12"><label class="form-label">Reason</label><input class="form-control" name="reason" required placeholder="Reason for releasing stock"></div>
