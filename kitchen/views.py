@@ -1503,8 +1503,6 @@ def kitchen_purchasing_report(request):
 
 
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
-
-@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def kitchen_batch_profitability_report(request):
     """Dedicated FIFO batch profitability and traceability register."""
     hotels = get_accessible_hotels(request.user)
@@ -1553,6 +1551,7 @@ def kitchen_batch_profitability_report(request):
         "batch_rows": rows, "totals": totals, "batch_count": len(rows),
     })
 
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def kitchen_inventory_report(request):
     """Current Kitchen stock position and FIFO valuation with a dated movement register."""
     from django.db.models import Q
