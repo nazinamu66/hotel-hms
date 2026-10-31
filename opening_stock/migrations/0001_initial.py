@@ -7,7 +7,7 @@ import decimal
 class Migration(migrations.Migration):
     initial = True
     dependencies = [
-        ("accounting", "0016_opening_balance_equity"),
+        ("accounting", "0017_journalentry_opening_entry_type"),
         ("inventory", "0053_stockcostlayer_source_reference"),
         ("linen", "0013_roomlinensetup"),
         ("maintenance", "0009_equipment_and_locations"),
