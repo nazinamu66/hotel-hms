@@ -1,0 +1,18 @@
+{% extends "base/base.html" %}
+{% block title %}Kitchen Shift Handover{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div><h2>Kitchen Shift Handover</h2><p class="text-muted mb-0">Shared kitchen stock recorded between outgoing and incoming shifts.</p></div>
+    <a class="btn btn-primary" href="{% url 'kitchen_handover_create' %}">New handover</a>
+  </div>
+  <div class="card"><div class="table-responsive"><table class="table table-hover mb-0">
+    <thead><tr><th>Reference</th><th>Outgoing</th><th>Incoming</th><th>Date</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for h in handovers %}<tr>
+      <td>#{{ h.pk }}</td><td>{{ h.outgoing_user.get_full_name|default:h.outgoing_user.username }}</td>
+      <td>{{ h.incoming_user.get_full_name|default:h.incoming_user.username }}</td><td>{{ h.created_at|date:"d M Y H:i" }}</td>
+      <td>{{ h.get_status_display }}</td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'kitchen_handover_detail' h.pk %}">View</a></td>
+    </tr>{% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No shift handovers recorded yet.</td></tr>{% endfor %}</tbody>
+  </table></div></div>
+</div>
+{% endblock %}
