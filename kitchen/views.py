@@ -41,6 +41,9 @@ from .models import (
     KitchenTicket,
     KitchenTicketItem,
     KitchenSpoilageRecord,
+    KitchenStorageLocation,
+    KitchenShiftHandover,
+    KitchenShiftHandoverLine,
 )
 
 from .forms import (
@@ -3185,3 +3188,135 @@ def kitchen_ticket_served(request, ticket_id):
     )
 
     return redirect("kitchen_dashboard")
+
+def _current_kitchen(user):
+    department = getattr(user, "department", None)
+    if user.role != "KITCHEN" or not department or department.department_type != "KITCHEN":
+        raise PermissionDenied("You must be assigned to a Kitchen department.")
+    return department
+
+
+def _is_head_chef(user, department):
+    return bool(user.role == "KITCHEN" and user.department_id == department.pk and user.is_department_head)
+
+
+@role_required("KITCHEN")
+def kitchen_handover_list(request):
+    department = _current_kitchen(request.user)
+    handovers = KitchenShiftHandover.objects.filter(department=department).select_related(
+        "outgoing_user", "incoming_user"
+    ).prefetch_related("lines__location").order_by("-created_at")
+    if not _is_head_chef(request.user, department):
+        handovers = handovers.exclude(lines__location__access_level="RESTRICTED").distinct()
+    return render(request, "kitchen/handover/list.html", {"handovers": handovers})
+
+
+@role_required("KITCHEN")
+def kitchen_handover_create(request):
+    department = _current_kitchen(request.user)
+    shared_locations = KitchenStorageLocation.objects.filter(department=department, access_level="SHARED", is_active=True)
+    colleagues = User.objects.filter(role="KITCHEN", department=department, is_active=True).exclude(
+        pk=request.user.pk
+    ).order_by("first_name", "username")
+    if request.method == "POST":
+        incoming = get_object_or_404(colleagues, pk=request.POST.get("incoming_user"))
+        rows, index = [], 0
+        while f"item_name_{index}" in request.POST:
+            name = request.POST.get(f"item_name_{index}", "").strip()
+            quantity_raw = request.POST.get(f"quantity_{index}", "").strip()
+            unit = request.POST.get(f"unit_{index}", "").strip()
+            location_id = request.POST.get(f"location_{index}", "").strip()
+            if name or quantity_raw or unit or location_id:
+                try:
+                    location = shared_locations.get(pk=location_id)
+                    quantity = Decimal(quantity_raw)
+                except (KitchenStorageLocation.DoesNotExist, InvalidOperation, TypeError, ValueError):
+                    messages.error(request, f"Check item, storage location and quantity on line {index + 1}.")
+                    return redirect("kitchen_handover_create")
+                if not name or not unit or not quantity.is_finite() or quantity < 0:
+                    messages.error(request, f"Line {index + 1} requires an item, unit and non-negative quantity.")
+                    return redirect("kitchen_handover_create")
+                rows.append((location, name, unit, quantity))
+            index += 1
+        if not rows:
+            messages.error(request, "Add at least one item to the handover.")
+            return redirect("kitchen_handover_create")
+        with transaction.atomic():
+            handover = KitchenShiftHandover.objects.create(
+                department=department, outgoing_user=request.user, incoming_user=incoming,
+                status="AWAITING_RECEIPT", outgoing_note=request.POST.get("outgoing_note", "").strip(),
+                submitted_at=timezone.now(),
+            )
+            KitchenShiftHandoverLine.objects.bulk_create([
+                KitchenShiftHandoverLine(
+                    handover=handover, location=loc, item_name=name, unit=unit, outgoing_quantity=qty
+                ) for loc, name, unit, qty in rows
+            ])
+        messages.success(request, "Kitchen handover submitted to the incoming staff member.")
+        return redirect("kitchen_handover_list")
+    return render(request, "kitchen/handover/create.html", {"locations": shared_locations, "colleagues": colleagues})
+
+
+@role_required("KITCHEN")
+@transaction.atomic
+def kitchen_handover_detail(request, pk):
+    department = _current_kitchen(request.user)
+    handover = get_object_or_404(
+        KitchenShiftHandover.objects.select_for_update().select_related(
+            "department", "outgoing_user", "incoming_user"
+        ).prefetch_related("lines__location"), pk=pk, department=department
+    )
+    is_head = _is_head_chef(request.user, department)
+    if not is_head and handover.lines.filter(location__access_level="RESTRICTED").exists():
+        raise PermissionDenied("Restricted storage handovers are visible only to the Head Chef.")
+    can_confirm = request.user.pk == handover.incoming_user_id and handover.status == "AWAITING_RECEIPT"
+    if request.method == "POST":
+        if not can_confirm:
+            raise PermissionDenied("Only the designated incoming staff member can confirm this handover.")
+        discrepancy = False
+        for line in handover.lines.select_for_update().all():
+            try:
+                received = Decimal(request.POST.get(f"received_{line.pk}", "").strip())
+            except (InvalidOperation, TypeError, ValueError):
+                messages.error(request, f"Enter a valid received quantity for {line.item_name}.")
+                return redirect("kitchen_handover_detail", pk=handover.pk)
+            if not received.is_finite() or received < 0:
+                messages.error(request, f"Received quantity for {line.item_name} cannot be negative.")
+                return redirect("kitchen_handover_detail", pk=handover.pk)
+            note = request.POST.get(f"note_{line.pk}", "").strip()
+            if received != line.outgoing_quantity:
+                discrepancy = True
+                if not note:
+                    messages.error(request, f"Explain the difference for {line.item_name}.")
+                    return redirect("kitchen_handover_detail", pk=handover.pk)
+            line.incoming_quantity, line.discrepancy_note = received, note
+            line.save(update_fields=["incoming_quantity", "discrepancy_note"])
+        handover.incoming_note = request.POST.get("incoming_note", "").strip()
+        handover.confirmed_at = timezone.now()
+        handover.status = "VARIANCE" if discrepancy else "CONFIRMED"
+        handover.save(update_fields=["incoming_note", "confirmed_at", "status"])
+        messages.success(request, "Handover confirmation recorded.")
+        return redirect("kitchen_handover_detail", pk=handover.pk)
+    return render(request, "kitchen/handover/detail.html", {
+        "handover": handover, "can_confirm": can_confirm, "is_head": is_head,
+    })
+
+
+@role_required("KITCHEN")
+def kitchen_storage_register(request):
+    department = _current_kitchen(request.user)
+    if not _is_head_chef(request.user, department):
+        raise PermissionDenied("Only the Head Chef can access restricted storage.")
+    locations = KitchenStorageLocation.objects.filter(department=department).order_by("access_level", "name")
+    if request.method == "POST":
+        name, access = request.POST.get("name", "").strip(), request.POST.get("access_level", "")
+        if not name or access not in {"SHARED", "RESTRICTED"}:
+            messages.error(request, "Enter a storage name and valid access level.")
+        else:
+            KitchenStorageLocation.objects.get_or_create(
+                department=department, name=name,
+                defaults={"access_level": access, "created_by": request.user},
+            )
+            messages.success(request, "Storage location saved.")
+        return redirect("kitchen_storage_register")
+    return render(request, "kitchen/handover/storage.html", {"locations": locations})
