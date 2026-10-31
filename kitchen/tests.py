@@ -23,6 +23,8 @@ from kitchen.models import (
     RecipeVersion,
     RecipeVersionItem,
     KitchenSpoilageRecord,
+    KitchenStorageLocation,
+    KitchenRestrictedStockRecord,
 )
 
 
@@ -2783,3 +2785,107 @@ class KitchenPurchasingReportTests(TestCase):
         self.assertEqual(row["payments"].count(), 1)
         self.assertEqual(row["payments"].get().reference, "KPR-PAY-001")
         self.assertEqual(row["reimbursement"].status, "PENDING")
+
+
+
+class KitchenRestrictedStockAccessTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.org = Organization.objects.create(name="Restricted Stock Test Org")
+        cls.hotel = Hotel.objects.create(organization=cls.org, name="Restricted Stock Test Hotel")
+        cls.department = Department.objects.create(
+            hotel=cls.hotel, department_type="KITCHEN",
+            code="RST", name="Restricted Stock Kitchen",
+        )
+        cls.head = User.objects.create_user(
+            username="restricted_head", password="test-password", role="KITCHEN",
+            hotel=cls.hotel, department=cls.department, is_department_head=True,
+        )
+        cls.staff = User.objects.create_user(
+            username="restricted_staff", password="test-password", role="KITCHEN",
+            hotel=cls.hotel, department=cls.department, is_department_head=False,
+        )
+        cls.freezer = KitchenStorageLocation.objects.create(
+            department=cls.department, name="Locked Freezer 1", access_level="RESTRICTED",
+            created_by=cls.head,
+        )
+        cls.freezer_two = KitchenStorageLocation.objects.create(
+            department=cls.department, name="Locked Freezer 2", access_level="RESTRICTED",
+            created_by=cls.head,
+        )
+        cls.general = KitchenStorageLocation.objects.create(
+            department=cls.department, name="General Fridge", access_level="SHARED",
+            created_by=cls.head,
+        )
+
+    def test_only_head_chef_can_view_restricted_register(self):
+        self.client.force_login(self.staff)
+        self.assertEqual(self.client.get(reverse("kitchen_restricted_stock")).status_code, 403)
+        self.client.force_login(self.head)
+        response = self.client.get(reverse("kitchen_restricted_stock"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Locked Freezer 1")
+        self.assertContains(response, "Locked Freezer 2")
+
+    def test_regular_staff_cannot_post_restricted_stock_record(self):
+        self.client.force_login(self.staff)
+        response = self.client.post(reverse("kitchen_restricted_stock"), {
+            "record_type": "COUNT",
+            "source_location": str(self.freezer.pk),
+            "item_name": "Raw fish",
+            "quantity": "5",
+            "unit": "lb",
+            "reason": "Shift count",
+        })
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(KitchenRestrictedStockRecord.objects.exists())
+
+    def test_head_chef_can_record_count_without_inventory_movement(self):
+        movement_count = StockMovement.objects.count()
+        self.client.force_login(self.head)
+        response = self.client.post(reverse("kitchen_restricted_stock"), {
+            "record_type": "COUNT",
+            "source_location": str(self.freezer.pk),
+            "item_name": "Raw fish",
+            "quantity": "5.000",
+            "unit": "lb",
+            "reason": "Opening physical count",
+        })
+        self.assertEqual(response.status_code, 302)
+        record = KitchenRestrictedStockRecord.objects.get()
+        self.assertEqual(record.record_type, "COUNT")
+        self.assertEqual(record.quantity, Decimal("5.000"))
+        self.assertEqual(record.recorded_by, self.head)
+        self.assertEqual(StockMovement.objects.count(), movement_count)
+
+    def test_head_chef_can_log_transfer_to_general_fridge_without_stock_posting(self):
+        movement_count = StockMovement.objects.count()
+        self.client.force_login(self.head)
+        response = self.client.post(reverse("kitchen_restricted_stock"), {
+            "record_type": "TRANSFER",
+            "source_location": str(self.freezer.pk),
+            "destination_location": str(self.general.pk),
+            "item_name": "Fish portions",
+            "quantity": "10",
+            "unit": "portions",
+            "reason": "Move for current service",
+        })
+        self.assertEqual(response.status_code, 302)
+        record = KitchenRestrictedStockRecord.objects.get()
+        self.assertEqual(record.destination_location, self.general)
+        self.assertEqual(record.quantity, Decimal("10"))
+        self.assertEqual(StockMovement.objects.count(), movement_count)
+
+    def test_restricted_register_is_scoped_to_current_kitchen_department(self):
+        other_department = Department.objects.create(
+            hotel=self.hotel, department_type="KITCHEN",
+            code="RST2", name="Other Restricted Kitchen",
+        )
+        KitchenStorageLocation.objects.create(
+            department=other_department, name="Other Hotel Freezer",
+            access_level="RESTRICTED", created_by=self.head,
+        )
+        self.client.force_login(self.head)
+        response = self.client.get(reverse("kitchen_restricted_stock"))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Other Hotel Freezer")
