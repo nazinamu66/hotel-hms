@@ -1,41 +1,33 @@
 {% extends "base/base.html" %}
 {% block title %}New Kitchen Handover{% endblock %}
 {% block content %}
-<div class="container py-4">
-  <h2>Close Shift & Hand Over</h2>
-  <p class="text-muted">Record the items physically available in shared kitchen storage. Restricted freezers are excluded.</p>
-  {% if not locations %}<div class="alert alert-warning">No shared storage locations have been configured. Ask the Head Chef to configure the kitchen storage register.</div>{% else %}
-  <form method="post" class="card card-body">{% csrf_token %}
-    <div class="mb-3"><label class="form-label">Incoming staff member</label><select class="form-select" name="incoming_user" required><option value="">Select staff member</option>{% for u in colleagues %}<option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></div>
-    <h5>Handover items</h5>
-    <div id="handover-lines">
-      <div class="row g-2 mb-2 handover-line">
-        <div class="col-md-3"><input class="form-control" name="item_name_0" placeholder="Item (e.g. Fish portions)" required></div>
-        <div class="col-md-2"><input class="form-control" type="number" min="0" step="0.001" name="quantity_0" placeholder="Quantity" required></div>
-        <div class="col-md-2"><input class="form-control" name="unit_0" placeholder="Unit (portions, kg)" required></div>
-        <div class="col-md-3"><select class="form-select" name="location_0" required>{% for loc in locations %}<option value="{{ loc.pk }}">{{ loc.name }}</option>{% endfor %}</select></div>
+<style>
+.khc-page{max-width:1250px;margin:0 auto;color:#172033}.khc-head{margin-bottom:23px}.khc-kicker{display:inline-block;padding:6px 10px;border-radius:999px;background:#edf3ff;border:1px solid #dce7ff;color:#3157a4;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase}.khc-head h1{margin:11px 0 6px;font-size:clamp(1.55rem,2.5vw,2rem);font-weight:850;letter-spacing:-.04em}.khc-head p{margin:0;color:#64748b;line-height:1.55}.khc-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.045);overflow:hidden}.khc-section{padding:21px;border-bottom:1px solid #edf0f5}.khc-section:last-child{border-bottom:0}.khc-section h2{margin:0 0 5px;font-size:.96rem;font-weight:850}.khc-section>p{margin:0 0 17px;color:#8793a4;font-size:.8rem}.khc-field label{display:block;margin-bottom:7px;color:#344256;font-size:.82rem;font-weight:750}.khc-field input,.khc-field select,.khc-field textarea{display:block;width:100%;min-width:0;min-height:44px;box-sizing:border-box;padding:10px 12px;border:1px solid #d6deea;border-radius:10px;background:#fff;color:#172033;font:inherit;font-size:.9rem}.khc-field textarea{min-height:100px;resize:vertical}.khc-field input:focus,.khc-field select:focus,.khc-field textarea:focus{outline:0;border-color:#7aa7f8;box-shadow:0 0 0 4px rgba(37,99,235,.11)}.khc-incoming{max-width:520px}.khc-line{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(100px,.65fr) minmax(120px,.7fr) minmax(170px,1fr) 42px;gap:11px;align-items:end;padding:14px;margin-bottom:10px;border:1px solid #e8edf4;border-radius:12px;background:#fbfcfe}.khc-line:last-child{margin-bottom:0}.khc-remove{width:42px;height:44px;border:1px solid #f1d4d4;border-radius:9px;background:#fff7f7;color:#c24141;font-size:1.1rem;cursor:pointer}.khc-add{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:9px 13px;border:1px solid #d7e2f5;border-radius:9px;background:#f7faff;color:#2459d3;font:inherit;font-size:.8rem;font-weight:800;cursor:pointer}.khc-actions{display:flex;justify-content:flex-end;gap:10px;padding:18px 21px;background:#fbfcfe}.khc-submit,.khc-cancel{display:inline-flex;align-items:center;justify-content:center;min-height:43px;padding:10px 16px;border-radius:10px;font:inherit;font-size:.84rem;font-weight:800;text-decoration:none;cursor:pointer}.khc-submit{border:0;background:#2459d3;color:#fff}.khc-submit:hover{background:#1d4ed8;color:#fff}.khc-cancel{border:1px solid #d6deea;background:#fff;color:#475569}.khc-alert{padding:14px 16px;border:1px solid #f3d49a;border-radius:11px;background:#fffbeb;color:#92400e;font-size:.85rem}
+@media(max-width:900px){.khc-line{grid-template-columns:repeat(2,minmax(0,1fr))}.khc-remove{grid-column:2;justify-self:end}}@media(max-width:600px){.khc-section{padding:16px}.khc-line{grid-template-columns:1fr;padding:12px}.khc-remove{grid-column:auto;width:100%}.khc-actions{flex-direction:column-reverse;padding:16px}.khc-submit,.khc-cancel{width:100%}}
+</style>
+<div class="khc-page">
+  <header class="khc-head"><span class="khc-kicker">Kitchen operations · Shift transition</span><h1>Close Shift &amp; Hand Over</h1><p>Record the shared kitchen stock physically available for the incoming staff member. Restricted storage is excluded from this handover.</p></header>
+  {% if not locations %}<div class="khc-alert">No shared storage locations have been configured. Ask the Head Chef to configure the kitchen storage register.</div>{% else %}
+  <form method="post" class="khc-card">{% csrf_token %}
+    <section class="khc-section"><h2>Incoming staff member</h2><p>Choose the colleague taking responsibility for the next shift.</p><div class="khc-field khc-incoming"><label for="khc-incoming">Incoming staff member</label><select id="khc-incoming" name="incoming_user" required><option value="">Select staff member</option>{% for u in colleagues %}<option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></div></section>
+    <section class="khc-section"><h2>Stock handover items</h2><p>Enter each item, its quantity and the shared storage location where it is held.</p>
+      <div id="handover-lines">
+        <div class="khc-line handover-line">
+          <div class="khc-field"><label>Item name</label><input name="item_name_0" placeholder="e.g. Fish portions" required></div>
+          <div class="khc-field"><label>Quantity</label><input type="number" min="0" step="0.001" name="quantity_0" placeholder="0.000" required></div>
+          <div class="khc-field"><label>Unit</label><input name="unit_0" placeholder="kg, portions" required></div>
+          <div class="khc-field"><label>Storage location</label><select name="location_0" required>{% for loc in locations %}<option value="{{ loc.pk }}">{{ loc.name }}</option>{% endfor %}</select></div>
+          <button type="button" class="khc-remove" aria-label="Remove item" title="Remove item" disabled>×</button>
+        </div>
       </div>
-    </div>
-    <button type="button" class="btn btn-outline-secondary mb-3" id="add-line">Add another item</button>
-    <div class="mb-3"><label class="form-label">Outgoing shift notes</label><textarea class="form-control" name="outgoing_note" rows="3"></textarea></div>
-    <div class="d-flex gap-2"><button class="btn btn-primary" type="submit">Submit handover</button><a class="btn btn-light" href="{% url 'kitchen_handover_list' %}">Cancel</a></div>
+      <button type="button" class="khc-add" id="add-line">＋ Add another item</button>
+    </section>
+    <section class="khc-section"><h2>Outgoing shift notes</h2><p>Share anything the incoming colleague should know.</p><div class="khc-field"><label for="khc-notes">Handover notes (optional)</label><textarea id="khc-notes" name="outgoing_note" rows="4" placeholder="Outstanding preparation, low stock, items requiring attention..."></textarea></div></section>
+    <div class="khc-actions"><a class="khc-cancel" href="{% url 'kitchen_handover_list' %}">Cancel</a><button class="khc-submit" type="submit">Submit handover →</button></div>
   </form>{% endif %}
 </div>
 <script>
-(function(){
- const wrap=document.getElementById("handover-lines");
- const add=document.getElementById("add-line");
- if(!wrap||!add)return;
- let index=1;
- add.addEventListener("click",function(){
-   const first=wrap.querySelector(".handover-line");
-   const row=first.cloneNode(true);
-   row.querySelectorAll("input,select").forEach(function(el){
-     el.name=el.name.replace(/_0$/,"_"+index);
-     el.value="";
-   });
-   wrap.appendChild(row); index++;
- });
-})();
+(function(){const wrap=document.getElementById("handover-lines"),add=document.getElementById("add-line");if(!wrap||!add)return;let index=1;function updateRemoveButtons(){const rows=wrap.querySelectorAll(".handover-line");rows.forEach(row=>{const button=row.querySelector(".khc-remove");if(button)button.disabled=rows.length===1;});}add.addEventListener("click",function(){const first=wrap.querySelector(".handover-line"),row=first.cloneNode(true);row.querySelectorAll("input,select").forEach(function(el){el.name=el.name.replace(/_\d+$/,"_"+index);el.value="";});const remove=row.querySelector(".khc-remove");remove.disabled=false;remove.addEventListener("click",function(){row.remove();updateRemoveButtons();});wrap.appendChild(row);index++;updateRemoveButtons();});updateRemoveButtons();})();
 </script>
+{% endif %}
 {% endblock %}
