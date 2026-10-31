@@ -45,6 +45,7 @@ from .models import (
     KitchenShiftHandover,
     KitchenShiftHandoverLine,
     KitchenRestrictedStockRecord,
+    KitchenRestrictedStockLayer,
 )
 
 from .forms import (
@@ -2466,6 +2467,7 @@ def direct_purchase_receive(request, pk):
             product=item.product,
             department=kitchen,
             purchase_item=None,
+            source_reference=f"DP-{dp.id}-ITEM-{item.pk}",
             quantity_received=received_now,
             quantity_remaining=received_now,
             unit_cost=item.unit_cost,
@@ -3331,6 +3333,12 @@ def kitchen_restricted_stock(request):
     if not _is_head_chef(request.user, department):
         raise PermissionDenied("Only the Head Chef can access restricted stock records.")
 
+    from .services.restricted_stock import (
+        transfer_general_to_restricted,
+        release_restricted_to_general,
+        STOCK_PRODUCT_TYPES,
+    )
+
     restricted_locations = KitchenStorageLocation.objects.filter(
         department=department, access_level="RESTRICTED", is_active=True
     )
@@ -3342,77 +3350,103 @@ def kitchen_restricted_stock(request):
     ).select_related("source_location", "destination_location", "recorded_by", "product")
 
     if request.method == "POST":
-        record_type = request.POST.get("record_type", "").strip()
-        source_id = request.POST.get("source_location", "").strip()
-        destination_id = request.POST.get("destination_location", "").strip()
-        item_name = request.POST.get("item_name", "").strip()
-        unit = request.POST.get("unit", "").strip()
+        action = request.POST.get("action", "").strip()
         reason = request.POST.get("reason", "").strip()
         raw_quantity = request.POST.get("quantity", "").strip()
-        product_id = request.POST.get("product", "").strip()
-
         try:
             quantity = Decimal(raw_quantity)
-            source = restricted_locations.get(pk=source_id)
-        except (InvalidOperation, TypeError, ValueError, KitchenStorageLocation.DoesNotExist):
-            messages.error(request, "Choose a valid restricted location and enter a valid quantity.")
+            if not quantity.is_finite() or quantity <= 0:
+                raise InvalidOperation
+        except (InvalidOperation, TypeError, ValueError):
+            messages.error(request, "Enter a valid positive quantity.")
             return redirect("kitchen_restricted_stock")
 
-        if not quantity.is_finite() or quantity <= 0 or not item_name or not unit or not reason:
-            messages.error(request, "Item, positive quantity, unit and reason are required.")
-            return redirect("kitchen_restricted_stock")
-
-        destination = None
-        if record_type == "TRANSFER":
-            try:
-                destination = shared_locations.get(pk=destination_id)
-            except (KitchenStorageLocation.DoesNotExist, ValueError, TypeError):
-                messages.error(request, "Choose a valid shared destination for this transfer.")
-                return redirect("kitchen_restricted_stock")
-            if destination.pk == source.pk:
-                messages.error(request, "Source and destination must be different.")
-                return redirect("kitchen_restricted_stock")
-        elif record_type != "COUNT":
-            messages.error(request, "Choose a physical count or location transfer.")
+        if not reason:
+            messages.error(request, "A reason is required for every restricted-stock entry.")
             return redirect("kitchen_restricted_stock")
 
         product = None
+        product_id = request.POST.get("product", "").strip()
         if product_id:
             try:
                 product = Product.objects.get(
-                    pk=product_id,
-                    hotel_id=department.hotel_id,
-                    product_type="RAW",
+                    pk=product_id, hotel_id=department.hotel_id,
+                    product_type__in=STOCK_PRODUCT_TYPES,
                 )
             except (Product.DoesNotExist, ValueError, TypeError):
-                messages.error(request, "Choose a RAW ingredient belonging to this hotel's inventory.")
+                messages.error(request, "Choose a stock product belonging to this hotel's inventory.")
                 return redirect("kitchen_restricted_stock")
 
-        KitchenRestrictedStockRecord.objects.create(
-            department=department,
-            record_type=record_type,
-            source_location=source,
-            destination_location=destination,
-            product=product,
-            item_name=item_name,
-            quantity=quantity,
-            unit=unit,
-            reason=reason,
-            recorded_by=request.user,
-        )
-        messages.success(
-            request,
-            "Restricted-stock physical count recorded." if record_type == "COUNT"
-            else "Restricted-to-shared storage transfer recorded."
-        )
+        try:
+            if action == "TO_RESTRICTED":
+                if product is None:
+                    raise ValidationError("Choose a product to move into restricted storage.")
+                source = shared_locations.get(pk=request.POST.get("source_location"))
+                destination = restricted_locations.get(pk=request.POST.get("destination_location"))
+                transfer_general_to_restricted(
+                    product=product, department=department, source_location=source,
+                    location=destination, quantity=quantity, user=request.user, reason=reason,
+                )
+                messages.success(request, f"{quantity} {product.base_unit} of {product.name} moved into {destination.name}.")
+
+            elif action == "RELEASE":
+                if product is None:
+                    raise ValidationError("Choose a product to release.")
+                source = restricted_locations.get(pk=request.POST.get("source_location"))
+                destination = shared_locations.get(pk=request.POST.get("destination_location"))
+                release_restricted_to_general(
+                    product=product, department=department, location=source,
+                    destination=destination, quantity=quantity,
+                    user=request.user, reason=reason,
+                )
+                messages.success(request, f"{quantity} {product.base_unit} of {product.name} released to {destination.name}.")
+
+            elif action == "COUNT":
+                source = restricted_locations.get(pk=request.POST.get("source_location"))
+                item_name = product.name if product else request.POST.get("item_name", "").strip()
+                unit = product.base_unit if product else request.POST.get("unit", "").strip()
+                if not item_name or not unit:
+                    raise ValidationError("Enter an item name and unit, or select a product.")
+                KitchenRestrictedStockRecord.objects.create(
+                    department=department, record_type="COUNT", source_location=source,
+                    product=product, item_name=item_name, quantity=quantity,
+                    unit=unit, reason=reason, recorded_by=request.user,
+                )
+                messages.success(request, "Physical count snapshot recorded. It does not change the stock balance.")
+            else:
+                raise ValidationError("Choose a valid restricted-stock action.")
+
+        except (
+            ValidationError, KitchenStorageLocation.DoesNotExist,
+            ValueError, TypeError,
+        ) as exc:
+            messages.error(request, "; ".join(exc.messages) if hasattr(exc, "messages") else str(exc))
         return redirect("kitchen_restricted_stock")
 
     products = Product.objects.filter(
-        hotel_id=department.hotel_id, product_type="RAW"
+        hotel_id=department.hotel_id, product_type__in=STOCK_PRODUCT_TYPES,
+        is_active=True,
     ).order_by("name")
+    general_stock = (
+        Stock.objects.filter(
+            department=department, quantity__gt=0,
+            product__product_type__in=STOCK_PRODUCT_TYPES,
+        ).select_related("product").order_by("product__name")
+    )
+    restricted_stock = (
+        KitchenRestrictedStockLayer.objects.filter(
+            department=department, quantity_remaining__gt=0
+        )
+        .values(
+            "location_id", "location__name", "product_id",
+            "product__name", "product__base_unit",
+        )
+        .annotate(quantity=Sum("quantity_remaining"))
+        .order_by("location__name", "product__name")
+    )
     return render(request, "kitchen/handover/restricted_stock.html", {
         "restricted_locations": restricted_locations,
-        "shared_locations": shared_locations,
-        "records": records,
-        "products": products,
+        "shared_locations": shared_locations, "records": records,
+        "products": products, "general_stock": general_stock,
+        "restricted_stock": restricted_stock,
     })
