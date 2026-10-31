@@ -25,6 +25,7 @@ from kitchen.models import (
     KitchenSpoilageRecord,
     KitchenStorageLocation,
     KitchenRestrictedStockRecord,
+    KitchenRestrictedStockLayer,
 )
 
 
@@ -2858,60 +2859,97 @@ class KitchenRestrictedStockAccessTests(TestCase):
         self.assertEqual(record.recorded_by, self.head)
         self.assertEqual(StockMovement.objects.count(), movement_count)
 
-    def test_head_chef_can_log_transfer_to_general_fridge_without_stock_posting(self):
-        movement_count = StockMovement.objects.count()
+    def test_head_chef_moves_general_stock_into_restricted_fifo_ledger(self):
+        product = Product.objects.create(
+            hotel=self.hotel, name="Raw Fish", sku="RESTRICTED-FISH-001",
+            product_type="RAW", base_unit="kg", cost_price=Decimal("20.00"),
+        )
+        stock = Stock.objects.create(product=product, department=self.department, quantity=Decimal("10.000"))
+        source_layer = StockCostLayer.objects.create(
+            product=product, department=self.department,
+            quantity_received=Decimal("10.000"), quantity_remaining=Decimal("10.000"),
+            unit_cost=Decimal("20.0000"), source_reference="DP-12-ITEM-3",
+        )
         self.client.force_login(self.head)
         response = self.client.post(reverse("kitchen_restricted_stock"), {
-            "record_type": "TRANSFER",
-            "source_location": str(self.freezer.pk),
-            "destination_location": str(self.general.pk),
-            "item_name": "Fish portions",
-            "quantity": "10",
-            "unit": "portions",
-            "reason": "Move for current service",
+            "action": "TO_RESTRICTED", "source_location": str(self.general.pk),
+            "destination_location": str(self.freezer.pk), "product": str(product.pk),
+            "quantity": "4", "reason": "Reserve for service",
         })
         self.assertEqual(response.status_code, 302)
-        record = KitchenRestrictedStockRecord.objects.get()
-        self.assertEqual(record.destination_location, self.general)
-        self.assertEqual(record.quantity, Decimal("10"))
-        self.assertEqual(StockMovement.objects.count(), movement_count)
+        stock.refresh_from_db()
+        source_layer.refresh_from_db()
+        restricted = KitchenRestrictedStockLayer.objects.get(product=product, location=self.freezer)
+        self.assertEqual(stock.quantity, Decimal("6.000"))
+        self.assertEqual(source_layer.quantity_remaining, Decimal("6.000"))
+        self.assertEqual(restricted.quantity_remaining, Decimal("4.000"))
+        self.assertEqual(restricted.unit_cost, Decimal("20.0000"))
+        self.assertEqual(restricted.source_reference, "DP-12-ITEM-3")
+        record = KitchenRestrictedStockRecord.objects.get(record_type="TRANSFER")
+        self.assertEqual(record.source_location, self.general)
+        self.assertEqual(record.destination_location, self.freezer)
 
-    def test_product_link_must_be_raw_and_belong_to_current_hotel(self):
-        other_hotel = Hotel.objects.create(
-            organization=self.org,
-            name="Other Restricted Stock Hotel",
+    def test_head_chef_releases_restricted_stock_with_original_fifo_provenance(self):
+        product = Product.objects.create(
+            hotel=self.hotel, name="Prepared Rice", sku="RESTRICTED-RICE-001",
+            product_type="FOOD", base_unit="portion", usage_type="RESALE",
         )
-        non_raw_product = Product.objects.create(
-            hotel=self.hotel,
-            name="Prepared Rice",
-            sku="RESTRICTED-FOOD-001",
-            product_type="FOOD",
-            base_unit="portion",
+        stock = Stock.objects.create(product=product, department=self.department, quantity=Decimal("0.000"))
+        source_layer = StockCostLayer.objects.create(
+            product=product, department=self.department,
+            quantity_received=Decimal("5.000"), quantity_remaining=Decimal("0.000"),
+            unit_cost=Decimal("145.5000"), source_reference="PROD-77",
         )
-        foreign_raw_product = Product.objects.create(
-            hotel=other_hotel,
-            name="Foreign Raw Fish",
-            sku="RESTRICTED-RAW-001",
-            product_type="RAW",
-            base_unit="kg",
+        KitchenRestrictedStockLayer.objects.create(
+            department=self.department, location=self.freezer, product=product,
+            source_cost_layer=source_layer, source_reference="PROD-77",
+            quantity_received=Decimal("5.000"), quantity_remaining=Decimal("5.000"),
+            unit_cost=Decimal("145.5000"),
         )
         self.client.force_login(self.head)
+        response = self.client.post(reverse("kitchen_restricted_stock"), {
+            "action": "RELEASE", "source_location": str(self.freezer.pk),
+            "destination_location": str(self.general.pk), "product": str(product.pk),
+            "quantity": "2", "reason": "Release for lunch",
+        })
+        self.assertEqual(response.status_code, 302)
+        stock.refresh_from_db()
+        restricted = KitchenRestrictedStockLayer.objects.get(product=product, location=self.freezer)
+        restored = StockCostLayer.objects.filter(
+            product=product, department=self.department,
+            quantity_remaining=Decimal("2.000"),
+        ).latest("id")
+        self.assertEqual(stock.quantity, Decimal("2.000"))
+        self.assertEqual(restricted.quantity_remaining, Decimal("3.000"))
+        self.assertEqual(restored.unit_cost, Decimal("145.5000"))
+        self.assertEqual(restored.source_reference, "PROD-77")
 
-        for product in (non_raw_product, foreign_raw_product):
-            with self.subTest(product=product.name):
-                response = self.client.post(reverse("kitchen_restricted_stock"), {
-                    "record_type": "COUNT",
-                    "source_location": str(self.freezer.pk),
-                    "item_name": product.name,
-                    "quantity": "2",
-                    "unit": product.base_unit,
-                    "reason": "Validation test",
-                    "product": str(product.pk),
-                })
-                self.assertEqual(response.status_code, 302)
-                self.assertFalse(
-                    KitchenRestrictedStockRecord.objects.filter(product=product).exists()
-                )
+    def test_prepared_food_can_be_counted_but_foreign_hotel_products_are_rejected(self):
+        other_hotel = Hotel.objects.create(
+            organization=self.org, name="Other Restricted Stock Hotel",
+        )
+        food_product = Product.objects.create(
+            hotel=self.hotel, name="Prepared Rice", sku="RESTRICTED-FOOD-001",
+            product_type="FOOD", base_unit="portion", usage_type="RESALE",
+        )
+        foreign_raw_product = Product.objects.create(
+            hotel=other_hotel, name="Foreign Raw Fish", sku="RESTRICTED-RAW-001",
+            product_type="RAW", base_unit="kg",
+        )
+        self.client.force_login(self.head)
+        response = self.client.post(reverse("kitchen_restricted_stock"), {
+            "action": "COUNT", "source_location": str(self.freezer.pk),
+            "product": str(food_product.pk), "quantity": "2", "reason": "Count check",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(KitchenRestrictedStockRecord.objects.filter(product=food_product).exists())
+
+        response = self.client.post(reverse("kitchen_restricted_stock"), {
+            "action": "COUNT", "source_location": str(self.freezer.pk),
+            "product": str(foreign_raw_product.pk), "quantity": "2", "reason": "Foreign product",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(KitchenRestrictedStockRecord.objects.filter(product=foreign_raw_product).exists())
 
     def test_restricted_register_is_scoped_to_current_kitchen_department(self):
         other_department = Department.objects.create(
