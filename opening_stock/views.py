@@ -52,7 +52,8 @@ def opening_stock_dashboard(request):
             messages.error(request, "Please correct the opening batch details.")
         elif action == "ADD_LINE":
             batch = get_object_or_404(OpeningStockBatch, pk=request.POST.get("batch_id"), hotel=hotel, status="DRAFT")
-            form = OpeningStockLineForm(request.POST, hotel=hotel)
+            from .models import OpeningStockLine
+            form = OpeningStockLineForm(request.POST, hotel=hotel, instance=OpeningStockLine(batch=batch))
             if form.is_valid():
                 line = form.save(commit=False)
                 line.batch = batch
@@ -73,6 +74,7 @@ def opening_stock_dashboard(request):
             except (ValidationError, ValueError) as exc:
                 messages.error(request, " ".join(getattr(exc, "messages", [str(exc)])))
             else:
+                batch.refresh_from_db()
                 messages.success(request, f"Opening balances posted successfully. Journal: {batch.journal_entry_id}.")
             return redirect(f"/opening-stock/?hotel={hotel.pk}&batch={batch.pk}")
 
