@@ -1,22 +1,5 @@
 {% extends "base/base.html" %}
-{% block title %}Head Chef Restricted Stock<script>
-(function () {
-  const source = document.querySelector('form input[name="action"][value="RELEASE"]')?.closest("form")?.querySelector('select[name="source_location"]');
-  const product = document.querySelector('form input[name="action"][value="RELEASE"]')?.closest("form")?.querySelector('select[name="product"]');
-  if (!source || !product) return;
-  function filterProducts() {
-    const locationId = source.value;
-    Array.from(product.options).forEach(option => {
-      if (!option.value) return;
-      option.hidden = !!locationId && option.dataset.location !== locationId;
-      if (option.hidden && option.selected) product.value = "";
-    });
-  }
-  source.addEventListener("change", filterProducts);
-  filterProducts();
-})();
-</script>
-{% endblock %}
+{% block title %}Head Chef Restricted Stock{% endblock %}
 {% block content %}
 <div class="container-fluid py-4">
   <div class="mb-4">
@@ -104,4 +87,109 @@
     </table></div>
   </div>
 </div>
+{% endblock %} content %}
+<div class="container-fluid py-4">
+  <div class="mb-4">
+    <h2 class="mb-1">Restricted Inventory</h2>
+    <p class="text-muted mb-0">Head Chef only · Restricted quantities are isolated from ordinary kitchen stock and retain their FIFO cost history.</p>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-xl-6">
+      <div class="card card-body h-100">
+        <h5>Move general stock into restricted storage</h5>
+        <p class="text-muted small">Production, direct purchases and Store transfers continue to arrive in General Kitchen Inventory first.</p>
+        <form method="post" class="row g-3">{% csrf_token %}
+          <input type="hidden" name="action" value="TO_RESTRICTED">
+          <div class="col-12"><label class="form-label">Product</label><select class="form-select" name="product" required>
+            <option value="">Choose product</option>
+            {% for stock in general_stock %}<option value="{{ stock.product_id }}">{{ stock.product.name }} — {{ stock.quantity }} {{ stock.product.base_unit }} in General Kitchen</option>{% endfor %}
+          </select></div>
+          <div class="col-md-6"><label class="form-label">General source</label><select class="form-select" name="source_location" required>
+            <option value="">Choose shared location</option>{% for loc in shared_locations %}<option value="{{ loc.pk }}">{{ loc.name }}</option>{% endfor %}
+          </select></div>
+          <div class="col-md-6"><label class="form-label">Restricted destination</label><select class="form-select" name="destination_location" required>
+            <option value="">Choose restricted location</option>{% for loc in restricted_locations %}<option value="{{ loc.pk }}">{{ loc.name }}</option>{% endfor %}
+          </select></div>
+          <div class="col-md-6"><label class="form-label">Quantity (base unit)</label><input class="form-control" type="number" name="quantity" min="0.001" step="0.001" required></div>
+          <div class="col-md-6"><label class="form-label">Reason</label><input class="form-control" name="reason" required placeholder="Reason for reserving stock"></div>
+          <div class="col-12"><button class="btn btn-primary" {% if not general_stock or not shared_locations or not restricted_locations %}disabled{% endif %}>Move into restricted</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="col-xl-6">
+      <div class="card card-body h-100">
+        <h5>Release restricted stock to general kitchen</h5>
+        <p class="text-muted small">The original FIFO unit cost and source reference are restored on release.</p>
+        <form method="post" class="row g-3">{% csrf_token %}
+          <input type="hidden" name="action" value="RELEASE">
+          <div class="col-md-6"><label class="form-label">Restricted source</label><select class="form-select" name="source_location" required>
+            <option value="">Choose restricted location</option>{% for loc in restricted_locations %}<option value="{{ loc.pk }}">{{ loc.name }}</option>{% endfor %}
+          </select></div>
+          <div class="col-md-6"><label class="form-label">General destination</label><select class="form-select" name="destination_location" required>
+            <option value="">Choose shared location</option>{% for loc in shared_locations %}<option value="{{ loc.pk }}">{{ loc.name }}</option>{% endfor %}
+          </select></div>
+          <div class="col-md-6"><label class="form-label">Product</label><select class="form-select" name="product" required>
+            <option value="">Choose product</option>{% for item in restricted_stock %}<option value="{{ item.product_id }}" data-location="{{ item.location_id }}">{{ item.product__name }} — {{ item.location__name }}: {{ item.quantity }} {{ item.product__base_unit }}</option>{% endfor %}
+          </select></div>
+          <div class="col-md-6"><label class="form-label">Quantity (base unit)</label><input class="form-control" type="number" name="quantity" min="0.001" step="0.001" required></div>
+          <div class="col-12"><label class="form-label">Reason</label><input class="form-control" name="reason" required placeholder="Reason for releasing stock"></div>
+          <div class="col-12"><button class="btn btn-outline-primary" {% if not restricted_stock or not shared_locations %}disabled{% endif %}>Release to general</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header fw-semibold">Restricted stock balances</div>
+    <div class="table-responsive"><table class="table table-hover mb-0">
+      <thead><tr><th>Location</th><th>Product</th><th class="text-end">Quantity</th></tr></thead>
+      <tbody>{% for item in restricted_stock %}<tr><td>{{ item.location__name }}</td><td>{{ item.product__name }}</td><td class="text-end">{{ item.quantity }} {{ item.product__base_unit }}</td></tr>
+      {% empty %}<tr><td colspan="3" class="text-center text-muted py-4">No restricted inventory currently held.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div>
+
+  <div class="card card-body mb-4">
+    <h5>Record a physical count</h5>
+    <p class="text-muted small">A count is an audit snapshot only; it does not silently create or remove inventory value. Stock corrections need an authorised inventory-adjustment workflow.</p>
+    <form method="post" class="row g-3">{% csrf_token %}
+      <input type="hidden" name="action" value="COUNT">
+      <div class="col-md-4"><label class="form-label">Restricted location</label><select class="form-select" name="source_location" required><option value="">Choose location</option>{% for loc in restricted_locations %}<option value="{{ loc.pk }}">{{ loc.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><label class="form-label">Product (optional)</label><select class="form-select" name="product"><option value="">Manual item</option>{% for p in products %}<option value="{{ p.pk }}">{{ p.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-2"><label class="form-label">Counted quantity</label><input class="form-control" type="number" name="quantity" min="0.001" step="0.001" required></div>
+      <div class="col-md-2"><label class="form-label">Unit</label><input class="form-control" name="unit" placeholder="kg, portions"></div>
+      <div class="col-md-6"><label class="form-label">Item name (if not linked)</label><input class="form-control" name="item_name"></div>
+      <div class="col-md-6"><label class="form-label">Reason</label><input class="form-control" name="reason" required placeholder="Physical count"></div>
+      <div class="col-12"><button class="btn btn-outline-secondary" {% if not restricted_locations %}disabled{% endif %}>Record count</button></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-header fw-semibold">Restricted inventory audit history</div>
+    <div class="table-responsive"><table class="table table-hover mb-0">
+      <thead><tr><th>Date/time</th><th>Type</th><th>Product / item</th><th>Quantity</th><th>From</th><th>To</th><th>Reason</th><th>Recorded by</th></tr></thead>
+      <tbody>{% for record in records %}<tr><td>{{ record.recorded_at|date:"d M Y H:i" }}</td><td>{{ record.get_record_type_display }}</td><td>{{ record.item_name }}</td><td>{{ record.quantity }} {{ record.unit }}</td><td>{{ record.source_location.name }}</td><td>{{ record.destination_location.name|default:"—" }}</td><td>{{ record.reason }}</td><td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td></tr>
+      {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No restricted inventory entries recorded.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div>
+</div>
+<script>
+(function () {
+  const form = document.querySelector('input[name="action"][value="RELEASE"]')?.closest("form");
+  const source = form?.querySelector('select[name="source_location"]');
+  const product = form?.querySelector('select[name="product"]');
+  if (!source || !product) return;
+  function filterProducts() {
+    const locationId = source.value;
+    Array.from(product.options).forEach(option => {
+      if (!option.value) return;
+      option.hidden = !!locationId && option.dataset.location !== locationId;
+      if (option.hidden && option.selected) product.value = "";
+    });
+  }
+  source.addEventListener("change", filterProducts);
+  filterProducts();
+})();
+</script>
 {% endblock %}
