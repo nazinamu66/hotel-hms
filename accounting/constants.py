@@ -51,6 +51,8 @@ OWNER_CAPITAL = "owner_capital"
 
 RETAINED_EARNINGS = "retained_earnings"
 
+OPENING_BALANCE_EQUITY = "opening_balance_equity"
+
 ROOM_REVENUE = "room_revenue"
 
 RESTAURANT_REVENUE = "restaurant_revenue"
@@ -268,6 +270,16 @@ DEFAULT_ACCOUNTS = [
         "code": "3001",
         "name": "Retained Earnings",
         "system_key": RETAINED_EARNINGS,
+        "type": EQUITY,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": False,
+    },
+
+    {
+        "code": "3002",
+        "name": "Opening Balance Equity",
+        "system_key": OPENING_BALANCE_EQUITY,
         "type": EQUITY,
         "is_system": True,
         "allow_posting": True,
