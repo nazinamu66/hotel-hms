@@ -1847,7 +1847,7 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertContains(response, "Food sales revenue")
         self.assertContains(response, "Production batch profitability")
         self.assertContains(response, "Open Batch Profitability Report")
-        self.assertNotIn("batch_profitability_rows", response.context)
+        self.assertNotIn("batch_rows", response.context)
 
     def test_batch_profitability_report_is_management_only_and_hotel_scoped(self):
         self.client.force_login(self.manager)
@@ -2032,7 +2032,7 @@ class KitchenManagementReportAccessTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        rows = response.context["batch_profitability_rows"]
+        rows = response.context["batch_rows"]
         self.assertEqual(len(rows), 1)
         row = rows[0]
         self.assertEqual(row["batch_id"], batch.pk)
@@ -2180,7 +2180,7 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         rows = {
             row["batch_id"]: row
-            for row in response.context["batch_profitability_rows"]
+            for row in response.context["batch_rows"]
         }
         first = rows[first_batch.pk]
         second = rows[second_batch.pk]
