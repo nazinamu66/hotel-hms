@@ -2220,13 +2220,13 @@ class KitchenManagementReportAccessTests(TestCase):
 
         self.client.force_login(self.manager)
         response = self.client.get(
-            reverse("kitchen_management_report"),
+            reverse("kitchen_batch_profitability_report"),
             {"from": "2026-01-01", "to": "2026-12-31"},
         )
 
         self.assertEqual(response.status_code, 200)
         row = next(
-            row for row in response.context["batch_profitability_rows"]
+            row for row in response.context["batch_rows"]
             if row["batch_id"] == batch.pk
         )
         self.assertEqual(row["traceability_status"], "UNATTRIBUTED")
