@@ -3379,9 +3379,13 @@ def kitchen_restricted_stock(request):
         product = None
         if product_id:
             try:
-                product = Product.objects.get(pk=product_id, hotel_id=department.hotel_id)
+                product = Product.objects.get(
+                    pk=product_id,
+                    hotel_id=department.hotel_id,
+                    product_type="RAW",
+                )
             except (Product.DoesNotExist, ValueError, TypeError):
-                messages.error(request, "Choose a product belonging to this hotel's inventory.")
+                messages.error(request, "Choose a RAW ingredient belonging to this hotel's inventory.")
                 return redirect("kitchen_restricted_stock")
 
         KitchenRestrictedStockRecord.objects.create(
