@@ -270,6 +270,7 @@ class JournalEntry(models.Model):
             ("PURCHASE", "Purchase"),
             ("CLOSING", "Closing"),
             ("PRODUCTION", "Production"),
+            ("OPENING", "Opening Balance"),
         ],
         default="NORMAL"
     )
