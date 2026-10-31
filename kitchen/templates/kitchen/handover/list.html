@@ -1,18 +1,18 @@
 {% extends "base/base.html" %}
 {% block title %}Kitchen Shift Handover{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div><h2>Kitchen Shift Handover</h2><p class="text-muted mb-0">Shared kitchen stock recorded between outgoing and incoming shifts.</p></div>
-    <a class="btn btn-primary" href="{% url 'kitchen_handover_create' %}">New handover</a>
-  </div>
-  <div class="card"><div class="table-responsive"><table class="table table-hover mb-0">
-    <thead><tr><th>Reference</th><th>Outgoing</th><th>Incoming</th><th>Date</th><th>Status</th><th></th></tr></thead>
-    <tbody>{% for h in handovers %}<tr>
-      <td>#{{ h.pk }}</td><td>{{ h.outgoing_user.get_full_name|default:h.outgoing_user.username }}</td>
-      <td>{{ h.incoming_user.get_full_name|default:h.incoming_user.username }}</td><td>{{ h.created_at|date:"d M Y H:i" }}</td>
-      <td>{{ h.get_status_display }}</td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'kitchen_handover_detail' h.pk %}">View</a></td>
-    </tr>{% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No shift handovers recorded yet.</td></tr>{% endfor %}</tbody>
-  </table></div></div>
+<style>
+.kh-page{max-width:1450px;margin:0 auto;color:#172033}.kh-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:24px}.kh-kicker{display:inline-block;padding:6px 10px;border-radius:999px;background:#edf3ff;border:1px solid #dce7ff;color:#3157a4;font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase}.kh-head h1{margin:11px 0 6px;font-size:clamp(1.55rem,2.5vw,2rem);font-weight:850;letter-spacing:-.04em}.kh-head p{margin:0;color:#64748b}.kh-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 16px;border-radius:10px;background:#2459d3;color:#fff;text-decoration:none;font-size:.85rem;font-weight:800;box-shadow:0 5px 13px rgba(37,99,235,.16)}.kh-primary:hover{background:#1d4ed8;color:#fff}.kh-card{overflow:hidden;background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.045)}.kh-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 21px;border-bottom:1px solid #edf0f5}.kh-card-head strong{font-size:.95rem;font-weight:850}.kh-card-head span{color:#8793a4;font-size:.78rem}.kh-table-wrap{overflow-x:auto}.kh-table{width:100%;min-width:720px;border-collapse:collapse}.kh-table th{padding:13px 17px;background:#f8fafc;color:#718096;font-size:.7rem;font-weight:850;letter-spacing:.06em;text-align:left;text-transform:uppercase}.kh-table td{padding:15px 17px;border-top:1px solid #edf0f5;color:#475569;font-size:.85rem}.kh-ref{font-weight:850;color:#172033}.kh-status{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eef3ff;color:#3157a4;font-size:.72rem;font-weight:800}.kh-view{display:inline-flex;align-items:center;padding:7px 11px;border:1px solid #d7e2f5;border-radius:8px;color:#2459d3;text-decoration:none;font-size:.78rem;font-weight:800}.kh-view:hover{background:#f4f7ff}.kh-empty{padding:48px 20px!important;text-align:center!important}.kh-empty-icon{display:grid;place-items:center;width:48px;height:48px;margin:0 auto 12px;border-radius:14px;background:#f1f5f9;color:#64748b;font-size:1.35rem}.kh-empty strong{display:block;color:#334155;font-size:.9rem}.kh-empty small{display:block;margin-top:5px;color:#94a3b8;font-size:.8rem}
+@media(max-width:650px){.kh-head{flex-direction:column}.kh-primary{width:100%}.kh-card-head{align-items:flex-start;flex-direction:column}}
+</style>
+<div class="kh-page">
+  <header class="kh-head"><div><span class="kh-kicker">Kitchen operations</span><h1>Shift Handover</h1><p>Keep every shift aligned with a clear record of shared kitchen stock and responsibilities.</p></div><a class="kh-primary" href="{% url 'kitchen_handover_create' %}"><span aria-hidden="true">＋</span> New handover</a></header>
+  <section class="kh-card">
+    <div class="kh-card-head"><strong>Handover records</strong><span>{{ handovers|length }} record{{ handovers|length|pluralize }}</span></div>
+    <div class="kh-table-wrap"><table class="kh-table"><thead><tr><th>Reference</th><th>Outgoing staff</th><th>Incoming staff</th><th>Date recorded</th><th>Status</th><th></th></tr></thead><tbody>
+    {% for h in handovers %}<tr><td><span class="kh-ref">#{{ h.pk }}</span></td><td>{{ h.outgoing_user.get_full_name|default:h.outgoing_user.username }}</td><td>{{ h.incoming_user.get_full_name|default:h.incoming_user.username }}</td><td>{{ h.created_at|date:"d M Y · H:i" }}</td><td><span class="kh-status">{{ h.get_status_display }}</span></td><td><a class="kh-view" href="{% url 'kitchen_handover_detail' h.pk %}">View record →</a></td></tr>
+    {% empty %}<tr><td colspan="6" class="kh-empty"><span class="kh-empty-icon">⇄</span><strong>No shift handovers yet</strong><small>When a shift is handed over, its record will appear here.</small></td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
 </div>
 {% endblock %}
