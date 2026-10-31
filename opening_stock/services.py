@@ -47,6 +47,8 @@ def post_opening_stock_batch(*, batch, user):
         raise ValidationError("Only a draft opening stock batch can be posted.")
     if not batch.lines.exists():
         raise ValidationError("Add at least one opening balance line before posting.")
+    if batch.opening_date > timezone.localdate():
+        raise ValidationError("Opening date cannot be in the future.")
     if is_date_locked(batch.hotel, batch.opening_date):
         raise ValidationError("The selected opening date belongs to a closed accounting period.")
 
