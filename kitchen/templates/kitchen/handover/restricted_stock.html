@@ -1,0 +1,31 @@
+{% extends "base/base.html" %}
+{% block title %}Head Chef Restricted Stock{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="mb-4"><h2>Restricted Storage Register</h2><p class="text-muted mb-0">Head Chef only · Physical counts and transfers are custody records and do not post inventory movements or accounting entries.</p></div>
+  <div class="card card-body mb-4">
+    <h5>Record a count or transfer</h5>
+    <form method="post" class="row g-3">{% csrf_token %}
+      <div class="col-md-3"><label class="form-label">Record type</label><select class="form-select" name="record_type" id="record-type"><option value="COUNT">Physical count</option><option value="TRANSFER">Transfer to general fridge</option></select></div>
+      <div class="col-md-3"><label class="form-label">Restricted freezer</label><select class="form-select" name="source_location" required>{% for loc in restricted_locations %}<option value="{{ loc.pk }}">{{ loc.name }}</option>{% empty %}<option value="">No restricted locations configured</option>{% endfor %}</select></div>
+      <div class="col-md-3" id="destination-wrap" style="display:none"><label class="form-label">General storage destination</label><select class="form-select" name="destination_location">{% for loc in shared_locations %}<option value="{{ loc.pk }}">{{ loc.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-3"><label class="form-label">Item name</label><input class="form-control" name="item_name" placeholder="e.g. Raw fish" required></div>
+      <div class="col-md-2"><label class="form-label">Quantity</label><input class="form-control" type="number" name="quantity" min="0.001" step="0.001" required></div>
+      <div class="col-md-2"><label class="form-label">Unit</label><input class="form-control" name="unit" placeholder="kg, lb, portions" required></div>
+      <div class="col-md-3"><label class="form-label">Inventory product (optional)</label><select class="form-select" name="product"><option value="">Not linked</option>{% for p in products %}<option value="{{ p.pk }}">{{ p.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-5"><label class="form-label">Reason / notes</label><input class="form-control" name="reason" required placeholder="Count check or reason for transfer"></div>
+      <div class="col-12"><button class="btn btn-primary" {% if not restricted_locations %}disabled{% endif %}>Save register entry</button></div>
+    </form>
+  </div>
+  <div class="card"><div class="card-header fw-semibold">Restricted stock audit history</div><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>Date/time</th><th>Type</th><th>Item</th><th>Quantity</th><th>From</th><th>To</th><th>Reason</th><th>Recorded by</th></tr></thead><tbody>
+    {% for record in records %}<tr><td>{{ record.recorded_at|date:"d M Y H:i" }}</td><td>{{ record.get_record_type_display }}</td><td>{{ record.item_name }}{% if record.product %}<small class="text-muted d-block">{{ record.product.name }}</small>{% endif %}</td><td>{{ record.quantity }} {{ record.unit }}</td><td>{{ record.source_location.name }}</td><td>{{ record.destination_location.name|default:"—" }}</td><td>{{ record.reason }}</td><td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td></tr>{% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No restricted stock entries recorded.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+</div>
+<script>
+(function(){
+ const type=document.getElementById("record-type");
+ const destination=document.getElementById("destination-wrap");
+ if(type&&destination){type.addEventListener("change",function(){destination.style.display=type.value==="TRANSFER"?"block":"none";});}
+})();
+</script>
+{% endblock %}
