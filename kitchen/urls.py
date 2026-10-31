@@ -7,6 +7,7 @@ urlpatterns = [
     path("handover/new/", views.kitchen_handover_create, name="kitchen_handover_create"),
     path("handover/<int:pk>/", views.kitchen_handover_detail, name="kitchen_handover_detail"),
     path("storage-register/", views.kitchen_storage_register, name="kitchen_storage_register"),
+    path("restricted-stock/", views.kitchen_restricted_stock, name="kitchen_restricted_stock"),
     path("food-sales/", views.kitchen_food_sales_report, name="kitchen_food_sales_report"),
     path("management-reports/", views.kitchen_management_report, name="kitchen_management_report"),
     path("management-reports/spoilage/", views.kitchen_spoilage_report, name="kitchen_spoilage_report"),
