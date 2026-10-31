@@ -1014,7 +1014,6 @@ def kitchen_spoilage_review(request, pk):
     return redirect("kitchen_spoilage")
 
 
-@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def _build_batch_profitability_rows(batches, scoped_hotels):
     """Trace production batches through FIFO sales and spoilage allocations."""
     from restaurant.models import POSOrder, POSOrderItem
@@ -1159,6 +1158,7 @@ def _build_batch_profitability_rows(batches, scoped_hotels):
     return batch_profitability_rows
 
 
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def kitchen_management_report(request):
     """Management-only overview of Kitchen sales, production, waste and fulfillment."""
     from restaurant.models import POSOrder, POSOrderItem
