@@ -1,0 +1,53 @@
+{% extends "base/base.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <div class="text-uppercase text-muted small fw-bold">Kitchen Operations</div>
+            <h1 class="h3 mb-1">Production Variance Approvals</h1>
+            <p class="text-muted mb-0">Review STRICT recipe variance requests before production is executed.</p>
+        </div>
+    </div>
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            {% if pending_overrides %}
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>Batch</th><th>Food</th><th>Portions</th><th>Hotel</th><th>Requested by</th><th>Reason</th><th>Submitted quantities</th><th>Actions</th></tr></thead>
+                    <tbody>
+                    {% for pending in pending_overrides %}
+                        <tr>
+                            <td>#{{ pending.pk }}</td>
+                            <td>{{ pending.recipe.name }}</td>
+                            <td>{{ pending.quantity_produced }}</td>
+                            <td>{{ pending.recipe.product.hotel.name }}</td>
+                            <td>{{ pending.override_requested_by|default:pending.produced_by }}</td>
+                            <td>{{ pending.override_reason|default:"—" }}</td>
+                            <td>
+                                <details><summary>View quantities</summary>
+                                    {% for ingredient_id, entry in pending.pending_actual_quantities.items %}
+                                    <div class="small py-1">Ingredient #{{ ingredient_id }}: {{ entry.quantity }}</div>
+                                    {% endfor %}
+                                </details>
+                            </td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <form method="post" action="{% url 'production_override_approve' pending.pk %}">{% csrf_token %}<button class="btn btn-primary btn-sm" type="submit">Approve &amp; Produce</button></form>
+                                    <form method="post" action="{% url 'production_override_reject' pending.pk %}">{% csrf_token %}<button class="btn btn-outline-secondary btn-sm" type="submit">Reject</button></form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <h2 class="h5">No pending variance requests</h2>
+                <p class="text-muted mb-0">New STRICT recipe override requests will appear here.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
