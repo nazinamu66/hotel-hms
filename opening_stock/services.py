@@ -1,4 +1,5 @@
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from datetime import datetime, time
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -96,9 +97,7 @@ def post_opening_stock_batch(*, batch, user):
                 quantity_remaining=quantity,
                 unit_cost=unit_cost,
                 is_opening_balance=True,
-                received_at=timezone.make_aware(
-                    timezone.datetime.combine(batch.opening_date, timezone.datetime.min.time())
-                ),
+                received_at=timezone.make_aware(datetime.combine(batch.opening_date, time.min)),
             )
 
             account_key = "finished_goods_inventory" if product.product_type == "FOOD" else "inventory_asset"
