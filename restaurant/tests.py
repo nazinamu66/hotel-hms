@@ -176,3 +176,45 @@ class RefundShiftReconciliationTests(SimpleTestCase):
         reverse_payment(order, SimpleNamespace(pk=9), method="CASH")
 
         create_payment.assert_not_called()
+
+
+class PendingShiftHandoverPOSGuardTests(SimpleTestCase):
+    @patch("core.services.operations.pos_flow.CashHandover.objects.filter")
+    @patch("core.services.operations.pos_flow.Shift.objects.select_for_update")
+    def test_pos_order_is_rejected_while_its_shift_handover_is_pending(
+        self, select_for_update, handover_filter
+    ):
+        from core.services.operations.pos_flow import process_pos_order
+
+        restaurant = SimpleNamespace(
+            department_type="RESTAURANT",
+            hotel_id=5,
+            hotel=SimpleNamespace(pk=5),
+        )
+        user = SimpleNamespace(department=restaurant)
+        shift = SimpleNamespace(pk=31)
+
+        select_for_update.return_value.filter.return_value.first.return_value = shift
+        handover_filter.return_value.exists.return_value = True
+
+        with self.assertRaisesMessage(
+            ValueError,
+            "A cash handover is pending for this shift.",
+        ):
+            process_pos_order(
+                user=user,
+                cart={"items": {"12": {"qty": 1}}},
+                settlement="PAY_NOW",
+                payment_method="CASH",
+            )
+
+        select_for_update.return_value.filter.assert_called_once_with(
+            user=user,
+            department=restaurant,
+            status="OPEN",
+        )
+        handover_filter.assert_called_once_with(
+            shift=shift,
+            from_user=user,
+            status="PENDING",
+        )
