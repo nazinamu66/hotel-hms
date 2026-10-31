@@ -77,7 +77,7 @@
 
         <div style="overflow-x:auto;margin-top:18px;">
             <table style="width:100%;border-collapse:collapse;">
-                <thead><tr style="text-align:left;border-bottom:1px solid #ddd;"><th style="padding:10px;">Type</th><th style="padding:10px;">Item</th><th style="padding:10px;">Quantity / Value</th><th style="padding:10px;">Location / Department</th></tr></thead>
+                <thead><tr style="text-align:left;border-bottom:1px solid #ddd;"><th style="padding:10px;">Type</th><th style="padding:10px;">Item</th><th style="padding:10px;">Quantity / Value</th><th style="padding:10px;">Location / Department</th>{% if selected_batch.status == "DRAFT" %}<th style="padding:10px;">Action</th>{% endif %}</tr></thead>
                 <tbody>
                 {% for line in selected_batch.lines.all %}
                     <tr style="border-bottom:1px solid #eee;">
@@ -85,9 +85,12 @@
                         <td style="padding:10px;">{% if line.line_type == "STOCK" %}{{ line.product.name }}{% elif line.line_type == "LINEN" %}{{ line.linen_item.product.name }}{% else %}{{ line.asset_name }}{% endif %}</td>
                         <td style="padding:10px;">{% if line.line_type == "EQUIPMENT" %}{{ line.asset_value }}{% else %}{{ line.quantity }}{% endif %}</td>
                         <td style="padding:10px;">{% if line.line_type == "STOCK" %}{{ line.department.name }}{% elif line.line_type == "LINEN" %}{{ line.get_linen_location_display }} / {{ line.get_linen_condition_display }}{% else %}{% if line.room %}Room {{ line.room.room_number }}{% elif line.maintenance_location %}{{ line.maintenance_location.name }}{% else %}Unassigned{% endif %}{% endif %}</td>
+                        {% if selected_batch.status == "DRAFT" %}
+                        <td style="padding:10px;"><form method="post">{% csrf_token %}<input type="hidden" name="hotel" value="{{ selected_hotel.pk }}"><input type="hidden" name="batch_id" value="{{ selected_batch.pk }}"><input type="hidden" name="line_id" value="{{ line.pk }}"><input type="hidden" name="action" value="DELETE_LINE"><button type="submit" style="border:0;background:none;color:#b42318;cursor:pointer;">Remove</button></form></td>
+                        {% endif %}
                     </tr>
                 {% empty %}
-                    <tr><td colspan="4" style="padding:20px;color:#777;">No lines added yet.</td></tr>
+                    <tr><td colspan="{% if selected_batch.status == 'DRAFT' %}5{% else %}4{% endif %}" style="padding:20px;color:#777;">No lines added yet.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
