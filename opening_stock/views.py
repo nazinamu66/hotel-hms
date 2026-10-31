@@ -78,6 +78,16 @@ def opening_stock_dashboard(request):
             selected_batch = batch
             messages.error(request, "Please correct the opening line details.")
 
+        elif action == "DELETE_LINE":
+            batch = get_object_or_404(
+                OpeningStockBatch, pk=request.POST.get("batch_id"),
+                hotel=hotel, status="DRAFT",
+            )
+            line = get_object_or_404(batch.lines, pk=request.POST.get("line_id"))
+            line.delete()
+            messages.success(request, "Draft opening balance line removed.")
+            return redirect(f"/opening-stock/?hotel={hotel.pk}&batch={batch.pk}")
+
         elif action == "POST_BATCH":
             batch = get_object_or_404(
                 OpeningStockBatch, pk=request.POST.get("batch_id"), hotel=hotel,
