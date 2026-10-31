@@ -100,12 +100,29 @@
         <div style="border-top:1px solid #ddd;margin-top:20px;padding-top:18px;">
             <h3 style="font-size:18px;margin-top:0;">Add an opening balance line</h3>
             <p style="font-size:13px;color:#777;">Stock quantity and unit cost must be entered in the product's base unit. Add one equipment asset per line. Linen quantities are whole pieces and include a location and condition.</p>
-            <form method="post">
+            <form method="post" id="opening-line-form">
                 {% csrf_token %}
                 <input type="hidden" name="hotel" value="{{ selected_hotel.pk }}">
                 <input type="hidden" name="batch_id" value="{{ selected_batch.pk }}">
                 <input type="hidden" name="action" value="ADD_LINE">
-                {{ line_form.as_p }}
+
+                {% for field in line_form %}
+                    <div class="opening-line-field" data-field-name="{{ field.name }}"
+                        {% if field.name == "line_type" %}data-line-types="STOCK,LINEN,EQUIPMENT"
+                        {% elif field.name == "product" or field.name == "department" %}data-line-types="STOCK"
+                        {% elif field.name == "quantity" or field.name == "unit_cost" %}data-line-types="STOCK,LINEN"
+                        {% elif field.name == "linen_item" or field.name == "linen_location" or field.name == "linen_condition" %}data-line-types="LINEN"
+                        {% else %}data-line-types="EQUIPMENT"{% endif %}
+                        style="margin-bottom:14px;">
+                        <label for="{{ field.id_for_label }}" style="display:block;font-weight:600;margin-bottom:5px;">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<div style="font-size:12px;color:#777;margin-top:4px;">{{ field.help_text }}</div>{% endif %}
+                        {% for error in field.errors %}<div style="font-size:12px;color:#b42318;margin-top:4px;">{{ error }}</div>{% endfor %}
+                    </div>
+                {% endfor %}
+                {% if line_form.non_field_errors %}
+                    <div style="color:#b42318;margin-bottom:12px;">{{ line_form.non_field_errors }}</div>
+                {% endif %}
                 <button type="submit" style="padding:10px 16px;border:0;border-radius:6px;background:#174ea6;color:white;">Add line</button>
             </form>
         </div>
@@ -114,4 +131,37 @@
     {% endif %}
     {% endif %}
 </div>
+
+<style>
+    #opening-line-form select,
+    #opening-line-form input,
+    #opening-line-form textarea {
+        max-width:100%;
+    }
+    #opening-line-form .opening-line-field[hidden] {
+        display:none !important;
+    }
+</style>
+<script>
+(function () {
+    const form = document.getElementById("opening-line-form");
+    if (!form) return;
+
+    const typeSelect = form.querySelector('[name="line_type"]');
+    const fields = form.querySelectorAll(".opening-line-field");
+
+    function updateLineFields() {
+        const selectedType = typeSelect ? typeSelect.value : "";
+        fields.forEach(function (wrapper) {
+            const allowedTypes = (wrapper.dataset.lineTypes || "").split(",");
+            wrapper.hidden = !allowedTypes.includes(selectedType);
+        });
+    }
+
+    if (typeSelect) {
+        typeSelect.addEventListener("change", updateLineFields);
+        updateLineFields();
+    }
+})();
+</script>
 {% endblock %}
