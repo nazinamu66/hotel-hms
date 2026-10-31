@@ -31,5 +31,8 @@ class OpeningStockLineForm(forms.ModelForm):
         self.fields["asset_product"].queryset = Product.objects.filter(hotel=hotel, product_type="EQUIPMENT", is_active=True).order_by("name")
         self.fields["room"].queryset = Room.objects.filter(hotel=hotel).order_by("room_number")
         self.fields["maintenance_location"].queryset = MaintenanceLocation.objects.filter(hotel=hotel, is_active=True, status="ACTIVE").order_by("name")
+        self.fields["quantity"].help_text = "Department stock: enter the product's BASE UNIT. Linen: enter whole pieces."
+        self.fields["unit_cost"].help_text = "Cost per base unit (department stock or linen)."
+        self.fields["asset_value"].help_text = "Total opening value for this individual asset."
         for field in self.fields.values():
             field.required = False
