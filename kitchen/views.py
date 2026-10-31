@@ -1015,6 +1015,151 @@ def kitchen_spoilage_review(request, pk):
 
 
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def _build_batch_profitability_rows(batches, scoped_hotels):
+    """Trace production batches through FIFO sales and spoilage allocations."""
+    from restaurant.models import POSOrder, POSOrderItem
+    from django.db.models import Sum
+    batch_profitability_rows = []
+        # Batch-level traceability: follow the finished-food FIFO layer created
+        # by each production batch through later POS sales and normal spoilage.
+        batch_profitability_rows = []
+        spoilage_movement_ids = set(
+            KitchenSpoilageRecord.objects.filter(
+                department__hotel__in=scoped_hotels,
+                stock_movement__isnull=False,
+            ).values_list("stock_movement_id", flat=True)
+        )
+        for batch in batches:
+            product = batch.recipe.product
+            source_ref = f"PROD-{batch.pk}"
+            layers = StockCostLayer.objects.filter(
+                source_reference=source_ref,
+                product=product,
+            )
+            layer_ids = list(layers.values_list("pk", flat=True))
+            layer_allocations = list(
+                StockMovementCostAllocation.objects
+                .filter(cost_layer_id__in=layer_ids)
+                .select_related("movement", "cost_layer")
+            ) if layer_ids else []
+    
+            sold_qty = Decimal("0.000")
+            sold_cogs = Decimal("0.00")
+            spoiled_qty = Decimal("0.000")
+            spoiled_cost = Decimal("0.00")
+            sales_by_order = {}
+    
+            for allocation in layer_allocations:
+                movement = allocation.movement
+                if movement.movement_type != "OUT":
+                    continue
+                if movement.reference.startswith("POS-"):
+                    try:
+                        order_id = int(movement.reference[4:])
+                    except ValueError:
+                        continue
+                    sales_by_order.setdefault(order_id, []).append(allocation)
+                elif movement.pk in spoilage_movement_ids:
+                    spoiled_qty += allocation.quantity
+                    spoiled_cost += allocation.total_cost
+    
+            if sales_by_order:
+                valid_orders = {
+                    order.pk: order
+                    for order in POSOrder.objects.filter(
+                        pk__in=sales_by_order,
+                        department__hotel__in=scoped_hotels,
+                        status__in=("CHARGED", "PAID"),
+                        is_refunded=False,
+                    )
+                }
+                for order_id, allocations in sales_by_order.items():
+                    order = valid_orders.get(order_id)
+                    if not order:
+                        continue
+                    allocated_qty = sum(
+                        (allocation.quantity for allocation in allocations),
+                        Decimal("0.000"),
+                    )
+                    if allocated_qty <= 0:
+                        continue
+                    # MenuItem is unique per product, so an order has one line
+                    # per product. Allocate that line's revenue in proportion
+                    # to the FIFO quantity sourced from this production batch.
+                    line = POSOrderItem.objects.filter(
+                        order_id=order_id,
+                        menu_item__product=product,
+                    ).first()
+                    if not line:
+                        continue
+                    sold_qty += allocated_qty
+                    sold_cogs += sum(
+                        (allocation.total_cost for allocation in allocations),
+                        Decimal("0.00"),
+                    )
+                    total_product_allocated = StockMovementCostAllocation.objects.filter(
+                        movement__reference=f"POS-{order_id}",
+                        movement__product=product,
+                        movement__movement_type="OUT",
+                    ).aggregate(total=Sum("quantity"))["total"] or Decimal("0.000")
+                    if total_product_allocated > 0:
+                        batch_profit_revenue = (
+                            line.price * line.quantity * allocated_qty
+                            / total_product_allocated
+                        )
+                    else:
+                        batch_profit_revenue = Decimal("0.00")
+                    sales_by_order[order_id] = (allocations, batch_profit_revenue)
+    
+            sales_revenue = sum(
+                (value[1] for value in sales_by_order.values() if isinstance(value, tuple)),
+                Decimal("0.00"),
+            )
+            remaining_qty = sum(
+                (layer.quantity_remaining for layer in layers),
+                Decimal("0.000"),
+            )
+            remaining_value = sum(
+                (
+                    layer.quantity_remaining * layer.unit_cost
+                    for layer in layers
+                ),
+                Decimal("0.00"),
+            )
+            actual_production_cost = batch.total_cost()
+            # A batch without a confidently identified finished-goods FIFO layer
+            # cannot be reconciled from allocations. This is common in legacy
+            # records created before production provenance was recorded; do not
+            # present the full batch quantity as a stock discrepancy.
+            traceability_status = "TRACEABLE" if layers.exists() else "UNATTRIBUTED"
+            reconciliation_gap = (
+                Decimal(batch.quantity_produced)
+                - sold_qty - spoiled_qty - remaining_qty
+                if traceability_status == "TRACEABLE"
+                else None
+            )
+            batch_profitability_rows.append({
+                "batch_id": batch.pk,
+                "food_item": product.name,
+                "produced_at": batch.created_at,
+                "quantity_produced": batch.quantity_produced,
+                "production_cost": actual_production_cost,
+                "quantity_sold": sold_qty,
+                "sales_revenue": sales_revenue,
+                "sales_cogs": sold_cogs,
+                "gross_profit": sales_revenue - sold_cogs,
+                "quantity_spoiled": spoiled_qty,
+                "spoilage_cost": spoiled_cost,
+                "remaining_quantity": remaining_qty,
+                "remaining_value": remaining_value,
+                "reconciliation_gap": reconciliation_gap,
+                "traceability_status": traceability_status,
+            })
+    
+    
+    return batch_profitability_rows
+
+
 def kitchen_management_report(request):
     """Management-only overview of Kitchen sales, production, waste and fulfillment."""
     from restaurant.models import POSOrder, POSOrderItem
@@ -1088,141 +1233,7 @@ def kitchen_management_report(request):
         created_at__date__lte=date_to,
         is_executed=True,
     ).select_related("recipe", "produced_by", "produced_by__department__hotel")
-    # Batch-level traceability: follow the finished-food FIFO layer created
-    # by each production batch through later POS sales and normal spoilage.
-    batch_profitability_rows = []
-    spoilage_movement_ids = set(
-        KitchenSpoilageRecord.objects.filter(
-            department__hotel__in=scoped_hotels,
-            stock_movement__isnull=False,
-        ).values_list("stock_movement_id", flat=True)
-    )
-    for batch in batches:
-        product = batch.recipe.product
-        source_ref = f"PROD-{batch.pk}"
-        layers = StockCostLayer.objects.filter(
-            source_reference=source_ref,
-            product=product,
-        )
-        layer_ids = list(layers.values_list("pk", flat=True))
-        layer_allocations = list(
-            StockMovementCostAllocation.objects
-            .filter(cost_layer_id__in=layer_ids)
-            .select_related("movement", "cost_layer")
-        ) if layer_ids else []
-
-        sold_qty = Decimal("0.000")
-        sold_cogs = Decimal("0.00")
-        spoiled_qty = Decimal("0.000")
-        spoiled_cost = Decimal("0.00")
-        sales_by_order = {}
-
-        for allocation in layer_allocations:
-            movement = allocation.movement
-            if movement.movement_type != "OUT":
-                continue
-            if movement.reference.startswith("POS-"):
-                try:
-                    order_id = int(movement.reference[4:])
-                except ValueError:
-                    continue
-                sales_by_order.setdefault(order_id, []).append(allocation)
-            elif movement.pk in spoilage_movement_ids:
-                spoiled_qty += allocation.quantity
-                spoiled_cost += allocation.total_cost
-
-        if sales_by_order:
-            valid_orders = {
-                order.pk: order
-                for order in POSOrder.objects.filter(
-                    pk__in=sales_by_order,
-                    department__hotel__in=scoped_hotels,
-                    status__in=("CHARGED", "PAID"),
-                    is_refunded=False,
-                )
-            }
-            for order_id, allocations in sales_by_order.items():
-                order = valid_orders.get(order_id)
-                if not order:
-                    continue
-                allocated_qty = sum(
-                    (allocation.quantity for allocation in allocations),
-                    Decimal("0.000"),
-                )
-                if allocated_qty <= 0:
-                    continue
-                # MenuItem is unique per product, so an order has one line
-                # per product. Allocate that line's revenue in proportion
-                # to the FIFO quantity sourced from this production batch.
-                line = POSOrderItem.objects.filter(
-                    order_id=order_id,
-                    menu_item__product=product,
-                ).first()
-                if not line:
-                    continue
-                sold_qty += allocated_qty
-                sold_cogs += sum(
-                    (allocation.total_cost for allocation in allocations),
-                    Decimal("0.00"),
-                )
-                total_product_allocated = StockMovementCostAllocation.objects.filter(
-                    movement__reference=f"POS-{order_id}",
-                    movement__product=product,
-                    movement__movement_type="OUT",
-                ).aggregate(total=Sum("quantity"))["total"] or Decimal("0.000")
-                if total_product_allocated > 0:
-                    batch_profit_revenue = (
-                        line.price * line.quantity * allocated_qty
-                        / total_product_allocated
-                    )
-                else:
-                    batch_profit_revenue = Decimal("0.00")
-                sales_by_order[order_id] = (allocations, batch_profit_revenue)
-
-        sales_revenue = sum(
-            (value[1] for value in sales_by_order.values() if isinstance(value, tuple)),
-            Decimal("0.00"),
-        )
-        remaining_qty = sum(
-            (layer.quantity_remaining for layer in layers),
-            Decimal("0.000"),
-        )
-        remaining_value = sum(
-            (
-                layer.quantity_remaining * layer.unit_cost
-                for layer in layers
-            ),
-            Decimal("0.00"),
-        )
-        actual_production_cost = batch.total_cost()
-        # A batch without a confidently identified finished-goods FIFO layer
-        # cannot be reconciled from allocations. This is common in legacy
-        # records created before production provenance was recorded; do not
-        # present the full batch quantity as a stock discrepancy.
-        traceability_status = "TRACEABLE" if layers.exists() else "UNATTRIBUTED"
-        reconciliation_gap = (
-            Decimal(batch.quantity_produced)
-            - sold_qty - spoiled_qty - remaining_qty
-            if traceability_status == "TRACEABLE"
-            else None
-        )
-        batch_profitability_rows.append({
-            "batch_id": batch.pk,
-            "food_item": product.name,
-            "produced_at": batch.created_at,
-            "quantity_produced": batch.quantity_produced,
-            "production_cost": actual_production_cost,
-            "quantity_sold": sold_qty,
-            "sales_revenue": sales_revenue,
-            "sales_cogs": sold_cogs,
-            "gross_profit": sales_revenue - sold_cogs,
-            "quantity_spoiled": spoiled_qty,
-            "spoilage_cost": spoiled_cost,
-            "remaining_quantity": remaining_qty,
-            "remaining_value": remaining_value,
-            "reconciliation_gap": reconciliation_gap,
-            "traceability_status": traceability_status,
-        })
+    batch_profitability_rows = _build_batch_profitability_rows(batches, scoped_hotels)
 
     production_count = batches.count()
     portions_produced = batches.aggregate(total=Sum("quantity_produced"))["total"] or 0
@@ -1307,7 +1318,6 @@ def kitchen_management_report(request):
         "outstanding_delivery_quantity": outstanding_delivery_quantity,
         "uncosted_sales_items": sales_items.filter(cost_at_sale__lte=0).count(),
         "trend_rows": trend_rows,
-        "batch_profitability_rows": batch_profitability_rows,
     })
 
 
@@ -1493,6 +1503,56 @@ def kitchen_purchasing_report(request):
 
 
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def kitchen_batch_profitability_report(request):
+    """Dedicated FIFO batch profitability and traceability register."""
+    hotels = get_accessible_hotels(request.user)
+    if not hotels.exists():
+        raise PermissionDenied("You do not have access to Kitchen management reports.")
+    today = timezone.localdate()
+    try:
+        date_from = date.fromisoformat(request.GET.get("from", "").strip()) if request.GET.get("from") else today.replace(day=1)
+    except ValueError:
+        date_from = today.replace(day=1)
+    try:
+        date_to = date.fromisoformat(request.GET.get("to", "").strip()) if request.GET.get("to") else today
+    except ValueError:
+        date_to = today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel.isdigit():
+        scoped_hotels = hotels.filter(pk=int(selected_hotel))
+        if not scoped_hotels.exists():
+            raise PermissionDenied("You do not have access to that hotel.")
+    else:
+        scoped_hotels, selected_hotel = hotels, ""
+    batches = ProductionBatch.objects.filter(
+        produced_by__department__hotel__in=scoped_hotels,
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+        is_executed=True,
+    ).select_related("recipe", "recipe__product", "produced_by", "produced_by__department__hotel").order_by("-created_at", "-pk")
+    rows = _build_batch_profitability_rows(batches, scoped_hotels)
+    totals = {
+        "produced": sum((Decimal(row["quantity_produced"]) for row in rows), Decimal("0.000")),
+        "production_cost": sum((row["production_cost"] for row in rows), Decimal("0.00")),
+        "sold": sum((row["quantity_sold"] for row in rows), Decimal("0.000")),
+        "revenue": sum((row["sales_revenue"] for row in rows), Decimal("0.00")),
+        "cogs": sum((row["sales_cogs"] for row in rows), Decimal("0.00")),
+        "gross_profit": sum((row["gross_profit"] for row in rows), Decimal("0.00")),
+        "spoiled": sum((row["quantity_spoiled"] for row in rows), Decimal("0.000")),
+        "spoilage_cost": sum((row["spoilage_cost"] for row in rows), Decimal("0.00")),
+        "remaining": sum((row["remaining_quantity"] for row in rows), Decimal("0.000")),
+        "remaining_value": sum((row["remaining_value"] for row in rows), Decimal("0.00")),
+    }
+    return render(request, "kitchen/reports/batch_profitability_report.html", {
+        "hotels": hotels.order_by("name"), "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(), "date_to": date_to.isoformat(),
+        "batch_rows": rows, "totals": totals, "batch_count": len(rows),
+    })
+
 def kitchen_inventory_report(request):
     """Current Kitchen stock position and FIFO valuation with a dated movement register."""
     from django.db.models import Q
@@ -1571,6 +1631,10 @@ def kitchen_inventory_report(request):
     low_stock_count = 0
     discrepancy_count = 0
     unvalued_quantity = Decimal("0.000")
+    raw_fifo_value = Decimal("0.00")
+    food_fifo_value = Decimal("0.00")
+    raw_unvalued_quantity = Decimal("0.000")
+    food_unvalued_quantity = Decimal("0.000")
 
     for row in rows_by_key.values():
         physical = row["physical_quantity"]
@@ -1594,6 +1658,12 @@ def kitchen_inventory_report(request):
         total_layer_quantity += layer_qty
         total_fifo_value += row["fifo_value"]
         unvalued_quantity += row["unvalued_quantity"]
+        if row["product"].product_type == "RAW":
+            raw_fifo_value += row["fifo_value"]
+            raw_unvalued_quantity += row["unvalued_quantity"]
+        elif row["product"].product_type == "FOOD":
+            food_fifo_value += row["fifo_value"]
+            food_unvalued_quantity += row["unvalued_quantity"]
         inventory_rows.append(row)
 
     inventory_rows.sort(key=lambda item: (
@@ -1645,6 +1715,10 @@ def kitchen_inventory_report(request):
         "total_physical_quantity": total_physical_quantity,
         "total_layer_quantity": total_layer_quantity,
         "total_fifo_value": total_fifo_value,
+        "raw_fifo_value": raw_fifo_value,
+        "food_fifo_value": food_fifo_value,
+        "raw_unvalued_quantity": raw_unvalued_quantity,
+        "food_unvalued_quantity": food_unvalued_quantity,
         "low_stock_count": low_stock_count,
         "discrepancy_count": discrepancy_count,
         "unvalued_quantity": unvalued_quantity,
