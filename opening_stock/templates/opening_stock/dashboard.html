@@ -108,8 +108,7 @@
 
                 {% for field in line_form %}
                     <div class="opening-line-field" data-field-name="{{ field.name }}"
-                        {% if field.name == "line_type" %}data-line-types="STOCK,LINEN,EQUIPMENT"
-                        {% elif field.name == "product" or field.name == "department" %}data-line-types="STOCK"
+                        {% if field.name == "product" or field.name == "department" %}data-line-types="STOCK"
                         {% elif field.name == "quantity" or field.name == "unit_cost" %}data-line-types="STOCK,LINEN"
                         {% elif field.name == "linen_item" or field.name == "linen_location" or field.name == "linen_condition" %}data-line-types="LINEN"
                         {% else %}data-line-types="EQUIPMENT"{% endif %}
@@ -153,6 +152,11 @@
     function updateLineFields() {
         const selectedType = typeSelect ? typeSelect.value : "";
         fields.forEach(function (wrapper) {
+            // The category selector must remain visible so the user can choose a type.
+            if (wrapper.dataset.fieldName === "line_type") {
+                wrapper.hidden = false;
+                return;
+            }
             const allowedTypes = (wrapper.dataset.lineTypes || "").split(",");
             wrapper.hidden = !allowedTypes.includes(selectedType);
         });
