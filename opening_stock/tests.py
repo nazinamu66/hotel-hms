@@ -1,0 +1,124 @@
+from datetime import date
+from decimal import Decimal
+
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+
+from accounting.models import JournalLine
+from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement
+from opening_stock.models import OpeningStockBatch, OpeningStockLine
+from opening_stock.services import post_opening_stock_batch
+
+
+User = get_user_model()
+
+
+class OpeningStockPostingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        organization = Organization.objects.create(name="Opening Stock Test Organization")
+        cls.hotel = Hotel.objects.create(organization=organization, name="Opening Stock Test Hotel")
+        cls.department = Department.objects.create(
+            hotel=cls.hotel,
+            code="OPN",
+            name="Opening Test Store",
+            department_type="STORE",
+        )
+        cls.product = Product.objects.create(
+            hotel=cls.hotel,
+            name="Opening Test Rice",
+            sku="OPENING-RICE",
+            product_type="RAW",
+            base_unit="kg",
+            usage_type="CONSUMABLE",
+        )
+        cls.user = User.objects.create_user(
+            username="opening-stock-admin",
+            password="test-password",
+            role="ADMIN",
+        )
+
+    def make_batch(self, reference="OPENING-TEST-001"):
+        return OpeningStockBatch.objects.create(
+            hotel=self.hotel,
+            reference=reference,
+            opening_date=date.today(),
+            created_by=self.user,
+        )
+
+    def test_stock_opening_creates_stock_fifo_movement_and_balanced_journal(self):
+        batch = self.make_batch()
+        line = OpeningStockLine.objects.create(
+            batch=batch,
+            line_type="STOCK",
+            product=self.product,
+            department=self.department,
+            quantity=Decimal("12.500"),
+            unit_cost=Decimal("80.0000"),
+        )
+
+        result = post_opening_stock_batch(batch=batch, user=self.user)
+
+        stock = Stock.objects.get(product=self.product, department=self.department)
+        layer = StockCostLayer.objects.get(source_reference=f"OPENING-{batch.pk}-LINE-{line.pk}")
+        movement = StockMovement.objects.get(reference=f"OPENING-{batch.pk}-LINE-{line.pk}")
+        journal_lines = list(JournalLine.objects.filter(journal=result["journal_entry"]))
+
+        self.assertEqual(stock.quantity, Decimal("12.500"))
+        self.assertEqual(layer.quantity_remaining, Decimal("12.500"))
+        self.assertEqual(layer.unit_cost, Decimal("80.0000"))
+        self.assertTrue(layer.is_opening_balance)
+        self.assertEqual(movement.quantity, Decimal("12.500"))
+        self.assertEqual(sum((row.debit for row in journal_lines), Decimal("0.00")), Decimal("1000.00"))
+        self.assertEqual(sum((row.credit for row in journal_lines), Decimal("0.00")), Decimal("1000.00"))
+        self.assertEqual(batch.status, "DRAFT")
+        batch.refresh_from_db()
+        self.assertEqual(batch.status, "POSTED")
+        self.assertEqual(batch.journal_entry_id, result["journal_entry"].pk)
+
+    def test_posted_batch_cannot_be_posted_twice(self):
+        batch = self.make_batch("OPENING-TEST-002")
+        OpeningStockLine.objects.create(
+            batch=batch,
+            line_type="STOCK",
+            product=self.product,
+            department=self.department,
+            quantity=Decimal("2.000"),
+            unit_cost=Decimal("10.0000"),
+        )
+        post_opening_stock_batch(batch=batch, user=self.user)
+
+        with self.assertRaises(ValidationError):
+            post_opening_stock_batch(batch=batch, user=self.user)
+
+        self.assertEqual(
+            Stock.objects.get(product=self.product, department=self.department).quantity,
+            Decimal("2.000"),
+        )
+        self.assertEqual(
+            StockMovement.objects.filter(reference__startswith=f"OPENING-{batch.pk}-").count(),
+            1,
+        )
+
+    def test_stock_line_rejects_foreign_hotel_product(self):
+        other_org = Organization.objects.create(name="Other Opening Org")
+        other_hotel = Hotel.objects.create(organization=other_org, name="Other Opening Hotel")
+        foreign_product = Product.objects.create(
+            hotel=other_hotel,
+            name="Foreign Rice",
+            sku="FOREIGN-RICE",
+            product_type="RAW",
+            base_unit="kg",
+        )
+        batch = self.make_batch("OPENING-TEST-003")
+        line = OpeningStockLine(
+            batch=batch,
+            line_type="STOCK",
+            product=foreign_product,
+            department=self.department,
+            quantity=Decimal("1.000"),
+            unit_cost=Decimal("5.0000"),
+        )
+        with self.assertRaises(ValidationError):
+            line.full_clean()
