@@ -222,6 +222,18 @@ def pos_v2(request):
         )
         return redirect("restaurant_shift_open")
 
+    # The sender must not continue trading after submitting this shift for handover.
+    if CashHandover.objects.filter(
+        shift=shift,
+        from_user=user,
+        status="PENDING",
+    ).exists():
+        messages.info(
+            request,
+            "A cash handover is pending for this shift. Complete or cancel it before using the POS."
+        )
+        return redirect("restaurant_shift_detail", shift_id=shift.id)
+
     request.session["shift_id"] = shift.id
 
     # --------------------------------
