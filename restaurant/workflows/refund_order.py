@@ -130,11 +130,15 @@ def reverse_payment(order, user, *, method="CASH", account=None,
     if order.status != "PAID":
         return
 
+    # Keep the refund as a separate negative payment and attach it to
+    # the originating shift. The original positive payment remains intact,
+    # preserving its tender method for audit and reconciliation.
     Payment.objects.create(
         folio=order.folio,
         amount=-order.total_amount,
         method=method,
         account=account,
+        shift=order.shift,
         collected_by=user,
         reference=reference or f"POS-REFUND-{order.id}",
         note=note,
