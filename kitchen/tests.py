@@ -2027,7 +2027,7 @@ class KitchenManagementReportAccessTests(TestCase):
 
         self.client.force_login(self.manager)
         response = self.client.get(
-            reverse("kitchen_management_report"),
+            reverse("kitchen_batch_profitability_report"),
             {"from": "2026-01-01", "to": "2026-12-31"},
         )
 
@@ -2173,7 +2173,7 @@ class KitchenManagementReportAccessTests(TestCase):
 
         self.client.force_login(self.manager)
         response = self.client.get(
-            reverse("kitchen_management_report"),
+            reverse("kitchen_batch_profitability_report"),
             {"from": "2026-01-01", "to": "2026-12-31"},
         )
 
