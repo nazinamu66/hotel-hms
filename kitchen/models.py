@@ -1260,3 +1260,44 @@ class KitchenShiftHandoverLine(models.Model):
 
     def __str__(self):
         return f"{self.item_name}: {self.outgoing_quantity} {self.unit}"
+
+
+class KitchenRestrictedStockRecord(models.Model):
+    """
+    Head-Chef-only physical count and location-transfer audit record.
+    These records describe custody/location, not inventory valuation.
+    """
+    RECORD_TYPES = (
+        ("COUNT", "Physical count"),
+        ("TRANSFER", "Location transfer"),
+    )
+
+    department = models.ForeignKey(
+        Department, on_delete=models.PROTECT, related_name="restricted_stock_records"
+    )
+    record_type = models.CharField(max_length=12, choices=RECORD_TYPES)
+    source_location = models.ForeignKey(
+        KitchenStorageLocation, on_delete=models.PROTECT, related_name="restricted_stock_out_records"
+    )
+    destination_location = models.ForeignKey(
+        KitchenStorageLocation, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="restricted_stock_in_records",
+    )
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="restricted_stock_records",
+    )
+    item_name = models.CharField(max_length=150)
+    quantity = models.DecimalField(max_digits=12, decimal_places=3)
+    unit = models.CharField(max_length=20)
+    reason = models.TextField()
+    recorded_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name="kitchen_restricted_stock_records"
+    )
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-recorded_at", "-pk"]
+
+    def __str__(self):
+        return f"{self.get_record_type_display()}: {self.item_name} — {self.quantity} {self.unit}"
