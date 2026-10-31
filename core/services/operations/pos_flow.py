@@ -3,6 +3,7 @@ from decimal import Decimal
 from accounting.models import BankAccount
 from django.shortcuts import get_object_or_404
 from core.workflows.finalize_order import finalize_order
+from core.models import CashHandover
 from inventory.models import Stock, Department
 from restaurant.models import POSOrder, POSOrderItem, Shift, MenuItem
 from rooms.models import Room
@@ -33,7 +34,9 @@ def process_pos_order(
 
     hotel = restaurant.hotel
 
-    shift = Shift.objects.filter(
+    # Lock the shift so a handover cannot be created concurrently with a POS sale.
+    # close_shift() locks this same row before freezing the handover totals.
+    shift = Shift.objects.select_for_update().filter(
         user=user,
         department=restaurant,
         status="OPEN"
@@ -41,6 +44,16 @@ def process_pos_order(
 
     if not shift:
         raise ValueError("No active shift")
+
+    if CashHandover.objects.filter(
+        shift=shift,
+        from_user=user,
+        status="PENDING",
+    ).exists():
+        raise ValueError(
+            "A cash handover is pending for this shift. "
+            "Complete or cancel it before processing another POS order."
+        )
 
     kitchen = Department.objects.filter(
         hotel=hotel,
