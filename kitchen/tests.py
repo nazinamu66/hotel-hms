@@ -2793,9 +2793,9 @@ class KitchenRestrictedStockAccessTests(TestCase):
     def setUpTestData(cls):
         cls.org = Organization.objects.create(name="Restricted Stock Test Org")
         cls.hotel = Hotel.objects.create(organization=cls.org, name="Restricted Stock Test Hotel")
-        cls.department = Department.objects.create(
-            hotel=cls.hotel, department_type="KITCHEN",
-            code="RST", name="Restricted Stock Kitchen",
+        cls.department = Department.objects.get(
+            hotel=cls.hotel,
+            department_type="KITCHEN",
         )
         cls.head = User.objects.create_user(
             username="restricted_head", password="test-password", role="KITCHEN",
@@ -2875,6 +2875,43 @@ class KitchenRestrictedStockAccessTests(TestCase):
         self.assertEqual(record.destination_location, self.general)
         self.assertEqual(record.quantity, Decimal("10"))
         self.assertEqual(StockMovement.objects.count(), movement_count)
+
+    def test_product_link_must_be_raw_and_belong_to_current_hotel(self):
+        other_hotel = Hotel.objects.create(
+            organization=self.org,
+            name="Other Restricted Stock Hotel",
+        )
+        non_raw_product = Product.objects.create(
+            hotel=self.hotel,
+            name="Prepared Rice",
+            sku="RESTRICTED-FOOD-001",
+            product_type="FOOD",
+            base_unit="portion",
+        )
+        foreign_raw_product = Product.objects.create(
+            hotel=other_hotel,
+            name="Foreign Raw Fish",
+            sku="RESTRICTED-RAW-001",
+            product_type="RAW",
+            base_unit="kg",
+        )
+        self.client.force_login(self.head)
+
+        for product in (non_raw_product, foreign_raw_product):
+            with self.subTest(product=product.name):
+                response = self.client.post(reverse("kitchen_restricted_stock"), {
+                    "record_type": "COUNT",
+                    "source_location": str(self.freezer.pk),
+                    "item_name": product.name,
+                    "quantity": "2",
+                    "unit": product.base_unit,
+                    "reason": "Validation test",
+                    "product": str(product.pk),
+                })
+                self.assertEqual(response.status_code, 302)
+                self.assertFalse(
+                    KitchenRestrictedStockRecord.objects.filter(product=product).exists()
+                )
 
     def test_restricted_register_is_scoped_to_current_kitchen_department(self):
         other_department = Department.objects.create(
