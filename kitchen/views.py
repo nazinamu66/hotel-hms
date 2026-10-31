@@ -1160,168 +1160,168 @@ def _build_batch_profitability_rows(batches, scoped_hotels):
 
 
 def kitchen_management_report(request):
-"""Management-only overview of Kitchen sales, production, waste and fulfillment."""
-from restaurant.models import POSOrder, POSOrderItem
-from django.db.models import Sum
+    """Management-only overview of Kitchen sales, production, waste and fulfillment."""
+    from restaurant.models import POSOrder, POSOrderItem
+    from django.db.models import Sum
 
-hotels = get_accessible_hotels(request.user)
-if not hotels.exists():
-    raise PermissionDenied("You do not have access to Kitchen management reports.")
+    hotels = get_accessible_hotels(request.user)
+    if not hotels.exists():
+        raise PermissionDenied("You do not have access to Kitchen management reports.")
 
-today = timezone.localdate()
-date_from_raw = request.GET.get("from", "").strip()
-date_to_raw = request.GET.get("to", "").strip()
-try:
-    date_from = date.fromisoformat(date_from_raw) if date_from_raw else today.replace(day=1)
-except ValueError:
-    date_from = today.replace(day=1)
-try:
-    date_to = date.fromisoformat(date_to_raw) if date_to_raw else today
-except ValueError:
-    date_to = today
-if date_from > date_to:
-    date_from, date_to = date_to, date_from
+    today = timezone.localdate()
+    date_from_raw = request.GET.get("from", "").strip()
+    date_to_raw = request.GET.get("to", "").strip()
+    try:
+        date_from = date.fromisoformat(date_from_raw) if date_from_raw else today.replace(day=1)
+    except ValueError:
+        date_from = today.replace(day=1)
+    try:
+        date_to = date.fromisoformat(date_to_raw) if date_to_raw else today
+    except ValueError:
+        date_to = today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
 
-selected_hotel = request.GET.get("hotel", "").strip()
-if selected_hotel.isdigit():
-    scoped_hotels = hotels.filter(pk=int(selected_hotel))
-    if not scoped_hotels.exists():
-        raise PermissionDenied("You do not have access to that hotel.")
-else:
-    scoped_hotels = hotels
-    selected_hotel = ""
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel.isdigit():
+        scoped_hotels = hotels.filter(pk=int(selected_hotel))
+        if not scoped_hotels.exists():
+            raise PermissionDenied("You do not have access to that hotel.")
+    else:
+        scoped_hotels = hotels
+        selected_hotel = ""
 
-sales_items = POSOrderItem.objects.filter(
-    order__department__hotel__in=scoped_hotels,
-    order__created_at__date__gte=date_from,
-    order__created_at__date__lte=date_to,
-    order__status__in=("CHARGED", "PAID"),
-    order__is_refunded=False,
-    menu_item__product__product_type="FOOD",
-).select_related("order", "menu_item", "menu_item__product", "order__department__hotel")
+    sales_items = POSOrderItem.objects.filter(
+        order__department__hotel__in=scoped_hotels,
+        order__created_at__date__gte=date_from,
+        order__created_at__date__lte=date_to,
+        order__status__in=("CHARGED", "PAID"),
+        order__is_refunded=False,
+        menu_item__product__product_type="FOOD",
+    ).select_related("order", "menu_item", "menu_item__product", "order__department__hotel")
 
-total_sales = Decimal("0.00")
-sales_cogs = Decimal("0.00")
-total_sold = 0
-for item in sales_items:
-    total_sold += item.quantity
-    total_sales += item.price * item.quantity
-    sales_cogs += (item.cost_at_sale or Decimal("0")) * item.quantity
+    total_sales = Decimal("0.00")
+    sales_cogs = Decimal("0.00")
+    total_sold = 0
+    for item in sales_items:
+        total_sold += item.quantity
+        total_sales += item.price * item.quantity
+        sales_cogs += (item.cost_at_sale or Decimal("0")) * item.quantity
 
-# Keep the overview chart readable even when users select a long period:
-# show the latest 14 calendar days within the selected range.
-trend_end = date_to
-trend_start = max(date_from, trend_end - timezone.timedelta(days=13))
-trend_days = []
-cursor_day = trend_start
-while cursor_day <= trend_end:
-    trend_days.append(cursor_day)
-    cursor_day += timezone.timedelta(days=1)
-daily = {
-    day: {"sales": Decimal("0.00"), "production": 0, "spoilage": Decimal("0.00")}
-    for day in trend_days
-}
-for item in sales_items:
-    day = item.order.created_at.date()
-    if day in daily:
-        daily[day]["sales"] += item.price * item.quantity
+    # Keep the overview chart readable even when users select a long period:
+    # show the latest 14 calendar days within the selected range.
+    trend_end = date_to
+    trend_start = max(date_from, trend_end - timezone.timedelta(days=13))
+    trend_days = []
+    cursor_day = trend_start
+    while cursor_day <= trend_end:
+        trend_days.append(cursor_day)
+        cursor_day += timezone.timedelta(days=1)
+    daily = {
+        day: {"sales": Decimal("0.00"), "production": 0, "spoilage": Decimal("0.00")}
+        for day in trend_days
+    }
+    for item in sales_items:
+        day = item.order.created_at.date()
+        if day in daily:
+            daily[day]["sales"] += item.price * item.quantity
 
-batches = ProductionBatch.objects.filter(
-    produced_by__department__hotel__in=scoped_hotels,
-    created_at__date__gte=date_from,
-    created_at__date__lte=date_to,
-    is_executed=True,
-).select_related("recipe", "produced_by", "produced_by__department__hotel")
-batch_profitability_rows = _build_batch_profitability_rows(batches, scoped_hotels)
+    batches = ProductionBatch.objects.filter(
+        produced_by__department__hotel__in=scoped_hotels,
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+        is_executed=True,
+    ).select_related("recipe", "produced_by", "produced_by__department__hotel")
+    batch_profitability_rows = _build_batch_profitability_rows(batches, scoped_hotels)
 
-production_count = batches.count()
-portions_produced = batches.aggregate(total=Sum("quantity_produced"))["total"] or 0
-production_cost = sum((batch.total_cost() for batch in batches), Decimal("0.00"))
-for batch in batches:
-    day = batch.created_at.date()
-    if day in daily:
-        daily[day]["production"] += batch.quantity_produced
+    production_count = batches.count()
+    portions_produced = batches.aggregate(total=Sum("quantity_produced"))["total"] or 0
+    production_cost = sum((batch.total_cost() for batch in batches), Decimal("0.00"))
+    for batch in batches:
+        day = batch.created_at.date()
+        if day in daily:
+            daily[day]["production"] += batch.quantity_produced
 
-spoilage_records = KitchenSpoilageRecord.objects.filter(
-    department__hotel__in=scoped_hotels,
-    recorded_at__date__gte=date_from,
-    recorded_at__date__lte=date_to,
-)
-spoilage_cost = spoilage_records.aggregate(total=Sum("cost_amount"))["total"] or Decimal("0.00")
-spoilage_quantity = spoilage_records.aggregate(total=Sum("quantity"))["total"] or Decimal("0.000")
-pending_spoilage = spoilage_records.filter(review_status="PENDING").count()
-for record in spoilage_records:
-    day = record.recorded_at.date()
-    if day in daily:
-        daily[day]["spoilage"] += record.cost_amount
+    spoilage_records = KitchenSpoilageRecord.objects.filter(
+        department__hotel__in=scoped_hotels,
+        recorded_at__date__gte=date_from,
+        recorded_at__date__lte=date_to,
+    )
+    spoilage_cost = spoilage_records.aggregate(total=Sum("cost_amount"))["total"] or Decimal("0.00")
+    spoilage_quantity = spoilage_records.aggregate(total=Sum("quantity"))["total"] or Decimal("0.000")
+    pending_spoilage = spoilage_records.filter(review_status="PENDING").count()
+    for record in spoilage_records:
+        day = record.recorded_at.date()
+        if day in daily:
+            daily[day]["spoilage"] += record.cost_amount
 
-trend_rows = []
-max_sales = max((row["sales"] for row in daily.values()), default=Decimal("0.00"))
-max_production = max((row["production"] for row in daily.values()), default=0)
-max_spoilage = max((row["spoilage"] for row in daily.values()), default=Decimal("0.00"))
-for day, values in daily.items():
-    trend_rows.append({
-        "date": day,
-        "label": day.strftime("%b %d"),
-        "sales": values["sales"],
-        "production": values["production"],
-        "spoilage": values["spoilage"],
-        "sales_width": int(values["sales"] / max_sales * 100) if max_sales else 0,
-        "production_width": int(values["production"] / max_production * 100) if max_production else 0,
-        "spoilage_width": int(values["spoilage"] / max_spoilage * 100) if max_spoilage else 0,
+    trend_rows = []
+    max_sales = max((row["sales"] for row in daily.values()), default=Decimal("0.00"))
+    max_production = max((row["production"] for row in daily.values()), default=0)
+    max_spoilage = max((row["spoilage"] for row in daily.values()), default=Decimal("0.00"))
+    for day, values in daily.items():
+        trend_rows.append({
+            "date": day,
+            "label": day.strftime("%b %d"),
+            "sales": values["sales"],
+            "production": values["production"],
+            "spoilage": values["spoilage"],
+            "sales_width": int(values["sales"] / max_sales * 100) if max_sales else 0,
+            "production_width": int(values["production"] / max_production * 100) if max_production else 0,
+            "spoilage_width": int(values["spoilage"] / max_spoilage * 100) if max_spoilage else 0,
+        })
+
+    requests = IngredientRestockRequest.objects.filter(
+        (
+            Q(requested_by__hotel__in=scoped_hotels)
+            | Q(requested_by__department__hotel__in=scoped_hotels)
+        ),
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+    )
+    pending_requests = requests.filter(status__in=("PENDING", "APPROVED", "RECONCILIATION_PENDING", "PARTIALLY_ISSUED")).count()
+
+    direct_purchases = DirectPurchase.objects.filter(
+        supplier__hotel__in=scoped_hotels,
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+    )
+    pending_purchases = direct_purchases.filter(
+        status__in=("RECONCILIATION_PENDING", "APPROVED", "PAID", "PARTIALLY_RECEIVED")
+    ).count()
+    outstanding_delivery_quantity = sum(
+        (item.outstanding_quantity for item in DirectPurchaseItem.objects.filter(
+            purchase__in=direct_purchases,
+            purchase__status__in=("APPROVED", "PAID", "PARTIALLY_RECEIVED"),
+        )),
+        Decimal("0.000"),
+    )
+
+    return render(request, "kitchen/management_report.html", {
+        "hotels": hotels.order_by("name"),
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "total_sales": total_sales,
+        "sales_cogs": sales_cogs,
+        "estimated_gross_profit": total_sales - sales_cogs,
+        "total_sold": total_sold,
+        "production_count": production_count,
+        "portions_produced": portions_produced,
+        "production_cost": production_cost,
+        "spoilage_cost": spoilage_cost,
+        "spoilage_quantity": spoilage_quantity,
+        "pending_spoilage": pending_spoilage,
+        "pending_requests": pending_requests,
+        "pending_purchases": pending_purchases,
+        "outstanding_delivery_quantity": outstanding_delivery_quantity,
+        "uncosted_sales_items": sales_items.filter(cost_at_sale__lte=0).count(),
+        "trend_rows": trend_rows,
     })
 
-requests = IngredientRestockRequest.objects.filter(
-    (
-        Q(requested_by__hotel__in=scoped_hotels)
-        | Q(requested_by__department__hotel__in=scoped_hotels)
-    ),
-    created_at__date__gte=date_from,
-    created_at__date__lte=date_to,
-)
-pending_requests = requests.filter(status__in=("PENDING", "APPROVED", "RECONCILIATION_PENDING", "PARTIALLY_ISSUED")).count()
-
-direct_purchases = DirectPurchase.objects.filter(
-    supplier__hotel__in=scoped_hotels,
-    created_at__date__gte=date_from,
-    created_at__date__lte=date_to,
-)
-pending_purchases = direct_purchases.filter(
-    status__in=("RECONCILIATION_PENDING", "APPROVED", "PAID", "PARTIALLY_RECEIVED")
-).count()
-outstanding_delivery_quantity = sum(
-    (item.outstanding_quantity for item in DirectPurchaseItem.objects.filter(
-        purchase__in=direct_purchases,
-        purchase__status__in=("APPROVED", "PAID", "PARTIALLY_RECEIVED"),
-    )),
-    Decimal("0.000"),
-)
-
-return render(request, "kitchen/management_report.html", {
-    "hotels": hotels.order_by("name"),
-    "selected_hotel": selected_hotel,
-    "date_from": date_from.isoformat(),
-    "date_to": date_to.isoformat(),
-    "total_sales": total_sales,
-    "sales_cogs": sales_cogs,
-    "estimated_gross_profit": total_sales - sales_cogs,
-    "total_sold": total_sold,
-    "production_count": production_count,
-    "portions_produced": portions_produced,
-    "production_cost": production_cost,
-    "spoilage_cost": spoilage_cost,
-    "spoilage_quantity": spoilage_quantity,
-    "pending_spoilage": pending_spoilage,
-    "pending_requests": pending_requests,
-    "pending_purchases": pending_purchases,
-    "outstanding_delivery_quantity": outstanding_delivery_quantity,
-    "uncosted_sales_items": sales_items.filter(cost_at_sale__lte=0).count(),
-    "trend_rows": trend_rows,
-})
 
 
-
-    return batch_profitability_rows
+        return batch_profitability_rows
 
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def kitchen_purchasing_report(request):
