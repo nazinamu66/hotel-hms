@@ -328,6 +328,8 @@
             Live kitchen queue
             <div style="margin-top:8px;">
                 <a class="btn btn-primary" href="{% url 'kitchen_refund_queue' %}">Refund confirmations</a>
+                <a class="btn btn-primary" href="{% url 'kitchen_handover_list' %}">Shift handover</a>
+                {% if user.is_department_head %}<a class="btn btn-primary" href="{% url 'kitchen_storage_register' %}">Storage register</a>{% endif %}
             </div>
         </div>
 
