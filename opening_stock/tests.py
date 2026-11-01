@@ -7,6 +7,7 @@ from django.test import TestCase
 
 from accounting.models import JournalLine
 from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement
+from opening_stock.forms import OpeningStockLineForm
 from opening_stock.models import OpeningStockBatch, OpeningStockLine
 from opening_stock.services import post_opening_stock_batch
 from linen.models import LinenItem, LinenTransaction
@@ -49,6 +50,26 @@ class OpeningStockPostingTests(TestCase):
             opening_date=date.today(),
             created_by=self.user,
         )
+
+    def test_stock_form_accepts_blank_irrelevant_numeric_fields(self):
+        batch = self.make_batch("OPENING-FORM-STOCK")
+        form = OpeningStockLineForm(
+            data={
+                "line_type": "STOCK",
+                "product": str(self.product.pk),
+                "department": str(self.department.pk),
+                "quantity": "5",
+                "unit_cost": "2000",
+            },
+            hotel=self.hotel,
+            instance=OpeningStockLine(batch=batch),
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        line = form.save(commit=False)
+        self.assertEqual(line.quantity, Decimal("5"))
+        self.assertEqual(line.unit_cost, Decimal("2000"))
+        self.assertEqual(line.asset_value, Decimal("0"))
 
     def test_stock_opening_creates_stock_fifo_movement_and_balanced_journal(self):
         batch = self.make_batch()
