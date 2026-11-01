@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django import forms
 
 from inventory.models import Department, Product
@@ -36,3 +38,15 @@ class OpeningStockLineForm(forms.ModelForm):
         self.fields["asset_value"].help_text = "Total opening value for this individual asset."
         for field in self.fields.values():
             field.required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        # The model columns are non-nullable. Category-specific forms leave
+        # unrelated numeric fields blank, so normalize those values to zero
+        # before ModelForm's model validation runs.
+        for field_name in ("quantity", "unit_cost", "asset_value"):
+            if cleaned_data.get(field_name) is None:
+                cleaned_data[field_name] = Decimal("0")
+
+        return cleaned_data
