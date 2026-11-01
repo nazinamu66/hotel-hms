@@ -96,6 +96,14 @@ class OpeningStockPostingTests(TestCase):
         self.assertEqual(movement.quantity, Decimal("12.500"))
         self.assertEqual(sum((row.debit for row in journal_lines), Decimal("0.00")), Decimal("1000.00"))
         self.assertEqual(sum((row.credit for row in journal_lines), Decimal("0.00")), Decimal("1000.00"))
+        self.assertEqual(
+            JournalLine.objects.get(journal=result["journal_entry"], account__code="1200").debit,
+            Decimal("1000.00"),
+        )
+        self.assertEqual(
+            JournalLine.objects.get(journal=result["journal_entry"], account__code="3002").credit,
+            Decimal("1000.00"),
+        )
         batch.refresh_from_db()
         self.assertEqual(batch.status, "POSTED")
         self.assertEqual(batch.journal_entry_id, result["journal_entry"].pk)
@@ -175,7 +183,11 @@ class OpeningStockPostingTests(TestCase):
         self.assertEqual(transaction.quantity, 20)
         self.assertEqual(get_linen_summary(linen_item)["store"], Decimal("20"))
         self.assertEqual(
-            sum((row.credit for row in result["journal_entry"].lines.all()), Decimal("0.00")),
+            JournalLine.objects.get(journal=result["journal_entry"], account__code="1250").debit,
+            Decimal("500.00"),
+        )
+        self.assertEqual(
+            JournalLine.objects.get(journal=result["journal_entry"], account__code="3002").credit,
             Decimal("500.00"),
         )
 
@@ -207,6 +219,10 @@ class OpeningStockPostingTests(TestCase):
         self.assertEqual(asset.condition, "GOOD")
         self.assertEqual(asset.purchase_cost, Decimal("500.00"))
         self.assertEqual(
-            sum((row.debit for row in result["journal_entry"].lines.all()), Decimal("0.00")),
+            JournalLine.objects.get(journal=result["journal_entry"], account__code="1250").debit,
+            Decimal("500.00"),
+        )
+        self.assertEqual(
+            JournalLine.objects.get(journal=result["journal_entry"], account__code="3002").credit,
             Decimal("500.00"),
         )
