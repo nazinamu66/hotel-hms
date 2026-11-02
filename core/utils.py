@@ -1,5 +1,6 @@
 from inventory.models import Hotel
 
+
 def get_user_hotel(user):
     """
     Returns a SINGLE hotel.
@@ -21,8 +22,20 @@ def get_user_hotels(user):
     Used for dashboards and reports.
     """
 
+    # The platform bootstrap assigns the first ADMIN to the newly
+    # created organization. Their dashboards must use that organization
+    # scope; an ADMIN with no organization has no hotel access yet.
+    if user.role == "ADMIN":
+        if user.organization_id:
+            return Hotel.objects.filter(
+                organization_id=user.organization_id
+            )
+        return Hotel.objects.none()
+
     if user.role == "DIRECTOR":
-        return Hotel.objects.all()
+        return Hotel.objects.filter(
+            organization_id=user.organization_id
+        )
 
     if user.hotel:
         return Hotel.objects.filter(id=user.hotel.id)
