@@ -162,6 +162,14 @@ def initial_setup(request):
         step = 1
 
     setup_data = request.session.get("initial_setup", {})
+    step_labels = (
+        "Organization",
+        "Hotel profile",
+        "Features",
+        "Departments",
+        "Accounting",
+        "Review",
+    )
 
     # ---------------------------------------------------------
     # STEP 1 — ORGANIZATION
@@ -208,6 +216,7 @@ def initial_setup(request):
                 "form": form,
                 "step": 1,
                 "total_steps": 6,
+                "step_labels": step_labels,
                 "setup_data": setup_data,
             },
         )
@@ -303,6 +312,7 @@ def initial_setup(request):
                 "form": form,
                 "step": 2,
                 "total_steps": 6,
+                "step_labels": step_labels,
                 "setup_data": setup_data,
             },
         )
@@ -363,6 +373,7 @@ def initial_setup(request):
                 "form": form,
                 "step": 3,
                 "total_steps": 6,
+                "step_labels": step_labels,
                 "setup_data": setup_data,
             },
         )
@@ -420,6 +431,7 @@ def initial_setup(request):
                 "form": form,
                 "step": 4,
                 "total_steps": 6,
+                "step_labels": step_labels,
                 "setup_data": setup_data,
                 "departments": department_names,
             },
@@ -478,6 +490,7 @@ def initial_setup(request):
                 "form": form,
                 "step": 5,
                 "total_steps": 6,
+                "step_labels": step_labels,
                 "setup_data": setup_data,
             },
         )
@@ -720,6 +733,7 @@ def initial_setup(request):
                 "form": form,
                 "step": 6,
                 "total_steps": 6,
+                "step_labels": step_labels,
                 "setup_data": setup_data,
                 "selected_feature_labels": selected_feature_labels,
             },
