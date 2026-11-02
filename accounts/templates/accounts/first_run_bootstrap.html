@@ -3,46 +3,52 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>First-time setup · Hotel HMS</title>
+    <meta name="theme-color" content="#f4f7fc">
+    <title>Welcome to Hotel HMS · First-time setup</title>
     <style>
         :root { color-scheme: light; --ink:#172334; --muted:#64748b; --line:#dbe3ee; --blue:#245de8; }
         * { box-sizing:border-box; }
-        body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; background:#f3f6fb; color:var(--ink); font:15px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-        main { width:min(100%,560px); background:#fff; border:1px solid var(--line); border-radius:20px; padding:clamp(24px,5vw,42px); box-shadow:0 18px 55px rgba(24,39,75,.09); }
-        .mark { width:48px; height:48px; display:grid; place-items:center; border-radius:14px; background:#eaf0ff; color:var(--blue); font-size:23px; font-weight:800; }
-        .eyebrow { margin:24px 0 6px; color:var(--blue); font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
-        h1 { margin:0; font-size:clamp(25px,5vw,32px); letter-spacing:-.04em; line-height:1.15; }
-        p { color:var(--muted); }
-        .account { margin:22px 0; padding:15px 17px; border:1px solid var(--line); border-radius:12px; background:#f8faff; }
-        .account strong { display:block; color:var(--ink); }
-        .notice { margin:20px 0; padding:13px 15px; border-radius:10px; background:#eff6ff; color:#244b8f; font-size:14px; }
-        button { width:100%; border:0; border-radius:11px; padding:14px 18px; background:var(--blue); color:white; font:700 15px inherit; cursor:pointer; }
-        button:hover { background:#194bc9; }
-        .small { margin-top:17px; font-size:12px; text-align:center; }
+        body { margin:0; min-height:100vh; display:grid; place-items:center; padding:28px; background:radial-gradient(circle at 15% 10%,#e7efff 0,transparent 34%),#f4f7fc; color:var(--ink); font:15px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+        main { width:min(100%,720px); background:#fff; border:1px solid var(--line); border-radius:26px; padding:clamp(28px,6vw,58px); box-shadow:0 24px 70px rgba(24,39,75,.10); }
+        .mark { width:54px; height:54px; display:grid; place-items:center; border-radius:17px; background:#eaf0ff; color:var(--blue); font-size:26px; font-weight:850; }
+        .eyebrow { margin:28px 0 8px; color:var(--blue); font-size:12px; font-weight:850; letter-spacing:.16em; text-transform:uppercase; }
+        h1 { margin:0; font-size:clamp(30px,5vw,43px); letter-spacing:-.045em; line-height:1.1; }
+        .intro { max-width:590px; margin:17px 0 26px; color:var(--muted); font-size:clamp(16px,2.2vw,19px); }
+        .account { margin:25px 0 18px; padding:19px 21px; border:1px solid var(--line); border-radius:16px; background:#f8faff; }
+        .account-label { color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.1em; }
+        .account strong { display:block; margin:4px 0; color:var(--ink); font-size:20px; }
+        .account span:last-child { color:var(--muted); }
+        .notice { margin:20px 0 24px; padding:16px 18px; border:1px solid #dbeafe; border-radius:14px; background:#eff6ff; color:#244b8f; }
+        button { width:100%; border:0; border-radius:13px; padding:16px 20px; background:var(--blue); color:white; font:700 16px system-ui,sans-serif; cursor:pointer; transition:background .15s,transform .15s; }
+        button:hover { background:#194bc9; transform:translateY(-1px); }
+        button:focus-visible { outline:3px solid #9bb8ff; outline-offset:3px; }
+        .small { margin:17px 0 0; color:var(--muted); font-size:13px; text-align:center; }
+        @media(max-width:520px) { body{padding:14px} main{border-radius:20px;padding:26px 21px} }
     </style>
 </head>
 <body>
 <main>
     <div class="mark" aria-hidden="true">H</div>
     <div class="eyebrow">Hotel HMS · First-time setup</div>
-    <h1>Prepare your hotel system</h1>
-    <p>Your Django superuser account is ready. Before creating the first organization and hotel, activate its Hotel HMS administrator role.</p>
+    <h1>Let's set up your hotel business.</h1>
+    <p class="intro">Your account is ready. First, we'll activate you as the organization's Director. Then we'll guide you through creating your organization and configuring your first hotel.</p>
 
     <div class="account">
-        <span style="color:#64748b;font-size:12px;">CURRENT SIGNED-IN ACCOUNT</span>
-        <strong>{{ account.username }}</strong>
-        <span style="color:#64748b;font-size:13px;">{{ account.email|default:"No email address set" }}</span>
+        <div class="account-label">YOUR SIGNED-IN ACCOUNT</div>
+        <strong>{{ account.get_full_name|default:account.username }}</strong>
+        <span>{{ account.email|default:"No email address set" }}</span>
     </div>
 
     <div class="notice">
-        This step keeps your existing account and password. It does not create another user or delete any data.
+        <strong>Your account stays yours.</strong><br>
+        We'll keep your existing username, email and password. This step does not create another user or delete any data.
     </div>
 
     <form method="post">
         {% csrf_token %}
-        <button type="submit">Activate administrator and continue</button>
+        <button type="submit">Activate Director account and continue <span aria-hidden="true">→</span></button>
     </form>
-    <p class="small">Only the authenticated Django superuser can complete this step.</p>
+    <p class="small">For security, only the authenticated initial Django superuser can complete this step.</p>
 </main>
 </body>
 </html>
