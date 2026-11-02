@@ -139,6 +139,38 @@ class FirstRunBootstrapTests(TestCase):
             fetch_redirect_response=False,
         )
 
+    def test_all_six_onboarding_steps_render_for_first_director(self):
+        self.client.post(reverse("first_run_bootstrap"))
+        session = self.client.session
+        session["initial_setup"] = {
+            "organization": {"organization_name": "Demo Organization"},
+            "hotel": {
+                "hotel_name": "Demo Hotel",
+                "address": "123 Test Street",
+                "city": "Kano",
+                "state": "Kano",
+                "country": "Nigeria",
+                "phone": "08000000000",
+                "email": "",
+                "website": "",
+                "tax_number": "",
+                "currency": "₦",
+            },
+            "features": ["FRONTDESK", "HOUSEKEEPING"],
+            "departments_confirmed": True,
+            "accounting_confirmed": True,
+        }
+        session.save()
+
+        for step in range(1, 7):
+            with self.subTest(step=step):
+                response = self.client.get(
+                    reverse("initial_setup"),
+                    {"step": step},
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, f"Step {step} of 6")
+
     def test_non_superuser_cannot_use_first_run_bootstrap(self):
         ordinary_user = User.objects.create_user(
             username="ordinary-user",
