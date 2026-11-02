@@ -90,7 +90,7 @@ def first_run_bootstrap(request):
         )
         return redirect("role_redirect")
 
-    if user.role == "DIRECTOR":
+    if user.role in {"ADMIN", "DIRECTOR"}:
         return redirect("initial_setup")
 
     if request.method == "POST":
@@ -744,9 +744,8 @@ def initial_setup(request):
 @login_required
 def role_redirect(request):
 
-    # A fresh installation starts with a Django superuser. Route that
-    # account through the browser-based bootstrap before any department
-    # or hotel assignment exists.
+    # A fresh installation starts with a Django superuser. Activate that
+    # account as the first Director, then route it through organization setup.
     if (
         request.user.is_superuser
         and not request.user.organization_id
