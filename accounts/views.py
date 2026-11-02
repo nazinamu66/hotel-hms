@@ -71,8 +71,8 @@ def logout_view(request):
 @login_required
 def first_run_bootstrap(request):
     """
-    Promote the authenticated initial Django superuser to the
-    application's ADMIN role before the first hotel is configured.
+    Activate the authenticated initial Django superuser as the
+    organization's first Director before the first hotel is configured.
     This is available only on a genuinely empty installation.
     """
     user = request.user
@@ -90,11 +90,11 @@ def first_run_bootstrap(request):
         )
         return redirect("role_redirect")
 
-    if user.role == "ADMIN":
+    if user.role == "DIRECTOR":
         return redirect("initial_setup")
 
     if request.method == "POST":
-        user.role = "ADMIN"
+        user.role = "DIRECTOR"
         user.organization = None
         user.hotel = None
         user.department = None
@@ -109,7 +109,7 @@ def first_run_bootstrap(request):
 
         messages.success(
             request,
-            "Administrator access is ready. Continue with your hotel setup.",
+            "Director access is ready. Continue with your organization and hotel setup.",
         )
         return redirect("initial_setup")
 
@@ -147,7 +147,7 @@ def organization_profile(request):
 
 @login_required
 def initial_setup(request):
-    if request.user.role != "ADMIN":
+    if request.user.role not in {"ADMIN", "DIRECTOR"}:
         raise PermissionDenied
 
     if request.user.organization_id:
@@ -738,9 +738,11 @@ def role_redirect(request):
         and not request.user.organization_id
         and not Organization.objects.exists()
         and not Hotel.objects.exists()
-        and request.user.role != "ADMIN"
     ):
-        return redirect("first_run_bootstrap")
+        if request.user.role == "DIRECTOR":
+            return redirect("initial_setup")
+        if request.user.role != "ADMIN":
+            return redirect("first_run_bootstrap")
 
     role = request.user.role
 
