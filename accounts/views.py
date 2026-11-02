@@ -67,6 +67,58 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
+
+@login_required
+def first_run_bootstrap(request):
+    """
+    Promote the authenticated initial Django superuser to the
+    application's ADMIN role before the first hotel is configured.
+    This is available only on a genuinely empty installation.
+    """
+    user = request.user
+
+    if not user.is_superuser:
+        raise PermissionDenied
+
+    if user.organization_id:
+        return redirect("hotel_dashboard")
+
+    if Organization.objects.exists() or Hotel.objects.exists():
+        messages.error(
+            request,
+            "Initial setup has already started. Contact an existing administrator.",
+        )
+        return redirect("role_redirect")
+
+    if user.role == "ADMIN":
+        return redirect("initial_setup")
+
+    if request.method == "POST":
+        user.role = "ADMIN"
+        user.organization = None
+        user.hotel = None
+        user.department = None
+        user.is_department_head = False
+        user.save(update_fields=[
+            "role",
+            "organization",
+            "hotel",
+            "department",
+            "is_department_head",
+        ])
+
+        messages.success(
+            request,
+            "Administrator access is ready. Continue with your hotel setup.",
+        )
+        return redirect("initial_setup")
+
+    return render(
+        request,
+        "accounts/first_run_bootstrap.html",
+        {"account": user},
+    )
+
 @login_required
 def organization_profile(request):
     if request.user.role not in {"ADMIN", "DIRECTOR"}:
@@ -677,6 +729,18 @@ def initial_setup(request):
 
 @login_required
 def role_redirect(request):
+
+    # A fresh installation starts with a Django superuser. Route that
+    # account through the browser-based bootstrap before any department
+    # or hotel assignment exists.
+    if (
+        request.user.is_superuser
+        and not request.user.organization_id
+        and not Organization.objects.exists()
+        and not Hotel.objects.exists()
+        and request.user.role != "ADMIN"
+    ):
+        return redirect("first_run_bootstrap")
 
     role = request.user.role
 
