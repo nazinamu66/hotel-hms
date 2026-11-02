@@ -685,7 +685,7 @@ def initial_setup(request):
                             setup_new_hotel(hotel)
 
                             # ---------------------------------
-                            # ADMIN → ORGANIZATION
+                            # DIRECTOR → ORGANIZATION
                             # ---------------------------------
                             request.user.organization = organization
                             request.user.save(
