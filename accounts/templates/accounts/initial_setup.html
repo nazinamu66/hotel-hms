@@ -1,414 +1,223 @@
 {% extends "base/base.html" %}
+{% block title %}Set up your hotel · Hotel HMS{% endblock %}
 
 {% block content %}
+<style>
+    .hms-setup { --setup-ink:#172334; --setup-muted:#64748b; --setup-line:#dce5f1; --setup-blue:#245de8; max-width:1120px; margin:0 auto; padding:34px clamp(16px,3vw,38px) 56px; color:var(--setup-ink); }
+    .hms-setup * { box-sizing:border-box; }
+    .setup-kicker { color:var(--setup-blue); font-size:11px; font-weight:850; letter-spacing:.16em; text-transform:uppercase; }
+    .setup-heading { margin:9px 0 8px; font-size:clamp(28px,4vw,40px); font-weight:850; letter-spacing:-.045em; line-height:1.12; }
+    .setup-intro { max-width:720px; margin:0; color:var(--setup-muted); font-size:16px; line-height:1.65; }
+    .setup-progress { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin:30px 0 24px; }
+    .setup-progress-item { min-width:0; text-decoration:none; color:#94a3b8; }
+    .setup-progress-track { height:5px; margin-bottom:10px; border-radius:99px; background:#e8edf5; overflow:hidden; }
+    .setup-progress-fill { height:100%; border-radius:99px; background:var(--setup-blue); }
+    .setup-progress-item.is-done .setup-progress-track,.setup-progress-item.is-current .setup-progress-track { background:#dbe7ff; }
+    .setup-progress-item.is-done .setup-progress-fill { width:100%; }
+    .setup-progress-item.is-current .setup-progress-fill { width:50%; }
+    .setup-progress-label { display:block; overflow:hidden; font-size:11px; font-weight:750; text-overflow:ellipsis; white-space:nowrap; }
+    .setup-progress-item.is-done,.setup-progress-item.is-current { color:#29436f; }
+    .setup-progress-item.is-current .setup-progress-label { color:var(--setup-blue); }
+    .setup-card { overflow:hidden; border:1px solid var(--setup-line); border-radius:22px; background:#fff; box-shadow:0 16px 42px rgba(30,50,90,.07); }
+    .setup-card-head { padding:clamp(22px,4vw,34px) clamp(22px,4vw,38px) 22px; border-bottom:1px solid #edf1f7; }
+    .setup-step-number { display:inline-flex; align-items:center; gap:7px; color:var(--setup-blue); font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .setup-card-title { margin:9px 0 6px; font-size:24px; font-weight:820; letter-spacing:-.035em; }
+    .setup-card-subtitle { margin:0; color:var(--setup-muted); line-height:1.6; }
+    .setup-card-body { padding:clamp(22px,4vw,38px); }
+    .setup-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:21px 22px; }
+    .setup-field { min-width:0; }
+    .setup-field.is-wide { grid-column:1/-1; }
+    .setup-field label { display:block; margin:0 0 8px; color:#34445c; font-size:13px; font-weight:760; }
+    .setup-field input:not([type=checkbox]):not([type=radio]),.setup-field select,.setup-field textarea { display:block; width:100%; min-height:48px; padding:11px 13px; border:1px solid #cfd9e7; border-radius:11px; background:#fff; color:var(--setup-ink); font:inherit; transition:border-color .15s,box-shadow .15s; }
+    .setup-field textarea { min-height:104px; resize:vertical; }
+    .setup-field input:focus,.setup-field select:focus,.setup-field textarea:focus { outline:0; border-color:#6892ff; box-shadow:0 0 0 4px rgba(36,93,232,.11); }
+    .setup-field input[type=file] { padding:9px; }
+    .setup-help { margin:7px 0 0; color:#71819a; font-size:12px; line-height:1.5; }
+    .setup-error { margin-top:7px; color:#c03535; font-size:12px; }
+    .setup-alert { margin-bottom:20px; padding:14px 16px; border:1px solid #fecaca; border-radius:12px; background:#fff1f2; color:#a32323; }
+    .setup-info { margin-bottom:24px; padding:18px 20px; border:1px solid #dbe7ff; border-radius:15px; background:#f5f8ff; }
+    .setup-info h3 { margin:0 0 7px; font-size:15px; font-weight:800; }
+    .setup-info p,.setup-info ul { margin:0; color:#536783; font-size:13px; line-height:1.65; }
+    .setup-info ul { padding-left:19px; }
+    .setup-departments { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:18px 0 22px; }
+    .setup-department { display:flex; align-items:center; gap:10px; min-height:48px; padding:11px 13px; border:1px solid var(--setup-line); border-radius:12px; background:#fbfcff; color:#33445c; font-size:13px; font-weight:700; }
+    .setup-department-mark { display:grid; width:25px; height:25px; flex:0 0 25px; place-items:center; border-radius:8px; background:#eaf0ff; color:var(--setup-blue); font-size:12px; }
+    .setup-check { display:flex; align-items:flex-start; gap:11px; padding:15px; border:1px solid var(--setup-line); border-radius:12px; background:#fbfcff; color:#34445c; font-size:13px; line-height:1.5; }
+    .setup-check input { width:18px; height:18px; margin-top:1px; accent-color:var(--setup-blue); }
+    .setup-feature-grid > div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .setup-feature-grid label { display:flex; align-items:center; gap:11px; min-height:62px; margin:0; padding:14px; border:1px solid var(--setup-line); border-radius:13px; background:#fff; cursor:pointer; font-size:13px; font-weight:700; }
+    .setup-feature-grid input { width:18px; height:18px; accent-color:var(--setup-blue); }
+    .setup-review-section { margin-bottom:20px; overflow:hidden; border:1px solid var(--setup-line); border-radius:14px; }
+    .setup-review-head { padding:12px 16px; background:#f7f9fd; font-size:13px; font-weight:800; }
+    .setup-review-content { padding:16px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px 20px; }
+    .setup-review-item small { display:block; margin-bottom:3px; color:#7a899e; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+    .setup-review-item strong { overflow-wrap:anywhere; color:#29384e; font-size:13px; font-weight:700; }
+    .setup-feature-tags { display:flex; flex-wrap:wrap; gap:8px; }
+    .setup-feature-tag { padding:7px 11px; border-radius:99px; background:#edf3ff; color:#2855ae; font-size:12px; font-weight:750; }
+    .setup-actions { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:30px; padding-top:22px; border-top:1px solid #edf1f7; }
+    .setup-btn { display:inline-flex; align-items:center; justify-content:center; min-height:46px; padding:11px 20px; border:1px solid transparent; border-radius:11px; font:750 14px system-ui,sans-serif; text-decoration:none; cursor:pointer; transition:transform .15s,background .15s; }
+    .setup-btn:hover { transform:translateY(-1px); }
+    .setup-btn-primary { background:var(--setup-blue); color:#fff; }
+    .setup-btn-primary:hover { background:#194bc9; color:#fff; }
+    .setup-btn-secondary { border-color:#d4deeb; background:#fff; color:#44546b; }
+    .setup-btn-secondary:hover { background:#f7f9fc; color:#26364d; }
+    .setup-footer-note { margin:16px 0 0; color:#8190a5; font-size:11px; text-align:center; }
+    @media(max-width:680px) { .hms-setup{padding:24px 13px 38px}.setup-progress{gap:5px}.setup-progress-label{font-size:9px}.setup-fields,.setup-review-content{grid-template-columns:1fr}.setup-departments,.setup-feature-grid>div{grid-template-columns:1fr}.setup-card{border-radius:16px}.setup-actions .setup-btn{flex:1;padding:10px 12px} }
+</style>
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
+<div class="hms-setup">
+    <div class="setup-kicker">Hotel HMS · Guided setup</div>
+    <h1 class="setup-heading">Let's prepare your hotel.</h1>
+    <p class="setup-intro">We'll configure your organization, hotel services and core systems together. Your progress is saved as you move through each step.</p>
 
-            <!-- STEP HEADER -->
-            <div class="mb-4">
+    <nav class="setup-progress" aria-label="Setup progress">
+        {% for label in step_labels %}
+            <a class="setup-progress-item {% if step > forloop.counter %}is-done{% elif step == forloop.counter %}is-current{% endif %}" href="{% if step > forloop.counter %}{% url 'initial_setup' %}?step={{ forloop.counter }}{% else %}#{% endif %}" {% if step == forloop.counter %}aria-current="step"{% endif %}>
+                <span class="setup-progress-track"><span class="setup-progress-fill"></span></span>
+                <span class="setup-progress-label">{{ label }}</span>
+            </a>
+        {% endfor %}
+    </nav>
 
-                <div class="text-muted small mb-2">
-                    Hotel Setup · Step {{ step }} of {{ total_steps }}
+    <section class="setup-card">
+        <header class="setup-card-head">
+            <div class="setup-step-number">Step {{ step }} of {{ total_steps }}</div>
+            {% if step == 1 %}
+                <h2 class="setup-card-title">Tell us about your organization</h2>
+                <p class="setup-card-subtitle">This is the parent business that owns or operates your hotel. You can add more hotels under this organization later.</p>
+            {% elif step == 2 %}
+                <h2 class="setup-card-title">Add your first hotel</h2>
+                <p class="setup-card-subtitle">Enter the hotel's business and contact details. These can be updated later in your hotel profile.</p>
+            {% elif step == 3 %}
+                <h2 class="setup-card-title">Choose the services you operate</h2>
+                <p class="setup-card-subtitle">Select the features your hotel needs. You can change these choices later as your operations grow.</p>
+            {% elif step == 4 %}
+                <h2 class="setup-card-title">Your departments</h2>
+                <p class="setup-card-subtitle">Hotel HMS will create the standard departments for your hotel automatically.</p>
+            {% elif step == 5 %}
+                <h2 class="setup-card-title">Your accounting foundation</h2>
+                <p class="setup-card-subtitle">We'll prepare the accounting structure your hotel needs before you begin recording transactions.</p>
+            {% else %}
+                <h2 class="setup-card-title">Review and create your hotel</h2>
+                <p class="setup-card-subtitle">Check the details below. When you're ready, we'll create your organization and initialize your hotel.</p>
+            {% endif %}
+        </header>
+
+        <div class="setup-card-body">
+            {% if form.non_field_errors %}
+                <div class="setup-alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            {% if step == 3 %}
+                <div class="setup-info">
+                    <h3>Build the system around your operation</h3>
+                    <p>Only select the departments and services you currently use. You can enable additional features later.</p>
                 </div>
+            {% elif step == 4 %}
+                <div class="setup-info">
+                    <h3>Standard hotel departments</h3>
+                    <p>These departments establish the operational structure used for staff assignment, inventory and reporting.</p>
+                </div>
+                <div class="setup-departments">
+                    {% for department in departments %}
+                        <div class="setup-department"><span class="setup-department-mark">✓</span>{{ department }}</div>
+                    {% endfor %}
+                </div>
+            {% elif step == 5 %}
+                <div class="setup-info">
+                    <h3>Created automatically when you launch</h3>
+                    <ul>
+                        <li>The hotel's default Chart of Accounts, including the system control accounts.</li>
+                        <li>The first business day for operational posting.</li>
+                        <li>The initial accounting period and related setup records.</li>
+                    </ul>
+                </div>
+            {% elif step == 6 %}
+                <div class="setup-review-section">
+                    <div class="setup-review-head">Organization</div>
+                    <div class="setup-review-content">
+                        <div class="setup-review-item"><small>Organization name</small><strong>{{ setup_data.organization.organization_name }}</strong></div>
+                    </div>
+                </div>
+                <div class="setup-review-section">
+                    <div class="setup-review-head">First hotel</div>
+                    <div class="setup-review-content">
+                        <div class="setup-review-item"><small>Hotel name</small><strong>{{ setup_data.hotel.hotel_name }}</strong></div>
+                        <div class="setup-review-item"><small>Currency</small><strong>{{ setup_data.hotel.currency }}</strong></div>
+                        <div class="setup-review-item"><small>Address</small><strong>{{ setup_data.hotel.address }}</strong></div>
+                        <div class="setup-review-item"><small>City / State</small><strong>{{ setup_data.hotel.city }}, {{ setup_data.hotel.state }}</strong></div>
+                        <div class="setup-review-item"><small>Country</small><strong>{{ setup_data.hotel.country }}</strong></div>
+                        <div class="setup-review-item"><small>Phone</small><strong>{{ setup_data.hotel.phone }}</strong></div>
+                        {% if setup_data.hotel.email %}<div class="setup-review-item"><small>Email</small><strong>{{ setup_data.hotel.email }}</strong></div>{% endif %}
+                        {% if setup_data.hotel.website %}<div class="setup-review-item"><small>Website</small><strong>{{ setup_data.hotel.website }}</strong></div>{% endif %}
+                        {% if setup_data.hotel.tax_number %}<div class="setup-review-item"><small>Tax / registration number</small><strong>{{ setup_data.hotel.tax_number }}</strong></div>{% endif %}
+                    </div>
+                </div>
+                <div class="setup-review-section">
+                    <div class="setup-review-head">Enabled features</div>
+                    <div class="setup-review-content">
+                        <div class="setup-feature-tags">
+                            {% for feature in selected_feature_labels %}<span class="setup-feature-tag">{{ feature }}</span>{% empty %}<span class="setup-feature-tag">No optional features selected</span>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="setup-info">
+                    <h3>What happens next?</h3>
+                    <p>Hotel HMS will create your organization and hotel, apply the selected features, create the standard departments and initialize the accounting structure. Your Director account will be linked to the new organization.</p>
+                </div>
+            {% endif %}
 
-                {% if step == 1 %}
-
-                    <h1 class="h3 mb-2">
-                        Organization
-                    </h1>
-
-                    <p class="text-muted">
-                        Let's start by setting up your organization.
-                    </p>
-
-                {% elif step == 2 %}
-
-                    <h1 class="h3 mb-2">
-                        Hotel Profile
-                    </h1>
-
-                    <p class="text-muted">
-                        Enter the details for your hotel.
-                    </p>
-
-                {% elif step == 3 %}
-
-                    <h1 class="h3 mb-2">
-                        Hotel Features
-                    </h1>
-
-                    <p class="text-muted">
-                        Select the features and services this hotel will use.
-                    </p>
-
-                {% elif step == 4 %}
-
-                    <h1 class="h3 mb-2">
-                        Departments
-                    </h1>
-
-                    <p class="text-muted">
-                        These standard departments will be created automatically.
-                    </p>
-
-                {% elif step == 5 %}
-
-                    <h1 class="h3 mb-2">
-                        Accounting
-                    </h1>
-
-                    <p class="text-muted">
-                        Your hotel's default accounting structure will be created automatically.
-                    </p>
-
+            <form method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+                {% if step == 3 %}
+                    <div class="setup-field setup-feature-grid">
+                        <label>{{ form.features.label }}</label>
+                        {{ form.features }}
+                        {% if form.features.errors %}<div class="setup-error">{{ form.features.errors }}</div>{% endif %}
+                        {% if form.features.help_text %}<p class="setup-help">{{ form.features.help_text }}</p>{% endif %}
+                    </div>
+                {% elif step == 4 or step == 5 %}
+                    {% for field in form %}
+                        <label class="setup-check" for="{{ field.id_for_label }}">
+                            {{ field }}
+                            <span>{{ field.label }}</span>
+                        </label>
+                        {% if field.errors %}<div class="setup-error">{{ field.errors }}</div>{% endif %}
+                    {% endfor %}
+                {% elif step == 6 %}
+                    {% for field in form %}
+                        <label class="setup-check" for="{{ field.id_for_label }}">
+                            {{ field }}
+                            <span>{{ field.label }}</span>
+                        </label>
+                        {% if field.errors %}<div class="setup-error">{{ field.errors }}</div>{% endif %}
+                    {% endfor %}
+                {% else %}
+                    <div class="setup-fields">
+                        {% for field in form %}
+                            <div class="setup-field {% if field.name == 'address' %}is-wide{% endif %}">
+                                {{ field.label_tag }}
+                                {{ field }}
+                                {% if field.help_text %}<p class="setup-help">{{ field.help_text }}</p>{% endif %}
+                                {% if field.errors %}<div class="setup-error">{{ field.errors }}</div>{% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% endif %}
 
-            </div>
-
-
-            <!-- FORM CARD -->
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-
-                    <form
-                        method="post"
-                        enctype="multipart/form-data"
-                    >
-
-                        {% csrf_token %}
-
-
-                        <!-- NON-FIELD ERRORS -->
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                {{ form.non_field_errors }}
-                            </div>
-                        {% endif %}
-
-
-                        <!-- STEP 4 — DEPARTMENTS -->
-                        {% if step == 4 %}
-
-                            <div class="mb-4">
-
-                                <h5 class="mb-3">
-                                    Departments that will be created
-                                </h5>
-
-                                <div class="row">
-
-                                    {% for department in departments %}
-
-                                        <div class="col-md-6 mb-2">
-
-                                            <div class="border rounded p-2 bg-light">
-                                                {{ department }}
-                                            </div>
-
-                                        </div>
-
-                                    {% endfor %}
-
-                                </div>
-
-                            </div>
-
-
-                            {% for field in form %}
-
-                                <div class="mb-3">
-
-                                    {{ field }}
-
-                                    <label
-                                        for="{{ field.id_for_label }}"
-                                        class="ms-2"
-                                    >
-                                        {{ field.label }}
-                                    </label>
-
-                                    {% if field.errors %}
-                                        <div class="text-danger small mt-1">
-                                            {{ field.errors }}
-                                        </div>
-                                    {% endif %}
-
-                                </div>
-
-                            {% endfor %}
-
-
-                        <!-- STEP 5 — ACCOUNTING -->
-                        {% elif step == 5 %}
-
-                            <div class="mb-4">
-
-                                <h5 class="mb-3">
-                                    Automatic Accounting Setup
-                                </h5>
-
-                                <div class="alert alert-info">
-
-                                    <p class="mb-2">
-                                        When you create the hotel, the system will automatically:
-                                    </p>
-
-                                    <ul class="mb-0">
-
-                                        <li>
-                                            Create the default Chart of Accounts.
-                                        </li>
-
-                                        <li>
-                                            Create the first business day.
-                                        </li>
-
-                                        <li>
-                                            Create the initial accounting period.
-                                        </li>
-
-                                    </ul>
-
-                                </div>
-
-                            </div>
-
-
-                            {% for field in form %}
-
-                                <div class="mb-3">
-
-                                    {{ field }}
-
-                                    <label
-                                        for="{{ field.id_for_label }}"
-                                        class="ms-2"
-                                    >
-                                        {{ field.label }}
-                                    </label>
-
-                                    {% if field.errors %}
-                                        <div class="text-danger small mt-1">
-                                            {{ field.errors }}
-                                        </div>
-                                    {% endif %}
-
-                                </div>
-
-                            {% endfor %}
-                        {% elif step == 6 %}
-
-    <div class="mb-4">
-
-        <h5 class="mb-3">
-            Organization
-        </h5>
-
-        <div class="border rounded p-3 bg-light">
-            <strong>Organization Name:</strong>
-            {{ setup_data.organization.organization_name }}
-        </div>
-
-    </div>
-
-
-    <div class="mb-4">
-
-        <h5 class="mb-3">
-            Hotel
-        </h5>
-
-        <div class="border rounded p-3 bg-light">
-
-            <div class="mb-2">
-                <strong>Hotel Name:</strong>
-                {{ setup_data.hotel.hotel_name }}
-            </div>
-
-            <div class="mb-2">
-                <strong>Address:</strong>
-                {{ setup_data.hotel.address }}
-            </div>
-
-            <div class="mb-2">
-                <strong>City:</strong>
-                {{ setup_data.hotel.city }}
-            </div>
-
-            <div class="mb-2">
-                <strong>State:</strong>
-                {{ setup_data.hotel.state }}
-            </div>
-
-            <div class="mb-2">
-                <strong>Country:</strong>
-                {{ setup_data.hotel.country }}
-            </div>
-
-            <div class="mb-2">
-                <strong>Phone:</strong>
-                {{ setup_data.hotel.phone }}
-            </div>
-
-            {% if setup_data.hotel.email %}
-                <div class="mb-2">
-                    <strong>Email:</strong>
-                    {{ setup_data.hotel.email }}
+                <div class="setup-actions">
+                    {% if step > 1 %}
+                        <a class="setup-btn setup-btn-secondary" href="{% url 'initial_setup' %}?step={{ step|add:'-1' }}">← Back</a>
+                    {% else %}
+                        <span></span>
+                    {% endif %}
+                    <button class="setup-btn setup-btn-primary" type="submit">
+                        {% if step == 6 %}Create my hotel and launch →{% else %}Save and continue →{% endif %}
+                    </button>
                 </div>
-            {% endif %}
-
-            {% if setup_data.hotel.website %}
-                <div class="mb-2">
-                    <strong>Website:</strong>
-                    {{ setup_data.hotel.website }}
-                </div>
-            {% endif %}
-
-            {% if setup_data.hotel.tax_number %}
-                <div class="mb-2">
-                    <strong>Tax / Registration Number:</strong>
-                    {{ setup_data.hotel.tax_number }}
-                </div>
-            {% endif %}
-
-            <div>
-                <strong>Currency:</strong>
-                {{ setup_data.hotel.currency }}
-            </div>
-
+            </form>
+            <p class="setup-footer-note">Your setup progress is saved between steps. You can go back to review and change your answers.</p>
         </div>
-
-    </div>
-
-
-    <div class="mb-4">
-
-        <h5 class="mb-3">
-            Enabled Features
-        </h5>
-
-        <div class="border rounded p-3 bg-light">
-
-            {% for code, label in form.fields.confirm.widget.choices %}
-                {% comment %}
-                No feature choices are rendered here.
-                The selected feature codes are converted
-                below in the view context in a later polish pass.
-                {% endcomment %}
-            {% endfor %}
-
-            <ul class="mb-0">
-                {% for feature in selected_feature_labels %}
-                    <li>{{ feature }}</li>
-                {% endfor %}
-            </ul>
-
-        </div>
-
-    </div>
-
-
-    <div class="alert alert-warning">
-        <strong>Ready to create the hotel?</strong>
-
-        <p class="mb-0 mt-2">
-            The system will create the hotel, business profile,
-            selected features, standard departments, and default
-            accounting structure automatically.
-        </p>
-    </div>
-
-
-    {% for field in form %}
-
-        <div class="mb-3">
-
-            {{ field }}
-
-            <label
-                for="{{ field.id_for_label }}"
-                class="ms-2"
-            >
-                {{ field.label }}
-            </label>
-
-            {% if field.errors %}
-                <div class="text-danger small mt-1">
-                    {{ field.errors }}
-                </div>
-            {% endif %}
-
-        </div>
-
-    {% endfor %}
-
-                        <!-- STEPS 1–3 -->
-                        {% else %}
-
-                            {% for field in form %}
-
-                                <div class="mb-3">
-
-                                    {{ field.label_tag }}
-
-                                    {{ field }}
-
-                                    {% if field.help_text %}
-                                        <div class="form-text">
-                                            {{ field.help_text }}
-                                        </div>
-                                    {% endif %}
-
-                                    {% if field.errors %}
-                                        <div class="text-danger small mt-1">
-                                            {{ field.errors }}
-                                        </div>
-                                    {% endif %}
-
-                                </div>
-
-                            {% endfor %}
-
-                        {% endif %}
-
-
-                        <!-- NAVIGATION -->
-                        <div class="d-flex justify-content-between mt-4">
-
-                            {% if step > 1 %}
-
-                                <a
-                                    href="{% url 'initial_setup' %}?step={{ step|add:'-1' }}"
-                                    class="btn btn-outline-secondary"
-                                >
-                                    Back
-                                </a>
-
-                            {% else %}
-
-                                <div></div>
-
-                            {% endif %}
-
-
-                            <button
-                                type="submit"
-                                class="btn btn-primary"
-                            >
-                                Continue
-                            </button>
-
-                        </div>
-
-                    </form>
-
-                </div>
-            </div>
-
-        </div>
-    </div>
+    </section>
 </div>
-
 {% endblock %}
