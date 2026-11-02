@@ -33,9 +33,7 @@ def get_user_hotels(user):
         return Hotel.objects.none()
 
     if user.role == "DIRECTOR":
-        return Hotel.objects.filter(
-            organization_id=user.organization_id
-        )
+        return Hotel.objects.all()
 
     if user.hotel:
         return Hotel.objects.filter(id=user.hotel.id)
