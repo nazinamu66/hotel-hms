@@ -75,3 +75,74 @@ class RoleRequiredTests(SimpleTestCase):
 
         self.assertEqual(wrapped.__name__, "original_view")
         self.assertEqual(wrapped.__doc__, "Original view docstring.")
+
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.urls import reverse
+
+from inventory.models import Hotel, Organization
+
+
+User = get_user_model()
+
+
+class FirstRunBootstrapTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username="first-run-superuser",
+            password="test-password",
+            is_superuser=True,
+            is_staff=True,
+            role="FRONTDESK",
+        )
+        self.client.force_login(self.admin)
+
+    def test_superuser_is_sent_to_first_run_bootstrap_on_empty_install(self):
+        response = self.client.get(reverse("role_redirect"))
+
+        self.assertRedirects(
+            response,
+            reverse("first_run_bootstrap"),
+            fetch_redirect_response=False,
+        )
+
+    def test_bootstrap_promotes_existing_superuser_without_recreating_account(self):
+        response = self.client.post(reverse("first_run_bootstrap"))
+
+        self.admin.refresh_from_db()
+        self.assertRedirects(
+            response,
+            reverse("initial_setup"),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(self.admin.role, "ADMIN")
+        self.assertTrue(self.admin.is_superuser)
+        self.assertEqual(User.objects.count(), 1)
+
+    def test_non_superuser_cannot_use_first_run_bootstrap(self):
+        ordinary_user = User.objects.create_user(
+            username="ordinary-user",
+            password="test-password",
+            role="FRONTDESK",
+        )
+        self.client.force_login(ordinary_user)
+
+        response = self.client.get(reverse("first_run_bootstrap"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_bootstrap_is_unavailable_after_organization_exists(self):
+        organization = Organization.objects.create(name="Existing Organization")
+        Hotel.objects.create(
+            organization=organization,
+            name="Existing Hotel",
+        )
+
+        response = self.client.get(reverse("first_run_bootstrap"))
+
+        self.assertRedirects(
+            response,
+            reverse("role_redirect"),
+            fetch_redirect_response=False,
+        )
