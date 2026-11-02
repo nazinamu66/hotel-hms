@@ -107,7 +107,7 @@ class FirstRunBootstrapTests(TestCase):
             fetch_redirect_response=False,
         )
 
-    def test_bootstrap_promotes_existing_superuser_without_recreating_account(self):
+    def test_bootstrap_activates_existing_superuser_as_director_without_recreating_account(self):
         response = self.client.post(reverse("first_run_bootstrap"))
 
         self.admin.refresh_from_db()
@@ -116,9 +116,28 @@ class FirstRunBootstrapTests(TestCase):
             reverse("initial_setup"),
             fetch_redirect_response=False,
         )
-        self.assertEqual(self.admin.role, "ADMIN")
+        self.assertEqual(self.admin.role, "DIRECTOR")
         self.assertTrue(self.admin.is_superuser)
         self.assertEqual(User.objects.count(), 1)
+
+    def test_activated_director_can_open_initial_setup(self):
+        self.client.post(reverse("first_run_bootstrap"))
+
+        response = self.client.get(reverse("initial_setup"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Organization")
+
+    def test_activated_director_is_routed_to_initial_setup(self):
+        self.client.post(reverse("first_run_bootstrap"))
+
+        response = self.client.get(reverse("role_redirect"))
+
+        self.assertRedirects(
+            response,
+            reverse("initial_setup"),
+            fetch_redirect_response=False,
+        )
 
     def test_non_superuser_cannot_use_first_run_bootstrap(self):
         ordinary_user = User.objects.create_user(
