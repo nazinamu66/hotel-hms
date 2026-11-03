@@ -180,6 +180,42 @@ def store_request_stock(request):
     )
 
 @role_required("STORE")
+def store_linen_stock_requests(request):
+    store = request.user.department
+    if not store or store.department_type != "STORE":
+        raise PermissionDenied("You must be assigned to the Store department.")
+
+    requests = (
+        LowStockRequest.objects
+        .filter(
+            department__hotel=store.hotel,
+            department__department_type="LAUNDRY",
+            product__linen_item__isnull=False,
+            fulfillment_type="STORE",
+            product__linen_item__isnull=True,
+        )
+        .select_related("product", "department", "requested_by")
+        .prefetch_related("transfers")
+        .order_by("-created_at", "-id")
+    )
+
+    for stock_request in requests:
+        stock_request.total_issued = sum(
+            transfer.quantity for transfer in stock_request.transfers.all()
+        )
+        stock_request.remaining_quantity = max(
+            Decimal(stock_request.requested_quantity) - stock_request.total_issued,
+            Decimal("0"),
+        )
+
+    return render(
+        request,
+        "store/linen_stock_requests.html",
+        {"requests": requests},
+    )
+
+
+@role_required("STORE")
 def store_stock_requests(request):
 
     store = request.user.department
