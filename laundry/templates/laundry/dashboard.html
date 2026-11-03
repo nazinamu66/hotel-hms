@@ -1,389 +1,389 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-Laundry Dashboard
-{% endblock %}
+{% block title %}Laundry Dashboard{% endblock %}
 
 {% block header %}
 <h2>Laundry Dashboard</h2>
 {% endblock %}
 
 {% block content %}
+<style>
+    .laundry-dashboard {
+        --ld-ink: #172033;
+        --ld-muted: #64748b;
+        --ld-line: #e5eaf1;
+        --ld-panel: #ffffff;
+        --ld-bg: #f4f7fb;
+        --ld-blue: #2563eb;
+        --ld-blue-soft: #eff6ff;
+        --ld-green: #15803d;
+        --ld-green-soft: #f0fdf4;
+        --ld-amber: #b45309;
+        --ld-amber-soft: #fffbeb;
+        color: var(--ld-ink);
+        display: grid;
+        gap: 24px;
+    }
+    .laundry-dashboard * { box-sizing: border-box; }
+    .ld-heading {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    .ld-eyebrow {
+        color: var(--ld-blue);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        margin: 0 0 7px;
+    }
+    .ld-heading h1 {
+        color: var(--ld-ink);
+        font-size: clamp(24px, 3vw, 31px);
+        letter-spacing: -.04em;
+        line-height: 1.15;
+        margin: 0;
+    }
+    .ld-subtitle { color: var(--ld-muted); margin: 8px 0 0; font-size: 14px; }
+    .ld-section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 13px;
+    }
+    .ld-section-head h2 { margin: 0; font-size: 17px; letter-spacing: -.025em; }
+    .ld-section-head p { margin: 4px 0 0; color: var(--ld-muted); font-size: 12px; }
+    .ld-actions {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 13px;
+    }
+    .ld-action {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        min-height: 156px;
+        padding: 17px;
+        background: var(--ld-panel);
+        border: 1px solid var(--ld-line);
+        border-radius: 15px;
+        text-decoration: none;
+        color: inherit;
+        box-shadow: 0 5px 18px rgba(15, 23, 42, .035);
+        transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    }
+    .ld-action:hover {
+        transform: translateY(-2px);
+        border-color: #bfdbfe;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, .075);
+        color: inherit;
+    }
+    .ld-action-icon {
+        width: 38px; height: 38px; display: grid; place-items: center;
+        border-radius: 11px; background: var(--ld-blue-soft);
+        color: var(--ld-blue); font-size: 18px; margin-bottom: 13px;
+    }
+    .ld-action strong { font-size: 14px; }
+    .ld-action span:last-child { color: var(--ld-muted); font-size: 12px; line-height: 1.5; margin-top: 6px; }
+    .ld-kpis {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 13px;
+    }
+    .ld-kpi {
+        position: relative;
+        overflow: hidden;
+        background: var(--ld-panel);
+        border: 1px solid var(--ld-line);
+        border-radius: 15px;
+        padding: 17px 18px;
+        box-shadow: 0 5px 18px rgba(15, 23, 42, .035);
+    }
+    .ld-kpi:before {
+        content: ""; position: absolute; inset: 0 auto 0 0; width: 3px;
+        background: #94a3b8;
+    }
+    .ld-kpi.clean:before { background: #16a34a; }
+    .ld-kpi.dirty:before { background: #d97706; }
+    .ld-kpi.total:before { background: #2563eb; }
+    .ld-kpi.pending:before { background: #8b5cf6; }
+    .ld-kpi-label { color: var(--ld-muted); font-size: 12px; font-weight: 700; }
+    .ld-kpi-value { font-size: 29px; line-height: 1.15; letter-spacing: -.04em; font-weight: 800; margin-top: 8px; }
+    .ld-kpi-note { color: var(--ld-muted); font-size: 11px; margin-top: 5px; }
+    .ld-panel {
+        background: var(--ld-panel);
+        border: 1px solid var(--ld-line);
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 18px rgba(15, 23, 42, .035);
+    }
+    .ld-panel-head {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px; padding: 17px 19px; border-bottom: 1px solid var(--ld-line);
+    }
+    .ld-panel-head h2 { margin: 0; font-size: 15px; }
+    .ld-panel-head p { margin: 4px 0 0; color: var(--ld-muted); font-size: 12px; }
+    .ld-link {
+        color: var(--ld-blue); text-decoration: none; font-size: 12px; font-weight: 750;
+        white-space: nowrap;
+    }
+    .ld-link:hover { text-decoration: underline; }
+    .ld-table-wrap { width: 100%; overflow-x: auto; }
+    .ld-table { width: 100%; border-collapse: collapse; min-width: 620px; }
+    .ld-table th {
+        text-align: left; color: #64748b; background: #f8fafc;
+        font-size: 10px; text-transform: uppercase; letter-spacing: .07em;
+        font-weight: 800; padding: 11px 17px; white-space: nowrap;
+    }
+    .ld-table td {
+        padding: 13px 17px; border-top: 1px solid #edf1f5;
+        font-size: 12px; vertical-align: middle;
+    }
+    .ld-table tbody tr:hover { background: #fafcff; }
+    .ld-item-name { font-weight: 750; color: var(--ld-ink); }
+    .ld-number { font-variant-numeric: tabular-nums; font-weight: 750; }
+    .ld-pill {
+        display: inline-flex; align-items: center; border-radius: 999px;
+        padding: 4px 8px; font-size: 10px; font-weight: 800;
+        background: #f1f5f9; color: #475569; white-space: nowrap;
+    }
+    .ld-pill.clean { background: var(--ld-green-soft); color: var(--ld-green); }
+    .ld-pill.dirty { background: var(--ld-amber-soft); color: var(--ld-amber); }
+    .ld-empty { padding: 30px 18px; text-align: center; color: var(--ld-muted); }
+    .ld-empty-icon {
+        width: 42px; height: 42px; display: grid; place-items: center;
+        margin: 0 auto 10px; border-radius: 13px; background: #f1f5f9; font-size: 19px;
+    }
+    .ld-empty strong { display: block; color: var(--ld-ink); font-size: 13px; }
+    .ld-empty p { margin: 5px 0 0; font-size: 12px; }
+    .ld-bottom-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+    @media (max-width: 1050px) {
+        .ld-actions, .ld-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 700px) {
+        .ld-bottom-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 520px) {
+        .ld-actions, .ld-kpis { grid-template-columns: minmax(0, 1fr); }
+        .ld-action { min-height: auto; }
+        .ld-kpi { padding: 15px 16px; }
+        .ld-kpi-value { font-size: 25px; }
+        .ld-panel-head { padding: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .ld-action { transition: none; }
+    }
+</style>
 
-<!-- ===================================================== -->
-<!-- LAUNDRY OPERATIONS -->
-<!-- ===================================================== -->
+<div class="laundry-dashboard">
+    <section class="ld-heading">
+        <div>
+            <p class="ld-eyebrow">Laundry operations</p>
+            <h1>Good work starts with a clear view.</h1>
+            <p class="ld-subtitle">Monitor linen availability, handle incoming returns and keep daily laundry work moving.</p>
+        </div>
+    </section>
 
-<h3>Laundry Operations</h3>
-
-<div style="
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-    gap:15px;
-    margin-bottom:30px;
-">
-
-    <div class="card" style="padding:15px;">
-        <strong>Hotel Linen Requests</strong>
-
-        <p style="margin:10px 0;">
-            Review, approve and fulfill linen requests from Housekeeping.
-        </p>
-
-        <a href="{% url 'laundry:linen_requests' %}">
-            Open Linen Requests →
-        </a>
-    </div>
-
-
-    <div class="card" style="padding:15px;">
-        <strong>Process Dirty Linen</strong>
-
-        <p style="margin:10px 0;">
-            Process dirty linen and return it to clean Laundry stock.
-        </p>
-
-        <a href="{% url 'laundry:process_linen' %}">
-            Open Processing →
-        </a>
-    </div>
-
-
-    <div class="card" style="padding:15px;">
-        <strong>Pending Receipts</strong>
-
-        <p style="margin:10px 0;">
-            Confirm linen physically received from Housekeeping.
-        </p>
-
-        {% if pending_receipt_count %}
-            <a href="#pending-receipts">
-                Review {{ pending_receipt_count }} Pending Receipt{{ pending_receipt_count|pluralize }} →
+    <section aria-labelledby="ld-actions-title">
+        <div class="ld-section-head">
+            <div>
+                <h2 id="ld-actions-title">Quick actions</h2>
+                <p>Common tasks for the Laundry department</p>
+            </div>
+        </div>
+        <div class="ld-actions">
+            <a class="ld-action" href="{% url 'laundry:linen_requests' %}">
+                <span class="ld-action-icon">📋</span>
+                <strong>Housekeeping requests</strong>
+                <span>Review, approve and fulfil clean-linen requests.</span>
             </a>
+            <a class="ld-action" href="{% url 'laundry:process_linen' %}">
+                <span class="ld-action-icon">🧺</span>
+                <strong>Process dirty linen</strong>
+                <span>Turn received dirty linen into clean Laundry stock.</span>
+            </a>
+            <a class="ld-action" href="{% url 'laundry:request_linen_from_store' %}">
+                <span class="ld-action-icon">📦</span>
+                <strong>Request linen from Store</strong>
+                <span>Request additional linen when Laundry needs replenishment.</span>
+            </a>
+            <a class="ld-action" href="#pending-receipts">
+                <span class="ld-action-icon">📥</span>
+                <strong>Pending receipts</strong>
+                <span>{% if pending_receipt_count %}{{ pending_receipt_count }} receipt{{ pending_receipt_count|pluralize }} waiting for confirmation.{% else %}No receipts are waiting for confirmation.{% endif %}</span>
+            </a>
+        </div>
+    </section>
+
+    <section aria-labelledby="ld-overview-title">
+        <div class="ld-section-head">
+            <div>
+                <h2 id="ld-overview-title">Laundry overview</h2>
+                <p>Current linen position across the Laundry ledger</p>
+            </div>
+        </div>
+        <div class="ld-kpis">
+            <article class="ld-kpi clean">
+                <div class="ld-kpi-label">Clean linen</div>
+                <div class="ld-kpi-value">{{ total_clean }}</div>
+                <div class="ld-kpi-note">Available for issue to Housekeeping</div>
+            </article>
+            <article class="ld-kpi dirty">
+                <div class="ld-kpi-label">Dirty linen</div>
+                <div class="ld-kpi-value">{{ total_dirty }}</div>
+                <div class="ld-kpi-note">Awaiting laundry processing</div>
+            </article>
+            <article class="ld-kpi total">
+                <div class="ld-kpi-label">Total linen</div>
+                <div class="ld-kpi-value">{{ total_linen }}</div>
+                <div class="ld-kpi-note">Clean and dirty linen in Laundry</div>
+            </article>
+            <article class="ld-kpi pending">
+                <div class="ld-kpi-label">Pending receipts</div>
+                <div class="ld-kpi-value">{{ pending_receipt_count }}</div>
+                <div class="ld-kpi-note">Returns awaiting physical confirmation</div>
+            </article>
+        </div>
+    </section>
+
+    <section class="ld-panel" aria-labelledby="ld-balance-title">
+        <div class="ld-panel-head">
+            <div>
+                <h2 id="ld-balance-title">Linen balance</h2>
+                <p>Clean and dirty quantities currently recorded in Laundry</p>
+            </div>
+            <a class="ld-link" href="{% url 'laundry:process_linen' %}">Go to processing →</a>
+        </div>
+        {% if laundry_balances %}
+            <div class="ld-table-wrap">
+                <table class="ld-table">
+                    <thead>
+                        <tr>
+                            <th>Linen item</th>
+                            <th>Clean</th>
+                            <th>Dirty</th>
+                            <th>Total</th>
+                            <th>Next step</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in laundry_balances %}
+                        <tr>
+                            <td><span class="ld-item-name">{{ row.item.product.name }}</span></td>
+                            <td><span class="ld-pill clean">{{ row.clean_quantity }}</span></td>
+                            <td><span class="ld-pill dirty">{{ row.dirty_quantity }}</span></td>
+                            <td class="ld-number">{{ row.total_quantity }}</td>
+                            <td>
+                                {% if row.dirty_quantity > 0 %}
+                                    <a class="ld-link" href="{% url 'laundry:process_linen' %}">Process dirty linen →</a>
+                                {% elif row.clean_quantity > 0 %}
+                                    <span class="ld-pill clean">Ready to issue</span>
+                                {% else %}
+                                    <span class="ld-pill">No available stock</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         {% else %}
-            <span>No pending receipts</span>
+            <div class="ld-empty">
+                <div class="ld-empty-icon">🧺</div>
+                <strong>No linen balances yet</strong>
+                <p>When linen is received into Laundry, its clean or dirty balance will appear here.</p>
+            </div>
         {% endif %}
-    </div>
+    </section>
 
+    <div class="ld-bottom-grid">
+        <section class="ld-panel" id="pending-receipts" aria-labelledby="ld-receipts-title">
+            <div class="ld-panel-head">
+                <div>
+                    <h2 id="ld-receipts-title">Pending linen receipts</h2>
+                    <p>Confirm quantities physically received from Housekeeping</p>
+                </div>
+                <span class="ld-pill {% if pending_receipt_count %}dirty{% else %}clean{% endif %}">{{ pending_receipt_count }} pending</span>
+            </div>
+            {% if pending_receipts %}
+                <div class="ld-table-wrap">
+                    <table class="ld-table">
+                        <thead>
+                            <tr>
+                                <th>Linen</th>
+                                <th>Returned by</th>
+                                <th>Declared</th>
+                                <th>Received</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for receipt in pending_receipts %}
+                            <tr>
+                                <td><span class="ld-item-name">{{ receipt.linen_item.product.name }}</span><br><span style="color:#64748b;font-size:11px;">{{ receipt.created_at|date:"d M Y, H:i" }}</span></td>
+                                <td>{{ receipt.returned_by.username }}</td>
+                                <td><span class="ld-number">{{ receipt.declared_clean_quantity|add:receipt.declared_dirty_quantity }}</span><br><span style="color:#64748b;font-size:11px;">{{ receipt.declared_clean_quantity }} clean · {{ receipt.declared_dirty_quantity }} dirty</span></td>
+                                <td><span class="ld-pill">Awaiting confirmation</span></td>
+                                <td><a class="ld-link" href="{% url 'laundry:receipt_detail' receipt.id %}">Review →</a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="ld-empty">
+                    <div class="ld-empty-icon">✓</div>
+                    <strong>All caught up</strong>
+                    <p>There are no pending linen receipts to review.</p>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="ld-panel" aria-labelledby="ld-activity-title">
+            <div class="ld-panel-head">
+                <div>
+                    <h2 id="ld-activity-title">Recent activity</h2>
+                    <p>Latest movements recorded in the linen ledger</p>
+                </div>
+            </div>
+            {% if recent_transactions %}
+                <div class="ld-table-wrap">
+                    <table class="ld-table">
+                        <thead>
+                            <tr>
+                                <th>Activity</th>
+                                <th>Quantity</th>
+                                <th>Condition</th>
+                                <th>When</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in recent_transactions %}
+                            <tr>
+                                <td>
+                                    <span class="ld-item-name">{{ transaction.linen_item.product.name }}</span><br>
+                                    <span style="color:#64748b;font-size:11px;">{{ transaction.get_event_type_display }}{% if transaction.performed_by %} · {{ transaction.performed_by.username }}{% endif %}</span>
+                                </td>
+                                <td class="ld-number">{{ transaction.quantity }}</td>
+                                <td><span class="ld-pill {% if transaction.condition == 'CLEAN' %}clean{% elif transaction.condition == 'DIRTY' %}dirty{% endif %}">{{ transaction.condition|title }}</span></td>
+                                <td style="white-space:nowrap;">{{ transaction.created_at|date:"d M, H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="ld-empty">
+                    <div class="ld-empty-icon">↻</div>
+                    <strong>No recent activity</strong>
+                    <p>Linen movements will appear here as they happen.</p>
+                </div>
+            {% endif %}
+        </section>
+    </div>
 </div>
-
-<!-- ===================================================== -->
-<!-- SUMMARY -->
-<!-- ===================================================== -->
-
-<h3>Laundry Overview</h3>
-
-<div style="
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-    gap:15px;
-    margin-bottom:25px;
-">
-
-    <div class="card" style="padding:15px;">
-        <strong>Clean Linen</strong>
-        <h2>{{ total_clean }}</h2>
-    </div>
-
-    <div class="card" style="padding:15px;">
-        <strong>Dirty Linen</strong>
-        <h2>{{ total_dirty }}</h2>
-    </div>
-
-    <div class="card" style="padding:15px;">
-        <strong>Total Linen</strong>
-        <h2>{{ total_linen }}</h2>
-    </div>
-
-    <div class="card" style="padding:15px;">
-        <strong>Pending Receipts</strong>
-        <h2>{{ pending_receipt_count }}</h2>
-    </div>
-
-</div>
-
-
-<!-- ===================================================== -->
-<!-- LINEN BALANCES -->
-<!-- ===================================================== -->
-
-<h3>Laundry Linen Balance</h3>
-
-{% if laundry_balances %}
-
-<table style="
-    width:100%;
-    border-collapse:collapse;
-    margin-bottom:25px;
-">
-
-<thead style="background:#eee;">
-
-<tr>
-
-    <th style="padding:10px;">
-        Linen Item
-    </th>
-
-    <th>
-        Clean
-    </th>
-
-    <th>
-        Dirty
-    </th>
-
-    <th>
-        Total
-    </th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-{% for row in laundry_balances %}
-
-<tr style="border-bottom:1px solid #ddd;">
-
-    <td style="padding:10px;">
-        <strong>
-            {{ row.item.product.name }}
-        </strong>
-    </td>
-
-    <td>
-        {{ row.clean_quantity }}
-    </td>
-
-    <td>
-        {{ row.dirty_quantity }}
-
-        {% if row.dirty_quantity > 0 %}
-            <br>
-            <a href="{% url 'laundry:process_linen' %}">
-                Process →
-            </a>
-        {% endif %}
-    </td>
-
-    <td>
-        {{ row.total_quantity }}
-    </td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-{% else %}
-
-<p>
-    No linen is currently recorded in Laundry.
-</p>
-
-{% endif %}
-
-
-<!-- ===================================================== -->
-<!-- PENDING RECEIPTS -->
-<!-- ===================================================== -->
-
-<h3 id="pending-receipts">Pending Linen Receipts</h3>
-
-{% if pending_receipts %}
-
-<table style="
-    width:100%;
-    border-collapse:collapse;
-    margin-bottom:25px;
-">
-
-<thead style="background:#eee;">
-
-<tr>
-
-    <th style="padding:10px;">
-        Linen
-    </th>
-
-    <th>
-        Returned By
-    </th>
-
-    <th>
-        Hotel
-    </th>
-
-    <th>
-        Declared Clean
-    </th>
-
-    <th>
-        Declared Dirty
-    </th>
-
-    <th>
-        Date
-    </th>
-
-    <th>
-        Action
-    </th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-{% for receipt in pending_receipts %}
-
-<tr style="border-bottom:1px solid #ddd;">
-
-    <td style="padding:10px;">
-        <strong>
-            <a href="{% url 'laundry:receipt_detail' receipt.id %}">
-                {{ receipt.linen_item.product.name }}
-            </a>
-        </strong>
-    </td>
-
-    <td>
-        {{ receipt.returned_by.username }}
-    </td>
-
-    <td>
-        {{ receipt.returned_by.hotel.name }}
-    </td>
-
-    <td>
-        {{ receipt.declared_clean_quantity }}
-    </td>
-
-    <td>
-        {{ receipt.declared_dirty_quantity }}
-    </td>
-
-    <td>
-        {{ receipt.created_at|date:"Y-m-d H:i" }}
-    </td>
-    <td>
-        <a href="{% url 'laundry:receipt_detail' receipt.id %}">
-            Review
-        </a>
-    </td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-{% else %}
-
-<p>
-    No pending linen receipts.
-</p>
-
-{% endif %}
-
-
-<!-- ===================================================== -->
-<!-- RECENT ACTIVITY -->
-<!-- ===================================================== -->
-
-<h3>Recent Laundry Activity</h3>
-
-{% if recent_transactions %}
-
-<table style="
-    width:100%;
-    border-collapse:collapse;
-">
-
-<thead style="background:#eee;">
-
-<tr>
-
-    <th style="padding:10px;">
-        Date
-    </th>
-
-    <th>
-        Linen
-    </th>
-
-    <th>
-        Event
-    </th>
-
-    <th>
-        Quantity
-    </th>
-
-    <th>
-        Condition
-    </th>
-
-    <th>
-        Performed By
-    </th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-{% for transaction in recent_transactions %}
-
-<tr style="border-bottom:1px solid #ddd;">
-
-    <td style="padding:10px;">
-        {{ transaction.created_at|date:"Y-m-d H:i" }}
-    </td>
-
-    <td>
-        {{ transaction.linen_item.product.name }}
-    </td>
-
-    <td>
-        {{ transaction.get_event_type_display }}
-    </td>
-
-    <td>
-        {{ transaction.quantity }}
-    </td>
-
-    <td>
-        {{ transaction.condition }}
-    </td>
-
-    <td>
-        {{ transaction.performed_by.username }}
-    </td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-{% else %}
-
-<p>
-    No recent Laundry activity.
-</p>
-
-{% endif %}
-
 {% endblock %}
