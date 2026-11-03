@@ -1462,6 +1462,11 @@ def po_detail(request, pk):
         supplier_paid = total
 
     supplier_outstanding = max(total - supplier_paid, Decimal("0.00"))
+    po_payments = SupplierPayment.objects.filter(
+        hotel=po.department.hotel,
+        source_type="PO",
+        source_id=po.pk,
+    ).select_related("payment_account", "created_by", "journal_entry")
 
     return render(
         request,
@@ -1474,6 +1479,7 @@ def po_detail(request, pk):
             "po_total": total,
             "supplier_paid": supplier_paid,
             "supplier_outstanding": supplier_outstanding,
+            "po_payments": po_payments,
         },
     )
 
