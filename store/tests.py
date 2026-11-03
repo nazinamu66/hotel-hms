@@ -110,7 +110,7 @@ class StoreStockTransferTests(TestCase):
             hotel=self.hotel,
             name="Test Bedsheet",
             sku="STORE-TEST-BEDSHEET",
-            product_type="SUPPLY",
+            product_type="LAUNDRY",
             usage_type="ASSET",
             base_unit="piece",
             cost_price=Decimal("500.00"),
