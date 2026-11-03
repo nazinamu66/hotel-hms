@@ -1,0 +1,32 @@
+{% extends "base/base.html" %}
+{% block title %}Request Linen from Store{% endblock %}
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;padding:18px 0;">
+  <h2>Request Linen from Store</h2>
+  <p>Request bedsheets, towels, pillowcases and other registered hotel linen. Detergent, bleach and other supplies belong in Operational Supplies.</p>
+  <section style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin:20px 0;">
+    <h3>New Linen Request</h3>
+    <form method="post">{% csrf_token %}
+      <label for="linen_item">Linen item</label>
+      <select id="linen_item" name="linen_item" required style="padding:9px;min-width:240px;margin:8px 12px;">
+        <option value="">Select linen</option>
+        {% for item in linen_items %}<option value="{{ item.pk }}">{{ item.product.name }} ({{ item.product.base_unit }})</option>{% endfor %}
+      </select>
+      <label for="quantity">Quantity</label>
+      <input id="quantity" name="quantity" type="number" min="1" step="1" required style="padding:9px;width:120px;margin:8px 12px;">
+      <button type="submit" style="padding:10px 16px;">Submit request</button>
+    </form>
+    {% if not linen_items %}<p>No active Linen Items are registered for this hotel yet.</p>{% endif %}
+  </section>
+  <h3>My Laundry Linen Requests</h3>
+  <div style="overflow-x:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr style="background:#f1f5f9;text-align:left;"><th style="padding:12px;">Date</th><th style="padding:12px;">Linen</th><th style="padding:12px;">Requested</th><th style="padding:12px;">Issued</th><th style="padding:12px;">Remaining</th><th style="padding:12px;">Status</th></tr></thead>
+      <tbody>{% for item in requests %}
+        <tr style="border-top:1px solid #e2e8f0;"><td style="padding:12px;">{{ item.created_at|date:"d M Y H:i" }}</td><td style="padding:12px;">{{ item.product.name }}</td><td style="padding:12px;">{{ item.requested_quantity }}</td><td style="padding:12px;">{{ item.total_issued }}</td><td style="padding:12px;">{{ item.remaining_quantity }}</td><td style="padding:12px;">{{ item.get_status_display }}</td></tr>
+      {% empty %}<tr><td colspan="6" style="padding:24px;text-align:center;color:#64748b;">No linen requests submitted yet.</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+  <p style="margin-top:18px;"><a href="{% url 'laundry:dashboard' %}">← Back to Laundry</a></p>
+</div>
+{% endblock %}
