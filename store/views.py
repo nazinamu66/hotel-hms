@@ -652,7 +652,7 @@ def store_issue_stock_request(request, pk):
             )
         )
 
-        if stock_request.product.linen_item_id:
+        if LinenItem.objects.filter(product_id=stock_request.product_id).exists():
             return redirect("store_linen_stock_requests")
 
         return redirect(
