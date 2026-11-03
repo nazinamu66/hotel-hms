@@ -1448,6 +1448,20 @@ def po_detail(request, pk):
         Decimal("0.00"),
     )
 
+    from accounting.models import SupplierPayment
+    supplier_paid = SupplierPayment.objects.filter(
+        hotel=po.department.hotel,
+        source_type="PO",
+        source_id=po.pk,
+    ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+
+    # Legacy full payments predate SupplierPayment records. Preserve their
+    # paid status for display instead of presenting them as unpaid.
+    if po.payment_status == "PAID" and supplier_paid == 0:
+        supplier_paid = total
+
+    supplier_outstanding = max(total - supplier_paid, Decimal("0.00"))
+
     return render(
         request,
         "inventory/po_detail.html",
@@ -1457,6 +1471,8 @@ def po_detail(request, pk):
             "back_url": back_url,
             "back_label": back_label,
             "po_total": total,
+            "supplier_paid": supplier_paid,
+            "supplier_outstanding": supplier_outstanding,
         },
     )
 
@@ -1773,134 +1789,22 @@ def po_finalize(request, pk):
 
 
 @role_required("ACCOUNTANT", "DIRECTOR", "ADMIN")
-@transaction.atomic
 def po_pay(request, pk):
-
-    # Payments are now centralized so partial payments and payment history
-    # cannot be bypassed through the legacy full-payment screen.
-    from accounting.models import SupplierPayment
-    if SupplierPayment.objects.filter(source_type="PO", source_id=pk).exists():
-        messages.info(request, "This purchase order has payments recorded in Supplier & Vendor Payments. Continue there to avoid duplicate or excess payment.")
-        return redirect("accounting:supplier_payments")
-
+    """
+    Keep the historical PO payment URL working, but route all new
+    settlements through the centralized partial-payment workflow.
+    Supplier liability is payable only after the goods are received.
+    """
     hotels = get_accessible_hotels(request.user)
-
     po = get_object_or_404(
-        PurchaseOrder.objects.select_related(
-            "supplier",
-            "department__hotel",
-        ),
+        PurchaseOrder.objects.select_related("department__hotel"),
         pk=pk,
-        status__in=["APPROVED", "RECEIVED"],
+        status="RECEIVED",
         department__hotel__in=hotels,
+        supplier__isnull=False,
     )
-    hotel = po.department.hotel
-
-    total = sum(
-        (
-            item.purchase_quantity * item.unit_cost
-            for item in po.items.all()
-        ),
-        Decimal("0.00"),
-    )
-
-    if request.method == "POST":
-
-        payment_account_id = request.POST.get(
-            "payment_account"
-        )
-
-        payment_reference = (
-            request.POST.get(
-                "payment_reference",
-                "",
-            )
-            .strip()
-        )
-
-        payment_account = get_object_or_404(
-            Account,
-            pk=payment_account_id,
-            hotel=hotel,
-            is_active=True,
-            allow_posting=True,
-        )
-
-        try:
-
-            from accounting.services.postings.supplier_payment import (
-                post_supplier_payment,
-            )
-
-            post_supplier_payment(
-                po=po,
-                payment_account=payment_account,
-                amount=total,
-                user=request.user,
-                reference=(
-                    payment_reference
-                    or f"PO-PAY-{po.id}"
-                ),
-            )
-
-        except ValidationError as e:
-
-            messages.error(
-                request,
-                str(e),
-            )
-
-            return redirect(
-                "inventory:po_pay",
-                pk=po.pk,
-            )
-
-        po.payment_status = "PAID"
-        po.paid_by = request.user
-        po.paid_at = timezone.now()
-        po.payment_reference = payment_reference
-
-        po.save(
-            update_fields=[
-                "payment_status",
-                "paid_by",
-                "paid_at",
-                "payment_reference",
-            ]
-        )
-
-        messages.success(
-            request,
-            f"PO #{po.id} paid successfully.",
-        )
-
-        return redirect(
-            "inventory:po_detail",
-            pk=po.pk,
-        )
-
-    payment_accounts = (
-        Account.objects
-        .filter(
-            hotel=hotel,
-            account_type__in=[
-                "cash",
-                "bank",
-            ],
-            is_active=True,
-            allow_posting=True,
-        )
-        .order_by("code")
-    )
-
-    return render(
-        request,
-        "inventory/po_pay.html",
-        {
-            "po": po,
-            "total": total,
-            "payment_accounts": payment_accounts,
-        },
+    return redirect(
+        f"{reverse('accounting:supplier_payments')}?hotel={po.department.hotel_id}"
     )
 
 @role_required("STORE", "MAINTENANCE", "HOUSEKEEPING", "KITCHEN")
