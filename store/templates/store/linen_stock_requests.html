@@ -1,0 +1,17 @@
+{% extends "base/base.html" %}
+{% block title %}Laundry Linen Requests{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:18px 0;">
+  <h2>Laundry Linen Requests</h2>
+  <p>Requests for registered linen items from Laundry departments. Issuing updates Store inventory and the Laundry linen ledger together.</p>
+  <div style="overflow-x:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;">
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr style="background:#f1f5f9;text-align:left;"><th style="padding:12px;">Request</th><th style="padding:12px;">Laundry</th><th style="padding:12px;">Linen</th><th style="padding:12px;">Requested</th><th style="padding:12px;">Issued</th><th style="padding:12px;">Remaining</th><th style="padding:12px;">Status</th><th style="padding:12px;">Action</th></tr></thead>
+      <tbody>{% for item in requests %}
+        <tr style="border-top:1px solid #e2e8f0;"><td style="padding:12px;">#{{ item.id }}</td><td style="padding:12px;">{{ item.department.name }}</td><td style="padding:12px;">{{ item.product.name }}</td><td style="padding:12px;">{{ item.requested_quantity }}</td><td style="padding:12px;">{{ item.total_issued }}</td><td style="padding:12px;">{{ item.remaining_quantity }}</td><td style="padding:12px;">{{ item.get_status_display }}</td><td style="padding:12px;">{% if item.remaining_quantity > 0 and item.status != "REJECTED" %}<a href="{% url 'store_issue_stock_request' item.pk %}">Issue from Store</a>{% else %}—{% endif %}</td></tr>
+      {% empty %}<tr><td colspan="8" style="padding:24px;text-align:center;color:#64748b;">No Laundry linen requests found.</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+  <p style="margin-top:18px;"><a href="{% url 'store_stock_requests' %}">← General Stock Requests</a></p>
+</div>
+{% endblock %}
