@@ -142,6 +142,11 @@ urlpatterns = [
     ),
     
     path(
+        "linen/request-store/",
+        views.request_linen_from_store,
+        name="request_linen_from_store",
+    ),
+    path(
         "stock/request/",
         department_request_stock,
         name="laundry_request_stock",
