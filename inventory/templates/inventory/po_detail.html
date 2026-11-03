@@ -1131,7 +1131,7 @@ Purchase Order #{{ po.id }}
                 {% endif %}
 
                 {% if supplier_outstanding > 0 %}
-                    {% if request.user.role == "ACCOUNTANT" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+                    {% if request.user.role == "ACCOUNTANT" or request.user.role == "CHIEF_ACCOUNTANT" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
                         <div class="po-action-bar">
                             <a href="{% url 'inventory:po_pay' po.pk %}" class="po-action po-action-primary">
                                 💰 Record payment / partial payment
