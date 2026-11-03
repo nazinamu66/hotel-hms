@@ -652,6 +652,9 @@ def store_issue_stock_request(request, pk):
             )
         )
 
+        if stock_request.product.linen_item_id:
+            return redirect("store_linen_stock_requests")
+
         return redirect(
             "store_stock_requests"
         )
