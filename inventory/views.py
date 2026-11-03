@@ -1795,7 +1795,7 @@ def po_finalize(request, pk):
     )
 
 
-@role_required("ACCOUNTANT", "DIRECTOR", "ADMIN")
+@role_required("ACCOUNTANT", "CHIEF_ACCOUNTANT", "DIRECTOR", "ADMIN")
 def po_pay(request, pk):
     """
     Keep the historical PO payment URL working, but route all new
