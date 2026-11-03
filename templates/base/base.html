@@ -726,6 +726,12 @@
                 {% endfor %}
             </a>
 
+            {% if user|has_role:"ADMIN,DIRECTOR" %}
+            <a href="{% url 'inventory:supplier_list' %}">
+                Supplier Setup
+            </a>
+            {% endif %}
+
             <!-- Manager MUST see Direct Purchases
                  because management approval happens there -->
 
