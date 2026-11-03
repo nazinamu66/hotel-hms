@@ -11,6 +11,11 @@ urlpatterns = [
         views.store_stock_requests,
         name="store_stock_requests",
     ),
+    path(
+        "linen-stock-requests/",
+        views.store_linen_stock_requests,
+        name="store_linen_stock_requests",
+    ),
 
     # ============================================================
     # LINEN
