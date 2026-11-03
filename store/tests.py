@@ -14,6 +14,7 @@ from inventory.models import (
     StockMovement,
     StockTransfer,
 )
+from linen.models import LinenItem, LinenTransaction
 from store.views import issue_request_item
 
 
@@ -94,6 +95,65 @@ class StoreStockTransferTests(TestCase):
             StockMovement.objects.filter(
                 reference=f"TRANSFER-{transfer.id}",
                 movement_type="TRANSFER",
+            ).count(),
+            1,
+        )
+
+    def test_linen_transfer_to_laundry_updates_linen_ledger_once(self):
+        laundry = Department.objects.create(
+            hotel=self.hotel,
+            code="STL",
+            name="Test Laundry",
+            department_type="LAUNDRY",
+        )
+        linen_product = Product.objects.create(
+            hotel=self.hotel,
+            name="Test Bedsheet",
+            sku="STORE-TEST-BEDSHEET",
+            product_type="SUPPLY",
+            usage_type="ASSET",
+            base_unit="piece",
+            cost_price=Decimal("500.00"),
+        )
+        linen_item = LinenItem.objects.create(product=linen_product)
+        Stock.objects.create(
+            product=linen_product,
+            department=self.store,
+            quantity=Decimal("10.000"),
+        )
+        StockCostLayer.objects.create(
+            product=linen_product,
+            department=self.store,
+            quantity_received=Decimal("10.000"),
+            quantity_remaining=Decimal("10.000"),
+            unit_cost=Decimal("500.0000"),
+        )
+        transfer = StockTransfer.objects.create(
+            product=linen_product,
+            from_department=self.store,
+            to_department=laundry,
+            quantity=Decimal("5.000"),
+            created_by=self.store_user,
+        )
+
+        transfer.execute()
+
+        entry = LinenTransaction.objects.get(
+            linen_item=linen_item,
+            reference=f"TRANSFER-{transfer.id}",
+        )
+        self.assertEqual(entry.quantity, 5)
+        self.assertEqual(entry.event_type, "RECEIVED")
+        self.assertEqual(entry.condition, "CLEAN")
+        self.assertEqual(entry.to_location, "LAUNDRY")
+
+        with self.assertRaises(ValidationError):
+            transfer.execute()
+
+        self.assertEqual(
+            LinenTransaction.objects.filter(
+                linen_item=linen_item,
+                reference=f"TRANSFER-{transfer.id}",
             ).count(),
             1,
         )
