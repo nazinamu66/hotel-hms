@@ -1,37 +1,41 @@
 {% extends "base/base.html" %}
 {% block title %}Linen Category Defaults{% endblock %}
 {% block content %}
-<h2>Linen Setup · Category Defaults</h2>
-<p>Set reusable standard quantities for each room category. Leave an item blank to exclude it from the category defaults.</p>
-<form method="get" style="margin-bottom:20px;">
-  <label for="category">Room category</label>
-  <select id="category" name="category" required>
-    <option value="">Choose a category</option>
-    {% for category in categories %}
-      <option value="{{ category.pk }}" {% if selected_category.pk == category.pk %}selected{% endif %}>{{ category.name }}</option>
-    {% endfor %}
-  </select>
-  <button class="btn btn-secondary" type="submit">Load defaults</button>
-</form>
-{% if selected_category %}
-<form method="post">
-  {% csrf_token %}
-  <input type="hidden" name="category" value="{{ selected_category.pk }}">
-  <h3>{{ selected_category.name }} defaults</h3>
-  <table style="width:100%;border-collapse:collapse;">
-    <thead><tr><th style="text-align:left;padding:10px;">Linen item</th><th style="padding:10px;">Default quantity per room</th></tr></thead>
-    <tbody>
-    {% for row in item_rows %}
-      <tr style="border-top:1px solid #ddd;">
-        <td style="padding:10px;">{{ row.item.product.name }} <small>({{ row.item.product.sku }})</small></td>
-        <td style="padding:10px;text-align:center;"><input type="number" min="1" step="1" name="quantity_{{ row.item.pk }}" value="{{ row.quantity }}" placeholder="Not included"></td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="2" style="padding:16px;">No active linen items are available for your hotel.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  <button class="btn btn-primary" type="submit">Save category defaults</button>
-</form>
-{% endif %}
+<style>
+.linen-setup-page{max-width:1050px}.linen-setup-head{margin-bottom:22px}.linen-kicker{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin:0 0 7px}.linen-setup-head h1{font-size:26px;margin:0 0 7px}.linen-setup-head p{color:#64748b;margin:0;line-height:1.5}.linen-setup-card{background:var(--card-bg,#fff);border:1px solid #e2e8f0;border-radius:14px;padding:22px;margin-bottom:18px;box-shadow:0 3px 12px rgba(15,23,42,.035)}.linen-select-row{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.linen-select-row label,.linen-setup-table label{display:block;font-size:13px;font-weight:700;color:#334155;margin-bottom:7px}.linen-select-row select,.linen-setup-table input{border:1px solid #cbd5e1;border-radius:9px;padding:10px 12px;background:#fff;min-width:240px;font:inherit}.linen-setup-table{width:100%;border-collapse:separate;border-spacing:0;min-width:500px}.linen-setup-table th{background:#f8fafc;color:#64748b;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:12px}.linen-setup-table th:last-child,.linen-setup-table td:last-child{text-align:right}.linen-setup-table td{padding:12px;border-top:1px solid #edf1f5;font-size:13px}.linen-setup-table input{width:130px;min-width:0;box-sizing:border-box;text-align:right}.linen-table-wrap{overflow-x:auto}.linen-btn{display:inline-flex;border:0;border-radius:9px;padding:10px 15px;text-decoration:none;font-weight:700;cursor:pointer}.linen-btn-primary{background:#1d4ed8;color:#fff}.linen-btn-muted{background:#eef2f7;color:#334155}.linen-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}.linen-empty{padding:20px!important;color:#64748b;text-align:center}@media(max-width:600px){.linen-setup-card{padding:16px}.linen-setup-head h1{font-size:23px}}
+</style>
+<div class="linen-setup-page">
+  <header class="linen-setup-head"><p class="linen-kicker">Linen configuration · Level 1</p><h1>Room category defaults</h1><p>Define the standard linen quantities for each room category. Individual rooms inherit these values when their linen setup is first created, and can then be customized separately.</p></header>
+
+  <section class="linen-setup-card">
+    <form method="get" class="linen-select-row">
+      <div><label for="category">Room category</label><select id="category" name="category" required><option value="">Choose a category</option>{% for category in categories %}<option value="{{ category.pk }}" {% if selected_category.pk == category.pk %}selected{% endif %}>{{ category.name }}</option>{% endfor %}</select></div>
+      <button class="linen-btn linen-btn-muted" type="submit">Load category</button>
+      <a class="linen-btn linen-btn-muted" href="{% url 'linen_dashboard' %}">Back to linen overview</a>
+    </form>
+  </section>
+
+  {% if selected_category %}
+  <section class="linen-setup-card">
+    <div style="margin-bottom:16px"><p class="linen-kicker" style="margin-bottom:4px">Default configuration</p><h2 style="font-size:19px;margin:0">{{ selected_category.name }}</h2><p style="font-size:13px;color:#64748b;margin:5px 0 0">Enter the number of pieces required per room. Leave a field blank to exclude that item from this category.</p></div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="category" value="{{ selected_category.pk }}">
+      <div class="linen-table-wrap">
+        <table class="linen-setup-table">
+          <thead><tr><th>Linen item</th><th>SKU</th><th>Quantity per room</th></tr></thead>
+          <tbody>
+          {% for row in item_rows %}
+            <tr><td><strong>{{ row.item.product.name }}</strong></td><td style="color:#64748b">{{ row.item.product.sku }}</td><td><input aria-label="Default quantity for {{ row.item.product.name }}" type="number" min="1" step="1" name="quantity_{{ row.item.pk }}" value="{{ row.quantity }}" placeholder="Excluded"></td></tr>
+          {% empty %}
+            <tr><td colspan="3" class="linen-empty">No active linen items are available for your hotel.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="linen-actions"><button class="linen-btn linen-btn-primary" type="submit">Save category defaults</button></div>
+    </form>
+  </section>
+  {% endif %}
+</div>
 {% endblock %}
