@@ -2044,6 +2044,10 @@ def department_request_stock(request):
         .distinct()
     )
 
+    # Registered linen is requested through its dedicated workflow.
+    if department.department_type == "LAUNDRY":
+        products = products.filter(linen_item__isnull=True)
+
     stock_map = {
         stock.product_id: stock.quantity
         for stock in Stock.objects.filter(
