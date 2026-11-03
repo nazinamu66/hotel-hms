@@ -458,7 +458,7 @@
         <!-- LINEN MANAGEMENT -->
         <!-- ========================= -->
 
-        {% if user|has_role:"STORE,LAUNDRY,MANAGER,ADMIN,DIRECTOR" or user.role == "HOUSEKEEPING" and user.is_department_head %}
+        {% if user|has_role:"STORE,MANAGER,ADMIN,DIRECTOR" or user.role == "HOUSEKEEPING" and user.is_department_head %}
 
         <h4 class="menu-toggle"
             onclick="toggleMenu('linen_menu', this)">
