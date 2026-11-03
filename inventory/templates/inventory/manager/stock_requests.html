@@ -1,42 +1,55 @@
 {% extends "base/base.html" %}
+{% block title %}Pending Stock Requests{% endblock %}
 {% block content %}
-
-<h2>Pending Stock Requests</h2>
-
-<table border="1" cellpadding="8" width="100%">
-    <thead>
-        <tr>
-            <th>Product</th>
-            <th>Department</th>
-            <th>Requested Qty</th>
-            <th>Requested By</th>
-            <th>Requested At</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-
-    <tbody>
-        {% for r in requests %}
-        <tr>
-            <td>{{ r.product.name }}</td>
+<style>
+.stock-workflow{max-width:1320px;margin:0 auto;padding:8px 0 42px;color:#1e293b}
+.sw-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px}
+.sw-kicker{margin:0 0 7px;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.sw-head h1{margin:0 0 7px;font-size:28px;line-height:1.2}
+.sw-sub{margin:0;color:#64748b;font-size:14px;line-height:1.55}
+.sw-count{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid #e2e8f0;border-radius:999px;background:#fff;color:#334155;font-size:13px;font-weight:700}
+.sw-count b{display:inline-grid;place-items:center;min-width:25px;height:25px;border-radius:50%;background:#fff7ed;color:#c2410c}
+.sw-card{overflow:hidden;border:1px solid #e2e8f0;border-radius:15px;background:#fff;box-shadow:0 3px 12px rgba(15,23,42,.04)}
+.sw-card-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:19px 22px;border-bottom:1px solid #edf1f5}
+.sw-card-head h2{margin:0 0 4px;font-size:17px}.sw-card-head p{margin:0;color:#64748b;font-size:12px}
+.sw-table-wrap{overflow-x:auto}.sw-table{width:100%;min-width:780px;border-collapse:collapse}
+.sw-table th{padding:12px 15px;background:#f8fafc;color:#64748b;text-align:left;font-size:10px;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+.sw-table td{padding:15px;border-top:1px solid #edf1f5;color:#334155;font-size:13px;vertical-align:middle}
+.sw-table tbody tr:hover{background:#fafcff}
+.sw-product{font-weight:750;color:#1e293b}.sw-meta{display:block;margin-top:3px;color:#94a3b8;font-size:11px}
+.sw-qty{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.sw-review{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:8px;background:#1d4ed8;color:#fff!important;text-decoration:none;font-size:12px;font-weight:750;white-space:nowrap}
+.sw-review:hover{background:#1e40af}
+.sw-empty{text-align:center;padding:48px 20px!important;color:#64748b}
+.sw-empty strong{display:block;margin-bottom:6px;color:#1e293b;font-size:16px}
+@media(max-width:650px){.sw-head h1{font-size:23px}.sw-card-head{padding:16px}}
+</style>
+<div class="stock-workflow">
+  <header class="sw-head">
+    <div><p class="sw-kicker">Procurement · Manager review</p><h1>Pending Stock Requests</h1><p class="sw-sub">Review departmental purchase requests before a draft Purchase Order is created.</p></div>
+    <div class="sw-count"><b>{{ requests|length }}</b> awaiting review</div>
+  </header>
+  <section class="sw-card">
+    <div class="sw-card-head"><div><h2>Requests awaiting a decision</h2><p>Only pending requests routed through the purchase workflow appear here.</p></div></div>
+    <div class="sw-table-wrap">
+      <table class="sw-table">
+        <thead><tr><th>Product</th><th>Department</th><th>Requested quantity</th><th>Requested by</th><th>Submitted</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for r in requests %}
+          <tr>
+            <td><span class="sw-product">{{ r.product.name }}</span><span class="sw-meta">{{ r.product.sku|default:"No SKU" }} · {{ r.product.base_unit }}</span></td>
             <td>{{ r.department.name }}</td>
-            <td>{{ r.requested_quantity }}</td>
-            <td>{{ r.requested_by }}</td>
-            <td>{{ r.created_at|date:"Y-m-d H:i" }}</td>
-            <td>
-                <a href="{% url 'inventory:manager_review_request' r.pk %}">
-                    🔍 Review
-                </a>
-            </td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="6" style="text-align:center;">
-                No pending requests 🎉
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
+            <td><span class="sw-qty">{{ r.requested_quantity }}</span> <span class="sw-meta" style="display:inline">{{ r.product.base_unit }}</span></td>
+            <td>{{ r.requested_by.get_full_name|default:r.requested_by.username }}</td>
+            <td>{{ r.created_at|date:"d M Y, H:i" }}</td>
+            <td><a class="sw-review" href="{% url 'inventory:manager_review_request' r.pk %}">Review request →</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="sw-empty"><strong>No pending purchase requests</strong>All submitted purchase requests have been reviewed. New requests will appear here.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
 {% endblock %}
