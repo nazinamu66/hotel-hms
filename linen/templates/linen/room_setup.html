@@ -1,26 +1,29 @@
 {% extends "base/base.html" %}
 {% block title %}Room Linen Setup{% endblock %}
 {% block content %}
-<h2>Room Linen Setup</h2>
-<p><strong>Room {{ room.room_number }}</strong> · {{ room.category.name }} · {{ room.hotel.name }}</p>
-<p>Category defaults are copied the first time this room is configured. Change quantities for this room only. Leave a field blank and save to remove that linen item from this room's checklist. Enter 0 to keep the item configured with a zero quantity.</p>
-<form method="post">
-  {% csrf_token %}
-  <table style="width:100%;border-collapse:collapse;">
-    <thead><tr><th style="text-align:left;padding:10px;">Linen item</th><th style="padding:10px;">Category default</th><th style="padding:10px;">This room</th></tr></thead>
-    <tbody>
-    {% for row in item_rows %}
-      <tr style="border-top:1px solid #ddd;">
-        <td style="padding:10px;">{{ row.item.product.name }} <small>({{ row.item.product.sku }})</small></td>
-        <td style="padding:10px;text-align:center;">{% if row.default_quantity != '' %}{{ row.default_quantity }}{% else %}—{% endif %}</td>
-        <td style="padding:10px;text-align:center;"><input type="number" min="0" step="1" name="quantity_{{ row.item.pk }}" value="{{ row.state_quantity }}" placeholder="Not configured"></td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="3" style="padding:16px;">No active linen items are available for this hotel.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  <button class="btn btn-primary" type="submit">Save room configuration</button>
-  <a class="btn btn-secondary" href="{% url 'room_detail' room.pk %}">Back to room</a>
-</form>
+<style>
+.linen-setup-page{max-width:1100px}.linen-setup-head{margin-bottom:22px}.linen-kicker{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin:0 0 7px}.linen-setup-head h1{font-size:26px;margin:0 0 7px}.linen-setup-head p{color:#64748b;margin:0;line-height:1.5}.linen-room-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.linen-chip{display:inline-flex;padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:99px;color:#475569;font-size:12px;font-weight:600}.linen-setup-card{background:var(--card-bg,#fff);border:1px solid #e2e8f0;border-radius:14px;padding:22px;margin-bottom:18px;box-shadow:0 3px 12px rgba(15,23,42,.035)}.linen-info{border-radius:10px;background:#eff6ff;border:1px solid #dbeafe;color:#1e40af;padding:13px 15px;font-size:13px;line-height:1.5;margin-bottom:18px}.linen-setup-table{width:100%;border-collapse:separate;border-spacing:0;min-width:580px}.linen-setup-table th{background:#f8fafc;color:#64748b;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:12px}.linen-setup-table th:not(:first-child),.linen-setup-table td:not(:first-child){text-align:center}.linen-setup-table td{padding:12px;border-top:1px solid #edf1f5;font-size:13px}.linen-setup-table input{width:120px;max-width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:9px;text-align:center;font:inherit}.linen-table-wrap{overflow-x:auto}.linen-btn{display:inline-flex;border:0;border-radius:9px;padding:10px 15px;text-decoration:none;font-weight:700;cursor:pointer}.linen-btn-primary{background:#1d4ed8;color:#fff}.linen-btn-muted{background:#eef2f7;color:#334155}.linen-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}.linen-empty{padding:20px!important;color:#64748b;text-align:center}@media(max-width:600px){.linen-setup-card{padding:16px}.linen-setup-head h1{font-size:23px}}
+</style>
+<div class="linen-setup-page">
+  <header class="linen-setup-head"><p class="linen-kicker">Linen configuration · Level 2</p><h1>Room-specific linen setup</h1><p>Review the category defaults and set the actual linen checklist quantities for this individual room.</p><div class="linen-room-meta"><span class="linen-chip">Room {{ room.room_number }}</span><span class="linen-chip">{{ room.category.name }}</span><span class="linen-chip">{{ room.hotel.name }}</span></div></header>
+  <section class="linen-setup-card">
+    <div class="linen-info"><strong>How this works:</strong> Category defaults are copied the first time this room is configured. Change quantities here for this room only. Leave a field blank and save to remove that linen item from its checklist. Enter 0 to keep the item configured with a zero quantity.</div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="linen-table-wrap">
+        <table class="linen-setup-table">
+          <thead><tr><th>Linen item</th><th>Category default</th><th>This room</th></tr></thead>
+          <tbody>
+          {% for row in item_rows %}
+            <tr><td style="text-align:left"><strong>{{ row.item.product.name }}</strong><div style="font-size:11px;color:#94a3b8;margin-top:3px">{{ row.item.product.sku }}</div></td><td>{% if row.default_quantity != '' %}{{ row.default_quantity }}{% else %}<span style="color:#94a3b8">Not set</span>{% endif %}</td><td><input aria-label="Room quantity for {{ row.item.product.name }}" type="number" min="0" step="1" name="quantity_{{ row.item.pk }}" value="{{ row.state_quantity }}" placeholder="Excluded"></td></tr>
+          {% empty %}
+            <tr><td colspan="3" class="linen-empty">No active linen items are available for this hotel.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="linen-actions"><button class="linen-btn linen-btn-primary" type="submit">Save room configuration</button><a class="linen-btn linen-btn-muted" href="{% url 'room_detail' room.pk %}">Back to room</a><a class="linen-btn linen-btn-muted" href="{% url 'linen_dashboard' %}">Linen overview</a></div>
+    </form>
+  </section>
+</div>
 {% endblock %}
