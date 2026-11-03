@@ -1,174 +1,43 @@
 {% extends "base/base.html" %}
-
-{% block title %}
-Issue Linen
-{% endblock %}
-
+{% block title %}Issue Linen{% endblock %}
 {% block content %}
-
-<h2>Issue Linen</h2>
-
-<p style="color:#666;">
-    Issue clean linen from the Linen Store to a Housekeeping staff member.
-</p>
-
-<div
-    class="card"
-    style="
-        max-width:700px;
-        padding:25px;
-        background:white;
-        border:1px solid #ddd;
-    "
->
-
-<form method="post">
-
-{% csrf_token %}
-
-<!-- ========================= -->
-<!-- LINEN ITEM -->
-<!-- ========================= -->
-
-<label>
-    <strong>Linen Item</strong>
-</label>
-
-<br>
-
-<select
-    name="linen_item"
-    required
-    style="width:100%;padding:10px;"
->
-
-    <option value="">
-        Select linen item
-    </option>
-
-    {% for linen_item in linen_items %}
-
-        <option value="{{ linen_item.id }}">
-            {{ linen_item.product.name }}
-            — {{ linen_item.product.sku }}
-        </option>
-
-    {% endfor %}
-
-</select>
-
-<br><br>
-
-<!-- ========================= -->
-<!-- HOUSEKEEPING STAFF -->
-<!-- ========================= -->
-
-<label>
-    <strong>Issued To</strong>
-</label>
-
-<br>
-
-<select
-    name="issued_to"
-    required
-    style="width:100%;padding:10px;"
->
-
-    <option value="">
-        Select Housekeeping staff
-    </option>
-
-    {% for staff in housekeeping_staff %}
-
-        <option value="{{ staff.id }}">
-            {{ staff.get_full_name|default:staff.username }}
-            — {{ staff.username }}
-        </option>
-
-    {% endfor %}
-
-</select>
-
-<br><br>
-
-<!-- ========================= -->
-<!-- QUANTITY -->
-<!-- ========================= -->
-
-<label>
-    <strong>Quantity</strong>
-</label>
-
-<br>
-
-<input
-    type="number"
-    name="quantity"
-    min="1"
-    step="1"
-    required
-    style="width:100%;padding:10px;"
->
-
-<br><br>
-
-<!-- ========================= -->
-<!-- REFERENCE -->
-<!-- ========================= -->
-
-<label>
-    <strong>Reference</strong>
-</label>
-
-<br>
-
-<input
-    type="text"
-    name="reference"
-    maxlength="100"
-    placeholder="Optional issue reference"
-    style="width:100%;padding:10px;"
->
-
-<br><br>
-
-<!-- ========================= -->
-<!-- NOTE -->
-<!-- ========================= -->
-
-<label>
-    <strong>Note</strong>
-</label>
-
-<br>
-
-<textarea
-    name="note"
-    rows="4"
-    placeholder="Optional note..."
-    style="width:100%;padding:10px;"
-></textarea>
-
-<br><br>
-
-<button
-    type="submit"
-    class="btn btn-primary"
->
-    Issue Linen
-</button>
-
-<a
-    href="{% url 'linen_dashboard' %}"
-    class="btn btn-secondary"
-    style="margin-left:10px;"
->
-    Cancel
-</a>
-
-</form>
-
+<style>
+.linen-form-page{max-width:780px}.linen-form-head{margin-bottom:22px}.linen-kicker{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin:0 0 7px}.linen-form-head h1{font-size:26px;margin:0 0 7px}.linen-form-head p{color:#64748b;margin:0;line-height:1.5}.linen-form-card{background:var(--card-bg,#fff);border:1px solid #e2e8f0;border-radius:14px;padding:24px;box-shadow:0 3px 12px rgba(15,23,42,.04)}.linen-field{margin-bottom:18px}.linen-field label{display:block;font-size:13px;font-weight:700;color:#334155;margin-bottom:7px}.linen-field input,.linen-field select,.linen-field textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:11px 12px;background:#fff;color:#0f172a;font:inherit}.linen-field input:focus,.linen-field select:focus,.linen-field textarea:focus{outline:3px solid rgba(59,130,246,.14);border-color:#3b82f6}.linen-help{font-size:12px;color:#64748b;margin-top:6px}.linen-form-actions{display:flex;gap:9px;flex-wrap:wrap;padding-top:5px}.linen-form-actions a,.linen-form-actions button{border:0;border-radius:9px;padding:11px 16px;text-decoration:none;font-weight:700;cursor:pointer}.linen-submit{background:#1d4ed8;color:#fff}.linen-cancel{background:#eef2f7;color:#334155}@media(max-width:600px){.linen-form-card{padding:17px}.linen-form-head h1{font-size:23px}}
+</style>
+<div class="linen-form-page">
+  <header class="linen-form-head"><p class="linen-kicker">Linen inventory · Issue</p><h1>Issue linen</h1><p>Issue clean linen from the Linen Store to a Housekeeping team member. The issue is recorded against the selected staff member.</p></header>
+  <section class="linen-form-card">
+    <form method="post">
+      {% csrf_token %}
+      <div class="linen-field">
+        <label for="linen_item">Linen item</label>
+        <select id="linen_item" name="linen_item" required>
+          <option value="">Select linen item</option>
+          {% for linen_item in linen_items %}<option value="{{ linen_item.id }}">{{ linen_item.product.name }} — {{ linen_item.product.sku }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="linen-field">
+        <label for="issued_to">Issue to Housekeeping staff</label>
+        <select id="issued_to" name="issued_to" required>
+          <option value="">Select Housekeeping staff</option>
+          {% for staff in housekeeping_staff %}<option value="{{ staff.id }}">{{ staff.get_full_name|default:staff.username }} — {{ staff.username }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="linen-field">
+        <label for="quantity">Quantity issued</label>
+        <input id="quantity" type="number" name="quantity" min="1" step="1" required placeholder="Enter whole quantity">
+        <div class="linen-help">The system checks the current Linen Store balance before issuing.</div>
+      </div>
+      <div class="linen-field">
+        <label for="reference">Reference <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
+        <input id="reference" type="text" name="reference" maxlength="100" placeholder="Issue slip or internal reference">
+      </div>
+      <div class="linen-field">
+        <label for="note">Notes <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
+        <textarea id="note" name="note" rows="4" placeholder="Add any useful issue details..."></textarea>
+      </div>
+      <div class="linen-form-actions"><button class="linen-submit" type="submit">Confirm issue</button><a class="linen-cancel" href="{% url 'linen_dashboard' %}">Cancel</a></div>
+    </form>
+  </section>
 </div>
-
 {% endblock %}
