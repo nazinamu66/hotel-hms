@@ -997,31 +997,9 @@ Purchase Order #{{ po.id }}
                 </p>
 
 
-                <!-- PAYMENT -->
-                {% if po.payment_status != "PAID" %}
-
-                    {% if request.user.role == "ACCOUNTANT" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
-
-                        <div class="po-action-bar">
-
-                            <a
-                                href="{% url 'inventory:po_pay' po.pk %}"
-                                class="po-action po-action-primary"
-                            >
-                                💰 Pay Supplier
-                            </a>
-
-                        </div>
-
-                    {% endif %}
-
-                {% else %}
-
-                    <div class="po-workflow-note">
-                        ✓ Supplier fully paid
-                    </div>
-
-                {% endif %}
+                <div class="po-workflow-note">
+                    Supplier settlement becomes available after goods are received and the payable is recognized.
+                </div>
 
 
                 <!-- RECEIVING -->
@@ -1064,33 +1042,23 @@ Purchase Order #{{ po.id }}
                 </p>
 
 
-                {% if po.payment_status == "PAID" %}
-
-                    <div class="po-workflow-note">
-                        ✓ Supplier fully paid
+                <div class="po-payment-summary">
+                    <div>
+                        <div class="po-payment-summary-label">Supplier payment progress</div>
+                        <div class="po-payment-summary-value">₦{{ supplier_paid|floatformat:2 }} paid</div>
+                        <div class="po-info-label">Outstanding: ₦{{ supplier_outstanding|floatformat:2 }}</div>
                     </div>
+                    <span class="po-status-badge {% if supplier_outstanding <= 0 %}payment-paid{% elif supplier_paid > 0 %}payment-partial{% else %}payment-unpaid{% endif %}">
+                        {% if supplier_outstanding <= 0 %}Paid{% elif supplier_paid > 0 %}Partially paid{% else %}Unpaid{% endif %}
+                    </span>
+                </div>
 
-                {% else %}
-
-                    <div class="po-workflow-note">
-                        Payment outstanding
+                {% if supplier_outstanding > 0 and request.user.role == "ACCOUNTANT" or supplier_outstanding > 0 and request.user.role == "ADMIN" or supplier_outstanding > 0 and request.user.role == "DIRECTOR" %}
+                    <div class="po-action-bar">
+                        <a href="{% url 'inventory:po_pay' po.pk %}" class="po-action po-action-primary">
+                            💰 Record payment / partial payment
+                        </a>
                     </div>
-
-                    {% if request.user.role == "ACCOUNTANT" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
-
-                        <div class="po-action-bar">
-
-                            <a
-                                href="{% url 'inventory:po_pay' po.pk %}"
-                                class="po-action po-action-primary"
-                            >
-                                💰 Pay Supplier
-                            </a>
-
-                        </div>
-
-                    {% endif %}
-
                 {% endif %}
 
             </div>
