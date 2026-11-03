@@ -654,6 +654,10 @@
 
             <a href="/store/issue/">
                 Issue Stock
+            <a href="{% url 'store_linen_stock_requests' %}">
+                🛏️ Laundry Linen Requests
+            </a>
+
             <a href="{% url 'store_stock_requests' %}">
                 📋 Stock Requests
                 {% for action in pending_actions %}
