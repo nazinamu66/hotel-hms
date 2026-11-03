@@ -192,7 +192,6 @@ def store_linen_stock_requests(request):
             department__department_type="LAUNDRY",
             product__linen_item__isnull=False,
             fulfillment_type="STORE",
-            product__linen_item__isnull=True,
         )
         .select_related("product", "department", "requested_by")
         .prefetch_related("transfers")
@@ -238,6 +237,7 @@ def store_stock_requests(request):
                 "RESTAURANT"
             ],
             fulfillment_type="STORE",
+            product__linen_item__isnull=True,
         )
         .select_related(
             "product",
