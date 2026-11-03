@@ -279,10 +279,17 @@ Purchase Orders
             </p>
         </div>
 
-        <a href="{% url 'inventory:po_create' %}" class="po-primary-btn">
-            <span>＋</span>
-            New Purchase Order
-        </a>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            {% if request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+            <a href="{% url 'inventory:supplier_list' %}" class="po-view-btn">
+                Manage Suppliers
+            </a>
+            {% endif %}
+            <a href="{% url 'inventory:po_create' %}" class="po-primary-btn">
+                <span>＋</span>
+                New Purchase Order
+            </a>
+        </div>
     </div>
 
     <div class="po-summary">
