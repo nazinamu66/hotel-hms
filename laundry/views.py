@@ -13,7 +13,7 @@ from laundry.models import GuestLaundryOrder
 from accounts.decorators import role_required
 from accounts.services.access import get_accessible_hotels
 from django.db.models import Q
-from inventory.models import Department, Stock, Product
+from inventory.models import Department, Stock, Product, LowStockRequest
 from laundry.models import LaundryReceipt
 from linen.models import LinenItem, LinenTransaction
 from linen.services.balances import get_linen_condition_balance
@@ -1269,6 +1269,81 @@ def dashboard(request):
             "recent_transactions": recent_transactions,
         },
     )
+
+@role_required(
+    "LAUNDRY",
+    "MANAGER",
+    "ADMIN",
+    "DIRECTOR",
+)
+def request_linen_from_store(request):
+    """Create and display Laundry requests for registered linen only."""
+    department = request.user.department
+
+    if not department or department.department_type != "LAUNDRY":
+        raise PermissionDenied("You must be assigned to a Laundry department.")
+
+    linen_items = (
+        LinenItem.objects
+        .filter(
+            product__hotel=department.hotel,
+            product__is_active=True,
+            is_active=True,
+        )
+        .select_related("product")
+        .order_by("product__name")
+    )
+
+    requests = (
+        LowStockRequest.objects
+        .filter(
+            department=department,
+            product__linen_item__isnull=False,
+        )
+        .select_related("product", "requested_by")
+        .prefetch_related("transfers")
+        .order_by("-created_at", "-id")
+    )
+
+    if request.method == "POST":
+        item = get_object_or_404(linen_items, pk=request.POST.get("linen_item"))
+        try:
+            quantity = int(request.POST.get("quantity", "0"))
+        except (TypeError, ValueError):
+            quantity = 0
+
+        if quantity <= 0:
+            messages.error(request, "Enter a quantity greater than zero.")
+            return redirect("laundry:request_linen_from_store")
+
+        LowStockRequest.objects.create(
+            product=item.product,
+            department=department,
+            requested_quantity=quantity,
+            fulfillment_type="STORE",
+            requested_by=request.user,
+        )
+        messages.success(
+            request,
+            f"Request for {quantity} {item.product.name} submitted to Store.",
+        )
+        return redirect("laundry:request_linen_from_store")
+
+    for stock_request in requests:
+        stock_request.total_issued = sum(
+            transfer.quantity for transfer in stock_request.transfers.all()
+        )
+        stock_request.remaining_quantity = max(
+            stock_request.requested_quantity - stock_request.total_issued,
+            0,
+        )
+
+    return render(
+        request,
+        "laundry/request_linen_from_store.html",
+        {"linen_items": linen_items, "requests": requests},
+    )
+
 
 @role_required(
     "LAUNDRY",
