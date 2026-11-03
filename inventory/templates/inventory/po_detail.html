@@ -278,6 +278,34 @@ Purchase Order #{{ po.id }}
         color: #667085 !important;
     }
 
+    .po-payment-summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding: 18px 20px;
+        margin: 18px 0;
+        border: 1px solid #e2e6ed;
+        border-radius: 11px;
+        background: #f8fafc;
+    }
+
+    .po-payment-summary-label {
+        color: #667085;
+        font-size: 12px;
+        font-weight: 650;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .po-payment-summary-value {
+        margin: 5px 0;
+        color: #293241;
+        font-size: 23px;
+        font-weight: 750;
+    }
+
     /* DRAFT / ADD ITEM */
     .po-draft-layout {
         display: grid;
@@ -1053,12 +1081,14 @@ Purchase Order #{{ po.id }}
                     </span>
                 </div>
 
-                {% if supplier_outstanding > 0 and request.user.role == "ACCOUNTANT" or supplier_outstanding > 0 and request.user.role == "ADMIN" or supplier_outstanding > 0 and request.user.role == "DIRECTOR" %}
-                    <div class="po-action-bar">
-                        <a href="{% url 'inventory:po_pay' po.pk %}" class="po-action po-action-primary">
-                            💰 Record payment / partial payment
-                        </a>
-                    </div>
+                {% if supplier_outstanding > 0 %}
+                    {% if request.user.role == "ACCOUNTANT" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+                        <div class="po-action-bar">
+                            <a href="{% url 'inventory:po_pay' po.pk %}" class="po-action po-action-primary">
+                                💰 Record payment / partial payment
+                            </a>
+                        </div>
+                    {% endif %}
                 {% endif %}
 
             </div>
