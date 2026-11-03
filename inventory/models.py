@@ -1132,6 +1132,30 @@ class StockTransfer(models.Model):
             reference=f"TRANSFER-{transfer.id}",
         )
 
+        # A Store transfer of registered linen into Laundry must also
+        # update the dedicated linen ledger in this same atomic transaction.
+        if transfer.to_department.department_type == "LAUNDRY":
+            from linen.models import LinenItem, LinenTransaction
+
+            linen_item = LinenItem.objects.filter(
+                product_id=transfer.product_id,
+                is_active=True,
+            ).first()
+
+            if linen_item:
+                LinenTransaction.objects.create(
+                    linen_item=linen_item,
+                    quantity=int(transfer.quantity),
+                    condition="CLEAN",
+                    event_type="RECEIVED",
+                    to_location="LAUNDRY",
+                    performed_by=transfer.created_by,
+                    reference=f"TRANSFER-{transfer.id}",
+                    note=transfer.note or (
+                        f"Store transfer #{transfer.id} received into Laundry."
+                    ),
+                )
+
         if request_item:
             request_item.request.update_issue_status()
 
