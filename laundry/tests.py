@@ -22,13 +22,16 @@ class GuestLaundryServiceTests(TestCase):
         self.hotel = Hotel.objects.create(
             name="Guest Laundry Test Hotel",
         )
-        self.department = Department.objects.create(
+        self.department, _ = Department.objects.get_or_create(
             hotel=self.hotel,
-            code="LAUN",
             name="Laundry",
-            department_type="LAUNDRY",
-            is_active=True,
+            defaults={
+                "code": "LAUN",
+                "department_type": "LAUNDRY",
+                "is_active": True,
+            },
         )
+        self.assertEqual(self.department.department_type, "LAUNDRY")
         self.user = User.objects.create_user(
             username="laundry-test-user",
             password="test-password",
