@@ -17,7 +17,17 @@
 .hk-head-dashboard .hk-btn.secondary{background:#e2e8f0;color:#334155!important}
 .hk-head-dashboard h3{font-size:1.12rem;font-weight:800;letter-spacing:-.02em;margin:28px 0 13px}
 .hk-head-dashboard .hk-section-note{font-size:.85rem;color:#64748b;margin:-5px 0 14px}
-.hk-head-dashboard .hk-kpis{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px!important;margin:0 0 28px!important}
+.hk-head-dashboard .hk-kpis{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px!important;margin:0 0 28px!important}
+.hk-head-dashboard .hk-linen-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 26px}
+.hk-head-dashboard .hk-linen-card{background:#fff;border:1px solid #e2e8f0;border-radius:13px;padding:15px}
+.hk-head-dashboard .hk-linen-card span{display:block;color:#64748b;font-size:.78rem;font-weight:700}
+.hk-head-dashboard .hk-linen-card strong{display:block;font-size:1.55rem;margin-top:5px;font-variant-numeric:tabular-nums}
+.hk-head-dashboard .hk-linen-card small{display:block;color:#64748b;margin-top:3px}
+.hk-head-dashboard .hk-section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.hk-head-dashboard .hk-section-head a{font-size:.85rem}
+@media(max-width:900px){.hk-head-dashboard .hk-linen-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.hk-head-dashboard .hk-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.hk-head-dashboard .hk-kpis,.hk-head-dashboard .hk-linen-grid{grid-template-columns:1fr}}
 .hk-head-dashboard .hk-kpis .card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;padding:17px!important;box-shadow:0 4px 14px rgba(15,23,42,.04)}
 .hk-head-dashboard .hk-kpis strong{font-size:.85rem;color:#64748b}
 .hk-head-dashboard .hk-kpis h2{font-size:1.9rem;line-height:1.2;margin:8px 0 0;font-weight:850;letter-spacing:-.04em}
@@ -36,7 +46,7 @@
 <div class="hk-head-dashboard">
 <div class="hk-hero">
   <div><div class="hk-eyebrow">Housekeeping · Operations</div><h1 class="hk-title">Housekeeping Head Dashboard</h1><p class="hk-subtitle">Manage room readiness, staff assignments, inspections, supplies and daily service activity for your hotel.</p></div>
-  <div class="hk-actions"><a class="hk-btn secondary" href="{% url 'housekeeping_cleaning_history' %}">View cleaning history</a><a class="hk-btn secondary" href="{% url 'maintenance_create_ticket_room' %}">Report room issue</a></div>
+  <div class="hk-actions"><a class="hk-btn secondary" href="{% url 'housekeeping_cleaning_history' %}">Cleaning history</a><a class="hk-btn secondary" href="{% url 'housekeeping_linen_movements' %}">Linen custody</a></div>
 </div>
 
 <!-- ===================================================== -->
@@ -46,49 +56,30 @@
 <h3>Today's Overview</h3>
 <p class="hk-section-note">A live snapshot of housekeeping workload and operational exceptions.</p>
 
-<div style="
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-    gap:15px;
-    margin-bottom:25px;
-">
-
-    <div class="card" style="padding:15px;">
-        <strong>Dirty Rooms</strong>
-        <h2>{{ dirty_room_count }}</h2>
-    </div>
-
-    <div class="card" style="padding:15px;">
-        <strong>Assigned</strong>
-        <h2>{{ assigned_count }}</h2>
-    </div>
-
-    <div class="card" style="padding:15px;">
-        <strong>In Progress</strong>
-        <h2>{{ in_progress_count }}</h2>
-    </div>
-
-    <div class="card" style="padding:15px;">
-        <strong>Inspection</strong>
-        <h2>{{ inspection_count }}</h2>
-    </div>
-
-    <div class="card" style="padding:15px;">
-        <strong>Cleaned Today</strong>
-        <h2>{{ cleaned_today_count }}</h2>
-    </div>
-
-    <div class="card" style="padding:15px;">
-        <strong>Low Stock</strong>
-        <h2>{{ low_stock_items|length }}</h2>
-    </div>
-
-    <div class="card" style="padding:15px;">
-        <strong>Lost & Found</strong>
-        <h2>{{ lost_found_count }}</h2>
-    </div>
-
+<div class="hk-kpis">
+    <div class="card"><strong>Dirty Rooms</strong><h2>{{ dirty_room_count }}</h2></div>
+    <div class="card"><strong>Assigned</strong><h2>{{ assigned_count }}</h2></div>
+    <div class="card"><strong>In Progress</strong><h2>{{ in_progress_count }}</h2></div>
+    <div class="card"><strong>Awaiting Inspection</strong><h2>{{ inspection_count }}</h2></div>
+    <div class="card"><strong>Cleaned Today</strong><h2>{{ cleaned_today_count }}</h2></div>
+    <div class="card"><strong>Low Stock Items</strong><h2>{{ low_stock_items|length }}</h2></div>
 </div>
+
+<div class="hk-section-head">
+    <div><h3 style="margin-top:0">Hotel Linen Position</h3><p class="hk-section-note">Current quantities from the linen transaction ledger, separated by physical location.</p></div>
+    <a href="{% url 'housekeeping_linen_movements' %}">Open Linen Custody →</a>
+</div>
+<div class="hk-linen-grid">
+    <div class="hk-linen-card"><span>Linen Store</span><strong>{{ linen_totals.store }}</strong><small>Clean and dirty stock held by Store</small></div>
+    <div class="hk-linen-card"><span>Housekeeping</span><strong>{{ linen_totals.housekeeping }}</strong><small>Department-level linen position</small></div>
+    <div class="hk-linen-card"><span>Laundry</span><strong>{{ linen_totals.laundry }}</strong><small>Includes linen currently held by Laundry</small></div>
+    <div class="hk-linen-card"><span>Discrepancy Holding</span><strong>{{ linen_totals.discrepancy }}</strong><small>Awaiting management investigation</small></div>
+</div>
+<p class="hk-section-note">Also recorded: {{ linen_totals.damaged }} damaged · {{ linen_totals.lost }} lost · {{ linen_totals.written_off }} written off.</p>
+{% if staff_linen_requests_count %}
+<p><a href="{% url 'housekeeping_linen_request_queue' %}">{{ staff_linen_requests_count }} staff linen request{{ staff_linen_requests_count|pluralize }} awaiting Laundry processing →</a></p>
+{% endif %}
+
 
 
 <!-- ===================================================== -->
