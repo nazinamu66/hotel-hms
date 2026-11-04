@@ -23,7 +23,10 @@ from laundry.services.processing import (
 )
 
 from accounts.services.access import user_can_access_hotel
-from laundry.services.receiving import (\n    confirm_laundry_receipt,\n    resolve_laundry_receipt_discrepancy,\n)
+from laundry.services.receiving import (
+    confirm_laundry_receipt,
+    resolve_laundry_receipt_discrepancy,
+)
 from linen.models import LinenRequest
 from frontdesk.workflows.payment import take_payment_for_folio
 from linen.services.workflows import approve_linen_request,fulfill_laundry_request
