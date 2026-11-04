@@ -169,21 +169,9 @@
         {% endif %}
 
 
-        <!-- ========================= -->
-        <!-- SHARED HOTEL REPORTING -->
-        <!-- Available to all hotel roles -->
-        <!-- ========================= -->
-
-        <h4 class="menu-toggle {% if request.resolver_match.url_name == 'housekeeping_lost_found' or request.resolver_match.url_name == 'maintenance_create_ticket_room' or request.resolver_match.url_name == 'maintenance_create_ticket' %}active-menu{% endif %}"
-            onclick="toggleMenu('shared_reporting_menu', this)">
-            <span class="arrow">▸</span>
-            Room & Property Reports
-        </h4>
-
-        <div id="shared_reporting_menu" class="menu-section {% if request.resolver_match.url_name == 'housekeeping_lost_found' or request.resolver_match.url_name == 'maintenance_create_ticket_room' or request.resolver_match.url_name == 'maintenance_create_ticket' %}open{% endif %}">
-            <a href="{% url 'housekeeping_lost_found' %}">Lost &amp; Found</a>
-            <a href="{% url 'maintenance_create_ticket_room' %}">Report a Property Issue</a>
-        </div>
+        <!-- Direct shared actions: no single-link expandable menu -->
+        <a class="sidebar-link" href="{% url 'housekeeping_lost_found' %}">Lost &amp; Found</a>
+        <a class="sidebar-link" href="{% url 'maintenance_create_ticket_room' %}">Report Property Issue</a>
 
 
         <!-- ========================= -->
@@ -371,8 +359,6 @@
             <a href="{% url 'housekeeping_cleaning_history' %}">
                 {% if user.role == "HOUSEKEEPING" and not user.is_department_head %}My Cleaning History{% else %}Cleaning History{% endif %}
             </a>
-            <a href="{% url 'housekeeping_lost_found' %}">Lost &amp; Found</a>
-            <a href="{% url 'maintenance_create_ticket_room' %}">Report Property Issue</a>
 
             {% if user.role != "HOUSEKEEPING" or user.is_department_head %}
                 <a href="{% url 'housekeeping_request_stock' %}">Request Stock</a>
