@@ -2282,6 +2282,7 @@ def send_linen_to_laundry(request):
 
 @role_required(
     "HOUSEKEEPING",
+    "STORE",
     "MANAGER",
     "ADMIN",
     "DIRECTOR",
