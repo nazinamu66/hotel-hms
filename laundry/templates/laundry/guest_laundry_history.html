@@ -1,339 +1,87 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-Guest Laundry History
-{% endblock %}
-
-{% block header %}
-<h2>Guest Laundry History</h2>
-{% endblock %}
+{% block title %}Guest Laundry History{% endblock %}
+{% block header %}<h2>Guest Laundry History</h2>{% endblock %}
 
 {% block content %}
+<style>
+.gh-page{--gh-ink:#172033;--gh-muted:#64748b;--gh-line:#e5eaf1;--gh-blue:#2563eb;--gh-blue-soft:#eff6ff;--gh-green:#15803d;--gh-green-soft:#f0fdf4;--gh-amber:#b45309;--gh-amber-soft:#fffbeb;--gh-red:#b91c1c;--gh-red-soft:#fef2f2;color:var(--gh-ink);display:grid;gap:19px}
+.gh-page *{box-sizing:border-box}.gh-heading{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px}
+.gh-eyebrow{margin:0 0 6px;color:var(--gh-blue);font-size:11px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.gh-heading h1{margin:0;font-size:clamp(23px,3vw,30px);letter-spacing:-.04em;line-height:1.15}
+.gh-sub{margin:7px 0 0;color:var(--gh-muted);font-size:13px}
+.gh-actions{display:flex;gap:9px;flex-wrap:wrap}.gh-button{display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:9px 13px;border:1px solid var(--gh-line);border-radius:9px;background:white;color:#334155;text-decoration:none;font-size:12px;font-weight:800;cursor:pointer}
+.gh-button:hover{background:#f8fafc;color:var(--gh-blue)}.gh-button.primary{border-color:var(--gh-blue);background:var(--gh-blue);color:white}.gh-button.primary:hover{background:#1d4ed8}
+.gh-panel{overflow:hidden;border:1px solid var(--gh-line);border-radius:15px;background:white;box-shadow:0 5px 18px rgba(15,23,42,.035)}
+.gh-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 19px;border-bottom:1px solid var(--gh-line)}
+.gh-panel-head h2{margin:0;font-size:15px}.gh-panel-head p{margin:4px 0 0;color:var(--gh-muted);font-size:11px}
+.gh-count{padding:5px 9px;border-radius:999px;background:var(--gh-blue-soft);color:var(--gh-blue);font-size:11px;font-weight:800;white-space:nowrap}
+.gh-filter-body{padding:18px 19px}.gh-filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px;align-items:end}
+.gh-field{display:grid;gap:6px;min-width:0}.gh-field label{font-size:11px;font-weight:800;color:#334155}
+.gh-field input,.gh-field select{width:100%;min-height:40px;padding:9px 10px;border:1px solid #cbd5e1;border-radius:8px;background:white;color:var(--gh-ink);font:inherit;font-size:12px}
+.gh-filter-actions{display:flex;gap:8px;align-items:end;flex-wrap:wrap}
+.gh-table-wrap{width:100%;overflow-x:auto}.gh-table{width:100%;min-width:980px;border-collapse:collapse}
+.gh-table th{padding:11px 12px;background:#f8fafc;color:#64748b;font-size:10px;font-weight:800;text-align:left;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.gh-table td{padding:12px;border-top:1px solid #edf1f5;font-size:12px;vertical-align:middle}.gh-table tbody tr:hover{background:#fafcff}
+.gh-order{color:var(--gh-blue);font-weight:850;text-decoration:none}.gh-order:hover{text-decoration:underline}
+.gh-customer{font-weight:800}.gh-secondary{display:block;margin-top:3px;color:var(--gh-muted);font-size:10px}
+.gh-money{font-weight:850;white-space:nowrap;font-variant-numeric:tabular-nums}
+.gh-status{display:inline-flex;padding:5px 9px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:10px;font-weight:800;white-space:nowrap}
+.gh-status.new{background:var(--gh-blue-soft);color:var(--gh-blue)}.gh-status.received,.gh-status.processing{background:var(--gh-amber-soft);color:var(--gh-amber)}
+.gh-status.ready{background:#f5f3ff;color:#6d28d9}.gh-status.delivered{background:var(--gh-green-soft);color:var(--gh-green)}.gh-status.cancelled{background:var(--gh-red-soft);color:var(--gh-red)}
+.gh-view{display:inline-flex;padding:6px 10px;border:1px solid var(--gh-line);border-radius:7px;color:#334155;text-decoration:none;font-size:10px;font-weight:800}.gh-view:hover{background:var(--gh-blue-soft);border-color:#bfdbfe;color:var(--gh-blue)}
+.gh-empty{padding:40px 18px;text-align:center}.gh-empty-icon{display:grid;place-items:center;width:46px;height:46px;margin:0 auto 11px;border-radius:13px;background:#f1f5f9;font-size:21px}
+.gh-empty strong{display:block;font-size:13px}.gh-empty p{margin:5px 0 0;color:var(--gh-muted);font-size:12px}
+@media(max-width:1000px){.gh-filters{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.gh-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.gh-filter-body{padding:14px}.gh-panel-head{padding:14px}}
+@media(max-width:420px){.gh-filters{grid-template-columns:1fr}.gh-filter-actions .gh-button{flex:1}}
+</style>
 
-<div class="card" style="padding:20px; margin-bottom:20px;">
+<div class="gh-page">
+  <section class="gh-heading">
+    <div><p class="gh-eyebrow">Laundry operations · Guest services</p><h1>Guest Laundry History</h1><p class="gh-sub">Search, review and trace guest and walk-in laundry orders.</p></div>
+    <div class="gh-actions"><a class="gh-button" href="{% url 'laundry:guest_laundry' %}">← Guest Laundry</a><a class="gh-button primary" href="{% url 'laundry:guest_laundry_new' %}">＋ New order</a></div>
+  </section>
 
-    <h3>Search &amp; Filters</h3>
-
-    <form method="get">
-
-        <div style="
-            display:grid;
-            grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-            gap:15px;
-            align-items:end;
-        ">
-
-            <div>
-                <label>
-                    <strong>Customer Name</strong>
-                </label>
-                <br>
-                <input
-                    type="text"
-                    name="customer"
-                    value="{{ customer }}"
-                    placeholder="Guest or walk-in name"
-                    style="width:100%; box-sizing:border-box;"
-                >
-            </div>
-
-            <div>
-                <label>
-                    <strong>From Date</strong>
-                </label>
-                <br>
-                <input
-                    type="date"
-                    name="date_from"
-                    value="{{ date_from }}"
-                    style="width:100%; box-sizing:border-box;"
-                >
-            </div>
-
-            <div>
-                <label>
-                    <strong>To Date</strong>
-                </label>
-                <br>
-                <input
-                    type="date"
-                    name="date_to"
-                    value="{{ date_to }}"
-                    style="width:100%; box-sizing:border-box;"
-                >
-            </div>
-
-            <div>
-                <label>
-                    <strong>Customer Type</strong>
-                </label>
-                <br>
-                <select
-                    name="customer_type"
-                    style="width:100%; box-sizing:border-box;"
-                >
-                    <option value=""
-                        {% if not customer_type %}selected{% endif %}>
-                        All
-                    </option>
-
-                    <option value="ROOM"
-                        {% if customer_type == "ROOM" %}selected{% endif %}>
-                        Room Guest
-                    </option>
-
-                    <option value="WALKIN"
-                        {% if customer_type == "WALKIN" %}selected{% endif %}>
-                        Walk-in
-                    </option>
-                </select>
-            </div>
-
-            <div>
-                <label>
-                    <strong>Status</strong>
-                </label>
-                <br>
-                <select
-                    name="status"
-                    style="width:100%; box-sizing:border-box;"
-                >
-                    <option value=""
-                        {% if not status %}selected{% endif %}>
-                        All
-                    </option>
-
-                    <option value="NEW"
-                        {% if status == "NEW" %}selected{% endif %}>
-                        New
-                    </option>
-
-                    <option value="RECEIVED"
-                        {% if status == "RECEIVED" %}selected{% endif %}>
-                        Received
-                    </option>
-
-                    <option value="PROCESSING"
-                        {% if status == "PROCESSING" %}selected{% endif %}>
-                        Processing
-                    </option>
-
-                    <option value="READY"
-                        {% if status == "READY" %}selected{% endif %}>
-                        Ready
-                    </option>
-
-                    <option value="DELIVERED"
-                        {% if status == "DELIVERED" %}selected{% endif %}>
-                        Delivered
-                    </option>
-
-                    <option value="CANCELLED"
-                        {% if status == "CANCELLED" %}selected{% endif %}>
-                        Cancelled
-                    </option>
-                </select>
-            </div>
-
-            <div>
-                <button type="submit">
-                    🔎 Search
-                </button>
-
-                <a href="{% url 'laundry:guest_laundry_history' %}">
-                    Clear
-                </a>
-            </div>
-
-        </div>
-
-    </form>
-
-</div>
-
-
-<div class="card" style="padding:20px;">
-
-    <div style="
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        margin-bottom:15px;
-    ">
-
-        <h3 style="margin:0;">
-            Order History
-        </h3>
-
-        <a href="{% url 'laundry:guest_laundry_new' %}">
-            + New Guest Laundry Order
-        </a>
-
+  <section class="gh-panel">
+    <div class="gh-panel-head"><div><h2>Search and filters</h2><p>Narrow the order history by customer, date, customer type or processing status.</p></div></div>
+    <div class="gh-filter-body">
+      <form method="get" class="gh-filters">
+        <div class="gh-field"><label for="gh-customer">Customer name</label><input id="gh-customer" type="text" name="customer" value="{{ customer }}" placeholder="Guest or walk-in"></div>
+        <div class="gh-field"><label for="gh-from">From date</label><input id="gh-from" type="date" name="date_from" value="{{ date_from }}"></div>
+        <div class="gh-field"><label for="gh-to">To date</label><input id="gh-to" type="date" name="date_to" value="{{ date_to }}"></div>
+        <div class="gh-field"><label for="gh-type">Customer type</label><select id="gh-type" name="customer_type"><option value="">All customers</option><option value="ROOM" {% if customer_type == "ROOM" %}selected{% endif %}>Room guest</option><option value="WALKIN" {% if customer_type == "WALKIN" %}selected{% endif %}>Walk-in</option></select></div>
+        <div class="gh-field"><label for="gh-status">Order status</label><select id="gh-status" name="status"><option value="">All statuses</option><option value="NEW" {% if status == "NEW" %}selected{% endif %}>New</option><option value="RECEIVED" {% if status == "RECEIVED" %}selected{% endif %}>Received</option><option value="PROCESSING" {% if status == "PROCESSING" %}selected{% endif %}>Processing</option><option value="READY" {% if status == "READY" %}selected{% endif %}>Ready</option><option value="DELIVERED" {% if status == "DELIVERED" %}selected{% endif %}>Delivered</option><option value="CANCELLED" {% if status == "CANCELLED" %}selected{% endif %}>Cancelled</option></select></div>
+        <div class="gh-filter-actions"><button class="gh-button primary" type="submit">⌕ Search</button><a class="gh-button" href="{% url 'laundry:guest_laundry_history' %}">Clear filters</a></div>
+      </form>
     </div>
+  </section>
 
-
+  <section class="gh-panel">
+    <div class="gh-panel-head"><div><h2>Order records</h2><p>Orders matching the selected filters</p></div><span class="gh-count">{{ orders|length }} order{{ orders|length|pluralize }}</span></div>
     {% if orders %}
-
-    <div style="overflow-x:auto;">
-
-        <table style="
-            width:100%;
-            border-collapse:collapse;
-        ">
-
-            <thead style="background:#eee;">
-
-                <tr>
-
-                    <th style="padding:10px; text-align:left;">
-                        Order
-                    </th>
-
-                    <th style="padding:10px; text-align:left;">
-                        Customer
-                    </th>
-
-                    <th style="padding:10px; text-align:left;">
-                        Type
-                    </th>
-
-                    <th style="padding:10px; text-align:left;">
-                        Room
-                    </th>
-
-                    <th style="padding:10px; text-align:right;">
-                        Total
-                    </th>
-
-                    <th style="padding:10px; text-align:left;">
-                        Status
-                    </th>
-
-                    <th style="padding:10px; text-align:left;">
-                        Created
-                    </th>
-
-                    <th style="padding:10px; text-align:left;">
-                        Action
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-            {% for order in orders %}
-
-            <tr style="border-bottom:1px solid #ddd;">
-
-                <td style="padding:10px;">
-
-                    <strong>
-                        <a href="{% url 'laundry:guest_laundry_detail' order.id %}">
-                            #{{ order.id }}
-                        </a>
-                    </strong>
-
-                </td>
-
-
-                <td style="padding:10px;">
-
-                    {% if order.folio.guest %}
-
-                        {{ order.folio.guest.full_name }}
-
-                    {% else %}
-
-                        {{ order.customer_name|default:"Walk-in Customer" }}
-
-                    {% endif %}
-
-                </td>
-
-
-                <td style="padding:10px;">
-
-                    {% if order.folio.folio_type == "ROOM" %}
-                        Room Guest
-                    {% else %}
-                        Walk-in
-                    {% endif %}
-
-                </td>
-
-
-                <td style="padding:10px;">
-
-                    {% if order.folio.room %}
-                        {{ order.folio.room.room_number }}
-                    {% else %}
-                        Walk-in
-                    {% endif %}
-
-                </td>
-
-
-                <td style="
-                    padding:10px;
-                    text-align:right;
-                ">
-
-                    ₦{{ order.total_amount|floatformat:2 }}
-
-                </td>
-
-
-                <td style="padding:10px;">
-
-                    {{ order.get_status_display }}
-
-                </td>
-
-
-                <td style="padding:10px;">
-
-                    {{ order.created_at|date:"Y-m-d H:i" }}
-
-                </td>
-
-
-                <td style="padding:10px;">
-
-                    <a href="{% url 'laundry:guest_laundry_detail' order.id %}">
-                        View
-                    </a>
-
-                </td>
-
-            </tr>
-
-            {% endfor %}
-
-            </tbody>
-
-        </table>
-
+    <div class="gh-table-wrap">
+      <table class="gh-table">
+        <thead><tr><th>Order</th><th>Customer</th><th>Type</th><th>Room</th><th>Total amount</th><th>Status</th><th>Created</th><th>Action</th></tr></thead>
+        <tbody>
+          {% for order in orders %}
+          <tr>
+            <td><a class="gh-order" href="{% url 'laundry:guest_laundry_detail' order.id %}">#{{ order.id }}</a></td>
+            <td><span class="gh-customer">{% if order.folio.guest %}{{ order.folio.guest.full_name }}{% else %}{{ order.customer_name|default:"Walk-in Customer" }}{% endif %}</span>{% if order.customer_phone %}<span class="gh-secondary">{{ order.customer_phone }}</span>{% endif %}</td>
+            <td>{% if order.folio.folio_type == "ROOM" %}Room guest{% else %}Walk-in{% endif %}</td>
+            <td>{% if order.folio.room %}{{ order.folio.room.room_number }}{% else %}<span class="gh-secondary">—</span>{% endif %}</td>
+            <td class="gh-money">₦{{ order.total_amount|floatformat:2 }}</td>
+            <td><span class="gh-status {{ order.status|lower }}">{{ order.get_status_display }}</span></td>
+            <td>{{ order.created_at|date:"d M Y" }}<span class="gh-secondary">{{ order.created_at|date:"H:i" }}</span></td>
+            <td><a class="gh-view" href="{% url 'laundry:guest_laundry_detail' order.id %}">View order →</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-
     {% else %}
-
-        <p>
-            No Guest Laundry orders match the selected filters.
-        </p>
-
+    <div class="gh-empty"><div class="gh-empty-icon">📋</div><strong>No matching Guest Laundry orders</strong><p>Try changing or clearing your filters, or create a new order.</p><a class="gh-button primary" style="margin-top:13px" href="{% url 'laundry:guest_laundry_new' %}">Create new order</a></div>
     {% endif %}
-
+  </section>
 </div>
-
-
-<div style="margin-top:20px;">
-
-    <a href="{% url 'laundry:guest_laundry' %}">
-        ← Back to Guest Laundry
-    </a>
-
-</div>
-
 {% endblock %}
