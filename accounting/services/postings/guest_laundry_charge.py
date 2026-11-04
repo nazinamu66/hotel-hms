@@ -27,7 +27,7 @@ def post_guest_laundry_charge(order, charge):
 
     hotel = order.folio.hotel
     receivable = get_account(hotel, "1100")
-    revenue = get_account(hotel, "4000")
+    revenue = get_account(hotel, "4200")
 
     return post_journal_entry(
         hotel=hotel,
