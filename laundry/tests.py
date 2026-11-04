@@ -185,3 +185,155 @@ class GuestLaundryServiceTests(TestCase):
 
         self.assertEqual(Charge.objects.filter(folio=self.folio).count(), 0)
         post_charge.assert_not_called()
+
+
+class LaundryReceiptReconciliationTests(TestCase):
+    def setUp(self):
+        from linen.models import LinenItem
+        self.hotel = Hotel.objects.create(name="Receipt Reconciliation Hotel")
+        self.department = Department.objects.filter(
+            hotel=self.hotel,
+            department_type="LAUNDRY",
+            is_active=True,
+        ).first()
+        if self.department is None:
+            self.department = Department.objects.create(
+                hotel=self.hotel,
+                code="LAUN",
+                name="Laundry",
+                department_type="LAUNDRY",
+                is_active=True,
+            )
+        self.user = User.objects.create_user(
+            username="receipt-manager",
+            password="test-password",
+            role="MANAGER",
+            hotel=self.hotel,
+            department=self.department,
+        )
+        self.product = __import__("inventory.models", fromlist=["Product"]).Product.objects.create(
+            hotel=self.hotel,
+            name="Receipt Test Bedsheet",
+            sku="RECEIPT-BEDSHEET",
+            product_type="HOUSEKEEPING",
+            usage_type="ASSET",
+            base_unit="pcs",
+        )
+        self.linen_item = LinenItem.objects.create(product=self.product)
+        from linen.models import LinenTransaction
+        LinenTransaction.objects.create(
+            linen_item=self.linen_item,
+            quantity=10,
+            condition="CLEAN",
+            event_type="RECEIVED",
+            to_location="LAUNDRY",
+            performed_by=self.user,
+            reference="TEST-OPENING",
+        )
+        from laundry.models import LaundryReceipt
+        self.receipt = LaundryReceipt.objects.create(
+            linen_item=self.linen_item,
+            returned_by=self.user,
+            declared_clean_quantity=10,
+            declared_dirty_quantity=0,
+            reference="TEST-RETURN-1",
+        )
+
+    def test_short_receipt_moves_difference_to_holding_and_marks_pending(self):
+        from laundry.models import LaundryReceiptDiscrepancy
+        from laundry.services.receiving import confirm_laundry_receipt
+        from linen.services.balances import get_linen_condition_balance
+
+        receipt = confirm_laundry_receipt(
+            receipt=self.receipt,
+            received_by=self.user,
+            received_clean_quantity=8,
+            received_dirty_quantity=0,
+        )
+
+        self.assertEqual(receipt.status, "DISCREPANCY_PENDING")
+        self.assertEqual(
+            get_linen_condition_balance(self.linen_item, "LAUNDRY")["CLEAN"],
+            8,
+        )
+        self.assertEqual(
+            get_linen_condition_balance(self.linen_item, "DISCREPANCY")["CLEAN"],
+            2,
+        )
+        discrepancy = LaundryReceiptDiscrepancy.objects.get(
+            receipt=receipt,
+            condition="CLEAN",
+        )
+        self.assertEqual(discrepancy.quantity, 2)
+        self.assertEqual(discrepancy.status, "OPEN")
+
+    def test_recovered_discrepancy_returns_quantity_to_laundry_once(self):
+        from laundry.services.receiving import (
+            confirm_laundry_receipt,
+            resolve_laundry_receipt_discrepancy,
+        )
+        from linen.services.balances import get_linen_condition_balance
+
+        receipt = confirm_laundry_receipt(
+            receipt=self.receipt,
+            received_by=self.user,
+            received_clean_quantity=8,
+            received_dirty_quantity=0,
+        )
+        discrepancy = receipt.discrepancies.get(condition="CLEAN")
+
+        resolve_laundry_receipt_discrepancy(
+            discrepancy=discrepancy,
+            resolution="RECOVERED",
+            resolved_by=self.user,
+            note="Two sheets were located.",
+        )
+
+        self.assertEqual(
+            get_linen_condition_balance(self.linen_item, "LAUNDRY")["CLEAN"],
+            10,
+        )
+        self.assertEqual(
+            get_linen_condition_balance(self.linen_item, "DISCREPANCY")["CLEAN"],
+            0,
+        )
+        receipt.refresh_from_db()
+        self.assertEqual(receipt.status, "DISCREPANCY_RESOLVED")
+
+        with self.assertRaises(ValidationError):
+            resolve_laundry_receipt_discrepancy(
+                discrepancy=discrepancy,
+                resolution="RECOVERED",
+                resolved_by=self.user,
+            )
+
+    def test_confirmed_loss_removes_quantity_from_holding_not_laundry(self):
+        from laundry.services.receiving import (
+            confirm_laundry_receipt,
+            resolve_laundry_receipt_discrepancy,
+        )
+        from linen.services.balances import get_linen_condition_balance
+
+        receipt = confirm_laundry_receipt(
+            receipt=self.receipt,
+            received_by=self.user,
+            received_clean_quantity=8,
+            received_dirty_quantity=0,
+        )
+        discrepancy = receipt.discrepancies.get(condition="CLEAN")
+
+        resolve_laundry_receipt_discrepancy(
+            discrepancy=discrepancy,
+            resolution="LOST",
+            resolved_by=self.user,
+            note="Investigation confirmed loss.",
+        )
+
+        self.assertEqual(
+            get_linen_condition_balance(self.linen_item, "LAUNDRY")["CLEAN"],
+            8,
+        )
+        self.assertEqual(
+            get_linen_condition_balance(self.linen_item, "DISCREPANCY")["CLEAN"],
+            0,
+        )
