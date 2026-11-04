@@ -1,157 +1,246 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-Fulfill Laundry Request
+{% block title %}Fulfil Laundry Linen Request{% endblock %}
+
+{% block header %}
+<h2>Fulfil Laundry Request</h2>
 {% endblock %}
 
 {% block content %}
+<style>
+    .lf-page {
+        --lf-ink: #172033;
+        --lf-muted: #64748b;
+        --lf-line: #e5eaf1;
+        --lf-blue: #2563eb;
+        --lf-blue-soft: #eff6ff;
+        --lf-green: #15803d;
+        --lf-green-soft: #f0fdf4;
+        --lf-amber: #b45309;
+        --lf-amber-soft: #fffbeb;
+        color: var(--lf-ink);
+        display: grid;
+        gap: 20px;
+        max-width: 1100px;
+    }
+    .lf-page * { box-sizing: border-box; }
+    .lf-heading {
+        display: flex; justify-content: space-between; align-items: flex-end;
+        flex-wrap: wrap; gap: 14px;
+    }
+    .lf-eyebrow {
+        margin: 0 0 6px; color: var(--lf-blue); font-size: 11px;
+        font-weight: 800; letter-spacing: .11em; text-transform: uppercase;
+    }
+    .lf-heading h1 {
+        margin: 0; font-size: clamp(23px, 3vw, 30px);
+        letter-spacing: -.04em; line-height: 1.15; color: var(--lf-ink);
+    }
+    .lf-description { margin: 7px 0 0; color: var(--lf-muted); font-size: 13px; }
+    .lf-back {
+        display: inline-flex; align-items: center; padding: 9px 13px;
+        border: 1px solid var(--lf-line); border-radius: 9px; background: white;
+        color: #334155; text-decoration: none; font-size: 12px; font-weight: 750;
+    }
+    .lf-back:hover { background: #f8fafc; color: var(--lf-blue); }
+    .lf-banner {
+        display: flex; gap: 12px; align-items: flex-start; padding: 15px 17px;
+        border: 1px solid #dbeafe; border-radius: 12px; background: #f8fbff;
+    }
+    .lf-banner-icon {
+        display: grid; place-items: center; flex: 0 0 36px; height: 36px;
+        border-radius: 10px; background: var(--lf-blue-soft); font-size: 17px;
+    }
+    .lf-banner strong { display: block; font-size: 13px; }
+    .lf-banner p { margin: 4px 0 0; color: var(--lf-muted); font-size: 12px; line-height: 1.5; }
+    .lf-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr); gap: 16px; align-items: start; }
+    .lf-panel {
+        overflow: hidden; border: 1px solid var(--lf-line); border-radius: 15px;
+        background: white; box-shadow: 0 5px 18px rgba(15, 23, 42, .035);
+    }
+    .lf-panel-head { padding: 17px 19px; border-bottom: 1px solid var(--lf-line); }
+    .lf-panel-head h2 { margin: 0; font-size: 15px; }
+    .lf-panel-head p { margin: 4px 0 0; color: var(--lf-muted); font-size: 11px; }
+    .lf-panel-body { padding: 19px; }
+    .lf-product {
+        display: flex; align-items: center; gap: 13px; margin-bottom: 18px;
+    }
+    .lf-product-icon {
+        display: grid; place-items: center; width: 48px; height: 48px;
+        flex: 0 0 48px; border-radius: 13px; background: var(--lf-blue-soft); font-size: 22px;
+    }
+    .lf-product h3 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+    .lf-product p { margin: 4px 0 0; color: var(--lf-muted); font-size: 11px; }
+    .lf-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .lf-stat {
+        padding: 13px 14px; border: 1px solid var(--lf-line); border-radius: 11px;
+        background: #fbfcfe;
+    }
+    .lf-stat-label { color: var(--lf-muted); font-size: 11px; font-weight: 700; }
+    .lf-stat-value { margin-top: 5px; font-size: 23px; line-height: 1.1; font-weight: 850; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+    .lf-stat.available { background: var(--lf-green-soft); border-color: #dcfce7; }
+    .lf-stat.available .lf-stat-value { color: var(--lf-green); }
+    .lf-stat.remaining { background: var(--lf-blue-soft); border-color: #dbeafe; }
+    .lf-stat.remaining .lf-stat-value { color: var(--lf-blue); }
+    .lf-requester {
+        display: flex; justify-content: space-between; gap: 12px; margin-top: 15px;
+        padding-top: 14px; border-top: 1px solid var(--lf-line); font-size: 12px;
+    }
+    .lf-requester span { color: var(--lf-muted); }
+    .lf-note {
+        margin-top: 15px; padding: 12px 13px; border-radius: 10px;
+        background: #f8fafc; border: 1px solid var(--lf-line);
+    }
+    .lf-note strong { display: block; margin-bottom: 5px; font-size: 11px; }
+    .lf-note p { margin: 0; color: #475569; font-size: 12px; line-height: 1.55; white-space: pre-wrap; }
+    .lf-form label { display: block; margin-bottom: 7px; font-size: 12px; font-weight: 800; }
+    .lf-form input, .lf-form textarea {
+        width: 100%; padding: 11px 12px; border: 1px solid #cbd5e1;
+        border-radius: 9px; background: white; color: var(--lf-ink);
+        font: inherit; font-size: 13px; outline: none;
+    }
+    .lf-form input:focus, .lf-form textarea:focus {
+        border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(37, 99, 235, .10);
+    }
+    .lf-help { margin: 6px 0 16px; color: var(--lf-muted); font-size: 11px; line-height: 1.45; }
+    .lf-form textarea { min-height: 100px; resize: vertical; }
+    .lf-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 17px; }
+    .lf-button {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-height: 39px; padding: 9px 14px; border: 0; border-radius: 9px;
+        background: var(--lf-blue); color: white; font: inherit;
+        font-size: 12px; font-weight: 800; text-decoration: none; cursor: pointer;
+    }
+    .lf-button:hover { background: #1d4ed8; color: white; }
+    .lf-button.secondary { background: #f1f5f9; color: #334155; }
+    .lf-button.secondary:hover { background: #e2e8f0; }
+    .lf-warning {
+        padding: 15px; border: 1px solid #fde68a; border-radius: 11px;
+        background: var(--lf-amber-soft); color: #92400e; font-size: 12px; line-height: 1.55;
+    }
+    .lf-warning strong { display: block; margin-bottom: 4px; font-size: 13px; }
+    @media (max-width: 760px) {
+        .lf-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 480px) {
+        .lf-panel-body { padding: 15px; }
+        .lf-stats { gap: 8px; }
+        .lf-stat { padding: 11px; }
+        .lf-stat-value { font-size: 20px; }
+        .lf-actions .lf-button { width: 100%; }
+    }
+</style>
 
-<h2>Fulfill Laundry Request #{{ linen_request.id }}</h2>
-
-<p style="color:#666;">
-    Issue clean linen from Laundry to Housekeeping.
-</p>
-
-<div
-    class="card"
-    style="
-        max-width:800px;
-        padding:25px;
-        background:white;
-        border:1px solid #ddd;
-    "
->
-
-    <h3>
-        {{ linen_request.linen_item.product.name }}
-    </h3>
-
-    <p>
-        <strong>SKU:</strong>
-        {{ linen_request.linen_item.product.sku }}
-    </p>
-
-    <p>
-        <strong>Requested by:</strong>
-        {{ linen_request.requested_by.username }}
-    </p>
-
-    <hr>
-
-    <p>
-        <strong>Requested:</strong>
-        {{ linen_request.quantity }}
-    </p>
-
-    <p>
-        <strong>Already fulfilled:</strong>
-        {{ linen_request.fulfilled_quantity }}
-    </p>
-
-    <p>
-        <strong>Remaining:</strong>
-        {{ remaining_quantity }}
-    </p>
-
-    <p style="color:#176b2c;font-size:18px;">
-        <strong>Clean Laundry Stock Available:</strong>
-        {{ clean_balance }}
-    </p>
-
-    {% if linen_request.note %}
-        <p>
-            <strong>Housekeeping Note:</strong><br>
-            {{ linen_request.note }}
-        </p>
-    {% endif %}
-
-    <hr>
-
-    {% if remaining_quantity > 0 and clean_balance > 0 %}
-
-    <form method="post">
-
-        {% csrf_token %}
-
-        <label>
-            <strong>Quantity to Fulfill</strong>
-        </label>
-
-        <br>
-
-        <input
-            type="number"
-            name="quantity"
-            min="1"
-            max="{{ remaining_quantity }}"
-            value="{{ remaining_quantity }}"
-            required
-            style="width:100%;padding:10px;"
-        >
-
-        <br><br>
-
-        <label>
-            <strong>Note</strong>
-        </label>
-
-        <br>
-
-        <textarea
-            name="note"
-            rows="4"
-            placeholder="Optional fulfillment note"
-            style="width:100%;padding:10px;"
-        ></textarea>
-
-        <br><br>
-
-        <button
-            type="submit"
-            class="btn btn-primary"
-        >
-            Confirm Fulfillment
-        </button>
-
-        <a
-            href="{% url 'laundry:linen_requests' %}"
-            class="btn btn-secondary"
-            style="margin-left:10px;"
-        >
-            Back to Requests
-        </a>
-
-    </form>
-
-    {% else %}
-
-        <div
-            style="
-                padding:15px;
-                background:#fff3cd;
-                border:1px solid #ffeeba;
-            "
-        >
-            This request cannot currently be fulfilled.
-
-            {% if remaining_quantity <= 0 %}
-                The request has no remaining quantity.
-            {% elif clean_balance <= 0 %}
-                There is currently no clean linen available in Laundry.
-            {% endif %}
+<div class="lf-page">
+    <section class="lf-heading">
+        <div>
+            <p class="lf-eyebrow">Laundry operations · Request #{{ linen_request.id }}</p>
+            <h1>Fulfil linen request</h1>
+            <p class="lf-description">Issue clean linen from Laundry to the requesting Housekeeping employee.</p>
         </div>
+        <a class="lf-back" href="{% url 'laundry:linen_requests' %}">← Back to requests</a>
+    </section>
 
-        <br>
+    <section class="lf-banner">
+        <span class="lf-banner-icon">🧺</span>
+        <div>
+            <strong>Confirm the quantity physically issued</strong>
+            <p>Only the quantity confirmed here will be deducted from Laundry's clean linen balance and added to the employee's custody record. Partial fulfilment is supported.</p>
+        </div>
+    </section>
 
-        <a
-            href="{% url 'laundry:linen_requests' %}"
-            class="btn btn-secondary"
-        >
-            Back to Requests
-        </a>
+    <div class="lf-grid">
+        <section class="lf-panel">
+            <div class="lf-panel-head">
+                <h2>Request summary</h2>
+                <p>Review the item and outstanding quantities before issuing.</p>
+            </div>
+            <div class="lf-panel-body">
+                <div class="lf-product">
+                    <span class="lf-product-icon">🛏️</span>
+                    <div>
+                        <h3>{{ linen_request.linen_item.product.name }}</h3>
+                        <p>SKU: {{ linen_request.linen_item.product.sku|default:"Not specified" }}</p>
+                    </div>
+                </div>
 
-    {% endif %}
+                <div class="lf-stats">
+                    <div class="lf-stat">
+                        <div class="lf-stat-label">Originally requested</div>
+                        <div class="lf-stat-value">{{ linen_request.quantity }}</div>
+                    </div>
+                    <div class="lf-stat">
+                        <div class="lf-stat-label">Already fulfilled</div>
+                        <div class="lf-stat-value">{{ linen_request.fulfilled_quantity }}</div>
+                    </div>
+                    <div class="lf-stat remaining">
+                        <div class="lf-stat-label">Still outstanding</div>
+                        <div class="lf-stat-value">{{ remaining_quantity }}</div>
+                    </div>
+                    <div class="lf-stat available">
+                        <div class="lf-stat-label">Clean in Laundry</div>
+                        <div class="lf-stat-value">{{ clean_balance }}</div>
+                    </div>
+                </div>
 
+                <div class="lf-requester">
+                    <span>Requested by</span>
+                    <strong>{{ linen_request.requested_by.username }}</strong>
+                </div>
+
+                {% if linen_request.note %}
+                <div class="lf-note">
+                    <strong>Housekeeping request note</strong>
+                    <p>{{ linen_request.note }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="lf-panel">
+            <div class="lf-panel-head">
+                <h2>Issue clean linen</h2>
+                <p>Enter the quantity being handed over now.</p>
+            </div>
+            <div class="lf-panel-body">
+                {% if remaining_quantity > 0 and clean_balance > 0 %}
+                    <form method="post" class="lf-form">
+                        {% csrf_token %}
+                        <label for="lf-quantity">Quantity to fulfil</label>
+                        <input
+                            id="lf-quantity"
+                            type="number"
+                            name="quantity"
+                            min="1"
+                            max="{{ remaining_quantity }}"
+                            value="{{ remaining_quantity }}"
+                            required
+                        >
+                        <p class="lf-help">Maximum outstanding request: {{ remaining_quantity }} pieces. Available clean Laundry stock: {{ clean_balance }} pieces. The system will validate actual availability when you confirm.</p>
+
+                        <label for="lf-note">Fulfilment note <span style="font-weight:400;color:#64748b;">(optional)</span></label>
+                        <textarea id="lf-note" name="note" rows="4" placeholder="Add a handover note, if needed"></textarea>
+
+                        <div class="lf-actions">
+                            <button type="submit" class="lf-button">Confirm issue →</button>
+                            <a href="{% url 'laundry:linen_requests' %}" class="lf-button secondary">Cancel</a>
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="lf-warning">
+                        <strong>This request cannot currently be fulfilled.</strong>
+                        {% if remaining_quantity <= 0 %}
+                            The request has no outstanding quantity.
+                        {% elif clean_balance <= 0 %}
+                            There is currently no clean linen available in Laundry.
+                        {% endif %}
+                    </div>
+                    <div class="lf-actions">
+                        <a href="{% url 'laundry:linen_requests' %}" class="lf-button secondary">Back to requests</a>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
 </div>
-
 {% endblock %}
