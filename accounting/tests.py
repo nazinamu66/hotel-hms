@@ -99,3 +99,74 @@ class POSCOGSCurrencyPrecisionTests(TestCase):
         self.assertEqual(record.call_count, 1)
         self.assertEqual(record.call_args.kwargs["reference"], "COGS-REV-DRINK-123")
         self.assertTrue(order.is_cogs_posted)
+
+
+class GuestLaundryChargePostingTests(SimpleTestCase):
+    @patch("accounting.services.postings.guest_laundry_charge.post_journal_entry")
+    @patch("accounting.services.postings.guest_laundry_charge.get_account")
+    def test_guest_laundry_charge_debits_receivable_and_credits_revenue(
+        self, get_account, post_journal_entry
+    ):
+        from accounting.services.postings.guest_laundry_charge import (
+            post_guest_laundry_charge,
+        )
+
+        hotel = SimpleNamespace(id=7)
+        receivable = object()
+        revenue = object()
+        get_account.side_effect = [receivable, revenue]
+
+        order = SimpleNamespace(
+            id=42,
+            folio_id=9,
+            folio=SimpleNamespace(hotel=hotel),
+            created_by="laundry-user",
+        )
+        charge = SimpleNamespace(
+            folio_id=9,
+            department=SimpleNamespace(hotel_id=7),
+            amount=Decimal("4000.00"),
+        )
+
+        post_guest_laundry_charge(order, charge)
+
+        self.assertEqual(
+            get_account.call_args_list,
+            [
+                ((hotel, "1100"),),
+                ((hotel, "4000"),),
+            ],
+        )
+        kwargs = post_journal_entry.call_args.kwargs
+        self.assertEqual(kwargs["hotel"], hotel)
+        self.assertEqual(kwargs["description"], "Guest Laundry Order #42")
+        self.assertEqual(kwargs["reference"], "GUEST-LAUNDRY-42")
+        self.assertEqual(kwargs["created_by"], "laundry-user")
+        self.assertEqual(
+            kwargs["lines"],
+            [
+                {"account": receivable, "debit": Decimal("4000.00")},
+                {"account": revenue, "credit": Decimal("4000.00")},
+            ],
+        )
+
+    def test_guest_laundry_charge_rejects_charge_from_another_folio(self):
+        from django.core.exceptions import ValidationError
+        from accounting.services.postings.guest_laundry_charge import (
+            post_guest_laundry_charge,
+        )
+
+        order = SimpleNamespace(
+            id=42,
+            folio_id=9,
+            folio=SimpleNamespace(hotel=SimpleNamespace(id=7)),
+            created_by=None,
+        )
+        charge = SimpleNamespace(
+            folio_id=10,
+            department=SimpleNamespace(hotel_id=7),
+            amount=Decimal("4000.00"),
+        )
+
+        with self.assertRaises(ValidationError):
+            post_guest_laundry_charge(order, charge)
