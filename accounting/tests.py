@@ -119,7 +119,7 @@ class GuestLaundryChargePostingTests(SimpleTestCase):
         order = SimpleNamespace(
             id=42,
             folio_id=9,
-            folio=SimpleNamespace(hotel=hotel),
+            folio=SimpleNamespace(hotel=hotel, hotel_id=hotel.id),
             created_by="laundry-user",
         )
         charge = SimpleNamespace(
