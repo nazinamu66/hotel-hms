@@ -86,7 +86,7 @@
 
   <section class="gd-actions">
     {% if order.status == "DELIVERED" and order.billing_charge %}
-    <a class="gd-btn green" href="{% url 'laundry:guest_laundry_receipt_a4' order.id %}" target="_blank">Print A4 receipt</a>
+    <a class="gd-btn green" href="{% url 'laundry:guest_laundry_receipt' order.id %}" target="_blank">Print A4 receipt</a>
     <a class="gd-btn" href="{% url 'laundry:guest_laundry_receipt_thermal' order.id %}" target="_blank">Print 80mm receipt</a>
     {% endif %}
     {% if order.status == "DELIVERED" and order.billing_charge_id and balance > 0 %}<a class="gd-btn primary" href="{% url 'laundry:guest_laundry_payment' order.id %}">Record payment</a>{% endif %}
