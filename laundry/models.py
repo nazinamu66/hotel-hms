@@ -17,6 +17,8 @@ class LaundryReceipt(models.Model):
     STATUS_CHOICES = (
         ("PENDING", "Pending"),
         ("RECEIVED", "Received"),
+        ("DISCREPANCY_PENDING", "Discrepancy Pending Review"),
+        ("DISCREPANCY_RESOLVED", "Discrepancy Resolved"),
         ("CANCELLED", "Cancelled"),
     )
 
