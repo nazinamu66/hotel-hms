@@ -280,6 +280,44 @@ def dashboard(request):
     )
 
     # ---------------------------------------------------------
+    # HOTEL-WIDE LINEN POSITION (ledger-derived)
+    # ---------------------------------------------------------
+
+    linen_items = (
+        LinenItem.objects
+        .filter(
+            product__hotel__in=hotels,
+            is_active=True,
+            product__is_active=True,
+        )
+        .select_related("product", "product__hotel")
+        .order_by("product__hotel__name", "product__name")
+    )
+
+    linen_totals = {
+        "store": Decimal("0"),
+        "housekeeping": Decimal("0"),
+        "laundry": Decimal("0"),
+        "discrepancy": Decimal("0"),
+        "damaged": Decimal("0"),
+        "lost": Decimal("0"),
+        "written_off": Decimal("0"),
+    }
+    linen_rows = []
+    for linen_item in linen_items:
+        summary = get_linen_summary(linen_item)
+        linen_rows.append({"linen_item": linen_item, "summary": summary})
+        for key in linen_totals:
+            linen_totals[key] += summary[key]
+
+    staff_linen_requests_count = LinenRequest.objects.filter(
+        request_type="LAUNDRY",
+        requested_by__department__hotel__in=hotels,
+        requested_by__department__department_type="HOUSEKEEPING",
+        status__in=("PENDING", "APPROVED", "PARTIAL"),
+    ).count()
+
+    # ---------------------------------------------------------
     # RENDER
     # ---------------------------------------------------------
 
@@ -307,6 +345,9 @@ def dashboard(request):
             "lost_found_open": lost_found_open,
             "lost_found_count": lost_found_count,
             "lost_found_today_count": lost_found_today_count,
+            "linen_totals": linen_totals,
+            "linen_rows": linen_rows,
+            "staff_linen_requests_count": staff_linen_requests_count,
         },
     )
 
