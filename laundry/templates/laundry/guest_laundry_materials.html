@@ -1,233 +1,101 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-Process Guest Laundry Order #{{ order.id }}
-{% endblock %}
-
-{% block header %}
-<h2>Process Guest Laundry Order #{{ order.id }}</h2>
-{% endblock %}
+{% block title %}Process Guest Laundry Order #{{ order.id }}{% endblock %}
+{% block header %}<h2>Process Guest Laundry Order #{{ order.id }}</h2>{% endblock %}
 
 {% block content %}
+<style>
+.gm-page{--gm-ink:#172033;--gm-muted:#64748b;--gm-line:#e5eaf1;--gm-blue:#2563eb;--gm-blue-soft:#eff6ff;color:var(--gm-ink);display:grid;gap:19px}
+.gm-page *{box-sizing:border-box}.gm-heading{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px}
+.gm-eyebrow{margin:0 0 6px;color:var(--gm-blue);font-size:11px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.gm-heading h1{margin:0;font-size:clamp(23px,3vw,30px);letter-spacing:-.04em;line-height:1.15}
+.gm-sub{margin:7px 0 0;color:var(--gm-muted);font-size:13px}
+.gm-back,.gm-button{display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:9px 13px;border:1px solid var(--gm-line);border-radius:9px;background:white;color:#334155;text-decoration:none;font-size:12px;font-weight:800;cursor:pointer}
+.gm-back:hover{background:#f8fafc;color:var(--gm-blue)}
+.gm-button.primary{border-color:var(--gm-blue);background:var(--gm-blue);color:white}.gm-button.primary:hover{background:#1d4ed8}
+.gm-panel{overflow:hidden;border:1px solid var(--gm-line);border-radius:15px;background:white;box-shadow:0 5px 18px rgba(15,23,42,.035)}
+.gm-panel-head{padding:16px 19px;border-bottom:1px solid var(--gm-line)}.gm-panel-head h2{margin:0;font-size:15px}.gm-panel-head p{margin:4px 0 0;color:var(--gm-muted);font-size:11px;line-height:1.5}
+.gm-body{padding:19px}.gm-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.gm-summary-item{padding:13px 14px;border:1px solid var(--gm-line);border-radius:11px;background:#fbfcfe}
+.gm-label{color:var(--gm-muted);font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.gm-value{margin-top:6px;font-size:14px;font-weight:800;line-height:1.4}
+.gm-items{margin:15px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px}
+.gm-items li{padding:7px 10px;border-radius:8px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:700}
+.gm-hint{display:flex;gap:11px;padding:13px 15px;border:1px solid #dbeafe;border-radius:11px;background:#f8fbff}
+.gm-hint strong{display:block;font-size:12px}.gm-hint p{margin:4px 0 0;color:var(--gm-muted);font-size:11px;line-height:1.5}
+.gm-table-wrap{overflow-x:auto}.gm-table{width:100%;min-width:600px;border-collapse:collapse}
+.gm-table th{padding:11px 13px;background:#f8fafc;color:#64748b;font-size:10px;text-align:left;text-transform:uppercase;letter-spacing:.06em}
+.gm-table td{padding:12px 13px;border-top:1px solid #edf1f5;vertical-align:middle}
+.gm-table select,.gm-table input{width:100%;min-height:41px;padding:9px 10px;border:1px solid #cbd5e1;border-radius:8px;background:white;color:var(--gm-ink);font:inherit;font-size:12px}
+.gm-remove{padding:8px 10px;border:1px solid #fee2e2;border-radius:8px;background:#fff7f7;color:#b91c1c;font-size:11px;font-weight:800;cursor:pointer}
+.gm-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px}
+.gm-foot{display:flex;gap:9px;flex-wrap:wrap;padding:0 19px 19px}
+.gm-muted{color:var(--gm-muted);font-size:11px}
+@media(max-width:650px){.gm-summary{grid-template-columns:1fr}.gm-body{padding:15px}.gm-foot{padding:0 15px 15px}.gm-foot .gm-button{width:100%}}
+</style>
 
-<div class="card" style="padding:20px; margin-bottom:20px;">
+<div class="gm-page">
+  <section class="gm-heading">
+    <div><p class="gm-eyebrow">Guest services · Order #{{ order.id }}</p><h1>Record processing materials</h1><p class="gm-sub">Record the actual materials consumed while processing this guest order.</p></div>
+    <a class="gm-back" href="{% url 'laundry:guest_laundry_detail' order.id %}">← Back to order</a>
+  </section>
 
-    <h3>Order</h3>
+  <section class="gm-panel">
+    <div class="gm-panel-head"><h2>Order summary</h2><p>Confirm you are recording materials against the correct customer order.</p></div>
+    <div class="gm-body">
+      <div class="gm-summary">
+        <div class="gm-summary-item"><div class="gm-label">Customer</div><div class="gm-value">{% if order.folio.guest %}{{ order.folio.guest.full_name }}{% else %}{{ order.customer_name|default:"Walk-in Customer" }}{% endif %}</div></div>
+        <div class="gm-summary-item"><div class="gm-label">Order status</div><div class="gm-value">{{ order.get_status_display }}</div></div>
+        <div class="gm-summary-item"><div class="gm-label">Order reference</div><div class="gm-value">#{{ order.id }}</div></div>
+      </div>
+      <div class="gm-label" style="margin-top:17px">Laundry items</div>
+      <ul class="gm-items">{% for item in order.items.all %}<li>{{ item.description }} × {{ item.quantity }}</li>{% endfor %}</ul>
+    </div>
+  </section>
 
-    <p>
-        <strong>Customer:</strong>
-        {% if order.folio.guest %}
-            {{ order.folio.guest.full_name }}
-        {% else %}
-            {{ order.customer_name|default:"Walk-in Customer" }}
-        {% endif %}
-    </p>
+  <div class="gm-hint"><span>ℹ️</span><div><strong>FIFO costing is automatic</strong><p>Enter actual quantities consumed. The system calculates material cost from FIFO inventory and records the consumption. Only select materials assigned to this hotel's Laundry department.</p></div></div>
 
-    <p>
-        <strong>Status:</strong>
-        {{ order.get_status_display }}
-    </p>
-
-    <p>
-        <strong>Items:</strong>
-    </p>
-
-    <ul>
-        {% for item in order.items.all %}
-            <li>
-                {{ item.description }} × {{ item.quantity }}
-            </li>
-        {% endfor %}
-    </ul>
-
-</div>
-
-
-<div class="card" style="padding:20px; margin-bottom:20px;">
-
-    <h3>Materials Used</h3>
-
-    <p>
-        Enter the actual materials consumed during processing.
-        Cost is calculated automatically from FIFO inventory.
-    </p>
-
-    <form method="post">
-
-        {% csrf_token %}
-
-        <table
-            id="materials-table"
-            style="width:100%; border-collapse:collapse;"
-        >
-
-            <thead style="background:#eee;">
-
-                <tr>
-                    <th style="padding:10px; text-align:left;">
-                        Material
-                    </th>
-
-                    <th style="padding:10px; text-align:left;">
-                        Quantity
-                    </th>
-
-                    <th style="padding:10px;">
-                    </th>
-                </tr>
-
-            </thead>
-
+  <section class="gm-panel">
+    <div class="gm-panel-head"><h2>Materials used</h2><p>Add one row for each material consumed. You can add multiple materials to this order.</p></div>
+    <form method="post" id="materials-form">
+      {% csrf_token %}
+      <div class="gm-body">
+        <div class="gm-table-wrap">
+          <table class="gm-table">
+            <thead><tr><th style="width:58%">Material</th><th style="width:25%">Quantity consumed</th><th>Action</th></tr></thead>
             <tbody id="materials-body">
-
-                <tr class="material-row">
-
-                    <td style="padding:10px;">
-
-                        <select
-                            name="product"
-                            required
-                            style="padding:8px; min-width:300px;"
-                        >
-
-                            <option value="">
-                                Select material
-                            </option>
-
-                            {% for product in products %}
-
-                                <option
-                                    value="{{ product.id }}"
-                                >
-                                    {{ product.name }}
-                                    ({{ product.base_unit }})
-                                </option>
-
-                            {% endfor %}
-
-                        </select>
-
-                    </td>
-
-                    <td style="padding:10px;">
-
-                        <input
-                            type="number"
-                            name="quantity"
-                            min="0.01"
-                            step="0.01"
-                            required
-                            style="padding:8px; width:140px;"
-                        >
-
-                    </td>
-
-                    <td style="padding:10px;">
-
-                        <button
-                            type="button"
-                            onclick="removeMaterialRow(this)"
-                        >
-                            Remove
-                        </button>
-
-                    </td>
-
-                </tr>
-
+              <tr class="material-row">
+                <td><select name="product" required><option value="">Select material</option>{% for product in products %}<option value="{{ product.id }}">{{ product.name }} ({{ product.base_unit }})</option>{% endfor %}</select></td>
+                <td><input type="number" name="quantity" min="0.01" step="0.01" required placeholder="0.00"></td>
+                <td><button type="button" class="gm-remove" onclick="removeMaterialRow(this)">Remove</button></td>
+              </tr>
             </tbody>
-
-        </table>
-
-
-        <div style="margin-top:15px;">
-
-            <button
-                type="button"
-                onclick="addMaterialRow()"
-            >
-                + Add Material
-            </button>
-
+          </table>
         </div>
-
-
-        <div style="margin-top:25px;">
-
-            <button
-                type="submit"
-                style="padding:10px 18px;"
-            >
-                Consume Materials
-            </button>
-
-            &nbsp;
-
-            <a
-                href="{% url 'laundry:guest_laundry_detail' order.id %}"
-            >
-                Cancel
-            </a>
-
-        </div>
-
+        <div class="gm-toolbar"><span class="gm-muted">Enter quantities in the units shown beside each material.</span><button type="button" class="gm-button" onclick="addMaterialRow()">＋ Add material</button></div>
+      </div>
+      <div class="gm-foot"><button type="submit" class="gm-button primary">Consume materials →</button><a class="gm-button" href="{% url 'laundry:guest_laundry_detail' order.id %}">Cancel</a></div>
     </form>
-
+  </section>
 </div>
-
 
 <script>
-
-function addMaterialRow() {
-
-    const body = document.getElementById(
-        "materials-body"
-    );
-
-    const firstRow = body.querySelector(
-        ".material-row"
-    );
-
-    const newRow = firstRow.cloneNode(true);
-
-    newRow.querySelector(
-        'select[name="product"]'
-    ).value = "";
-
-    newRow.querySelector(
-        'input[name="quantity"]'
-    ).value = "";
-
-    body.appendChild(newRow);
+function addMaterialRow(){
+  const body=document.getElementById("materials-body");
+  const row=body.querySelector(".material-row").cloneNode(true);
+  row.querySelector('select[name="product"]').value="";
+  row.querySelector('input[name="quantity"]').value="";
+  body.appendChild(row);
 }
-
-
-function removeMaterialRow(button) {
-
-    const body = document.getElementById(
-        "materials-body"
-    );
-
-    const rows = body.querySelectorAll(
-        ".material-row"
-    );
-
-    if (rows.length === 1) {
-
-        rows[0].querySelector(
-            'select[name="product"]'
-        ).value = "";
-
-        rows[0].querySelector(
-            'input[name="quantity"]'
-        ).value = "";
-
-        return;
-    }
-
-    button.closest(".material-row").remove();
+function removeMaterialRow(button){
+  const body=document.getElementById("materials-body");
+  const rows=body.querySelectorAll(".material-row");
+  if(rows.length===1){
+    rows[0].querySelector('select[name="product"]').value="";
+    rows[0].querySelector('input[name="quantity"]').value="";
+    return;
+  }
+  button.closest(".material-row").remove();
 }
-
 </script>
-
 {% endblock %}
