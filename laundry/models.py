@@ -94,7 +94,7 @@ class LaundryReceipt(models.Model):
                 "At least one declared linen quantity is required."
             )
 
-        if self.status == "RECEIVED":
+        if self.status in ("RECEIVED", "DISCREPANCY_PENDING", "DISCREPANCY_RESOLVED"):
             if self.received_by is None:
                 raise ValidationError(
                     "A Laundry staff member must confirm receipt."
