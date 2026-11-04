@@ -1,367 +1,163 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-Housekeeping Stock Movements
-{% endblock %}
+{% block title %}Housekeeping Stock Movements{% endblock %}
 
 {% block content %}
-
-<h2>
-    Housekeeping Stock Movements
-</h2>
-
-<p>
-    Stock movements involving the Housekeeping department.
-</p>
-
-<hr>
-
-<!-- ===================================================== -->
-<!-- FILTERS -->
-<!-- ===================================================== -->
-
-<form
-    method="get"
-    style="
-        margin-bottom:20px;
-        display:flex;
-        gap:12px;
-        align-items:end;
-        flex-wrap:wrap;
-    "
->
-
-    <div>
-        <label for="movement_search">
-            Search
-        </label>
-        <br>
-
-        <input
-            type="text"
-            id="movement_search"
-            name="search"
-            value="{{ search }}"
-            placeholder="Product, reference, department..."
-            style="min-width:280px;"
-        >
-    </div>
-
-    <div>
-        <label for="movement_type">
-            Type
-        </label>
-        <br>
-
-        <select
-            id="movement_type"
-            name="type"
-        >
-
-            <option
-                value=""
-                {% if not movement_type %}selected{% endif %}
-            >
-                All Types
-            </option>
-
-            <option
-                value="IN"
-                {% if movement_type == "IN" %}selected{% endif %}
-            >
-                Stock In
-            </option>
-
-            <option
-                value="OUT"
-                {% if movement_type == "OUT" %}selected{% endif %}
-            >
-                Stock Out
-            </option>
-
-            <option
-                value="TRANSFER"
-                {% if movement_type == "TRANSFER" %}selected{% endif %}
-            >
-                Transfer
-            </option>
-
-        </select>
-    </div>
-
-    <div>
-        <label for="date_from">
-            From
-        </label>
-        <br>
-
-        <input
-            type="date"
-            id="date_from"
-            name="from"
-            value="{{ date_from }}"
-        >
-    </div>
-
-    <div>
-        <label for="date_to">
-            To
-        </label>
-        <br>
-
-        <input
-            type="date"
-            id="date_to"
-            name="to"
-            value="{{ date_to }}"
-        >
-    </div>
-
-    <div>
-        <label for="movement_sort">
-            Sort
-        </label>
-        <br>
-
-        <select
-            id="movement_sort"
-            name="sort"
-        >
-
-            <option
-                value="-date"
-                {% if current_sort == "-date" %}selected{% endif %}
-            >
-                Newest First
-            </option>
-
-            <option
-                value="date"
-                {% if current_sort == "date" %}selected{% endif %}
-            >
-                Oldest First
-            </option>
-
-            <option
-                value="product"
-                {% if current_sort == "product" %}selected{% endif %}
-            >
-                Product A–Z
-            </option>
-
-            <option
-                value="-product"
-                {% if current_sort == "-product" %}selected{% endif %}
-            >
-                Product Z–A
-            </option>
-
-            <option
-                value="-quantity"
-                {% if current_sort == "-quantity" %}selected{% endif %}
-            >
-                Quantity High–Low
-            </option>
-
-            <option
-                value="quantity"
-                {% if current_sort == "quantity" %}selected{% endif %}
-            >
-                Quantity Low–High
-            </option>
-
-            <option
-                value="type"
-                {% if current_sort == "type" %}selected{% endif %}
-            >
-                Movement Type A–Z
-            </option>
-
-            <option
-                value="-type"
-                {% if current_sort == "-type" %}selected{% endif %}
-            >
-                Movement Type Z–A
-            </option>
-
-        </select>
-    </div>
-
-    <div>
-        <button type="submit">
-            Filter
-        </button>
-    </div>
-
-    <div>
-        <a href="{% url 'housekeeping_stock_movements' %}">
-            Reset
-        </a>
-    </div>
-
-</form>
-
-<hr>
-
-<!-- ===================================================== -->
-<!-- MOVEMENTS -->
-<!-- ===================================================== -->
-
-{% if movements %}
-
-<table
-    style="
-        width:100%;
-        border-collapse:collapse;
-    "
->
-
-<thead style="background:#eee;">
-
-<tr>
-
-    <th style="padding:8px;">
-        Date
-    </th>
-
-    <th style="text-align:left; padding:8px;">
-        Product
-    </th>
-
-    <th style="text-align:right; padding:8px;">
-        Quantity
-    </th>
-
-    <th style="padding:8px;">
-        Movement
-    </th>
-
-    <th style="text-align:left; padding:8px;">
-        From
-    </th>
-
-    <th style="text-align:left; padding:8px;">
-        To
-    </th>
-
-    <th style="text-align:left; padding:8px;">
-        Reference
-    </th>
-
-    <th style="text-align:left; padding:8px;">
-        Recorded By
-    </th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-{% for movement in movements %}
-
-<tr style="border-top:1px solid #ddd;">
-
-    <td style="padding:8px;">
-        {{ movement.created_at|date:"Y-m-d H:i" }}
-    </td>
-
-    <td style="padding:8px;">
-
-        <strong>
-            {{ movement.product.name }}
-        </strong>
-
-        {% if movement.product.sku %}
-            <br>
-            <small>
-                {{ movement.product.sku }}
-            </small>
-        {% endif %}
-
-    </td>
-
-    <td style="padding:8px; text-align:right;">
-
-        {{ movement.quantity }}
-        {{ movement.product.base_unit }}
-
-    </td>
-
-    <td style="padding:8px; text-align:center;">
-
-        {% if movement.movement_type == "IN" %}
-
-            🟢 Stock In
-
-        {% elif movement.movement_type == "OUT" %}
-
-            🔴 Stock Out
-
-        {% elif movement.movement_type == "TRANSFER" %}
-
-            🔄 Transfer
-
+<style>
+.hk-move-page{max-width:1320px;margin:0 auto;padding:8px 0 38px;color:#1e293b}
+.hk-move-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.hk-move-kicker{margin:0 0 7px;color:#64748b;font-size:.74rem;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.hk-move-head h1{margin:0;font-size:clamp(1.55rem,3vw,2rem);letter-spacing:-.04em}
+.hk-move-head p{margin:7px 0 0;color:#64748b}
+.hk-move-actions{display:flex;gap:9px;flex-wrap:wrap}
+.hk-move-link{display:inline-flex;align-items:center;padding:10px 14px;border:1px solid #dbeafe;border-radius:10px;background:#eff6ff;color:#1d4ed8;text-decoration:none;font-size:.84rem;font-weight:750}
+.hk-filter-panel{margin-bottom:18px;padding:18px;border:1px solid #e2e8f0;border-radius:15px;background:#fff;box-shadow:0 3px 12px rgba(15,23,42,.035)}
+.hk-filter-title{margin:0 0 13px;font-size:.9rem;font-weight:800}
+.hk-filter-grid{display:grid;grid-template-columns:minmax(220px,2fr) repeat(4,minmax(130px,1fr)) auto auto;gap:11px;align-items:end}
+.hk-filter-field label{display:block;margin-bottom:6px;color:#64748b;font-size:.73rem;font-weight:750}
+.hk-filter-field input,.hk-filter-field select{box-sizing:border-box;width:100%;height:40px;padding:0 10px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#334155;font:inherit;font-size:.82rem;min-width:0}
+.hk-filter-field input:focus,.hk-filter-field select:focus{outline:3px solid #dbeafe;border-color:#60a5fa}
+.hk-filter-submit{height:40px;padding:0 16px;border:0;border-radius:9px;background:#2563eb;color:#fff;font:inherit;font-size:.82rem;font-weight:800;cursor:pointer}
+.hk-filter-submit:hover{background:#1d4ed8}
+.hk-filter-reset{display:inline-flex;height:40px;align-items:center;padding:0 10px;color:#64748b;text-decoration:none;font-size:.82rem;font-weight:700}
+.hk-results{overflow:hidden;border:1px solid #e2e8f0;border-radius:15px;background:#fff;box-shadow:0 4px 16px rgba(15,23,42,.035)}
+.hk-results-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 19px;border-bottom:1px solid #edf2f7}
+.hk-results-head h2{margin:0;font-size:1rem}
+.hk-results-head p{margin:4px 0 0;color:#64748b;font-size:.79rem}
+.hk-results-count{padding:6px 10px;border-radius:99px;background:#f1f5f9;color:#475569;font-size:.74rem;font-weight:800;white-space:nowrap}
+.hk-move-table-wrap{overflow-x:auto}
+.hk-move-table{width:100%;min-width:980px;border-collapse:collapse}
+.hk-move-table th{padding:12px 13px;background:#f8fafc;color:#64748b;text-align:left;font-size:.69rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.hk-move-table td{padding:13px;border-top:1px solid #f1f5f9;color:#475569;font-size:.81rem;vertical-align:middle}
+.hk-move-table tbody tr:hover{background:#fafcff}
+.hk-date{white-space:nowrap;color:#64748b;font-variant-numeric:tabular-nums}
+.hk-move-product{color:#1e293b;font-weight:800}
+.hk-move-muted{display:block;margin-top:3px;color:#94a3b8;font-size:.72rem}
+.hk-qty{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hk-move-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:99px;font-size:.7rem;font-weight:800;white-space:nowrap}
+.hk-move-badge:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.hk-move-badge.in{background:#ecfdf5;color:#047857}
+.hk-move-badge.out{background:#fef2f2;color:#b91c1c}
+.hk-move-badge.transfer{background:#eff6ff;color:#1d4ed8}
+.hk-reference{display:inline-block;padding:4px 7px;border-radius:6px;background:#f8fafc;color:#475569;font-family:ui-monospace,monospace;font-size:.72rem}
+.hk-empty{padding:44px 20px;text-align:center;color:#64748b}
+.hk-empty strong{display:block;color:#334155}
+.hk-empty p{margin:6px 0 0;font-size:.84rem}
+@media(max-width:1050px){.hk-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){.hk-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hk-filter-field.search-field{grid-column:span 2}.hk-filter-submit,.hk-filter-reset{width:100%;justify-content:center}.hk-filter-panel{padding:14px}.hk-results-head{padding:14px}}
+</style>
+
+<div class="hk-move-page">
+    <header class="hk-move-head">
+        <div>
+            <p class="hk-move-kicker">Housekeeping · Inventory audit</p>
+            <h1>Stock Movements</h1>
+            <p>Track stock receipts, issues and transfers involving Housekeeping.</p>
+        </div>
+        <div class="hk-move-actions">
+            <a class="hk-move-link" href="{% url 'housekeeping_stock' %}">▦ Department stock</a>
+            <a class="hk-move-link" href="{% url 'housekeeping_stock_workspace' %}">← Stock workspace</a>
+        </div>
+    </header>
+
+    <form method="get" class="hk-filter-panel">
+        <h2 class="hk-filter-title">Find a transaction</h2>
+        <div class="hk-filter-grid">
+            <div class="hk-filter-field search-field">
+                <label for="movement_search">Search</label>
+                <input type="text" id="movement_search" name="search" value="{{ search }}" placeholder="Product, reference, department or staff">
+            </div>
+            <div class="hk-filter-field">
+                <label for="movement_type">Movement type</label>
+                <select id="movement_type" name="type">
+                    <option value="" {% if not movement_type %}selected{% endif %}>All types</option>
+                    <option value="IN" {% if movement_type == "IN" %}selected{% endif %}>Stock in</option>
+                    <option value="OUT" {% if movement_type == "OUT" %}selected{% endif %}>Stock out</option>
+                    <option value="TRANSFER" {% if movement_type == "TRANSFER" %}selected{% endif %}>Transfer</option>
+                </select>
+            </div>
+            <div class="hk-filter-field">
+                <label for="date_from">From</label>
+                <input type="date" id="date_from" name="from" value="{{ date_from }}">
+            </div>
+            <div class="hk-filter-field">
+                <label for="date_to">To</label>
+                <input type="date" id="date_to" name="to" value="{{ date_to }}">
+            </div>
+            <div class="hk-filter-field">
+                <label for="movement_sort">Sort by</label>
+                <select id="movement_sort" name="sort">
+                    <option value="-date" {% if current_sort == "-date" %}selected{% endif %}>Newest first</option>
+                    <option value="date" {% if current_sort == "date" %}selected{% endif %}>Oldest first</option>
+                    <option value="product" {% if current_sort == "product" %}selected{% endif %}>Product A–Z</option>
+                    <option value="-product" {% if current_sort == "-product" %}selected{% endif %}>Product Z–A</option>
+                    <option value="-quantity" {% if current_sort == "-quantity" %}selected{% endif %}>Quantity high–low</option>
+                    <option value="quantity" {% if current_sort == "quantity" %}selected{% endif %}>Quantity low–high</option>
+                    <option value="type" {% if current_sort == "type" %}selected{% endif %}>Type A–Z</option>
+                    <option value="-type" {% if current_sort == "-type" %}selected{% endif %}>Type Z–A</option>
+                </select>
+            </div>
+            <button class="hk-filter-submit" type="submit">Apply filters</button>
+            <a class="hk-filter-reset" href="{% url 'housekeeping_stock_movements' %}">Reset</a>
+        </div>
+    </form>
+
+    <section class="hk-results">
+        <div class="hk-results-head">
+            <div>
+                <h2>Movement history</h2>
+                <p>Transactions matching your current filters.</p>
+            </div>
+            <span class="hk-results-count">{{ movements|length }} record{{ movements|length|pluralize }}</span>
+        </div>
+
+        {% if movements %}
+        <div class="hk-move-table-wrap">
+            <table class="hk-move-table">
+                <thead>
+                    <tr>
+                        <th>Date & time</th>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Movement</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Reference</th>
+                        <th>Recorded by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movement in movements %}
+                    <tr>
+                        <td class="hk-date">{{ movement.created_at|date:"d M Y" }}<span class="hk-move-muted">{{ movement.created_at|date:"H:i" }}</span></td>
+                        <td><span class="hk-move-product">{{ movement.product.name }}</span>{% if movement.product.sku %}<span class="hk-move-muted">{{ movement.product.sku }}</span>{% endif %}</td>
+                        <td class="hk-qty">{{ movement.quantity }} {{ movement.product.base_unit }}</td>
+                        <td>
+                            {% if movement.movement_type == "IN" %}
+                                <span class="hk-move-badge in">Stock in</span>
+                            {% elif movement.movement_type == "OUT" %}
+                                <span class="hk-move-badge out">Stock out</span>
+                            {% elif movement.movement_type == "TRANSFER" %}
+                                <span class="hk-move-badge transfer">Transfer</span>
+                            {% else %}
+                                {{ movement.get_movement_type_display }}
+                            {% endif %}
+                        </td>
+                        <td>{% if movement.from_department %}{{ movement.from_department.name }}{% else %}<span class="hk-move-muted">—</span>{% endif %}</td>
+                        <td>{% if movement.to_department %}{{ movement.to_department.name }}{% else %}<span class="hk-move-muted">—</span>{% endif %}</td>
+                        <td>{% if movement.reference %}<span class="hk-reference">{{ movement.reference }}</span>{% else %}—{% endif %}</td>
+                        <td>{{ movement.created_by|default:"—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
-
-            {{ movement.get_movement_type_display }}
-
+        <div class="hk-empty">
+            <strong>No matching stock movements</strong>
+            <p>Try adjusting your search or date filters.</p>
+        </div>
         {% endif %}
-
-    </td>
-
-    <td style="padding:8px;">
-
-        {% if movement.from_department %}
-            {{ movement.from_department.name }}
-        {% else %}
-            —
-        {% endif %}
-
-    </td>
-
-    <td style="padding:8px;">
-
-        {% if movement.to_department %}
-            {{ movement.to_department.name }}
-        {% else %}
-            —
-        {% endif %}
-
-    </td>
-
-    <td style="padding:8px;">
-
-        {{ movement.reference|default:"—" }}
-
-    </td>
-
-    <td style="padding:8px;">
-
-        {{ movement.created_by|default:"—" }}
-
-    </td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-{% else %}
-
-<p>
-    No Housekeeping stock movements match your filters.
-</p>
-
-{% endif %}
-
-<hr>
-
-<a href="{% url 'housekeeping_stock' %}">
-    ← Back to Housekeeping Stock
-</a>
-
+    </section>
+</div>
 {% endblock %}
