@@ -74,6 +74,11 @@ class LinenTransaction(models.Model):
         ("LOST", "Lost"),
         ("WRITTEN_OFF", "Written Off"),
         ("ADJUSTMENT", "Adjustment"),
+        # Audit-only movements inside Housekeeping. These do not
+        # change hotel location balances because the linen remains
+        # within the Housekeeping department.
+        ("ROOM_REPLENISHED", "Clean Linen Placed in Room"),
+        ("DIRTY_COLLECTED", "Dirty Linen Collected from Room"),
     )
 
     LOCATION_CHOICES = (
