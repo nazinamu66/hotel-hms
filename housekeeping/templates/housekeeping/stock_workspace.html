@@ -33,6 +33,7 @@
     </header>
 
     <div class="hk-stock-grid">
+        {% if user.role == "HOUSEKEEPING" %}
         <a class="hk-stock-card" href="{% url 'housekeeping_request_stock' %}">
             <span class="hk-stock-icon">＋</span>
             <strong>Request Stock</strong>
@@ -46,6 +47,8 @@
             <span>Review submitted requests, quantities issued, outstanding balances and purchase progress.</span>
             <em>View request history →</em>
         </a>
+
+        {% endif %}
 
         {% if can_manage_stock %}
         <a class="hk-stock-card" href="{% url 'housekeeping_stock' %}">
