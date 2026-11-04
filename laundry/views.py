@@ -1822,3 +1822,32 @@ def receive_receipt(request, receipt_id):
     )
 
     return redirect("laundry:dashboard")
+
+@role_required("MANAGER", "ADMIN", "DIRECTOR")
+def resolve_receipt_discrepancy(request, discrepancy_id):
+    from laundry.models import LaundryReceiptDiscrepancy
+    from laundry.services.receiving import resolve_laundry_receipt_discrepancy
+
+    if request.method != "POST":
+        return redirect("laundry:dashboard")
+
+    discrepancy = get_object_or_404(
+        LaundryReceiptDiscrepancy.objects.select_related(
+            "receipt", "receipt__linen_item", "receipt__returned_by",
+        ),
+        pk=discrepancy_id,
+        receipt__returned_by__hotel__in=get_accessible_hotels(request.user),
+    )
+
+    try:
+        resolve_laundry_receipt_discrepancy(
+            discrepancy=discrepancy,
+            resolution=request.POST.get("resolution", "").strip().upper(),
+            resolved_by=request.user,
+            note=request.POST.get("resolution_note", ""),
+        )
+        messages.success(request, "Laundry receipt discrepancy resolved.")
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+
+    return redirect("laundry:receipt_detail", receipt_id=discrepancy.receipt_id)
