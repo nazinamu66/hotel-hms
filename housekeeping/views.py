@@ -2301,15 +2301,24 @@ def housekeeping_linen_movements(request):
         and not is_department_head(request.user)
     )
 
+    custody_filter = {
+        "user": request.user,
+        "linen_item__product__hotel__in": hotels,
+        "linen_item__is_active": True,
+    }
+    if not is_regular_staff:
+        custody_filter = {
+            "user__department__hotel__in": hotels,
+            "user__department__department_type": "HOUSEKEEPING",
+            "linen_item__product__hotel__in": hotels,
+            "linen_item__is_active": True,
+        }
+
     custodies = (
         LinenCustody.objects
-        .filter(
-            user=request.user if is_regular_staff else request.user,
-            linen_item__product__hotel__in=hotels,
-            linen_item__is_active=True,
-        )
-        .select_related("linen_item", "linen_item__product")
-        .order_by("linen_item__product__name")
+        .filter(**custody_filter)
+        .select_related("user", "user__department", "linen_item", "linen_item__product")
+        .order_by("user__username", "linen_item__product__name")
     )
 
     movements = (
@@ -2362,14 +2371,15 @@ def housekeeping_linen_request_queue(request):
         if not department or department.department_type != "HOUSEKEEPING":
             raise PermissionDenied("You are not assigned to a Housekeeping department.")
         requests = LinenRequest.objects.filter(
-            request_type="HOUSEKEEPING",
-            requested_by__department__hotel=department.hotel,
+            request_type="LAUNDRY",
+            requested_by__department=department,
         )
     else:
         hotels = get_accessible_hotels(request.user)
         requests = LinenRequest.objects.filter(
-            request_type="HOUSEKEEPING",
+            request_type="LAUNDRY",
             requested_by__department__hotel__in=hotels,
+            requested_by__department__department_type="HOUSEKEEPING",
         )
 
     requests = requests.select_related(
