@@ -1818,7 +1818,11 @@ def receive_receipt(request, receipt_id):
 
     messages.success(
         request,
-        "Linen receipt confirmed successfully.",
+        (
+            "Linen receipt confirmed. Quantity discrepancy recorded for management review."
+            if receipt.status == "DISCREPANCY_PENDING"
+            else "Linen receipt confirmed successfully."
+        ),
     )
 
     return redirect("laundry:dashboard")
