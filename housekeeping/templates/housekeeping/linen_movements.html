@@ -43,9 +43,11 @@
             <p class="linen-track-sub">{% if is_regular_staff %}See the clean and dirty linen assigned to you, request more from Laundry and record handovers.{% else %}Review individual staff custody balances and recorded linen movements across your accessible hotels.{% endif %}</p>
         </div>
         <div class="linen-page-actions">
+            {% if user.role != "STORE" %}
             <a class="btn btn-primary" href="{% url 'housekeeping_request_laundry' %}">Request clean linen from Laundry</a>
             <a class="btn btn-secondary" href="{% url 'housekeeping_send_linen_to_laundry' %}">Hand over linen to Laundry</a>
             <a class="btn btn-secondary" href="{% url 'housekeeping_linen_requests' %}">My linen requests</a>
+            {% endif %}
             {% if user.role == "STORE" or user.role == "MANAGER" or user.role == "ADMIN" or user.role == "DIRECTOR" %}
             <a class="btn btn-secondary" href="{% url 'linen_dashboard' %}">Linen Overview</a>
             {% endif %}
