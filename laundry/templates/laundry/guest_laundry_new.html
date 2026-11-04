@@ -1,315 +1,170 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-New Guest Laundry Order
-{% endblock %}
+{% block title %}New Guest Laundry Order{% endblock %}
 
 {% block header %}
 <h2>New Guest Laundry Order</h2>
 {% endblock %}
 
 {% block content %}
+<style>
+    .gn-page { --gn-ink:#172033; --gn-muted:#64748b; --gn-line:#e5eaf1; --gn-blue:#2563eb; --gn-blue-soft:#eff6ff; color:var(--gn-ink); display:grid; gap:19px; }
+    .gn-page * { box-sizing:border-box; }
+    .gn-heading { display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:14px; }
+    .gn-eyebrow { margin:0 0 6px; color:var(--gn-blue); font-size:11px; font-weight:800; letter-spacing:.11em; text-transform:uppercase; }
+    .gn-heading h1 { margin:0; font-size:clamp(23px,3vw,30px); letter-spacing:-.04em; line-height:1.15; }
+    .gn-subtitle { margin:7px 0 0; color:var(--gn-muted); font-size:13px; line-height:1.5; }
+    .gn-back { display:inline-flex; align-items:center; padding:9px 13px; border:1px solid var(--gn-line); border-radius:9px; background:white; color:#334155; text-decoration:none; font-size:12px; font-weight:800; }
+    .gn-back:hover { background:#f8fafc; color:var(--gn-blue); }
+    .gn-note { display:flex; gap:12px; align-items:flex-start; padding:14px 16px; border:1px solid #dbeafe; border-radius:12px; background:#f8fbff; }
+    .gn-note-icon { display:grid; place-items:center; flex:0 0 36px; height:36px; border-radius:10px; background:var(--gn-blue-soft); font-size:17px; }
+    .gn-note strong { display:block; font-size:13px; }
+    .gn-note p { margin:4px 0 0; color:var(--gn-muted); font-size:12px; line-height:1.5; }
+    .gn-card { overflow:hidden; border:1px solid var(--gn-line); border-radius:15px; background:white; box-shadow:0 5px 18px rgba(15,23,42,.035); }
+    .gn-card-head { padding:17px 20px; border-bottom:1px solid var(--gn-line); }
+    .gn-card-head h2 { margin:0; font-size:15px; }
+    .gn-card-head p { margin:4px 0 0; color:var(--gn-muted); font-size:11px; }
+    .gn-form-body { display:grid; gap:21px; padding:20px; }
+    .gn-section-title { margin:0 0 11px; color:#334155; font-size:11px; font-weight:850; letter-spacing:.07em; text-transform:uppercase; }
+    .gn-customer-types { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .gn-choice { display:flex; align-items:center; gap:10px; min-height:58px; padding:13px 15px; border:1px solid var(--gn-line); border-radius:11px; background:#fff; cursor:pointer; font-size:13px; font-weight:750; }
+    .gn-choice:has(input:checked) { border-color:#93c5fd; background:#f8fbff; box-shadow:0 0 0 2px #dbeafe; }
+    .gn-choice input { width:16px; height:16px; accent-color:var(--gn-blue); }
+    .gn-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    .gn-field { display:grid; gap:7px; min-width:0; }
+    .gn-field.full { grid-column:1/-1; }
+    .gn-field label { color:#334155; font-size:12px; font-weight:800; }
+    .gn-field input, .gn-field select, .gn-field textarea { width:100%; min-height:43px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:9px; background:white; color:var(--gn-ink); font:inherit; font-size:13px; outline:none; }
+    .gn-field textarea { min-height:95px; resize:vertical; }
+    .gn-field input:focus, .gn-field select:focus, .gn-field textarea:focus { border-color:#60a5fa; box-shadow:0 0 0 3px #dbeafe; }
+    .gn-field small { color:var(--gn-muted); font-size:10px; line-height:1.4; }
+    .gn-divider { height:1px; background:#edf1f5; }
+    .gn-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:0 20px 20px; }
+    .gn-submit { display:inline-flex; justify-content:center; align-items:center; min-height:42px; padding:10px 16px; border:1px solid var(--gn-blue); border-radius:9px; background:var(--gn-blue); color:white; font-size:12px; font-weight:850; cursor:pointer; }
+    .gn-submit:hover { background:#1d4ed8; }
+    .gn-cancel { display:inline-flex; align-items:center; min-height:42px; padding:10px 14px; border:1px solid var(--gn-line); border-radius:9px; color:#475569; text-decoration:none; font-size:12px; font-weight:800; }
+    .gn-cancel:hover { background:#f8fafc; }
+    @media(max-width:620px) { .gn-customer-types,.gn-grid { grid-template-columns:minmax(0,1fr); } .gn-field.full { grid-column:auto; } .gn-form-body { padding:16px; } .gn-actions { padding:0 16px 16px; } }
+</style>
 
-<h3>Order Details</h3>
-
-<form method="post">
-
-    {% csrf_token %}
-
-    <div class="card" style="padding:20px; margin-bottom:25px;">
-
-        <!-- CUSTOMER TYPE -->
-
-        <div style="margin-bottom:20px;">
-
-            <label>
-                <strong>Customer Type</strong>
-            </label>
-
-            <br>
-
-            <label style="margin-right:20px;">
-                <input
-                    type="radio"
-                    name="customer_type"
-                    value="ROOM"
-                    id="customer_type_room"
-                    checked
-                >
-                Hotel Guest
-            </label>
-
-            <label>
-                <input
-                    type="radio"
-                    name="customer_type"
-                    value="WALKIN"
-                    id="customer_type_walkin"
-                >
-                Walk-in Customer
-            </label>
-
+<div class="gn-page">
+    <section class="gn-heading">
+        <div>
+            <p class="gn-eyebrow">Laundry operations · Guest services</p>
+            <h1>New Guest Laundry Order</h1>
+            <p class="gn-subtitle">Capture the customer, garments and agreed price before the Laundry team begins processing.</p>
         </div>
+        <a class="gn-back" href="{% url 'laundry:guest_laundry' %}">← Guest Laundry</a>
+    </section>
 
+    <section class="gn-note">
+        <span class="gn-note-icon">🧺</span>
+        <div><strong>Before creating the order</strong><p>Choose a current in-house guest to charge the room folio, or select walk-in customer for a separate customer folio. Enter the item description, quantity and unit price.</p></div>
+    </section>
 
-        <!-- HOTEL GUEST -->
-
-        <div
-            id="room_customer_section"
-            style="margin-bottom:15px;"
-        >
-
-            <label for="folio">
-                <strong>Guest / Room</strong>
-            </label>
-
-            <br>
-
-            <select
-                name="folio"
-                id="folio"
-                required
-                style="padding:8px; min-width:350px;"
-            >
-
-                <option value="">
-                    Select guest / room
-                </option>
-
-                {% for folio in active_folios %}
-
-                    <option value="{{ folio.id }}">
-
-                        {{ folio.guest.full_name }}
-                        — Room {{ folio.room.room_number }}
-                        — Folio #{{ folio.id }}
-
-                    </option>
-
-                {% endfor %}
-
-            </select>
-
-        </div>
-
-
-        <!-- WALK-IN CUSTOMER -->
-
-        <div
-            id="walkin_customer_section"
-            style="display:none; margin-bottom:15px;"
-        >
-
-            <div style="margin-bottom:15px;">
-
-                <label for="customer_name">
-                    <strong>Customer Name</strong>
-                </label>
-
-                <br>
-
-                <input
-                    type="text"
-                    name="customer_name"
-                    id="customer_name"
-                    maxlength="150"
-                    placeholder="e.g. Ibrahim Musa"
-                    style="padding:8px; width:350px;"
-                >
-
+    <form method="post">
+        {% csrf_token %}
+        <section class="gn-card">
+            <div class="gn-card-head">
+                <h2>Order details</h2>
+                <p>Fields marked as required must be completed.</p>
             </div>
+            <div class="gn-form-body">
+                <section>
+                    <h3 class="gn-section-title">1. Customer type</h3>
+                    <div class="gn-customer-types">
+                        <label class="gn-choice"><input type="radio" name="customer_type" value="ROOM" id="customer_type_room" checked><span>🏨 Hotel guest</span></label>
+                        <label class="gn-choice"><input type="radio" name="customer_type" value="WALKIN" id="customer_type_walkin"><span>🚶 Walk-in customer</span></label>
+                    </div>
+                </section>
 
+                <div class="gn-divider"></div>
 
-            <div>
+                <section id="room_customer_section">
+                    <h3 class="gn-section-title">2. Guest and room</h3>
+                    <div class="gn-field">
+                        <label for="folio">Guest / room folio *</label>
+                        <select name="folio" id="folio" required>
+                            <option value="">Select guest / room</option>
+                            {% for folio in active_folios %}
+                                <option value="{{ folio.id }}">{{ folio.guest.full_name }} — Room {{ folio.room.room_number }} — Folio #{{ folio.id }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if not active_folios %}<small>No active guest room folios are currently available. You can still create a walk-in order.</small>{% else %}<small>Select the open folio that should receive the laundry charge.</small>{% endif %}
+                    </div>
+                </section>
 
-                <label for="customer_phone">
-                    <strong>Phone</strong>
-                </label>
+                <section id="walkin_customer_section" hidden>
+                    <h3 class="gn-section-title">2. Walk-in customer details</h3>
+                    <div class="gn-grid">
+                        <div class="gn-field">
+                            <label for="customer_name">Customer name *</label>
+                            <input type="text" name="customer_name" id="customer_name" maxlength="150" placeholder="e.g. Ibrahim Musa">
+                        </div>
+                        <div class="gn-field">
+                            <label for="customer_phone">Phone number</label>
+                            <input type="text" name="customer_phone" id="customer_phone" maxlength="50" placeholder="e.g. 08012345678">
+                        </div>
+                    </div>
+                </section>
 
-                <br>
+                <div class="gn-divider"></div>
 
-                <input
-                    type="text"
-                    name="customer_phone"
-                    id="customer_phone"
-                    maxlength="50"
-                    placeholder="e.g. 08012345678"
-                    style="padding:8px; width:250px;"
-                >
-
+                <section>
+                    <h3 class="gn-section-title">3. Laundry item and pricing</h3>
+                    <div class="gn-grid">
+                        <div class="gn-field full">
+                            <label for="description">Laundry item / description *</label>
+                            <input type="text" name="description" id="description" maxlength="150" required placeholder="e.g. Shirt, trousers, suit or bedsheet">
+                            <small>Describe the garment or item being received. Create separate orders for items with different prices if necessary.</small>
+                        </div>
+                        <div class="gn-field">
+                            <label for="quantity">Quantity *</label>
+                            <input type="number" name="quantity" id="quantity" min="1" step="1" required placeholder="e.g. 3">
+                        </div>
+                        <div class="gn-field">
+                            <label for="unit_price">Unit price (₦) *</label>
+                            <input type="number" name="unit_price" id="unit_price" min="0" step="0.01" required placeholder="e.g. 1500.00">
+                            <small>Enter the agreed price per item.</small>
+                        </div>
+                        <div class="gn-field full">
+                            <label for="note">Order note</label>
+                            <textarea name="note" id="note" rows="3" placeholder="Optional: stains, special instructions or customer remarks"></textarea>
+                        </div>
+                    </div>
+                </section>
             </div>
-
-        </div>
-
-
-        <!-- LAUNDRY ITEM -->
-
-        <div style="margin-bottom:15px;">
-
-            <label for="description">
-                <strong>Laundry Item</strong>
-            </label>
-
-            <br>
-
-            <input
-                type="text"
-                name="description"
-                id="description"
-                maxlength="150"
-                required
-                placeholder="e.g. Shirt, Trousers, Suit"
-                style="padding:8px; width:350px;"
-            >
-
-        </div>
-
-
-        <!-- QUANTITY -->
-
-        <div style="margin-bottom:15px;">
-
-            <label for="quantity">
-                <strong>Quantity</strong>
-            </label>
-
-            <br>
-
-            <input
-                type="number"
-                name="quantity"
-                id="quantity"
-                min="1"
-                required
-                style="padding:8px; width:120px;"
-            >
-
-        </div>
-
-
-        <!-- UNIT PRICE -->
-
-        <div style="margin-bottom:15px;">
-
-            <label for="unit_price">
-                <strong>Unit Price (₦)</strong>
-            </label>
-
-            <br>
-
-            <input
-                type="number"
-                name="unit_price"
-                id="unit_price"
-                min="0"
-                step="0.01"
-                required
-                style="padding:8px; width:160px;"
-            >
-
-        </div>
-
-
-        <!-- NOTE -->
-
-        <div style="margin-bottom:15px;">
-
-            <label for="note">
-                <strong>Note</strong>
-            </label>
-
-            <br>
-
-            <textarea
-                name="note"
-                id="note"
-                rows="4"
-                style="width:500px; max-width:100%; padding:8px;"
-                placeholder="Optional note"
-            ></textarea>
-
-        </div>
-
-    </div>
-
-
-    <button
-        type="submit"
-        style="padding:10px 18px;"
-    >
-        Create Guest Laundry Order
-    </button>
-
-    &nbsp;
-
-    <a href="{% url 'laundry:guest_laundry' %}">
-        Cancel
-    </a>
-
-</form>
-
+            <div class="gn-actions">
+                <button class="gn-submit" type="submit">Create Guest Laundry Order →</button>
+                <a class="gn-cancel" href="{% url 'laundry:guest_laundry' %}">Cancel</a>
+            </div>
+        </section>
+    </form>
+</div>
 
 <script>
-
-    const roomRadio = document.getElementById(
-        "customer_type_room"
-    );
-
-    const walkinRadio = document.getElementById(
-        "customer_type_walkin"
-    );
-
-    const roomSection = document.getElementById(
-        "room_customer_section"
-    );
-
-    const walkinSection = document.getElementById(
-        "walkin_customer_section"
-    );
-
-    const folioField = document.getElementById(
-        "folio"
-    );
-
-    const customerNameField = document.getElementById(
-        "customer_name"
-    );
-
+(function () {
+    const roomRadio = document.getElementById("customer_type_room");
+    const walkinRadio = document.getElementById("customer_type_walkin");
+    const roomSection = document.getElementById("room_customer_section");
+    const walkinSection = document.getElementById("walkin_customer_section");
+    const folioField = document.getElementById("folio");
+    const customerNameField = document.getElementById("customer_name");
 
     function updateCustomerType() {
-
-        if (walkinRadio.checked) {
-
-            roomSection.style.display = "none";
-            walkinSection.style.display = "block";
-
-            folioField.required = false;
-            customerNameField.required = true;
-
-        } else {
-
-            roomSection.style.display = "block";
-            walkinSection.style.display = "none";
-
-            folioField.required = true;
-            customerNameField.required = false;
-        }
+        const isWalkin = walkinRadio.checked;
+        roomSection.hidden = isWalkin;
+        walkinSection.hidden = !isWalkin;
+        folioField.required = !isWalkin;
+        customerNameField.required = isWalkin;
+        folioField.disabled = isWalkin;
+        customerNameField.disabled = !isWalkin;
+        document.getElementById("customer_phone").disabled = !isWalkin;
     }
 
-
-    roomRadio.addEventListener(
-        "change",
-        updateCustomerType
-    );
-
-    walkinRadio.addEventListener(
-        "change",
-        updateCustomerType
-    );
-
-
+    roomRadio.addEventListener("change", updateCustomerType);
+    walkinRadio.addEventListener("change", updateCustomerType);
     updateCustomerType();
-
+})();
 </script>
-
 {% endblock %}
