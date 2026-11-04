@@ -1464,6 +1464,42 @@ def cleaning_linen_check(request, assignment_id):
     )
 
 
+
+# ============================================================
+# HOUSEKEEPING STOCK WORKSPACE
+# ============================================================
+
+@role_required("HOUSEKEEPING", "MANAGER", "ADMIN", "DIRECTOR")
+def housekeeping_stock_workspace(request):
+    """Single entry point for Housekeeping operational stock tasks."""
+    department = request.user.department
+    if request.user.role == "HOUSEKEEPING":
+        if not department or department.department_type != "HOUSEKEEPING":
+            raise PermissionDenied("You are not assigned to a Housekeeping department.")
+
+    accessible_hotels = get_accessible_hotels(request.user)
+    if not accessible_hotels.exists():
+        raise PermissionDenied
+
+    can_manage_stock = (
+        request.user.role in ("MANAGER", "ADMIN", "DIRECTOR")
+        or (
+            request.user.role == "HOUSEKEEPING"
+            and is_department_head(request.user)
+            and department
+            and department.department_type == "HOUSEKEEPING"
+        )
+    )
+
+    return render(
+        request,
+        "housekeeping/stock_workspace.html",
+        {
+            "department": department,
+            "can_manage_stock": can_manage_stock,
+        },
+    )
+
 @role_required(
     "HOUSEKEEPING",
     "MANAGER",
