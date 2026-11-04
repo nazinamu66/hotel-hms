@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from laundry.models import LaundryReceipt
+from laundry.models import LaundryReceipt, LaundryReceiptDiscrepancy
 from linen.models import LinenTransaction
 
 
@@ -122,6 +122,34 @@ def confirm_laundry_receipt(
 
     received_at = timezone.now()
 
+    # Reclassify the unconfirmed portion out of available Laundry
+    # stock and into a separate holding location. The original
+    # Housekeeping transfer remains intact and auditable.
+    clean_difference = receipt.declared_clean_quantity - received_clean_quantity
+    dirty_difference = receipt.declared_dirty_quantity - received_dirty_quantity
+
+    for condition, difference in (
+        ("CLEAN", clean_difference),
+        ("DIRTY", dirty_difference),
+    ):
+        if difference > 0:
+            LinenTransaction.objects.create(
+                linen_item=receipt.linen_item,
+                quantity=difference,
+                condition=condition,
+                event_type="RETURNED",
+                from_location="LAUNDRY",
+                to_location="DISCREPANCY",
+                performed_by=received_by,
+                reference=receipt.reference or f"LAUNDRY-RECEIPT-{receipt.id}",
+                note=f"Receipt discrepancy pending review. {note or receipt.note}".strip(),
+            )
+            LaundryReceiptDiscrepancy.objects.create(
+                receipt=receipt,
+                condition=condition,
+                quantity=difference,
+            )
+
     # --------------------------------------------------------
     # Record confirmed clean linen receipt
     # --------------------------------------------------------
@@ -156,7 +184,11 @@ def confirm_laundry_receipt(
     receipt.received_clean_quantity = received_clean_quantity
     receipt.received_dirty_quantity = received_dirty_quantity
     receipt.received_at = received_at
-    receipt.status = "RECEIVED"
+    receipt.status = (
+        "DISCREPANCY_PENDING"
+        if clean_difference or dirty_difference
+        else "RECEIVED"
+    )
 
     if note:
         receipt.note = note
@@ -173,3 +205,76 @@ def confirm_laundry_receipt(
     )
 
     return receipt
+
+@transaction.atomic
+def resolve_laundry_receipt_discrepancy(
+    *,
+    discrepancy,
+    resolution,
+    resolved_by,
+    note="",
+):
+    """Resolve a held linen shortfall without silently changing stock."""
+    discrepancy = (
+        LaundryReceiptDiscrepancy.objects
+        .select_for_update()
+        .select_related("receipt", "receipt__linen_item")
+        .get(pk=discrepancy.pk)
+    )
+
+    if discrepancy.status != "OPEN":
+        raise ValidationError("This discrepancy has already been resolved.")
+
+    if resolution not in ("RECOVERED", "LOST", "DAMAGED"):
+        raise ValidationError("Select a valid discrepancy resolution.")
+
+    receipt = discrepancy.receipt
+    reference = receipt.reference or f"LAUNDRY-RECEIPT-{receipt.id}"
+    transaction_note = note.strip() or (
+        f"Resolution of {discrepancy.condition.lower()} linen discrepancy "
+        f"for receipt #{receipt.id}."
+    )
+
+    if resolution == "RECOVERED":
+        LinenTransaction.objects.create(
+            linen_item=receipt.linen_item,
+            quantity=discrepancy.quantity,
+            condition=discrepancy.condition,
+            event_type="RETURNED",
+            from_location="DISCREPANCY",
+            to_location="LAUNDRY",
+            performed_by=resolved_by,
+            reference=reference,
+            note=transaction_note,
+        )
+    else:
+        LinenTransaction.objects.create(
+            linen_item=receipt.linen_item,
+            quantity=discrepancy.quantity,
+            condition=discrepancy.condition,
+            event_type=resolution,
+            from_location="DISCREPANCY",
+            performed_by=resolved_by,
+            reference=reference,
+            note=transaction_note,
+        )
+
+    discrepancy.status = "RESOLVED"
+    discrepancy.resolution = resolution
+    discrepancy.resolved_by = resolved_by
+    discrepancy.resolved_at = timezone.now()
+    discrepancy.resolution_note = transaction_note
+    discrepancy.save(update_fields=[
+        "status",
+        "resolution",
+        "resolved_by",
+        "resolved_at",
+        "resolution_note",
+    ])
+
+    receipt.refresh_from_db()
+    if not receipt.discrepancies.filter(status="OPEN").exists():
+        receipt.status = "DISCREPANCY_RESOLVED"
+        receipt.save(update_fields=["status"])
+
+    return discrepancy
