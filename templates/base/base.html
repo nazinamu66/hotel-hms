@@ -360,16 +360,7 @@
                 {% if user.role == "HOUSEKEEPING" and not user.is_department_head %}My Cleaning History{% else %}Cleaning History{% endif %}
             </a>
 
-            {% if user.role != "HOUSEKEEPING" or user.is_department_head %}
-                <a href="{% url 'housekeeping_request_stock' %}">Request Stock</a>
-                <a href="{% url 'housekeeping_stock_requests' %}">My Stock Requests</a>
-            {% endif %}
-
-            {% if user|has_role:"ADMIN,DIRECTOR" or user.is_department_head and user.department.department_type == "HOUSEKEEPING" %}
-                <a href="{% url 'housekeeping_stock' %}">Department Stock</a>
-                <a href="{% url 'housekeeping_stock_movements' %}">Stock Movements</a>
-                <a href="{% url 'housekeeping_incoming_pos' %}">Incoming Deliveries</a>
-            {% endif %}
+            <a href="{% url 'housekeeping_stock_workspace' %}">Stock Management</a>
 
             <a href="{% url 'housekeeping_linen_movements' %}">Linen Custody</a>
 
