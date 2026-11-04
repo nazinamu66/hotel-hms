@@ -62,12 +62,14 @@
             <em>View movement history →</em>
         </a>
 
+        {% if can_receive_deliveries %}
         <a class="hk-stock-card" href="{% url 'housekeeping_incoming_pos' %}">
             <span class="hk-stock-icon">📦</span>
             <strong>Incoming Deliveries</strong>
             <span>Open approved purchase orders and receive goods delivered to Housekeeping.</span>
             <em>Review deliveries →</em>
         </a>
+        {% endif %}
         {% endif %}
     </div>
 
