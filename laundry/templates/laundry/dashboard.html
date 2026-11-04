@@ -304,8 +304,8 @@
         <section class="ld-panel" id="pending-receipts" aria-labelledby="ld-receipts-title">
             <div class="ld-panel-head">
                 <div>
-                    <h2 id="ld-receipts-title">Pending linen receipts</h2>
-                    <p>Confirm quantities physically received from Housekeeping</p>
+                    <h2 id="ld-receipts-title">Linen receipts &amp; investigations</h2>
+                    <p>Confirm handovers and review quantity discrepancies</p>
                 </div>
                 <span class="ld-pill {% if pending_receipt_count %}dirty{% else %}clean{% endif %}">{{ pending_receipt_count }} pending</span>
             </div>
@@ -327,7 +327,7 @@
                                 <td><span class="ld-item-name">{{ receipt.linen_item.product.name }}</span><br><span style="color:#64748b;font-size:11px;">{{ receipt.created_at|date:"d M Y, H:i" }}</span></td>
                                 <td>{{ receipt.returned_by.username }}</td>
                                 <td><span class="ld-number">{{ receipt.declared_clean_quantity|add:receipt.declared_dirty_quantity }}</span><br><span style="color:#64748b;font-size:11px;">{{ receipt.declared_clean_quantity }} clean · {{ receipt.declared_dirty_quantity }} dirty</span></td>
-                                <td><span class="ld-pill">Awaiting confirmation</span></td>
+                                <td><span class="ld-pill">{% if receipt.status == "PENDING" %}Awaiting confirmation{% else %}Discrepancy pending review{% endif %}</span></td>
                                 <td><a class="ld-link" href="{% url 'laundry:receipt_detail' receipt.id %}">Review →</a></td>
                             </tr>
                             {% endfor %}
@@ -338,7 +338,7 @@
                 <div class="ld-empty">
                     <div class="ld-empty-icon">✓</div>
                     <strong>All caught up</strong>
-                    <p>There are no pending linen receipts to review.</p>
+                    <p>There are no pending receipts or open discrepancies.</p>
                 </div>
             {% endif %}
         </section>
