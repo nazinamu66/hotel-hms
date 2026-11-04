@@ -1,149 +1,206 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-Laundry Linen Requests
+{% block title %}Hotel Linen Requests{% endblock %}
+
+{% block header %}
+<h2>Hotel Linen Requests</h2>
 {% endblock %}
 
 {% block content %}
+<style>
+    .linen-requests-page {
+        --lr-ink: #172033;
+        --lr-muted: #64748b;
+        --lr-line: #e5eaf1;
+        --lr-blue: #2563eb;
+        --lr-blue-soft: #eff6ff;
+        --lr-green: #15803d;
+        --lr-green-soft: #f0fdf4;
+        --lr-amber: #b45309;
+        --lr-amber-soft: #fffbeb;
+        color: var(--lr-ink);
+        display: grid;
+        gap: 20px;
+    }
+    .linen-requests-page * { box-sizing: border-box; }
+    .lr-page-heading {
+        display: flex; justify-content: space-between; align-items: flex-end;
+        flex-wrap: wrap; gap: 14px;
+    }
+    .lr-eyebrow {
+        margin: 0 0 6px; color: var(--lr-blue); font-size: 11px;
+        font-weight: 800; letter-spacing: .11em; text-transform: uppercase;
+    }
+    .lr-page-heading h1 {
+        margin: 0; color: var(--lr-ink); font-size: clamp(23px, 3vw, 30px);
+        letter-spacing: -.04em; line-height: 1.15;
+    }
+    .lr-description { margin: 7px 0 0; color: var(--lr-muted); font-size: 13px; }
+    .lr-back {
+        display: inline-flex; align-items: center; gap: 7px; padding: 9px 13px;
+        border: 1px solid var(--lr-line); border-radius: 9px; background: white;
+        color: #334155; text-decoration: none; font-size: 12px; font-weight: 750;
+    }
+    .lr-back:hover { background: #f8fafc; color: var(--lr-blue); }
+    .lr-intro {
+        display: flex; align-items: flex-start; gap: 12px; padding: 15px 17px;
+        border: 1px solid #dbeafe; border-radius: 12px; background: #f8fbff;
+    }
+    .lr-intro-icon {
+        display: grid; place-items: center; flex: 0 0 34px; height: 34px;
+        border-radius: 10px; background: var(--lr-blue-soft); font-size: 16px;
+    }
+    .lr-intro strong { display: block; font-size: 13px; }
+    .lr-intro p { margin: 4px 0 0; color: var(--lr-muted); font-size: 12px; line-height: 1.5; }
+    .lr-panel {
+        overflow: hidden; border: 1px solid var(--lr-line); border-radius: 15px;
+        background: white; box-shadow: 0 5px 18px rgba(15, 23, 42, .035);
+    }
+    .lr-panel-head {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--lr-line);
+    }
+    .lr-panel-head h2 { margin: 0; font-size: 15px; }
+    .lr-panel-head p { margin: 4px 0 0; color: var(--lr-muted); font-size: 11px; }
+    .lr-count {
+        display: inline-flex; align-items: center; padding: 5px 9px;
+        border-radius: 999px; background: var(--lr-blue-soft); color: var(--lr-blue);
+        font-size: 11px; font-weight: 800; white-space: nowrap;
+    }
+    .lr-table-wrap { width: 100%; overflow-x: auto; }
+    .lr-table { width: 100%; min-width: 850px; border-collapse: collapse; }
+    .lr-table th {
+        padding: 11px 14px; background: #f8fafc; color: #64748b;
+        font-size: 10px; font-weight: 800; text-align: left;
+        text-transform: uppercase; letter-spacing: .065em; white-space: nowrap;
+    }
+    .lr-table td {
+        padding: 13px 14px; border-top: 1px solid #edf1f5;
+        font-size: 12px; vertical-align: middle;
+    }
+    .lr-table tbody tr:hover { background: #fafcff; }
+    .lr-id { color: #64748b; font-weight: 750; font-variant-numeric: tabular-nums; }
+    .lr-item { font-weight: 800; color: var(--lr-ink); }
+    .lr-sub { display: block; margin-top: 3px; color: var(--lr-muted); font-size: 10px; }
+    .lr-qty { font-weight: 800; font-variant-numeric: tabular-nums; }
+    .lr-remaining { color: var(--lr-blue); }
+    .lr-status {
+        display: inline-flex; align-items: center; padding: 5px 9px;
+        border-radius: 999px; background: #f1f5f9; color: #475569;
+        font-size: 10px; font-weight: 800; white-space: nowrap;
+    }
+    .lr-status.pending { background: var(--lr-amber-soft); color: var(--lr-amber); }
+    .lr-status.approved, .lr-status.partial { background: var(--lr-blue-soft); color: var(--lr-blue); }
+    .lr-status.fulfilled { background: var(--lr-green-soft); color: var(--lr-green); }
+    .lr-action {
+        display: inline-flex; justify-content: center; align-items: center;
+        min-height: 34px; padding: 7px 11px; border: 0; border-radius: 8px;
+        background: var(--lr-blue); color: white; font: inherit; font-size: 11px;
+        font-weight: 800; text-decoration: none; cursor: pointer;
+    }
+    .lr-action:hover { background: #1d4ed8; color: white; }
+    .lr-action.secondary { background: #eff6ff; color: var(--lr-blue); }
+    .lr-action.secondary:hover { background: #dbeafe; }
+    .lr-muted-dash { color: #94a3b8; }
+    .lr-empty { padding: 42px 18px; text-align: center; }
+    .lr-empty-icon {
+        display: grid; place-items: center; width: 44px; height: 44px;
+        margin: 0 auto 11px; border-radius: 13px; background: #f1f5f9; font-size: 20px;
+    }
+    .lr-empty strong { display: block; font-size: 14px; }
+    .lr-empty p { margin: 5px 0 0; color: var(--lr-muted); font-size: 12px; }
+    @media (max-width: 600px) {
+        .lr-panel-head { padding: 14px; }
+        .lr-page-heading { align-items: flex-start; }
+    }
+</style>
 
-<h2>Laundry Linen Requests</h2>
+<div class="linen-requests-page">
+    <section class="lr-page-heading">
+        <div>
+            <p class="lr-eyebrow">Laundry operations</p>
+            <h1>Hotel Linen Requests</h1>
+            <p class="lr-description">Review Housekeeping requests, approve them and issue clean linen from Laundry.</p>
+        </div>
+        <a class="lr-back" href="{% url 'laundry:dashboard' %}">← Laundry dashboard</a>
+    </section>
 
-<p style="color:#666;">
-    Housekeeping requests for clean linen from Laundry.
-</p>
+    <section class="lr-intro">
+        <span class="lr-intro-icon">📋</span>
+        <div>
+            <strong>Request approval and fulfilment</strong>
+            <p>Approving a request authorises fulfilment; it does not move stock. Linen is deducted from clean Laundry balance when the fulfilment is confirmed.</p>
+        </div>
+    </section>
 
-<div
-    class="card"
-    style="
-        background:white;
-        border:1px solid #ddd;
-        padding:20px;
-    "
->
+    <section class="lr-panel">
+        <div class="lr-panel-head">
+            <div>
+                <h2>Housekeeping requests</h2>
+                <p>Requests for clean linen from the Laundry department</p>
+            </div>
+            <span class="lr-count">{{ requests|length }} request{{ requests|length|pluralize }}</span>
+        </div>
 
-<table style="width:100%; border-collapse:collapse;">
-
-    <thead>
-        <tr>
-            <th style="padding:10px;text-align:left;">ID</th>
-            <th style="padding:10px;text-align:left;">Linen</th>
-            <th style="padding:10px;text-align:left;">Requested By</th>
-            <th style="padding:10px;text-align:center;">Requested</th>
-            <th style="padding:10px;text-align:center;">Fulfilled</th>
-            <th style="padding:10px;text-align:center;">Remaining</th>
-            <th style="padding:10px;text-align:center;">Status</th>
-            <th style="padding:10px;text-align:center;">Action</th>
-        </tr>
-    </thead>
-
-    <tbody>
-
-        {% for linen_request in requests %}
-
-        <tr style="border-top:1px solid #eee;">
-
-            <td style="padding:10px;">
-                #{{ linen_request.id }}
-            </td>
-
-            <td style="padding:10px;">
-                <strong>
-                    {{ linen_request.linen_item.product.name }}
-                </strong>
-                <br>
-                <small>
-                    {{ linen_request.linen_item.product.sku }}
-                </small>
-            </td>
-
-            <td style="padding:10px;">
-                {{ linen_request.requested_by.username }}
-            </td>
-
-            <td style="padding:10px;text-align:center;">
-                {{ linen_request.quantity }}
-            </td>
-
-            <td style="padding:10px;text-align:center;">
-                {{ linen_request.fulfilled_quantity }}
-            </td>
-
-            <td style="padding:10px;text-align:center;">
-                {{ linen_request.remaining_quantity }}
-            </td>
-
-            <td style="padding:10px;text-align:center;">
-                {{ linen_request.get_status_display }}
-            </td>
-
-            <td style="padding:10px;text-align:center;">
-
-                {% if linen_request.status == "PENDING" %}
-
-                <form
-                    method="post"
-                    action="{% url 'laundry:approve_linen_request' linen_request.id %}"
-                    style="display:inline;"
-                >
-
-                    {% csrf_token %}
-
-                    <button
-                        type="submit"
-                        class="btn btn-primary"
-                    >
-                        Approve
-                    </button>
-
-                </form>
-
-                {% elif linen_request.status == "APPROVED" or linen_request.status == "PARTIAL" %}
-
-                    <a
-                        href="{% url 'laundry:fulfill_linen_request' linen_request.id %}"
-                        class="btn btn-primary"
-                    >
-                        Fulfill
-                    </a>
-
-                {% else %}
-
-                    <span style="color:#777;">
-                        —
-                    </span>
-
-                {% endif %}
-
-            </td>
-
-        </tr>
-
-        {% empty %}
-
-        <tr>
-            <td
-                colspan="8"
-                style="padding:30px;text-align:center;color:#777;"
-            >
-                No Laundry linen requests found.
-            </td>
-        </tr>
-
-        {% endfor %}
-
-    </tbody>
-
-</table>
-
+        {% if requests %}
+        <div class="lr-table-wrap">
+            <table class="lr-table">
+                <thead>
+                    <tr>
+                        <th>Request</th>
+                        <th>Linen item</th>
+                        <th>Requested by</th>
+                        <th>Requested</th>
+                        <th>Fulfilled</th>
+                        <th>Remaining</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for linen_request in requests %}
+                    <tr>
+                        <td><span class="lr-id">#{{ linen_request.id }}</span><span class="lr-sub">{{ linen_request.created_at|date:"d M Y, H:i" }}</span></td>
+                        <td>
+                            <span class="lr-item">{{ linen_request.linen_item.product.name }}</span>
+                            {% if linen_request.linen_item.product.sku %}<span class="lr-sub">{{ linen_request.linen_item.product.sku }}</span>{% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ linen_request.requested_by.username }}</strong>
+                            {% if linen_request.requested_by.hotel %}<span class="lr-sub">{{ linen_request.requested_by.hotel.name }}</span>{% endif %}
+                        </td>
+                        <td class="lr-qty">{{ linen_request.quantity }}</td>
+                        <td class="lr-qty">{{ linen_request.fulfilled_quantity }}</td>
+                        <td class="lr-qty lr-remaining">{{ linen_request.remaining_quantity }}</td>
+                        <td>
+                            <span class="lr-status {% if linen_request.status == 'PENDING' %}pending{% elif linen_request.status == 'APPROVED' %}approved{% elif linen_request.status == 'PARTIAL' %}partial{% elif linen_request.status == 'FULFILLED' %}fulfilled{% endif %}">
+                                {{ linen_request.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if linen_request.status == "PENDING" %}
+                                <form method="post" action="{% url 'laundry:approve_linen_request' linen_request.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="lr-action">Approve request</button>
+                                </form>
+                            {% elif linen_request.status == "APPROVED" or linen_request.status == "PARTIAL" %}
+                                <a href="{% url 'laundry:fulfill_linen_request' linen_request.id %}" class="lr-action secondary">Fulfil request →</a>
+                            {% else %}
+                                <span class="lr-muted-dash">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="lr-empty">
+            <div class="lr-empty-icon">✓</div>
+            <strong>No linen requests to review</strong>
+            <p>New Housekeeping requests will appear here when submitted.</p>
+        </div>
+        {% endif %}
+    </section>
 </div>
-
-<br>
-
-<a
-    href="{% url 'laundry:dashboard' %}"
-    class="btn btn-secondary"
->
-    Laundry Dashboard
-</a>
-
 {% endblock %}
