@@ -39,8 +39,8 @@
     <div class="linen-track-head">
         <div>
             <div class="linen-kicker">Housekeeping · Linen control</div>
-            <h2 class="linen-track-title">{% if is_regular_staff %}My Linen Tracking{% else %}Linen Tracking{% endif %}</h2>
-            <p class="linen-track-sub">See the clean and dirty linen currently in your custody and review recorded movements.</p>
+            <h2 class="linen-track-title">{% if is_regular_staff %}My Linen Custody{% else %}Housekeeping Linen Custody{% endif %}</h2>
+            <p class="linen-track-sub">{% if is_regular_staff %}See the clean and dirty linen assigned to you, request more from Laundry and record handovers.{% else %}Review individual staff custody balances and recorded linen movements across your accessible hotels.{% endif %}</p>
         </div>
         <div class="linen-page-actions">
             <a class="btn btn-primary" href="{% url 'housekeeping_request_laundry' %}">Request clean linen from Laundry</a>
