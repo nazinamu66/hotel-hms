@@ -153,6 +153,61 @@ class LaundryReceipt(models.Model):
             f"{self.get_status_display()}"
         )
 
+class LaundryReceiptDiscrepancy(models.Model):
+    CONDITION_CHOICES = (
+        ("CLEAN", "Clean"),
+        ("DIRTY", "Dirty"),
+    )
+    STATUS_CHOICES = (
+        ("OPEN", "Open"),
+        ("RESOLVED", "Resolved"),
+    )
+    RESOLUTION_CHOICES = (
+        ("RECOVERED", "Recovered and received"),
+        ("LOST", "Confirmed lost"),
+        ("DAMAGED", "Confirmed damaged"),
+    )
+
+    receipt = models.ForeignKey(
+        LaundryReceipt,
+        on_delete=models.PROTECT,
+        related_name="discrepancies",
+    )
+    condition = models.CharField(max_length=10, choices=CONDITION_CHOICES)
+    quantity = models.PositiveIntegerField()
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="OPEN")
+    resolution = models.CharField(max_length=12, choices=RESOLUTION_CHOICES, blank=True)
+    resolved_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="laundry_discrepancies_resolved",
+    )
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolution_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["receipt", "condition"],
+                name="unique_receipt_condition_discrepancy",
+            ),
+        ]
+        ordering = ["created_at", "id"]
+
+    def clean(self):
+        if self.quantity <= 0:
+            raise ValidationError("Discrepancy quantity must be greater than zero.")
+        if self.status == "RESOLVED":
+            if not self.resolution or not self.resolved_by or not self.resolved_at:
+                raise ValidationError("A resolved discrepancy requires an outcome, user and timestamp.")
+
+    def __str__(self):
+        return f"{self.receipt_id} - {self.condition} - {self.quantity} ({self.status})"
+
+
 class LaundryService(models.Model):
     hotel = models.ForeignKey(
         "inventory.Hotel",
