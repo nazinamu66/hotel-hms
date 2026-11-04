@@ -5,6 +5,9 @@ from django.db import transaction
 from django.utils import timezone
 
 from billing.models import Charge
+from accounting.services.postings.guest_laundry_charge import (
+    post_guest_laundry_charge,
+)
 from billing.services.folio_factory import get_or_create_walkin_folio
 from inventory.models import Department
 from laundry.models import GuestLaundryOrder
@@ -249,9 +252,12 @@ def deliver_guest_laundry_order(order_id):
         .get(pk=order_id)
     )
 
-    # Idempotency: already delivered and billed.
+    # Idempotency: never recreate an existing charge. Ensure its accounting
+    # journal exists as well, including for older delivered orders.
     if order.billing_charge_id:
-        return order, order.billing_charge
+        charge = order.billing_charge
+        post_guest_laundry_charge(order, charge)
+        return order, charge
 
     if order.status != "READY":
         raise ValidationError(
