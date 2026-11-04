@@ -1204,7 +1204,7 @@ def dashboard(request):
     pending_receipts = (
         LaundryReceipt.objects
         .filter(
-            status="PENDING",
+            status__in=("PENDING", "DISCREPANCY_PENDING"),
             linen_item__product__is_active=True,
             returned_by__hotel__in=hotels,
         )
