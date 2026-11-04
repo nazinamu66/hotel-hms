@@ -132,7 +132,7 @@ class GuestLaundryChargePostingTests(SimpleTestCase):
 
         get_account.assert_has_calls([
             call(hotel, "1100"),
-            call(hotel, "4000"),
+            call(hotel, "4200"),
         ])
         kwargs = post_journal_entry.call_args.kwargs
         self.assertEqual(kwargs["hotel"], hotel)
