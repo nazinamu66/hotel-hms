@@ -1,0 +1,78 @@
+{% extends "base/base.html" %}
+
+{% block title %}Housekeeping Stock Management{% endblock %}
+{% block header %}{% endblock %}
+
+{% block content %}
+<style>
+.hk-stock-home{max-width:1180px;margin:0 auto;padding:8px 0 36px;color:#1e293b}
+.hk-stock-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.hk-stock-kicker{margin:0 0 7px;color:#64748b;font-size:.75rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.hk-stock-hero h1{margin:0;font-size:clamp(1.6rem,3vw,2.1rem);letter-spacing:-.04em}
+.hk-stock-hero p{margin:8px 0 0;color:#64748b}
+.hk-stock-dept{padding:8px 12px;border:1px solid #dbeafe;border-radius:99px;background:#eff6ff;color:#1d4ed8;font-size:.8rem;font-weight:750}
+.hk-stock-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.hk-stock-card{display:flex;flex-direction:column;min-height:150px;padding:19px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;text-decoration:none;color:inherit;box-shadow:0 3px 12px rgba(15,23,42,.035);transition:border-color .15s,transform .15s}
+.hk-stock-card:hover{border-color:#93c5fd;transform:translateY(-2px)}
+.hk-stock-icon{display:flex;align-items:center;justify-content:center;width:38px;height:38px;margin-bottom:14px;border-radius:10px;background:#eff6ff;font-size:19px}
+.hk-stock-card strong{font-size:1rem}
+.hk-stock-card span{margin-top:6px;color:#64748b;font-size:.86rem;line-height:1.5}
+.hk-stock-card em{margin-top:auto;padding-top:15px;color:#1d4ed8;font-size:.82rem;font-style:normal;font-weight:750}
+.hk-stock-note{margin-top:20px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:11px;background:#f8fafc;color:#64748b;font-size:.85rem;line-height:1.55}
+@media(max-width:620px){.hk-stock-grid{grid-template-columns:1fr}.hk-stock-card{min-height:130px}}
+</style>
+
+<div class="hk-stock-home">
+    <header class="hk-stock-hero">
+        <div>
+            <p class="hk-stock-kicker">Housekeeping · Inventory</p>
+            <h1>Stock Management</h1>
+            <p>Request supplies and follow the stock assigned to your department.</p>
+        </div>
+        {% if department %}<span class="hk-stock-dept">{{ department.name }}</span>{% endif %}
+    </header>
+
+    <div class="hk-stock-grid">
+        <a class="hk-stock-card" href="{% url 'housekeeping_request_stock' %}">
+            <span class="hk-stock-icon">＋</span>
+            <strong>Request Stock</strong>
+            <span>Request operational supplies assigned to Housekeeping and choose the available fulfilment route.</span>
+            <em>Submit a request →</em>
+        </a>
+
+        <a class="hk-stock-card" href="{% url 'housekeeping_stock_requests' %}">
+            <span class="hk-stock-icon">▤</span>
+            <strong>My Stock Requests</strong>
+            <span>Review submitted requests, quantities issued, outstanding balances and purchase progress.</span>
+            <em>View request history →</em>
+        </a>
+
+        {% if can_manage_stock %}
+        <a class="hk-stock-card" href="{% url 'housekeeping_stock' %}">
+            <span class="hk-stock-icon">▦</span>
+            <strong>Department Stock</strong>
+            <span>Review current operational stock, quantities, reorder position and estimated stock value.</span>
+            <em>View stock balances →</em>
+        </a>
+
+        <a class="hk-stock-card" href="{% url 'housekeeping_stock_movements' %}">
+            <span class="hk-stock-icon">⇄</span>
+            <strong>Stock Movements</strong>
+            <span>Search and filter stock receipts, issues and transfers involving Housekeeping.</span>
+            <em>View movement history →</em>
+        </a>
+
+        <a class="hk-stock-card" href="{% url 'housekeeping_incoming_pos' %}">
+            <span class="hk-stock-icon">📦</span>
+            <strong>Incoming Deliveries</strong>
+            <span>Open approved purchase orders and receive goods delivered to Housekeeping.</span>
+            <em>Review deliveries →</em>
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="hk-stock-note">
+        Stock requests and receiving continue to use the existing Inventory workflows. This page is a simpler entry point; it does not create a separate stock ledger.
+    </div>
+</div>
+{% endblock %}
