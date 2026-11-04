@@ -14,6 +14,7 @@ from .views import (
     lost_found_dispose,
     cleaning_material_add,
     housekeeping_stock,
+    housekeeping_stock_workspace,
     housekeeping_stock_movements,
     request_new_linen,
     housekeeping_linen_requests,
@@ -113,6 +114,12 @@ urlpatterns = [
     # ============================================================
     # HOUSEKEEPING STOCK
     # ============================================================
+
+    path(
+        "stock/workspace/",
+        housekeeping_stock_workspace,
+        name="housekeeping_stock_workspace",
+    ),
 
     path(
         "stock/request/",
