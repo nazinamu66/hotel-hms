@@ -345,4 +345,8 @@ def deliver_guest_laundry_order(order_id):
         ]
     )
 
+    # Accounting must succeed before delivery is committed. This runs inside
+    # the same atomic transaction as the folio charge and order status update.
+    post_guest_laundry_charge(order, charge)
+
     return order, charge
