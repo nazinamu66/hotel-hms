@@ -303,10 +303,8 @@ def dashboard(request):
         "lost": Decimal("0"),
         "written_off": Decimal("0"),
     }
-    linen_rows = []
     for linen_item in linen_items:
         summary = get_linen_summary(linen_item)
-        linen_rows.append({"linen_item": linen_item, "summary": summary})
         for key in linen_totals:
             linen_totals[key] += summary[key]
 
@@ -346,7 +344,6 @@ def dashboard(request):
             "lost_found_count": lost_found_count,
             "lost_found_today_count": lost_found_today_count,
             "linen_totals": linen_totals,
-            "linen_rows": linen_rows,
             "staff_linen_requests_count": staff_linen_requests_count,
         },
     )
