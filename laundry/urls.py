@@ -128,6 +128,11 @@ urlpatterns = [
         views.receive_receipt,
         name="receive_receipt",
     ),
+    path(
+        "receipt-discrepancies/<int:discrepancy_id>/resolve/",
+        views.resolve_receipt_discrepancy,
+        name="resolve_receipt_discrepancy",
+    ),
 
     path(
         "stock/",
