@@ -1635,6 +1635,26 @@ def housekeeping_stock(request):
             }
         )
 
+    stock_summary = {
+        "total_items": len(stock_items),
+        "total_units": sum(
+            (item["quantity"] for item in stock_items),
+            0,
+        ),
+        "low_stock_items": sum(
+            1 for item in stock_items
+            if item["stock_status"] == "LOW STOCK"
+        ),
+        "out_of_stock_items": sum(
+            1 for item in stock_items
+            if item["stock_status"] == "OUT OF STOCK"
+        ),
+        "total_stock_value": sum(
+            (item["stock_value"] for item in stock_items),
+            0,
+        ),
+    }
+
     return render(
         request,
         "housekeeping/stock.html",
@@ -1642,6 +1662,7 @@ def housekeeping_stock(request):
             "housekeeping_departments": housekeeping_departments,
             "stock_items": stock_items,
             "accessible_hotels": accessible_hotels,
+            "stock_summary": stock_summary,
         },
     )
 
