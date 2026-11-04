@@ -68,21 +68,21 @@
             <div class="linen-card-top"><strong>Clean linen</strong><span class="linen-state linen-clean">Ready to use</span></div>
             <div class="linen-card-body">
                 <div class="linen-total">{% with total=0 %}{% endwith %}{{ clean_total|default:"—" }}</div>
-                <div class="linen-caption">Total clean items in your custody</div>
+                <div class="linen-caption">{% if is_regular_staff %}Total clean items in your custody{% else %}Total clean items held by Housekeeping staff{% endif %}</div>
             </div>
         </section>
         <section class="linen-card">
             <div class="linen-card-top"><strong>Dirty linen</strong><span class="linen-state linen-dirty">Return to laundry</span></div>
             <div class="linen-card-body">
                 <div class="linen-total">{{ dirty_total|default:"—" }}</div>
-                <div class="linen-caption">Total dirty items awaiting laundry</div>
+                <div class="linen-caption">{% if is_regular_staff %}Total dirty items awaiting Laundry{% else %}Total dirty items held by Housekeeping staff{% endif %}</div>
             </div>
         </section>
         <section class="linen-card">
             <div class="linen-card-top"><strong>Total in custody</strong><span class="linen-state">{{ custody_count }} linen types</span></div>
             <div class="linen-card-body">
                 <div class="linen-total">{{ custody_total|default:"0" }}</div>
-                <div class="linen-caption">Clean plus dirty linen currently held</div>
+                <div class="linen-caption">{% if is_regular_staff %}Clean plus dirty linen currently held by you{% else %}Clean plus dirty linen held by the Housekeeping team{% endif %}</div>
             </div>
         </section>
     </div>
