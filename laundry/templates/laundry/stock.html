@@ -1,134 +1,188 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-Laundry Stock
+{% block title %}Laundry Stock{% endblock %}
+
+{% block header %}
+<h2>Laundry Stock</h2>
 {% endblock %}
 
 {% block content %}
+<style>
+    .ls-page {
+        --ls-ink: #172033;
+        --ls-muted: #64748b;
+        --ls-line: #e5eaf1;
+        --ls-blue: #2563eb;
+        --ls-blue-soft: #eff6ff;
+        --ls-green: #15803d;
+        --ls-green-soft: #f0fdf4;
+        --ls-amber: #b45309;
+        --ls-amber-soft: #fffbeb;
+        --ls-red: #b91c1c;
+        --ls-red-soft: #fef2f2;
+        color: var(--ls-ink);
+        display: grid;
+        gap: 20px;
+    }
+    .ls-page * { box-sizing: border-box; }
+    .ls-heading {
+        display: flex; justify-content: space-between; align-items: flex-end;
+        flex-wrap: wrap; gap: 14px;
+    }
+    .ls-eyebrow {
+        margin: 0 0 6px; color: var(--ls-blue); font-size: 11px;
+        font-weight: 800; letter-spacing: .11em; text-transform: uppercase;
+    }
+    .ls-heading h1 {
+        margin: 0; color: var(--ls-ink); font-size: clamp(23px, 3vw, 30px);
+        letter-spacing: -.04em; line-height: 1.15;
+    }
+    .ls-description { margin: 7px 0 0; color: var(--ls-muted); font-size: 13px; line-height: 1.5; }
+    .ls-back {
+        display: inline-flex; align-items: center; padding: 9px 13px;
+        border: 1px solid var(--ls-line); border-radius: 9px; background: white;
+        color: #334155; text-decoration: none; font-size: 12px; font-weight: 750;
+    }
+    .ls-back:hover { background: #f8fafc; color: var(--ls-blue); }
+    .ls-info {
+        display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px;
+        border: 1px solid #dbeafe; border-radius: 12px; background: #f8fbff;
+    }
+    .ls-info-icon {
+        display: grid; place-items: center; flex: 0 0 36px; height: 36px;
+        border-radius: 10px; background: var(--ls-blue-soft); font-size: 17px;
+    }
+    .ls-info strong { display: block; font-size: 13px; }
+    .ls-info p { margin: 4px 0 0; color: var(--ls-muted); font-size: 12px; line-height: 1.5; }
+    .ls-panel {
+        overflow: hidden; border: 1px solid var(--ls-line); border-radius: 15px;
+        background: white; box-shadow: 0 5px 18px rgba(15, 23, 42, .035);
+    }
+    .ls-panel-head {
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 12px; padding: 16px 19px; border-bottom: 1px solid var(--ls-line);
+    }
+    .ls-panel-head h2 { margin: 0; font-size: 15px; }
+    .ls-panel-head p { margin: 4px 0 0; color: var(--ls-muted); font-size: 11px; }
+    .ls-count {
+        display: inline-flex; padding: 5px 9px; border-radius: 999px;
+        background: var(--ls-blue-soft); color: var(--ls-blue);
+        font-size: 11px; font-weight: 800; white-space: nowrap;
+    }
+    .ls-table-wrap { width: 100%; overflow-x: auto; }
+    .ls-table { width: 100%; min-width: 850px; border-collapse: collapse; }
+    .ls-table th {
+        padding: 11px 14px; background: #f8fafc; color: #64748b;
+        font-size: 10px; font-weight: 800; text-align: left;
+        text-transform: uppercase; letter-spacing: .065em; white-space: nowrap;
+    }
+    .ls-table th.numeric, .ls-table td.numeric { text-align: right; }
+    .ls-table td {
+        padding: 13px 14px; border-top: 1px solid #edf1f5;
+        font-size: 12px; vertical-align: middle;
+    }
+    .ls-table tbody tr:hover { background: #fafcff; }
+    .ls-product { font-weight: 800; color: var(--ls-ink); }
+    .ls-hotel { color: #475569; }
+    .ls-quantity { font-size: 13px; font-weight: 850; font-variant-numeric: tabular-nums; }
+    .ls-unit { color: var(--ls-muted); }
+    .ls-money { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ls-status {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 5px 9px; border-radius: 999px;
+        font-size: 10px; font-weight: 800; white-space: nowrap;
+    }
+    .ls-status.ok { color: var(--ls-green); background: var(--ls-green-soft); }
+    .ls-status.low { color: var(--ls-amber); background: var(--ls-amber-soft); }
+    .ls-status.out { color: var(--ls-red); background: var(--ls-red-soft); }
+    .ls-empty { padding: 42px 18px; text-align: center; }
+    .ls-empty-icon {
+        display: grid; place-items: center; width: 46px; height: 46px;
+        margin: 0 auto 11px; border-radius: 13px; background: #f1f5f9; font-size: 21px;
+    }
+    .ls-empty strong { display: block; font-size: 14px; }
+    .ls-empty p { margin: 5px 0 0; color: var(--ls-muted); font-size: 12px; }
+    .ls-footer { display: flex; justify-content: flex-start; }
+    @media (max-width: 520px) {
+        .ls-panel-head { padding: 14px; }
+    }
+</style>
 
-<h2>
-    Laundry Stock
-</h2>
+<div class="ls-page">
+    <section class="ls-heading">
+        <div>
+            <p class="ls-eyebrow">Laundry operations</p>
+            <h1>Laundry Stock List</h1>
+            <p class="ls-description">Review operational products assigned to Laundry, their current quantities, stock values and replenishment status.</p>
+        </div>
+        <a class="ls-back" href="{% url 'laundry:dashboard' %}">← Laundry dashboard</a>
+    </section>
 
-<p>
-    Current operational stock assigned to Laundry.
-</p>
+    <section class="ls-info">
+        <span class="ls-info-icon">📦</span>
+        <div>
+            <strong>Operational stock overview</strong>
+            <p>This list shows inventory products assigned to the Laundry department. Clean and dirty linen balances are tracked separately on the Laundry Dashboard.</p>
+        </div>
+    </section>
 
-<hr>
+    <section class="ls-panel">
+        <div class="ls-panel-head">
+            <div>
+                <h2>Department stock</h2>
+                <p>Current inventory quantities and valuation</p>
+            </div>
+            <span class="ls-count">{{ stock_items|length }} item{{ stock_items|length|pluralize }}</span>
+        </div>
 
-{% if stock_items %}
-
-<table
-    style="
-        width:100%;
-        border-collapse:collapse;
-    "
->
-
-<thead style="background:#eee;">
-
-<tr>
-
-    <th style="text-align:left; padding:8px;">
-        Hotel
-    </th>
-
-    <th style="text-align:left; padding:8px;">
-        Product
-    </th>
-
-    <th style="text-align:right; padding:8px;">
-        Quantity
-    </th>
-
-    <th style="text-align:right; padding:8px;">
-        Unit
-    </th>
-
-    <th style="text-align:right; padding:8px;">
-        Unit Cost
-    </th>
-
-    <th style="text-align:right; padding:8px;">
-        Stock Value
-    </th>
-
-    <th style="text-align:center; padding:8px;">
-        Status
-    </th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-{% for stock in stock_items %}
-
-<tr style="border-top:1px solid #ddd;">
-
-    <td style="padding:8px;">
-        {{ stock.product.hotel.name }}
-    </td>
-
-    <td style="padding:8px;">
-        {{ stock.product.name }}
-    </td>
-
-    <td style="padding:8px; text-align:right;">
-        {{ stock.quantity }}
-    </td>
-
-    <td style="padding:8px; text-align:right;">
-        {{ stock.product.base_unit }}
-    </td>
-
-    <td style="padding:8px; text-align:right;">
-        {{ stock.product.cost_price }}
-    </td>
-
-    <td style="padding:8px; text-align:right;">
-        {{ stock.stock_value }}
-    </td>
-
-    <td style="padding:8px; text-align:center;">
-
-        {% if stock.stock_status == "OUT OF STOCK" %}
-
-            🔴 OUT OF STOCK
-
-        {% elif stock.stock_status == "LOW STOCK" %}
-
-            🟠 LOW STOCK
-
+        {% if stock_items %}
+        <div class="ls-table-wrap">
+            <table class="ls-table">
+                <thead>
+                    <tr>
+                        <th>Hotel</th>
+                        <th>Product</th>
+                        <th class="numeric">Quantity</th>
+                        <th class="numeric">Unit</th>
+                        <th class="numeric">Unit cost</th>
+                        <th class="numeric">Stock value</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in stock_items %}
+                    <tr>
+                        <td class="ls-hotel">{{ stock.product.hotel.name }}</td>
+                        <td><span class="ls-product">{{ stock.product.name }}</span></td>
+                        <td class="numeric"><span class="ls-quantity">{{ stock.quantity }}</span></td>
+                        <td class="numeric ls-unit">{{ stock.product.base_unit }}</td>
+                        <td class="numeric ls-money">{{ stock.product.cost_price }}</td>
+                        <td class="numeric ls-money"><strong>{{ stock.stock_value }}</strong></td>
+                        <td>
+                            {% if stock.stock_status == "OUT OF STOCK" %}
+                                <span class="ls-status out">● Out of stock</span>
+                            {% elif stock.stock_status == "LOW STOCK" %}
+                                <span class="ls-status low">● Low stock</span>
+                            {% else %}
+                                <span class="ls-status ok">● In stock</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
-
-            🟢 OK
-
+        <div class="ls-empty">
+            <div class="ls-empty-icon">📦</div>
+            <strong>No Laundry stock found</strong>
+            <p>There are currently no active operational products assigned to the accessible Laundry departments.</p>
+        </div>
         {% endif %}
+    </section>
 
-    </td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-{% else %}
-
-<p>
-    No Laundry stock has been assigned yet.
-</p>
-
-{% endif %}
-
-<hr>
-
-<a href="{% url 'laundry:dashboard' %}">
-    ← Back to Laundry
-</a>
-
+    <div class="ls-footer">
+        <a class="ls-back" href="{% url 'laundry:dashboard' %}">← Back to Laundry</a>
+    </div>
+</div>
 {% endblock %}
