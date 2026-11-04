@@ -9,6 +9,7 @@ from housekeeping.workflows.common import (
 from linen.models import (
     CleaningLinenCheck,
     LinenCustody,
+    LinenTransaction,
     RoomLinenState,
 )
 
@@ -231,6 +232,44 @@ def reconcile_linen_custody(
                     "dirty_quantity",
                     "updated_at",
                 ],
+            )
+
+        # ----------------------------------------------------
+        # Audit the internal Housekeeping movements
+        # ----------------------------------------------------
+        # These records are deliberately location-neutral:
+        # both the room and the employee's linen custody belong
+        # to Housekeeping. They appear in movement history but
+        # must not alter the hotel-wide location balance.
+        reference = f"HK-CLEAN-{assignment.pk}"
+        room_label = assignment.room.room_number
+
+        if clean_issued > 0:
+            LinenTransaction.objects.create(
+                linen_item=check.linen_item,
+                quantity=clean_issued,
+                condition="CLEAN",
+                event_type="ROOM_REPLENISHED",
+                performed_by=user,
+                reference=reference,
+                note=(
+                    f"Clean linen placed in Room {room_label} "
+                    f"during cleaning assignment #{assignment.pk}."
+                ),
+            )
+
+        if dirty_collected > 0:
+            LinenTransaction.objects.create(
+                linen_item=check.linen_item,
+                quantity=dirty_collected,
+                condition="DIRTY",
+                event_type="DIRTY_COLLECTED",
+                performed_by=user,
+                reference=reference,
+                note=(
+                    f"Dirty linen collected from Room {room_label} "
+                    f"during cleaning assignment #{assignment.pk}."
+                ),
             )
 
         # ----------------------------------------------------
