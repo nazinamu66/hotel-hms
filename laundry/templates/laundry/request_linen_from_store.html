@@ -1,32 +1,244 @@
 {% extends "base/base.html" %}
+
 {% block title %}Request Linen from Store{% endblock %}
+
+{% block header %}
+<h2>Request Linen from Store</h2>
+{% endblock %}
+
 {% block content %}
-<div style="max-width:1100px;margin:0 auto;padding:18px 0;">
-  <h2>Request Linen from Store</h2>
-  <p>Request bedsheets, towels, pillowcases and other registered hotel linen. Detergent, bleach and other supplies belong in Operational Supplies.</p>
-  <section style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin:20px 0;">
-    <h3>New Linen Request</h3>
-    <form method="post">{% csrf_token %}
-      <label for="linen_item">Linen item</label>
-      <select id="linen_item" name="linen_item" required style="padding:9px;min-width:240px;margin:8px 12px;">
-        <option value="">Select linen</option>
-        {% for item in linen_items %}<option value="{{ item.pk }}">{{ item.product.name }} ({{ item.product.base_unit }})</option>{% endfor %}
-      </select>
-      <label for="quantity">Quantity</label>
-      <input id="quantity" name="quantity" type="number" min="1" step="1" required style="padding:9px;width:120px;margin:8px 12px;">
-      <button type="submit" style="padding:10px 16px;">Submit request</button>
-    </form>
-    {% if not linen_items %}<p>No active Linen Items are registered for this hotel yet.</p>{% endif %}
-  </section>
-  <h3>My Laundry Linen Requests</h3>
-  <div style="overflow-x:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;">
-    <table style="width:100%;border-collapse:collapse;">
-      <thead><tr style="background:#f1f5f9;text-align:left;"><th style="padding:12px;">Date</th><th style="padding:12px;">Linen</th><th style="padding:12px;">Requested</th><th style="padding:12px;">Issued</th><th style="padding:12px;">Remaining</th><th style="padding:12px;">Status</th></tr></thead>
-      <tbody>{% for item in requests %}
-        <tr style="border-top:1px solid #e2e8f0;"><td style="padding:12px;">{{ item.created_at|date:"d M Y H:i" }}</td><td style="padding:12px;">{{ item.product.name }}</td><td style="padding:12px;">{{ item.requested_quantity }}</td><td style="padding:12px;">{{ item.total_issued }}</td><td style="padding:12px;">{{ item.remaining_quantity }}</td><td style="padding:12px;">{{ item.get_status_display }}</td></tr>
-      {% empty %}<tr><td colspan="6" style="padding:24px;text-align:center;color:#64748b;">No linen requests submitted yet.</td></tr>{% endfor %}</tbody>
-    </table>
-  </div>
-  <p style="margin-top:18px;"><a href="{% url 'laundry:dashboard' %}">← Back to Laundry</a></p>
+<style>
+    .rs-page {
+        --rs-ink: #172033;
+        --rs-muted: #64748b;
+        --rs-line: #e5eaf1;
+        --rs-blue: #2563eb;
+        --rs-blue-soft: #eff6ff;
+        --rs-green: #15803d;
+        --rs-green-soft: #f0fdf4;
+        --rs-amber: #b45309;
+        --rs-amber-soft: #fffbeb;
+        color: var(--rs-ink);
+        display: grid;
+        gap: 20px;
+    }
+    .rs-page * { box-sizing: border-box; }
+    .rs-heading {
+        display: flex; justify-content: space-between; align-items: flex-end;
+        flex-wrap: wrap; gap: 14px;
+    }
+    .rs-eyebrow {
+        margin: 0 0 6px; color: var(--rs-blue); font-size: 11px;
+        font-weight: 800; letter-spacing: .11em; text-transform: uppercase;
+    }
+    .rs-heading h1 {
+        margin: 0; color: var(--rs-ink); font-size: clamp(23px, 3vw, 30px);
+        letter-spacing: -.04em; line-height: 1.15;
+    }
+    .rs-description { margin: 7px 0 0; color: var(--rs-muted); font-size: 13px; line-height: 1.55; }
+    .rs-back {
+        display: inline-flex; align-items: center; padding: 9px 13px;
+        border: 1px solid var(--rs-line); border-radius: 9px; background: white;
+        color: #334155; text-decoration: none; font-size: 12px; font-weight: 750;
+    }
+    .rs-back:hover { background: #f8fafc; color: var(--rs-blue); }
+    .rs-info {
+        display: flex; align-items: flex-start; gap: 12px; padding: 15px 17px;
+        border: 1px solid #dbeafe; border-radius: 12px; background: #f8fbff;
+    }
+    .rs-info-icon {
+        display: grid; place-items: center; flex: 0 0 36px; height: 36px;
+        border-radius: 10px; background: var(--rs-blue-soft); font-size: 17px;
+    }
+    .rs-info strong { display: block; font-size: 13px; }
+    .rs-info p { margin: 4px 0 0; color: var(--rs-muted); font-size: 12px; line-height: 1.5; }
+    .rs-panel {
+        overflow: hidden; border: 1px solid var(--rs-line); border-radius: 15px;
+        background: white; box-shadow: 0 5px 18px rgba(15, 23, 42, .035);
+    }
+    .rs-panel-head {
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 12px; padding: 16px 19px; border-bottom: 1px solid var(--rs-line);
+    }
+    .rs-panel-head h2 { margin: 0; font-size: 15px; }
+    .rs-panel-head p { margin: 4px 0 0; color: var(--rs-muted); font-size: 11px; }
+    .rs-count {
+        display: inline-flex; padding: 5px 9px; border-radius: 999px;
+        background: var(--rs-blue-soft); color: var(--rs-blue);
+        font-size: 11px; font-weight: 800; white-space: nowrap;
+    }
+    .rs-form-body { padding: 19px; }
+    .rs-form-grid {
+        display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(150px, .65fr) auto;
+        gap: 13px; align-items: end;
+    }
+    .rs-field label { display: block; margin-bottom: 7px; font-size: 12px; font-weight: 800; }
+    .rs-field select, .rs-field input {
+        width: 100%; min-height: 42px; padding: 9px 11px;
+        border: 1px solid #cbd5e1; border-radius: 9px; background: white;
+        color: var(--rs-ink); font: inherit; font-size: 13px; outline: none;
+    }
+    .rs-field select:focus, .rs-field input:focus {
+        border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(37, 99, 235, .10);
+    }
+    .rs-submit {
+        display: inline-flex; justify-content: center; align-items: center;
+        min-height: 42px; padding: 10px 16px; border: 0; border-radius: 9px;
+        background: var(--rs-blue); color: white; font: inherit;
+        font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap;
+    }
+    .rs-submit:hover { background: #1d4ed8; }
+    .rs-help { margin: 13px 0 0; color: var(--rs-muted); font-size: 11px; line-height: 1.5; }
+    .rs-table-wrap { width: 100%; overflow-x: auto; }
+    .rs-table { width: 100%; min-width: 760px; border-collapse: collapse; }
+    .rs-table th {
+        padding: 11px 14px; background: #f8fafc; color: #64748b;
+        font-size: 10px; font-weight: 800; text-align: left;
+        text-transform: uppercase; letter-spacing: .065em; white-space: nowrap;
+    }
+    .rs-table td {
+        padding: 13px 14px; border-top: 1px solid #edf1f5;
+        font-size: 12px; vertical-align: middle;
+    }
+    .rs-table tbody tr:hover { background: #fafcff; }
+    .rs-date { color: #475569; white-space: nowrap; }
+    .rs-item { font-weight: 800; }
+    .rs-qty { font-weight: 800; font-variant-numeric: tabular-nums; }
+    .rs-remaining { color: var(--rs-blue); }
+    .rs-status {
+        display: inline-flex; padding: 5px 9px; border-radius: 999px;
+        background: #f1f5f9; color: #475569; font-size: 10px;
+        font-weight: 800; white-space: nowrap;
+    }
+    .rs-status.fulfilled { background: var(--rs-green-soft); color: var(--rs-green); }
+    .rs-status.pending, .rs-status.partial { background: var(--rs-amber-soft); color: var(--rs-amber); }
+    .rs-status.approved, .rs-status.issued { background: var(--rs-blue-soft); color: var(--rs-blue); }
+    .rs-empty { padding: 38px 18px; text-align: center; }
+    .rs-empty-icon {
+        display: grid; place-items: center; width: 44px; height: 44px;
+        margin: 0 auto 11px; border-radius: 13px; background: #f1f5f9; font-size: 20px;
+    }
+    .rs-empty strong { display: block; font-size: 13px; }
+    .rs-empty p { margin: 5px 0 0; color: var(--rs-muted); font-size: 12px; }
+    .rs-footer { display: flex; justify-content: flex-start; }
+    @media (max-width: 720px) {
+        .rs-form-grid { grid-template-columns: minmax(0, 1fr) minmax(110px, .6fr); }
+        .rs-submit { grid-column: 1 / -1; width: 100%; }
+    }
+    @media (max-width: 480px) {
+        .rs-form-body { padding: 15px; }
+        .rs-form-grid { grid-template-columns: minmax(0, 1fr); }
+        .rs-submit { grid-column: auto; }
+        .rs-panel-head { padding: 14px; }
+    }
+</style>
+
+<div class="rs-page">
+    <section class="rs-heading">
+        <div>
+            <p class="rs-eyebrow">Laundry operations</p>
+            <h1>Request Linen from Store</h1>
+            <p class="rs-description">Request bedsheets, towels, pillowcases and other registered hotel linen. Detergent, bleach and other supplies belong in Operational Supplies.</p>
+        </div>
+        <a class="rs-back" href="{% url 'laundry:dashboard' %}">← Laundry dashboard</a>
+    </section>
+
+    <section class="rs-info">
+        <span class="rs-info-icon">📦</span>
+        <div>
+            <strong>Dedicated linen replenishment</strong>
+            <p>Submit requests for registered linen items only. Store will review and issue the requested quantities; issued quantities and outstanding balances are tracked below.</p>
+        </div>
+    </section>
+
+    <section class="rs-panel">
+        <div class="rs-panel-head">
+            <div>
+                <h2>New linen request</h2>
+                <p>Select the linen item and enter the quantity required.</p>
+            </div>
+        </div>
+        <div class="rs-form-body">
+            {% if linen_items %}
+            <form method="post" class="rs-form-grid">
+                {% csrf_token %}
+                <div class="rs-field">
+                    <label for="linen_item">Linen item</label>
+                    <select id="linen_item" name="linen_item" required>
+                        <option value="">Select linen item</option>
+                        {% for item in linen_items %}
+                            <option value="{{ item.pk }}">{{ item.product.name }} ({{ item.product.base_unit }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="rs-field">
+                    <label for="quantity">Quantity</label>
+                    <input id="quantity" name="quantity" type="number" min="1" step="1" placeholder="e.g. 20" required>
+                </div>
+                <button type="submit" class="rs-submit">Submit request →</button>
+            </form>
+            <p class="rs-help">Requests are sent to the Store department for review. You can follow issued and remaining quantities in your request history.</p>
+            {% else %}
+            <div class="rs-empty">
+                <div class="rs-empty-icon">🧺</div>
+                <strong>No active linen items registered</strong>
+                <p>Ask an authorised manager to register the hotel's linen items before submitting a request.</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="rs-panel">
+        <div class="rs-panel-head">
+            <div>
+                <h2>My Laundry linen requests</h2>
+                <p>Track requests submitted by this Laundry department.</p>
+            </div>
+            <span class="rs-count">{{ requests|length }} request{{ requests|length|pluralize }}</span>
+        </div>
+
+        {% if requests %}
+        <div class="rs-table-wrap">
+            <table class="rs-table">
+                <thead>
+                    <tr>
+                        <th>Date submitted</th>
+                        <th>Linen item</th>
+                        <th>Requested</th>
+                        <th>Issued</th>
+                        <th>Remaining</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in requests %}
+                    <tr>
+                        <td class="rs-date">{{ item.created_at|date:"d M Y, H:i" }}</td>
+                        <td><span class="rs-item">{{ item.product.name }}</span></td>
+                        <td class="rs-qty">{{ item.requested_quantity }}</td>
+                        <td class="rs-qty">{{ item.total_issued }}</td>
+                        <td class="rs-qty rs-remaining">{{ item.remaining_quantity }}</td>
+                        <td>
+                            <span class="rs-status {% if item.status == 'FULFILLED' %}fulfilled{% elif item.status == 'PENDING' %}pending{% elif item.status == 'PARTIAL' %}partial{% elif item.status == 'APPROVED' %}approved{% elif item.status == 'ISSUED' %}issued{% endif %}">
+                                {{ item.get_status_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="rs-empty">
+            <div class="rs-empty-icon">📋</div>
+            <strong>No linen requests yet</strong>
+            <p>Your submitted requests will appear here with their issued quantities and current status.</p>
+        </div>
+        {% endif %}
+    </section>
+
+    <div class="rs-footer">
+        <a class="rs-back" href="{% url 'laundry:dashboard' %}">← Back to Laundry</a>
+    </div>
 </div>
 {% endblock %}
