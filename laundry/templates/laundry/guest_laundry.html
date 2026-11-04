@@ -1,333 +1,177 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-Guest Laundry
-{% endblock %}
+{% block title %}Guest Laundry{% endblock %}
 
 {% block header %}
 <h2>Guest Laundry</h2>
 {% endblock %}
 
 {% block content %}
+<style>
+    .gl-page {
+        --gl-ink: #172033; --gl-muted: #64748b; --gl-line: #e5eaf1;
+        --gl-blue: #2563eb; --gl-blue-soft: #eff6ff;
+        --gl-green: #15803d; --gl-green-soft: #f0fdf4;
+        --gl-amber: #b45309; --gl-amber-soft: #fffbeb;
+        --gl-red: #b91c1c; --gl-red-soft: #fef2f2;
+        color: var(--gl-ink); display: grid; gap: 20px;
+    }
+    .gl-page * { box-sizing: border-box; }
+    .gl-heading { display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:14px; }
+    .gl-eyebrow { margin:0 0 6px; color:var(--gl-blue); font-size:11px; font-weight:800; letter-spacing:.11em; text-transform:uppercase; }
+    .gl-heading h1 { margin:0; color:var(--gl-ink); font-size:clamp(23px,3vw,30px); letter-spacing:-.04em; line-height:1.15; }
+    .gl-description { margin:7px 0 0; color:var(--gl-muted); font-size:13px; line-height:1.5; }
+    .gl-actions { display:flex; flex-wrap:wrap; gap:9px; }
+    .gl-button { display:inline-flex; align-items:center; justify-content:center; min-height:39px; padding:9px 13px; border:1px solid var(--gl-line); border-radius:9px; background:white; color:#334155; text-decoration:none; font-size:12px; font-weight:800; }
+    .gl-button:hover { background:#f8fafc; color:var(--gl-blue); }
+    .gl-button.primary { border-color:var(--gl-blue); background:var(--gl-blue); color:white; }
+    .gl-button.primary:hover { background:#1d4ed8; color:white; }
+    .gl-shortcuts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .gl-shortcut { display:flex; gap:13px; align-items:flex-start; padding:17px; border:1px solid var(--gl-line); border-radius:14px; background:white; box-shadow:0 5px 18px rgba(15,23,42,.035); text-decoration:none; color:inherit; transition:border-color .15s,transform .15s; }
+    .gl-shortcut:hover { border-color:#bfdbfe; transform:translateY(-1px); }
+    .gl-shortcut-icon { display:grid; place-items:center; flex:0 0 42px; height:42px; border-radius:12px; background:var(--gl-blue-soft); font-size:19px; }
+    .gl-shortcut strong { display:block; font-size:13px; }
+    .gl-shortcut p { margin:5px 0 0; color:var(--gl-muted); font-size:11px; line-height:1.5; }
+    .gl-panel { overflow:hidden; border:1px solid var(--gl-line); border-radius:15px; background:white; box-shadow:0 5px 18px rgba(15,23,42,.035); }
+    .gl-panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:16px 19px; border-bottom:1px solid var(--gl-line); }
+    .gl-panel-head h2 { margin:0; font-size:15px; }
+    .gl-panel-head p { margin:4px 0 0; color:var(--gl-muted); font-size:11px; }
+    .gl-count { display:inline-flex; padding:5px 9px; border-radius:999px; background:var(--gl-blue-soft); color:var(--gl-blue); font-size:11px; font-weight:800; white-space:nowrap; }
+    .gl-table-wrap { width:100%; overflow-x:auto; }
+    .gl-table { width:100%; min-width:900px; border-collapse:collapse; }
+    .gl-table th { padding:11px 13px; background:#f8fafc; color:#64748b; font-size:10px; font-weight:800; text-align:left; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+    .gl-table td { padding:13px; border-top:1px solid #edf1f5; font-size:12px; vertical-align:middle; }
+    .gl-table tbody tr:hover { background:#fafcff; }
+    .gl-primary-text { color:var(--gl-ink); font-weight:800; text-decoration:none; }
+    .gl-primary-text:hover { color:var(--gl-blue); }
+    .gl-secondary { display:block; margin-top:3px; color:var(--gl-muted); font-size:10px; }
+    .gl-items { color:#475569; line-height:1.6; }
+    .gl-money { white-space:nowrap; font-weight:800; font-variant-numeric:tabular-nums; }
+    .gl-status { display:inline-flex; padding:5px 9px; border-radius:999px; background:#f1f5f9; color:#475569; font-size:10px; font-weight:800; white-space:nowrap; }
+    .gl-status.new { background:var(--gl-blue-soft); color:var(--gl-blue); }
+    .gl-status.received,.gl-status.processing { background:var(--gl-amber-soft); color:var(--gl-amber); }
+    .gl-status.ready { background:#f5f3ff; color:#6d28d9; }
+    .gl-status.delivered { background:var(--gl-green-soft); color:var(--gl-green); }
+    .gl-status.cancelled { background:var(--gl-red-soft); color:var(--gl-red); }
+    .gl-row-actions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:145px; }
+    .gl-mini { display:inline-flex; align-items:center; justify-content:center; padding:6px 9px; border:1px solid var(--gl-line); border-radius:7px; background:white; color:#334155; font:inherit; font-size:10px; font-weight:800; text-decoration:none; cursor:pointer; }
+    .gl-mini:hover { background:#f8fafc; color:var(--gl-blue); }
+    .gl-mini.primary { border-color:var(--gl-blue); background:var(--gl-blue); color:white; }
+    .gl-mini.danger { color:var(--gl-red); }
+    .gl-inline-form { display:inline; margin:0; }
+    .gl-empty { padding:38px 18px; text-align:center; }
+    .gl-empty-icon { display:grid; place-items:center; width:46px; height:46px; margin:0 auto 11px; border-radius:13px; background:#f1f5f9; font-size:21px; }
+    .gl-empty strong { display:block; font-size:13px; }
+    .gl-empty p { margin:5px 0 0; color:var(--gl-muted); font-size:12px; }
+    @media(max-width:680px) { .gl-shortcuts { grid-template-columns:minmax(0,1fr); } .gl-panel-head { padding:14px; } }
+</style>
 
-<h3>Guest Laundry Operations</h3>
+<div class="gl-page">
+    <section class="gl-heading">
+        <div>
+            <p class="gl-eyebrow">Laundry operations · Guest services</p>
+            <h1>Guest Laundry</h1>
+            <p class="gl-description">Receive guest garments, manage processing, record materials and deliver completed orders.</p>
+        </div>
+        <div class="gl-actions">
+            <a class="gl-button" href="{% url 'laundry:guest_laundry_history' %}">📋 Order history</a>
+            <a class="gl-button primary" href="{% url 'laundry:guest_laundry_new' %}">＋ New laundry order</a>
+        </div>
+    </section>
 
-<div style="
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-    gap:15px;
-    margin-bottom:30px;
-">
-
-    <div class="card" style="padding:15px;">
-        <strong>Guest Laundry</strong>
-
-        <p style="margin:10px 0;">
-            Receive, process and deliver laundry for hotel guests.
-        </p>
-
-        <a href="{% url 'laundry:guest_laundry_new' %}">
-            + New Guest Laundry Order →
+    <section class="gl-shortcuts">
+        <a class="gl-shortcut" href="{% url 'laundry:guest_laundry_new' %}">
+            <span class="gl-shortcut-icon">🧺</span>
+            <span><strong>New Guest Laundry Order</strong><p>Create an order for an in-house guest or a walk-in customer.</p></span>
         </a>
-        <br><br>
-
-        <a href="{% url 'laundry:guest_laundry_history' %}">
-            📋 View Order History →
+        <a class="gl-shortcut" href="{% url 'laundry:guest_laundry_history' %}">
+            <span class="gl-shortcut-icon">📋</span>
+            <span><strong>Guest Laundry History</strong><p>Search previous orders by customer, date, customer type and status.</p></span>
         </a>
-    </div>
+    </section>
 
+    <section class="gl-panel">
+        <div class="gl-panel-head">
+            <div><h2>Active guest folios</h2><p>In-house guests available for room-charge laundry orders</p></div>
+            <span class="gl-count">{{ active_folios|length }} active guest{{ active_folios|length|pluralize }}</span>
+        </div>
+        {% if active_folios %}
+        <div class="gl-table-wrap">
+            <table class="gl-table" style="min-width:560px;">
+                <thead><tr><th>Guest</th><th>Room</th><th>Folio</th><th>Status</th></tr></thead>
+                <tbody>
+                    {% for folio in active_folios %}
+                    <tr>
+                        <td><strong>{{ folio.guest.full_name }}</strong></td>
+                        <td>Room {{ folio.room.room_number }}</td>
+                        <td>#{{ folio.id }}</td>
+                        <td><span class="gl-status delivered">Active</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="gl-empty"><div class="gl-empty-icon">🛎️</div><strong>No active guest room folios</strong><p>Room guests with open folios will appear here. Walk-in orders can still be created.</p></div>
+        {% endif %}
+    </section>
+
+    <section class="gl-panel">
+        <div class="gl-panel-head">
+            <div><h2>Guest Laundry orders</h2><p>Current orders and the next action available for each one</p></div>
+            <span class="gl-count">{{ orders|length }} order{{ orders|length|pluralize }}</span>
+        </div>
+        {% if orders %}
+        <div class="gl-table-wrap">
+            <table class="gl-table">
+                <thead>
+                    <tr><th>Order</th><th>Guest / customer</th><th>Room</th><th>Items</th><th>Total</th><th>Status</th><th>Created</th><th>Next action</th></tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td><a class="gl-primary-text" href="{% url 'laundry:guest_laundry_detail' order.id %}">#{{ order.id }}</a></td>
+                        <td>
+                            {% if order.folio.guest %}{{ order.folio.guest.full_name }}{% else %}{{ order.customer_name|default:"Walk-in Customer" }}{% endif %}
+                            {% if order.folio.folio_type == "WALKIN" %}<span class="gl-secondary">Walk-in customer</span>{% endif %}
+                        </td>
+                        <td>{% if order.folio.room %}{{ order.folio.room.room_number }}{% else %}<span class="gl-secondary">Walk-in</span>{% endif %}</td>
+                        <td class="gl-items">
+                            {% for item in order.items.all %}{{ item.description }} × {{ item.quantity }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                        </td>
+                        <td class="gl-money">₦{{ order.total_amount|floatformat:2 }}</td>
+                        <td><span class="gl-status {{ order.status|lower }}">{{ order.get_status_display }}</span></td>
+                        <td>{{ order.created_at|date:"d M Y" }}<span class="gl-secondary">{{ order.created_at|date:"H:i" }}</span></td>
+                        <td>
+                            <div class="gl-row-actions">
+                                {% if order.status == "NEW" %}
+                                    <form class="gl-inline-form" method="post" action="{% url 'laundry:guest_laundry_receive' order.id %}">{% csrf_token %}<button class="gl-mini primary" type="submit">Receive</button></form>
+                                    <form class="gl-inline-form" method="post" action="{% url 'laundry:guest_laundry_cancel' order.id %}" onsubmit="return confirm('Cancel Guest Laundry order #{{ order.id }}?');">{% csrf_token %}<button class="gl-mini danger" type="submit">Cancel</button></form>
+                                {% elif order.status == "RECEIVED" %}
+                                    <form class="gl-inline-form" method="post" action="{% url 'laundry:guest_laundry_process' order.id %}">{% csrf_token %}<button class="gl-mini primary" type="submit">Start processing</button></form>
+                                    <form class="gl-inline-form" method="post" action="{% url 'laundry:guest_laundry_cancel' order.id %}" onsubmit="return confirm('Cancel Guest Laundry order #{{ order.id }}?');">{% csrf_token %}<button class="gl-mini danger" type="submit">Cancel</button></form>
+                                {% elif order.status == "PROCESSING" %}
+                                    <a class="gl-mini" href="{% url 'laundry:guest_laundry_materials' order.id %}">Materials</a>
+                                    <form class="gl-inline-form" method="post" action="{% url 'laundry:guest_laundry_ready' order.id %}" onsubmit="return confirm('Mark Guest Laundry order #{{ order.id }} as ready?');">{% csrf_token %}<button class="gl-mini primary" type="submit">Mark ready</button></form>
+                                {% elif order.status == "READY" %}
+                                    <form class="gl-inline-form" method="post" action="{% url 'laundry:guest_laundry_deliver' order.id %}">{% csrf_token %}<button class="gl-mini primary" type="submit">Deliver &amp; charge</button></form>
+                                {% elif order.status == "DELIVERED" %}
+                                    {% if order.billing_charge_id and order.folio.balance > 0 %}
+                                        <a class="gl-mini primary" href="{% url 'laundry:guest_laundry_payment' order.id %}">Record payment</a>
+                                    {% elif order.billing_charge_id %}
+                                        <span class="gl-status delivered">Paid</span>
+                                    {% else %}—{% endif %}
+                                {% else %}—{% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="gl-empty"><div class="gl-empty-icon">🧺</div><strong>No Guest Laundry orders yet</strong><p>New guest and walk-in laundry orders will appear here as they are created.</p><a class="gl-button primary" style="margin-top:13px;" href="{% url 'laundry:guest_laundry_new' %}">Create first order</a></div>
+        {% endif %}
+    </section>
 </div>
-
-
-<h3>Active Guest Folios</h3>
-
-{% if active_folios %}
-
-<table style="
-    width:100%;
-    border-collapse:collapse;
-    margin-bottom:30px;
-">
-
-<thead style="background:#eee;">
-
-<tr>
-    <th style="padding:10px;">Guest</th>
-    <th>Room</th>
-    <th>Folio</th>
-    <th>Status</th>
-</tr>
-
-</thead>
-
-<tbody>
-
-{% for folio in active_folios %}
-
-<tr style="border-bottom:1px solid #ddd;">
-
-    <td style="padding:10px;">
-        <strong>
-            {{ folio.guest.full_name }}
-        </strong>
-    </td>
-
-    <td>
-        {{ folio.room.room_number }}
-    </td>
-
-    <td>
-        #{{ folio.id }}
-    </td>
-
-    <td>
-        Active
-    </td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-{% else %}
-
-<p>
-    No active guest room folios are available.
-</p>
-
-{% endif %}
-
-
-<h3>Guest Laundry Orders</h3>
-
-{% if orders %}
-
-<table style="
-    width:100%;
-    border-collapse:collapse;
-">
-
-<thead style="background:#eee;">
-
-<tr>
-
-    <th style="padding:10px;">
-        Order
-    </th>
-
-    <th>
-        Guest
-    </th>
-
-    <th>
-        Room
-    </th>
-
-    <th>
-        Items
-    </th>
-
-    <th>
-        Total
-    </th>
-
-    <th>
-        Status
-    </th>
-
-    <th>
-        Created
-    </th>
-
-    <th>
-        Action
-    </th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-{% for order in orders %}
-
-<tr style="border-bottom:1px solid #ddd;">
-
-    <td style="padding:10px;">
-        <strong>
-            <a href="{% url 'laundry:guest_laundry_detail' order.id %}">
-                #{{ order.id }}
-            </a>
-        </strong>
-    </td>
-
-    <td>
-        {% if order.folio.guest %}
-            {{ order.folio.guest.full_name }}
-        {% else %}
-            {{ order.customer_name|default:"Walk-in Customer" }}
-        {% endif %}
-    </td>
-
-    <td>
-        {% if order.folio.room %}
-            {{ order.folio.room.room_number }}
-        {% else %}
-            Walk-in
-        {% endif %}
-    </td>
-
-    <td>
-
-        {% for item in order.items.all %}
-
-            {{ item.description }} × {{ item.quantity }}
-
-            {% if not forloop.last %}
-                <br>
-            {% endif %}
-
-        {% endfor %}
-
-    </td>
-
-    <td>
-        ₦{{ order.total_amount|floatformat:2 }}
-    </td>
-
-    <td>
-        {{ order.get_status_display }}
-    </td>
-
-    <td>
-        {{ order.created_at|date:"Y-m-d H:i" }}
-    </td>
-
-    <td>
-        {% if order.status == "NEW" %}
-
-            <form
-                method="post"
-                action="{% url 'laundry:guest_laundry_receive' order.id %}"
-                style="display:inline;"
-            >
-                {% csrf_token %}
-                <button type="submit">
-                    Receive
-                </button>
-            </form>
-            <form
-                method="post"
-                action="{% url 'laundry:guest_laundry_cancel' order.id %}"
-                style="display:inline;"
-                onsubmit="return confirm('Cancel Guest Laundry order #{{ order.id }}?');"
-            >
-                {% csrf_token %}
-                <button type="submit">
-                    Cancel
-                </button>
-            </form>
-
-        {% elif order.status == "RECEIVED" %}
-
-            <form
-                method="post"
-                action="{% url 'laundry:guest_laundry_process' order.id %}"
-                style="display:inline;"
-            >
-                {% csrf_token %}
-                <button type="submit">
-                    Start Processing
-                </button>
-            </form>
-
-            <form
-                method="post"
-                action="{% url 'laundry:guest_laundry_cancel' order.id %}"
-                style="display:inline;"
-                onsubmit="return confirm('Cancel Guest Laundry order #{{ order.id }}?');"
-            >
-                {% csrf_token %}
-                <button type="submit">
-                    Cancel
-                </button>
-            </form>
-
-        {% elif order.status == "PROCESSING" %}
-
-            <a
-                href="{% url 'laundry:guest_laundry_materials' order.id %}"
-                style="
-                    display:inline-block;
-                    padding:8px 12px;
-                    margin-right:6px;
-                "
-            >
-                Process Materials
-            </a>
-
-            <form
-                method="post"
-                action="{% url 'laundry:guest_laundry_ready' order.id %}"
-                style="display:inline;"
-                onsubmit="return confirm('Mark Guest Laundry order #{{ order.id }} as ready?');"
-            >
-                {% csrf_token %}
-                <button type="submit">
-                    Mark Ready
-                </button>
-            </form>
-
-        {% elif order.status == "READY" %}
-
-            <form
-                method="post"
-                action="{% url 'laundry:guest_laundry_deliver' order.id %}"
-                style="display:inline;"
-            >
-                {% csrf_token %}
-                <button type="submit">
-                    Deliver &amp; Charge
-                </button>
-            </form>
-
-        {% elif order.status == "DELIVERED" %}
-
-        {% if order.billing_charge_id and order.folio.balance > 0 %}
-            <a href="{% url 'laundry:guest_laundry_payment' order.id %}">
-                Pay
-            </a>
-        {% elif order.billing_charge_id %}
-            Paid
-        {% else %}
-            —
-        {% endif %}
-
-        {% else %}
-
-            —
-
-        {% endif %}
-
-    </td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-{% else %}
-
-<p>
-    No Guest Laundry orders have been created.
-</p>
-
-{% endif %}
-
 {% endblock %}
