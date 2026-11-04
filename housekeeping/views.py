@@ -1481,14 +1481,19 @@ def housekeeping_stock_workspace(request):
     if not accessible_hotels.exists():
         raise PermissionDenied
 
+    is_housekeeping_head = (
+        request.user.role == "HOUSEKEEPING"
+        and is_department_head(request.user)
+        and department
+        and department.department_type == "HOUSEKEEPING"
+    )
     can_manage_stock = (
         request.user.role in ("MANAGER", "ADMIN", "DIRECTOR")
-        or (
-            request.user.role == "HOUSEKEEPING"
-            and is_department_head(request.user)
-            and department
-            and department.department_type == "HOUSEKEEPING"
-        )
+        or is_housekeeping_head
+    )
+    can_receive_deliveries = (
+        request.user.role in ("ADMIN", "DIRECTOR")
+        or is_housekeeping_head
     )
 
     return render(
@@ -1497,6 +1502,7 @@ def housekeeping_stock_workspace(request):
         {
             "department": department,
             "can_manage_stock": can_manage_stock,
+            "can_receive_deliveries": can_receive_deliveries,
         },
     )
 
