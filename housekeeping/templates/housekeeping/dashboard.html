@@ -70,12 +70,12 @@
     <a href="{% url 'housekeeping_linen_movements' %}">Open Linen Custody →</a>
 </div>
 <div class="hk-linen-grid">
-    <div class="hk-linen-card"><span>Linen Store</span><strong>{{ linen_totals.store }}</strong><small>Clean and dirty stock held by Store</small></div>
-    <div class="hk-linen-card"><span>Housekeeping</span><strong>{{ linen_totals.housekeeping }}</strong><small>Department-level linen position</small></div>
+    <div class="hk-linen-card"><span>Linen Store</span><strong>{{ linen_totals.store }}</strong><small>Total linen recorded at Store</small></div>
+    <div class="hk-linen-card"><span>Housekeeping Ledger</span><strong>{{ linen_totals.housekeeping }}</strong><small>Aggregate Housekeeping location balance</small></div>
     <div class="hk-linen-card"><span>Laundry</span><strong>{{ linen_totals.laundry }}</strong><small>Includes linen currently held by Laundry</small></div>
     <div class="hk-linen-card"><span>Discrepancy Holding</span><strong>{{ linen_totals.discrepancy }}</strong><small>Awaiting management investigation</small></div>
 </div>
-<p class="hk-section-note">Also recorded: {{ linen_totals.damaged }} damaged · {{ linen_totals.lost }} lost · {{ linen_totals.written_off }} written off.</p>
+<p class="hk-section-note">Also recorded: {{ linen_totals.damaged }} damaged · {{ linen_totals.lost }} lost · {{ linen_totals.written_off }} written off. These are ledger balances; individual staff custody and room-use records are separate operational details.</p>
 {% if staff_linen_requests_count %}
 <p><a href="{% url 'housekeeping_linen_request_queue' %}">{{ staff_linen_requests_count }} staff linen request{{ staff_linen_requests_count|pluralize }} awaiting Laundry processing →</a></p>
 {% endif %}
