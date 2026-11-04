@@ -80,6 +80,7 @@ class LinenTransaction(models.Model):
         ("STORE", "Linen Store"),
         ("HOUSEKEEPING", "Housekeeping"),
         ("LAUNDRY", "Laundry"),
+        ("DISCREPANCY", "Discrepancy Holding"),
     )
 
     CONDITION_CHOICES = (
