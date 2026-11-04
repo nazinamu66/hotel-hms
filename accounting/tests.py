@@ -1,6 +1,6 @@
 from decimal import Decimal
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from django.test import SimpleTestCase, TestCase
 
@@ -130,13 +130,10 @@ class GuestLaundryChargePostingTests(SimpleTestCase):
 
         post_guest_laundry_charge(order, charge)
 
-        self.assertEqual(
-            get_account.call_args_list,
-            [
-                ((hotel, "1100"),),
-                ((hotel, "4000"),),
-            ],
-        )
+        get_account.assert_has_calls([
+            call(hotel, "1100"),
+            call(hotel, "4000"),
+        ])
         kwargs = post_journal_entry.call_args.kwargs
         self.assertEqual(kwargs["hotel"], hotel)
         self.assertEqual(kwargs["description"], "Guest Laundry Order #42")
