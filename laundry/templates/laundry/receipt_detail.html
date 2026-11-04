@@ -244,8 +244,36 @@ Laundry Receipt
 {% if receipt.has_discrepancy %}
 
 <p>
-    <strong>Discrepancy recorded.</strong>
+    <strong>Discrepancy recorded and held separately from available Laundry stock.</strong>
 </p>
+
+{% for discrepancy in receipt.discrepancies.all %}
+    <div class="card" style="padding:16px; margin:16px 0;">
+        <h4>{{ discrepancy.get_condition_display }} shortfall: {{ discrepancy.quantity }}</h4>
+        <p>Status: {{ discrepancy.get_status_display }}</p>
+        {% if discrepancy.status == "RESOLVED" %}
+            <p>Outcome: {{ discrepancy.get_resolution_display }}</p>
+            <p>Resolved by: {{ discrepancy.resolved_by.username }} at {{ discrepancy.resolved_at|date:"Y-m-d H:i" }}</p>
+            {% if discrepancy.resolution_note %}<p>{{ discrepancy.resolution_note }}</p>{% endif %}
+        {% elif request.user.role == "MANAGER" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+            <form method="post" action="{% url 'laundry:resolve_receipt_discrepancy' discrepancy.id %}">
+                {% csrf_token %}
+                <label>Investigation outcome</label>
+                <select name="resolution" required>
+                    <option value="">Choose outcome</option>
+                    <option value="RECOVERED">Recovered and received into Laundry</option>
+                    <option value="LOST">Confirmed lost</option>
+                    <option value="DAMAGED">Confirmed damaged</option>
+                </select>
+                <label>Investigation note</label>
+                <textarea name="resolution_note" rows="3" required></textarea>
+                <button type="submit">Resolve discrepancy</button>
+            </form>
+        {% else %}
+            <p>Awaiting management investigation and resolution.</p>
+        {% endif %}
+    </div>
+{% endfor %}
 
 {% else %}
 
