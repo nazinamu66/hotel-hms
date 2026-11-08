@@ -397,7 +397,7 @@ class HousekeepingLinenTransitReceiptTests(TestCase):
         # corresponds to the employee's current physical custody.
         LinenTransaction.objects.create(
             linen_item=self.linen_item,
-            quantity=7,
+            quantity=3,
             condition="CLEAN",
             event_type="RECEIVED",
             to_location="HOUSEKEEPING",
