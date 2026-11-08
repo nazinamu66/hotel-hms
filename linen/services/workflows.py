@@ -647,9 +647,21 @@ def reassign_linen_custody(
     reason,
 ):
     """Transfer physical custody between HK staff in an audited exception."""
+    import uuid
+
     from django.core.exceptions import PermissionDenied
     from accounts.services.access import can_manage_department, user_can_access_hotel
     from linen.models import LinenCustody
+
+    # Lock the linen item first. This serializes reassignment attempts for
+    # the same item and prevents concurrent creation/update races on a
+    # recipient's previously non-existent custody row.
+    linen_item = (
+        LinenItem.objects
+        .select_for_update()
+        .select_related("product")
+        .get(pk=linen_item.pk)
+    )
 
     department = from_user.department
     if (
@@ -697,7 +709,7 @@ def reassign_linen_custody(
     target.dirty_quantity += dirty_quantity
     target.save(update_fields=["clean_quantity", "dirty_quantity", "updated_at"])
 
-    reference = f"HK-CUSTODY-{timezone.now():%Y%m%d%H%M%S}-{linen_item.pk}-{from_user.pk}-{to_user.pk}"
+    reference = f"HK-CUSTODY-{uuid.uuid4().hex[:16].upper()}"
     for condition, quantity in (("CLEAN", clean_quantity), ("DIRTY", dirty_quantity)):
         if quantity:
             LinenTransaction.objects.create(
