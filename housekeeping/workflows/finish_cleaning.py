@@ -92,204 +92,105 @@ def validate_linen_checklist(
         )
 
 
-def reconcile_linen_custody(
-    assignment,
-    user,
-):
-    """
-    Commit the physical linen movement resulting from
-    the completed cleaning checklist.
+def reconcile_linen_custody(assignment, user):
+    """Snapshot and reconcile one checklist submission exactly once."""
+    from django.db.models import Max
+    from linen.models import CleaningLinenSubmission, LinenItem
 
-    For every linen item:
-
-        clean custody
-            decreases by clean issued
-
-        dirty custody
-            increases by dirty collected
-
-        room linen state
-            becomes final quantity
-
-    Missing linen is NOT added to HK custody.
-
-    The operation is atomic. If any linen item cannot
-    be reconciled, nothing is committed.
-    """
-
-    checks = (
-        CleaningLinenCheck.objects
-        .select_related(
-            "linen_item",
-            "linen_item__product",
-        )
-        .filter(
-            assignment=assignment,
-        )
-        .order_by(
-            "linen_item__product__name",
-        )
+    assignment = type(assignment).objects.select_for_update().get(pk=assignment.pk)
+    if assignment.status != "IN_PROGRESS":
+        raise ValidationError("This cleaning assignment is not open for submission.")
+    checks = list(
+        CleaningLinenCheck.objects.select_related("linen_item", "linen_item__product")
+        .filter(assignment=assignment).order_by("linen_item__product__name")
     )
+    if not checks:
+        raise ValidationError("No linen checklist records were found.")
 
-    if not checks.exists():
+    latest = CleaningLinenSubmission.objects.filter(assignment=assignment).order_by("-sequence").first()
+    failed_inspections = assignment.inspections.filter(result="FAIL").count()
+    if latest and failed_inspections < latest.sequence:
+        raise ValidationError("This checklist has already been submitted for inspection.")
 
-        raise ValidationError(
-            "No linen checklist records were found."
-        )
-
+    previous_sequence = (
+        CleaningLinenSubmission.objects.filter(assignment=assignment)
+        .aggregate(value=Max("sequence"))["value"] or 0
+    )
+    snapshot = [
+        {
+            "linen_item_id": check.linen_item_id,
+            "linen_item_name": check.linen_item.product.name,
+            "expected_quantity": check.expected_quantity,
+            "found_quantity": check.found_quantity,
+            "dirty_collected_quantity": check.dirty_collected_quantity,
+            "clean_issued_quantity": check.clean_issued_quantity,
+            "final_quantity": check.final_quantity,
+            "note": check.note,
+        }
+        for check in checks
+    ]
+    submission = CleaningLinenSubmission.objects.create(
+        assignment=assignment, sequence=previous_sequence + 1,
+        submitted_by=user, snapshot=snapshot,
+    )
     states = {
         state.linen_item_id: state
-        for state in (
-            RoomLinenState.objects
-            .select_for_update()
-            .filter(
-                room=assignment.room,
-            )
-        )
+        for state in RoomLinenState.objects.select_for_update().filter(room=assignment.room)
     }
-
-    for check in checks:
-
-        state = states.get(
-            check.linen_item_id
-        )
-
-        if not state:
-
+    for entry in snapshot:
+        item_id = entry["linen_item_id"]
+        state = states.get(item_id)
+        if state is None:
             raise ValidationError(
-                f"{check.linen_item.product.name}: "
-                "Linen state no longer exists for this room."
+                f'{entry["linen_item_name"]}: Linen state no longer exists for this room.'
             )
-
-        clean_issued = (
-            check.clean_issued_quantity
-        )
-
-        dirty_collected = (
-            check.dirty_collected_quantity
-        )
-
-        final_quantity = (
-            check.final_quantity
-        )
-
-        # ----------------------------------------------------
-        # Get and lock HK custody
-        # ----------------------------------------------------
-
+        linen_item = LinenItem.objects.get(pk=item_id)
+        clean_issued = entry["clean_issued_quantity"]
+        dirty_collected = entry["dirty_collected_quantity"]
         custody = (
-            LinenCustody.objects
-            .select_for_update()
-            .filter(
-                user=user,
-                linen_item=check.linen_item,
-            )
-            .first()
+            LinenCustody.objects.select_for_update()
+            .filter(user=user, linen_item=linen_item).first()
         )
-
-        if clean_issued > 0 and not custody:
-
+        if clean_issued and not custody:
             raise ValidationError(
-                f"{check.linen_item.product.name}: "
-                "You do not have any clean linen in your custody."
+                f'{entry["linen_item_name"]}: You do not have any clean linen in your custody.'
             )
-
-        if custody:
-
-            if clean_issued > custody.clean_quantity:
-
-                raise ValidationError(
-                    f"{check.linen_item.product.name}: "
-                    f"You have only "
-                    f"{custody.clean_quantity} clean linen "
-                    "in your custody, but "
-                    f"{clean_issued} are required."
-                )
-
-        # ----------------------------------------------------
-        # Update HK custody
-        # ----------------------------------------------------
-
-        if clean_issued > 0 or dirty_collected > 0:
-
+        if custody and clean_issued > custody.clean_quantity:
+            raise ValidationError(
+                f'{entry["linen_item_name"]}: You have only {custody.clean_quantity} clean linen '
+                f'in your custody, but {clean_issued} are required.'
+            )
+        if clean_issued or dirty_collected:
             if not custody:
-
-                custody = (
-                    LinenCustody.objects.create(
-                        user=user,
-                        linen_item=check.linen_item,
-                        clean_quantity=0,
-                        dirty_quantity=0,
-                    )
+                custody = LinenCustody.objects.create(
+                    user=user, linen_item=linen_item, clean_quantity=0, dirty_quantity=0,
                 )
-
             custody.clean_quantity -= clean_issued
             custody.dirty_quantity += dirty_collected
+            custody.save(update_fields=["clean_quantity", "dirty_quantity", "updated_at"])
 
-            custody.save(
-                update_fields=[
-                    "clean_quantity",
-                    "dirty_quantity",
-                    "updated_at",
-                ],
-            )
-
-        # ----------------------------------------------------
-        # Audit the internal Housekeeping movements
-        # ----------------------------------------------------
-        # These records are deliberately location-neutral:
-        # both the room and the employee's linen custody belong
-        # to Housekeeping. They appear in movement history but
-        # must not alter the hotel-wide location balance.
-        reference = f"HK-CLEAN-{assignment.pk}"
+        reference = f"HK-CLEAN-{assignment.pk}-SUB-{submission.sequence}"
         room_label = assignment.room.room_number
-
-        if clean_issued > 0:
+        if clean_issued:
             LinenTransaction.objects.create(
-                linen_item=check.linen_item,
-                quantity=clean_issued,
-                condition="CLEAN",
-                event_type="ROOM_REPLENISHED",
-                performed_by=user,
-                from_user=user,
-                to_room=assignment.room,
-                cleaning_assignment=assignment,
-                reference=reference,
-                note=(
-                    f"Clean linen placed in Room {room_label} "
-                    f"during cleaning assignment #{assignment.pk}."
-                ),
+                linen_item=linen_item, quantity=clean_issued, condition="CLEAN",
+                event_type="ROOM_REPLENISHED", performed_by=user, from_user=user,
+                to_room=assignment.room, cleaning_assignment=assignment, reference=reference,
+                note=f"Clean linen placed in Room {room_label} during cleaning submission #{submission.sequence}.",
             )
-
-        if dirty_collected > 0:
+        if dirty_collected:
             LinenTransaction.objects.create(
-                linen_item=check.linen_item,
-                quantity=dirty_collected,
-                condition="DIRTY",
-                event_type="DIRTY_COLLECTED",
-                performed_by=user,
-                from_room=assignment.room,
-                to_user=user,
-                cleaning_assignment=assignment,
-                reference=reference,
-                note=(
-                    f"Dirty linen collected from Room {room_label} "
-                    f"during cleaning assignment #{assignment.pk}."
-                ),
+                linen_item=linen_item, quantity=dirty_collected, condition="DIRTY",
+                event_type="DIRTY_COLLECTED", performed_by=user, from_room=assignment.room,
+                to_user=user, cleaning_assignment=assignment, reference=reference,
+                note=f"Dirty linen collected from Room {room_label} during cleaning submission #{submission.sequence}.",
             )
+        state.quantity = entry["final_quantity"]
+        state.save(update_fields=["quantity", "updated_at"])
 
-        # ----------------------------------------------------
-        # Commit room linen state
-        # ----------------------------------------------------
-
-        state.quantity = final_quantity
-
-        state.save(
-            update_fields=[
-                "quantity",
-                "updated_at",
-            ],
-        )
+    submission.reconciled_at = timezone.now()
+    submission.save(update_fields=["reconciled_at"])
+    return submission
 
 
 def mark_cleaning_finished(
