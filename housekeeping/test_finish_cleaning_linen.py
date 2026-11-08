@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -199,7 +200,7 @@ class CleaningLinenMovementAuditTests(TestCase):
         )
         get_or_create_linen_checks(assignment, self.staff)
 
-        with self.assertRaisesMessage(Exception, "Dirty collected quantity cannot exceed"):
+        with self.assertRaisesMessage(ValidationError, "Dirty collected quantity cannot exceed"):
             save_linen_checks(
                 assignment=assignment,
                 user=self.staff,
