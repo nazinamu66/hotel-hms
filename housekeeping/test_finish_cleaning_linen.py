@@ -149,18 +149,29 @@ class LinenMovementHistoryAccessTests(TestCase):
             organization=cls.organization,
             name="Other Linen History Hotel",
         )
-        cls.hk_department = Department.objects.create(
+        cls.hk_department = Department.objects.filter(
             hotel=cls.hotel,
-            code="HK",
-            name="Housekeeping",
             department_type="HOUSEKEEPING",
-        )
-        cls.other_hk_department = Department.objects.create(
+        ).first()
+        if cls.hk_department is None:
+            cls.hk_department = Department.objects.create(
+                hotel=cls.hotel,
+                code="HK",
+                name="Housekeeping",
+                department_type="HOUSEKEEPING",
+            )
+
+        cls.other_hk_department = Department.objects.filter(
             hotel=cls.other_hotel,
-            code="HK",
-            name="Housekeeping",
             department_type="HOUSEKEEPING",
-        )
+        ).first()
+        if cls.other_hk_department is None:
+            cls.other_hk_department = Department.objects.create(
+                hotel=cls.other_hotel,
+                code="HK",
+                name="Housekeeping",
+                department_type="HOUSEKEEPING",
+            )
         cls.staff = User.objects.create_user(
             username="history-staff",
             password="test-password",
