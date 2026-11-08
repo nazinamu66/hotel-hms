@@ -2044,8 +2044,9 @@ def department_request_stock(request):
         .distinct()
     )
 
-    # Registered linen is requested through its dedicated workflow.
-    if department.department_type == "LAUNDRY":
+    # Registered linen is managed through the dedicated Linen/Laundry
+    # workflow, never through operational department stock requests.
+    if department.department_type in ("HOUSEKEEPING", "LAUNDRY"):
         products = products.filter(linen_item__isnull=True)
 
     stock_map = {
