@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -718,3 +719,36 @@ class RoomLinenSetup(models.Model):
 
     def __str__(self):
         return f"Linen setup for room {self.room.room_number}"
+
+
+class CleaningLinenSubmission(models.Model):
+    """Immutable snapshot of one linen checklist submission for a cleaning assignment."""
+
+    assignment = models.ForeignKey(
+        "housekeeping.CleaningAssignment",
+        on_delete=models.PROTECT,
+        related_name="linen_submissions",
+    )
+    sequence = models.PositiveIntegerField()
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cleaning_linen_submissions",
+    )
+    snapshot = models.JSONField(default=list)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    reconciled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["assignment_id", "sequence"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assignment", "sequence"],
+                name="unique_cleaning_linen_submission_sequence",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Cleaning #{self.assignment_id} linen submission {self.sequence}"
