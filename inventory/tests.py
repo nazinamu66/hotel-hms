@@ -11,6 +11,10 @@ from inventory.models import (
     Hotel,
     Organization,
     Product,
+    PurchaseItem,
+    PurchaseOrder,
+    PurchaseReceipt,
+    PurchaseReceiptItem,
     Stock,
     StockCostLayer,
     StockMovement,
@@ -289,3 +293,109 @@ class KitchenScopedLatestCostTests(TestCase):
         )
 
         self.assertEqual(get_latest_cost(self.product, self.kitchen_b), Decimal("0.00"))
+
+
+
+class PurchaseReceiptLedgerTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        organization = Organization.objects.create(name="Receipt Ledger Org")
+        cls.hotel = Hotel.objects.create(
+            organization=organization,
+            name="Receipt Ledger Hotel",
+        )
+        cls.department = Department.objects.create(
+            hotel=cls.hotel,
+            code="RLS",
+            name="Receipt Ledger Store",
+            department_type="STORE",
+        )
+        cls.supplier = Supplier.objects.create(
+            hotel=cls.hotel,
+            name="Receipt Ledger Supplier",
+        )
+        cls.product = Product.objects.create(
+            hotel=cls.hotel,
+            name="Receipt Ledger Rice",
+            sku="RECEIPT-LEDGER-RICE",
+            product_type="RAW",
+            base_unit="bag",
+        )
+        cls.po = PurchaseOrder.objects.create(
+            supplier=cls.supplier,
+            department=cls.department,
+            status="APPROVED",
+        )
+        cls.item = PurchaseItem.objects.create(
+            purchase_order=cls.po,
+            product=cls.product,
+            purchase_quantity=20,
+            unit_cost=Decimal("15000.00"),
+        )
+
+    def test_receipts_accumulate_against_ordered_quantity(self):
+        first = PurchaseReceipt.objects.create(
+            purchase_order=self.po,
+            notes="First delivery",
+        )
+        PurchaseReceiptItem.objects.create(
+            receipt=first,
+            purchase_item=self.item,
+            quantity=8,
+            unit_cost=Decimal("15000.00"),
+        )
+
+        second = PurchaseReceipt.objects.create(
+            purchase_order=self.po,
+            notes="Balance delivery",
+        )
+        PurchaseReceiptItem.objects.create(
+            receipt=second,
+            purchase_item=self.item,
+            quantity=12,
+            unit_cost=Decimal("15000.00"),
+        )
+
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.purchase_quantity, 20)
+        self.assertEqual(self.item.received_quantity, 20)
+        self.assertEqual(self.item.outstanding_quantity, 0)
+        self.assertTrue(self.item.is_fully_received)
+
+    def test_receipt_line_preserves_delivery_cost_snapshot(self):
+        receipt = PurchaseReceipt.objects.create(
+            purchase_order=self.po,
+        )
+        line = PurchaseReceiptItem.objects.create(
+            receipt=receipt,
+            purchase_item=self.item,
+            quantity=3,
+            unit_cost=Decimal("14500.00"),
+        )
+
+        self.assertEqual(line.total_cost, Decimal("43500.00"))
+        self.assertEqual(self.item.received_quantity, 3)
+        self.assertEqual(self.item.outstanding_quantity, 17)
+        self.assertFalse(self.item.is_fully_received)
+
+    def test_one_po_line_can_only_appear_once_per_receipt(self):
+        from django.db import IntegrityError, transaction
+
+        receipt = PurchaseReceipt.objects.create(
+            purchase_order=self.po,
+        )
+        PurchaseReceiptItem.objects.create(
+            receipt=receipt,
+            purchase_item=self.item,
+            quantity=2,
+            unit_cost=Decimal("15000.00"),
+        )
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                PurchaseReceiptItem.objects.create(
+                    receipt=receipt,
+                    purchase_item=self.item,
+                    quantity=1,
+                    unit_cost=Decimal("15000.00"),
+                )
