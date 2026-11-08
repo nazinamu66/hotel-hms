@@ -11,9 +11,8 @@ Linen Checklist — Room {{ assignment.room.room_number }}
 </h2>
 
 <p style="color:#666;">
-    Check the linen physically found in the room, record the clean
-    linen taken from Laundry, and confirm the final quantity left
-    in the room.
+    Record what was found, collect only the dirty pieces, and add the clean
+    linen needed. Clean linen already in the room can remain there.
 </p>
 
 <div
@@ -43,13 +42,17 @@ Linen Checklist — Room {{ assignment.room.room_number }}
 
     <p style="margin:8px 0 0 0;">
         Found is what you physically find in the room.
-        Any difference is automatically recorded as missing.
+        Any shortfall or surplus is shown against the expected quantity.
     </p>
 
     <p style="margin:8px 0 0 0;">
-        Clean Taken is the clean linen you take from Laundry
-        and put into the room. This can be higher or lower than
-        the expected quantity when necessary.
+        Dirty Taken is only the dirty linen you remove. Clean linen already
+        in the room stays there. Clean Added is taken from your custody and
+        can bring the final room quantity above or below the expected amount.
+    </p>
+    <p style="margin:8px 0 0 0;">
+        Final quantity = Found − Dirty Taken + Clean Added. Add a note when
+        the final quantity differs from the expected quantity.
     </p>
 </div>
 
@@ -81,7 +84,7 @@ Linen Checklist — Room {{ assignment.room.room_number }}
     </th>
 
     <th style="text-align:center;padding:10px;">
-        Missing
+        Variance
     </th>
 
     <th style="text-align:center;padding:10px;">
@@ -89,7 +92,7 @@ Linen Checklist — Room {{ assignment.room.room_number }}
     </th>
 
     <th style="text-align:center;padding:10px;">
-        Clean Taken
+        Clean Added
     </th>
 
     <th style="text-align:center;padding:10px;">
@@ -211,9 +214,8 @@ Linen Checklist — Room {{ assignment.room.room_number }}
     >
 
         <span
-            class="missing-number"
+            class="variance-number"
             data-expected="{{ check.expected_quantity }}"
-            data-found-input="found_{{ check.linen_item_id }}"
         >
             0
         </span>
@@ -236,12 +238,12 @@ Linen Checklist — Room {{ assignment.room.room_number }}
             id="dirty_{{ check.linen_item_id }}"
             name="dirty_{{ check.linen_item_id }}"
             value="{{ check.dirty_collected_quantity }}"
-            readonly
+            min="0"
+            step="1"
             style="
                 width:60px;
                 text-align:center;
                 padding:7px;
-                background:#f5f5f5;
             "
         >
 
@@ -315,7 +317,6 @@ Linen Checklist — Room {{ assignment.room.room_number }}
             type="number"
             class="final-input"
             id="final_{{ check.linen_item_id }}"
-            name="final_{{ check.linen_item_id }}"
             value="{{ check.final_quantity }}"
             readonly
             style="
@@ -501,78 +502,31 @@ document.addEventListener(
                         "final_" + itemId
                     );
 
-                const missingNumber =
-                    row.querySelector(
-                        ".missing-number"
-                    );
-
-                const expected =
-                    parseInt(
-                        missingNumber.dataset.expected,
-                        10
-                    );
-
+                const varianceNumber = row.querySelector(".variance-number");
+                const expected = parseInt(varianceNumber.dataset.expected, 10);
 
                 function updateRow() {
+                    const found = Math.max(parseInt(foundInput.value || "0", 10), 0);
+                    const dirty = Math.max(parseInt(dirtyInput.value || "0", 10), 0);
+                    const clean = Math.max(parseInt(cleanInput.value || "0", 10), 0);
 
-                    const found =
-                        Math.max(
-                            parseInt(
-                                foundInput.value || "0",
-                                10
-                            ),
-                            0
-                        );
+                    // Prevent the UI from presenting an impossible collection.
+                    dirtyInput.max = found;
+                    if (dirty > found) dirtyInput.value = found;
+                    const safeDirty = Math.min(dirty, found);
+                    const finalQuantity = found - safeDirty + clean;
+                    finalInput.value = finalQuantity;
 
-                    const clean =
-                        Math.max(
-                            parseInt(
-                                cleanInput.value || "0",
-                                10
-                            ),
-                            0
-                        );
-
-                    /*
-                     * Every linen piece found in the room
-                     * is physically removed as dirty linen.
-                     */
-                    dirtyInput.value = found;
-
-
-                    /*
-                     * Missing is calculated from the
-                     * previous room state.
-                     */
-                    const missing =
-                        Math.max(
-                            expected - found,
-                            0
-                        );
-
-                    missingNumber.textContent =
-                        missing;
-
-
-                    /*
-                     * Clean Taken becomes the quantity
-                     * physically left in the room.
-                     */
-                    finalInput.value = clean;
-
+                    // Positive = surplus; negative = shortfall.
+                    const variance = finalQuantity - expected;
+                    varianceNumber.textContent = variance > 0
+                        ? "+" + variance
+                        : String(variance);
                 }
 
-
-                foundInput.addEventListener(
-                    "input",
-                    updateRow
-                );
-
-                cleanInput.addEventListener(
-                    "input",
-                    updateRow
-                );
-
+                foundInput.addEventListener("input", updateRow);
+                dirtyInput.addEventListener("input", updateRow);
+                cleanInput.addEventListener("input", updateRow);
 
                 updateRow();
 
