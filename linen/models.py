@@ -85,6 +85,7 @@ class LinenTransaction(models.Model):
         ("STORE", "Linen Store"),
         ("HOUSEKEEPING", "Housekeeping"),
         ("LAUNDRY", "Laundry"),
+        ("IN_TRANSIT", "In Transit to Laundry"),
         ("DISCREPANCY", "Discrepancy Holding"),
     )
 
