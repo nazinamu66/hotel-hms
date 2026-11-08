@@ -530,47 +530,9 @@ def return_linen_to_laundry(
             "in your custody."
         )
 
-    # --------------------------------------------------------
-    # Record clean linen movement
-    # --------------------------------------------------------
-
-    if clean_quantity > 0:
-        LinenTransaction.objects.create(
-            linen_item=linen_item,
-            quantity=clean_quantity,
-            condition="CLEAN",
-            event_type="SENT_TO_LAUNDRY",
-            from_location="HOUSEKEEPING",
-            to_location="LAUNDRY",
-            performed_by=user,
-            from_user=user,
-            reference=reference,
-            note=note,
-        )
-
-    # --------------------------------------------------------
-    # Record dirty linen movement
-    # --------------------------------------------------------
-
-    if dirty_quantity > 0:
-        LinenTransaction.objects.create(
-            linen_item=linen_item,
-            quantity=dirty_quantity,
-            condition="DIRTY",
-            event_type="SENT_TO_LAUNDRY",
-            from_location="HOUSEKEEPING",
-            to_location="LAUNDRY",
-            performed_by=user,
-            from_user=user,
-            reference=reference,
-            note=note,
-        )
-
-    # --------------------------------------------------------
-    # Create Laundry receipt
-    # --------------------------------------------------------
-
-    create_laundry_receipt(
+    # Create the receipt first so every transit movement can be
+    # tied to one unique, auditable receipt reference.
+    receipt = create_laundry_receipt(
         linen_item=linen_item,
         returned_by=user,
         declared_clean_quantity=clean_quantity,
@@ -578,6 +540,30 @@ def return_linen_to_laundry(
         reference=reference,
         note=note,
     )
+    movement_reference = reference or f"HK-LAUNDRY-RETURN-{receipt.pk}"
+    if not receipt.reference:
+        receipt.reference = movement_reference
+        receipt.save(update_fields=["reference"])
+
+    # Handover removes the linen from staff custody, but it is not
+    # Laundry stock until Laundry confirms the physical count.
+    for condition, quantity in (
+        ("CLEAN", clean_quantity),
+        ("DIRTY", dirty_quantity),
+    ):
+        if quantity > 0:
+            LinenTransaction.objects.create(
+                linen_item=linen_item,
+                quantity=quantity,
+                condition=condition,
+                event_type="SENT_TO_LAUNDRY",
+                from_location="HOUSEKEEPING",
+                to_location="IN_TRANSIT",
+                performed_by=user,
+                from_user=user,
+                reference=movement_reference,
+                note=note,
+            )
 
     # --------------------------------------------------------
     # Update employee custody
