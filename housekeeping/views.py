@@ -17,6 +17,7 @@ from .models import (
 from linen.services.workflows import (
     
     return_linen_to_laundry,
+    reassign_linen_custody,
 )
 
 from accounts.models import User
@@ -2435,3 +2436,55 @@ def housekeeping_linen_request_queue(request):
     )
 
 
+
+
+# ============================================================
+# EXCEPTIONAL LINEN CUSTODY REASSIGNMENT
+# ============================================================
+
+@role_required("HOUSEKEEPING", "MANAGER", "ADMIN", "DIRECTOR")
+def reassign_housekeeping_linen(request):
+    from linen.models import LinenCustody
+
+    hotels = get_accessible_hotels(request.user)
+    if request.user.role == "HOUSEKEEPING":
+        department = request.user.department
+        if not is_department_head(request.user) or not department or department.department_type != "HOUSEKEEPING":
+            raise PermissionDenied("Only the Housekeeping Head may authorize an emergency custody reassignment.")
+        departments = Department.objects.filter(pk=department.pk, is_active=True)
+    else:
+        departments = Department.objects.filter(
+            hotel__in=hotels, department_type="HOUSEKEEPING", is_active=True
+        )
+
+    staff = User.objects.filter(
+        department__in=departments, role="HOUSEKEEPING", is_active=True
+    ).select_related("department", "department__hotel").order_by("username")
+    linen_items = LinenItem.objects.filter(
+        product__hotel__in=hotels, is_active=True, product__is_active=True
+    ).select_related("product", "product__hotel").order_by("product__name")
+
+    if request.method == "POST":
+        try:
+            linen_item = get_object_or_404(linen_items, pk=request.POST.get("linen_item"))
+            from_user = get_object_or_404(staff, pk=request.POST.get("from_user"))
+            to_user = get_object_or_404(staff, pk=request.POST.get("to_user"))
+            clean_quantity = int(request.POST.get("clean_quantity") or 0)
+            dirty_quantity = int(request.POST.get("dirty_quantity") or 0)
+            reason = request.POST.get("reason", "").strip()
+            if not reason:
+                raise ValidationError("A reason is required for an emergency custody reassignment.")
+            reassign_linen_custody(
+                linen_item=linen_item, from_user=from_user, to_user=to_user,
+                clean_quantity=clean_quantity, dirty_quantity=dirty_quantity,
+                authorized_by=request.user, reason=reason,
+            )
+        except (ValidationError, ValueError, TypeError) as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(request, "Linen custody reassigned and audit history recorded.")
+            return redirect("housekeeping_linen_movements")
+
+    return render(request, "housekeeping/linen_reassignment.html", {
+        "staff": staff, "linen_items": linen_items,
+    })
