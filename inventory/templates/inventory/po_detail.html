@@ -1075,19 +1075,22 @@ Purchase Order #{{ po.id }}
 
 
     <!-- RECEIVED -->
-    {% if po.status == "RECEIVED" %}
+    {% if po.status == "PARTIALLY_RECEIVED" or po.status == "RECEIVED" %}
 
         <div class="po-card">
 
             <div class="po-workflow workflow-received">
 
                 <h3 class="po-workflow-title">
-                    Goods Received
+                    {% if po.status == "PARTIALLY_RECEIVED" %}Partial Delivery Received{% else %}Goods Received{% endif %}
                 </h3>
 
                 <p class="po-workflow-text">
-                    The goods have been received into the
-                    purchase order's receiving department.
+                    {% if po.status == "PARTIALLY_RECEIVED" %}
+                        Some goods have been received. The outstanding quantities remain open for further deliveries.
+                    {% else %}
+                        All ordered goods have been received into the purchase order's receiving department.
+                    {% endif %}
                 </p>
 
 
