@@ -39,6 +39,7 @@ from accounts.services.access import (
     is_department_head,
 )
 from housekeeping.workflows.materials import consume_cleaning_material
+from housekeeping.workflows.linen_check import reset_linen_checks_for_retry
 
 @role_required(
     "HOUSEKEEPING",
@@ -1039,6 +1040,7 @@ def inspect_cleaning(request, room_id):
                 failure_note = f"Inspection failed ({timezone.localtime():%Y-%m-%d %H:%M}): {notes}"
                 assignment.notes = f"{previous_notes}\n{failure_note}".strip()
                 assignment.save(update_fields=["status", "completed_at", "notes"])
+                reset_linen_checks_for_retry(assignment)
 
         if result == "PASS":
             messages.success(request, f"Room {room.room_number} passed inspection and is ready.")
