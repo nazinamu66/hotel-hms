@@ -373,6 +373,10 @@ def cleaning_history(request):
             "room",
             "room__hotel",
             "cleaned_by",
+            "assignment",
+        )
+        .prefetch_related(
+            "assignment__linen_checks__linen_item__product",
         )
     )
 
