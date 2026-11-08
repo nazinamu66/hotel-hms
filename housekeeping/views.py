@@ -2460,6 +2460,9 @@ def housekeeping_linen_movements(request):
                 | Q(from_user_id=staff_id)
                 | Q(to_user_id=staff_id)
                 | Q(cleaning_assignment__assigned_to_id=staff_id)
+                | Q(reference__in=LinenIssue.objects.filter(
+                    issued_to_id=staff_id
+                ).values_list("reference", flat=True))
             )
         else:
             staff_id = ""
