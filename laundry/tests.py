@@ -7,13 +7,12 @@ from django.utils import timezone
 
 from accounts.models import User
 from billing.models import Charge, Folio
-from inventory.models import Department, Hotel
-from laundry.models import GuestLaundryOrder, LaundryReceipt
+from inventory.models import Department, Hotel, Product
+from laundry.models import GuestLaundryOrder
 from laundry.services.receiving import confirm_laundry_receipt, create_laundry_receipt
 from linen.models import LinenCustody, LinenItem, LinenTransaction
 from linen.services.balances import get_linen_condition_balance, get_linen_summary
 from linen.services.workflows import return_linen_to_laundry
-from inventory.models import Product
 from laundry.services.guest_laundry import (
     cancel_guest_laundry_order,
     create_guest_laundry_order,
