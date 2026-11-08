@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
 
 from housekeeping.models import LostFoundItem
-from accounts.services.access import user_can_access_hotel
+from accounts.services.access import user_can_access_hotel, is_department_head
 
 
 def validate_item(
@@ -16,26 +16,24 @@ def validate_item(
         )
 
 
-def validate_manager(user):
-    """
-    Only Housekeeping HODs and management may
-    change the status of a Lost & Found item.
-    """
-
-    if (
-        user.is_department_head
-        or user.role in {
-            "MANAGER",
-            "ADMIN",
-            "DIRECTOR",
-            "GENERAL_MANAGER",
-        }
-    ):
-        return
-
-    raise PermissionDenied(
-        "You do not have permission to manage Lost & Found items."
+def can_manage_lost_found(user):
+    """Only Housekeeping department heads and management may close records."""
+    is_housekeeping_head = (
+        is_department_head(user)
+        and user.department
+        and user.department.department_type == "HOUSEKEEPING"
     )
+    return bool(
+        is_housekeeping_head
+        or user.role in {"MANAGER", "ADMIN", "DIRECTOR", "GENERAL_MANAGER"}
+    )
+
+
+def validate_manager(user):
+    if not can_manage_lost_found(user):
+        raise PermissionDenied(
+            "Only the Housekeeping Head or hotel management may manage Lost & Found items."
+        )
 
 
 def create_item(
