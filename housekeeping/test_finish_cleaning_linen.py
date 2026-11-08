@@ -114,7 +114,7 @@ class CleaningLinenMovementAuditTests(TestCase):
         )
         dirty_collection = LinenTransaction.objects.get(
             event_type="DIRTY_COLLECTED",
-            reference=f"HK-CLEAN-{assignment.pk}",
+            reference=f"HK-CLEAN-{assignment.pk}-SUB-1",
         )
 
         self.assertEqual(room_replenishment.quantity, 2)
