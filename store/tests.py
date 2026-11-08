@@ -1,12 +1,14 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.test import RequestFactory, TestCase
+from django.test import Client, RequestFactory, TestCase
+from django.urls import reverse
 from django.contrib.auth import get_user_model
 
 from inventory.models import (
     Department,
     Hotel,
+    LowStockRequest,
     Organization,
     Product,
     Stock,
@@ -156,6 +158,90 @@ class StoreStockTransferTests(TestCase):
                 reference=f"TRANSFER-{transfer.id}",
             ).count(),
             1,
+        )
+
+
+    def test_general_stock_request_issue_preserves_fractional_quantity(self):
+        housekeeping = Department.objects.create(
+            hotel=self.hotel,
+            code="SHK",
+            name="Test Housekeeping",
+            department_type="HOUSEKEEPING",
+        )
+        stock_request = LowStockRequest.objects.create(
+            product=self.product,
+            department=housekeeping,
+            requested_quantity=2,
+            fulfillment_type="STORE",
+            requested_by=self.store_user,
+        )
+
+        client = Client()
+        client.force_login(self.store_user)
+        response = client.post(
+            reverse(
+                "store_issue_stock_request",
+                kwargs={"pk": stock_request.pk},
+            ),
+            {"quantity": "1.250"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        transfer = StockTransfer.objects.get(
+            stock_request=stock_request,
+        )
+        self.assertEqual(transfer.quantity, Decimal("1.250"))
+
+        source_stock = Stock.objects.get(
+            product=self.product,
+            department=self.store,
+        )
+        destination_stock = Stock.objects.get(
+            product=self.product,
+            department=housekeeping,
+        )
+        self.assertEqual(source_stock.quantity, Decimal("8.750"))
+        self.assertEqual(destination_stock.quantity, Decimal("1.250"))
+
+        stock_request.refresh_from_db()
+        self.assertEqual(stock_request.status, "PARTIALLY_FULFILLED")
+
+    def test_general_stock_request_rejects_more_than_three_decimal_places(self):
+        housekeeping = Department.objects.create(
+            hotel=self.hotel,
+            code="SHK2",
+            name="Test Housekeeping 2",
+            department_type="HOUSEKEEPING",
+        )
+        stock_request = LowStockRequest.objects.create(
+            product=self.product,
+            department=housekeeping,
+            requested_quantity=2,
+            fulfillment_type="STORE",
+            requested_by=self.store_user,
+        )
+
+        client = Client()
+        client.force_login(self.store_user)
+        response = client.post(
+            reverse(
+                "store_issue_stock_request",
+                kwargs={"pk": stock_request.pk},
+            ),
+            {"quantity": "1.2345"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            StockTransfer.objects.filter(stock_request=stock_request).exists()
+        )
+        self.assertEqual(
+            Stock.objects.get(
+                product=self.product,
+                department=self.store,
+            ).quantity,
+            Decimal("10.000"),
         )
 
     def test_store_ingredient_issue_rejects_get_requests(self):
