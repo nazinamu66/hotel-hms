@@ -580,7 +580,7 @@ def return_linen_to_laundry(
         ],
     )
 
-    return custody
+    return receipt
 
 @transaction.atomic
 def return_clean_linen_from_laundry(
