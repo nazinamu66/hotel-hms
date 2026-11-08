@@ -251,6 +251,9 @@ def reconcile_linen_custody(
                 condition="CLEAN",
                 event_type="ROOM_REPLENISHED",
                 performed_by=user,
+                from_user=user,
+                to_room=assignment.room,
+                cleaning_assignment=assignment,
                 reference=reference,
                 note=(
                     f"Clean linen placed in Room {room_label} "
@@ -265,6 +268,9 @@ def reconcile_linen_custody(
                 condition="DIRTY",
                 event_type="DIRTY_COLLECTED",
                 performed_by=user,
+                from_room=assignment.room,
+                to_user=user,
+                cleaning_assignment=assignment,
                 reference=reference,
                 note=(
                     f"Dirty linen collected from Room {room_label} "
