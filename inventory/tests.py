@@ -455,6 +455,56 @@ class PartialPurchaseOrderReceivingTests(TestCase):
             unit_cost=Decimal("24000.00"),
         )
 
+    def test_supplier_payable_uses_only_quantities_physically_received(self):
+        from accounting.services.supplier_payments import purchase_order_received_total
+
+        receipt = PurchaseReceipt.objects.create(
+            purchase_order=self.po,
+            received_by=self.user,
+        )
+        PurchaseReceiptItem.objects.create(
+            receipt=receipt,
+            purchase_item=self.item,
+            quantity=3,
+            unit_cost=Decimal("24000.00"),
+        )
+
+        self.assertEqual(
+            purchase_order_received_total(self.po),
+            Decimal("72000.00"),
+        )
+
+    def test_supplier_payable_aggregates_receipt_cost_snapshots(self):
+        from accounting.services.supplier_payments import purchase_order_received_total
+
+        first = PurchaseReceipt.objects.create(purchase_order=self.po)
+        PurchaseReceiptItem.objects.create(
+            receipt=first,
+            purchase_item=self.item,
+            quantity=2,
+            unit_cost=Decimal("24000.00"),
+        )
+        second = PurchaseReceipt.objects.create(purchase_order=self.po)
+        PurchaseReceiptItem.objects.create(
+            receipt=second,
+            purchase_item=self.item,
+            quantity=1,
+            unit_cost=Decimal("25000.00"),
+        )
+
+        self.assertEqual(
+            purchase_order_received_total(self.po),
+            Decimal("73000.00"),
+        )
+
+    def test_supplier_payable_is_zero_before_any_receipt(self):
+        from accounting.services.supplier_payments import purchase_order_received_total
+
+        self.assertEqual(
+            purchase_order_received_total(self.po),
+            Decimal("0.00"),
+        )
+
     @patch("accounting.services.postings.purchase.post_inventory_receipt")
     def test_partial_receipt_updates_stock_fifo_and_remaining_balance(self, post_receipt):
         receipt = self.po.receive(
