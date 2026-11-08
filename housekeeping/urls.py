@@ -22,6 +22,7 @@ from .views import (
     cleaning_linen_check,
     request_laundry_linen,
     housekeeping_linen_request_queue,
+    reassign_housekeeping_linen,
 )
 from inventory.views import (
     department_request_stock,
@@ -173,6 +174,12 @@ urlpatterns = [
         "linen/send-to-laundry/",
         send_linen_to_laundry,
         name="housekeeping_send_linen_to_laundry",
+    ),
+
+    path(
+        "linen/reassign/",
+        reassign_housekeeping_linen,
+        name="housekeeping_linen_reassign",
     ),
 
     path(
