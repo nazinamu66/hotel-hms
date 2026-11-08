@@ -1177,9 +1177,10 @@ def supplier_payments(request):
     def source_details(source_type, source_id):
         if source_type == "PO":
             source = get_object_or_404(PurchaseOrder.objects.select_for_update().select_related("supplier", "department__hotel"), pk=source_id, department__hotel=hotel)
-            if source.status != "RECEIVED" or not source.supplier_id:
-                raise ValueError("Only received purchase orders with a supplier can be paid.")
-            total = sum((item.purchase_quantity * item.unit_cost for item in source.items.all()), Decimal("0.00"))
+            if source.status not in ("PARTIALLY_RECEIVED", "RECEIVED") or not source.supplier_id:
+                raise ValueError("Only partially or fully received purchase orders with a supplier can be paid.")
+            from accounting.services.supplier_payments import purchase_order_received_total
+            total = purchase_order_received_total(source)
             return source, source.supplier, total, f"PO #{source.pk} · {source.department.name}"
         if source_type == "DIRECT":
             source = get_object_or_404(DirectPurchase.objects.select_for_update().select_related("supplier"), pk=source_id, supplier__hotel=hotel)
@@ -1273,13 +1274,33 @@ def supplier_payments(request):
             messages.error(request, f"Payment was not recorded: {exc}")
 
     obligations = []
-    for po in PurchaseOrder.objects.filter(department__hotel=hotel, status="RECEIVED", supplier__isnull=False).select_related("supplier", "department").prefetch_related("items"):
-        total = sum((item.purchase_quantity * item.unit_cost for item in po.items.all()), Decimal("0.00"))
+    purchase_orders = (
+        PurchaseOrder.objects
+        .filter(
+            department__hotel=hotel,
+            status__in=("PARTIALLY_RECEIVED", "RECEIVED"),
+            supplier__isnull=False,
+        )
+        .select_related("supplier", "department")
+    )
+    from accounting.services.supplier_payments import purchase_order_received_total
+    for po in purchase_orders:
+        total = purchase_order_received_total(po)
         paid = paid_to_date("PO", po.pk)
+        # Legacy full payments predate SupplierPayment records. Retain their
+        # paid state without creating a second payable obligation.
         if po.payment_status == "PAID" and paid == 0:
             continue
         if total > paid:
-            obligations.append({"source_type":"PO","source_id":po.pk,"supplier":po.supplier,"label":f"PO #{po.pk} · {po.department.name}","total":total,"paid":paid,"outstanding":total-paid})
+            obligations.append({
+                "source_type": "PO",
+                "source_id": po.pk,
+                "supplier": po.supplier,
+                "label": f"PO #{po.pk} · {po.department.name}",
+                "total": total,
+                "paid": paid,
+                "outstanding": total - paid,
+            })
     for dp in DirectPurchase.objects.filter(supplier__hotel=hotel, status__in=("APPROVED","PAID","PARTIALLY_RECEIVED","RECEIVED")).exclude(payment_source="STAFF_FUNDS").select_related("supplier"):
         total = Decimal(str(dp.total_cost)); paid = paid_to_date("DIRECT", dp.pk)
         if dp.status == "PAID" and paid == 0:
