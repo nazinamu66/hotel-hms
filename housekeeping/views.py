@@ -2655,6 +2655,7 @@ def fulfill_housekeeping_linen_request(request, request_id):
         from_location="HOUSEKEEPING",
         to_location="HOUSEKEEPING",
         performed_by=request.user,
+        to_user=linen_request.requested_by,
         reference=reference,
         note=(
             f"Issued from Housekeeping department stock to "
@@ -2772,6 +2773,18 @@ def fulfill_housekeeping_linen_request(request, request_id):
         source="HOUSEKEEPING",
         reference=reference,
         note=request.POST.get("note", "").strip(),
+    )
+    LinenTransaction.objects.create(
+        linen_item=linen_request.linen_item,
+        quantity=quantity,
+        condition="CLEAN",
+        event_type="ISSUED",
+        performed_by=request.user,
+        from_user=source_user,
+        to_user=linen_request.requested_by,
+        reference=reference,
+        note=f"Transferred from {source_user.get_username()} to "
+             f"{linen_request.requested_by.get_username()}.",
     )
 
     linen_request.fulfilled_quantity += quantity
