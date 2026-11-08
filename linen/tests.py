@@ -515,6 +515,24 @@ class EmergencyLinenCustodyReassignmentTests(TestCase):
                 reason="Custodian unavailable.",
             )
 
+    def test_reassignment_requires_a_reason_for_the_audit_trail(self):
+        from .services.workflows import reassign_linen_custody
+
+        with self.assertRaises(ValidationError):
+            reassign_linen_custody(
+                linen_item=self.linen_item,
+                from_user=self.staff_from,
+                to_user=self.staff_to,
+                clean_quantity=1,
+                dirty_quantity=0,
+                authorized_by=self.manager,
+                reason="   ",
+            )
+
+        self.source_custody.refresh_from_db()
+        self.assertEqual(self.source_custody.clean_quantity, 5)
+        self.assertEqual(self.source_custody.dirty_quantity, 3)
+
     def test_regular_housekeeping_staff_cannot_authorize_reassignment(self):
         from django.core.exceptions import PermissionDenied
         from .services.workflows import reassign_linen_custody
