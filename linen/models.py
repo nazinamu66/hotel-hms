@@ -132,6 +132,48 @@ class LinenTransaction(models.Model):
         related_name="linen_transactions",
     )
 
+    # Structured custody references for auditable staff/room movements.
+    # from_location/to_location continue to represent department-level stock.
+    from_user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="linen_transactions_from",
+    )
+
+    to_user = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="linen_transactions_to",
+    )
+
+    from_room = models.ForeignKey(
+        "rooms.Room",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="linen_transactions_from",
+    )
+
+    to_room = models.ForeignKey(
+        "rooms.Room",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="linen_transactions_to",
+    )
+
+    cleaning_assignment = models.ForeignKey(
+        "housekeeping.CleaningAssignment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="linen_transactions",
+    )
+
     reference = models.CharField(
         max_length=100,
         blank=True,
