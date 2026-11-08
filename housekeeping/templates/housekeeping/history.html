@@ -364,6 +364,7 @@
                         <th>Room / Hotel</th>
                         <th>Housekeeper</th>
                         <th>Previous status</th>
+                        <th>Linen reconciliation</th>
                         <th>Notes</th>
                     </tr>
                 </thead>
@@ -402,6 +403,54 @@
                             </td>
 
                             <td>
+                                {% if log.assignment %}
+                                    {% with linen_checks=log.assignment.linen_checks.all %}
+                                        {% if linen_checks %}
+                                            <details>
+                                                <summary style="cursor:pointer;color:#1d4ed8;font-weight:650;">
+                                                    View {{ linen_checks|length }} linen item{{ linen_checks|length|pluralize }}
+                                                </summary>
+                                                <div style="min-width:340px;padding:10px 0;">
+                                                    <table style="width:100%;border-collapse:collapse;">
+                                                        <thead>
+                                                            <tr>
+                                                                <th style="text-align:left;padding:5px;">Item</th>
+                                                                <th style="padding:5px;">Expected</th>
+                                                                <th style="padding:5px;">Found</th>
+                                                                <th style="padding:5px;">Dirty</th>
+                                                                <th style="padding:5px;">Clean added</th>
+                                                                <th style="padding:5px;">Final</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for check in linen_checks %}
+                                                                <tr>
+                                                                    <td style="padding:5px;">{{ check.linen_item.product.name }}</td>
+                                                                    <td style="text-align:center;padding:5px;">{{ check.expected_quantity }}</td>
+                                                                    <td style="text-align:center;padding:5px;">{{ check.found_quantity }}</td>
+                                                                    <td style="text-align:center;padding:5px;">{{ check.dirty_collected_quantity }}</td>
+                                                                    <td style="text-align:center;padding:5px;">{{ check.clean_issued_quantity }}</td>
+                                                                    <td style="text-align:center;padding:5px;font-weight:700;">{{ check.final_quantity }}</td>
+                                                                </tr>
+                                                                {% if check.note %}
+                                                                    <tr>
+                                                                        <td colspan="6" style="padding:4px 8px 9px;color:#64748b;font-size:12px;">Note: {{ check.note }}</td>
+                                                                    </tr>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </details>
+                                        {% else %}
+                                            <span class="history-muted">No linen checklist</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% else %}
+                                    <span class="history-muted">Historical record</span>
+                                {% endif %}
+                            </td>
+                            <td>
                                 {% if log.notes %}
                                     {{ log.notes|truncatechars:100 }}
                                 {% else %}
@@ -411,7 +460,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="5" class="history-empty">
+                            <td colspan="6" class="history-empty">
                                 <strong>No cleaning records found.</strong>
                                 <div class="history-muted" style="margin-top: 7px;">
                                     Try changing your filters or clearing them to view all available records.
