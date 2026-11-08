@@ -10,6 +10,7 @@ from housekeeping.workflows.linen_check import get_or_create_linen_checks, save_
 from inventory.models import Department, Hotel, Organization, Product
 from linen.models import (
     CleaningLinenCheck,
+    CleaningLinenSubmission,
     LinenCustody,
     LinenItem,
     LinenTransaction,
@@ -109,7 +110,7 @@ class CleaningLinenMovementAuditTests(TestCase):
 
         room_replenishment = LinenTransaction.objects.get(
             event_type="ROOM_REPLENISHED",
-            reference=f"HK-CLEAN-{assignment.pk}",
+            reference=f"HK-CLEAN-{assignment.pk}-SUB-1",
         )
         dirty_collection = LinenTransaction.objects.get(
             event_type="DIRTY_COLLECTED",
@@ -212,6 +213,79 @@ class CleaningLinenMovementAuditTests(TestCase):
                     },
                 },
             )
+
+
+    def test_duplicate_reconciliation_is_rejected_without_double_posting(self):
+        assignment = CleaningAssignment.objects.create(
+            room=self.room, assigned_to=self.staff, assigned_by=self.staff, status="IN_PROGRESS",
+        )
+        state = RoomLinenState.objects.create(room=self.room, linen_item=self.linen_item, quantity=1)
+        custody = LinenCustody.objects.create(
+            user=self.staff, linen_item=self.linen_item, clean_quantity=5, dirty_quantity=0,
+        )
+        CleaningLinenCheck.objects.create(
+            assignment=assignment, linen_item=self.linen_item, expected_quantity=1,
+            found_quantity=1, dirty_collected_quantity=1, clean_issued_quantity=1, final_quantity=1,
+        )
+        reconcile_linen_custody(assignment, self.staff)
+        with self.assertRaisesMessage(ValidationError, "already been submitted"):
+            reconcile_linen_custody(assignment, self.staff)
+        custody.refresh_from_db()
+        state.refresh_from_db()
+        self.assertEqual((custody.clean_quantity, custody.dirty_quantity), (4, 1))
+        self.assertEqual(state.quantity, 1)
+        self.assertEqual(CleaningLinenSubmission.objects.filter(assignment=assignment).count(), 1)
+        self.assertEqual(LinenTransaction.objects.filter(
+            cleaning_assignment=assignment,
+            event_type__in=["ROOM_REPLENISHED", "DIRTY_COLLECTED"],
+        ).count(), 2)
+
+    def test_failed_inspection_retry_rebases_check_and_posts_only_new_deltas(self):
+        from housekeeping.workflows.linen_check import reset_linen_checks_for_retry
+
+        assignment = CleaningAssignment.objects.create(
+            room=self.room, assigned_to=self.staff, assigned_by=self.staff, status="IN_PROGRESS",
+        )
+        state = RoomLinenState.objects.create(room=self.room, linen_item=self.linen_item, quantity=2)
+        custody = LinenCustody.objects.create(
+            user=self.staff, linen_item=self.linen_item, clean_quantity=8, dirty_quantity=0,
+        )
+        get_or_create_linen_checks(assignment, self.staff)
+        save_linen_checks(assignment, self.staff, {str(self.linen_item.pk): {
+            "found_quantity": "2", "dirty_collected_quantity": "1",
+            "clean_issued_quantity": "2", "note": "First submission",
+        }})
+        reconcile_linen_custody(assignment, self.staff)
+        assignment.inspections.create(
+            inspected_by=self.staff, result="FAIL", checklist={}, notes="Correct the bed linen",
+        )
+        assignment.status = "IN_PROGRESS"
+        assignment.save(update_fields=["status"])
+        reset_linen_checks_for_retry(assignment)
+
+        check = CleaningLinenCheck.objects.get(assignment=assignment)
+        state.refresh_from_db()
+        self.assertEqual((check.expected_quantity, check.found_quantity), (3, 3))
+        self.assertEqual((check.dirty_collected_quantity, check.clean_issued_quantity), (0, 0))
+        self.assertEqual(state.quantity, 3)
+
+        save_linen_checks(assignment, self.staff, {str(self.linen_item.pk): {
+            "found_quantity": "3", "dirty_collected_quantity": "1",
+            "clean_issued_quantity": "1", "note": "Corrective submission",
+        }})
+        reconcile_linen_custody(assignment, self.staff)
+        custody.refresh_from_db()
+        state.refresh_from_db()
+        self.assertEqual((custody.clean_quantity, custody.dirty_quantity), (5, 2))
+        self.assertEqual(state.quantity, 3)
+        submissions = CleaningLinenSubmission.objects.filter(assignment=assignment).order_by("sequence")
+        self.assertEqual(submissions.count(), 2)
+        self.assertEqual(submissions[0].snapshot[0]["note"], "First submission")
+        self.assertEqual(submissions[1].snapshot[0]["note"], "Corrective submission")
+        self.assertEqual(LinenTransaction.objects.filter(
+            cleaning_assignment=assignment, event_type="DIRTY_COLLECTED",
+        ).count(), 2)
+
 
 
 class LinenMovementHistoryAccessTests(TestCase):
