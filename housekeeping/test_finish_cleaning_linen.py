@@ -114,8 +114,15 @@ class CleaningLinenMovementAuditTests(TestCase):
 
         self.assertEqual(room_replenishment.quantity, 2)
         self.assertEqual(room_replenishment.condition, "CLEAN")
+        self.assertEqual(room_replenishment.from_user, self.staff)
+        self.assertEqual(room_replenishment.to_room, self.room)
+        self.assertEqual(room_replenishment.cleaning_assignment, assignment)
+
         self.assertEqual(dirty_collection.quantity, 1)
         self.assertEqual(dirty_collection.condition, "DIRTY")
+        self.assertEqual(dirty_collection.from_room, self.room)
+        self.assertEqual(dirty_collection.to_user, self.staff)
+        self.assertEqual(dirty_collection.cleaning_assignment, assignment)
 
         # These are internal Housekeeping movements. They are
         # audit records, not transfers into or out of the hotel
