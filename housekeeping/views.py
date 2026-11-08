@@ -2348,7 +2348,6 @@ def send_linen_to_laundry(request):
     "DIRECTOR",
 )
 def housekeeping_linen_movements(request):
-
     hotels = get_accessible_hotels(request.user)
 
     if not hotels.exists():
@@ -2378,26 +2377,92 @@ def housekeeping_linen_movements(request):
     custodies = (
         LinenCustody.objects
         .filter(**custody_filter)
-        .select_related("user", "user__department", "linen_item", "linen_item__product")
+        .select_related("user", "user__department", "user__department__hotel",
+                        "linen_item", "linen_item__product")
         .order_by("user__username", "linen_item__product__name")
     )
 
     movements = (
         LinenTransaction.objects
         .filter(linen_item__product__hotel__in=hotels)
-        .select_related("linen_item", "linen_item__product", "performed_by")
+        .select_related(
+            "linen_item", "linen_item__product", "performed_by",
+            "from_user", "to_user", "from_room", "to_room",
+            "cleaning_assignment", "cleaning_assignment__room",
+        )
     )
 
     if is_regular_staff:
-        # Include movements they performed themselves and movements
-        # generated when a Head issued linen to them.
         issued_references = LinenIssue.objects.filter(
             issued_to=request.user
         ).values_list("reference", flat=True)
         movements = movements.filter(
             Q(performed_by=request.user)
+            | Q(from_user=request.user)
+            | Q(to_user=request.user)
+            | Q(cleaning_assignment__assigned_to=request.user)
             | Q(reference__in=issued_references)
         )
+
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    linen_item_id = request.GET.get("linen_item", "").strip()
+    event_type = request.GET.get("event_type", "").strip()
+    staff_id = request.GET.get("staff", "").strip()
+
+    parsed_from = parse_date(date_from) if date_from else None
+    parsed_to = parse_date(date_to) if date_to else None
+    if parsed_from:
+        movements = movements.filter(created_at__date__gte=parsed_from)
+    if parsed_to:
+        movements = movements.filter(created_at__date__lte=parsed_to)
+
+    available_linen_items = (
+        LinenItem.objects
+        .filter(product__hotel__in=hotels, is_active=True, product__is_active=True)
+        .select_related("product")
+        .order_by("product__name")
+    )
+    if linen_item_id and available_linen_items.filter(pk=linen_item_id).exists():
+        movements = movements.filter(linen_item_id=linen_item_id)
+    else:
+        linen_item_id = ""
+
+    event_choices = LinenTransaction.EVENT_CHOICES
+    allowed_events = {choice[0] for choice in event_choices}
+    if event_type in allowed_events:
+        movements = movements.filter(event_type=event_type)
+    else:
+        event_type = ""
+
+    available_staff = User.objects.filter(
+        department__hotel__in=hotels,
+        department__department_type="HOUSEKEEPING",
+        is_active=True,
+    ).order_by("username").distinct()
+
+    if is_regular_staff:
+        available_staff = available_staff.filter(pk=request.user.pk)
+        staff_id = str(request.user.pk)
+        movements = movements.filter(
+            Q(performed_by=request.user)
+            | Q(from_user=request.user)
+            | Q(to_user=request.user)
+            | Q(cleaning_assignment__assigned_to=request.user)
+            | Q(reference__in=LinenIssue.objects.filter(
+                issued_to=request.user
+            ).values_list("reference", flat=True))
+        )
+    elif staff_id:
+        if available_staff.filter(pk=staff_id).exists():
+            movements = movements.filter(
+                Q(performed_by_id=staff_id)
+                | Q(from_user_id=staff_id)
+                | Q(to_user_id=staff_id)
+                | Q(cleaning_assignment__assigned_to_id=staff_id)
+            )
+        else:
+            staff_id = ""
 
     movements = movements.order_by("-created_at", "-id")
 
@@ -2416,6 +2481,14 @@ def housekeeping_linen_movements(request):
             "dirty_total": dirty_total,
             "custody_total": clean_total + dirty_total,
             "custody_count": len(custody_rows),
+            "available_linen_items": available_linen_items,
+            "available_staff": available_staff,
+            "event_choices": event_choices,
+            "date_from": date_from,
+            "date_to": date_to,
+            "selected_linen_item": linen_item_id,
+            "selected_event_type": event_type,
+            "selected_staff": staff_id,
         },
     )
 
