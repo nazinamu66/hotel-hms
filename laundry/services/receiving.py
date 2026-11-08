@@ -72,11 +72,9 @@ def confirm_laundry_receipt(
     """
     Confirm the physical quantities received by Laundry.
 
-    The original SENT_TO_LAUNDRY transaction already records
-    the physical movement from Housekeeping to Laundry.
-
-    RECEIVED_AT_LAUNDRY is therefore an acknowledgement event
-    and does not create another physical location movement.
+    New returns are held in IN_TRANSIT until Laundry confirms
+    the physical count. Legacy receipts retain their original
+    Housekeeping-to-Laundry movement and confirmation behavior.
     """
 
     if receipt.status != "PENDING":
@@ -122,11 +120,83 @@ def confirm_laundry_receipt(
 
     received_at = timezone.now()
 
-    # Reclassify the unconfirmed portion out of available Laundry
-    # stock and into a separate holding location. The original
-    # Housekeeping transfer remains intact and auditable.
+    receipt_reference = receipt.reference or f"LAUNDRY-RECEIPT-{receipt.id}"
+    is_transit_receipt = LinenTransaction.objects.filter(
+        linen_item=receipt.linen_item,
+        event_type="SENT_TO_LAUNDRY",
+        from_location="HOUSEKEEPING",
+        to_location="IN_TRANSIT",
+        reference=receipt_reference,
+        from_user=receipt.returned_by,
+    ).exists()
+
     clean_difference = receipt.declared_clean_quantity - received_clean_quantity
     dirty_difference = receipt.declared_dirty_quantity - received_dirty_quantity
+
+    # For new workflow returns, confirmed quantities move from transit
+    # into Laundry. Any shortfall moves from transit into discrepancy.
+    if is_transit_receipt:
+        for condition, confirmed, difference in (
+            ("CLEAN", received_clean_quantity, clean_difference),
+            ("DIRTY", received_dirty_quantity, dirty_difference),
+        ):
+            if confirmed > 0:
+                LinenTransaction.objects.create(
+                    linen_item=receipt.linen_item,
+                    quantity=confirmed,
+                    condition=condition,
+                    event_type="RETURNED",
+                    from_location="IN_TRANSIT",
+                    to_location="LAUNDRY",
+                    performed_by=received_by,
+                    from_user=receipt.returned_by,
+                    reference=receipt_reference,
+                    note=note or receipt.note,
+                )
+            if difference > 0:
+                LinenTransaction.objects.create(
+                    linen_item=receipt.linen_item,
+                    quantity=difference,
+                    condition=condition,
+                    event_type="RETURNED",
+                    from_location="IN_TRANSIT",
+                    to_location="DISCREPANCY",
+                    performed_by=received_by,
+                    from_user=receipt.returned_by,
+                    reference=receipt_reference,
+                    note=f"Receipt discrepancy pending review. {note or receipt.note}".strip(),
+                )
+                LaundryReceiptDiscrepancy.objects.create(
+                    receipt=receipt,
+                    condition=condition,
+                    quantity=difference,
+                )
+
+    else:
+        # Backward compatibility: old records already moved into
+        # LAUNDRY at handover. Keep their historical accounting path.
+        for condition, difference in (
+            ("CLEAN", clean_difference),
+            ("DIRTY", dirty_difference),
+        ):
+            if difference > 0:
+                LinenTransaction.objects.create(
+                    linen_item=receipt.linen_item,
+                    quantity=difference,
+                    condition=condition,
+                    event_type="RETURNED",
+                    from_location="LAUNDRY",
+                    to_location="DISCREPANCY",
+                    performed_by=received_by,
+                    from_user=receipt.returned_by,
+                    reference=receipt_reference,
+                    note=f"Receipt discrepancy pending review. {note or receipt.note}".strip(),
+                )
+                LaundryReceiptDiscrepancy.objects.create(
+                    receipt=receipt,
+                    condition=condition,
+                    quantity=difference,
+                )
 
     for condition, difference in (
         ("CLEAN", clean_difference),
