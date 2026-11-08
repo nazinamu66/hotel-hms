@@ -141,6 +141,7 @@ def confirm_laundry_receipt(
                 from_location="LAUNDRY",
                 to_location="DISCREPANCY",
                 performed_by=received_by,
+                from_user=receipt.returned_by,
                 reference=receipt.reference or f"LAUNDRY-RECEIPT-{receipt.id}",
                 note=f"Receipt discrepancy pending review. {note or receipt.note}".strip(),
             )
@@ -161,6 +162,7 @@ def confirm_laundry_receipt(
             condition="CLEAN",
             event_type="RECEIVED_AT_LAUNDRY",
             performed_by=received_by,
+            from_user=receipt.returned_by,
             reference=receipt.reference,
             note=note or receipt.note,
         )
@@ -244,6 +246,7 @@ def resolve_laundry_receipt_discrepancy(
             from_location="DISCREPANCY",
             to_location="LAUNDRY",
             performed_by=resolved_by,
+            from_user=receipt.returned_by,
             reference=reference,
             note=transaction_note,
         )
