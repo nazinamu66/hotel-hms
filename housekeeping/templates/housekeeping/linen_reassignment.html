@@ -1,0 +1,43 @@
+{% extends "base/base.html" %}
+{% block title %}Emergency Linen Custody Reassignment{% endblock %}
+{% block content %}
+<div class="container" style="max-width:900px;margin:24px auto">
+    <div style="margin-bottom:22px">
+        <p style="color:#64748b;font-weight:700;text-transform:uppercase;font-size:.75rem">Housekeeping · Linen control</p>
+        <h2>Emergency custody reassignment</h2>
+        <p>Use only when the staff member holding linen is unavailable to return it. This transfers recorded custody between two Housekeeping staff members; it does not move linen into or out of the department.</p>
+    </div>
+    <form method="post" class="card" style="padding:22px;display:grid;gap:16px">
+        {% csrf_token %}
+        <label>Linen item
+            <select name="linen_item" required style="display:block;width:100%;padding:10px">
+                <option value="">Select linen item</option>
+                {% for item in linen_items %}<option value="{{ item.pk }}">{{ item.product.name }} · {{ item.product.hotel.name }}</option>{% endfor %}
+            </select>
+        </label>
+        <label>From staff member
+            <select name="from_user" required style="display:block;width:100%;padding:10px">
+                <option value="">Select current custodian</option>
+                {% for person in staff %}<option value="{{ person.pk }}">{{ person.get_username }} · {{ person.department.hotel.name }}</option>{% endfor %}
+            </select>
+        </label>
+        <label>To staff member
+            <select name="to_user" required style="display:block;width:100%;padding:10px">
+                <option value="">Select receiving staff member</option>
+                {% for person in staff %}<option value="{{ person.pk }}">{{ person.get_username }} · {{ person.department.hotel.name }}</option>{% endfor %}
+            </select>
+        </label>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">
+            <label>Clean quantity<input type="number" name="clean_quantity" min="0" step="1" value="0" required style="display:block;width:100%;padding:10px"></label>
+            <label>Dirty quantity<input type="number" name="dirty_quantity" min="0" step="1" value="0" required style="display:block;width:100%;padding:10px"></label>
+        </div>
+        <label>Reason / explanation
+            <textarea name="reason" rows="3" required style="display:block;width:100%;padding:10px" placeholder="Explain why the original custodian cannot complete the normal return process."></textarea>
+        </label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" type="submit">Confirm reassignment</button>
+            <a class="btn btn-secondary" href="{% url 'housekeeping_linen_movements' %}">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
