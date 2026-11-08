@@ -50,6 +50,10 @@
         <p class="hk-staff-intro">Your assigned rooms and the next actions you need to complete.</p>
     </header>
 
+    <div class="hk-actions" style="margin:0 0 20px;">
+        <a class="hk-btn" href="{% url 'housekeeping_linen_movements' %}">Linen workspace · View custody, request and return linen</a>
+    </div>
+
     <div class="hk-staff-cards">
         <div class="hk-staff-card"><span>Assigned to me</span><strong>{{ assigned_count }}</strong></div>
         <div class="hk-staff-card"><span>In progress</span><strong>{{ in_progress_count }}</strong></div>
