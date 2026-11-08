@@ -619,6 +619,7 @@ class PurchaseOrder(models.Model):
         ("DRAFT", "Draft"),
         ("SUBMITTED", "Submitted"),
         ("APPROVED", "Approved"),
+        ("PARTIALLY_RECEIVED", "Partially Received"),
         ("RECEIVED", "Received"),
         ("REJECTED", "Rejected"),
     )
@@ -787,6 +788,64 @@ class PurchaseOrder(models.Model):
         self.save(update_fields=["status", "received_at"])
 
         post_inventory_receipt(self)
+
+
+class PurchaseReceipt(models.Model):
+    """A dated, auditable delivery against an approved purchase order."""
+
+    purchase_order = models.ForeignKey(
+        PurchaseOrder,
+        on_delete=models.PROTECT,
+        related_name="receipts",
+    )
+    received_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="purchase_receipts",
+    )
+    received_at = models.DateTimeField(default=timezone.now)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["received_at", "id"]
+
+    def __str__(self):
+        return f"Receipt #{self.pk} · PO #{self.purchase_order_id}"
+
+
+class PurchaseReceiptItem(models.Model):
+    """Immutable quantity and unit-cost snapshot for one PO line delivery."""
+
+    receipt = models.ForeignKey(
+        PurchaseReceipt,
+        on_delete=models.PROTECT,
+        related_name="items",
+    )
+    purchase_item = models.ForeignKey(
+        "PurchaseItem",
+        on_delete=models.PROTECT,
+        related_name="receipt_lines",
+    )
+    quantity = models.PositiveIntegerField()
+    unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["receipt", "purchase_item"],
+                name="unique_purchase_item_per_receipt",
+            ),
+        ]
+
+    @property
+    def total_cost(self):
+        return Decimal(self.quantity) * self.unit_cost
+
+    def __str__(self):
+        return f"{self.purchase_item.product} · {self.quantity}"
 
 
 class PurchaseItem(models.Model):
