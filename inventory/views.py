@@ -1271,6 +1271,7 @@ def po_list(request):
             department=request.user.department,
             status__in=[
                 "APPROVED",
+                "PARTIALLY_RECEIVED",
                 "RECEIVED",
             ],
         )
