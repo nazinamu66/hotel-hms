@@ -351,3 +351,201 @@ class DirectStoreLinenIssueCustodyTests(TestCase):
                 reference="DIRECT-ISSUE-REJECTED",
             ).exists()
         )
+
+
+class EmergencyLinenCustodyReassignmentTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.organization = Organization.objects.create(
+            name="Custody Reassignment Organization",
+        )
+        cls.hotel = Hotel.objects.create(
+            organization=cls.organization,
+            name="Custody Reassignment Hotel",
+        )
+        cls.other_hotel = Hotel.objects.create(
+            organization=cls.organization,
+            name="Other Custody Hotel",
+        )
+        cls.department = Department.objects.create(
+            hotel=cls.hotel,
+            code="HK",
+            name="Housekeeping",
+            department_type="HOUSEKEEPING",
+        )
+        cls.other_department = Department.objects.create(
+            hotel=cls.other_hotel,
+            code="HK",
+            name="Other Housekeeping",
+            department_type="HOUSEKEEPING",
+        )
+        cls.manager = User.objects.create_user(
+            username="custody-reassignment-manager",
+            password="test-password",
+            role="MANAGER",
+            hotel=cls.hotel,
+        )
+        cls.staff_from = User.objects.create_user(
+            username="custody-original-holder",
+            password="test-password",
+            role="HOUSEKEEPING",
+            hotel=cls.hotel,
+            department=cls.department,
+        )
+        cls.staff_to = User.objects.create_user(
+            username="custody-new-holder",
+            password="test-password",
+            role="HOUSEKEEPING",
+            hotel=cls.hotel,
+            department=cls.department,
+        )
+        cls.other_staff = User.objects.create_user(
+            username="custody-other-hotel-holder",
+            password="test-password",
+            role="HOUSEKEEPING",
+            hotel=cls.other_hotel,
+            department=cls.other_department,
+        )
+        product = Product.objects.create(
+            hotel=cls.hotel,
+            name="Custody Test Bedsheet",
+            sku="CUSTODY-TEST-SHEET",
+            product_type="HOUSEKEEPING",
+            usage_type="ASSET",
+            base_unit="pcs",
+        )
+        cls.linen_item = LinenItem.objects.create(product=product)
+
+    def setUp(self):
+        from .models import LinenCustody
+        self.source_custody = LinenCustody.objects.create(
+            linen_item=self.linen_item,
+            user=self.staff_from,
+            clean_quantity=5,
+            dirty_quantity=3,
+        )
+
+    def test_manager_can_reassign_clean_and_dirty_custody_with_audit_trail(self):
+        from .models import LinenCustody, LinenTransaction
+        from .services.workflows import reassign_linen_custody
+
+        reference = reassign_linen_custody(
+            linen_item=self.linen_item,
+            from_user=self.staff_from,
+            to_user=self.staff_to,
+            clean_quantity=2,
+            dirty_quantity=1,
+            authorized_by=self.manager,
+            reason="Original custodian is unavailable to complete the return.",
+        )
+
+        self.source_custody.refresh_from_db()
+        target = LinenCustody.objects.get(
+            linen_item=self.linen_item,
+            user=self.staff_to,
+        )
+        self.assertEqual(self.source_custody.clean_quantity, 3)
+        self.assertEqual(self.source_custody.dirty_quantity, 2)
+        self.assertEqual(target.clean_quantity, 2)
+        self.assertEqual(target.dirty_quantity, 1)
+
+        movements = LinenTransaction.objects.filter(
+            reference=reference,
+            event_type="CUSTODY_TRANSFER",
+        ).order_by("condition")
+        self.assertEqual(movements.count(), 2)
+        clean = movements.get(condition="CLEAN")
+        dirty = movements.get(condition="DIRTY")
+        for movement in (clean, dirty):
+            self.assertEqual(movement.from_location, "HOUSEKEEPING")
+            self.assertEqual(movement.to_location, "HOUSEKEEPING")
+            self.assertEqual(movement.from_user, self.staff_from)
+            self.assertEqual(movement.to_user, self.staff_to)
+            self.assertEqual(movement.performed_by, self.manager)
+            self.assertEqual(
+                movement.note,
+                "Original custodian is unavailable to complete the return.",
+            )
+        self.assertEqual(clean.quantity, 2)
+        self.assertEqual(dirty.quantity, 1)
+
+    def test_reassignment_rejects_quantity_above_source_custody_without_partial_changes(self):
+        from .models import LinenCustody, LinenTransaction
+        from .services.workflows import reassign_linen_custody
+
+        with self.assertRaises(ValidationError):
+            reassign_linen_custody(
+                linen_item=self.linen_item,
+                from_user=self.staff_from,
+                to_user=self.staff_to,
+                clean_quantity=6,
+                dirty_quantity=0,
+                authorized_by=self.manager,
+                reason="Custodian unavailable.",
+            )
+
+        self.source_custody.refresh_from_db()
+        self.assertEqual(self.source_custody.clean_quantity, 5)
+        self.assertEqual(self.source_custody.dirty_quantity, 3)
+        self.assertFalse(
+            LinenCustody.objects.filter(
+                linen_item=self.linen_item,
+                user=self.staff_to,
+            ).exists()
+        )
+        self.assertFalse(
+            LinenTransaction.objects.filter(
+                event_type="CUSTODY_TRANSFER",
+            ).exists()
+        )
+
+    def test_reassignment_rejects_staff_from_another_department(self):
+        from .services.workflows import reassign_linen_custody
+
+        with self.assertRaises(ValidationError):
+            reassign_linen_custody(
+                linen_item=self.linen_item,
+                from_user=self.staff_from,
+                to_user=self.other_staff,
+                clean_quantity=1,
+                dirty_quantity=0,
+                authorized_by=self.manager,
+                reason="Custodian unavailable.",
+            )
+
+    def test_regular_housekeeping_staff_cannot_authorize_reassignment(self):
+        from django.core.exceptions import PermissionDenied
+        from .services.workflows import reassign_linen_custody
+
+        with self.assertRaises(PermissionDenied):
+            reassign_linen_custody(
+                linen_item=self.linen_item,
+                from_user=self.staff_from,
+                to_user=self.staff_to,
+                clean_quantity=1,
+                dirty_quantity=0,
+                authorized_by=self.staff_from,
+                reason="Custodian unavailable.",
+            )
+
+    def test_manager_from_another_hotel_cannot_authorize_reassignment(self):
+        from django.core.exceptions import PermissionDenied
+        from .services.workflows import reassign_linen_custody
+
+        other_manager = get_user_model().objects.create_user(
+            username="custody-other-hotel-manager",
+            password="test-password",
+            role="MANAGER",
+            hotel=self.other_hotel,
+        )
+        with self.assertRaises(PermissionDenied):
+            reassign_linen_custody(
+                linen_item=self.linen_item,
+                from_user=self.staff_from,
+                to_user=self.staff_to,
+                clean_quantity=1,
+                dirty_quantity=0,
+                authorized_by=other_manager,
+                reason="Custodian unavailable.",
+            )
