@@ -585,6 +585,8 @@ Purchase Order #{{ po.id }}
             <span class="po-status-badge status-approved">
                 Approved
             </span>
+        {% elif po.status == "PARTIALLY_RECEIVED" %}
+            <span class="po-status-badge status-pending">Partially Received</span>
         {% elif po.status == "RECEIVED" %}
             <span class="po-status-badge status-received">
                 Received
