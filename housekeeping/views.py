@@ -359,6 +359,8 @@ from housekeeping.models import CleaningLog
     "MANAGER",
     "ADMIN",
     "DIRECTOR",
+    "GENERAL_MANAGER",
+    "CHIEF_ACCOUNTANT",
 )
 def cleaning_history(request):
     hotels = get_accessible_hotels(request.user)
@@ -608,12 +610,8 @@ def lost_found_list(request):
         )
     )
 
-    can_manage_lost_found = (
-        request.user.is_department_head
-        or request.user.role in {
-            "MANAGER", "ADMIN", "DIRECTOR", "GENERAL_MANAGER",
-        }
-    )
+    from housekeeping.workflows.lost_found import can_manage_lost_found
+    can_manage_lost_found = can_manage_lost_found(request.user)
 
     return render(
         request,
