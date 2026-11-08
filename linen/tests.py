@@ -224,3 +224,125 @@ class RoomSpecificLinenSetupTests(TestCase):
             reverse("linen_room_setup", args=[self.other_room.pk])
         )
         self.assertEqual(response.status_code, 404)
+
+
+
+class DirectStoreLinenIssueCustodyTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        organization = Organization.objects.create(name="Direct Linen Issue Org")
+        cls.hotel = Hotel.objects.create(
+            organization=organization,
+            name="Direct Linen Issue Hotel",
+        )
+        cls.manager = User.objects.create_user(
+            username="direct-linen-manager",
+            password="test-password",
+            role="MANAGER",
+            hotel=cls.hotel,
+        )
+        department = Department.objects.create(
+            hotel=cls.hotel,
+            code="HK",
+            name="Housekeeping",
+            department_type="HOUSEKEEPING",
+        )
+        cls.staff = User.objects.create_user(
+            username="direct-linen-housekeeper",
+            password="test-password",
+            role="HOUSEKEEPING",
+            hotel=cls.hotel,
+            department=department,
+        )
+        product = Product.objects.create(
+            hotel=cls.hotel,
+            name="Direct Issue Bedsheet",
+            sku="DIRECT-ISSUE-SHEET",
+            product_type="HOUSEKEEPING",
+            usage_type="ASSET",
+            base_unit="pcs",
+        )
+        cls.linen_item = LinenItem.objects.create(
+            product=product,
+            par_level=20,
+            minimum_level=2,
+        )
+
+    def setUp(self):
+        self.client.force_login(self.manager)
+
+    def test_direct_store_issue_updates_employee_custody_and_movement_recipient(self):
+        from django.urls import reverse
+        from .models import LinenCustody, LinenTransaction
+
+        LinenTransaction.objects.create(
+            linen_item=self.linen_item,
+            quantity=8,
+            event_type="RECEIVED",
+            to_location="STORE",
+            performed_by=self.manager,
+            reference="DIRECT-ISSUE-OPENING",
+        )
+
+        response = self.client.post(
+            reverse("linen_issue"),
+            {
+                "linen_item": str(self.linen_item.pk),
+                "issued_to": str(self.staff.pk),
+                "quantity": "3",
+                "reference": "DIRECT-ISSUE-001",
+                "note": "Test direct issue",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        custody = LinenCustody.objects.get(
+            linen_item=self.linen_item,
+            user=self.staff,
+        )
+        self.assertEqual(custody.clean_quantity, 3)
+        self.assertEqual(custody.dirty_quantity, 0)
+
+        movement = LinenTransaction.objects.get(
+            reference="DIRECT-ISSUE-001",
+            event_type="ISSUED",
+        )
+        self.assertEqual(movement.quantity, 3)
+        self.assertEqual(movement.to_user, self.staff)
+
+    def test_direct_store_issue_does_not_create_custody_when_store_is_insufficient(self):
+        from django.urls import reverse
+        from .models import LinenCustody, LinenTransaction
+
+        LinenTransaction.objects.create(
+            linen_item=self.linen_item,
+            quantity=1,
+            event_type="RECEIVED",
+            to_location="STORE",
+            performed_by=self.manager,
+            reference="DIRECT-ISSUE-LOW-STOCK",
+        )
+
+        response = self.client.post(
+            reverse("linen_issue"),
+            {
+                "linen_item": str(self.linen_item.pk),
+                "issued_to": str(self.staff.pk),
+                "quantity": "2",
+                "reference": "DIRECT-ISSUE-REJECTED",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(
+            LinenCustody.objects.filter(
+                linen_item=self.linen_item,
+                user=self.staff,
+            ).exists()
+        )
+        self.assertFalse(
+            LinenTransaction.objects.filter(
+                reference="DIRECT-ISSUE-REJECTED",
+            ).exists()
+        )
