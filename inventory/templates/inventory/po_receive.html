@@ -459,6 +459,9 @@ Receive Purchase Order #{{ po.id }}
     </div>
 
 
+    <form method="post">
+        {% csrf_token %}
+
     <!-- GOODS -->
     <div class="receive-card">
 
@@ -492,13 +495,7 @@ Receive Purchase Order #{{ po.id }}
                         <th class="right">Unit Cost</th>
                         <th class="right">Order Value</th>
 
-                        <th class="right">
-                            Unit Cost
-                        </th>
 
-                        <th class="right">
-                            Total
-                        </th>
 
                     </tr>
 
@@ -678,10 +675,6 @@ Receive Purchase Order #{{ po.id }}
         </p>
 
 
-        <form method="post">
-
-            {% csrf_token %}
-
             <label for="receipt_notes" class="receive-label">Delivery note (optional)</label>
             <textarea
                 id="receipt_notes"
@@ -714,15 +707,13 @@ Receive Purchase Order #{{ po.id }}
 
             </div>
 
-        </form>
-
-
-        <div class="receive-warning">
+    <div class="receive-warning">
             This action records the delivery and updates inventory.
             Make sure the delivered quantities have been verified.
         </div>
 
     </div>
+    </form>
 
 </div>
 
