@@ -1826,93 +1826,70 @@ def po_receive(request, pk):
         )
 
     if not department:
-        raise PermissionDenied(
-            "You are not assigned to a department."
-        )
+        raise PermissionDenied("You are not assigned to a department.")
 
     po = get_object_or_404(
-        PurchaseOrder.objects.select_related(
-            "supplier",
-            "department__hotel",
-        ),
+        PurchaseOrder.objects.select_for_update().select_related(
+            "supplier", "department__hotel"
+        ).prefetch_related("items__product", "receipts__items"),
         pk=pk,
         department=department,
-        status="APPROVED",
+        status__in=("APPROVED", "PARTIALLY_RECEIVED"),
     )
 
-    # ---------------------------------------------------------
-    # RECEIVE PURCHASE ORDER
-    # ---------------------------------------------------------
-
     if request.method == "POST":
-
+        quantities = {
+            str(item.pk): request.POST.get(f"received_{item.pk}", "0")
+            for item in po.items.all()
+        }
+        notes = request.POST.get("receipt_notes", "").strip()
         try:
+            receipt = po.receive(request.user, quantities, notes=notes)
+        except ValidationError as exc:
+            messages.error(request, "Receipt was not recorded: " + "; ".join(exc.messages))
+            return redirect("inventory:po_receive", pk=po.pk)
 
-            po.receive(
-                request.user,
-            )
-
-        except ValidationError as e:
-
-            messages.error(
+        if po.status == "RECEIVED":
+            messages.success(
                 request,
-                str(e),
+                f"Purchase Order #{po.pk} is now fully received. Receipt #{receipt.pk} recorded.",
             )
-
-            return redirect(
-                "inventory:po_receive",
-                pk=po.pk,
+        else:
+            messages.success(
+                request,
+                f"Partial delivery recorded as Receipt #{receipt.pk}. Outstanding quantities remain on PO #{po.pk}.",
             )
-
-        messages.success(
-            request,
-            f"Purchase Order #{po.id} received successfully.",
-        )
-
-        # -----------------------------------------------------
-        # Department-specific destination
-        # -----------------------------------------------------
 
         if department.department_type == "HOUSEKEEPING":
-
-            return redirect(
-                "housekeeping_incoming_pos",
-            )
-
-        elif department.department_type == "MAINTENANCE":
-
-            return redirect(
-                "maintenance_incoming_pos",
-            )
-
-        elif department.department_type == "STORE":
-
-            return redirect(
-                "store_dashboard",
-            )
-
-        elif department.department_type == "KITCHEN":
-
-            return redirect(
-                "kitchen_dashboard",
-            )
+            return redirect("housekeeping_incoming_pos")
+        if department.department_type == "MAINTENANCE":
+            return redirect("maintenance_incoming_pos")
+        if department.department_type == "STORE":
+            return redirect("store_dashboard")
+        if department.department_type == "KITCHEN":
+            return redirect("kitchen_dashboard")
 
         raise PermissionDenied(
-            "This department does not have a valid "
-            "stock receiving destination."
+            "This department does not have a valid stock receiving destination."
         )
 
-    # ---------------------------------------------------------
-    # GET — SHOW RECEIVING PAGE
-    # ---------------------------------------------------------
+    items = list(po.items.select_related("product").all())
+    for item in items:
+        item.received_quantity = item.received_quantity
+        item.outstanding_quantity = item.outstanding_quantity
 
     return render(
         request,
         "inventory/po_receive.html",
         {
             "po": po,
+            "items": items,
+            "receipt_history": po.receipts.prefetch_related(
+                "items__purchase_item__product", "received_by"
+            ),
         },
     )
+
 # =========================
 # STORE INBOX
 # =========================
