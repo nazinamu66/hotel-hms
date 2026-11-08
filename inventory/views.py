@@ -1443,13 +1443,8 @@ def po_detail(request, pk):
         back_url = "inventory:po_list"
         back_label = "← Back to Purchase Orders"
 
-        total = sum(
-        (
-            item.total_cost
-            for item in po.items.all()
-        ),
-        Decimal("0.00"),
-    )
+        from accounting.services.supplier_payments import purchase_order_received_total
+    total = purchase_order_received_total(po)
 
     from accounting.models import SupplierPayment
     supplier_paid = SupplierPayment.objects.filter(
@@ -1808,7 +1803,7 @@ def po_pay(request, pk):
     po = get_object_or_404(
         PurchaseOrder.objects.select_related("department__hotel"),
         pk=pk,
-        status="RECEIVED",
+        status__in=("PARTIALLY_RECEIVED", "RECEIVED"),
         department__hotel__in=hotels,
         supplier__isnull=False,
     )
