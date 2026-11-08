@@ -635,3 +635,82 @@ def return_clean_linen_from_laundry(
         reference=reference,
         note=note,
     )
+
+@transaction.atomic
+def reassign_linen_custody(
+    linen_item,
+    from_user,
+    to_user,
+    clean_quantity,
+    dirty_quantity,
+    authorized_by,
+    reason,
+):
+    """Transfer physical custody between HK staff in an audited exception."""
+    from django.core.exceptions import PermissionDenied
+    from accounts.services.access import can_manage_department, user_can_access_hotel
+    from linen.models import LinenCustody
+
+    department = from_user.department
+    if (
+        not department
+        or department.department_type != "HOUSEKEEPING"
+        or to_user.department_id != department.pk
+        or from_user.role != "HOUSEKEEPING"
+        or to_user.role != "HOUSEKEEPING"
+        or not from_user.is_active
+        or not to_user.is_active
+    ):
+        raise ValidationError("Both staff members must be active Housekeeping staff in the same department.")
+
+    if from_user.pk == to_user.pk:
+        raise ValidationError("Choose a different staff member to receive the linen.")
+
+    if linen_item.product.hotel_id != department.hotel_id:
+        raise ValidationError("The linen item does not belong to this Housekeeping department's hotel.")
+
+    if not user_can_access_hotel(authorized_by, department.hotel) or not can_manage_department(authorized_by, department):
+        raise PermissionDenied("You are not authorized to reassign linen custody for this department.")
+
+    if clean_quantity < 0 or dirty_quantity < 0 or (clean_quantity == 0 and dirty_quantity == 0):
+        raise ValidationError("Enter a positive clean or dirty quantity.")
+
+    source = LinenCustody.objects.select_for_update().filter(
+        linen_item=linen_item, user=from_user
+    ).first()
+    if not source:
+        raise ValidationError("The selected staff member has no custody of this linen item.")
+
+    if clean_quantity > source.clean_quantity or dirty_quantity > source.dirty_quantity:
+        raise ValidationError(
+            f"Insufficient custody. Available: {source.clean_quantity} clean and {source.dirty_quantity} dirty."
+        )
+
+    source.clean_quantity -= clean_quantity
+    source.dirty_quantity -= dirty_quantity
+    source.save(update_fields=["clean_quantity", "dirty_quantity", "updated_at"])
+
+    target, _ = LinenCustody.objects.select_for_update().get_or_create(
+        linen_item=linen_item, user=to_user
+    )
+    target.clean_quantity += clean_quantity
+    target.dirty_quantity += dirty_quantity
+    target.save(update_fields=["clean_quantity", "dirty_quantity", "updated_at"])
+
+    reference = f"HK-CUSTODY-{timezone.now():%Y%m%d%H%M%S}-{linen_item.pk}-{from_user.pk}-{to_user.pk}"
+    for condition, quantity in (("CLEAN", clean_quantity), ("DIRTY", dirty_quantity)):
+        if quantity:
+            LinenTransaction.objects.create(
+                linen_item=linen_item,
+                quantity=quantity,
+                condition=condition,
+                event_type="CUSTODY_TRANSFER",
+                from_location="HOUSEKEEPING",
+                to_location="HOUSEKEEPING",
+                from_user=from_user,
+                to_user=to_user,
+                performed_by=authorized_by,
+                reference=reference,
+                note=reason,
+            )
+    return reference
