@@ -77,7 +77,7 @@
 <div class="hk-head-dashboard">
 <div class="hk-hero">
   <div><div class="hk-eyebrow">Housekeeping · Operations</div><h1 class="hk-title">Housekeeping Head Dashboard</h1><p class="hk-subtitle">Manage room readiness, staff assignments, inspections, supplies and daily service activity for your hotel.</p></div>
-  <div class="hk-actions"><a class="hk-btn secondary" href="{% url 'housekeeping_cleaning_history' %}">Cleaning history</a><a class="hk-btn secondary" href="{% url 'housekeeping_linen_movements' %}">Linen custody</a></div>
+  <div class="hk-actions"><a class="hk-btn secondary" href="{% url 'housekeeping_cleaning_history' %}">Cleaning history</a></div>
 </div>
 
 <!-- ===================================================== -->
@@ -98,7 +98,7 @@
 
 <div class="hk-section-head">
     <div><h3 style="margin-top:0">Hotel Linen Position</h3><p class="hk-section-note">Current quantities from the linen transaction ledger, separated by physical location.</p></div>
-    <a href="{% url 'housekeeping_linen_movements' %}">Open Linen Custody →</a>
+    <span class="hk-section-note">Detailed custody, requests and movement history are available in the Linen Workspace.</span>
 </div>
 <div class="hk-linen-grid">
     <div class="hk-linen-card"><span>Linen Store</span><strong>{{ linen_totals.store }}</strong><small>Total linen recorded at Store</small></div>
@@ -108,7 +108,7 @@
 </div>
 <p class="hk-section-note">Also recorded: {{ linen_totals.damaged }} damaged · {{ linen_totals.lost }} lost · {{ linen_totals.written_off }} written off. These are ledger balances; individual staff custody and room-use records are separate operational details.</p>
 {% if staff_linen_requests_count %}
-<p><a href="{% url 'housekeeping_linen_request_queue' %}">{{ staff_linen_requests_count }} staff linen request{{ staff_linen_requests_count|pluralize }} awaiting Laundry processing →</a></p>
+<p>{{ staff_linen_requests_count }} staff linen request{{ staff_linen_requests_count|pluralize }} awaiting Laundry processing. Review them in the Linen Workspace.</p>
 {% endif %}
 
 
