@@ -561,6 +561,7 @@ def return_linen_to_laundry(
             from_location="HOUSEKEEPING",
             to_location="LAUNDRY",
             performed_by=user,
+            from_user=user,
             reference=reference,
             note=note,
         )
