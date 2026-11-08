@@ -67,25 +67,19 @@
         <div>
             <div class="linen-kicker">Housekeeping · Linen control</div>
             <h2 class="linen-track-title">{% if is_regular_staff %}My Linen Custody{% else %}Housekeeping Linen Custody{% endif %}</h2>
-            <p class="linen-track-sub">{% if is_regular_staff %}See the clean and dirty linen assigned to you, request more from Laundry and record handovers.{% else %}Review individual staff custody balances and recorded linen movements across your accessible hotels.{% endif %}</p>
+            <p class="linen-track-sub">{% if is_regular_staff %}View your clean and dirty linen custody, request clean linen from Laundry, and return linen when required.{% else %}Review staff custody balances, Laundry requests and recorded linen movements across your accessible hotels.{% endif %}</p>
         </div>
         <div class="linen-page-actions">
-            {% if user.role != "STORE" %}
+            {% if user.role == "HOUSEKEEPING" or user.role == "MANAGER" or user.role == "ADMIN" or user.role == "DIRECTOR" %}
             <a class="btn btn-primary" href="{% url 'housekeeping_request_laundry' %}">Request clean linen from Laundry</a>
-            <a class="btn btn-secondary" href="{% url 'housekeeping_send_linen_to_laundry' %}">Hand over linen to Laundry</a>
+            <a class="btn btn-secondary" href="{% url 'housekeeping_send_linen_to_laundry' %}">Return linen to Laundry</a>
             <a class="btn btn-secondary" href="{% url 'housekeeping_linen_requests' %}">My linen requests</a>
+            {% endif %}
+            {% if user.role == "HOUSEKEEPING" and user.is_department_head or user.role == "MANAGER" or user.role == "ADMIN" or user.role == "DIRECTOR" %}
+            <a class="btn btn-secondary" href="{% url 'housekeeping_linen_request_queue' %}">Staff Laundry requests</a>
             {% endif %}
             {% if user.role == "MANAGER" or user.role == "GENERAL_MANAGER" or user.role == "ADMIN" or user.role == "DIRECTOR" %}
             <a class="btn btn-secondary" href="{% url 'linen_dashboard' %}">Linen Overview</a>
-            {% endif %}
-            {% if user.role == "STORE" or user.role == "MANAGER" or user.role == "ADMIN" or user.role == "DIRECTOR" %}
-            <a class="btn btn-secondary" href="{% url 'linen_receive' %}">Receive New Linen</a>
-            {% endif %}
-            {% if user.role == "STORE" or user.role == "MANAGER" or user.role == "ADMIN" or user.role == "DIRECTOR" or user.role == "HOUSEKEEPING" and user.is_department_head %}
-            <a class="btn btn-secondary" href="{% url 'linen_issue' %}">Issue from Store</a>
-            {% endif %}
-            {% if user.role == "HOUSEKEEPING" and user.is_department_head or user.role == "MANAGER" or user.role == "ADMIN" or user.role == "DIRECTOR" %}
-            <a class="btn btn-secondary" href="{% url 'housekeeping_linen_request_queue' %}">Staff linen requests</a>
             {% endif %}
         </div>
     </div>
