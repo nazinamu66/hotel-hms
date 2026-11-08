@@ -287,3 +287,26 @@ def save_linen_checks(
             "linen_item__product__name",
         )
     )
+
+@transaction.atomic
+def reset_linen_checks_for_retry(assignment):
+    """Rebase editable checks on the room's reconciled physical linen state."""
+    states = {
+        state.linen_item_id: state
+        for state in RoomLinenState.objects.select_for_update().filter(room=assignment.room)
+    }
+    checks = CleaningLinenCheck.objects.select_for_update().filter(assignment=assignment)
+    for check in checks:
+        state = states.get(check.linen_item_id)
+        if state is None:
+            continue
+        check.expected_quantity = state.quantity
+        check.found_quantity = state.quantity
+        check.dirty_collected_quantity = 0
+        check.clean_issued_quantity = 0
+        check.final_quantity = state.quantity
+        check.note = ""
+        check.save(update_fields=[
+            "expected_quantity", "found_quantity", "dirty_collected_quantity",
+            "clean_issued_quantity", "final_quantity", "note",
+        ])
