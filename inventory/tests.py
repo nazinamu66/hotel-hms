@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from decimal import Decimal
 
 from django.db import models
+from django.core.exceptions import ValidationError
 
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory, SimpleTestCase, TestCase
@@ -506,7 +507,7 @@ class PartialPurchaseOrderReceivingTests(TestCase):
 
     @patch("accounting.services.postings.purchase.post_inventory_receipt")
     def test_receipt_cannot_exceed_outstanding_quantity(self, post_receipt):
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValidationError):
             self.po.receive(self.user, {str(self.item.pk): "11"})
 
         self.po.refresh_from_db()
