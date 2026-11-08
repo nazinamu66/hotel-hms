@@ -1443,7 +1443,7 @@ def po_detail(request, pk):
         back_url = "inventory:po_list"
         back_label = "← Back to Purchase Orders"
 
-        from accounting.services.supplier_payments import purchase_order_received_total
+    from accounting.services.supplier_payments import purchase_order_received_total
     total = purchase_order_received_total(po)
 
     from accounting.models import SupplierPayment
