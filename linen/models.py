@@ -80,7 +80,6 @@ class LinenTransaction(models.Model):
         ("ROOM_REPLENISHED", "Clean Linen Placed in Room"),
         ("DIRTY_COLLECTED", "Dirty Linen Collected from Room"),
         ("CUSTODY_TRANSFER", "Emergency Staff Custody Transfer"),
-        ("CUSTODY_TRANSFER", "Emergency Staff Custody Transfer"),
     )
 
     LOCATION_CHOICES = (
@@ -204,7 +203,7 @@ class LinenTransaction(models.Model):
             self.from_location
             and self.to_location
             and self.from_location == self.to_location
-            and self.event_type != "PROCESSED"
+            and self.event_type not in ("PROCESSED", "CUSTODY_TRANSFER")
         ):
             raise ValidationError(
                 "Source and destination cannot be the same."
