@@ -422,13 +422,13 @@ def store_issue_stock_request(request, pk):
 
     stock_request = get_object_or_404(
         LowStockRequest.objects
+        .select_for_update()
         .select_related(
             "product",
             "department",
             "department__hotel",
             "requested_by",
-        )
-        .prefetch_related("transfers"),
+        ),
         pk=pk,
         department__hotel=store.hotel,
         department__department_type__in=[
@@ -449,8 +449,10 @@ def store_issue_stock_request(request, pk):
     # ---------------------------------------------------------
 
     total_issued = sum(
-        Decimal(t.quantity)
-        for t in stock_request.transfers.all()
+        StockTransfer.objects.filter(
+            stock_request=stock_request
+        ).values_list("quantity", flat=True),
+        Decimal("0"),
     )
 
     requested_quantity = Decimal(
@@ -522,11 +524,22 @@ def store_issue_stock_request(request, pk):
                 request.path
             )
 
-        if issue_quantity <= 0:
+        if not issue_quantity.is_finite() or issue_quantity <= 0:
 
             messages.error(
                 request,
-                "Quantity must be greater than zero."
+                "Quantity must be a finite number greater than zero."
+            )
+
+            return redirect(
+                request.path
+            )
+
+        if issue_quantity.as_tuple().exponent < -3:
+
+            messages.error(
+                request,
+                "Quantity can have at most three decimal places."
             )
 
             return redirect(
@@ -570,7 +583,7 @@ def store_issue_stock_request(request, pk):
             product=stock_request.product,
             from_department=store,
             to_department=stock_request.department,
-            quantity=int(issue_quantity),
+            quantity=issue_quantity,
             created_by=request.user,
             stock_request=stock_request,
             note=(
@@ -600,7 +613,7 @@ def store_issue_stock_request(request, pk):
                     f"Restaurant operational issue for "
                     f"stock request #{stock_request.id}"
                 ),
-                reference=f"RESTAURANT-INTERNAL-{stock_request.id}",
+                reference=f"RESTAURANT-INTERNAL-TRANSFER-{transfer.id}",
             )
 
             total_cost = result["total_cost"]
@@ -616,7 +629,7 @@ def store_issue_stock_request(request, pk):
                 hotel=store.hotel,
                 created_by=request.user,
                 entry_type="NORMAL",
-                reference=f"RESTAURANT-EXPENSE-{stock_request.id}",
+                reference=f"RESTAURANT-EXPENSE-TRANSFER-{transfer.id}",
             )
 
         else:
