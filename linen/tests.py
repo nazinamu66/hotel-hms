@@ -382,7 +382,9 @@ class EmergencyLinenCustodyReassignmentTests(TestCase):
             hotel=cls.other_hotel,
             name="Other Housekeeping",
             defaults={
-                "code": "HK",
+                # The hotel setup may already reserve "HK" for its
+                # automatically-created Housekeeping department.
+                "code": "HK2",
                 "department_type": "HOUSEKEEPING",
                 "is_active": True,
             },
