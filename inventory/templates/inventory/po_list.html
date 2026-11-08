@@ -378,6 +378,8 @@ Purchase Orders
                                         <span class="po-badge po-status-approved">
                                             Approved
                                         </span>
+                                    {% elif po.status == "PARTIALLY_RECEIVED" %}
+                                        <span class="po-badge po-status-pending">Partially Received</span>
                                     {% elif po.status == "RECEIVED" %}
                                         <span class="po-badge po-status-received">
                                             Received
