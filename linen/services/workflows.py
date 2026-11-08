@@ -687,6 +687,10 @@ def reassign_linen_custody(
     if clean_quantity < 0 or dirty_quantity < 0 or (clean_quantity == 0 and dirty_quantity == 0):
         raise ValidationError("Enter a positive clean or dirty quantity.")
 
+    if not reason or not reason.strip():
+        raise ValidationError("A reason is required for an emergency custody reassignment.")
+    reason = reason.strip()
+
     source = LinenCustody.objects.select_for_update().filter(
         linen_item=linen_item, user=from_user
     ).first()
