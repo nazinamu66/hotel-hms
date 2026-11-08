@@ -701,39 +701,76 @@ class PurchaseOrder(models.Model):
     )
 
     @transaction.atomic
-    def receive(self, user):
-
+    def receive(self, user, quantities, notes=""):
+        """Record one partial or complete physical delivery against this PO."""
         from maintenance.models import MaintenanceAsset
         from accounting.services.postings.purchase import post_inventory_receipt
 
-        print(">>> ENTERING receive()", self.id)
+        po = PurchaseOrder.objects.select_for_update().get(pk=self.pk)
+        if po.status not in ("APPROVED", "PARTIALLY_RECEIVED"):
+            raise ValidationError("Only approved or partially received purchase orders can be received.")
 
-        if self.status == "RECEIVED":
-            raise ValidationError("Purchase order already received.")
+        items = list(
+            po.items.select_for_update().select_related("product").order_by("id")
+        )
+        if not items:
+            raise ValidationError("This purchase order has no items to receive.")
 
-        if self.status not in ("APPROVED",):
-            raise ValidationError(
-                "Only approved purchase orders can be received."
+        normalized = {}
+        for item in items:
+            raw_quantity = quantities.get(str(item.pk), quantities.get(item.pk, 0))
+            try:
+                quantity = int(raw_quantity or 0)
+            except (TypeError, ValueError):
+                raise ValidationError(f"Enter a whole-number quantity for {item.product.name}.")
+            if quantity < 0:
+                raise ValidationError(f"Received quantity for {item.product.name} cannot be negative.")
+            if quantity > item.outstanding_quantity:
+                raise ValidationError(
+                    f"Received quantity for {item.product.name} exceeds the outstanding "
+                    f"quantity of {item.outstanding_quantity}."
+                )
+            normalized[item.pk] = quantity
+
+        if not any(normalized.values()):
+            raise ValidationError("Enter at least one quantity received.")
+
+        receipt = PurchaseReceipt.objects.create(
+            purchase_order=po,
+            received_by=user,
+            notes=(notes or "").strip(),
+        )
+        receipt_reference = f"PO-{po.pk}-REC-{receipt.pk}"
+
+        for item in items:
+            quantity = normalized[item.pk]
+            if quantity <= 0:
+                continue
+
+            receipt_line = PurchaseReceiptItem.objects.create(
+                receipt=receipt,
+                purchase_item=item,
+                quantity=quantity,
+                unit_cost=item.unit_cost,
             )
 
-        for item in self.items.select_related("product"):
-
-            if item.product.product_type == "EQUIPMENT":
-                if item.product.usage_type != "ASSET" or item.product.unit_multiplier != 1:
+            product = item.product
+            if product.product_type == "EQUIPMENT":
+                if product.usage_type != "ASSET" or product.unit_multiplier != 1:
                     raise ValidationError(
-                        f"{item.product.name} must be configured as an ASSET with unit multiplier 1."
+                        f"{product.name} must be configured as an ASSET with unit multiplier 1."
                     )
                 if item.unit_cost <= 0:
                     raise ValidationError(
-                        f"Equipment {item.product.name} must have a positive unit cost."
+                        f"Equipment {product.name} must have a positive unit cost."
                     )
-                for unit_number in range(item.purchase_quantity):
+                for _ in range(quantity):
                     MaintenanceAsset.objects.create(
-                        hotel=self.department.hotel,
-                        product=item.product,
+                        hotel=po.department.hotel,
+                        product=product,
                         purchase_item=item,
-                        name=item.product.name,
-                        asset_type=item.product.name,
+                        name=product.name,
+                        asset_type=product.name,
                         manufacturer="",
                         model_number="",
                         purchase_date=timezone.localdate(),
@@ -742,52 +779,43 @@ class PurchaseOrder(models.Model):
                     )
                 continue
 
-            # -----------------------------------------
-            # Receive physical stock
-            # -----------------------------------------
             stock_in(
-                product=item.product,
-                department=self.department,
-                quantity=item.purchase_quantity,
+                product=product,
+                department=po.department,
+                quantity=quantity,
                 user=user,
-                reference=f"PO-{self.id}",
+                reference=receipt_reference,
             )
 
-            # -----------------------------------------
-            # Create historical inventory cost layer
-            #
-            # PurchaseItem.unit_cost is the cost per
-            # PURCHASE UNIT.
-            #
-            # Stock is stored in BASE UNITS.
-            # -----------------------------------------
-            base_quantity = item.base_quantity
-
+            base_quantity = Decimal(quantity) * Decimal(product.unit_multiplier or 1)
             if base_quantity <= 0:
-                raise ValidationError(
-                    f"Invalid base quantity for {item.product.name}."
-                )
+                raise ValidationError(f"Invalid base quantity for {product.name}.")
 
-            unit_cost = (
-                Decimal(item.unit_cost)
-                / Decimal(item.product.unit_multiplier or 1)
-            )
-
+            unit_cost = Decimal(item.unit_cost) / Decimal(product.unit_multiplier or 1)
             StockCostLayer.objects.create(
-                product=item.product,
-                department=self.department,
+                product=product,
+                department=po.department,
                 purchase_item=item,
+                source_reference=receipt_reference,
                 quantity_received=base_quantity,
                 quantity_remaining=base_quantity,
                 unit_cost=unit_cost,
                 is_opening_balance=False,
             )
 
-        self.status = "RECEIVED"
-        self.received_at = timezone.now()
-        self.save(update_fields=["status", "received_at"])
+        all_received = all(
+            item.received_quantity >= item.purchase_quantity
+            for item in items
+        )
+        po.status = "RECEIVED" if all_received else "PARTIALLY_RECEIVED"
+        if all_received:
+            po.received_at = timezone.now()
+        po.save(update_fields=["status", "received_at"])
 
-        post_inventory_receipt(self)
+        post_inventory_receipt(receipt)
+        self.status = po.status
+        self.received_at = po.received_at
+        return receipt
 
 
 class PurchaseReceipt(models.Model):
