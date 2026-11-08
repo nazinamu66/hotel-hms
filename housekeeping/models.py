@@ -25,6 +25,16 @@ class CleaningLog(models.Model):
 
     notes = models.TextField(blank=True)
 
+    # Nullable to preserve historical cleaning logs created before
+    # assignments were linked to their final inspection record.
+    assignment = models.OneToOneField(
+        "housekeeping.CleaningAssignment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cleaning_log",
+    )
+
     def __str__(self):
         return f"Room {self.room.room_number} cleaned at {self.cleaned_at}"
 
