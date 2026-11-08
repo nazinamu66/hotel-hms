@@ -108,8 +108,8 @@ def reconcile_linen_custody(assignment, user):
         raise ValidationError("No linen checklist records were found.")
 
     latest = CleaningLinenSubmission.objects.filter(assignment=assignment).order_by("-sequence").first()
-    failed_inspections = assignment.inspections.filter(result="FAIL").count()
-    if latest and failed_inspections < latest.sequence:
+    inspection_count = assignment.inspections.count()
+    if latest and inspection_count <= latest.inspection_count:
         raise ValidationError("This checklist has already been submitted for inspection.")
 
     previous_sequence = (
@@ -131,7 +131,7 @@ def reconcile_linen_custody(assignment, user):
     ]
     submission = CleaningLinenSubmission.objects.create(
         assignment=assignment, sequence=previous_sequence + 1,
-        submitted_by=user, snapshot=snapshot,
+        submitted_by=user, snapshot=snapshot, inspection_count=inspection_count,
     )
     states = {
         state.linen_item_id: state
