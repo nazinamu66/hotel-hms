@@ -1,9 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
 
 from housekeeping.models import CleaningAssignment
 from housekeeping.workflows.finish_cleaning import reconcile_linen_custody
-from inventory.models import Hotel, Organization, Product
+from inventory.models import Department, Hotel, Organization, Product
 from linen.models import (
     CleaningLinenCheck,
     LinenCustody,
@@ -129,3 +131,194 @@ class CleaningLinenMovementAuditTests(TestCase):
         # department, so the aggregate location balance stays 10.
         summary = get_linen_summary(self.linen_item)
         self.assertEqual(summary["housekeeping"], 10)
+
+
+
+class LinenMovementHistoryAccessTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.organization = Organization.objects.create(
+            name="Linen History Organization",
+        )
+        cls.hotel = Hotel.objects.create(
+            organization=cls.organization,
+            name="Linen History Hotel",
+        )
+        cls.other_hotel = Hotel.objects.create(
+            organization=cls.organization,
+            name="Other Linen History Hotel",
+        )
+        cls.hk_department = Department.objects.create(
+            hotel=cls.hotel,
+            code="HK",
+            name="Housekeeping",
+            department_type="HOUSEKEEPING",
+        )
+        cls.other_hk_department = Department.objects.create(
+            hotel=cls.other_hotel,
+            code="HK",
+            name="Housekeeping",
+            department_type="HOUSEKEEPING",
+        )
+        cls.staff = User.objects.create_user(
+            username="history-staff",
+            password="test-password",
+            role="HOUSEKEEPING",
+            hotel=cls.hotel,
+            department=cls.hk_department,
+        )
+        cls.other_staff = User.objects.create_user(
+            username="history-other-staff",
+            password="test-password",
+            role="HOUSEKEEPING",
+            hotel=cls.hotel,
+            department=cls.hk_department,
+        )
+        cls.foreign_staff = User.objects.create_user(
+            username="history-foreign-staff",
+            password="test-password",
+            role="HOUSEKEEPING",
+            hotel=cls.other_hotel,
+            department=cls.other_hk_department,
+        )
+        cls.manager = User.objects.create_user(
+            username="history-manager",
+            password="test-password",
+            role="MANAGER",
+            hotel=cls.hotel,
+        )
+        cls.product = Product.objects.create(
+            hotel=cls.hotel,
+            name="History Bedsheet",
+            sku="HISTORY-BEDSHEET",
+            product_type="HOUSEKEEPING",
+            usage_type="ASSET",
+            base_unit="pcs",
+        )
+        cls.linen_item = LinenItem.objects.create(product=cls.product)
+        cls.other_product = Product.objects.create(
+            hotel=cls.hotel,
+            name="History Towel",
+            sku="HISTORY-TOWEL",
+            product_type="HOUSEKEEPING",
+            usage_type="ASSET",
+            base_unit="pcs",
+        )
+        cls.other_linen_item = LinenItem.objects.create(product=cls.other_product)
+        cls.foreign_product = Product.objects.create(
+            hotel=cls.other_hotel,
+            name="Foreign Bedsheet",
+            sku="FOREIGN-BEDSHEET",
+            product_type="HOUSEKEEPING",
+            usage_type="ASSET",
+            base_unit="pcs",
+        )
+        cls.foreign_linen_item = LinenItem.objects.create(product=cls.foreign_product)
+
+    def create_movement(self, *, item=None, performed_by=None,
+                        from_user=None, to_user=None, event_type="ISSUED",
+                        reference=""):
+        return LinenTransaction.objects.create(
+            linen_item=item or self.linen_item,
+            quantity=2,
+            event_type=event_type,
+            condition="CLEAN",
+            performed_by=performed_by,
+            from_user=from_user,
+            to_user=to_user,
+            reference=reference,
+        )
+
+    def test_regular_staff_sees_movements_involving_them_but_not_other_staff_or_hotels(self):
+        issued_to_staff = self.create_movement(
+            performed_by=self.other_staff,
+            to_user=self.staff,
+            reference="ISSUED-TO-ME",
+        )
+        issued_to_other = self.create_movement(
+            performed_by=self.other_staff,
+            to_user=self.other_staff,
+            reference="ISSUED-TO-OTHER",
+        )
+        foreign_movement = self.create_movement(
+            item=self.foreign_linen_item,
+            performed_by=self.foreign_staff,
+            to_user=self.foreign_staff,
+            reference="FOREIGN-MOVEMENT",
+        )
+
+        self.client.login(username="history-staff", password="test-password")
+        response = self.client.get(reverse("housekeeping_linen_movements"))
+
+        self.assertEqual(response.status_code, 200)
+        movement_ids = set(
+            response.context["movements"].values_list("pk", flat=True)
+        )
+        self.assertIn(issued_to_staff.pk, movement_ids)
+        self.assertNotIn(issued_to_other.pk, movement_ids)
+        self.assertNotIn(foreign_movement.pk, movement_ids)
+
+    def test_regular_staff_can_filter_by_item_and_movement_type(self):
+        matching = self.create_movement(
+            performed_by=self.other_staff,
+            to_user=self.staff,
+            item=self.linen_item,
+            event_type="ISSUED",
+        )
+        wrong_item = self.create_movement(
+            performed_by=self.other_staff,
+            to_user=self.staff,
+            item=self.other_linen_item,
+            event_type="ISSUED",
+        )
+        wrong_event = self.create_movement(
+            performed_by=self.other_staff,
+            to_user=self.staff,
+            item=self.linen_item,
+            event_type="RETURNED",
+        )
+
+        self.client.login(username="history-staff", password="test-password")
+        response = self.client.get(
+            reverse("housekeeping_linen_movements"),
+            {
+                "linen_item": str(self.linen_item.pk),
+                "event_type": "ISSUED",
+                "date_from": timezone.localdate().isoformat(),
+                "date_to": timezone.localdate().isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        movement_ids = set(
+            response.context["movements"].values_list("pk", flat=True)
+        )
+        self.assertIn(matching.pk, movement_ids)
+        self.assertNotIn(wrong_item.pk, movement_ids)
+        self.assertNotIn(wrong_event.pk, movement_ids)
+
+    def test_manager_can_filter_history_by_staff_recipient(self):
+        recipient_movement = self.create_movement(
+            performed_by=self.manager,
+            to_user=self.staff,
+            reference="MANAGER-ISSUE",
+        )
+        other_movement = self.create_movement(
+            performed_by=self.manager,
+            to_user=self.other_staff,
+            reference="OTHER-MANAGER-ISSUE",
+        )
+
+        self.client.login(username="history-manager", password="test-password")
+        response = self.client.get(
+            reverse("housekeeping_linen_movements"),
+            {"staff": str(self.staff.pk)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        movement_ids = set(
+            response.context["movements"].values_list("pk", flat=True)
+        )
+        self.assertIn(recipient_movement.pk, movement_ids)
+        self.assertNotIn(other_movement.pk, movement_ids)
