@@ -90,8 +90,8 @@ def get_or_create_linen_checks(
                 defaults={
                     "expected_quantity": state.quantity,
                     "found_quantity": state.quantity,
-                    "dirty_collected_quantity": state.quantity,
-                    "clean_issued_quantity": state.quantity,
+                    "dirty_collected_quantity": 0,
+                    "clean_issued_quantity": 0,
                     "final_quantity": state.quantity,
                 },
             )
@@ -118,7 +118,6 @@ def save_linen_checks(
         found_quantity
         dirty_collected_quantity
         clean_issued_quantity
-        final_quantity
         note
 
     IMPORTANT:
@@ -206,13 +205,6 @@ def save_linen_checks(
                 )
             )
 
-            final_quantity = int(
-                values.get(
-                    "final_quantity",
-                    0,
-                )
-            )
-
         except (TypeError, ValueError):
 
             raise ValidationError(
@@ -237,31 +229,23 @@ def save_linen_checks(
                 "Clean issued quantity cannot be negative."
             )
 
-        if final_quantity < 0:
-
-            raise ValidationError(
-                "Final quantity cannot be negative."
-            )
-
         # -----------------------------------------------------
         # Physical reconciliation
         # -----------------------------------------------------
 
-        if dirty_collected_quantity != found_quantity:
-
+        if dirty_collected_quantity > found_quantity:
             raise ValidationError(
                 f"{check.linen_item.product.name}: "
-                "Dirty collected quantity must equal "
-                "the quantity found in the room."
+                "Dirty collected quantity cannot exceed the quantity found."
             )
 
-        if final_quantity != clean_issued_quantity:
-
-            raise ValidationError(
-                f"{check.linen_item.product.name}: "
-                "Final quantity must equal the clean linen "
-                "placed in the room."
-            )
+        # The final quantity is derived on the server. The browser's
+        # calculated display is never trusted as the source of truth.
+        final_quantity = (
+            found_quantity
+            - dirty_collected_quantity
+            + clean_issued_quantity
+        )
 
         check.found_quantity = found_quantity
 
