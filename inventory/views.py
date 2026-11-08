@@ -161,6 +161,7 @@ def supplier_detail(request, pk):
             supplier=supplier,
             status__in=[
                 "APPROVED",
+                "PARTIALLY_RECEIVED",
                 "RECEIVED",
             ],
         )
@@ -1913,10 +1914,10 @@ def department_incoming_pos(request):
         PurchaseOrder.objects
         .filter(
             department=department,
-            status="APPROVED",
+            status__in=("APPROVED", "PARTIALLY_RECEIVED"),
         )
         .select_related("supplier")
-        .prefetch_related("items__product")
+        .prefetch_related("items__product", "items__receipt_lines")
         .order_by("approved_at", "id")
     )
 
