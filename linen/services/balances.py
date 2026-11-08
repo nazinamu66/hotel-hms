@@ -8,6 +8,7 @@ ACTIVE_LOCATIONS = (
     "STORE",
     "HOUSEKEEPING",
     "LAUNDRY",
+    "IN_TRANSIT",
     "DISCREPANCY",
 )
 
@@ -202,6 +203,11 @@ def get_linen_summary(linen_item):
         Decimal("0"),
     )
 
+    in_transit = balance.get(
+        "IN_TRANSIT",
+        Decimal("0"),
+    )
+
     damaged = balance.get(
         "DAMAGED",
         Decimal("0"),
@@ -226,6 +232,7 @@ def get_linen_summary(linen_item):
         store
         + housekeeping
         + laundry
+        + in_transit
         + damaged
         + lost
         + discrepancy
@@ -241,6 +248,7 @@ def get_linen_summary(linen_item):
         "store": store,
         "housekeeping": housekeeping,
         "laundry": laundry,
+        "in_transit": in_transit,
         "discrepancy": discrepancy,
         "damaged": damaged,
         "lost": lost,
