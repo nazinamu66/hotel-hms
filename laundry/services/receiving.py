@@ -198,29 +198,6 @@ def confirm_laundry_receipt(
                     quantity=difference,
                 )
 
-    for condition, difference in (
-        ("CLEAN", clean_difference),
-        ("DIRTY", dirty_difference),
-    ):
-        if difference > 0:
-            LinenTransaction.objects.create(
-                linen_item=receipt.linen_item,
-                quantity=difference,
-                condition=condition,
-                event_type="RETURNED",
-                from_location="LAUNDRY",
-                to_location="DISCREPANCY",
-                performed_by=received_by,
-                from_user=receipt.returned_by,
-                reference=receipt.reference or f"LAUNDRY-RECEIPT-{receipt.id}",
-                note=f"Receipt discrepancy pending review. {note or receipt.note}".strip(),
-            )
-            LaundryReceiptDiscrepancy.objects.create(
-                receipt=receipt,
-                condition=condition,
-                quantity=difference,
-            )
-
     # --------------------------------------------------------
     # Record confirmed clean linen receipt
     # --------------------------------------------------------
