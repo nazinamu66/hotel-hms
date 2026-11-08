@@ -2,6 +2,8 @@ from types import SimpleNamespace
 
 from decimal import Decimal
 
+from django.db import models
+
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory, SimpleTestCase, TestCase
 from unittest.mock import patch
@@ -399,3 +401,153 @@ class PurchaseReceiptLedgerTests(TestCase):
                     quantity=1,
                     unit_cost=Decimal("15000.00"),
                 )
+
+
+
+class PartialPurchaseOrderReceivingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        organization = Organization.objects.create(name="Partial PO Receipt Org")
+        cls.hotel = Hotel.objects.create(
+            organization=organization,
+            name="Partial PO Receipt Hotel",
+        )
+        cls.department = Department.objects.create(
+            hotel=cls.hotel,
+            code="PPR",
+            name="Partial PO Receipt Store",
+            department_type="STORE",
+        )
+        cls.supplier = Supplier.objects.create(
+            hotel=cls.hotel,
+            name="Partial PO Receipt Supplier",
+        )
+        cls.user = User.objects.create_user(
+            username="partial_po_receiver",
+            password="test-password",
+            role="STORE",
+            hotel=cls.hotel,
+            department=cls.department,
+        )
+
+    def setUp(self):
+        self.product = Product.objects.create(
+            hotel=self.hotel,
+            name="Partial Receipt Cooking Oil",
+            sku="PARTIAL-RECEIPT-OIL",
+            product_type="RAW",
+            base_unit="litre",
+            purchase_unit="carton",
+            unit_multiplier=12,
+            purchase_cost=Decimal("24000.00"),
+        )
+        self.po = PurchaseOrder.objects.create(
+            supplier=self.supplier,
+            department=self.department,
+            status="APPROVED",
+            created_by=self.user,
+        )
+        self.item = PurchaseItem.objects.create(
+            purchase_order=self.po,
+            product=self.product,
+            purchase_quantity=10,
+            unit_cost=Decimal("24000.00"),
+        )
+
+    @patch("accounting.services.postings.purchase.post_inventory_receipt")
+    def test_partial_receipt_updates_stock_fifo_and_remaining_balance(self, post_receipt):
+        receipt = self.po.receive(
+            self.user,
+            {str(self.item.pk): "3"},
+            notes="First three cartons",
+        )
+
+        self.po.refresh_from_db()
+        self.item.refresh_from_db()
+        stock = Stock.objects.get(product=self.product, department=self.department)
+        layer = StockCostLayer.objects.get(product=self.product, department=self.department)
+        movement = StockMovement.objects.get(reference=f"PO-{self.po.pk}-REC-{receipt.pk}")
+
+        self.assertEqual(self.po.status, "PARTIALLY_RECEIVED")
+        self.assertEqual(self.item.received_quantity, 3)
+        self.assertEqual(self.item.outstanding_quantity, 7)
+        self.assertEqual(stock.quantity, Decimal("36.000"))
+        self.assertEqual(movement.quantity, Decimal("36.000"))
+        self.assertEqual(layer.quantity_received, Decimal("36.000"))
+        self.assertEqual(layer.quantity_remaining, Decimal("36.000"))
+        self.assertEqual(layer.unit_cost, Decimal("2000.0000"))
+        self.assertEqual(layer.source_reference, f"PO-{self.po.pk}-REC-{receipt.pk}")
+        post_receipt.assert_called_once_with(receipt)
+
+    @patch("accounting.services.postings.purchase.post_inventory_receipt")
+    def test_final_receipt_completes_order_without_reposting_prior_quantities(self, post_receipt):
+        first = self.po.receive(self.user, {str(self.item.pk): "3"})
+        second = self.po.receive(self.user, {str(self.item.pk): "7"})
+
+        self.po.refresh_from_db()
+        self.item.refresh_from_db()
+        stock = Stock.objects.get(product=self.product, department=self.department)
+
+        self.assertEqual(self.po.status, "RECEIVED")
+        self.assertEqual(self.item.received_quantity, 10)
+        self.assertEqual(self.item.outstanding_quantity, 0)
+        self.assertEqual(stock.quantity, Decimal("120.000"))
+        self.assertEqual(
+            StockMovement.objects.filter(
+                reference__in=[
+                    f"PO-{self.po.pk}-REC-{first.pk}",
+                    f"PO-{self.po.pk}-REC-{second.pk}",
+                ],
+                movement_type="IN",
+            ).count(),
+            2,
+        )
+        self.assertEqual(post_receipt.call_count, 2)
+
+    @patch("accounting.services.postings.purchase.post_inventory_receipt")
+    def test_receipt_cannot_exceed_outstanding_quantity(self, post_receipt):
+        with self.assertRaises(Exception):
+            self.po.receive(self.user, {str(self.item.pk): "11"})
+
+        self.po.refresh_from_db()
+        self.assertEqual(self.po.status, "APPROVED")
+        self.assertFalse(PurchaseReceipt.objects.filter(purchase_order=self.po).exists())
+        self.assertFalse(Stock.objects.filter(product=self.product, department=self.department).exists())
+        post_receipt.assert_not_called()
+
+    @patch("accounting.services.postings.purchase.post_inventory_receipt")
+    def test_equipment_receipt_creates_only_delivered_asset_records(self, post_receipt):
+        equipment = Product.objects.create(
+            hotel=self.hotel,
+            name="Asset Laptop",
+            sku="PARTIAL-RECEIPT-LAPTOP",
+            product_type="EQUIPMENT",
+            usage_type="ASSET",
+            base_unit="unit",
+            purchase_unit="unit",
+            unit_multiplier=1,
+            purchase_cost=Decimal("500000.00"),
+        )
+        equipment_item = PurchaseItem.objects.create(
+            purchase_order=self.po,
+            product=equipment,
+            purchase_quantity=4,
+            unit_cost=Decimal("500000.00"),
+        )
+
+        self.po.receive(
+            self.user,
+            {
+                str(self.item.pk): "0",
+                str(equipment_item.pk): "2",
+            },
+        )
+
+        from maintenance.models import MaintenanceAsset
+        assets = MaintenanceAsset.objects.filter(purchase_item=equipment_item)
+
+        self.assertEqual(assets.count(), 2)
+        self.assertEqual(
+            assets.aggregate(total=models.Sum("purchase_cost"))["total"],
+            Decimal("1000000.00"),
+        )
