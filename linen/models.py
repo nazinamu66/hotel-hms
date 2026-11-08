@@ -79,6 +79,7 @@ class LinenTransaction(models.Model):
         # within the Housekeeping department.
         ("ROOM_REPLENISHED", "Clean Linen Placed in Room"),
         ("DIRTY_COLLECTED", "Dirty Linen Collected from Room"),
+        ("CUSTODY_TRANSFER", "Emergency Staff Custody Transfer"),
     )
 
     LOCATION_CHOICES = (
