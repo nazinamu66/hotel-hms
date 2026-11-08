@@ -178,6 +178,7 @@ def confirm_laundry_receipt(
             condition="DIRTY",
             event_type="RECEIVED_AT_LAUNDRY",
             performed_by=received_by,
+            from_user=receipt.returned_by,
             reference=receipt.reference,
             note=note or receipt.note,
         )
