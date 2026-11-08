@@ -485,13 +485,12 @@ Receive Purchase Order #{{ po.id }}
                             Product
                         </th>
 
-                        <th class="right">
-                            Purchase Qty
-                        </th>
-
-                        <th class="right">
-                            Base Qty
-                        </th>
+                        <th class="right">Ordered</th>
+                        <th class="right">Received to Date</th>
+                        <th class="right">Outstanding</th>
+                        <th class="right">Receive Now</th>
+                        <th class="right">Unit Cost</th>
+                        <th class="right">Order Value</th>
 
                         <th class="right">
                             Unit Cost
@@ -521,28 +520,35 @@ Receive Purchase Order #{{ po.id }}
 
                         <td class="right">
                             {{ item.purchase_quantity }}
-                            <span class="receive-unit">
-                                {{ item.product.purchase_unit }}
-                            </span>
+                            <span class="receive-unit">{{ item.product.purchase_unit }}</span>
                         </td>
 
+                        <td class="right">{{ item.received_quantity }}</td>
 
                         <td class="right">
-                            {{ item.base_quantity }}
-                            <span class="receive-unit">
-                                {{ item.product.base_unit }}
-                            </span>
+                            <strong>{{ item.outstanding_quantity }}</strong>
                         </td>
-
 
                         <td class="right">
-                            ₦{{ item.unit_cost|floatformat:2 }}
+                            {% if item.outstanding_quantity > 0 %}
+                                <input
+                                    type="number"
+                                    name="received_{{ item.pk }}"
+                                    min="0"
+                                    max="{{ item.outstanding_quantity }}"
+                                    step="1"
+                                    value="0"
+                                    style="width:105px;padding:9px;border:1px solid #d0d5dd;border-radius:8px;text-align:right;"
+                                    aria-label="Quantity of {{ item.product.name }} received now"
+                                >
+                                <span class="receive-unit">{{ item.product.purchase_unit }}</span>
+                            {% else %}
+                                <span class="receive-badge badge-paid">Complete</span>
+                            {% endif %}
                         </td>
 
-
-                        <td class="right">
-                            ₦{{ item.total_cost|floatformat:2 }}
-                        </td>
+                        <td class="right">₦{{ item.unit_cost|floatformat:2 }} / unit</td>
+                        <td class="right">₦{{ item.total_cost|floatformat:2 }} ordered</td>
 
                     </tr>
 
@@ -559,6 +565,33 @@ Receive Purchase Order #{{ po.id }}
 
     </div>
 
+
+    {% if receipt_history %}
+    <div class="receive-card">
+        <div class="receive-card-header">
+            <h3>Previous Deliveries</h3>
+            <p>Recorded receipts against this purchase order.</p>
+        </div>
+        <div class="receive-card-body">
+            {% for receipt in receipt_history %}
+                <div style="padding:12px 0;border-bottom:1px solid #eaecf0;">
+                    <strong>Receipt #{{ receipt.pk }}</strong>
+                    <span class="receive-unit">{{ receipt.received_at|date:"d M Y, H:i" }}</span>
+                    <div class="receive-unit">
+                        Received by: {{ receipt.received_by|default:"Historical record" }}
+                        {% if receipt.notes %} · {{ receipt.notes }}{% endif %}
+                    </div>
+                    {% for line in receipt.items.all %}
+                        <div class="receive-unit">
+                            {{ line.purchase_item.product.name }}: {{ line.quantity }}
+                            {{ line.purchase_item.product.purchase_unit }} at ₦{{ line.unit_cost|floatformat:2 }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 
     <!-- DESTINATION -->
     <div class="receive-card">
@@ -648,6 +681,20 @@ Receive Purchase Order #{{ po.id }}
         <form method="post">
 
             {% csrf_token %}
+
+            <label for="receipt_notes" class="receive-label">Delivery note (optional)</label>
+            <textarea
+                id="receipt_notes"
+                name="receipt_notes"
+                rows="3"
+                style="display:block;width:100%;box-sizing:border-box;margin:8px 0 18px;padding:11px;border:1px solid #d0d5dd;border-radius:8px;"
+                placeholder="Delivery note, supplier docket number, shortages or condition..."
+            ></textarea>
+
+            <p class="receive-confirm-text">
+                Enter only the quantities physically delivered now. Leave zero for items not delivered.
+                You can record another delivery against the remaining balance later.
+            </p>
 
             <div class="receive-actions">
 
