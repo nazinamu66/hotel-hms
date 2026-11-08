@@ -242,12 +242,17 @@ class DirectStoreLinenIssueCustodyTests(TestCase):
             role="MANAGER",
             hotel=cls.hotel,
         )
-        department = Department.objects.create(
+        department = Department.objects.filter(
             hotel=cls.hotel,
-            code="HK",
-            name="Housekeeping",
             department_type="HOUSEKEEPING",
-        )
+        ).first()
+        if department is None:
+            department = Department.objects.create(
+                hotel=cls.hotel,
+                code="HK",
+                name="Housekeeping",
+                department_type="HOUSEKEEPING",
+            )
         cls.staff = User.objects.create_user(
             username="direct-linen-housekeeper",
             password="test-password",
