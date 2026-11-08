@@ -864,6 +864,19 @@ class PurchaseItem(models.Model):
     def base_quantity(self):
         return self.purchase_quantity * self.product.unit_multiplier
 
+    @property
+    def received_quantity(self):
+        total = self.receipt_lines.aggregate(total=models.Sum("quantity"))["total"]
+        return total or 0
+
+    @property
+    def outstanding_quantity(self):
+        return max(self.purchase_quantity - self.received_quantity, 0)
+
+    @property
+    def is_fully_received(self):
+        return self.outstanding_quantity == 0
+
 
 # =========================
 # STOCK MOVEMENTS
