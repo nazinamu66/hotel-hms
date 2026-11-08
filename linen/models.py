@@ -730,6 +730,7 @@ class CleaningLinenSubmission(models.Model):
         related_name="linen_submissions",
     )
     sequence = models.PositiveIntegerField()
+    inspection_count = models.PositiveIntegerField(default=0)
     submitted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
