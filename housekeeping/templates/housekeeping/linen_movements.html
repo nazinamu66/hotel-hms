@@ -138,10 +138,18 @@
     </section>
 
     <section class="linen-card linen-section">
-        <div class="linen-section-head"><h3>Linen movement history</h3><span class="linen-caption">Issuances, returns and laundry movements</span></div>
+        <div class="linen-section-head"><h3>Linen movement history</h3><span class="linen-caption">Department transfers, staff handovers and room activity</span></div>
+        <form method="get" class="linen-table-wrap" style="padding:14px 18px;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+            <label style="font-size:.8rem;color:#64748b">From date<br><input type="date" name="date_from" value="{{ date_from }}"></label>
+            <label style="font-size:.8rem;color:#64748b">To date<br><input type="date" name="date_to" value="{{ date_to }}"></label>
+            <label style="font-size:.8rem;color:#64748b">Linen item<br><select name="linen_item"><option value="">All items</option>{% for item in available_linen_items %}<option value="{{ item.pk }}" {% if selected_linen_item == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.product.name }}</option>{% endfor %}</select></label>
+            <label style="font-size:.8rem;color:#64748b">Movement<br><select name="event_type"><option value="">All movements</option>{% for value,label in event_choices %}<option value="{{ value }}" {% if selected_event_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            {% if not is_regular_staff %}<label style="font-size:.8rem;color:#64748b">Staff member<br><select name="staff"><option value="">All staff</option>{% for staff in available_staff %}<option value="{{ staff.pk }}" {% if selected_staff == staff.pk|stringformat:"s" %}selected{% endif %}>{{ staff.get_username }}</option>{% endfor %}</select></label>{% endif %}
+            <button class="btn btn-primary" type="submit">Apply filters</button><a class="btn btn-secondary" href="{% url 'housekeeping_linen_movements' %}">Clear</a>
+        </form>
         <div class="linen-table-wrap">
             <table class="linen-table">
-                <thead><tr><th>Date</th><th>Linen item</th><th>Quantity</th><th>Movement</th><th>From</th><th>To</th><th>Recorded by</th><th>Reference</th></tr></thead>
+                <thead><tr><th>Date</th><th>Linen item</th><th>Quantity</th><th>Movement</th><th>From</th><th>To</th><th>Staff / Room</th><th>Recorded by</th><th>Reference / Notes</th></tr></thead>
                 <tbody>
                     {% for movement in movements %}
                     <tr>
@@ -151,11 +159,19 @@
                         <td>{{ movement.get_event_type_display }}<div class="linen-caption">{{ movement.get_condition_display }}</div></td>
                         <td>{{ movement.get_from_location_display|default:"—" }}</td>
                         <td>{{ movement.get_to_location_display|default:"—" }}</td>
-                        <td>{{ movement.performed_by.username|default:"—" }}</td>
-                        <td>{{ movement.reference|default:"—" }}</td>
+                        <td>
+                            {% if movement.from_user %}<div>From: {{ movement.from_user.get_username }}</div>{% endif %}
+                            {% if movement.to_user %}<div>To: {{ movement.to_user.get_username }}</div>{% endif %}
+                            {% if movement.from_room %}<div>Room: {{ movement.from_room.room_number }}</div>{% endif %}
+                            {% if movement.to_room %}<div>Room: {{ movement.to_room.room_number }}</div>{% endif %}
+                            {% if movement.cleaning_assignment %}<div class="linen-caption">Cleaning #{{ movement.cleaning_assignment_id }}</div>{% endif %}
+                            {% if not movement.from_user and not movement.to_user and not movement.from_room and not movement.to_room %}—{% endif %}
+                        </td>
+                        <td>{{ movement.performed_by.get_username|default:"—" }}</td>
+                        <td>{{ movement.reference|default:"—" }}{% if movement.note %}<div class="linen-caption">{{ movement.note }}</div>{% endif %}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="8" class="linen-empty">No linen movement history has been recorded yet.</td></tr>
+                    <tr><td colspan="9" class="linen-empty">No linen movement history has been recorded yet.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
