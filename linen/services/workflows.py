@@ -112,6 +112,7 @@ def fulfill_store_request(
         from_location="STORE",
         to_location="HOUSEKEEPING",
         performed_by=user,
+        to_user=request_obj.requested_by,
         reference=f"LINEN-REQ-{request_obj.id}",
         note=note,
     )
@@ -318,6 +319,7 @@ def fulfill_laundry_request(
         from_location="LAUNDRY",
         to_location="HOUSEKEEPING",
         performed_by=user,
+        to_user=request_obj.requested_by,
         reference=f"LINEN-REQ-{request_obj.id}",
         note=note,
     )
@@ -541,6 +543,7 @@ def return_linen_to_laundry(
             from_location="HOUSEKEEPING",
             to_location="LAUNDRY",
             performed_by=user,
+            from_user=user,
             reference=reference,
             note=note,
         )
