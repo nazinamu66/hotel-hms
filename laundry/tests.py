@@ -8,7 +8,12 @@ from django.utils import timezone
 from accounts.models import User
 from billing.models import Charge, Folio
 from inventory.models import Department, Hotel
-from laundry.models import GuestLaundryOrder
+from laundry.models import GuestLaundryOrder, LaundryReceipt
+from laundry.services.receiving import confirm_laundry_receipt, create_laundry_receipt
+from linen.models import LinenCustody, LinenItem, LinenTransaction
+from linen.services.balances import get_linen_condition_balance, get_linen_summary
+from linen.services.workflows import return_linen_to_laundry
+from inventory.models import Product
 from laundry.services.guest_laundry import (
     cancel_guest_laundry_order,
     create_guest_laundry_order,
@@ -337,3 +342,165 @@ class LaundryReceiptReconciliationTests(TestCase):
             get_linen_condition_balance(self.linen_item, "DISCREPANCY")["CLEAN"],
             0,
         )
+
+class HousekeepingLinenTransitReceiptTests(TestCase):
+    def setUp(self):
+        self.hotel = Hotel.objects.create(name="Linen Transit Test Hotel")
+        self.hk_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            department_type="HOUSEKEEPING",
+            defaults={
+                "code": "HK",
+                "name": "Housekeeping",
+                "is_active": True,
+            },
+        )
+        self.laundry_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            department_type="LAUNDRY",
+            defaults={
+                "code": "LAUN",
+                "name": "Laundry",
+                "is_active": True,
+            },
+        )
+        self.housekeeper = User.objects.create_user(
+            username="transit-housekeeper",
+            password="test-password",
+            role="HOUSEKEEPING",
+            hotel=self.hotel,
+            department=self.hk_department,
+        )
+        self.laundry_user = User.objects.create_user(
+            username="transit-laundry-user",
+            password="test-password",
+            role="LAUNDRY",
+            hotel=self.hotel,
+            department=self.laundry_department,
+        )
+        product = Product.objects.create(
+            hotel=self.hotel,
+            name="Transit Bedsheet",
+            sku="TRANSIT-BEDSHEET",
+            product_type="HOUSEKEEPING",
+            usage_type="ASSET",
+            base_unit="pcs",
+        )
+        self.linen_item = LinenItem.objects.create(product=product)
+        self.custody = LinenCustody.objects.create(
+            linen_item=self.linen_item,
+            user=self.housekeeper,
+            clean_quantity=3,
+            dirty_quantity=4,
+        )
+        # Establish the department-level Housekeeping balance that
+        # corresponds to the employee's current physical custody.
+        LinenTransaction.objects.create(
+            linen_item=self.linen_item,
+            quantity=7,
+            condition="CLEAN",
+            event_type="RECEIVED",
+            to_location="HOUSEKEEPING",
+            performed_by=self.housekeeper,
+            reference="TRANSIT-OPENING",
+        )
+        # Correct the dirty condition without changing total location stock.
+        LinenTransaction.objects.create(
+            linen_item=self.linen_item,
+            quantity=4,
+            condition="DIRTY",
+            event_type="ADJUSTMENT",
+            to_location="HOUSEKEEPING",
+            performed_by=self.housekeeper,
+            reference="TRANSIT-OPENING-DIRTY",
+        )
+
+    def test_handover_is_in_transit_until_laundry_confirms_it(self):
+        receipt = return_linen_to_laundry(
+            linen_item=self.linen_item,
+            user=self.housekeeper,
+            clean_quantity=2,
+            dirty_quantity=3,
+            note="End of shift return",
+        )
+
+        self.custody.refresh_from_db()
+        self.assertEqual(self.custody.clean_quantity, 1)
+        self.assertEqual(self.custody.dirty_quantity, 1)
+        self.assertEqual(receipt.status, "PENDING")
+
+        summary = get_linen_summary(self.linen_item)
+        self.assertEqual(summary["in_transit"], 5)
+        laundry = get_linen_condition_balance(self.linen_item, "LAUNDRY")
+        self.assertEqual(laundry["CLEAN"], 0)
+        self.assertEqual(laundry["DIRTY"], 0)
+
+        confirm_laundry_receipt(
+            receipt=receipt,
+            received_by=self.laundry_user,
+            received_clean_quantity=2,
+            received_dirty_quantity=3,
+        )
+
+        summary = get_linen_summary(self.linen_item)
+        self.assertEqual(summary["in_transit"], 0)
+        laundry = get_linen_condition_balance(self.linen_item, "LAUNDRY")
+        self.assertEqual(laundry["CLEAN"], 2)
+        self.assertEqual(laundry["DIRTY"], 3)
+
+    def test_short_return_moves_only_confirmed_quantity_to_laundry(self):
+        receipt = return_linen_to_laundry(
+            linen_item=self.linen_item,
+            user=self.housekeeper,
+            clean_quantity=2,
+            dirty_quantity=3,
+            note="Short count test",
+        )
+
+        confirm_laundry_receipt(
+            receipt=receipt,
+            received_by=self.laundry_user,
+            received_clean_quantity=1,
+            received_dirty_quantity=2,
+        )
+
+        summary = get_linen_summary(self.linen_item)
+        self.assertEqual(summary["in_transit"], 0)
+        self.assertEqual(summary["discrepancy"], 2)
+        laundry = get_linen_condition_balance(self.linen_item, "LAUNDRY")
+        self.assertEqual(laundry["CLEAN"], 1)
+        self.assertEqual(laundry["DIRTY"], 2)
+        self.assertEqual(receipt.discrepancies.count(), 2)
+
+    def test_legacy_receipt_confirmation_keeps_original_location_flow(self):
+        reference = "LEGACY-LAUNDRY-RETURN"
+        LinenTransaction.objects.create(
+            linen_item=self.linen_item,
+            quantity=2,
+            condition="CLEAN",
+            event_type="SENT_TO_LAUNDRY",
+            from_location="HOUSEKEEPING",
+            to_location="LAUNDRY",
+            performed_by=self.housekeeper,
+            from_user=self.housekeeper,
+            reference=reference,
+        )
+        receipt = create_laundry_receipt(
+            linen_item=self.linen_item,
+            returned_by=self.housekeeper,
+            declared_clean_quantity=2,
+            reference=reference,
+        )
+
+        confirm_laundry_receipt(
+            receipt=receipt,
+            received_by=self.laundry_user,
+            received_clean_quantity=1,
+        )
+
+        laundry = get_linen_condition_balance(self.linen_item, "LAUNDRY")
+        self.assertEqual(laundry["CLEAN"], 1)
+        summary = get_linen_summary(self.linen_item)
+        self.assertEqual(summary["in_transit"], 0)
+        self.assertEqual(summary["discrepancy"], 1)
+
