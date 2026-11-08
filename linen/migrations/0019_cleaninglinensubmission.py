@@ -17,6 +17,7 @@ class Migration(migrations.Migration):
             fields=[
                 ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("sequence", models.PositiveIntegerField()),
+                ("inspection_count", models.PositiveIntegerField(default=0)),
                 ("snapshot", models.JSONField(default=list)),
                 ("submitted_at", models.DateTimeField(auto_now_add=True)),
                 ("reconciled_at", models.DateTimeField(blank=True, null=True)),
