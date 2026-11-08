@@ -16,14 +16,12 @@ from .views import (
     housekeeping_stock,
     housekeeping_stock_workspace,
     housekeeping_stock_movements,
-    request_new_linen,
     housekeeping_linen_requests,
     send_linen_to_laundry,
     housekeeping_linen_movements,
     cleaning_linen_check,
     request_laundry_linen,
     housekeeping_linen_request_queue,
-    fulfill_housekeeping_linen_request,
 )
 from inventory.views import (
     department_request_stock,
@@ -154,12 +152,6 @@ urlpatterns = [
     # ============================================================
 
     path(
-        "linen/request/",
-        request_new_linen,
-        name="housekeeping_request_new_linen",
-    ),
-
-    path(
         "linen/request-laundry/",
         request_laundry_linen,
         name="housekeeping_request_laundry",
@@ -175,12 +167,6 @@ urlpatterns = [
         "linen/head-requests/",
         housekeeping_linen_request_queue,
         name="housekeeping_linen_request_queue",
-    ),
-
-    path(
-        "linen/head-requests/<int:request_id>/fulfill/",
-        fulfill_housekeeping_linen_request,
-        name="housekeeping_fulfill_linen_request",
     ),
 
     path(
