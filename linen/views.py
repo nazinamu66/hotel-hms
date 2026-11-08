@@ -7,7 +7,7 @@ from accounts.models import User
 from accounts.services.access import get_accessible_hotels
 from accounts.decorators import role_required
 
-from .models import LinenItem, LinenTransaction,LinenIssue
+from .models import LinenItem, LinenTransaction, LinenIssue, LinenCustody
 from .services.balances import get_linen_summary
 
 
@@ -380,9 +380,24 @@ def linen_issue(request):
                         from_location="STORE",
                         to_location="HOUSEKEEPING",
                         performed_by=request.user,
+                        to_user=issued_to,
                         reference=reference,
                         note=note,
                     )
+
+                    custody, created = LinenCustody.objects.get_or_create(
+                        linen_item=linen_item,
+                        user=issued_to,
+                        defaults={
+                            "clean_quantity": quantity,
+                            "dirty_quantity": 0,
+                        },
+                    )
+                    if not created:
+                        custody.clean_quantity += quantity
+                        custody.save(
+                            update_fields=["clean_quantity", "updated_at"],
+                        )
 
                     # --------------------------------------------
                     # Accountability record
