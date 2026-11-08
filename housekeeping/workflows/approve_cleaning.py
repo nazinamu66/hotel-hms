@@ -136,6 +136,8 @@ def approve_cleaning(
         room=room,
         cleaned_by=assignment.assigned_to,
         previous_status=previous_status,
+        assignment=assignment,
+        notes=assignment.notes,
     )
 
     record_inspection(
