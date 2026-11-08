@@ -369,17 +369,23 @@ class EmergencyLinenCustodyReassignmentTests(TestCase):
             organization=cls.organization,
             name="Other Custody Hotel",
         )
-        cls.department = Department.objects.create(
+        cls.department, _ = Department.objects.get_or_create(
             hotel=cls.hotel,
-            code="HK",
             name="Housekeeping",
-            department_type="HOUSEKEEPING",
+            defaults={
+                "code": "HK",
+                "department_type": "HOUSEKEEPING",
+                "is_active": True,
+            },
         )
-        cls.other_department = Department.objects.create(
+        cls.other_department, _ = Department.objects.get_or_create(
             hotel=cls.other_hotel,
-            code="HK",
             name="Other Housekeeping",
-            department_type="HOUSEKEEPING",
+            defaults={
+                "code": "HK",
+                "department_type": "HOUSEKEEPING",
+                "is_active": True,
+            },
         )
         cls.manager = User.objects.create_user(
             username="custody-reassignment-manager",
