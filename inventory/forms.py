@@ -170,6 +170,38 @@ class ProductForm(forms.ModelForm):
         unit_multiplier = cleaned_data.get("unit_multiplier")
 
         # ----------------------------------------------------
+        # Hotel-scoped identifier uniqueness
+        # ----------------------------------------------------
+
+        sku = cleaned_data.get("sku")
+        if self.hotel and sku:
+            duplicate_sku = Product.objects.filter(
+                hotel=self.hotel,
+                sku__iexact=sku.strip(),
+            )
+            if self.instance and self.instance.pk:
+                duplicate_sku = duplicate_sku.exclude(pk=self.instance.pk)
+            if duplicate_sku.exists():
+                self.add_error(
+                    "sku",
+                    "This SKU is already in use for this hotel. Please choose another SKU.",
+                )
+
+        barcode = cleaned_data.get("barcode")
+        if self.hotel and barcode and barcode.strip():
+            duplicate_barcode = Product.objects.filter(
+                hotel=self.hotel,
+                barcode__iexact=barcode.strip(),
+            )
+            if self.instance and self.instance.pk:
+                duplicate_barcode = duplicate_barcode.exclude(pk=self.instance.pk)
+            if duplicate_barcode.exists():
+                self.add_error(
+                    "barcode",
+                    "This barcode is already registered for this hotel.",
+                )
+
+        # ----------------------------------------------------
         # Cost calculation
         # ----------------------------------------------------
 
