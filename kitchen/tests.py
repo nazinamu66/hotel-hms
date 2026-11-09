@@ -3058,7 +3058,7 @@ class KitchenRestrictedStockAccessTests(TestCase):
         self.client.force_login(self.staff)
         response = self.client.get(reverse("kitchen_handover_create"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Current general / shared stock")
+        self.assertContains(response, "Registered Kitchen stock")
         self.assertContains(response, "Handover Shared Rice")
         self.assertContains(response, "12.000")
         self.assertEqual(
@@ -3154,3 +3154,50 @@ class KitchenHandoverAcknowledgementTests(TestCase):
             f"received_{handover.lines.get().pk}": "10", "incoming_acknowledged": "on",
         })
         self.assertEqual(response.status_code, 403)
+
+    def test_registered_product_matching_count_uses_server_balance_snapshot(self):
+        product = Product.objects.create(
+            hotel=self.hotel, name="Handover Test Rice", sku="HANDOVER-RICE-01",
+            product_type="RAW", base_unit="kg", cost_price=Decimal("10.00"),
+        )
+        Stock.objects.create(
+            product=product, department=self.department, quantity=Decimal("17.500"),
+        )
+        self.client.force_login(self.outgoing)
+        response = self.client.post(reverse("kitchen_handover_create"), {
+            "incoming_user": str(self.incoming.pk),
+            "product_id_0": str(product.pk),
+            "matches_system_0": "on",
+            "product_location_0": str(self.location.pk),
+            "outgoing_acknowledged": "on",
+        })
+        from kitchen.models import KitchenShiftHandoverLine
+        line = KitchenShiftHandoverLine.objects.get()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(line.product, product)
+        self.assertEqual(line.system_quantity, Decimal("17.500"))
+        self.assertEqual(line.outgoing_quantity, Decimal("17.500"))
+
+    def test_registered_product_mismatch_records_actual_count_without_adjusting_stock(self):
+        product = Product.objects.create(
+            hotel=self.hotel, name="Handover Test Beans", sku="HANDOVER-BEANS-01",
+            product_type="RAW", base_unit="kg", cost_price=Decimal("10.00"),
+        )
+        stock = Stock.objects.create(
+            product=product, department=self.department, quantity=Decimal("17.500"),
+        )
+        self.client.force_login(self.outgoing)
+        response = self.client.post(reverse("kitchen_handover_create"), {
+            "incoming_user": str(self.incoming.pk),
+            "product_id_0": str(product.pk),
+            "actual_quantity_0": "15.250",
+            "product_location_0": str(self.location.pk),
+            "outgoing_acknowledged": "on",
+        })
+        from kitchen.models import KitchenShiftHandoverLine
+        line = KitchenShiftHandoverLine.objects.get()
+        stock.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(line.system_quantity, Decimal("17.500"))
+        self.assertEqual(line.outgoing_quantity, Decimal("15.250"))
+        self.assertEqual(stock.quantity, Decimal("17.500"))
