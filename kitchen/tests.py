@@ -2964,3 +2964,86 @@ class KitchenRestrictedStockAccessTests(TestCase):
         response = self.client.get(reverse("kitchen_restricted_stock"))
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Other Hotel Freezer")
+
+
+    def _create_stock_product(self, *, name, sku, general_qty="8.000", restricted_qty="3.000"):
+        product = Product.objects.create(
+            hotel=self.hotel, name=name, sku=sku, product_type="RAW",
+            base_unit="kg", cost_price=Decimal("20.00"),
+        )
+        product.departments.add(self.department)
+        Stock.objects.create(
+            product=product, department=self.department,
+            quantity=Decimal(general_qty),
+        )
+        if Decimal(restricted_qty) > 0:
+            source_layer = StockCostLayer.objects.create(
+                product=product, department=self.department,
+                quantity_received=Decimal(restricted_qty),
+                quantity_remaining=Decimal("0.000"),
+                unit_cost=Decimal("20.0000"),
+                source_reference=f"TEST-{sku}",
+            )
+            KitchenRestrictedStockLayer.objects.create(
+                department=self.department, location=self.freezer,
+                product=product, source_cost_layer=source_layer,
+                source_reference=f"TEST-{sku}",
+                quantity_received=Decimal(restricted_qty),
+                quantity_remaining=Decimal(restricted_qty),
+                unit_cost=Decimal("20.0000"),
+            )
+        return product
+
+    def test_kitchen_staff_stock_page_shows_general_stock_only(self):
+        product = self._create_stock_product(
+            name="Shared Raw Fish", sku="STOCK-SHARED-001",
+        )
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("kitchen_stock"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Shared Raw Fish")
+        self.assertContains(response, "8.000")
+        self.assertNotContains(response, "3.000")
+        self.assertFalse(response.context["is_head"])
+        self.assertEqual(response.context["selected_scope"], "GENERAL")
+
+    def test_kitchen_staff_cannot_use_query_parameter_to_view_restricted_stock(self):
+        self._create_stock_product(
+            name="Private Freezer Fish", sku="STOCK-PRIVATE-001",
+        )
+        self.client.force_login(self.staff)
+        response = self.client.get(
+            reverse("kitchen_stock"), {"scope": "RESTRICTED"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Private Freezer Fish")
+        self.assertFalse(response.context["is_head"])
+        self.assertEqual(response.context["selected_scope"], "GENERAL")
+
+    def test_head_chef_can_view_general_and_restricted_stock_together(self):
+        self._create_stock_product(
+            name="Head Chef Fish", sku="STOCK-HEAD-001",
+        )
+        self.client.force_login(self.head)
+        response = self.client.get(reverse("kitchen_stock"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Head Chef Fish")
+        self.assertContains(response, "8.000")
+        self.assertContains(response, "3.000")
+        row = response.context["stock_rows"][0]
+        self.assertEqual(row["general_quantity"], Decimal("8.000"))
+        self.assertEqual(row["restricted_quantity"], Decimal("3.000"))
+        self.assertEqual(row["total_quantity"], Decimal("11.000"))
+
+    def test_head_chef_can_filter_to_restricted_balances(self):
+        self._create_stock_product(
+            name="Restricted Filter Fish", sku="STOCK-RESTRICTED-002",
+        )
+        self.client.force_login(self.head)
+        response = self.client.get(
+            reverse("kitchen_stock"), {"scope": "RESTRICTED"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Restricted Filter Fish")
+        self.assertNotContains(response, "8.000")
+        self.assertEqual(response.context["selected_scope"], "RESTRICTED")
