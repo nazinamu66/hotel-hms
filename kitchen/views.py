@@ -3132,11 +3132,20 @@ def kitchen_ticket_start(request, ticket_id):
         messages.error(request, "Ticket already started.")
         return redirect("kitchen_dashboard")
 
+    try:
+        eta_minutes = int(request.POST.get("eta_minutes", ""))
+        if eta_minutes < 1:
+            raise ValueError
+    except (TypeError, ValueError):
+        messages.error(request, "Enter a valid cooking time of at least one minute.")
+        return redirect("kitchen_dashboard")
+
     ticket.status = "PREPARING"
-    ticket.eta_minutes = request.POST.get("eta_minutes")
+    ticket.eta_minutes = eta_minutes
+    ticket.started_at = timezone.now()
     ticket.accepted_by = request.user
 
-    ticket.save(update_fields=["status", "eta_minutes", "accepted_by"])
+    ticket.save(update_fields=["status", "eta_minutes", "started_at", "accepted_by"])
 
     return redirect("kitchen_dashboard")
 
