@@ -1,96 +1,151 @@
 {% extends "base/base.html" %}
 
-{% block title %}Products{% endblock %}
+{% block title %}Product Master{% endblock %}
 
 {% block content %}
-
-<h2>Products</h2>
-
-{% if can_manage_products %}
-<div style="margin-bottom:15px;">
-    <a href="{% url 'inventory:product_create' %}" class="btn btn-primary">
-        Add Product
-    </a>
-</div>
-{% endif %}
-
-<form method="get" style="margin-bottom:20px;">
-
-<label>Filter by type:</label>
-
-<select name="type" onchange="this.form.submit()">
-
-<option value="">All</option>
-
-{% for key,label in product_types %}
-
-<option value="{{ key }}"
-{% if selected_type == key %}selected{% endif %}>
-{{ label }}
-</option>
-
-{% endfor %}
-
-</select>
-
-</form>
-
-<table class="table">
-
-<thead>
-<tr>
-<th>Name</th>
-<th>SKU</th>
-<th>Type</th>
-<th>Base Unit</th>
-<th>Supply Source</th>
-<th>Reorder Level</th>
-<th>Action</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for product in products %}
-
-<tr class="type-{{ product.product_type }}">
-<td>{{ product.name }}</td>
-<td>{{ product.sku }}</td>
-<td>{{ product.get_product_type_display }}</td>
-<td>{{ product.base_unit }}</td>
-<td>{{ product.get_supply_source_display }}</td>
-<td>{{ product.reorder_level }}</td>
-<td>
-    {% if can_manage_products %}
-        <a href="{% url 'inventory:product_edit' product.id %}">Edit</a> |
-        <form method="post" action="{% url 'inventory:product_delete' product.id %}" style="display:inline;">
-            {% csrf_token %}
-            <button type="submit" onclick="return confirm('Archive this product?');">Archive</button>
-        </form>
-    {% else %}
-        View only
-    {% endif %}
-</td>
-</tr>
-
-{% empty %}
-
-<tr>
-<td colspan="7">No products created yet.</td>
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
 <style>
-.type-RAW { background:#fffdf5; }
-.type-FOOD { background:#f5fff7; }
-.type-DRINK { background:#f5f9ff; }
-.type-SUPPLY { background:#fff5f5; }
-.type-BOUTIQUE { background:#faf5ff; }
+.pm-page{max-width:1500px;margin:0 auto;color:#172033}
+.pm-header{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:24px}
+.pm-heading h1{margin:0 0 7px;font-size:clamp(1.65rem,2.5vw,2.1rem);font-weight:850;letter-spacing:-.04em;color:#172033}
+.pm-heading p{margin:0;color:#64748b;font-size:.92rem}
+.pm-add{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 17px;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-size:.88rem;font-weight:800;box-shadow:0 5px 13px rgba(37,99,235,.17);white-space:nowrap}
+.pm-add:hover{background:#1d4ed8;color:#fff}
+.pm-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-bottom:20px}
+.pm-stat{padding:18px 20px;background:#fff;border:1px solid #e5eaf1;border-radius:14px;box-shadow:0 3px 12px rgba(15,23,42,.035)}
+.pm-stat-label{font-size:.72rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#718096}
+.pm-stat-value{margin-top:5px;font-size:1.7rem;font-weight:850;color:#172033;line-height:1.15}
+.pm-toolbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:16px;background:#fff;border:1px solid #e5eaf1;border-radius:14px 14px 0 0}
+.pm-filters{display:flex;align-items:center;gap:9px;flex:1;flex-wrap:wrap}
+.pm-search{flex:1;min-width:210px;max-width:390px}
+.pm-search input,.pm-select{width:100%;min-height:42px;box-sizing:border-box;padding:9px 12px;border:1px solid #d8e0eb;border-radius:9px;background:#fff;color:#172033;font-size:.86rem;outline:none}
+.pm-search input:focus,.pm-select:focus{border-color:#6793ec;box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+.pm-select-wrap{width:190px}
+.pm-filter-btn{min-height:42px;padding:9px 15px;border:0;border-radius:9px;background:#172f55;color:#fff;font-size:.84rem;font-weight:800;cursor:pointer}
+.pm-clear{padding:9px 12px;color:#64748b;text-decoration:none;font-size:.84rem;font-weight:700}
+.pm-results{color:#718096;font-size:.78rem;font-weight:700;white-space:nowrap}
+.pm-table-wrap{overflow-x:auto;background:#fff;border:1px solid #e5eaf1;border-top:0;border-radius:0 0 14px 14px;box-shadow:0 4px 14px rgba(15,23,42,.035)}
+.pm-table{width:100%;min-width:850px;border-collapse:separate;border-spacing:0}
+.pm-table th{padding:13px 16px;background:#f8fafc;color:#64748b;text-align:left;font-size:.69rem;letter-spacing:.07em;text-transform:uppercase;font-weight:850;white-space:nowrap;border-bottom:1px solid #e8edf4}
+.pm-table td{padding:15px 16px;border-bottom:1px solid #edf1f5;color:#334155;font-size:.85rem;vertical-align:middle}
+.pm-table tbody tr:last-child td{border-bottom:0}
+.pm-table tbody tr:hover{background:#fafcff}
+.pm-product-name{font-weight:800;color:#172033}
+.pm-sku{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.79rem;color:#64748b}
+.pm-type{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:.7rem;font-weight:800;white-space:nowrap}
+.pm-type-RAW{background:#fff5d9;color:#946200}
+.pm-type-FOOD{background:#dcfce7;color:#166534}
+.pm-type-DRINK{background:#dbeafe;color:#1d4ed8}
+.pm-type-HOUSEKEEPING,.pm-type-LAUNDRY{background:#f1f5f9;color:#475569}
+.pm-type-BOUTIQUE{background:#f3e8ff;color:#7e22ce}
+.pm-type-EQUIPMENT{background:#e0e7ff;color:#3730a3}
+.pm-type-SERVICE{background:#fce7f3;color:#9d174d}
+.pm-unit{color:#475569}
+.pm-source{color:#64748b}
+.pm-reorder{font-variant-numeric:tabular-nums;font-weight:700}
+.pm-actions{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.pm-edit{padding:7px 10px;border-radius:8px;background:#eff6ff;color:#1d4ed8;text-decoration:none;font-size:.78rem;font-weight:800}
+.pm-edit:hover{background:#dbeafe}
+.pm-archive{padding:7px 10px;border:1px solid #fecaca;border-radius:8px;background:#fff;color:#b91c1c;font-size:.78rem;font-weight:800;cursor:pointer}
+.pm-archive:hover{background:#fef2f2}
+.pm-readonly{color:#94a3b8;font-size:.78rem;font-weight:700}
+.pm-empty{padding:55px 20px!important;text-align:center!important;color:#64748b!important}
+.pm-empty strong{display:block;margin-bottom:6px;color:#334155;font-size:1rem}
+@media(max-width:700px){.pm-header{flex-direction:column}.pm-add{width:100%;box-sizing:border-box}.pm-stats{grid-template-columns:1fr 1fr}.pm-toolbar{align-items:stretch}.pm-filters{width:100%}.pm-search{max-width:none;min-width:100%}.pm-select-wrap{width:100%;}.pm-filter-btn{flex:1}.pm-results{width:100%}}
 </style>
 
+<div class="pm-page">
+    <header class="pm-header">
+        <div class="pm-heading">
+            <h1>Product Master</h1>
+            <p>Manage the products, ingredients and supplies used across your hotel.</p>
+        </div>
+        {% if can_manage_products %}
+            <a href="{% url 'inventory:product_create' %}" class="pm-add">＋ Add Product</a>
+        {% endif %}
+    </header>
+
+    <section class="pm-stats" aria-label="Product summary">
+        <div class="pm-stat">
+            <div class="pm-stat-label">Active products</div>
+            <div class="pm-stat-value">{{ total_products }}</div>
+        </div>
+        <div class="pm-stat">
+            <div class="pm-stat-label">Matching results</div>
+            <div class="pm-stat-value">{{ result_count }}</div>
+        </div>
+    </section>
+
+    <form method="get" class="pm-toolbar">
+        <div class="pm-filters">
+            <label class="pm-search">
+                <input type="search" name="q" value="{{ search_query }}" placeholder="Search name, SKU or barcode…" aria-label="Search products">
+            </label>
+            <label class="pm-select-wrap">
+                <select name="type" class="pm-select" aria-label="Filter by product type">
+                    <option value="">All product types</option>
+                    {% for key,label in product_types %}
+                        <option value="{{ key }}" {% if selected_type == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <button type="submit" class="pm-filter-btn">Apply filters</button>
+            {% if search_query or selected_type %}
+                <a href="{% url 'inventory:product_list' %}" class="pm-clear">Clear</a>
+            {% endif %}
+        </div>
+        <div class="pm-results">Showing {{ result_count }} product{{ result_count|pluralize }}</div>
+    </form>
+
+    <div class="pm-table-wrap">
+        <table class="pm-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>SKU</th>
+                    <th>Category</th>
+                    <th>Base unit</th>
+                    <th>Supply source</th>
+                    <th>Reorder level</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                    <tr>
+                        <td><span class="pm-product-name">{{ product.name }}</span></td>
+                        <td><span class="pm-sku">{{ product.sku }}</span></td>
+                        <td><span class="pm-type pm-type-{{ product.product_type }}">{{ product.get_product_type_display }}</span></td>
+                        <td><span class="pm-unit">{{ product.base_unit }}</span></td>
+                        <td><span class="pm-source">{{ product.get_supply_source_display }}</span></td>
+                        <td><span class="pm-reorder">{{ product.reorder_level }}</span></td>
+                        <td>
+                            {% if can_manage_products %}
+                                <div class="pm-actions">
+                                    <a class="pm-edit" href="{% url 'inventory:product_edit' product.id %}">Edit</a>
+                                    <form method="post" action="{% url 'inventory:product_delete' product.id %}" onsubmit="return confirm('Archive {{ product.name|escapejs }}?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="pm-archive">Archive</button>
+                                    </form>
+                                </div>
+                            {% else %}
+                                <span class="pm-readonly">View only</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="pm-empty">
+                            <strong>No products found</strong>
+                            {% if search_query or selected_type %}
+                                Try changing your search or filter.
+                            {% else %}
+                                There are no active products available in this product master.
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}
