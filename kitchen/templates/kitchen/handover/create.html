@@ -10,6 +10,24 @@
   {% if not locations %}<div class="khc-alert">No shared storage locations have been configured. Ask the Head Chef to configure the kitchen storage register.</div>{% else %}
   <form method="post" class="khc-card">{% csrf_token %}
     <section class="khc-section"><h2>Incoming staff member</h2><p>Choose the colleague taking responsibility for the next shift.</p><div class="khc-field khc-incoming"><label for="khc-incoming">Incoming staff member</label><select id="khc-incoming" name="incoming_user" required><option value="">Select staff member</option>{% for u in colleagues %}<option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></div></section>
+    <section class="khc-section">
+      <h2>Current general / shared stock</h2>
+      <p>This is the system balance for stock available to the Kitchen team. Use the physical count below when recording what is actually being handed over.</p>
+      {% if general_stock %}
+        <div style="overflow-x:auto;border:1px solid #e8edf4;border-radius:11px;">
+          <table style="width:100%;min-width:520px;border-collapse:collapse;">
+            <thead><tr style="background:#f8fafc;color:#64748b;font-size:.72rem;text-align:left;"><th style="padding:11px 13px;">Product</th><th style="padding:11px 13px;">Type</th><th style="padding:11px 13px;text-align:right;">System balance</th></tr></thead>
+            <tbody>
+              {% for stock in general_stock %}
+                <tr style="border-top:1px solid #edf0f5;"><td style="padding:11px 13px;font-weight:750;">{{ stock.product.name }}</td><td style="padding:11px 13px;color:#64748b;">{{ stock.product.get_product_type_display }}</td><td style="padding:11px 13px;text-align:right;font-weight:800;">{{ stock.quantity|floatformat:3 }} {{ stock.product.base_unit }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="khc-alert">There is currently no general/shared stock balance recorded for this Kitchen.</div>
+      {% endif %}
+    </section>
     <section class="khc-section"><h2>Stock handover items</h2><p>Enter each item, its quantity and the shared storage location where it is held.</p>
       <div id="handover-lines">
         <div class="khc-line handover-line">
