@@ -1,0 +1,51 @@
+{% extends "base/base.html" %}
+{% block title %}Kitchen Stock{% endblock %}
+{% block content %}
+<style>
+.ks-page{max-width:1450px;margin:0 auto;color:#172033}.ks-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:22px}.ks-head h1{margin:0 0 7px;font-size:clamp(1.6rem,2.5vw,2.1rem);font-weight:850;letter-spacing:-.04em}.ks-head p{margin:0;color:#64748b}.ks-back{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 14px;border:1px solid #d6deea;border-radius:10px;background:#fff;color:#475569;text-decoration:none;font-size:.82rem;font-weight:800}.ks-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:18px}.ks-stat{padding:17px 19px;background:#fff;border:1px solid #e5eaf1;border-radius:14px}.ks-stat small{display:block;color:#718096;font-size:.7rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}.ks-stat strong{display:block;margin-top:5px;font-size:1.55rem;font-weight:850}.ks-card{overflow:hidden;background:#fff;border:1px solid #e5eaf1;border-radius:15px;box-shadow:0 5px 18px rgba(15,23,42,.035)}.ks-toolbar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:16px;border-bottom:1px solid #edf0f5}.ks-filters{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.ks-select{min-height:41px;padding:9px 12px;border:1px solid #d6deea;border-radius:9px;background:#fff;color:#172033;font:inherit;font-size:.84rem}.ks-submit{min-height:41px;padding:9px 15px;border:0;border-radius:9px;background:#2459d3;color:#fff;font:inherit;font-size:.82rem;font-weight:800;cursor:pointer}.ks-hint{color:#718096;font-size:.78rem}.ks-table-wrap{overflow-x:auto}.ks-table{width:100%;min-width:760px;border-collapse:collapse}.ks-table th{padding:13px 16px;background:#f8fafc;color:#718096;text-align:left;font-size:.69rem;font-weight:850;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}.ks-table td{padding:14px 16px;border-top:1px solid #edf0f5;color:#344256;font-size:.85rem}.ks-table tbody tr:hover{background:#fbfcff}.ks-name{font-weight:800;color:#172033}.ks-sku{display:block;margin-top:3px;color:#94a3b8;font-family:ui-monospace,monospace;font-size:.73rem}.ks-type{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eef3ff;color:#3157a4;font-size:.7rem;font-weight:800}.ks-number{text-align:right;font-variant-numeric:tabular-nums;font-weight:750;white-space:nowrap}.ks-total{color:#172033;font-weight:850}.ks-empty{padding:42px 18px!important;text-align:center;color:#718096!important}.ks-privacy{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:8px;background:#f0fdf4;color:#166534;font-size:.72rem;font-weight:800}
+@media(max-width:650px){.ks-head{flex-direction:column}.ks-stats{grid-template-columns:1fr}.ks-filters{width:100%}.ks-select,.ks-submit{width:100%}}
+</style>
+<div class="ks-page">
+  <header class="ks-head"><div><h1>Kitchen Stock</h1><p>View available ingredients, prepared food and drinks assigned to this Kitchen.</p></div><a class="ks-back" href="{% url 'kitchen_dashboard' %}">← Kitchen Board</a></header>
+  <section class="ks-stats">
+    <div class="ks-stat"><small>Products listed</small><strong>{{ stock_rows|length }}</strong></div>
+    <div class="ks-stat"><small>With general stock</small><strong>{{ general_count }}</strong></div>
+    {% if is_head %}<div class="ks-stat"><small>With restricted stock</small><strong>{{ restricted_count }}</strong></div>{% endif %}
+  </section>
+  <section class="ks-card">
+    <form method="get" class="ks-toolbar">
+      <div class="ks-filters">
+        {% if is_head %}
+          <select class="ks-select" name="scope" aria-label="Stock access filter">
+            <option value="ALL" {% if selected_scope == "ALL" %}selected{% endif %}>All Kitchen stock</option>
+            <option value="GENERAL" {% if selected_scope == "GENERAL" %}selected{% endif %}>General / shared</option>
+            <option value="RESTRICTED" {% if selected_scope == "RESTRICTED" %}selected{% endif %}>Restricted</option>
+          </select>
+        {% endif %}
+        <select class="ks-select" name="type" aria-label="Product type filter">
+          <option value="">All product types</option>
+          {% for key,label in product_types %}<option value="{{ key }}" {% if selected_type == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        <button class="ks-submit" type="submit">Apply filters</button>
+      </div>
+      {% if is_head %}<span class="ks-privacy">🔒 Restricted balances visible to Head Chef only</span>{% else %}<span class="ks-hint">Showing general/shared stock only</span>{% endif %}
+    </form>
+    <div class="ks-table-wrap"><table class="ks-table">
+      <thead><tr><th>Product</th><th>Type</th><th class="ks-number">General / shared</th>{% if is_head %}<th class="ks-number">Restricted</th><th class="ks-number">Total</th>{% endif %}<th>Unit</th></tr></thead>
+      <tbody>
+        {% for row in stock_rows %}
+          <tr>
+            <td><span class="ks-name">{{ row.product.name }}</span><span class="ks-sku">{{ row.product.sku }}</span></td>
+            <td><span class="ks-type">{{ row.product.get_product_type_display }}</span></td>
+            <td class="ks-number">{{ row.general_quantity|floatformat:3 }}</td>
+            {% if is_head %}<td class="ks-number">{{ row.restricted_quantity|floatformat:3 }}</td><td class="ks-number ks-total">{{ row.total_quantity|floatformat:3 }}</td>{% endif %}
+            <td>{{ row.product.base_unit }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="{% if is_head %}6{% else %}4{% endif %}" class="ks-empty">No stock matches the selected filters.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+</div>
+{% endblock %}
