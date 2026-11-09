@@ -489,9 +489,26 @@ def product_create(request):
     )
 
     if is_department_head(request.user):
+        allowed_departments = Department.objects.filter(
+            pk=request.user.department_id,
+            is_active=True,
+        )
+
+        # Kitchen Heads need to assign RAW ingredients to Store as
+        # well as Kitchen, because Store is the issuing department.
+        if request.user.role == "KITCHEN":
+            allowed_departments = (
+                allowed_departments
+                | Department.objects.filter(
+                    hotel_id=request.user.department.hotel_id,
+                    department_type="STORE",
+                    is_active=True,
+                )
+            )
+
         form.fields["departments"].queryset = (
             form.fields["departments"].queryset.filter(
-                pk=request.user.department_id,
+                pk__in=allowed_departments.values("pk"),
             )
         )
 
@@ -530,6 +547,7 @@ def product_create(request):
                 if not can_create_product(
                     request.user,
                     department,
+                    product_type=form.cleaned_data.get("product_type"),
                 ):
                     raise PermissionDenied
 
