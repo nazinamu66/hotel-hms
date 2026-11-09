@@ -3047,3 +3047,20 @@ class KitchenRestrictedStockAccessTests(TestCase):
         self.assertContains(response, "Restricted Filter Fish")
         self.assertNotContains(response, "8.000")
         self.assertEqual(response.context["selected_scope"], "RESTRICTED")
+
+
+    def test_handover_form_displays_current_general_stock_for_outgoing_shift(self):
+        product = self._create_stock_product(
+            name="Handover Shared Rice", sku="STOCK-HANDOVER-001",
+            general_qty="12.000", restricted_qty="0.000",
+        )
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("kitchen_handover_create"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Current general / shared stock")
+        self.assertContains(response, "Handover Shared Rice")
+        self.assertContains(response, "12.000")
+        self.assertEqual(
+            list(response.context["general_stock"].values_list("product_id", flat=True)),
+            [product.pk],
+        )
