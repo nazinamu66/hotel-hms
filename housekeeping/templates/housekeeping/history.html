@@ -446,6 +446,59 @@
                                             <span class="history-muted">No linen checklist</span>
                                         {% endif %}
                                     {% endwith %}
+
+                                    {% with submissions=log.assignment.linen_submissions.all %}
+                                        {% if submissions %}
+                                            <details style="margin-top:10px;">
+                                                <summary style="cursor:pointer;color:#1d4ed8;font-weight:650;">
+                                                    Audit trail: {{ submissions|length }} submission{{ submissions|length|pluralize }}
+                                                </summary>
+                                                <div style="min-width:360px;padding:10px 0;">
+                                                    {% for submission in submissions %}
+                                                        <section style="padding:10px 0;border-top:1px solid #e2e8f0;">
+                                                            <strong>Submission #{{ submission.sequence }}</strong>
+                                                            <div class="history-muted">
+                                                                By {{ submission.submitted_by.get_full_name|default:submission.submitted_by.username|default:"User unavailable" }}
+                                                                · {{ submission.submitted_at|date:"d M Y, H:i" }}
+                                                            </div>
+                                                            {% if submission.reconciled_at %}
+                                                                <div class="history-muted">Reconciled {{ submission.reconciled_at|date:"d M Y, H:i" }}</div>
+                                                            {% else %}
+                                                                <div class="history-muted">Not reconciled</div>
+                                                            {% endif %}
+                                                            <table style="width:100%;border-collapse:collapse;margin-top:8px;">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th style="text-align:left;padding:5px;">Item</th>
+                                                                        <th style="padding:5px;">Expected</th>
+                                                                        <th style="padding:5px;">Found</th>
+                                                                        <th style="padding:5px;">Dirty</th>
+                                                                        <th style="padding:5px;">Clean added</th>
+                                                                        <th style="padding:5px;">Final</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {% for entry in submission.snapshot %}
+                                                                        <tr>
+                                                                            <td style="padding:5px;">{{ entry.linen_item_name }}</td>
+                                                                            <td style="text-align:center;padding:5px;">{{ entry.expected_quantity }}</td>
+                                                                            <td style="text-align:center;padding:5px;">{{ entry.found_quantity }}</td>
+                                                                            <td style="text-align:center;padding:5px;">{{ entry.dirty_collected_quantity }}</td>
+                                                                            <td style="text-align:center;padding:5px;">{{ entry.clean_issued_quantity }}</td>
+                                                                            <td style="text-align:center;padding:5px;font-weight:700;">{{ entry.final_quantity }}</td>
+                                                                        </tr>
+                                                                        {% if entry.note %}
+                                                                            <tr><td colspan="6" style="padding:4px 8px 9px;color:#64748b;font-size:12px;">Note: {{ entry.note }}</td></tr>
+                                                                        {% endif %}
+                                                                    {% endfor %}
+                                                                </tbody>
+                                                            </table>
+                                                        </section>
+                                                    {% endfor %}
+                                                </div>
+                                            </details>
+                                        {% endif %}
+                                    {% endwith %}
                                 {% else %}
                                     <span class="history-muted">Historical record</span>
                                 {% endif %}
