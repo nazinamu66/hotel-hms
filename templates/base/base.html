@@ -289,9 +289,6 @@
                 <a href="{% url 'inventory:product_list' %}">
                     📦 Product Master
                 </a>
-                <a href="{% url 'inventory:product_create' %}">
-                    ➕ Add Ingredient
-                </a>
             {% endif %}
 
             <a href="{% url 'kitchen_quick_production' %}">
@@ -302,25 +299,40 @@
                 📊 Production History
             </a>
 
-            {% if user.role == "KITCHEN" and user.is_department_head %}
-                <a href="{% url 'kitchen_incoming_deliveries' %}">
-                    📥 Incoming Deliveries
-                </a>
-            {% endif %}
+            {% if user.is_department_head or user|has_role:"MANAGER,ADMIN,DIRECTOR" %}
+                <h4 class="menu-toggle"
+                    onclick="toggleMenu('kitchen_requests_menu', this)">
+                    <span class="arrow">▸</span>
+                    Requests
+                </h4>
+                <div id="kitchen_requests_menu" class="menu-section">
+                    {% if user.is_department_head %}
+                        <a href="{% url 'kitchen_ingredient_request_create' %}">
+                            ➕ Request Ingredients
+                        </a>
+                        <a href="{% url 'kitchen_ingredient_requests' %}">
+                            🧾 My Ingredient Requests
+                        </a>
+                    {% endif %}
 
-            {% if user.is_department_head %}
-                <a href="{% url 'kitchen_ingredient_requests' %}">
-                    🧾 My Ingredient Requests
-                </a>
-            {% endif %}
+                    {% if user.role == "KITCHEN" and user.is_department_head %}
+                        <a href="{% url 'kitchen_incoming_deliveries' %}">
+                            📥 Incoming Deliveries
+                        </a>
+                        <a href="{% url 'urgent_purchase_create' %}">
+                            ⚡ Record Urgent Purchase
+                        </a>
+                        <a href="{% url 'urgent_purchase_history' %}">
+                            🗂️ My Urgent Purchase History
+                        </a>
+                    {% endif %}
 
-            {% if user.role == "KITCHEN" and user.is_department_head %}
-                <a href="{% url 'urgent_purchase_create' %}">
-                    ⚡ Record Urgent Purchase
-                </a>
-                <a href="{% url 'urgent_purchase_history' %}">
-                    🗂️ My Urgent Purchase History
-                </a>
+                    {% if user|has_role:"MANAGER,ADMIN" %}
+                        <a href="{% url 'manager_ingredient_requests' %}">
+                            🧂 Ingredient Request Approvals
+                        </a>
+                    {% endif %}
+                </div>
             {% endif %}
 
             {% endif %}
@@ -340,14 +352,6 @@
             <a href="{% url 'kitchen_spoilage_report' %}">🗑️ Spoilage Report</a>
             <a href="{% url 'kitchen_purchasing_report' %}">🧾 Purchasing & Fulfilment</a>
             <a href="{% url 'kitchen_food_sales_report' %}">🍽️ Food Sales Audit</a>
-            {% endif %}
-
-            {% if user|has_role:"MANAGER,ADMIN" %}
-
-            <a href="{% url 'manager_ingredient_requests' %}">
-                🧂 Ingredient Requests
-            </a>
-
             {% endif %}
 
         </div>
@@ -1073,6 +1077,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
         kitchen_menu: [
             "/kitchen/"
+        ],
+        kitchen_requests_menu: [
+            "/kitchen/ingredients/request",
+            "/kitchen/ingredients/requests/",
+            "/kitchen/incoming-deliveries/",
+            "/kitchen/urgent-purchase",
+            "/kitchen/urgent-purchases/",
+            "/kitchen/manager/ingredient-requests/"
         ],
         laundry_menu: [
             "/laundry/"
