@@ -3331,14 +3331,19 @@ def kitchen_handover_create(request):
                     return redirect("kitchen_handover_create")
                 rows.append((location, name, unit, quantity))
             index += 1
+        if request.POST.get("outgoing_acknowledged") != "on":
+            messages.error(request, "The outgoing staff member must acknowledge the physical count before submitting.")
+            return redirect("kitchen_handover_create")
         if not rows:
             messages.error(request, "Add at least one item to the handover.")
             return redirect("kitchen_handover_create")
         with transaction.atomic():
+            acknowledged_at = timezone.now()
             handover = KitchenShiftHandover.objects.create(
                 department=department, outgoing_user=request.user, incoming_user=incoming,
                 status="AWAITING_RECEIPT", outgoing_note=request.POST.get("outgoing_note", "").strip(),
-                submitted_at=timezone.now(),
+                outgoing_acknowledged=True, outgoing_acknowledged_at=acknowledged_at,
+                submitted_at=acknowledged_at,
             )
             KitchenShiftHandoverLine.objects.bulk_create([
                 KitchenShiftHandoverLine(
@@ -3380,6 +3385,9 @@ def kitchen_handover_detail(request, pk):
     if request.method == "POST":
         if not can_confirm:
             raise PermissionDenied("Only the designated incoming staff member can confirm this handover.")
+        if request.POST.get("incoming_acknowledged") != "on":
+            messages.error(request, "The incoming staff member must acknowledge the physical count before confirming receipt.")
+            return redirect("kitchen_handover_detail", pk=handover.pk)
         discrepancy = False
         for line in handover.lines.select_for_update().all():
             try:
@@ -3398,10 +3406,16 @@ def kitchen_handover_detail(request, pk):
                     return redirect("kitchen_handover_detail", pk=handover.pk)
             line.incoming_quantity, line.discrepancy_note = received, note
             line.save(update_fields=["incoming_quantity", "discrepancy_note"])
+        acknowledged_at = timezone.now()
         handover.incoming_note = request.POST.get("incoming_note", "").strip()
-        handover.confirmed_at = timezone.now()
+        handover.incoming_acknowledged = True
+        handover.incoming_acknowledged_at = acknowledged_at
+        handover.confirmed_at = acknowledged_at
         handover.status = "VARIANCE" if discrepancy else "CONFIRMED"
-        handover.save(update_fields=["incoming_note", "confirmed_at", "status"])
+        handover.save(update_fields=[
+            "incoming_note", "incoming_acknowledged", "incoming_acknowledged_at",
+            "confirmed_at", "status",
+        ])
         messages.success(request, "Handover confirmation recorded.")
         return redirect("kitchen_handover_detail", pk=handover.pk)
     return render(request, "kitchen/handover/detail.html", {
