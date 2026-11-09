@@ -10,7 +10,7 @@
      quantity.required=!box.checked;
      if(box.checked) quantity.value="";
      note.disabled=box.checked;
-     note.required=!box.checked && quantity.value !== row.dataset.outgoingQuantity;
+     note.required=!box.checked && Number(quantity.value) !== Number(row.dataset.outgoingQuantity);
      if(box.checked) note.value="";
    }
    box.addEventListener("change",sync);
