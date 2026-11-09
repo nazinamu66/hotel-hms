@@ -3065,3 +3065,92 @@ class KitchenRestrictedStockAccessTests(TestCase):
             list(response.context["general_stock"].values_list("product_id", flat=True)),
             [product.pk],
         )
+
+
+class KitchenHandoverAcknowledgementTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.organization = Organization.objects.create(name="Handover Acknowledgement Org")
+        cls.hotel = Hotel.objects.create(organization=cls.organization, name="Handover Acknowledgement Hotel")
+        cls.department = Department.objects.create(
+            hotel=cls.hotel, code="KHA", name="Handover Acknowledgement Kitchen",
+            department_type="KITCHEN",
+        )
+        cls.outgoing = User.objects.create_user(
+            username="handover_outgoing", password="test-password", role="KITCHEN",
+            hotel=cls.hotel, department=cls.department,
+        )
+        cls.incoming = User.objects.create_user(
+            username="handover_incoming", password="test-password", role="KITCHEN",
+            hotel=cls.hotel, department=cls.department,
+        )
+        cls.location = KitchenStorageLocation.objects.create(
+            department=cls.department, name="Shared Pantry", access_level="SHARED",
+        )
+
+    def create_handover(self):
+        from kitchen.models import KitchenShiftHandover, KitchenShiftHandoverLine
+        handover = KitchenShiftHandover.objects.create(
+            department=self.department, outgoing_user=self.outgoing, incoming_user=self.incoming,
+            status="AWAITING_RECEIPT", outgoing_acknowledged=True,
+        )
+        KitchenShiftHandoverLine.objects.create(
+            handover=handover, location=self.location, item_name="Rice", unit="kg",
+            outgoing_quantity=Decimal("10.000"),
+        )
+        return handover
+
+    def test_outgoing_acknowledgement_is_required_to_submit(self):
+        self.client.force_login(self.outgoing)
+        response = self.client.post(reverse("kitchen_handover_create"), {
+            "incoming_user": str(self.incoming.pk), "item_name_0": "Rice",
+            "quantity_0": "10", "unit_0": "kg", "location_0": str(self.location.pk),
+        })
+        self.assertRedirects(response, reverse("kitchen_handover_create"))
+        from kitchen.models import KitchenShiftHandover
+        self.assertFalse(KitchenShiftHandover.objects.exists())
+
+    def test_outgoing_acknowledgement_is_saved_on_submission(self):
+        self.client.force_login(self.outgoing)
+        response = self.client.post(reverse("kitchen_handover_create"), {
+            "incoming_user": str(self.incoming.pk), "item_name_0": "Rice",
+            "quantity_0": "10", "unit_0": "kg", "location_0": str(self.location.pk),
+            "outgoing_acknowledged": "on",
+        })
+        from kitchen.models import KitchenShiftHandover
+        handover = KitchenShiftHandover.objects.get()
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(handover.outgoing_acknowledged)
+        self.assertIsNotNone(handover.outgoing_acknowledged_at)
+
+    def test_incoming_acknowledgement_is_required_to_confirm(self):
+        handover = self.create_handover()
+        self.client.force_login(self.incoming)
+        response = self.client.post(reverse("kitchen_handover_detail", args=[handover.pk]), {
+            f"received_{handover.lines.get().pk}": "10",
+        })
+        handover.refresh_from_db()
+        self.assertRedirects(response, reverse("kitchen_handover_detail", args=[handover.pk]))
+        self.assertEqual(handover.status, "AWAITING_RECEIPT")
+        self.assertFalse(handover.incoming_acknowledged)
+
+    def test_incoming_acknowledgement_is_saved_on_confirmation(self):
+        handover = self.create_handover()
+        self.client.force_login(self.incoming)
+        response = self.client.post(reverse("kitchen_handover_detail", args=[handover.pk]), {
+            f"received_{handover.lines.get().pk}": "10",
+            "incoming_acknowledged": "on", "incoming_note": "Count checked.",
+        })
+        handover.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(handover.status, "CONFIRMED")
+        self.assertTrue(handover.incoming_acknowledged)
+        self.assertIsNotNone(handover.incoming_acknowledged_at)
+
+    def test_outgoing_staff_cannot_confirm_on_behalf_of_incoming_staff(self):
+        handover = self.create_handover()
+        self.client.force_login(self.outgoing)
+        response = self.client.post(reverse("kitchen_handover_detail", args=[handover.pk]), {
+            f"received_{handover.lines.get().pk}": "10", "incoming_acknowledged": "on",
+        })
+        self.assertEqual(response.status_code, 403)
