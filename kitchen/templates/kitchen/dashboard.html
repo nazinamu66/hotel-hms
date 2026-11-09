@@ -11,6 +11,7 @@
   <nav class="kb-actions" aria-label="Kitchen actions">
     <a class="kb-action" href="{% url 'kitchen_refund_queue' %}"><span class="kb-action-icon">↩</span><span class="kb-action-copy"><strong>Refund confirmations</strong><small>Review orders awaiting confirmation</small></span><span class="kb-action-arrow">›</span></a>
     <a class="kb-action" href="{% url 'kitchen_handover_list' %}"><span class="kb-action-icon">⇄</span><span class="kb-action-copy"><strong>Shift handover</strong><small>Review and record shift handovers</small></span><span class="kb-action-arrow">›</span></a>
+    <a class="kb-action" href="{% url 'kitchen_stock' %}"><span class="kb-action-icon">📦</span><span class="kb-action-copy"><strong>Kitchen stock</strong><small>View general stock and your permitted balances</small></span><span class="kb-action-arrow">›</span></a>
     {% if user.is_department_head %}<a class="kb-action" href="{% url 'kitchen_storage_register' %}"><span class="kb-action-icon">▤</span><span class="kb-action-copy"><strong>Storage register</strong><small>Manage kitchen storage locations</small></span><span class="kb-action-arrow">›</span></a><a class="kb-action" href="{% url 'kitchen_restricted_stock' %}"><span class="kb-action-icon">🔒</span><span class="kb-action-copy"><strong>Restricted stock</strong><small>Control reserved kitchen inventory</small></span><span class="kb-action-arrow">›</span></a>{% endif %}
   </nav>
   <div class="summary-grid">
