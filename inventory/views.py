@@ -30,7 +30,7 @@ from kitchen.forms import (
     RecipeItemForm,
 
 )
-from django.db.models import Count, Q, Sum
+from django.db.models import Q, Sum
 from django.urls import reverse
 from accounts.services.access import (
     get_accessible_hotels,
@@ -439,11 +439,6 @@ def product_list(request):
 
     products = products.order_by("product_type", "name")
 
-    type_counts = {
-        row["product_type"]: row["total"]
-        for row in base_products.values("product_type").annotate(total=Count("id"))
-    }
-
     context = {
         "products": products,
         "product_types": Product.PRODUCT_TYPE,
@@ -451,7 +446,6 @@ def product_list(request):
         "search_query": search_query,
         "total_products": base_products.count(),
         "result_count": products.count(),
-        "type_counts": type_counts,
         "can_manage_products": request.user.role in {
             "ADMIN",
             "DIRECTOR",
