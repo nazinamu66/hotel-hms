@@ -27,6 +27,7 @@ from inventory.models import (
 from inventory.forms import PurchaseItemForm, PurchaseOrderForm
 from inventory.views import po_submit, product_delete
 from inventory.services.costing import get_latest_cost
+from accounts.services.access import can_create_product
 from kitchen.models import ProductionBatch, Recipe
 
 
@@ -65,6 +66,79 @@ class ProductArchiveMethodTests(SimpleTestCase):
         response = product_delete(request, pk=123)
 
         self.assertEqual(response.status_code, 405)
+
+class KitchenIngredientDepartmentAssignmentTests(TestCase):
+    def setUp(self):
+        self.organization = Organization.objects.create(
+            name="Kitchen Assignment Test Org"
+        )
+        self.hotel = Hotel.objects.create(
+            organization=self.organization,
+            name="Kitchen Assignment Test Hotel",
+        )
+        self.kitchen = Department.objects.create(
+            hotel=self.hotel,
+            code="KIT",
+            name="Kitchen",
+            department_type="KITCHEN",
+        )
+        self.store = Department.objects.create(
+            hotel=self.hotel,
+            code="STR",
+            name="Store",
+            department_type="STORE",
+        )
+        self.housekeeping = Department.objects.create(
+            hotel=self.hotel,
+            code="HK",
+            name="Housekeeping",
+            department_type="HOUSEKEEPING",
+        )
+        self.kitchen_head = User.objects.create_user(
+            username="kitchen-assignment-head",
+            password="test-password",
+            role="KITCHEN",
+            hotel=self.hotel,
+            department=self.kitchen,
+            is_department_head=True,
+        )
+
+    def test_kitchen_head_can_assign_raw_ingredient_to_store(self):
+        self.assertTrue(
+            can_create_product(
+                self.kitchen_head,
+                self.store,
+                product_type="RAW",
+            )
+        )
+
+    def test_kitchen_head_cannot_assign_non_raw_product_to_store(self):
+        self.assertFalse(
+            can_create_product(
+                self.kitchen_head,
+                self.store,
+                product_type="FOOD",
+            )
+        )
+
+    def test_kitchen_head_cannot_assign_raw_ingredient_to_other_department(self):
+        self.assertFalse(
+            can_create_product(
+                self.kitchen_head,
+                self.housekeeping,
+                product_type="RAW",
+            )
+        )
+
+    def test_kitchen_head_can_assign_product_to_own_kitchen(self):
+        self.assertTrue(
+            can_create_product(
+                self.kitchen_head,
+                self.kitchen,
+                product_type="RAW",
+            )
+        )
+
 
 class FractionalStockTransferTests(TestCase):
     @classmethod
