@@ -19,20 +19,37 @@
             </p>
         </div>
 
-        {% if can_request %}
-            <a href="{% url 'kitchen_ingredient_request_create' %}"
-               style="
-                   display:inline-block;
-                   padding:11px 18px;
-                   background:#2563eb;
-                   color:white;
-                   text-decoration:none;
-                   border-radius:8px;
-                   font-weight:600;
-               ">
-                + Request Ingredients
-            </a>
-        {% endif %}
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            {% if user.role == "KITCHEN" and user.is_department_head %}
+                <a href="{% url 'inventory:product_create' %}"
+                   style="
+                       display:inline-block;
+                       padding:11px 18px;
+                       background:#0f766e;
+                       color:white;
+                       text-decoration:none;
+                       border-radius:8px;
+                       font-weight:600;
+                   ">
+                    + Add Ingredient
+                </a>
+            {% endif %}
+
+            {% if can_request %}
+                <a href="{% url 'kitchen_ingredient_request_create' %}"
+                   style="
+                       display:inline-block;
+                       padding:11px 18px;
+                       background:#2563eb;
+                       color:white;
+                       text-decoration:none;
+                       border-radius:8px;
+                       font-weight:600;
+                   ">
+                    + Request Ingredients
+                </a>
+            {% endif %}
+        </div>
     </div>
 
 
