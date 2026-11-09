@@ -583,6 +583,15 @@ def product_create(request):
 
             except ValidationError as exc:
                 form.add_error(None, exc)
+            except IntegrityError:
+                # The form checks identifiers before saving. This final guard
+                # handles a concurrent request that claims the same identifier
+                # between validation and the database insert.
+                form.add_error(
+                    None,
+                    "A product with this SKU or barcode was created at the same time. "
+                    "Please review the identifiers and try again.",
+                )
             else:
                 messages.success(
                     request,
