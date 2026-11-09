@@ -4,10 +4,11 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.services.access import get_accessible_hotels
-from housekeeping.models import CleaningLog, LostFoundItem
+from housekeeping.models import CleaningAssignment, CleaningLog, LostFoundItem
 from housekeeping.workflows.lost_found import can_manage_lost_found, claim_item, dispose_item
 from inventory.models import Department, Hotel, Organization
 from rooms.models import Room, RoomCategory
+from linen.models import CleaningLinenSubmission
 
 
 class HousekeepingAccessAuditTests(TestCase):
@@ -125,6 +126,63 @@ class HousekeepingAccessAuditTests(TestCase):
                 {self.hotel_a.pk},
             )
             self.assertEqual(response.context["page_obj"].paginator.count, 1)
+
+
+    def test_cleaning_history_displays_every_immutable_linen_submission(self):
+        assignment = CleaningAssignment.objects.create(
+            room=self.room_a,
+            assigned_to=self.staff,
+            assigned_by=self.hk_head,
+            status="DONE",
+        )
+        CleaningLog.objects.create(
+            room=self.room_a,
+            cleaned_by=self.staff,
+            previous_status="VACANT_DIRTY",
+            assignment=assignment,
+        )
+        CleaningLinenSubmission.objects.create(
+            assignment=assignment,
+            sequence=1,
+            inspection_count=0,
+            submitted_by=self.staff,
+            snapshot=[{
+                "linen_item_id": 1,
+                "linen_item_name": "Audit Bedsheet",
+                "expected_quantity": 4,
+                "found_quantity": 3,
+                "dirty_collected_quantity": 2,
+                "clean_issued_quantity": 1,
+                "final_quantity": 2,
+                "note": "First inspection attempt",
+            }],
+        )
+        CleaningLinenSubmission.objects.create(
+            assignment=assignment,
+            sequence=2,
+            inspection_count=1,
+            submitted_by=self.staff,
+            snapshot=[{
+                "linen_item_id": 1,
+                "linen_item_name": "Audit Bedsheet",
+                "expected_quantity": 2,
+                "found_quantity": 2,
+                "dirty_collected_quantity": 0,
+                "clean_issued_quantity": 0,
+                "final_quantity": 2,
+                "note": "Corrected after inspection",
+            }],
+        )
+
+        self.client.force_login(self.hk_head)
+        response = self.client.get(reverse("housekeeping_cleaning_history"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Audit trail: 2 submissions")
+        self.assertContains(response, "Submission #1")
+        self.assertContains(response, "Submission #2")
+        self.assertContains(response, "First inspection attempt")
+        self.assertContains(response, "Corrected after inspection")
 
     def test_regular_housekeeping_staff_only_sees_own_cleaning_history(self):
         other_staff = get_user_model().objects.create_user(
