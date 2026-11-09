@@ -3458,11 +3458,14 @@ def kitchen_handover_detail(request, pk):
             return redirect("kitchen_handover_detail", pk=handover.pk)
         discrepancy = False
         for line in handover.lines.select_for_update().all():
-            try:
-                received = Decimal(request.POST.get(f"received_{line.pk}", "").strip())
-            except (InvalidOperation, TypeError, ValueError):
-                messages.error(request, f"Enter a valid received quantity for {line.item_name}.")
-                return redirect("kitchen_handover_detail", pk=handover.pk)
+            if request.POST.get(f"matches_outgoing_{line.pk}") == "on":
+                received = line.outgoing_quantity
+            else:
+                try:
+                    received = Decimal(request.POST.get(f"received_{line.pk}", "").strip())
+                except (InvalidOperation, TypeError, ValueError):
+                    messages.error(request, f"Enter the actual physical count for {line.item_name}, or confirm that it matches the outgoing count.")
+                    return redirect("kitchen_handover_detail", pk=handover.pk)
             if not received.is_finite() or received < 0:
                 messages.error(request, f"Received quantity for {line.item_name} cannot be negative.")
                 return redirect("kitchen_handover_detail", pk=handover.pk)
