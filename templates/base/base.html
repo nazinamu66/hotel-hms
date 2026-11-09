@@ -302,7 +302,7 @@
                 📊 Production History
             </a>
 
-            {% if user.role == "KITCHEN" %}
+            {% if user.role == "KITCHEN" and user.is_department_head %}
                 <a href="{% url 'kitchen_incoming_deliveries' %}">
                     📥 Incoming Deliveries
                 </a>
