@@ -76,23 +76,31 @@ class KitchenIngredientDepartmentAssignmentTests(TestCase):
             organization=self.organization,
             name="Kitchen Assignment Test Hotel",
         )
-        self.kitchen = Department.objects.create(
+        # Hotel creation provisions standard departments automatically.
+        # Reuse those rows instead of violating the per-hotel name constraint.
+        self.kitchen, _ = Department.objects.get_or_create(
             hotel=self.hotel,
-            code="KIT",
             name="Kitchen",
-            department_type="KITCHEN",
+            defaults={
+                "code": "KIT",
+                "department_type": "KITCHEN",
+            },
         )
-        self.store = Department.objects.create(
+        self.store, _ = Department.objects.get_or_create(
             hotel=self.hotel,
-            code="STR",
             name="Store",
-            department_type="STORE",
+            defaults={
+                "code": "STR",
+                "department_type": "STORE",
+            },
         )
-        self.housekeeping = Department.objects.create(
+        self.housekeeping, _ = Department.objects.get_or_create(
             hotel=self.hotel,
-            code="HK",
             name="Housekeeping",
-            department_type="HOUSEKEEPING",
+            defaults={
+                "code": "HK",
+                "department_type": "HOUSEKEEPING",
+            },
         )
         self.kitchen_head = User.objects.create_user(
             username="kitchen-assignment-head",
