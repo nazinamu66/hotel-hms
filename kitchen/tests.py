@@ -3010,6 +3010,7 @@ class KitchenRestrictedStockAccessTests(TestCase):
     def test_kitchen_staff_cannot_use_query_parameter_to_view_restricted_stock(self):
         self._create_stock_product(
             name="Private Freezer Fish", sku="STOCK-PRIVATE-001",
+            general_qty="0.000",
         )
         self.client.force_login(self.staff)
         response = self.client.get(
