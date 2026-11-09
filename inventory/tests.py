@@ -24,7 +24,7 @@ from inventory.models import (
     StockTransfer,
     Supplier,
 )
-from inventory.forms import PurchaseItemForm, PurchaseOrderForm
+from inventory.forms import ProductForm, PurchaseItemForm, PurchaseOrderForm
 from inventory.views import po_submit, product_delete
 from inventory.services.costing import get_latest_cost
 from accounts.services.access import can_create_product
@@ -32,6 +32,76 @@ from kitchen.models import ProductionBatch, Recipe
 
 
 User = get_user_model()
+
+
+class PreparedFoodProductFormTests(TestCase):
+    def setUp(self):
+        self.organization = Organization.objects.create(
+            name="Prepared Food Form Test Org"
+        )
+        self.hotel = Hotel.objects.create(
+            organization=self.organization,
+            name="Prepared Food Form Test Hotel",
+        )
+        self.kitchen, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            name="Kitchen",
+            defaults={
+                "code": "KIT",
+                "department_type": "KITCHEN",
+            },
+        )
+
+    def form_data(self, **overrides):
+        data = {
+            "name": "Fried Rice",
+            "sku": "FRIED-RICE-FORM",
+            "barcode": "",
+            "product_type": "FOOD",
+            "base_unit": "portion",
+            "purchase_unit": "portion",
+            "unit_multiplier": "1",
+            "supply_source": "STORE",
+            "departments": [str(self.kitchen.pk)],
+            "usage_type": "RESALE",
+            "reorder_level": "0",
+            "price": "2500.00",
+            "purchase_cost": "0.00",
+            "register_as_linen": "",
+            "linen_par_level": "0",
+            "linen_minimum_level": "0",
+        }
+        data.update(overrides)
+        return data
+
+    def test_prepared_food_does_not_require_supplier_purchase_cost(self):
+        form = ProductForm(
+            data=self.form_data(),
+            hotel=self.hotel,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["usage_type"], "RESALE")
+        self.assertEqual(form.cleaned_data["purchase_cost"], Decimal("0.00"))
+
+    def test_drink_resale_still_requires_purchase_cost(self):
+        form = ProductForm(
+            data=self.form_data(
+                name="Bottled Water",
+                sku="BOTTLED-WATER-FORM",
+                product_type="DRINK",
+                base_unit="bottle",
+                purchase_unit="carton",
+                unit_multiplier="24",
+            ),
+            hotel=self.hotel,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn(
+            "Resale products must have a purchase cost.",
+            form.non_field_errors(),
+        )
 
 
 class PurchaseOrderMethodTests(SimpleTestCase):
