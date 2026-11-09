@@ -3307,51 +3307,13 @@ def kitchen_handover_list(request):
 @role_required("KITCHEN")
 def kitchen_handover_create(request):
     department = _current_kitchen(request.user)
-    shared_locations = KitchenStorageLocation.objects.filter(department=department, access_level="SHARED", is_active=True)
-    colleagues = User.objects.filter(role="KITCHEN", department=department, is_active=True).exclude(
-        pk=request.user.pk
-    ).order_by("first_name", "username")
-    if request.method == "POST":
-        incoming = get_object_or_404(colleagues, pk=request.POST.get("incoming_user"))
-        rows, index = [], 0
-        while f"item_name_{index}" in request.POST:
-            name = request.POST.get(f"item_name_{index}", "").strip()
-            quantity_raw = request.POST.get(f"quantity_{index}", "").strip()
-            unit = request.POST.get(f"unit_{index}", "").strip()
-            location_id = request.POST.get(f"location_{index}", "").strip()
-            if name or quantity_raw or unit or location_id:
-                try:
-                    location = shared_locations.get(pk=location_id)
-                    quantity = Decimal(quantity_raw)
-                except (KitchenStorageLocation.DoesNotExist, InvalidOperation, TypeError, ValueError):
-                    messages.error(request, f"Check item, storage location and quantity on line {index + 1}.")
-                    return redirect("kitchen_handover_create")
-                if not name or not unit or not quantity.is_finite() or quantity < 0:
-                    messages.error(request, f"Line {index + 1} requires an item, unit and non-negative quantity.")
-                    return redirect("kitchen_handover_create")
-                rows.append((location, name, unit, quantity))
-            index += 1
-        if request.POST.get("outgoing_acknowledged") != "on":
-            messages.error(request, "The outgoing staff member must acknowledge the physical count before submitting.")
-            return redirect("kitchen_handover_create")
-        if not rows:
-            messages.error(request, "Add at least one item to the handover.")
-            return redirect("kitchen_handover_create")
-        with transaction.atomic():
-            acknowledged_at = timezone.now()
-            handover = KitchenShiftHandover.objects.create(
-                department=department, outgoing_user=request.user, incoming_user=incoming,
-                status="AWAITING_RECEIPT", outgoing_note=request.POST.get("outgoing_note", "").strip(),
-                outgoing_acknowledged=True, outgoing_acknowledged_at=acknowledged_at,
-                submitted_at=acknowledged_at,
-            )
-            KitchenShiftHandoverLine.objects.bulk_create([
-                KitchenShiftHandoverLine(
-                    handover=handover, location=loc, item_name=name, unit=unit, outgoing_quantity=qty
-                ) for loc, name, unit, qty in rows
-            ])
-        messages.success(request, "Kitchen handover submitted to the incoming staff member.")
-        return redirect("kitchen_handover_list")
+    shared_locations = KitchenStorageLocation.objects.filter(
+        department=department, access_level="SHARED", is_active=True
+    )
+    colleagues = User.objects.filter(
+        role="KITCHEN", department=department, is_active=True
+    ).exclude(pk=request.user.pk).order_by("first_name", "username")
+
     general_stock = (
         Stock.objects.filter(
             department=department,
@@ -3362,6 +3324,112 @@ def kitchen_handover_create(request):
         .select_related("product")
         .order_by("product__product_type", "product__name")
     )
+
+    if request.method == "POST":
+        incoming = get_object_or_404(colleagues, pk=request.POST.get("incoming_user"))
+        rows = []
+        try:
+            # Registered products: the balance is read again from the database,
+            # never trusted from a browser-submitted quantity.
+            product_index = 0
+            while f"product_id_{product_index}" in request.POST:
+                product_id = request.POST.get(f"product_id_{product_index}", "").strip()
+                location_id = request.POST.get(f"product_location_{product_index}", "").strip()
+                if not product_id:
+                    product_index += 1
+                    continue
+                stock = get_object_or_404(
+                    Stock.objects.select_related("product"),
+                    product_id=product_id,
+                    department=department,
+                    product__hotel_id=department.hotel_id,
+                    product__is_active=True,
+                    product__product_type__in=("RAW", "FOOD", "DRINK"),
+                )
+                location = shared_locations.get(pk=location_id)
+                system_quantity = stock.quantity
+                if request.POST.get(f"matches_system_{product_index}") == "on":
+                    physical_quantity = system_quantity
+                else:
+                    raw_actual = request.POST.get(f"actual_quantity_{product_index}", "").strip()
+                    physical_quantity = Decimal(raw_actual)
+                    if not physical_quantity.is_finite() or physical_quantity < 0:
+                        raise ValueError(f"Enter a valid physical count for {stock.product.name}.")
+                rows.append({
+                    "location": location, "product": stock.product,
+                    "name": stock.product.name, "unit": stock.product.base_unit,
+                    "system_quantity": system_quantity,
+                    "quantity": physical_quantity,
+                })
+                product_index += 1
+
+            # Manual lines remain available for unregistered items.
+            manual_index = 0
+            while f"manual_item_name_{manual_index}" in request.POST:
+                name = request.POST.get(f"manual_item_name_{manual_index}", "").strip()
+                quantity_raw = request.POST.get(f"manual_quantity_{manual_index}", "").strip()
+                unit = request.POST.get(f"manual_unit_{manual_index}", "").strip()
+                location_id = request.POST.get(f"manual_location_{manual_index}", "").strip()
+                if name or quantity_raw or unit or location_id:
+                    location = shared_locations.get(pk=location_id)
+                    quantity = Decimal(quantity_raw)
+                    if not name or not unit or not quantity.is_finite() or quantity < 0:
+                        raise ValueError(f"Check the name, unit and physical quantity on manual line {manual_index + 1}.")
+                    rows.append({
+                        "location": location, "product": None, "name": name,
+                        "unit": unit, "system_quantity": None, "quantity": quantity,
+                    })
+                manual_index += 1
+
+            # Backward compatibility for clients posting the previous manual-line names.
+            if not rows and "item_name_0" in request.POST:
+                legacy_index = 0
+                while f"item_name_{legacy_index}" in request.POST:
+                    name = request.POST.get(f"item_name_{legacy_index}", "").strip()
+                    quantity_raw = request.POST.get(f"quantity_{legacy_index}", "").strip()
+                    unit = request.POST.get(f"unit_{legacy_index}", "").strip()
+                    location_id = request.POST.get(f"location_{legacy_index}", "").strip()
+                    if name or quantity_raw or unit or location_id:
+                        location = shared_locations.get(pk=location_id)
+                        quantity = Decimal(quantity_raw)
+                        if not name or not unit or not quantity.is_finite() or quantity < 0:
+                            raise ValueError(f"Check item, unit and quantity on line {legacy_index + 1}.")
+                        rows.append({
+                            "location": location, "product": None, "name": name,
+                            "unit": unit, "system_quantity": None, "quantity": quantity,
+                        })
+                    legacy_index += 1
+        except (KitchenStorageLocation.DoesNotExist, Stock.DoesNotExist, InvalidOperation, TypeError, ValueError) as exc:
+            messages.error(request, str(exc) or "Check the product, storage location and physical quantity.")
+            return redirect("kitchen_handover_create")
+
+        if request.POST.get("outgoing_acknowledged") != "on":
+            messages.error(request, "The outgoing staff member must acknowledge the physical count before submitting.")
+            return redirect("kitchen_handover_create")
+        if not rows:
+            messages.error(request, "There are no stock items to hand over. Add a registered stock item or a manual item.")
+            return redirect("kitchen_handover_create")
+
+        with transaction.atomic():
+            acknowledged_at = timezone.now()
+            handover = KitchenShiftHandover.objects.create(
+                department=department, outgoing_user=request.user, incoming_user=incoming,
+                status="AWAITING_RECEIPT", outgoing_note=request.POST.get("outgoing_note", "").strip(),
+                outgoing_acknowledged=True, outgoing_acknowledged_at=acknowledged_at,
+                submitted_at=acknowledged_at,
+            )
+            KitchenShiftHandoverLine.objects.bulk_create([
+                KitchenShiftHandoverLine(
+                    handover=handover, location=row["location"], product=row["product"],
+                    item_name=row["name"], unit=row["unit"],
+                    system_quantity=row["system_quantity"],
+                    outgoing_quantity=row["quantity"],
+                )
+                for row in rows
+            ])
+        messages.success(request, "Kitchen handover submitted to the incoming staff member.")
+        return redirect("kitchen_handover_list")
+
     return render(request, "kitchen/handover/create.html", {
         "locations": shared_locations,
         "colleagues": colleagues,
