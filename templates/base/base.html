@@ -285,6 +285,15 @@
                 🍲 Prepared Foods
             </a>
 
+            {% if user.role == "KITCHEN" and user.is_department_head %}
+                <a href="{% url 'inventory:product_list' %}">
+                    📦 Product Master
+                </a>
+                <a href="{% url 'inventory:product_create' %}">
+                    ➕ Add Ingredient
+                </a>
+            {% endif %}
+
             <a href="{% url 'kitchen_quick_production' %}">
                 ⚡ Quick Production
             </a>
@@ -605,6 +614,12 @@
         </h4>
 
         <div id="proc_menu" class="menu-section">
+
+            {% if user|has_role:"MANAGER,GENERAL_MANAGER" %}
+            <a href="{% url 'inventory:product_list' %}">
+                Product Master
+            </a>
+            {% endif %}
 
             <a href="{% url 'inventory:po_list' %}">
                 Purchase Orders
