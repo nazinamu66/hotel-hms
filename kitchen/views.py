@@ -3347,7 +3347,21 @@ def kitchen_handover_create(request):
             ])
         messages.success(request, "Kitchen handover submitted to the incoming staff member.")
         return redirect("kitchen_handover_list")
-    return render(request, "kitchen/handover/create.html", {"locations": shared_locations, "colleagues": colleagues})
+    general_stock = (
+        Stock.objects.filter(
+            department=department,
+            quantity__gt=0,
+            product__is_active=True,
+            product__product_type__in=("RAW", "FOOD", "DRINK"),
+        )
+        .select_related("product")
+        .order_by("product__product_type", "product__name")
+    )
+    return render(request, "kitchen/handover/create.html", {
+        "locations": shared_locations,
+        "colleagues": colleagues,
+        "general_stock": general_stock,
+    })
 
 
 @role_required("KITCHEN")
