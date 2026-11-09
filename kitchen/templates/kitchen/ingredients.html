@@ -20,6 +20,11 @@
         </div>
 
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <a href="{% url 'kitchen_stock' %}"
+               style="display:inline-block;padding:11px 18px;background:#172f55;color:white;text-decoration:none;border-radius:8px;font-weight:600;">
+                📦 All Kitchen Stock
+            </a>
+            
             {% if user.role == "KITCHEN" and user.is_department_head %}
                 <a href="{% url 'inventory:product_create' %}"
                    style="
