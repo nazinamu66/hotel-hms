@@ -437,8 +437,10 @@ class Product(models.Model):
         if self.sku:
             self.sku = self.sku.strip().upper()
 
-        if not self.barcode:
-            self.barcode = slugify(self.sku)
+        if self.barcode:
+            self.barcode = self.barcode.strip() or None
+        else:
+            self.barcode = None
 
         # 🔥 AUTO COST NORMALIZATION
         if self.unit_multiplier > 0 and self.purchase_cost:
