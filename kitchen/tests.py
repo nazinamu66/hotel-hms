@@ -3155,6 +3155,49 @@ class KitchenHandoverAcknowledgementTests(TestCase):
         })
         self.assertEqual(response.status_code, 403)
 
+    def test_incoming_can_confirm_physical_count_matches_outgoing(self):
+        handover = self.create_handover()
+        line = handover.lines.get()
+        self.client.force_login(self.incoming)
+        response = self.client.post(reverse("kitchen_handover_detail", args=[handover.pk]), {
+            f"matches_outgoing_{line.pk}": "on",
+            "incoming_acknowledged": "on",
+        })
+        handover.refresh_from_db()
+        line.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(handover.status, "CONFIRMED")
+        self.assertEqual(line.incoming_quantity, line.outgoing_quantity)
+
+    def test_incoming_actual_count_requires_explanation_when_different(self):
+        handover = self.create_handover()
+        line = handover.lines.get()
+        self.client.force_login(self.incoming)
+        response = self.client.post(reverse("kitchen_handover_detail", args=[handover.pk]), {
+            f"received_{line.pk}": "9",
+            "incoming_acknowledged": "on",
+        })
+        handover.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(handover.status, "AWAITING_RECEIPT")
+        self.assertFalse(handover.incoming_acknowledged)
+
+    def test_incoming_actual_count_and_explanation_record_variance(self):
+        handover = self.create_handover()
+        line = handover.lines.get()
+        self.client.force_login(self.incoming)
+        response = self.client.post(reverse("kitchen_handover_detail", args=[handover.pk]), {
+            f"received_{line.pk}": "9",
+            f"note_{line.pk}": "One kg missing at physical count.",
+            "incoming_acknowledged": "on",
+        })
+        handover.refresh_from_db()
+        line.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(handover.status, "VARIANCE")
+        self.assertEqual(line.incoming_quantity, Decimal("9"))
+        self.assertEqual(line.discrepancy_note, "One kg missing at physical count.")
+
     def test_registered_product_matching_count_uses_server_balance_snapshot(self):
         product = Product.objects.create(
             hotel=self.hotel, name="Handover Test Rice", sku="HANDOVER-RICE-01",
