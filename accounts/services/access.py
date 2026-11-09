@@ -330,10 +330,14 @@ def can_view_product_master(user):
     } or is_department_head(user)
 
 
-def can_create_product(user, department):
+def can_create_product(user, department, product_type=None):
     """
-    Return True when the user may create a product
-    for the specified department.
+    Return True when the user may assign a new product
+    to the specified department.
+
+    Kitchen heads may assign RAW ingredients to both their
+    own Kitchen and the Store in the same hotel. Store is the
+    inventory source from which Kitchen receives ingredients.
     """
 
     if not user or not user.is_authenticated:
@@ -354,13 +358,17 @@ def can_create_product(user, department):
             department,
         )
 
-    # Department heads may create products only
-    # for their own department.
     if is_department_head(user):
-        return (
-            user.department_id
-            == department.pk
-        )
+        if user.department_id == department.pk:
+            return True
+
+        if (
+            user.role == "KITCHEN"
+            and product_type == "RAW"
+            and department.department_type == "STORE"
+            and department.hotel_id == user.department.hotel_id
+        ):
+            return True
 
     return False
 
