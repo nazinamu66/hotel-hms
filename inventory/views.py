@@ -1870,10 +1870,9 @@ def po_receive(request, pk):
             "This department does not have a valid stock receiving destination."
         )
 
+    # Receipt quantities are computed from PurchaseReceiptItem rows.
+    # Keep these properties read-only; the template reads them directly.
     items = list(po.items.select_related("product").all())
-    for item in items:
-        item.received_quantity = item.received_quantity
-        item.outstanding_quantity = item.outstanding_quantity
 
     return render(
         request,
