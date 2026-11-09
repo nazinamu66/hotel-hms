@@ -30,7 +30,7 @@ from kitchen.forms import (
     RecipeItemForm,
 
 )
-from django.db.models import Q, Sum
+from django.db.models import Count, Q, Sum
 from django.urls import reverse
 from accounts.services.access import (
     get_accessible_hotels,
@@ -402,7 +402,8 @@ def product_list(request):
     if not can_view_product_master(request.user):
         raise PermissionDenied
 
-    product_type = request.GET.get("type")
+    product_type = request.GET.get("type", "").strip()
+    search_query = request.GET.get("q", "").strip()
 
     accessible_hotels = get_accessible_hotels(
         request.user,
@@ -410,32 +411,47 @@ def product_list(request):
         is_active=True,
     )
 
-    products = Product.objects.filter(
+    base_products = Product.objects.filter(
         hotel__in=accessible_hotels,
         is_active=True,
     )
 
-    # Department heads see only products
-    # associated with their department.
+    # Department heads see only products associated with their department.
     if is_department_head(request.user):
-        products = products.filter(
+        base_products = base_products.filter(
             departments=request.user.department_id,
         )
 
+    valid_product_types = {value for value, _label in Product.PRODUCT_TYPE}
+    if product_type not in valid_product_types:
+        product_type = ""
+
+    products = base_products
     if product_type:
+        products = products.filter(product_type=product_type)
+
+    if search_query:
         products = products.filter(
-            product_type=product_type,
+            Q(name__icontains=search_query)
+            | Q(sku__icontains=search_query)
+            | Q(barcode__icontains=search_query)
         )
 
-    products = products.order_by(
-        "product_type",
-        "name",
-    )
+    products = products.order_by("product_type", "name")
+
+    type_counts = {
+        row["product_type"]: row["total"]
+        for row in base_products.values("product_type").annotate(total=Count("id"))
+    }
 
     context = {
         "products": products,
         "product_types": Product.PRODUCT_TYPE,
         "selected_type": product_type,
+        "search_query": search_query,
+        "total_products": base_products.count(),
+        "result_count": products.count(),
+        "type_counts": type_counts,
         "can_manage_products": request.user.role in {
             "ADMIN",
             "DIRECTOR",
