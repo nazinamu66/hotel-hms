@@ -10,10 +10,11 @@
      quantity.required=!box.checked;
      if(box.checked) quantity.value="";
      note.disabled=box.checked;
-     note.required=!box.checked;
+     note.required=!box.checked && quantity.value !== row.dataset.outgoingQuantity;
      if(box.checked) note.value="";
    }
    box.addEventListener("change",sync);
+   quantity.addEventListener("input",sync);
    sync();
  });
 })();
@@ -29,7 +30,7 @@
   <div class="kh-print no-print"><button type="button" class="btn btn-outline-secondary" onclick="window.print()">Print handover record</button></div>
   <div class="card card-body mb-3"><div><strong>Outgoing:</strong> {{ handover.outgoing_user.get_full_name|default:handover.outgoing_user.username }}</div><div><strong>Incoming:</strong> {{ handover.incoming_user.get_full_name|default:handover.incoming_user.username }}</div>{% if handover.outgoing_note %}<p class="mt-2 mb-0">{{ handover.outgoing_note }}</p>{% endif %}</div>
   <div class="card card-body mb-3"><h5>Stock count and verification</h5><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Storage</th><th>Item</th><th>System balance</th><th>Outgoing physical count</th><th>Incoming count</th><th>Difference / note</th></tr></thead><tbody>
-    {% for line in handover.lines.all %}<tr><td>{{ line.location.name }}</td><td>{{ line.item_name }}</td><td>{% if line.system_quantity is not None %}{{ line.system_quantity }} {{ line.unit }}{% else %}—{% endif %}</td><td>{{ line.outgoing_quantity }} {{ line.unit }}</td><td>{% if can_confirm %}<label class="kh-match-label"><input form="incoming-confirm-form" type="checkbox" class="kh-match-outgoing" name="matches_outgoing_{{ line.pk }}"> My physical count matches</label><input form="incoming-confirm-form" class="form-control kh-received mt-2" type="number" min="0" step="0.001" name="received_{{ line.pk }}" placeholder="Enter actual count" required><span class="kh-help">Tick only after physically checking this item.</span>{% else %}{{ line.incoming_quantity|default:"—" }}{% endif %}</td><td>{% if can_confirm %}<input form="incoming-confirm-form" class="form-control kh-note" name="note_{{ line.pk }}" placeholder="Explain if count differs" disabled>{% else %}{{ line.discrepancy_note|default:"—" }}{% endif %}</td></tr>{% endfor %}
+    {% for line in handover.lines.all %}<tr data-outgoing-quantity="{{ line.outgoing_quantity }}"><td>{{ line.location.name }}</td><td>{{ line.item_name }}</td><td>{% if line.system_quantity is not None %}{{ line.system_quantity }} {{ line.unit }}{% else %}—{% endif %}</td><td>{{ line.outgoing_quantity }} {{ line.unit }}</td><td>{% if can_confirm %}<label class="kh-match-label"><input form="incoming-confirm-form" type="checkbox" class="kh-match-outgoing" name="matches_outgoing_{{ line.pk }}"> My physical count matches</label><input form="incoming-confirm-form" class="form-control kh-received mt-2" type="number" min="0" step="0.001" name="received_{{ line.pk }}" placeholder="Enter actual count" required><span class="kh-help">Tick only after physically checking this item.</span>{% else %}{{ line.incoming_quantity|default:"—" }}{% endif %}</td><td>{% if can_confirm %}<input form="incoming-confirm-form" class="form-control kh-note" name="note_{{ line.pk }}" placeholder="Explain if count differs" disabled>{% else %}{{ line.discrepancy_note|default:"—" }}{% endif %}</td></tr>{% endfor %}
     </tbody></table></div></div>
   <div class="row g-3 mb-3">
     <div class="col-md-6"><div class="kh-signoff"><strong>Outgoing staff acknowledgement</strong>{% if handover.outgoing_acknowledged %}<div>✓ Acknowledged by {{ handover.outgoing_user.get_full_name|default:handover.outgoing_user.username }}</div><small>{{ handover.outgoing_acknowledged_at|date:"d M Y H:i" }}</small>{% else %}<span class="text-warning">Not recorded</span>{% endif %}</div></div>
