@@ -33,7 +33,7 @@
 </div>
 <script>
 function formatTime(totalSeconds){const minutes=Math.floor(totalSeconds/60),seconds=totalSeconds%60;return minutes+":"+(seconds<10?"0":"")+seconds;}
-function startTimer(element){const minutes=Number.parseInt(element.dataset.minutes,10),startedAt=Number.parseInt(element.dataset.startedAt,10);if(!Number.isFinite(minutes)||minutes<1||!Number.isFinite(startedAt)||startedAt<=0){element.textContent="Timer unavailable";return;}const deadline=startedAt*1000+minutes*60*1000;function updateTimer(){const remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));element.textContent=remaining>0?formatTime(remaining):"Time reached";if(remaining<=0)clearInterval(interval);}updateTimer();const interval=setInterval(updateTimer,1000);}
+function startTimer(element){const minutes=Number.parseInt(element.dataset.minutes,10),startedAt=Number.parseInt(element.dataset.startedAt,10);if(!Number.isFinite(minutes)||minutes<1||!Number.isFinite(startedAt)||startedAt<=0){element.textContent="Timer unavailable";return;}const deadline=startedAt*1000+minutes*60*1000;let interval=null;function updateTimer(){const remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));element.textContent=remaining>0?formatTime(remaining):"Time reached";if(remaining<=0&&interval!==null){clearInterval(interval);interval=null;}}updateTimer();if(deadline>Date.now())interval=setInterval(updateTimer,1000);}
 document.querySelectorAll(".timer[data-ticket-id]").forEach(startTimer);
 const newTickets={{ new_tickets|length }},previousCount=localStorage.getItem("kitchen_ticket_count");
 if(previousCount!==null&&newTickets>parseInt(previousCount,10)){const sound=document.getElementById("ticket-sound");if(sound)sound.play().catch(function(){});}
