@@ -104,6 +104,53 @@ class PreparedFoodProductFormTests(TestCase):
         )
 
 
+    def test_duplicate_sku_is_reported_on_sku_field(self):
+        Product.objects.create(
+            hotel=self.hotel,
+            name="Existing Ingredient",
+            sku="DUPLICATE-SKU",
+            product_type="FOOD",
+            usage_type="RESALE",
+            base_unit="portion",
+        )
+
+        form = ProductForm(
+            data=self.form_data(sku="duplicate-sku"),
+            hotel=self.hotel,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn(
+            "This SKU is already in use for this hotel. Please choose another SKU.",
+            form.errors["sku"],
+        )
+
+    def test_duplicate_barcode_is_reported_on_barcode_field(self):
+        Product.objects.create(
+            hotel=self.hotel,
+            name="Existing Ingredient",
+            sku="EXISTING-INGREDIENT",
+            barcode="123456789",
+            product_type="FOOD",
+            usage_type="RESALE",
+            base_unit="portion",
+        )
+
+        form = ProductForm(
+            data=self.form_data(
+                sku="NEW-INGREDIENT",
+                barcode="123456789",
+            ),
+            hotel=self.hotel,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn(
+            "This barcode is already registered for this hotel.",
+            form.errors["barcode"],
+        )
+
+
 class PurchaseOrderMethodTests(SimpleTestCase):
     def setUp(self):
         self.factory = RequestFactory()
