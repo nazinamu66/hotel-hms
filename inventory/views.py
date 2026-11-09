@@ -501,13 +501,19 @@ def product_create(request):
         # product-master permissions.
         if (
             form.cleaned_data.get("product_type") == "RAW"
+            and request.user.role not in {
+                "ADMIN",
+                "DIRECTOR",
+                "GENERAL_MANAGER",
+                "MANAGER",
+            }
             and not (
                 request.user.role == "KITCHEN"
                 and is_department_head(request.user)
             )
         ):
             raise PermissionDenied(
-                "Only the Kitchen Department Head can create ingredients."
+                "Only management or the Kitchen Department Head can create ingredients."
             )
 
         selected_departments = form.cleaned_data.get(
