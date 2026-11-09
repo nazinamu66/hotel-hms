@@ -302,14 +302,19 @@
                 📊 Production History
             </a>
 
+            {% if user.role == "KITCHEN" %}
+                <a href="{% url 'kitchen_incoming_deliveries' %}">
+                    📥 Incoming Deliveries
+                </a>
+            {% endif %}
+
             {% if user.is_department_head %}
                 <a href="{% url 'kitchen_ingredient_requests' %}">
                     🧾 My Ingredient Requests
                 </a>
             {% endif %}
-            {% if user.role == "KITCHEN" and user.is_department_head %}<a href="{% url 'kitchen_incoming_deliveries' %}">
-                    🧾 Direct Purchase Deliveries
-                </a>
+
+            {% if user.role == "KITCHEN" and user.is_department_head %}
                 <a href="{% url 'urgent_purchase_create' %}">
                     ⚡ Record Urgent Purchase
                 </a>
