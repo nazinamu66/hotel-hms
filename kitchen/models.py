@@ -1248,6 +1248,10 @@ class KitchenShiftHandoverLine(models.Model):
     )
     item_name = models.CharField(max_length=150)
     unit = models.CharField(max_length=20)
+    system_quantity = models.DecimalField(
+        max_digits=12, decimal_places=3, null=True, blank=True,
+        help_text="Department-wide inventory balance captured when the outgoing handover was submitted."
+    )
     outgoing_quantity = models.DecimalField(max_digits=12, decimal_places=3)
     incoming_quantity = models.DecimalField(
         max_digits=12, decimal_places=3, null=True, blank=True
