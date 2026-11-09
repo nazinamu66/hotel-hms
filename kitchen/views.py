@@ -3201,6 +3201,87 @@ def kitchen_ticket_served(request, ticket_id):
 
     return redirect("kitchen_dashboard")
 
+@role_required("KITCHEN")
+def kitchen_stock(request):
+    """Unified Kitchen stock view: shared stock for staff, all stock for Head Chef."""
+    department = _current_kitchen(request.user)
+    is_head = _is_head_chef(request.user, department)
+
+    scope = request.GET.get("scope", "ALL" if is_head else "GENERAL").upper()
+    if not is_head or scope not in {"ALL", "GENERAL", "RESTRICTED"}:
+        scope = "GENERAL"
+
+    product_type = request.GET.get("type", "").upper()
+    valid_types = {value for value, _label in Product.PRODUCT_TYPE}
+    if product_type not in valid_types:
+        product_type = ""
+
+    products = Product.objects.filter(
+        hotel_id=department.hotel_id,
+        is_active=True,
+        product_type__in=("RAW", "FOOD", "DRINK"),
+    ).filter(
+        Q(departments=department)
+        | Q(restricted_stock_layers__department=department)
+    ).distinct().order_by("product_type", "name")
+
+    if product_type:
+        products = products.filter(product_type=product_type)
+
+    general_rows = Stock.objects.filter(
+        department=department,
+        product__in=products,
+    ).values("product_id", "quantity")
+
+    general_balances = {
+        row["product_id"]: row["quantity"]
+        for row in general_rows
+    }
+
+    restricted_balances = {}
+    if is_head:
+        restricted_rows = (
+            KitchenRestrictedStockLayer.objects.filter(
+                department=department,
+                product__in=products,
+                quantity_remaining__gt=0,
+            )
+            .values("product_id")
+            .annotate(quantity=Sum("quantity_remaining"))
+        )
+        restricted_balances = {
+            row["product_id"]: row["quantity"]
+            for row in restricted_rows
+        }
+
+    stock_rows = []
+    for product in products:
+        general_quantity = general_balances.get(product.pk, Decimal("0.000"))
+        restricted_quantity = restricted_balances.get(product.pk, Decimal("0.000"))
+        if scope == "GENERAL" and general_quantity <= 0:
+            continue
+        if scope == "RESTRICTED" and restricted_quantity <= 0:
+            continue
+        if scope == "ALL" and general_quantity <= 0 and restricted_quantity <= 0:
+            continue
+        stock_rows.append({
+            "product": product,
+            "general_quantity": general_quantity,
+            "restricted_quantity": restricted_quantity if is_head else None,
+            "total_quantity": general_quantity + restricted_quantity if is_head else general_quantity,
+        })
+
+    return render(request, "kitchen/stock/list.html", {
+        "stock_rows": stock_rows,
+        "is_head": is_head,
+        "selected_scope": scope,
+        "selected_type": product_type,
+        "product_types": Product.PRODUCT_TYPE,
+        "general_count": sum(1 for row in stock_rows if row["general_quantity"] > 0),
+        "restricted_count": sum(1 for row in stock_rows if row["restricted_quantity"] and row["restricted_quantity"] > 0),
+    })
+
+
 def _current_kitchen(user):
     department = getattr(user, "department", None)
     if user.role != "KITCHEN" or not department or department.department_type != "KITCHEN":
