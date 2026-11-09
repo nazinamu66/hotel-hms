@@ -31,18 +31,19 @@
       {% if is_head %}<span class="ks-privacy">🔒 Restricted balances visible to Head Chef only</span>{% else %}<span class="ks-hint">Showing general/shared stock only</span>{% endif %}
     </form>
     <div class="ks-table-wrap"><table class="ks-table">
-      <thead><tr><th>Product</th><th>Type</th><th class="ks-number">General / shared</th>{% if is_head %}<th class="ks-number">Restricted</th><th class="ks-number">Total</th>{% endif %}<th>Unit</th></tr></thead>
+      <thead><tr><th>Product</th><th>Type</th>{% if selected_scope != "RESTRICTED" %}<th class="ks-number">General / shared</th>{% endif %}{% if is_head and selected_scope != "GENERAL" %}<th class="ks-number">Restricted</th>{% endif %}{% if is_head and selected_scope == "ALL" %}<th class="ks-number">Total</th>{% endif %}<th>Unit</th></tr></thead>
       <tbody>
         {% for row in stock_rows %}
           <tr>
             <td><span class="ks-name">{{ row.product.name }}</span><span class="ks-sku">{{ row.product.sku }}</span></td>
             <td><span class="ks-type">{{ row.product.get_product_type_display }}</span></td>
-            <td class="ks-number">{{ row.general_quantity|floatformat:3 }}</td>
-            {% if is_head %}<td class="ks-number">{{ row.restricted_quantity|floatformat:3 }}</td><td class="ks-number ks-total">{{ row.total_quantity|floatformat:3 }}</td>{% endif %}
+            {% if selected_scope != "RESTRICTED" %}<td class="ks-number">{{ row.general_quantity|floatformat:3 }}</td>{% endif %}
+            {% if is_head and selected_scope != "GENERAL" %}<td class="ks-number">{{ row.restricted_quantity|floatformat:3 }}</td>{% endif %}
+            {% if is_head and selected_scope == "ALL" %}<td class="ks-number ks-total">{{ row.total_quantity|floatformat:3 }}</td>{% endif %}
             <td>{{ row.product.base_unit }}</td>
           </tr>
         {% empty %}
-          <tr><td colspan="{% if is_head %}6{% else %}4{% endif %}" class="ks-empty">No stock matches the selected filters.</td></tr>
+          <tr><td colspan="{% if is_head and selected_scope == "ALL" %}6{% elif is_head or selected_scope == "RESTRICTED" %}4{% else %}4{% endif %}" class="ks-empty">No stock matches the selected filters.</td></tr>
         {% endfor %}
       </tbody>
     </table></div>
