@@ -377,6 +377,7 @@ def cleaning_history(request):
         )
         .prefetch_related(
             "assignment__linen_checks__linen_item__product",
+            "assignment__linen_submissions__submitted_by",
         )
     )
 
