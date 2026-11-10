@@ -3549,3 +3549,45 @@ class KitchenHandoverAdjustmentPostingTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.stock.refresh_from_db()
         self.assertEqual(self.stock.quantity, Decimal("20.000"))
+
+    def test_surplus_fifo_layer_has_no_historical_purchase_attribution(self):
+        from kitchen.reconciliation_adjustments import post_kitchen_handover_adjustment
+
+        post_kitchen_handover_adjustment(
+            reconciliation_line=self.line,
+            verified_quantity=Decimal("23.000"),
+            user=self.poster,
+        )
+        adjustment_layer = StockCostLayer.objects.get(source_reference__startswith="KHR-")
+        self.assertIsNone(adjustment_layer.purchase_item)
+
+    def test_adjustment_service_blocks_approver_from_posting(self):
+        from kitchen.reconciliation_adjustments import post_kitchen_handover_adjustment
+
+        with self.assertRaises(ValidationError):
+            post_kitchen_handover_adjustment(
+                reconciliation_line=self.line,
+                verified_quantity=Decimal("18.000"),
+                user=self.approver,
+            )
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.quantity, Decimal("20.000"))
+
+    def test_adjustment_service_blocks_roles_outside_authorised_management(self):
+        from kitchen.reconciliation_adjustments import post_kitchen_handover_adjustment
+
+        general_manager = User.objects.create_user(
+            username="adjustment_general_manager",
+            password="test-password",
+            role="GENERAL_MANAGER",
+            organization=self.organization,
+        )
+        with self.assertRaises(ValidationError):
+            post_kitchen_handover_adjustment(
+                reconciliation_line=self.line,
+                verified_quantity=Decimal("18.000"),
+                user=general_manager,
+            )
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.quantity, Decimal("20.000"))
+
