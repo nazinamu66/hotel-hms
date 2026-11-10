@@ -212,14 +212,12 @@ class POSOrder(models.Model):
             if not product.is_stock_item():
                 continue
 
-            # Drinks come from Restaurant stock.
-            # Prepared food comes from Kitchen stock.
-            if product.product_type == "DRINK":
+            # Drinks and transferred snacks come from Restaurant stock.
+            # Made-to-order FOOD continues to come from Kitchen stock.
+            if product.product_type in ("DRINK", "SNACK"):
                 stock_department = restaurant
-
             elif product.product_type == "FOOD":
                 stock_department = kitchen
-
             else:
                 continue
 
