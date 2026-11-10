@@ -70,7 +70,7 @@
                   <form class="inline-form" method="post" action="{% url 'kitchen_restaurant_transfer_reject' transfer.pk %}">{% csrf_token %}<input name="rejection_note" type="text" placeholder="Reason for rejection" required><button class="transfer-btn danger" type="submit">Reject</button></form>
                 </div>
               {% elif transfer.status == "RECEIVED" %}
-                <br><span class="muted">Received by {{ transfer.received_by.get_full_name|default:transfer.received_by.username }}{% if transfer.received_at %} · {{ transfer.received_at|date:"d M Y, H:i" }}{% endif %}</span>
+                <br><span class="muted">Received by {{ transfer.received_by.get_full_name|default:transfer.received_by.username }}{% if transfer.to_department %} · {{ transfer.to_department.name }}{% endif %}{% if transfer.received_at %} · {{ transfer.received_at|date:"d M Y, H:i" }}{% endif %}</span>
               {% elif transfer.status == "REJECTED" %}
                 <br><span class="muted">Rejected: {{ transfer.rejection_note }}</span>
               {% endif %}
