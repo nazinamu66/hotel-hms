@@ -3737,3 +3737,20 @@ class KitchenRestaurantTransferTests(TestCase):
         self.assertEqual(KitchenRestaurantTransfer.objects.count(), 1)
         self.kitchen_stock.refresh_from_db()
         self.assertEqual(self.kitchen_stock.quantity, Decimal("10.000"))
+
+    def test_received_transfer_cannot_be_received_twice(self):
+        self.request_transfer()
+        transfer = KitchenRestaurantTransfer.objects.get()
+        self.client.force_login(self.restaurant_user)
+        url = reverse("kitchen_restaurant_transfer_receive", args=[transfer.pk])
+        first = self.client.post(url)
+        second = self.client.post(url)
+        self.assertEqual(first.status_code, 302)
+        self.assertEqual(second.status_code, 404)
+        self.assertEqual(
+            StockMovement.objects.filter(
+                reference=f"KITCHEN-RESTAURANT-{transfer.pk}",
+                movement_type="TRANSFER",
+            ).count(),
+            1,
+        )
