@@ -3659,7 +3659,7 @@ def kitchen_restaurant_transfers(request):
     transfers = KitchenRestaurantTransfer.objects.filter(
         product__hotel_id__in=hotel_ids,
     ).select_related(
-        "product", "from_department", "requested_by", "received_by", "rejected_by",
+        "product", "from_department", "to_department", "requested_by", "received_by", "rejected_by",
     )
     if user.role == "KITCHEN":
         transfers = transfers.filter(from_department=department)
