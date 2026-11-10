@@ -370,6 +370,11 @@ class Product(models.Model):
     # -----------------------------
     def clean(self):
 
+        if self.unit_multiplier is None or self.unit_multiplier < 1:
+            raise ValidationError({
+                "unit_multiplier": "Purchase unit conversion must be at least 1 base unit."
+            })
+
         # ----------------------------------
         # RAW MATERIAL RULES
         # ----------------------------------
@@ -464,8 +469,15 @@ class Product(models.Model):
         return self.usage_type == "INTERNAL"
     def to_base_unit(self, quantity):
         """
-        Convert purchase unit → base unit
+        Convert purchase unit → base unit.
+        Refuse invalid legacy/configuration values rather than silently
+        creating stock and FIFO quantities that disagree.
         """
+        if self.unit_multiplier is None or self.unit_multiplier < 1:
+            raise ValidationError(
+                f"{self.name} has an invalid purchase-unit conversion. "
+                "Configure at least 1 base unit per purchase unit."
+            )
         return quantity * self.unit_multiplier
 
 
