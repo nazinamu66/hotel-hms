@@ -125,7 +125,13 @@ class IngredientRequestApprovalTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "5.000 kg")
-        self.assertContains(response, "Unit Cost — Rice (₦ per kg)")
+
+        self.client.force_login(self.manager)
+        manager_response = self.client.get(
+            reverse("kitchen_ingredient_request_detail", args=[request_obj.pk])
+        )
+        self.assertEqual(manager_response.status_code, 200)
+        self.assertContains(manager_response, "Unit Cost — Rice (₦ per kg)")
 
     def test_kitchen_head_can_submit_urgent_purchase_without_posting_stock(self):
         self.client.force_login(self.requester)
