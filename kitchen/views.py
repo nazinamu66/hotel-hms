@@ -3667,6 +3667,45 @@ def kitchen_restaurant_transfers(request):
     elif user.role == "RESTAURANT":
         transfers = transfers.filter(from_department__hotel_id=department.hotel_id)
 
+    # Server-side register filters. Invalid dates are ignored safely.
+    search_query = request.GET.get("q", "").strip()
+    status_filter = request.GET.get("status", "").strip().upper()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+
+    if search_query:
+        transfers = transfers.filter(
+            Q(product__name__icontains=search_query)
+            | Q(note__icontains=search_query)
+            | Q(rejection_note__icontains=search_query)
+            | Q(requested_by__username__icontains=search_query)
+            | Q(requested_by__first_name__icontains=search_query)
+            | Q(requested_by__last_name__icontains=search_query)
+            | Q(received_by__username__icontains=search_query)
+            | Q(from_department__name__icontains=search_query)
+            | Q(to_department__name__icontains=search_query)
+            | Q(pk__icontains=search_query)
+        )
+
+    if status_filter in {"PENDING", "RECEIVED", "REJECTED"}:
+        transfers = transfers.filter(status=status_filter)
+    else:
+        status_filter = ""
+
+    try:
+        if date_from:
+            date.fromisoformat(date_from)
+            transfers = transfers.filter(requested_at__date__gte=date_from)
+    except ValueError:
+        date_from = ""
+
+    try:
+        if date_to:
+            date.fromisoformat(date_to)
+            transfers = transfers.filter(requested_at__date__lte=date_to)
+    except ValueError:
+        date_to = ""
+
     available_products = Stock.objects.filter(
         department=department,
         quantity__gt=0,
@@ -3725,7 +3764,48 @@ def kitchen_restaurant_transfers(request):
         "available_products": available_products,
         "can_request": user.role == "KITCHEN",
         "can_receive": user.role == "RESTAURANT",
+        "search_query": search_query,
+        "status_filter": status_filter,
+        "date_from": date_from,
+        "date_to": date_to,
+        "result_count": transfers.count(),
     })
+
+
+def kitchen_restaurant_transfer_detail(request, pk):
+    """Show one transfer within the viewer's existing hotel/department scope."""
+    user = request.user
+    department = user.department
+
+    if user.role in ("KITCHEN", "RESTAURANT"):
+        expected_type = "KITCHEN" if user.role == "KITCHEN" else "RESTAURANT"
+        if not department or department.department_type != expected_type:
+            raise PermissionDenied(
+                f"Your account must be assigned to a {expected_type.title()} department."
+            )
+        hotel_ids = [department.hotel_id]
+    else:
+        hotel_ids = list(get_accessible_hotels(user).values_list("pk", flat=True))
+
+    transfer = get_object_or_404(
+        KitchenRestaurantTransfer.objects.select_related(
+            "product", "from_department", "to_department",
+            "requested_by", "received_by", "rejected_by",
+        ),
+        pk=pk,
+        product__hotel_id__in=hotel_ids,
+    )
+
+    if user.role == "KITCHEN" and transfer.from_department_id != department.id:
+        raise PermissionDenied
+    if user.role == "RESTAURANT" and transfer.from_department.hotel_id != department.hotel_id:
+        raise PermissionDenied
+
+    return render(
+        request,
+        "kitchen/production/restaurant_transfer_detail.html",
+        {"transfer": transfer},
+    )
 
 
 @role_required("RESTAURANT")
