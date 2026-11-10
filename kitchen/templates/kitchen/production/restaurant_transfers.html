@@ -28,7 +28,7 @@
   {% if can_request %}
   <section class="transfer-card">
     <h2 style="margin:0 0 6px">Request a transfer</h2>
-    <p class="muted" style="margin:0 0 16px">Only completed production batches are eligible. The quantity remains in Kitchen stock until Restaurant confirms receipt.</p>
+    <p class="muted" style="margin:0 0 16px">Select prepared FOOD already held in Kitchen stock. The quantity remains in Kitchen stock until Restaurant confirms physical receipt.</p>
     {% if available_products %}
     <form method="post">
       {% csrf_token %}
