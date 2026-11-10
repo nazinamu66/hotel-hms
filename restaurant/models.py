@@ -40,7 +40,7 @@ class MenuItem(models.Model):
 
     def save(self, *args, **kwargs):
         if self.product_id:
-            if self.product.product_type == "FOOD":
+            if self.product.product_type in ("FOOD", "SNACK"):
                 self.category = "FOOD"
             elif self.product.product_type == "DRINK":
                 self.category = "DRINK"
