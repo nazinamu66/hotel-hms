@@ -3653,17 +3653,12 @@ class KitchenRestaurantTransferTests(TestCase):
             hotel=self.hotel, name="Samosa", sku="TRANSFER-SAMOSA",
             product_type="FOOD", usage_type="RESALE", base_unit="pcs",
         )
-        self.recipe = Recipe.objects.create(name="Transfer Samosa", product=self.product)
-        self.batch = ProductionBatch.objects.create(
-            recipe=self.recipe, quantity_produced=10,
-            produced_by=self.kitchen_user, is_executed=True,
-        )
         self.kitchen_stock = Stock.objects.create(
             product=self.product, department=self.kitchen, quantity=Decimal("10.000")
         )
         StockCostLayer.objects.create(
             product=self.product, department=self.kitchen,
-            source_reference=f"PROD-{self.batch.pk}",
+            source_reference="PROD-LEGACY-TEST",
             quantity_received=Decimal("10.000"),
             quantity_remaining=Decimal("10.000"),
             unit_cost=Decimal("125.0000"),
@@ -3673,7 +3668,7 @@ class KitchenRestaurantTransferTests(TestCase):
         self.client.force_login(self.kitchen_user)
         return self.client.post(
             reverse("kitchen_restaurant_transfers"),
-            {"production_batch": self.batch.pk, "quantity": quantity, "note": "Snack handover"},
+            {"product": self.product.pk, "quantity": quantity, "note": "Snack handover"},
         )
 
     def test_kitchen_request_does_not_move_stock_before_restaurant_receipt(self):
@@ -3704,7 +3699,7 @@ class KitchenRestaurantTransferTests(TestCase):
         self.assertEqual(
             StockCostLayer.objects.filter(
                 product=self.product, department=self.restaurant,
-                source_reference=f"PROD-{self.batch.pk}",
+                source_reference="PROD-LEGACY-TEST",
                 quantity_remaining=Decimal("4.000"),
                 unit_cost=Decimal("125.0000"),
             ).count(),
@@ -3733,7 +3728,7 @@ class KitchenRestaurantTransferTests(TestCase):
 
     def test_kitchen_cannot_request_more_than_unreserved_kitchen_stock(self):
         self.request_transfer(quantity="8.000")
-        response = self.request_transfer(quantity="3.000")
+        self.request_transfer(quantity="3.000")
         self.assertEqual(KitchenRestaurantTransfer.objects.count(), 1)
         self.kitchen_stock.refresh_from_db()
         self.assertEqual(self.kitchen_stock.quantity, Decimal("10.000"))
