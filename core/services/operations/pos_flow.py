@@ -107,7 +107,7 @@ def process_pos_order(
         else:
             stock = Stock.objects.select_for_update().filter(
                 product=product,
-                department=kitchen
+                department=restaurant
             ).first()
 
         if not stock or stock.quantity < qty:
