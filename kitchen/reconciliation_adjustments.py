@@ -79,6 +79,13 @@ def post_kitchen_handover_adjustment(*, reconciliation_line, verified_quantity, 
 
     if reconciliation.status != "APPROVED":
         raise ValidationError("Only an approved reconciliation can be adjusted.")
+    if getattr(user, "role", None) not in {"ADMIN", "DIRECTOR", "MANAGER"}:
+        raise ValidationError("Only an Admin, Director or Manager can post a Kitchen handover adjustment.")
+    if reconciliation.reviewed_by_id == getattr(user, "pk", None):
+        raise ValidationError(
+            "The approving manager cannot post the adjustment they approved. "
+            "A second authorised manager must post it."
+        )
     if line.adjustment_movement_id or line.adjustment_journal_id or line.adjusted_at:
         raise ValidationError("This discrepancy line has already been adjusted.")
     handover_line = line.handover_line
@@ -176,7 +183,7 @@ def post_kitchen_handover_adjustment(*, reconciliation_line, verified_quantity, 
         StockCostLayer.objects.create(
             product=product,
             department=department,
-            purchase_item=latest_layer.purchase_item,
+            purchase_item=None,
             source_reference=reference,
             quantity_received=quantity,
             quantity_remaining=quantity,
