@@ -14,6 +14,32 @@
 <td>{{ line.handover_line.outgoing_quantity }} {{ line.handover_line.unit }}</td><td>{{ line.handover_line.incoming_quantity }} {{ line.handover_line.unit }}</td><td>{{ line.handover_line.variance }} {{ line.handover_line.unit }}</td><td>{{ line.verified_quantity|default:"—" }} {{ line.handover_line.unit }}</td><td>{{ line.investigation_note|default:"—" }}</td>
 </tr>{% empty %}<tr><td colspan="8">No discrepancy lines recorded.</td></tr>{% endfor %}
 </tbody></table></div></section>
+{% if reconciliation.status == "APPROVED" %}
+<section class="krm-card">
+<h2>Post approved inventory adjustments</h2>
+<p class="krm-muted">Enter a new physical count taken now. The system compares it with the live Kitchen stock balance. Shortages consume FIFO layers; surpluses use the newest positive FIFO layer. Every posting creates a stock movement and balanced journal.</p>
+{% for line in reconciliation.lines.all %}
+<div style="border-top:1px solid #edf1f5;padding:15px 0">
+<strong>{{ line.handover_line.item_name }}</strong>
+{% if line.adjustment_movement_id %}
+<p class="krm-muted">Posted {{ line.adjusted_at|date:"d M Y, H:i" }} by {{ line.adjusted_by.get_full_name|default:line.adjusted_by.username }} · {{ line.adjustment_movement.get_movement_type_display }} · {{ line.adjustment_quantity }} {{ line.handover_line.unit }} · Value {{ line.adjustment_cost }} · Journal {{ line.adjustment_journal_id }}</p>
+{% elif not line.handover_line.product_id %}
+<p class="krm-muted">Unregistered item — cannot be adjusted in inventory.</p>
+{% elif reconciliation.reviewed_by_id == request.user.pk %}
+<p class="krm-muted">A different authorised manager must post this adjustment from the same approved record.</p>
+{% else %}
+<form method="post" action="{% url 'kitchen_handover_reconciliation_adjust' reconciliation.pk line.pk %}" class="krm-actions">
+{% csrf_token %}
+<label>New physical count ({{ line.handover_line.unit }})
+<input name="physical_quantity" type="number" min="0" step="0.001" required style="display:block;max-width:220px;padding:10px;border:1px solid #d7dfeb;border-radius:8px;margin-top:5px">
+</label>
+<button class="krm-btn">Post adjustment</button>
+</form>
+{% endif %}
+</div>
+{% endfor %}
+</section>
+{% endif %}
 {% if reconciliation.reviewed_by %}<section class="krm-card"><h2>Management decision</h2><p class="krm-muted">{{ reconciliation.get_status_display }} by {{ reconciliation.reviewed_by.get_full_name|default:reconciliation.reviewed_by.username }} · {{ reconciliation.reviewed_at|date:"d M Y, H:i" }}</p><div class="krm-note">{{ reconciliation.approval_note }}</div></section>{% endif %}
 {% if can_decide %}<form method="post" class="krm-card">{% csrf_token %}<h2>Record management decision</h2><p class="krm-muted">Approval authorises the next controlled adjustment stage only. No stock or accounting entries are created by this decision.</p><textarea name="approval_note" required placeholder="Explain the decision and any conditions..."></textarea><div class="krm-actions"><button class="krm-btn" name="action" value="APPROVE">Approve for adjustment</button><button class="krm-btn reject" name="action" value="REJECT">Reject</button><button class="krm-btn close" name="action" value="CLOSE">Close without adjustment</button></div></form>{% endif %}
 </div>
