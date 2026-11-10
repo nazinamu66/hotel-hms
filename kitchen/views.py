@@ -3746,14 +3746,17 @@ def kitchen_restaurant_transfer_receive(request, pk):
     if product.product_type != "SNACK" or product.usage_type != "RESALE":
         raise PermissionDenied("Only recipe-produced SNACK resale products can be received.")
     try:
-        transfer_stock(
-            product=product,
-            from_department=transfer.from_department,
-            to_department=restaurant,
-            quantity=transfer.quantity,
-            user=request.user,
-            reference=f"KITCHEN-RESTAURANT-SNACK-{transfer.pk}",
-        )
+        # A nested savepoint guarantees that a FIFO validation failure cannot
+        # leave partially moved cost layers behind when we display the error.
+        with transaction.atomic():
+            transfer_stock(
+                product=product,
+                from_department=transfer.from_department,
+                to_department=restaurant,
+                quantity=transfer.quantity,
+                user=request.user,
+                reference=f"KITCHEN-RESTAURANT-SNACK-{transfer.pk}",
+            )
     except ValidationError as exc:
         messages.error(request, "; ".join(exc.messages))
         return redirect("kitchen_restaurant_transfers")
