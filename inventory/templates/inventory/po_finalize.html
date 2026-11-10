@@ -464,8 +464,7 @@ Finalize Purchase Order #{{ po.id }}
                 <h3>Review Purchase Items</h3>
 
                 <p>
-                    Confirm the purchase quantity and unit cost for
-                    every item. Set quantity to zero to remove an item.
+                    Confirm quantities and costs per purchase unit. Each purchase unit is converted to the product's base unit using the displayed multiplier. Set quantity to zero to remove an item.
                 </p>
 
             </div>
@@ -485,11 +484,11 @@ Finalize Purchase Order #{{ po.id }}
                                 </th>
 
                                 <th class="number">
-                                    Purchase Quantity
+                                    Purchase Quantity (purchase unit)
                                 </th>
 
                                 <th class="number">
-                                    Unit Cost
+                                    Unit Cost (₦ / purchase unit)
                                 </th>
 
                                 <th class="number">
@@ -511,6 +510,10 @@ Finalize Purchase Order #{{ po.id }}
                                         <span class="po-product">
                                             {{ item.product.name }}
                                         </span>
+                                        <div class="po-unit" style="display:block;margin-top:5px;">
+                                            1 {{ item.product.purchase_unit|default:item.product.base_unit }}
+                                            = {{ item.product.unit_multiplier|default:1 }} {{ item.product.base_unit }}
+                                        </div>
                                     </td>
 
 
