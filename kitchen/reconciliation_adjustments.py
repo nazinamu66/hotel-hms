@@ -209,7 +209,10 @@ def post_kitchen_handover_adjustment(*, reconciliation_line, verified_quantity, 
         "adjusted_at", "adjustment_journal",
     ])
 
-    remaining = reconciliation.lines.filter(\n        adjustment_movement__isnull=True,\n        handover_line__product__isnull=False,\n    ).exists()
+    remaining = reconciliation.lines.filter(
+        adjustment_movement__isnull=True,
+        handover_line__product__isnull=False,
+    ).exists()
     if not remaining:
         reconciliation.status = "ADJUSTED"
         reconciliation.save(update_fields=["status"])
