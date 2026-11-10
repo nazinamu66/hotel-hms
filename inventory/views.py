@@ -2434,7 +2434,7 @@ def product_edit(request, pk):
                 with transaction.atomic():
                     product = form.save(commit=False)
 
-                    if product.product_type == "FOOD":
+                    if product.product_type in ("FOOD", "SNACK"):
                         product.base_unit = "portion"
                         product.purchase_unit = "portion"
                         product.unit_multiplier = 1
