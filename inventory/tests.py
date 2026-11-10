@@ -74,6 +74,37 @@ class PreparedFoodProductFormTests(TestCase):
         data.update(overrides)
         return data
 
+    def test_product_form_rejects_zero_purchase_unit_multiplier(self):
+        form = ProductForm(
+            data=self.form_data(unit_multiplier="0"),
+            hotel=self.hotel,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("unit_multiplier", form.errors)
+        self.assertIn(
+            "Purchase unit conversion must be at least 1 base unit.",
+            form.errors["unit_multiplier"],
+        )
+
+    def test_product_base_conversion_rejects_zero_multiplier(self):
+        product = Product(
+            hotel=self.hotel,
+            name="Invalid Conversion Product",
+            sku="INVALID-CONVERSION",
+            product_type="FOOD",
+            usage_type="RESALE",
+            base_unit="portion",
+            purchase_unit="tray",
+            unit_multiplier=0,
+        )
+
+        with self.assertRaisesMessage(
+            ValidationError,
+            "invalid purchase-unit conversion",
+        ):
+            product.to_base_unit(1)
+
     def test_prepared_food_does_not_require_supplier_purchase_cost(self):
         form = ProductForm(
             data=self.form_data(),
