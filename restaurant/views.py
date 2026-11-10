@@ -260,6 +260,23 @@ def pos_v2(request):
         .filter(
             is_active=True,
             category="FOOD",
+            product__product_type="FOOD",
+            product__hotel_id=restaurant.hotel_id,
+            product__usage_type="RESALE",
+        )
+        .select_related("product")
+        .order_by("name")
+    )
+
+    # --------------------------------
+    # SNACK MENU (already prepared and transferred to Restaurant)
+    # --------------------------------
+    snack_items = (
+        MenuItem.objects
+        .filter(
+            is_active=True,
+            category="FOOD",
+            product__product_type="SNACK",
             product__hotel_id=restaurant.hotel_id,
             product__usage_type="RESALE",
         )
@@ -350,6 +367,7 @@ def pos_v2(request):
         "restaurant/pos_v2.html",
         {
             "food_items": food_items,
+            "snack_items": snack_items,
             "drink_items": drink_items,
 
             "shift": shift,
@@ -414,7 +432,7 @@ def cart_add(request, item_id):
     # Determine stock department
     # --------------------------------
     # Determine stock department
-    if menu_item.product.product_type == "DRINK":
+    if menu_item.product.product_type in ("DRINK", "SNACK"):
         stock_department = restaurant
     else:
         stock_department = Department.objects.filter(
