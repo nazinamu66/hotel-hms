@@ -217,7 +217,7 @@ class ProductForm(forms.ModelForm):
         # FOOD rules
         # ----------------------------------------------------
 
-        if product_type == "FOOD":
+        if product_type in ("FOOD", "SNACK"): 
             cleaned_data["usage_type"] = "RESALE"
             cleaned_data["purchase_cost"] = 0
             cleaned_data["cost_price"] = 0
@@ -241,7 +241,7 @@ class ProductForm(forms.ModelForm):
         # RESALE validation
         # ----------------------------------------------------
 
-        elif usage_type == "RESALE" and product_type != "FOOD":
+        elif usage_type == "RESALE" and product_type not in ("FOOD", "SNACK"):
             if not price:
                 raise forms.ValidationError(
                     "Resale products must have a selling price."
