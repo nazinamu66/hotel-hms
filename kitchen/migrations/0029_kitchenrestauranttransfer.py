@@ -25,6 +25,7 @@ class Migration(migrations.Migration):
                 ("rejected_at", models.DateTimeField(blank=True, null=True)),
                 ("rejection_note", models.TextField(blank=True)),
                 ("from_department", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="restaurant_snack_transfers", to="inventory.department")),
+                ("to_department", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name="received_snack_transfers", to="inventory.department")),
                 ("product", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="kitchen_snack_transfers", to="inventory.product")),
                 ("received_by", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name="received_kitchen_snack_transfers", to=settings.AUTH_USER_MODEL)),
                 ("rejected_by", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name="rejected_kitchen_snack_transfers", to=settings.AUTH_USER_MODEL)),
