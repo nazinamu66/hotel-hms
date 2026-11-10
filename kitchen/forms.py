@@ -13,6 +13,14 @@ from .models import IngredientRestockRequest, IngredientRestockItem
 
 
 class BaseIngredientRestockItemFormSet(BaseInlineFormSet):
+    def add_fields(self, form, index):
+        super().add_fields(form, index)
+        ingredient_field = form.fields.get("ingredient")
+        if ingredient_field:
+            ingredient_field.label_from_instance = (
+                lambda product: f"{product.name} — {product.base_unit}"
+            )
+
     def clean(self):
         super().clean()
 
