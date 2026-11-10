@@ -31,7 +31,7 @@ class Recipe(models.Model):
     product = models.OneToOneField(
         Product,
         on_delete=models.PROTECT,
-        help_text="Finished food or snack product sold by restaurant"
+        help_text="Finished food product sold by restaurant"
     )
 
     is_active = models.BooleanField(default=True)
