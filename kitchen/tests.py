@@ -27,6 +27,7 @@ from kitchen.models import (
     KitchenStorageLocation,
     KitchenRestrictedStockRecord,
     KitchenRestrictedStockLayer,
+    KitchenRestaurantTransfer,
 )
 
 
@@ -3628,3 +3629,111 @@ class KitchenHandoverAdjustmentPostingTests(TestCase):
         self.stock.refresh_from_db()
         self.assertEqual(self.stock.quantity, Decimal("20.000"))
 
+
+
+class KitchenRestaurantTransferTests(TestCase):
+    def setUp(self):
+        organization = Organization.objects.create(name="Food Transfer Org")
+        self.hotel = Hotel.objects.create(organization=organization, name="Food Transfer Hotel")
+        self.kitchen = Department.objects.create(
+            hotel=self.hotel, code="KTR", name="Transfer Kitchen", department_type="KITCHEN"
+        )
+        self.restaurant = Department.objects.create(
+            hotel=self.hotel, code="RTR", name="Transfer Restaurant", department_type="RESTAURANT"
+        )
+        self.kitchen_user = User.objects.create_user(
+            username="transfer_kitchen", password="test-password",
+            role="KITCHEN", hotel=self.hotel, department=self.kitchen,
+        )
+        self.restaurant_user = User.objects.create_user(
+            username="transfer_restaurant", password="test-password",
+            role="RESTAURANT", hotel=self.hotel, department=self.restaurant,
+        )
+        self.product = Product.objects.create(
+            hotel=self.hotel, name="Samosa", sku="TRANSFER-SAMOSA",
+            product_type="FOOD", usage_type="RESALE", base_unit="pcs",
+        )
+        self.recipe = Recipe.objects.create(name="Transfer Samosa", product=self.product)
+        self.batch = ProductionBatch.objects.create(
+            recipe=self.recipe, quantity_produced=10,
+            produced_by=self.kitchen_user, is_executed=True,
+        )
+        self.kitchen_stock = Stock.objects.create(
+            product=self.product, department=self.kitchen, quantity=Decimal("10.000")
+        )
+        StockCostLayer.objects.create(
+            product=self.product, department=self.kitchen,
+            source_reference=f"PROD-{self.batch.pk}",
+            quantity_received=Decimal("10.000"),
+            quantity_remaining=Decimal("10.000"),
+            unit_cost=Decimal("125.0000"),
+        )
+
+    def request_transfer(self, quantity="4.000"):
+        self.client.force_login(self.kitchen_user)
+        return self.client.post(
+            reverse("kitchen_restaurant_transfers"),
+            {"production_batch": self.batch.pk, "quantity": quantity, "note": "Snack handover"},
+        )
+
+    def test_kitchen_request_does_not_move_stock_before_restaurant_receipt(self):
+        response = self.request_transfer()
+        transfer = KitchenRestaurantTransfer.objects.get()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(transfer.status, "PENDING")
+        self.kitchen_stock.refresh_from_db()
+        self.assertEqual(self.kitchen_stock.quantity, Decimal("10.000"))
+        self.assertFalse(Stock.objects.filter(product=self.product, department=self.restaurant).exists())
+        self.assertFalse(StockMovement.objects.filter(reference=f"KITCHEN-RESTAURANT-{transfer.pk}").exists())
+
+    def test_restaurant_confirmation_moves_stock_and_preserves_fifo_cost(self):
+        self.request_transfer()
+        transfer = KitchenRestaurantTransfer.objects.get()
+        self.client.force_login(self.restaurant_user)
+        response = self.client.post(
+            reverse("kitchen_restaurant_transfer_receive", args=[transfer.pk])
+        )
+        transfer.refresh_from_db()
+        self.kitchen_stock.refresh_from_db()
+        restaurant_stock = Stock.objects.get(product=self.product, department=self.restaurant)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(transfer.status, "RECEIVED")
+        self.assertEqual(transfer.received_by, self.restaurant_user)
+        self.assertEqual(self.kitchen_stock.quantity, Decimal("6.000"))
+        self.assertEqual(restaurant_stock.quantity, Decimal("4.000"))
+        self.assertEqual(
+            StockCostLayer.objects.filter(
+                product=self.product, department=self.restaurant,
+                source_reference=f"PROD-{self.batch.pk}",
+                quantity_remaining=Decimal("4.000"),
+                unit_cost=Decimal("125.0000"),
+            ).count(),
+            1,
+        )
+        movement = StockMovement.objects.get(
+            reference=f"KITCHEN-RESTAURANT-{transfer.pk}",
+            movement_type="TRANSFER",
+        )
+        self.assertEqual(movement.quantity, Decimal("4.000"))
+
+    def test_restaurant_rejection_leaves_kitchen_stock_unchanged(self):
+        self.request_transfer()
+        transfer = KitchenRestaurantTransfer.objects.get()
+        self.client.force_login(self.restaurant_user)
+        response = self.client.post(
+            reverse("kitchen_restaurant_transfer_reject", args=[transfer.pk]),
+            {"rejection_note": "Quantity does not match delivery."},
+        )
+        transfer.refresh_from_db()
+        self.kitchen_stock.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(transfer.status, "REJECTED")
+        self.assertEqual(self.kitchen_stock.quantity, Decimal("10.000"))
+        self.assertFalse(StockMovement.objects.filter(reference=f"KITCHEN-RESTAURANT-{transfer.pk}").exists())
+
+    def test_kitchen_cannot_request_more_than_unreserved_kitchen_stock(self):
+        self.request_transfer(quantity="8.000")
+        response = self.request_transfer(quantity="3.000")
+        self.assertEqual(KitchenRestaurantTransfer.objects.count(), 1)
+        self.kitchen_stock.refresh_from_db()
+        self.assertEqual(self.kitchen_stock.quantity, Decimal("10.000"))
