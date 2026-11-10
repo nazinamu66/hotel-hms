@@ -1474,7 +1474,7 @@ class KitchenHandoverReconciliationLine(models.Model):
 
 
 class KitchenRestaurantTransfer(models.Model):
-    """Auditable handover of produced FOOD stock from Kitchen to Restaurant."""
+    """Auditable handover of prepared FOOD stock from a Kitchen to Restaurant."""
 
     STATUS_CHOICES = (
         ("PENDING", "Awaiting Restaurant receipt"),
@@ -1482,10 +1482,11 @@ class KitchenRestaurantTransfer(models.Model):
         ("REJECTED", "Rejected"),
     )
 
-    production_batch = models.ForeignKey(
-        ProductionBatch,
-        on_delete=models.PROTECT,
-        related_name="restaurant_transfers",
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, related_name="kitchen_restaurant_transfers"
+    )
+    from_department = models.ForeignKey(
+        Department, on_delete=models.PROTECT, related_name="restaurant_food_transfers"
     )
     quantity = models.DecimalField(max_digits=12, decimal_places=3)
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="PENDING")
@@ -1512,20 +1513,14 @@ class KitchenRestaurantTransfer(models.Model):
     def clean(self):
         if self.quantity is None or self.quantity <= 0:
             raise ValidationError({"quantity": "Transfer quantity must be greater than zero."})
-        if not self.production_batch_id:
-            return
-        batch = self.production_batch
-        product = batch.recipe.product
-        if product.product_type != "FOOD" or product.usage_type != "RESALE":
-            raise ValidationError("Only prepared FOOD resale products can be transferred to Restaurant.")
-        if not batch.is_executed:
-            raise ValidationError("Only completed production batches can be transferred.")
-        if not batch.produced_by_id or not batch.produced_by.department_id:
-            raise ValidationError("The production batch has no Kitchen department.")
-        if batch.produced_by.department.department_type != "KITCHEN":
-            raise ValidationError("The production batch must belong to a Kitchen department.")
-        if product.hotel_id != batch.produced_by.department.hotel_id:
-            raise ValidationError("The finished food and Kitchen department must belong to the same hotel.")
+        if self.product_id:
+            if self.product.product_type != "FOOD" or self.product.usage_type != "RESALE":
+                raise ValidationError("Only prepared FOOD resale products can be transferred to Restaurant.")
+        if self.from_department_id:
+            if self.from_department.department_type != "KITCHEN":
+                raise ValidationError("The source department must be a Kitchen.")
+            if self.product_id and self.product.hotel_id != self.from_department.hotel_id:
+                raise ValidationError("The prepared food and Kitchen must belong to the same hotel.")
 
     def __str__(self):
-        return f"Kitchen → Restaurant: {self.production_batch.recipe.product} x {self.quantity} ({self.status})"
+        return f"Kitchen → Restaurant: {self.product} x {self.quantity} ({self.status})"
