@@ -18,7 +18,6 @@ def _management_reconciliation_queryset(user):
         "handover__outgoing_user",
         "handover__incoming_user",
         "opened_by",
-        "reviewed_by",
     ).prefetch_related(
         "lines__handover_line__product",
         "lines__handover_line__location",
