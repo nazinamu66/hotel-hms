@@ -592,7 +592,7 @@
 
             {% for item in food_items %}
 
-                {% with k_stock=kitchen_stock_map|get_item:item.product.id|default:0 %}
+                {% with k_stock=restaurant_stock_map|get_item:item.product.id|default:0 %}
 
                    <button
                         type="button"
