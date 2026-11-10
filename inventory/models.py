@@ -400,7 +400,9 @@ class Product(models.Model):
 
             # 🔥 must be resale
             if self.usage_type != "RESALE":
-                raise ValidationError("Prepared food must be RESALE.")
+                raise ValidationError("Prepared food and snacks must be RESALE.")
+            if self.product_type == "SNACK" and self.price <= 0:
+                raise ValidationError("Prepared snacks must have a selling price.")
 
         # ----------------------------------
         # DRINK / BOUTIQUE RULES
