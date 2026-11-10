@@ -2329,9 +2329,10 @@ def prepared_food_list(request):
         if food["quantity"] > 0
     )
 
-    total_portions = sum(
-        food["quantity"]
-        for food in prepared_foods
+    available_snack_count = sum(
+        1 for food in prepared_foods
+        if food["product"].product_type == "SNACK"
+        and food["quantity"] > 0
     )
 
     can_edit_recipe = (
@@ -2349,7 +2350,7 @@ def prepared_food_list(request):
             "prepared_foods": prepared_foods,
             "kitchen": kitchen,
             "available_count": available_count,
-            "total_portions": total_portions,
+            "available_snack_count": available_snack_count,
             "can_edit_recipe": can_edit_recipe,
         },
     )
