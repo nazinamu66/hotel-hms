@@ -110,6 +110,23 @@ class IngredientRequestApprovalTests(TestCase):
             "manager_note": "Reviewed",
         }
 
+    def test_ingredient_request_form_shows_product_base_unit(self):
+        self.client.force_login(self.requester)
+        response = self.client.get(reverse("kitchen_ingredient_request_create"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Rice — kg")
+        self.assertContains(response, "Quantity (base unit)")
+
+    def test_ingredient_request_detail_displays_quantity_in_base_unit(self):
+        request_obj = self.make_direct_request()
+        self.client.force_login(self.requester)
+        response = self.client.get(
+            reverse("kitchen_ingredient_request_detail", args=[request_obj.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "5.000 kg")
+        self.assertContains(response, "Unit Cost — Rice (₦ per kg)")
+
     def test_kitchen_head_can_submit_urgent_purchase_without_posting_stock(self):
         self.client.force_login(self.requester)
         before_stock = Stock.objects.filter(product=self.ingredient).count()
