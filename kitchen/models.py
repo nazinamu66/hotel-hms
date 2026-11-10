@@ -1470,3 +1470,54 @@ class KitchenHandoverReconciliationLine(models.Model):
     def __str__(self):
         return f"{self.handover_line.item_name} reconciliation"
 
+class KitchenRestaurantTransfer(models.Model):
+    """Auditable physical handover of finished SNACK stock to Restaurant."""
+
+    STATUS_CHOICES = (
+        ("PENDING", "Awaiting Restaurant receipt"),
+        ("RECEIVED", "Received"),
+        ("REJECTED", "Rejected"),
+    )
+
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, related_name="kitchen_snack_transfers"
+    )
+    from_department = models.ForeignKey(
+        Department, on_delete=models.PROTECT, related_name="restaurant_snack_transfers"
+    )
+    quantity = models.DecimalField(max_digits=12, decimal_places=3)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="PENDING")
+    note = models.TextField(blank=True)
+    requested_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name="requested_kitchen_snack_transfers"
+    )
+    requested_at = models.DateTimeField(default=timezone.now)
+    received_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="received_kitchen_snack_transfers",
+    )
+    received_at = models.DateTimeField(null=True, blank=True)
+    rejected_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="rejected_kitchen_snack_transfers",
+    )
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    rejection_note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-requested_at", "-pk"]
+
+    def clean(self):
+        if self.quantity is None or self.quantity <= 0:
+            raise ValidationError({"quantity": "Transfer quantity must be greater than zero."})
+        if self.product_id:
+            if self.product.product_type != "SNACK" or self.product.usage_type != "RESALE":
+                raise ValidationError("Only recipe-produced SNACK resale products can be transferred to Restaurant.")
+        if self.from_department_id:
+            if self.from_department.department_type != "KITCHEN":
+                raise ValidationError("The source department must be a Kitchen.")
+            if self.product_id and self.product.hotel_id != self.from_department.hotel_id:
+                raise ValidationError("The snack and Kitchen must belong to the same hotel.")
+
+    def __str__(self):
+        return f"Kitchen → Restaurant: {self.product} x {self.quantity} ({self.status})"
