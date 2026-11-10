@@ -3692,6 +3692,7 @@ class KitchenSnackTransferTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(transfer.status, "RECEIVED")
         self.assertEqual(transfer.received_by, self.restaurant_user)
+        self.assertEqual(transfer.to_department, self.restaurant)
         self.assertEqual(self.kitchen_stock.quantity, Decimal("6.000"))
         self.assertEqual(restaurant_stock.quantity, Decimal("4.000"))
         self.assertEqual(
