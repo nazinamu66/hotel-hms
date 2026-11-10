@@ -151,7 +151,7 @@ class PreparedFoodForm(forms.ModelForm):
 class ProductionBatchForm(forms.Form):
     recipe = forms.ModelChoiceField(
         queryset=Recipe.objects.filter(is_active=True),
-        label="Food Item"
+        label="Food / Snack Item"
     )
 
     quantity_produced = forms.IntegerField(
