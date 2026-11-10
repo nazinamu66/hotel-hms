@@ -1,0 +1,27 @@
+{% extends "base/base.html" %}
+{% block title %}Kitchen Handover Reconciliation Queue{% endblock %}
+{% block content %}
+<style>
+.krq{max-width:1180px;margin:0 auto;color:#172033}.krq-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:22px;margin-bottom:15px;box-shadow:0 8px 24px #0f172a08}.krq h1{font-size:clamp(24px,3vw,32px);font-weight:850;margin:8px 0}.krq-muted{color:#718096;font-size:13px}.krq-table-wrap{overflow-x:auto}.krq table{width:100%;min-width:760px;border-collapse:collapse}.krq th{background:#f7f9fc;color:#718096;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:12px}.krq td{border-bottom:1px solid #edf1f5;padding:14px 12px;font-size:13px}.krq-link{color:#315bb5;text-decoration:none;font-weight:800}.krq-status{display:inline-block;padding:6px 10px;border-radius:20px;background:#eef3ff;color:#3157a4;font-size:11px;font-weight:800}
+</style>
+<div class="krq">
+<section class="krq-card">
+<span class="krq-status">Management review</span>
+<h1>Kitchen handover discrepancies</h1>
+<p class="krq-muted">Review Head Chef investigations submitted for decision. Approval authorises a later controlled adjustment; it does not change stock on this screen.</p>
+<div class="krq-table-wrap"><table><thead><tr><th>Reference</th><th>Hotel / Kitchen</th><th>Handover</th><th>Submitted by</th><th>Submitted</th><th>Discrepancies</th><th></th></tr></thead><tbody>
+{% for item in reconciliations %}
+<tr>
+<td><strong>REC-{{ item.pk }}</strong></td>
+<td>{{ item.department.hotel.name }}<br><span class="krq-muted">{{ item.department.name }}</span></td>
+<td>#{{ item.handover_id }}<br><span class="krq-muted">{{ item.handover.created_at|date:"d M Y, H:i" }}</span></td>
+<td>{{ item.opened_by.get_full_name|default:item.opened_by.username }}</td>
+<td>{{ item.submitted_at|date:"d M Y, H:i" }}</td>
+<td>{{ item.lines.count }}</td>
+<td><a class="krq-link" href="{% url 'kitchen_handover_reconciliation_review' item.pk %}">Review →</a></td>
+</tr>
+{% empty %}<tr><td colspan="7" class="krq-muted">There are no submitted Kitchen handover reconciliations awaiting review.</td></tr>{% endfor %}
+</tbody></table></div>
+</section>
+</div>
+{% endblock %}
