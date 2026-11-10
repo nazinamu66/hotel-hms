@@ -233,6 +233,10 @@
                 POS
             </a>
 
+            <a href="{% url 'kitchen_restaurant_transfers' %}">
+                📦 Incoming Snack Transfers
+            </a>
+
             <a href="/restaurant/orders/">
                 Previous Orders
             </a>
@@ -283,6 +287,10 @@
 
             <a href="{% url 'kitchen_food_list' %}">
                 🍲 Prepared Foods
+            </a>
+
+            <a href="{% url 'kitchen_restaurant_transfers' %}">
+                ⇄ Snack Transfers
             </a>
 
             {% if user.role == "KITCHEN" and user.is_department_head %}
