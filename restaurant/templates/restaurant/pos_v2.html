@@ -645,6 +645,40 @@
     </div>
 
 
+    <!-- SNACKS: prepared in Kitchen, transferred and held by Restaurant -->
+    <div class="pos-menu-section">
+        <div class="section-heading">
+            <h2>Snacks</h2>
+            <span>Restaurant Stock · Transferred from Kitchen</span>
+        </div>
+        <div class="menu-grid">
+            {% for item in snack_items %}
+                {% with r_stock=restaurant_stock_map|get_item:item.product.id|default:0 %}
+                    <button
+                        type="button"
+                        data-menu-name="{{ item.name|lower }}"
+                        onclick="addItem({{ item.id }})"
+                        {% if r_stock <= 0 %}disabled{% endif %}
+                        class="menu-btn
+                            {% if r_stock <= 0 %}stock-out
+                            {% elif r_stock <= item.product.reorder_level %}stock-low
+                            {% else %}stock-good{% endif %}
+                        "
+                    >
+                        <span class="menu-name">{{ item.name }}</span>
+                        <span class="menu-price">₦{{ item.price|floatformat:2 }}</span>
+                        <span class="stock-label">
+                            {% if r_stock > 0 %}Restaurant available: {{ r_stock }}
+                            {% else %}Out of stock{% endif %}
+                        </span>
+                    </button>
+                {% endwith %}
+            {% empty %}
+                <p style="color:#6b7280;">No transferred snacks available.</p>
+            {% endfor %}
+        </div>
+    </div>
+
     <!-- DRINKS -->
     <div class="pos-menu-section">
 
