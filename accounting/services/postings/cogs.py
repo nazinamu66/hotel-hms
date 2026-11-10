@@ -36,7 +36,7 @@ def post_cogs_for_order(order):
         amount = item.cost_at_sale * item.quantity
         if product.product_type == "DRINK":
             drink_cogs += amount
-        elif product.product_type == "FOOD":
+        elif product.product_type in ("FOOD", "SNACK"):
             food_cogs += amount
 
     # Round exactly once per ledger transaction. Stable references make
@@ -61,11 +61,11 @@ def post_cogs_for_order(order):
             debit_system_key="cost_of_goods_sold",
             credit_system_key="finished_goods_inventory",
             amount=food_cogs,
-            description=f"Food COGS for POS Order #{order.id}",
+            description=f"Finished food and snack COGS for POS Order #{order.id}",
             hotel=hotel,
             created_by=order.created_by,
             entry_type="COGS",
-            reference=f"FOOD-COGS-{order.id}",
+            reference=f"FINISHED-FOOD-COGS-{order.id}",
         )
 
     return {"drink_cogs": drink_cogs, "food_cogs": food_cogs}
