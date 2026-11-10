@@ -1347,3 +1347,107 @@ class KitchenRestrictedStockRecord(models.Model):
 
     def __str__(self):
         return f"{self.get_record_type_display()}: {self.item_name} — {self.quantity} {self.unit}"
+
+class KitchenHandoverReconciliation(models.Model):
+    """
+    Investigation and management approval record for discrepancies found
+    during a two-party Kitchen shift handover. Creating or investigating this
+    record never changes stock.
+    """
+
+    STATUS_CHOICES = (
+        ("INVESTIGATING", "Under Head Chef investigation"),
+        ("SUBMITTED", "Submitted for management approval"),
+        ("APPROVED", "Approved for adjustment"),
+        ("REJECTED", "Rejected by management"),
+        ("ADJUSTED", "Inventory adjustment posted"),
+        ("CLOSED", "Closed without adjustment"),
+    )
+
+    handover = models.OneToOneField(
+        KitchenShiftHandover,
+        on_delete=models.PROTECT,
+        related_name="reconciliation",
+    )
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.PROTECT,
+        related_name="handover_reconciliations",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=STATUS_CHOICES,
+        default="INVESTIGATING",
+    )
+    opened_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name="opened_kitchen_reconciliations",
+    )
+    opened_at = models.DateTimeField(default=timezone.now)
+    investigation_notes = models.TextField(blank=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="reviewed_kitchen_reconciliations",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    approval_note = models.TextField(blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-opened_at", "-pk"]
+
+    def __str__(self):
+        return f"Reconciliation for Kitchen handover #{self.handover_id}"
+
+
+class KitchenHandoverReconciliationLine(models.Model):
+    """
+    Investigation result for one handover line.
+
+    verified_quantity is a fresh physical count taken during investigation;
+    it is deliberately separate from the handover snapshot because stock may
+    have moved since the shift change.
+    """
+
+    reconciliation = models.ForeignKey(
+        KitchenHandoverReconciliation,
+        on_delete=models.CASCADE,
+        related_name="lines",
+    )
+    handover_line = models.OneToOneField(
+        KitchenShiftHandoverLine,
+        on_delete=models.PROTECT,
+        related_name="reconciliation_line",
+    )
+    verified_quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        blank=True,
+    )
+    investigation_note = models.TextField(blank=True)
+    adjustment_movement = models.OneToOneField(
+        "inventory.StockMovement",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="kitchen_handover_reconciliation_line",
+    )
+    adjustment_cost = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["handover_line__location__name", "handover_line__item_name"]
+
+    def __str__(self):
+        return f"{self.handover_line.item_name} reconciliation"
+
