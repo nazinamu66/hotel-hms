@@ -3684,8 +3684,19 @@ def kitchen_restaurant_transfers(request):
             | Q(received_by__username__icontains=search_query)
             | Q(from_department__name__icontains=search_query)
             | Q(to_department__name__icontains=search_query)
-            | Q(pk__icontains=search_query)
         )
+        if search_query.isdigit():
+            transfers = transfers | KitchenRestaurantTransfer.objects.filter(
+                pk=int(search_query),
+                product__hotel_id__in=hotel_ids,
+            ).select_related(
+                "product", "from_department", "to_department",
+                "requested_by", "received_by", "rejected_by",
+            )
+            if user.role == "KITCHEN":
+                transfers = transfers.filter(from_department=department)
+            elif user.role == "RESTAURANT":
+                transfers = transfers.filter(from_department__hotel_id=department.hotel_id)
 
     if status_filter in {"PENDING", "RECEIVED", "REJECTED"}:
         transfers = transfers.filter(status=status_filter)
