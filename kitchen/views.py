@@ -894,11 +894,11 @@ def kitchen_spoilage(request):
 
     products = Product.objects.filter(
         hotel_id=kitchen.hotel_id if is_kitchen_user else None,
-        product_type__in=("RAW", "FOOD"),
+        product_type__in=("RAW", "FOOD", "SNACK"),
         is_active=True,
     ).order_by("name") if is_kitchen_user else Product.objects.filter(
         hotel__in=hotels,
-        product_type__in=("RAW", "FOOD"),
+        product_type__in=("RAW", "FOOD", "SNACK"),
         is_active=True,
     ).order_by("name")
     records = KitchenSpoilageRecord.objects.filter(
@@ -968,7 +968,7 @@ def kitchen_spoilage(request):
                     from accounting.services.journal import get_system_account, post_journal_entry
                     hotel = kitchen.hotel
                     expense = get_system_account(hotel, "spoilage_expense")
-                    inventory_key = "finished_goods_inventory" if product.product_type == "FOOD" else "inventory_asset"
+                    inventory_key = "finished_goods_inventory" if product.product_type in ("FOOD", "SNACK") else "inventory_asset"
                     inventory_account = get_system_account(hotel, inventory_key)
                     post_journal_entry(
                         hotel=hotel,
@@ -1613,7 +1613,7 @@ def kitchen_inventory_report(request):
     stock_records = Stock.objects.filter(
         department_id__in=department_ids,
         product__hotel__in=scoped_hotels,
-        product__product_type__in=("RAW", "FOOD"),
+        product__product_type__in=("RAW", "FOOD", "SNACK"),
     ).select_related("product", "department", "department__hotel")
 
     rows_by_key = {}
@@ -1630,7 +1630,7 @@ def kitchen_inventory_report(request):
     layers = StockCostLayer.objects.filter(
         department_id__in=department_ids,
         product__hotel__in=scoped_hotels,
-        product__product_type__in=("RAW", "FOOD"),
+        product__product_type__in=("RAW", "FOOD", "SNACK"),
         quantity_remaining__gt=0,
     ).select_related("product", "department", "department__hotel")
 
@@ -1685,7 +1685,7 @@ def kitchen_inventory_report(request):
         if row["product"].product_type == "RAW":
             raw_fifo_value += row["fifo_value"]
             raw_unvalued_quantity += row["unvalued_quantity"]
-        elif row["product"].product_type == "FOOD":
+        elif row["product"].product_type in ("FOOD", "SNACK"):
             food_fifo_value += row["fifo_value"]
             food_unvalued_quantity += row["unvalued_quantity"]
         inventory_rows.append(row)
@@ -1701,7 +1701,7 @@ def kitchen_inventory_report(request):
         created_at__date__gte=date_from,
         created_at__date__lte=date_to,
         product__hotel__in=scoped_hotels,
-        product__product_type__in=("RAW", "FOOD"),
+        product__product_type__in=("RAW", "FOOD", "SNACK"),
     ).select_related(
         "product", "from_department", "to_department",
         "from_department__hotel", "to_department__hotel", "created_by",
@@ -3221,7 +3221,7 @@ def kitchen_stock(request):
     products = Product.objects.filter(
         hotel_id=department.hotel_id,
         is_active=True,
-        product_type__in=("RAW", "FOOD", "DRINK"),
+        product_type__in=("RAW", "FOOD", "SNACK", "DRINK"),
     ).filter(
         Q(departments=department)
         | Q(restricted_stock_layers__department=department)
@@ -3321,7 +3321,7 @@ def kitchen_handover_create(request):
             department=department,
             quantity__gt=0,
             product__is_active=True,
-            product__product_type__in=("RAW", "FOOD", "DRINK"),
+            product__product_type__in=("RAW", "FOOD", "SNACK", "DRINK"),
         )
         .select_related("product")
         .order_by("product__product_type", "product__name")
@@ -3346,7 +3346,7 @@ def kitchen_handover_create(request):
                     department=department,
                     product__hotel_id=department.hotel_id,
                     product__is_active=True,
-                    product__product_type__in=("RAW", "FOOD", "DRINK"),
+                    product__product_type__in=("RAW", "FOOD", "SNACK", "DRINK"),
                 )
                 location = shared_locations.get(pk=location_id)
                 system_quantity = stock.quantity
