@@ -82,17 +82,17 @@ table.dp-table{width:100%;border-collapse:collapse;min-width:660px}
         <p class="dp-muted">Stock changes only when a delivery is recorded. Enter the quantities physically received, not the quantities ordered.</p>
         <div class="dp-table-wrap">
           <table class="dp-table">
-            <thead><tr><th>Ingredient</th><th>Ordered</th><th>Received</th><th>Outstanding</th><th>Unit cost</th><th>Line total</th>{% if can_receive %}<th>Receive now</th>{% endif %}</tr></thead>
+            <thead><tr><th>Ingredient</th><th>Ordered (base unit)</th><th>Received (base unit)</th><th>Outstanding (base unit)</th><th>Unit cost (₦ / base unit)</th><th>Line total</th>{% if can_receive %}<th>Receive now</th>{% endif %}</tr></thead>
             <tbody>
             {% for item in dp.items.all %}
               <tr>
                 <td><strong>{{ item.product.name }}</strong></td>
-                <td class="dp-number">{{ item.quantity|floatformat:3 }}</td>
-                <td class="dp-number">{{ item.quantity_received|floatformat:3 }}</td>
-                <td class="dp-number">{{ item.outstanding_quantity|floatformat:3 }}</td>
+                <td class="dp-number">{{ item.quantity|floatformat:3 }} {{ item.product.base_unit }}</td>
+                <td class="dp-number">{{ item.quantity_received|floatformat:3 }} {{ item.product.base_unit }}</td>
+                <td class="dp-number">{{ item.outstanding_quantity|floatformat:3 }} {{ item.product.base_unit }}</td>
                 <td class="dp-number">₦{{ item.unit_cost|floatformat:2 }}</td>
                 <td class="dp-number">₦{{ item.total_cost|floatformat:2 }}</td>
-                {% if can_receive %}<td><input form="receive-purchase-form" aria-label="Quantity of {{ item.product.name }} received now" type="number" name="received_{{ item.pk }}" min="0" max="{{ item.outstanding_quantity }}" step="0.001" value="0" style="width:105px;padding:8px;border:1px solid #cbd5e1;border-radius:8px"></td>{% endif %}
+                {% if can_receive %}<td><input form="receive-purchase-form" aria-label="Quantity of {{ item.product.name }} received now in {{ item.product.base_unit }}" type="number" name="received_{{ item.pk }}" min="0" max="{{ item.outstanding_quantity }}" step="0.001" value="0" style="width:105px;padding:8px;border:1px solid #cbd5e1;border-radius:8px"></td>{% endif %}
               </tr>
             {% empty %}
               <tr><td colspan="7">No items have been added to this purchase.</td></tr>
