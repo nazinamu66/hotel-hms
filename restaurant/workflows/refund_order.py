@@ -51,7 +51,9 @@ def restore_inventory(order, user, kitchen, restaurant, *, include_food=True):
         if not product.is_stock_item():
             continue
 
-        if product.product_type == "DRINK":
+        if product.product_type in ("DRINK", "SNACK"):
+            if product.product_type == "SNACK" and not include_food:
+                continue
             target_department = restaurant
 
         elif product.product_type == "FOOD":
@@ -172,7 +174,7 @@ def finalize_refund(order, user, reason):
         ]
     )
 
-def record_refunded_food_waste(order, user, kitchen, reason):
+def record_refunded_food_waste(order, user, kitchen, reason, restaurant=None):
     """
     Audit prepared food retained as waste and post its accounting treatment.
 
@@ -189,7 +191,7 @@ def record_refunded_food_waste(order, user, kitchen, reason):
 
     for item in order.items.select_related("menu_item__product"):
         product = item.menu_item.product
-        if product.product_type != "FOOD" or not product.is_stock_item():
+        if product.product_type not in ("FOOD", "SNACK") or not product.is_stock_item():
             continue
 
         cost = (
@@ -197,13 +199,18 @@ def record_refunded_food_waste(order, user, kitchen, reason):
             * Decimal(str(item.quantity))
         ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
+        record_department = (
+            restaurant
+            if product.product_type == "SNACK" and restaurant is not None
+            else kitchen
+        )
         record = KitchenSpoilageRecord.objects.create(
             product=product,
-            department=kitchen,
+            department=record_department,
             quantity=item.quantity,
             reason_code="OTHER",
             notes=(
-                f"Refunded POS Order #{order.id}; prepared food was not "
+                f"Refunded POS Order #{order.id}; prepared {product.product_type.lower()} was not "
                 f"returned to usable stock. {reason}".strip()
             ),
             recorded_by=user,
@@ -224,7 +231,7 @@ def record_refunded_food_waste(order, user, kitchen, reason):
             credit_system_key=credit_key,
             amount=cost,
             description=(
-                f"Refunded POS Order #{order.id} - prepared food spoilage "
+                f"Refunded POS Order #{order.id} - prepared {product.product_type.lower()} spoilage "
                 f"#{record.pk} - {product.name}"
             ),
             hotel=hotel,
@@ -254,7 +261,7 @@ def refund_order(order, user, reason="", *, kitchen_outcome="UNPREPARED_RESTOCK"
         order, user, kitchen, restaurant, include_food=include_food
     )
     if kitchen_outcome == "PREPARED_WASTE":
-        record_refunded_food_waste(order, user, kitchen, reason)
+        record_refunded_food_waste(order, user, kitchen, reason, restaurant=restaurant)
     if order.is_cogs_posted:
         reverse_cogs_for_order(order, include_food=include_food)
 
