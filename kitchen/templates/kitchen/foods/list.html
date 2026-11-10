@@ -224,28 +224,29 @@
     <div class="prepared-header">
         <div>
             <div class="eyebrow">Kitchen Operations</div>
-            <h1>Prepared Foods</h1>
+            <h1>Prepared Foods &amp; Snacks</h1>
             <p>
-                Monitor finished food currently available in the Kitchen.
+                Monitor finished food and snack stock currently available in the Kitchen.
             </p>
         </div>
+        <a href="{% url 'kitchen_restaurant_transfers' %}" class="view-link">Transfer snacks to Restaurant</a>
     </div>
 
     <div class="summary-grid">
 
         <div class="summary-card">
-            <div class="summary-label">Prepared Foods</div>
+            <div class="summary-label">Prepared Items</div>
             <div class="summary-value">{{ prepared_foods|length }}</div>
             <div class="summary-note">
-                Active food items assigned to Kitchen
+                Active food and snack items assigned to Kitchen
             </div>
         </div>
 
         <div class="summary-card">
-            <div class="summary-label">Available Foods</div>
+            <div class="summary-label">Available Items</div>
             <div class="summary-value">{{ available_count }}</div>
             <div class="summary-note">
-                Food items with stock available
+                Food and snack items with stock available
             </div>
         </div>
 
