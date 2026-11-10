@@ -218,7 +218,7 @@ class POSOrder(models.Model):
                 stock_department = restaurant
 
             elif product.product_type == "FOOD":
-                stock_department = kitchen
+                stock_department = restaurant
 
             else:
                 continue
