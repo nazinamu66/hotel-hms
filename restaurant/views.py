@@ -414,7 +414,7 @@ def cart_add(request, item_id):
     # Determine stock department
     # --------------------------------
     # Determine stock department
-    if menu_item.product.product_type == "DRINK":
+    if menu_item.product.product_type in ("DRINK", "FOOD"):
         stock_department = restaurant
     else:
         stock_department = Department.objects.filter(
@@ -483,7 +483,7 @@ def cart_update(request, item_id):
         product__hotel_id=restaurant.hotel_id,
     )
 
-    if menu_item.product.product_type == "DRINK":
+    if menu_item.product.product_type in ("DRINK", "FOOD"):
         stock_department = restaurant
     else:
         stock_department = Department.objects.filter(
