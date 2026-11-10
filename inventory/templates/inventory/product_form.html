@@ -578,6 +578,13 @@
                                     Food produced by the kitchen.
                                 </span>
 
+                            {% elif value == "SNACK" %}
+                                <span class="type-icon">🥟</span>
+                                <span class="type-name">Prepared Snack</span>
+                                <span class="type-description">
+                                    Recipe-produced snacks transferred to Restaurant for POS sales.
+                                </span>
+
                             {% elif value == "DRINK" %}
                                 <span class="type-icon">🥤</span>
                                 <span class="type-name">Beverage</span>
@@ -1122,6 +1129,33 @@
                 purchaseUnit.value = "portion";
             }
 
+            if (multiplier) {
+                multiplier.value = "1";
+            }
+
+        } else if (type === "SNACK") {
+
+            productTypeHelp.innerHTML =
+                "<strong>Prepared Snack:</strong> " +
+                "A recipe-produced snack prepared by the Kitchen, then transferred " +
+                "to Restaurant stock for sale through POS.";
+
+            classificationHelp.innerHTML =
+                "<strong>Prepared snacks are always resale items.</strong> " +
+                "Their production cost comes from the recipe and production batch.";
+
+            pricingHelp.innerHTML =
+                "Enter the selling price. The snack's inventory cost is derived " +
+                "from its production batch, not a manual purchase cost.";
+
+            purchaseCostField.classList.add("hidden-field");
+            sellingPriceField.classList.remove("hidden-field");
+
+            setSelectValue(usageSelect, "RESALE");
+            setSelectValue(supplySourceSelect, "STORE");
+
+            // Snacks retain their configured base unit (e.g. pcs).
+            // Do not apply the Prepared Food default of 'portion'.
             if (multiplier) {
                 multiplier.value = "1";
             }
