@@ -99,7 +99,7 @@ def process_pos_order(
         if not product.is_stock_item():
             continue
 
-        if product.product_type == "DRINK":
+        if product.product_type in ("DRINK", "SNACK"):
             stock = Stock.objects.select_for_update().filter(
                 product=product,
                 department=restaurant
