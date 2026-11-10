@@ -1,0 +1,41 @@
+{% extends "base/base.html" %}
+{% block title %}Transfer TR-{{ transfer.pk }}{% endblock %}
+{% block content %}
+<style>
+.detail-page{max-width:1050px;margin:0 auto;padding:10px 0 36px;color:#1f2937}
+.detail-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px;margin-bottom:18px;box-shadow:0 3px 12px rgba(15,23,42,.04)}
+.detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.detail-head h1{margin:0;font-size:28px}.muted{color:#64748b}
+.detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:20px}
+.detail-item{padding:14px;border:1px solid #e8edf3;border-radius:10px;background:#fafbfd}
+.detail-label{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#64748b;font-weight:700;margin-bottom:6px}
+.detail-value{font-weight:700;color:#1f2937}.status{display:inline-block;border-radius:20px;padding:6px 11px;font-size:12px;font-weight:700;background:#fef3c7;color:#92400e}
+.status.RECEIVED{background:#dcfce7;color:#166534}.status.REJECTED{background:#fee2e2;color:#991b1b}
+.back-link{display:inline-flex;padding:10px 14px;border-radius:8px;background:#eff6ff;color:#1d4ed8;text-decoration:none;font-weight:700}
+@media(max-width:650px){.detail-grid{grid-template-columns:1fr}.detail-card{padding:17px}}
+</style>
+<div class="detail-page">
+  <div class="detail-head" style="margin-bottom:20px">
+    <div><p class="muted" style="margin:0 0 5px;font-weight:700">FINISHED GOODS HANDOVER</p><h1>Transfer TR-{{ transfer.pk }}</h1><p class="muted" style="margin:7px 0 0">{{ transfer.product.name }} · {{ transfer.quantity|floatformat:3 }} {{ transfer.product.base_unit }}</p></div>
+    <a class="back-link" href="{% url 'kitchen_restaurant_transfers' %}">← Back to transfer register</a>
+  </div>
+  <section class="detail-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h2 style="margin:0">Transfer overview</h2><span class="status {{ transfer.status }}">{{ transfer.get_status_display }}</span></div>
+    <div class="detail-grid">
+      <div class="detail-item"><div class="detail-label">Snack</div><div class="detail-value">{{ transfer.product.name }}</div></div>
+      <div class="detail-item"><div class="detail-label">Quantity</div><div class="detail-value">{{ transfer.quantity|floatformat:3 }} {{ transfer.product.base_unit }}</div></div>
+      <div class="detail-item"><div class="detail-label">From Kitchen</div><div class="detail-value">{{ transfer.from_department.name }}</div></div>
+      <div class="detail-item"><div class="detail-label">To Restaurant</div><div class="detail-value">{% if transfer.to_department %}{{ transfer.to_department.name }}{% else %}Awaiting confirmation{% endif %}</div></div>
+      <div class="detail-item"><div class="detail-label">Requested by</div><div class="detail-value">{{ transfer.requested_by.get_full_name|default:transfer.requested_by.username }}</div><div class="muted">{{ transfer.requested_at|date:"d M Y, H:i:s" }}</div></div>
+      <div class="detail-item"><div class="detail-label">Received by</div><div class="detail-value">{% if transfer.received_by %}{{ transfer.received_by.get_full_name|default:transfer.received_by.username }}{% else %}—{% endif %}</div><div class="muted">{% if transfer.received_at %}{{ transfer.received_at|date:"d M Y, H:i:s" }}{% endif %}</div></div>
+      <div class="detail-item"><div class="detail-label">Rejected by</div><div class="detail-value">{% if transfer.rejected_by %}{{ transfer.rejected_by.get_full_name|default:transfer.rejected_by.username }}{% else %}—{% endif %}</div><div class="muted">{% if transfer.rejected_at %}{{ transfer.rejected_at|date:"d M Y, H:i:s" }}{% endif %}</div></div>
+      <div class="detail-item"><div class="detail-label">Transfer reference</div><div class="detail-value">TR-{{ transfer.pk }}</div></div>
+    </div>
+  </section>
+  <section class="detail-card">
+    <h2 style="margin:0 0 12px">Handover notes</h2>
+    <p style="white-space:pre-wrap;margin:0;color:#475569">{% if transfer.note %}{{ transfer.note }}{% else %}No handover note was recorded.{% endif %}</p>
+    {% if transfer.rejection_note %}<div style="margin-top:18px;padding:14px;border-radius:9px;background:#fff1f2;color:#9f1239"><strong>Rejection reason</strong><p style="margin:5px 0 0;white-space:pre-wrap">{{ transfer.rejection_note }}</p></div>{% endif %}
+  </section>
+</div>
+{% endblock %}
