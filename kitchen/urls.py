@@ -1,11 +1,11 @@
 from django.urls import path
-from . import views
+from . import views\nfrom . import reconciliation_views
 
 urlpatterns = [
     path("", views.kitchen_dashboard, name="kitchen_dashboard"),
     path("handover/", views.kitchen_handover_list, name="kitchen_handover_list"),
     path("handover/new/", views.kitchen_handover_create, name="kitchen_handover_create"),
-    path("handover/<int:pk>/", views.kitchen_handover_detail, name="kitchen_handover_detail"),
+    path("handover/<int:pk>/", views.kitchen_handover_detail, name="kitchen_handover_detail"),\n    path("handover/<int:handover_pk>/reconcile/", reconciliation_views.kitchen_handover_reconciliation_open, name="kitchen_handover_reconciliation_open"),\n    path("handover/reconciliation/<int:pk>/", reconciliation_views.kitchen_handover_reconciliation_detail, name="kitchen_handover_reconciliation_detail"),
     path("storage-register/", views.kitchen_storage_register, name="kitchen_storage_register"),
     path("restricted-stock/", views.kitchen_restricted_stock, name="kitchen_restricted_stock"),
     path("food-sales/", views.kitchen_food_sales_report, name="kitchen_food_sales_report"),
