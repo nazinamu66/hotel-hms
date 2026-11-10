@@ -690,6 +690,10 @@
 
             {% if user|has_role:"MANAGER,DIRECTOR,ADMIN" %}
 
+            <a href="{% url 'kitchen_handover_reconciliation_queue' %}">
+                Kitchen Handover Discrepancies
+            </a>
+
             <a href="{% url 'inventory:manager_stock_requests' %}">
                 Pending Stock Requests
 
@@ -1115,6 +1119,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         approval_menu: [
             "/inventory/manager/",
+            "/kitchen/management/handover-reconciliations/"
             "/kitchen/ingredient-requests/"
         ],
 
