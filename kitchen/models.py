@@ -56,7 +56,7 @@ class Recipe(models.Model):
         )
 
     def clean(self):
-        if self.product.product_type not in ["FOOD", "DRINK"]:
+        if self.product.product_type not in ["FOOD", "SNACK", "DRINK"]:
             raise ValidationError(
                 "Recipe product must be a FINISHED product."
             )
