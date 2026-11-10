@@ -3644,6 +3644,7 @@ def kitchen_restricted_stock(request):
 
 
 @role_required("KITCHEN", "RESTAURANT", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
+@transaction.atomic
 def kitchen_restaurant_transfers(request):
     """Kitchen requests finished-food handovers; Restaurant confirms physical receipt."""
     user = request.user
