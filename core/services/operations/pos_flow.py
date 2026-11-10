@@ -99,16 +99,11 @@ def process_pos_order(
         if not product.is_stock_item():
             continue
 
-        if product.product_type == "DRINK":
-            stock = Stock.objects.select_for_update().filter(
-                product=product,
-                department=restaurant
-            ).first()
-        else:
-            stock = Stock.objects.select_for_update().filter(
-                product=product,
-                department=restaurant
-            ).first()
+        # Both drinks and prepared FOOD are sold from Restaurant stock.
+        stock = Stock.objects.select_for_update().filter(
+            product=product,
+            department=restaurant
+        ).first()
 
         if not stock or stock.quantity < qty:
             raise ValueError(f"Insufficient stock for {product.name}")
