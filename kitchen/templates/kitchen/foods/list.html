@@ -81,6 +81,27 @@
         box-shadow: 0 4px 16px rgba(15, 23, 42, .05);
     }
 
+    .transfer-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 11px 16px;
+        border-radius: 9px;
+        background: #2563eb;
+        color: #fff;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 700;
+        white-space: nowrap;
+        box-shadow: 0 3px 9px rgba(37, 99, 235, .16);
+    }
+
+    .transfer-action:hover {
+        background: #1d4ed8;
+        color: #fff;
+    }
+
     .card-header {
         padding: 22px 26px;
         border-bottom: 1px solid #e8edf3;
@@ -229,7 +250,7 @@
                 Monitor finished food and snack stock currently available in the Kitchen.
             </p>
         </div>
-        <a href="{% url 'kitchen_restaurant_transfers' %}" class="view-link">Transfer snacks to Restaurant</a>
+        <a href="{% url 'kitchen_restaurant_transfers' %}" class="transfer-action">⇄ Transfer Snacks to Restaurant</a>
     </div>
 
     <div class="summary-grid">
@@ -251,10 +272,10 @@
         </div>
 
         <div class="summary-card">
-            <div class="summary-label">Total Portions</div>
-            <div class="summary-value">{{ total_portions|floatformat:0 }}</div>
+            <div class="summary-label">Snack Types In Stock</div>
+            <div class="summary-value">{{ available_snack_count }}</div>
             <div class="summary-note">
-                Finished portions currently in Kitchen
+                Prepared snack products with available Kitchen stock
             </div>
         </div>
 
@@ -298,7 +319,7 @@
                             <span class="stock-value">
                                 {{ item.quantity|floatformat:2 }}
                             </span>
-                            portions
+                            {{ item.product.base_unit }}
                         </td>
 
                         <td>
@@ -357,7 +378,7 @@
 
                                 <strong>No prepared foods yet</strong>
 
-                                No active FOOD products are currently assigned
+                                No active prepared food or snack products are currently assigned
                                 to this Kitchen.
 
                             </div>
