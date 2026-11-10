@@ -8,7 +8,7 @@ import django.utils.timezone
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("inventory", "0001_initial"),
+        ("inventory", "0054_purchase_receipt_ledger"),
         ("kitchen", "0034_kitchenhandoverline_system_quantity"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
