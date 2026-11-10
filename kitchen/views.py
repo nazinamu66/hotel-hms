@@ -911,7 +911,7 @@ def kitchen_spoilage(request):
         try:
             product = products.get(pk=request.POST.get("product", ""))
         except (Product.DoesNotExist, ValueError, TypeError):
-            messages.error(request, "Select a valid Kitchen ingredient or prepared food.")
+            messages.error(request, "Select a valid Kitchen ingredient, prepared food or snack.")
             return redirect("kitchen_spoilage")
 
         try:
@@ -1824,7 +1824,7 @@ def kitchen_spoilage_report(request):
         "product_filter": product_filter,
         "status_choices": KitchenSpoilageRecord.REVIEW_STATUS_CHOICES,
         "reason_choices": KitchenSpoilageRecord.REASON_CHOICES,
-        "products": Product.objects.filter(hotel__in=scoped_hotels, product_type__in=("RAW", "FOOD")).order_by("name").distinct(),
+        "products": Product.objects.filter(hotel__in=scoped_hotels, product_type__in=("RAW", "FOOD", "SNACK")).order_by("name").distinct(),
     })
 
 
