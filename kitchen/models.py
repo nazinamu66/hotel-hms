@@ -1485,6 +1485,10 @@ class KitchenRestaurantTransfer(models.Model):
     from_department = models.ForeignKey(
         Department, on_delete=models.PROTECT, related_name="restaurant_snack_transfers"
     )
+    to_department = models.ForeignKey(
+        Department, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="received_snack_transfers",
+    )
     quantity = models.DecimalField(max_digits=12, decimal_places=3)
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="PENDING")
     note = models.TextField(blank=True)
@@ -1518,6 +1522,11 @@ class KitchenRestaurantTransfer(models.Model):
                 raise ValidationError("The source department must be a Kitchen.")
             if self.product_id and self.product.hotel_id != self.from_department.hotel_id:
                 raise ValidationError("The snack and Kitchen must belong to the same hotel.")
+        if self.to_department_id:
+            if self.to_department.department_type != "RESTAURANT":
+                raise ValidationError("The destination department must be a Restaurant.")
+            if self.from_department_id and self.to_department.hotel_id != self.from_department.hotel_id:
+                raise ValidationError("The Kitchen and Restaurant must belong to the same hotel.")
 
     def __str__(self):
         return f"Kitchen → Restaurant: {self.product} x {self.quantity} ({self.status})"
