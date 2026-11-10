@@ -48,6 +48,9 @@ class ProductForm(forms.ModelForm):
         self.hotel = hotel
         self.maintenance_mode = maintenance_mode
 
+        # A purchase unit must contain at least one base unit.
+        self.fields["unit_multiplier"].widget.attrs["min"] = 1
+
         # ----------------------------------------------------
         # Department queryset
         # ----------------------------------------------------
