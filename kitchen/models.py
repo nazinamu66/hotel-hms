@@ -1524,6 +1524,8 @@ class KitchenRestaurantTransfer(models.Model):
             raise ValidationError("The production batch has no Kitchen department.")
         if batch.produced_by.department.department_type != "KITCHEN":
             raise ValidationError("The production batch must belong to a Kitchen department.")
+        if product.hotel_id != batch.produced_by.department.hotel_id:
+            raise ValidationError("The finished food and Kitchen department must belong to the same hotel.")
 
     def __str__(self):
         return f"Kitchen → Restaurant: {self.production_batch.recipe.product} x {self.quantity} ({self.status})"
