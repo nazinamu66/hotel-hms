@@ -3732,6 +3732,31 @@ class KitchenSnackTransferTests(TestCase):
         self.kitchen_stock.refresh_from_db()
         self.assertEqual(self.kitchen_stock.quantity, Decimal("10.000"))
 
+    def test_failed_fifo_receipt_keeps_transfer_pending_and_stock_unchanged(self):
+        self.request_transfer()
+        transfer = KitchenRestaurantTransfer.objects.get()
+        StockCostLayer.objects.filter(
+            product=self.product, department=self.kitchen
+        ).delete()
+
+        self.client.force_login(self.restaurant_user)
+        response = self.client.post(
+            reverse("kitchen_restaurant_transfer_receive", args=[transfer.pk])
+        )
+
+        transfer.refresh_from_db()
+        self.kitchen_stock.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(transfer.status, "PENDING")
+        self.assertIsNone(transfer.to_department_id)
+        self.assertEqual(self.kitchen_stock.quantity, Decimal("10.000"))
+        self.assertFalse(Stock.objects.filter(product=self.product, department=self.restaurant).exists())
+        self.assertFalse(
+            StockMovement.objects.filter(
+                reference=f"KITCHEN-RESTAURANT-SNACK-{transfer.pk}"
+            ).exists()
+        )
+
     def test_received_transfer_cannot_be_received_twice(self):
         self.request_transfer()
         transfer = KitchenRestaurantTransfer.objects.get()
