@@ -35,7 +35,7 @@ def reverse_cogs_for_order(order, *, include_food=True):
         amount = item.cost_at_sale * item.quantity
         if product.product_type == "DRINK":
             drink_cogs += amount
-        elif product.product_type == "FOOD" and include_food:
+        elif product.product_type in ("FOOD", "SNACK") and include_food:
             food_cogs += amount
 
     drink_cogs = _money(drink_cogs)
