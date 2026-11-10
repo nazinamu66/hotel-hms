@@ -2290,7 +2290,7 @@ def prepared_food_list(request):
         Product.objects
         .filter(
             hotel=kitchen.hotel,
-            product_type="FOOD",
+            product_type__in=("FOOD", "SNACK"),
             is_active=True,
             departments=kitchen,
         )
