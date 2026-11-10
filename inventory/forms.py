@@ -224,6 +224,9 @@ class ProductForm(forms.ModelForm):
 
             self.instance.cost_price = 0
 
+            if product_type == "SNACK" and (not price or price <= 0):
+                raise forms.ValidationError("Prepared snacks must have a selling price.")
+
         # ----------------------------------------------------
         # EQUIPMENT validation
         # ----------------------------------------------------
