@@ -1470,3 +1470,60 @@ class KitchenHandoverReconciliationLine(models.Model):
     def __str__(self):
         return f"{self.handover_line.item_name} reconciliation"
 
+
+
+
+class KitchenRestaurantTransfer(models.Model):
+    """Auditable handover of produced FOOD stock from Kitchen to Restaurant."""
+
+    STATUS_CHOICES = (
+        ("PENDING", "Awaiting Restaurant receipt"),
+        ("RECEIVED", "Received"),
+        ("REJECTED", "Rejected"),
+    )
+
+    production_batch = models.ForeignKey(
+        ProductionBatch,
+        on_delete=models.PROTECT,
+        related_name="restaurant_transfers",
+    )
+    quantity = models.DecimalField(max_digits=12, decimal_places=3)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="PENDING")
+    note = models.TextField(blank=True)
+    requested_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name="requested_kitchen_restaurant_transfers"
+    )
+    requested_at = models.DateTimeField(default=timezone.now)
+    received_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="received_kitchen_restaurant_transfers",
+    )
+    received_at = models.DateTimeField(null=True, blank=True)
+    rejected_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="rejected_kitchen_restaurant_transfers",
+    )
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    rejection_note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-requested_at", "-pk"]
+
+    def clean(self):
+        if self.quantity is None or self.quantity <= 0:
+            raise ValidationError({"quantity": "Transfer quantity must be greater than zero."})
+        if not self.production_batch_id:
+            return
+        batch = self.production_batch
+        product = batch.recipe.product
+        if product.product_type != "FOOD" or product.usage_type != "RESALE":
+            raise ValidationError("Only prepared FOOD resale products can be transferred to Restaurant.")
+        if not batch.is_executed:
+            raise ValidationError("Only completed production batches can be transferred.")
+        if not batch.produced_by_id or not batch.produced_by.department_id:
+            raise ValidationError("The production batch has no Kitchen department.")
+        if batch.produced_by.department.department_type != "KITCHEN":
+            raise ValidationError("The production batch must belong to a Kitchen department.")
+
+    def __str__(self):
+        return f"Kitchen → Restaurant: {self.production_batch.recipe.product} x {self.quantity} ({self.status})"
