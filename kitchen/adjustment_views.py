@@ -27,9 +27,6 @@ def kitchen_handover_reconciliation_adjust(request, pk, line_pk):
         pk=line_pk,
         reconciliation=reconciliation,
     )
-    if reconciliation.reviewed_by_id == request.user.pk:
-        raise PermissionDenied("The approving manager cannot post the adjustment they approved. A second authorised manager must post it.")
-
     raw_quantity = request.POST.get("physical_quantity", "").strip()
     try:
         physical_quantity = Decimal(raw_quantity)
