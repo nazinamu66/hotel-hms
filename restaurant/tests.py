@@ -220,3 +220,57 @@ class PendingShiftHandoverPOSGuardTests(SimpleTestCase):
             from_user=user,
             status="PENDING",
         )
+
+class SnackPOSInventoryRoutingTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Department, Hotel, Organization, Product
+        from billing.models import Folio
+        from restaurant.models import MenuItem, POSOrder, POSOrderItem
+
+        self.User = get_user_model()
+        organization = Organization.objects.create(name="Snack POS Org")
+        self.hotel = Hotel.objects.create(organization=organization, name="Snack POS Hotel")
+        self.restaurant = Department.objects.create(
+            hotel=self.hotel, code="SNR", name="Snack POS Restaurant", department_type="RESTAURANT"
+        )
+        self.kitchen = Department.objects.create(
+            hotel=self.hotel, code="SNK", name="Snack POS Kitchen", department_type="KITCHEN"
+        )
+        self.user = self.User.objects.create_user(
+            username="snack_pos_cashier", password="test-password",
+            role="RESTAURANT", hotel=self.hotel, department=self.restaurant,
+        )
+        self.product = Product.objects.create(
+            hotel=self.hotel, name="Samosa POS", sku="SNACK-POS-SAMOSA",
+            product_type="SNACK", usage_type="RESALE", base_unit="pcs",
+            price=Decimal("500.00"),
+        )
+        self.menu_item = MenuItem.objects.create(
+            name="Samosa POS", product=self.product, price=Decimal("500.00")
+        )
+        self.folio = Folio.objects.create(folio_type="WALKIN", hotel=self.hotel)
+        self.order = POSOrder.objects.create(
+            department=self.restaurant, created_by=self.user, folio=self.folio,
+        )
+        POSOrderItem.objects.create(
+            order=self.order, menu_item=self.menu_item, quantity=2, price=Decimal("500.00")
+        )
+
+    @patch("restaurant.models.stock_out")
+    @patch("restaurant.models.Charge.objects.create")
+    @patch("restaurant.models.KitchenTicket.objects.create")
+    def test_snack_sale_deducts_restaurant_stock_without_creating_kitchen_ticket(
+        self, create_ticket, create_charge, stock_out
+    ):
+        stock_out.return_value = {"total_cost": Decimal("250.00")}
+
+        self.order.charge_order()
+
+        stock_out.assert_called_once()
+        self.assertEqual(stock_out.call_args.kwargs["department"], self.restaurant)
+        create_ticket.assert_not_called()
+        create_charge.assert_called_once()
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, "CHARGED")
+        self.assertEqual(self.menu_item.category, "FOOD")
