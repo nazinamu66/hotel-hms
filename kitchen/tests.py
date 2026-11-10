@@ -3356,12 +3356,25 @@ class KitchenHandoverManagementReviewTests(TestCase):
             verified_quantity=Decimal("4.000"),
         )
 
-    def test_manager_sees_only_submitted_reconciliations_for_own_hotel(self):
+    def test_manager_sees_reconciliation_history_only_for_own_hotel(self):
         self.client.force_login(self.manager)
         response = self.client.get(reverse("kitchen_handover_reconciliation_queue"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f"REC-{self.reconciliation.pk}")
         self.assertNotContains(response, f"REC-{self.other_reconciliation.pk}")
+
+    def test_history_includes_approved_records_and_supports_status_filter(self):
+        self.reconciliation.status = "APPROVED"
+        self.reconciliation.save(update_fields=["status"])
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("kitchen_handover_reconciliation_queue"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"REC-{self.reconciliation.pk}")
+        filtered = self.client.get(
+            reverse("kitchen_handover_reconciliation_queue"), {"status": "APPROVED"}
+        )
+        self.assertContains(filtered, f"REC-{self.reconciliation.pk}")
+        self.assertNotContains(filtered, f"REC-{self.other_reconciliation.pk}")
 
     def test_director_and_admin_can_open_management_queue(self):
         for user in (self.director, self.admin):
@@ -3540,15 +3553,17 @@ class KitchenHandoverAdjustmentPostingTests(TestCase):
         self.stock.refresh_from_db()
         self.assertEqual(self.stock.quantity, Decimal("20.000"))
 
-    def test_approved_manager_cannot_post_their_own_adjustment(self):
+    def test_approving_manager_can_post_their_own_adjustment(self):
         self.client.force_login(self.approver)
         response = self.client.post(
             reverse("kitchen_handover_reconciliation_adjust", args=[self.reconciliation.pk, self.line.pk]),
             {"physical_quantity": "18.000"},
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 302)
         self.stock.refresh_from_db()
-        self.assertEqual(self.stock.quantity, Decimal("20.000"))
+        self.reconciliation.refresh_from_db()
+        self.assertEqual(self.stock.quantity, Decimal("18.000"))
+        self.assertEqual(self.reconciliation.status, "ADJUSTED")
 
     def test_surplus_fifo_layer_has_no_historical_purchase_attribution(self):
         from kitchen.reconciliation_adjustments import post_kitchen_handover_adjustment
@@ -3561,17 +3576,16 @@ class KitchenHandoverAdjustmentPostingTests(TestCase):
         adjustment_layer = StockCostLayer.objects.get(source_reference__startswith="KHR-")
         self.assertIsNone(adjustment_layer.purchase_item)
 
-    def test_adjustment_service_blocks_approver_from_posting(self):
+    def test_adjustment_service_allows_approver_to_post(self):
         from kitchen.reconciliation_adjustments import post_kitchen_handover_adjustment
 
-        with self.assertRaises(ValidationError):
-            post_kitchen_handover_adjustment(
-                reconciliation_line=self.line,
-                verified_quantity=Decimal("18.000"),
-                user=self.approver,
-            )
+        post_kitchen_handover_adjustment(
+            reconciliation_line=self.line,
+            verified_quantity=Decimal("18.000"),
+            user=self.approver,
+        )
         self.stock.refresh_from_db()
-        self.assertEqual(self.stock.quantity, Decimal("20.000"))
+        self.assertEqual(self.stock.quantity, Decimal("18.000"))
 
     def test_adjustment_service_blocks_roles_outside_authorised_management(self):
         from kitchen.reconciliation_adjustments import post_kitchen_handover_adjustment
