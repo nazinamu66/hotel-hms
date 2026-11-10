@@ -12,6 +12,7 @@ urlpatterns = [
     path("handover/reconciliation/<int:pk>/", reconciliation_views.kitchen_handover_reconciliation_detail, name="kitchen_handover_reconciliation_detail"),
     path("management/handover-reconciliations/", management_reconciliation_views.kitchen_handover_reconciliation_queue, name="kitchen_handover_reconciliation_queue"),
     path("management/handover-reconciliations/<int:pk>/", management_reconciliation_views.kitchen_handover_reconciliation_review, name="kitchen_handover_reconciliation_review"),
+    path("management/handover-reconciliations/<int:pk>/adjust/<int:line_pk>/", __import__("kitchen.adjustment_views", fromlist=["kitchen_handover_reconciliation_adjust"]).kitchen_handover_reconciliation_adjust, name="kitchen_handover_reconciliation_adjust"),
     path("storage-register/", views.kitchen_storage_register, name="kitchen_storage_register"),
     path("restricted-stock/", views.kitchen_restricted_stock, name="kitchen_restricted_stock"),
     path("food-sales/", views.kitchen_food_sales_report, name="kitchen_food_sales_report"),
