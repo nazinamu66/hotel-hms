@@ -554,7 +554,7 @@
                 <thead>
                     <tr>
                         <th>Ingredient</th>
-                        <th>Quantity</th>
+                        <th>Quantity (base unit)</th>
                         <th>Source</th>
                     </tr>
                 </thead>
@@ -573,7 +573,7 @@
 
                         <td>
                             <span class="quantity">
-                                {{ item.quantity }}
+                                {{ item.quantity|floatformat:3 }} {{ item.ingredient.base_unit }}
                             </span>
                         </td>
 
@@ -770,7 +770,7 @@
                                 class="form-label"
                                 for="cost_{{ item.id }}"
                             >
-                                Unit Cost — {{ item.ingredient.name }}
+                                Unit Cost — {{ item.ingredient.name }} (₦ per {{ item.ingredient.base_unit }})
                             </label>
 
                             <input
@@ -780,7 +780,7 @@
                                 class="form-control"
                                 step="0.01"
                                 min="0"
-                                placeholder="Enter unit cost"
+                                placeholder="Enter cost per {{ item.ingredient.base_unit }}"
                                 required
                             >
 
