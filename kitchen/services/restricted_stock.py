@@ -8,7 +8,7 @@ from inventory.workflows.cost_layers import allocate_fifo_layers
 from kitchen.models import KitchenRestrictedStockLayer, KitchenRestrictedStockRecord
 
 
-STOCK_PRODUCT_TYPES = ("RAW", "FOOD", "DRINK")
+STOCK_PRODUCT_TYPES = ("RAW", "FOOD", "SNACK", "DRINK")
 
 
 def _validate_quantity(value):
@@ -25,7 +25,7 @@ def _validate_product(product, department):
     if product.hotel_id != department.hotel_id:
         raise ValidationError("This product does not belong to the current hotel.")
     if product.product_type not in STOCK_PRODUCT_TYPES:
-        raise ValidationError("Only raw ingredients, prepared food and drinks can be restricted.")
+        raise ValidationError("Only raw ingredients, prepared food, snacks and drinks can be restricted.")
 
 
 @transaction.atomic
