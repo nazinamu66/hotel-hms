@@ -3670,6 +3670,7 @@ def kitchen_restaurant_transfers(request):
     available_products = Stock.objects.filter(
         department=department,
         quantity__gt=0,
+        product__hotel_id=department.hotel_id,
         product__product_type="FOOD",
         product__usage_type="RESALE",
         product__is_active=True,
