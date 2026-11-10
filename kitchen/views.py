@@ -26,6 +26,7 @@ from inventory.models import (
     StockMovementCostAllocation,
     StockTransfer,
     stock_out,
+    transfer_stock,
 )
 
 from .models import (
@@ -41,6 +42,7 @@ from .models import (
     KitchenTicket,
     KitchenTicketItem,
     KitchenSpoilageRecord,
+    KitchenRestaurantTransfer,
     KitchenStorageLocation,
     KitchenShiftHandover,
     KitchenShiftHandoverLine,
@@ -3639,3 +3641,151 @@ def kitchen_restricted_stock(request):
         "products": products, "general_stock": general_stock,
         "restricted_stock": restricted_stock,
     })
+
+@role_required("KITCHEN", "RESTAURANT", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
+@transaction.atomic
+def kitchen_restaurant_transfers(request):
+    """Kitchen requests snack handovers; Restaurant confirms physical receipt."""
+    user = request.user
+    department = user.department
+    if user.role in ("KITCHEN", "RESTAURANT"):
+        expected_type = "KITCHEN" if user.role == "KITCHEN" else "RESTAURANT"
+        if not department or department.department_type != expected_type:
+            raise PermissionDenied(f"Your account must be assigned to a {expected_type.title()} department.")
+        hotel_ids = [department.hotel_id]
+    else:
+        hotel_ids = list(get_accessible_hotels(user).values_list("pk", flat=True))
+
+    transfers = KitchenRestaurantTransfer.objects.filter(
+        product__hotel_id__in=hotel_ids,
+    ).select_related(
+        "product", "from_department", "requested_by", "received_by", "rejected_by",
+    )
+    if user.role == "KITCHEN":
+        transfers = transfers.filter(from_department=department)
+    elif user.role == "RESTAURANT":
+        transfers = transfers.filter(from_department__hotel_id=department.hotel_id)
+
+    available_products = Stock.objects.filter(
+        department=department,
+        quantity__gt=0,
+        product__hotel_id=department.hotel_id,
+        product__product_type="SNACK",
+        product__usage_type="RESALE",
+        product__is_active=True,
+    ).select_related("product").order_by("product__name") if user.role == "KITCHEN" else Stock.objects.none()
+
+    if request.method == "POST":
+        if user.role != "KITCHEN":
+            raise PermissionDenied("Only Kitchen staff can request a snack transfer.")
+        try:
+            product = Product.objects.get(
+                pk=request.POST.get("product"),
+                hotel_id=department.hotel_id,
+                product_type="SNACK",
+                usage_type="RESALE",
+                is_active=True,
+            )
+            quantity = Decimal(request.POST.get("quantity", "").strip())
+            if not quantity.is_finite() or quantity <= 0:
+                raise ValidationError("Enter a valid quantity greater than zero.")
+            kitchen_stock = Stock.objects.select_for_update().filter(
+                product=product, department=department
+            ).first()
+            available = kitchen_stock.quantity if kitchen_stock else Decimal("0")
+            pending = KitchenRestaurantTransfer.objects.filter(
+                product=product,
+                from_department=department,
+                status="PENDING",
+            ).aggregate(total=Sum("quantity"))["total"] or Decimal("0")
+            available_to_request = max(available - pending, Decimal("0"))
+            if quantity > available_to_request:
+                raise ValidationError(
+                    f"Only {available_to_request} {product.base_unit} is available "
+                    "for a new handover after pending requests."
+                )
+            transfer = KitchenRestaurantTransfer(
+                product=product,
+                from_department=department,
+                quantity=quantity,
+                note=request.POST.get("note", "").strip(),
+                requested_by=user,
+            )
+            transfer.full_clean()
+            transfer.save()
+            messages.success(request, f"Snack transfer #{transfer.pk} sent to Restaurant for receipt confirmation.")
+        except (Product.DoesNotExist, ValueError, InvalidOperation, ValidationError) as exc:
+            message = "; ".join(exc.messages) if isinstance(exc, ValidationError) else "Select a valid snack and quantity."
+            messages.error(request, message)
+        return redirect("kitchen_restaurant_transfers")
+
+    return render(request, "kitchen/production/restaurant_transfers.html", {
+        "transfers": transfers.order_by("-requested_at", "-pk"),
+        "available_products": available_products,
+        "can_request": user.role == "KITCHEN",
+        "can_receive": user.role == "RESTAURANT",
+    })
+
+
+@role_required("RESTAURANT")
+@require_POST
+@transaction.atomic
+def kitchen_restaurant_transfer_receive(request, pk):
+    restaurant = request.user.department
+    if not restaurant or restaurant.department_type != "RESTAURANT":
+        raise PermissionDenied("Restaurant department access is required.")
+    transfer = get_object_or_404(
+        KitchenRestaurantTransfer.objects.select_for_update().select_related(
+            "product", "from_department",
+        ),
+        pk=pk,
+        status="PENDING",
+        from_department__hotel_id=restaurant.hotel_id,
+    )
+    product = transfer.product
+    if product.product_type != "SNACK" or product.usage_type != "RESALE":
+        raise PermissionDenied("Only recipe-produced SNACK resale products can be received.")
+    try:
+        transfer_stock(
+            product=product,
+            from_department=transfer.from_department,
+            to_department=restaurant,
+            quantity=transfer.quantity,
+            user=request.user,
+            reference=f"KITCHEN-RESTAURANT-SNACK-{transfer.pk}",
+        )
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+        return redirect("kitchen_restaurant_transfers")
+    transfer.status = "RECEIVED"
+    transfer.received_by = request.user
+    transfer.received_at = timezone.now()
+    transfer.save(update_fields=["status", "received_by", "received_at"])
+    messages.success(request, f"Received {transfer.quantity} {product.base_unit} of {product.name}. Restaurant stock and FIFO cost layers are updated.")
+    return redirect("kitchen_restaurant_transfers")
+
+
+@role_required("RESTAURANT")
+@require_POST
+@transaction.atomic
+def kitchen_restaurant_transfer_reject(request, pk):
+    restaurant = request.user.department
+    if not restaurant or restaurant.department_type != "RESTAURANT":
+        raise PermissionDenied("Restaurant department access is required.")
+    transfer = get_object_or_404(
+        KitchenRestaurantTransfer.objects.select_for_update().select_related("from_department"),
+        pk=pk,
+        status="PENDING",
+        from_department__hotel_id=restaurant.hotel_id,
+    )
+    reason = request.POST.get("rejection_note", "").strip()
+    if not reason:
+        messages.error(request, "Enter a reason for rejecting this delivery.")
+        return redirect("kitchen_restaurant_transfers")
+    transfer.status = "REJECTED"
+    transfer.rejected_by = request.user
+    transfer.rejected_at = timezone.now()
+    transfer.rejection_note = reason
+    transfer.save(update_fields=["status", "rejected_by", "rejected_at", "rejection_note"])
+    messages.warning(request, f"Snack transfer #{transfer.pk} rejected. Kitchen stock was not changed.")
+    return redirect("kitchen_restaurant_transfers")
