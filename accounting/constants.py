@@ -62,6 +62,8 @@ OTHER_REVENUE = "other_revenue"
 COST_OF_GOODS_SOLD = "cost_of_goods_sold"
 
 SPOILAGE_EXPENSE = "spoilage_expense"
+INVENTORY_VARIANCE_EXPENSE = "inventory_variance_expense"
+INVENTORY_VARIANCE_GAIN = "inventory_variance_gain"
 
 MAINTENANCE_EXPENSE = "maintenance_expense"
 
@@ -346,6 +348,26 @@ DEFAULT_ACCOUNTS = [
         "is_system": True,
         "allow_posting": True,
         "allow_manual_entries": True,
+    },
+
+    {
+        "code": "5002",
+        "name": "Inventory Variance Expense",
+        "system_key": INVENTORY_VARIANCE_EXPENSE,
+        "type": EXPENSE,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": False,
+    },
+
+    {
+        "code": "4300",
+        "name": "Inventory Variance Gain",
+        "system_key": INVENTORY_VARIANCE_GAIN,
+        "type": OTHER_INCOME,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": False,
     },
 
     {
