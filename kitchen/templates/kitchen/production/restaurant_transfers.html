@@ -29,15 +29,15 @@
   <section class="transfer-card">
     <h2 style="margin:0 0 6px">Request a transfer</h2>
     <p class="muted" style="margin:0 0 16px">Only completed production batches are eligible. The quantity remains in Kitchen stock until Restaurant confirms receipt.</p>
-    {% if batches %}
+    {% if available_products %}
     <form method="post">
       {% csrf_token %}
       <div class="transfer-grid">
-        <div class="transfer-field"><label for="production_batch">Completed production batch</label>
-          <select id="production_batch" name="production_batch" required>
+        <div class="transfer-field"><label for="product">Prepared food in Kitchen stock</label>
+          <select id="product" name="product" required>
             <option value="">Select prepared food</option>
-            {% for batch in batches %}
-            <option value="{{ batch.pk }}">Batch #{{ batch.pk }} · {{ batch.recipe.product.name }} · Produced {{ batch.quantity_produced }} {{ batch.recipe.product.base_unit }}</option>
+            {% for stock in available_products %}
+            <option value="{{ stock.product_id }}">{{ stock.product.name }} · Available {{ stock.quantity }} {{ stock.product.base_unit }}</option>
             {% endfor %}
           </select>
         </div>
@@ -46,7 +46,7 @@
         <div><button class="transfer-btn" type="submit">Send to Restaurant</button></div>
       </div>
     </form>
-    {% else %}<p class="muted">No completed eligible production batches are available.</p>{% endif %}
+    {% else %}<p class="muted">No prepared FOOD stock is currently available to transfer.</p>{% endif %}
   </section>
   {% endif %}
 
@@ -59,8 +59,8 @@
         <tbody>
         {% for transfer in transfers %}
           <tr>
-            <td><strong>TR-{{ transfer.pk }}</strong><br>{{ transfer.production_batch.recipe.product.name }}<br><span class="muted">Production batch #{{ transfer.production_batch_id }}</span></td>
-            <td>{{ transfer.quantity }} {{ transfer.production_batch.recipe.product.base_unit }}</td>
+            <td><strong>TR-{{ transfer.pk }}</strong><br>{{ transfer.product.name }}<br><span class="muted">From {{ transfer.from_department.name }}</span></td>
+            <td>{{ transfer.quantity }} {{ transfer.product.base_unit }}</td>
             <td>{{ transfer.requested_by.get_full_name|default:transfer.requested_by.username }}<br><span class="muted">{{ transfer.requested_at|date:"d M Y, H:i" }}</span>{% if transfer.note %}<br><span class="muted">{{ transfer.note }}</span>{% endif %}</td>
             <td>
               <span class="status {{ transfer.status }}">{{ transfer.get_status_display }}</span>
