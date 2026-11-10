@@ -276,7 +276,7 @@ class SnackPOSInventoryRoutingTests(TestCase):
         self.assertEqual(self.menu_item.category, "FOOD")
 
 class RefundedSnackWasteAccountingTests(SimpleTestCase):
-    @patch("accounting.services.journal.record_transaction")
+    @patch("restaurant.workflows.refund_order.record_transaction")
     @patch("kitchen.models.KitchenSpoilageRecord.objects.create")
     def test_refunded_snack_waste_is_audited_under_restaurant_custody(
         self, create_record, record_transaction
