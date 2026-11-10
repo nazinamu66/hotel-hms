@@ -3409,3 +3409,142 @@ class KitchenHandoverManagementReviewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.reconciliation.refresh_from_db()
         self.assertEqual(self.reconciliation.status, "REJECTED")
+
+
+
+class KitchenHandoverAdjustmentPostingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        from kitchen.models import (
+            KitchenShiftHandover, KitchenShiftHandoverLine,
+            KitchenHandoverReconciliation, KitchenHandoverReconciliationLine,
+        )
+
+        cls.organization = Organization.objects.create(name="Adjustment Posting Org")
+        cls.hotel = Hotel.objects.create(organization=cls.organization, name="Adjustment Posting Hotel")
+        cls.department = Department.objects.create(
+            hotel=cls.hotel, code="KAP", name="Adjustment Kitchen", department_type="KITCHEN",
+        )
+        cls.location = KitchenStorageLocation.objects.create(
+            department=cls.department, name="Adjustment Pantry", access_level="SHARED",
+        )
+        cls.head = User.objects.create_user(
+            username="adjustment_head", password="test-password",
+            role="KITCHEN", department=cls.department, is_department_head=True,
+        )
+        cls.approver = User.objects.create_user(
+            username="adjustment_approver", password="test-password",
+            role="MANAGER", hotel=cls.hotel,
+        )
+        cls.poster = User.objects.create_user(
+            username="adjustment_poster", password="test-password",
+            role="DIRECTOR", organization=cls.organization,
+        )
+        cls.product = Product.objects.create(
+            hotel=cls.hotel, name="Adjustment Rice", sku="ADJUST-RICE",
+            product_type="RAW", base_unit="kg", cost_price=Decimal("999.00"),
+        )
+        cls.stock = Stock.objects.create(
+            product=cls.product, department=cls.department, quantity=Decimal("20.000"),
+        )
+        cls.layer = StockCostLayer.objects.create(
+            product=cls.product, department=cls.department,
+            quantity_received=Decimal("20.000"), quantity_remaining=Decimal("20.000"),
+            unit_cost=Decimal("12.5000"), source_reference="TEST-RECEIPT",
+        )
+        handover = KitchenShiftHandover.objects.create(
+            department=cls.department, outgoing_user=cls.head,
+            incoming_user=cls.head, status="VARIANCE", incoming_acknowledged=True,
+        )
+        handover_line = KitchenShiftHandoverLine.objects.create(
+            handover=handover, location=cls.location, product=cls.product,
+            item_name=cls.product.name, unit="kg",
+            outgoing_quantity=Decimal("20.000"), incoming_quantity=Decimal("18.000"),
+        )
+        cls.reconciliation = KitchenHandoverReconciliation.objects.create(
+            handover=handover, department=cls.department, opened_by=cls.head,
+            status="APPROVED", reviewed_by=cls.approver,
+            reviewed_at=timezone.now(), approval_note="Approved for adjustment.",
+            investigation_notes="Verified during investigation.",
+        )
+        cls.line = KitchenHandoverReconciliationLine.objects.create(
+            reconciliation=cls.reconciliation, handover_line=handover_line,
+            verified_quantity=Decimal("18.000"),
+        )
+
+    def test_shortage_consumes_fifo_and_posts_balanced_variance_journal(self):
+        from kitchen.reconciliation_adjustments import post_kitchen_handover_adjustment
+
+        result = post_kitchen_handover_adjustment(
+            reconciliation_line=self.line, verified_quantity=Decimal("18.000"), user=self.poster,
+        )
+        self.stock.refresh_from_db()
+        self.layer.refresh_from_db()
+        self.line.refresh_from_db()
+        self.reconciliation.refresh_from_db()
+        self.assertEqual(self.stock.quantity, Decimal("18.000"))
+        self.assertEqual(self.layer.quantity_remaining, Decimal("18.000"))
+        self.assertEqual(result["total_cost"], Decimal("25.00"))
+        self.assertEqual(self.line.adjustment_cost, Decimal("25.00"))
+        self.assertEqual(self.line.book_quantity_at_adjustment, Decimal("20.000"))
+        self.assertEqual(self.line.adjustment_quantity, Decimal("2.000"))
+        self.assertEqual(self.line.adjusted_by, self.poster)
+        self.assertIsNotNone(self.line.adjustment_journal_id)
+        self.assertEqual(self.reconciliation.status, "ADJUSTED")
+        journal_lines = list(self.line.adjustment_journal.lines.all())
+        self.assertEqual(sum(x.debit for x in journal_lines), Decimal("25.00"))
+        self.assertEqual(sum(x.credit for x in journal_lines), Decimal("25.00"))
+
+    def test_surplus_uses_latest_layer_not_product_cost_price_and_creates_layer(self):
+        from kitchen.reconciliation_adjustments import post_kitchen_handover_adjustment
+
+        newer_layer = StockCostLayer.objects.create(
+            product=self.product, department=self.department,
+            quantity_received=Decimal("5.000"), quantity_remaining=Decimal("5.000"),
+            unit_cost=Decimal("15.7500"), source_reference="NEWER-RECEIPT",
+        )
+        result = post_kitchen_handover_adjustment(
+            reconciliation_line=self.line, verified_quantity=Decimal("23.000"), user=self.poster,
+        )
+        self.stock.refresh_from_db()
+        self.line.refresh_from_db()
+        adjustment_layer = StockCostLayer.objects.get(source_reference__startswith="KHR-")
+        self.assertEqual(self.stock.quantity, Decimal("23.000"))
+        self.assertEqual(result["unit_cost"], Decimal("15.7500"))
+        self.assertEqual(result["total_cost"], Decimal("47.25"))
+        self.assertEqual(adjustment_layer.quantity_remaining, Decimal("3.000"))
+        self.assertEqual(adjustment_layer.unit_cost, newer_layer.unit_cost)
+        self.assertEqual(self.line.adjustment_journal.lines.count(), 2)
+
+    def test_duplicate_adjustment_is_blocked(self):
+        from kitchen.reconciliation_adjustments import post_kitchen_handover_adjustment
+
+        post_kitchen_handover_adjustment(
+            reconciliation_line=self.line, verified_quantity=Decimal("18.000"), user=self.poster,
+        )
+        with self.assertRaises(ValidationError):
+            post_kitchen_handover_adjustment(
+                reconciliation_line=self.line, verified_quantity=Decimal("18.000"), user=self.poster,
+            )
+
+    def test_surplus_without_positive_fifo_cost_layer_is_blocked(self):
+        from kitchen.reconciliation_adjustments import post_kitchen_handover_adjustment
+
+        self.layer.quantity_remaining = Decimal("0.000")
+        self.layer.save(update_fields=["quantity_remaining"])
+        with self.assertRaises(ValidationError):
+            post_kitchen_handover_adjustment(
+                reconciliation_line=self.line, verified_quantity=Decimal("23.000"), user=self.poster,
+            )
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.quantity, Decimal("20.000"))
+
+    def test_approved_manager_cannot_post_their_own_adjustment(self):
+        self.client.force_login(self.approver)
+        response = self.client.post(
+            reverse("kitchen_handover_reconciliation_adjust", args=[self.reconciliation.pk, self.line.pk]),
+            {"physical_quantity": "18.000"},
+        )
+        self.assertEqual(response.status_code, 403)
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.quantity, Decimal("20.000"))
