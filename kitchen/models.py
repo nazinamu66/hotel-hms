@@ -1444,6 +1444,25 @@ class KitchenHandoverReconciliationLine(models.Model):
         null=True,
         blank=True,
     )
+    book_quantity_at_adjustment = models.DecimalField(
+        max_digits=12, decimal_places=3, null=True, blank=True,
+    )
+    adjustment_quantity = models.DecimalField(
+        max_digits=12, decimal_places=3, null=True, blank=True,
+        help_text="Positive absolute quantity adjusted, in the product base unit.",
+    )
+    adjustment_unit_cost = models.DecimalField(
+        max_digits=12, decimal_places=4, null=True, blank=True,
+    )
+    adjusted_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="posted_kitchen_handover_adjustments",
+    )
+    adjusted_at = models.DateTimeField(null=True, blank=True)
+    adjustment_journal = models.ForeignKey(
+        "accounting.JournalEntry", on_delete=models.PROTECT,
+        null=True, blank=True, related_name="kitchen_handover_adjustments",
+    )
 
     class Meta:
         ordering = ["handover_line__location__name", "handover_line__item_name"]
