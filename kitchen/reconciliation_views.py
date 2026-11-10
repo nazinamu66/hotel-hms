@@ -5,7 +5,6 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction, models
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
 
 from accounts.decorators import role_required
 from .models import (
@@ -127,5 +126,5 @@ def kitchen_handover_reconciliation_detail(request, pk):
 
     return render(request, "kitchen/handover/reconciliation_detail.html", {
         "reconciliation": reconciliation,
-        "can_edit": True,
+        "can_edit": reconciliation.status == "INVESTIGATING" and reconciliation.opened_by_id == request.user.pk,
     })
