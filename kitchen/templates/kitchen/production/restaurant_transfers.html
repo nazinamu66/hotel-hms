@@ -2,33 +2,43 @@
 {% block title %}Kitchen → Restaurant Transfers{% endblock %}
 {% block content %}
 <style>
-.transfer-page{max-width:1200px;margin:0 auto;padding:8px 0 32px;color:#1f2937}
-.transfer-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px}
+.transfer-page{max-width:1280px;margin:0 auto;padding:8px 0 36px;color:#1f2937}
+.transfer-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:22px}
 .transfer-head h1{margin:0;font-size:28px}.muted{color:#64748b}
 .transfer-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;margin-bottom:20px;box-shadow:0 3px 12px rgba(15,23,42,.04)}
-.transfer-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;align-items:end}
+.transfer-grid{display:grid;grid-template-columns:minmax(180px,2fr) minmax(140px,1fr);gap:14px;align-items:end}
 .transfer-field{display:flex;flex-direction:column;gap:6px}.transfer-field label{font-size:13px;font-weight:700;color:#475569}
-.transfer-field input,.transfer-field select,.transfer-field textarea{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}
-.transfer-btn{border:0;border-radius:8px;padding:11px 16px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer}
-.transfer-btn.danger{background:#b91c1c}.transfer-btn.secondary{background:#475569}
-.transfer-table{width:100%;border-collapse:collapse;min-width:760px}.transfer-table th,.transfer-table td{text-align:left;padding:13px 12px;border-bottom:1px solid #e2e8f0;vertical-align:top}
+.transfer-field input,.transfer-field select{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}
+.transfer-btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:11px 16px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer;text-decoration:none}
+.transfer-btn:hover{background:#1d4ed8;color:#fff}.transfer-btn.secondary{background:#eef2f7;color:#334155}.transfer-btn.secondary:hover{background:#e2e8f0}.transfer-btn.danger{background:#b91c1c}
+.filter-grid{display:grid;grid-template-columns:minmax(220px,2fr) repeat(3,minmax(140px,1fr));gap:12px;align-items:end}
+.filter-actions{display:flex;gap:8px;flex-wrap:wrap}
+.transfer-table{width:100%;border-collapse:collapse;min-width:850px}.transfer-table th,.transfer-table td{text-align:left;padding:14px 12px;border-bottom:1px solid #e2e8f0;vertical-align:middle}
 .transfer-table th{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;background:#f8fafc}
-.status{display:inline-block;border-radius:20px;padding:4px 9px;font-size:12px;font-weight:700;background:#fef3c7;color:#92400e}
+.transfer-table tbody tr:hover{background:#f8fafc}
+.transfer-ref{font-weight:800;color:#2563eb;text-decoration:none}.transfer-ref:hover{text-decoration:underline}
+.status{display:inline-block;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:700;background:#fef3c7;color:#92400e}
 .status.RECEIVED{background:#dcfce7;color:#166534}.status.REJECTED{background:#fee2e2;color:#991b1b}
-.inline-form{display:flex;gap:8px;align-items:center;margin:0 0 7px}.inline-form input{min-width:150px;padding:8px;border:1px solid #cbd5e1;border-radius:7px}
-.table-wrap{overflow-x:auto}
-@media(max-width:700px){.transfer-grid{grid-template-columns:1fr}.transfer-head{align-items:flex-start;flex-direction:column}}
+.inline-form{display:flex;gap:8px;align-items:center;margin:8px 0 0}.inline-form input{min-width:130px;padding:8px;border:1px solid #cbd5e1;border-radius:7px}
+.table-wrap{overflow-x:auto}.result-count{font-size:13px;color:#64748b;margin:0 0 12px}
+.empty-state{text-align:center;padding:36px 16px;color:#64748b}
+@media(max-width:900px){.filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.transfer-grid,.filter-grid{grid-template-columns:1fr}.transfer-head{flex-direction:column}.transfer-card{padding:16px}}
 </style>
 <div class="transfer-page">
   <div class="transfer-head">
-    <div><p class="muted" style="margin:0 0 5px">FINISHED GOODS HANDOVER</p><h1>Kitchen → Restaurant Transfers</h1><p class="muted" style="margin:7px 0 0">Kitchen sends completed snacks; Restaurant confirms physical receipt before stock moves.</p></div>
-    <a href="{% url 'kitchen_production_history' %}" class="muted">← Production history</a>
+    <div>
+      <p class="muted" style="margin:0 0 5px;font-weight:700;letter-spacing:.06em">FINISHED GOODS HANDOVER</p>
+      <h1>Kitchen → Restaurant Transfers</h1>
+      <p class="muted" style="margin:7px 0 0">Track every snack handover from Kitchen request through Restaurant receipt.</p>
+    </div>
+    <a href="{% url 'kitchen_food_list' %}" class="transfer-btn secondary">← Prepared Foods &amp; Snacks</a>
   </div>
 
   {% if can_request %}
   <section class="transfer-card">
-    <h2 style="margin:0 0 6px">Request a transfer</h2>
-    <p class="muted" style="margin:0 0 16px">Select SNACK already held in Kitchen stock. The quantity remains in Kitchen stock until Restaurant confirms physical receipt.</p>
+    <h2 style="margin:0 0 6px">New snack transfer</h2>
+    <p class="muted" style="margin:0 0 16px">Stock remains in Kitchen until Restaurant physically confirms receipt.</p>
     {% if available_products %}
     <form method="post">
       {% csrf_token %}
@@ -42,8 +52,8 @@
           </select>
         </div>
         <div class="transfer-field"><label for="quantity">Quantity (base unit)</label><input id="quantity" name="quantity" type="number" min="0.001" step="0.001" required></div>
-        <div class="transfer-field"><label for="note">Note (optional)</label><input id="note" name="note" type="text" maxlength="500" placeholder="Collection / handover note"></div>
-        <div><button class="transfer-btn" type="submit">Send to Restaurant</button></div>
+        <div class="transfer-field"><label for="note">Handover note (optional)</label><input id="note" name="note" type="text" maxlength="500" placeholder="Collection / handover note"></div>
+        <div><button class="transfer-btn" type="submit">Send transfer request</button></div>
       </div>
     </form>
     {% else %}<p class="muted">No SNACK stock is currently available to transfer.</p>{% endif %}
@@ -51,33 +61,37 @@
   {% endif %}
 
   <section class="transfer-card">
-    <h2 style="margin:0 0 5px">Transfer register</h2>
-    <p class="muted" style="margin:0 0 16px">Pending requests do not change stock. Confirmed transfers move physical stock and its original FIFO cost layers together.</p>
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+      <div><h2 style="margin:0 0 5px">Transfer register</h2><p class="muted" style="margin:0">Search, filter and open any transfer to inspect its full audit trail.</p></div>
+      <strong style="color:#334155">{{ result_count }} result{{ result_count|pluralize }}</strong>
+    </div>
+    <form method="get" class="filter-grid" style="margin-bottom:18px">
+      <div class="transfer-field"><label for="transfer-search">Search</label><input id="transfer-search" type="search" name="q" value="{{ search_query }}" placeholder="Reference, snack, staff, department or note"></div>
+      <div class="transfer-field"><label for="status-filter">Status</label><select id="status-filter" name="status"><option value="">All statuses</option><option value="PENDING" {% if status_filter == "PENDING" %}selected{% endif %}>Awaiting receipt</option><option value="RECEIVED" {% if status_filter == "RECEIVED" %}selected{% endif %}>Received</option><option value="REJECTED" {% if status_filter == "REJECTED" %}selected{% endif %}>Rejected</option></select></div>
+      <div class="transfer-field"><label for="date-from">Requested from</label><input id="date-from" type="date" name="date_from" value="{{ date_from }}"></div>
+      <div class="transfer-field"><label for="date-to">Requested to</label><input id="date-to" type="date" name="date_to" value="{{ date_to }}"></div>
+      <div class="filter-actions"><button class="transfer-btn" type="submit">Apply filters</button><a class="transfer-btn secondary" href="{% url 'kitchen_restaurant_transfers' %}">Clear</a></div>
+    </form>
+    <p class="result-count">Click a transfer reference to open its details and audit history.</p>
     <div class="table-wrap">
       <table class="transfer-table">
-        <thead><tr><th>Reference / Food</th><th>Quantity</th><th>Kitchen handover</th><th>Status / Restaurant action</th></tr></thead>
+        <thead><tr><th>Reference / Snack</th><th>Quantity</th><th>Kitchen handover</th><th>Restaurant receipt</th><th>Status / Action</th></tr></thead>
         <tbody>
         {% for transfer in transfers %}
           <tr>
-            <td><strong>TR-{{ transfer.pk }}</strong><br>{{ transfer.product.name }}<br><span class="muted">From {{ transfer.from_department.name }}</span></td>
-            <td>{{ transfer.quantity }} {{ transfer.product.base_unit }}</td>
-            <td>{{ transfer.requested_by.get_full_name|default:transfer.requested_by.username }}<br><span class="muted">{{ transfer.requested_at|date:"d M Y, H:i" }}</span>{% if transfer.note %}<br><span class="muted">{{ transfer.note }}</span>{% endif %}</td>
-            <td>
-              <span class="status {{ transfer.status }}">{{ transfer.get_status_display }}</span>
+            <td><a class="transfer-ref" href="{% url 'kitchen_restaurant_transfer_detail' transfer.pk %}">TR-{{ transfer.pk }} ↗</a><br><strong>{{ transfer.product.name }}</strong><br><span class="muted">{{ transfer.from_department.name }}</span></td>
+            <td><strong>{{ transfer.quantity|floatformat:3 }}</strong> {{ transfer.product.base_unit }}</td>
+            <td>{{ transfer.requested_by.get_full_name|default:transfer.requested_by.username }}<br><span class="muted">{{ transfer.requested_at|date:"d M Y, H:i" }}</span></td>
+            <td>{% if transfer.received_at %}{{ transfer.received_by.get_full_name|default:transfer.received_by.username }}<br><span class="muted">{{ transfer.to_department.name }} · {{ transfer.received_at|date:"d M Y, H:i" }}</span>{% elif transfer.rejected_at %}{{ transfer.rejected_by.get_full_name|default:transfer.rejected_by.username }}<br><span class="muted">Rejected · {{ transfer.rejected_at|date:"d M Y, H:i" }}</span>{% else %}<span class="muted">Awaiting confirmation</span>{% endif %}</td>
+            <td><span class="status {{ transfer.status }}">{{ transfer.get_status_display }}</span>
               {% if transfer.status == "PENDING" and can_receive %}
-                <div style="margin-top:10px">
-                  <form class="inline-form" method="post" action="{% url 'kitchen_restaurant_transfer_receive' transfer.pk %}">{% csrf_token %}<button class="transfer-btn" type="submit">Confirm receipt</button></form>
-                  <form class="inline-form" method="post" action="{% url 'kitchen_restaurant_transfer_reject' transfer.pk %}">{% csrf_token %}<input name="rejection_note" type="text" placeholder="Reason for rejection" required><button class="transfer-btn danger" type="submit">Reject</button></form>
-                </div>
-              {% elif transfer.status == "RECEIVED" %}
-                <br><span class="muted">Received by {{ transfer.received_by.get_full_name|default:transfer.received_by.username }}{% if transfer.to_department %} · {{ transfer.to_department.name }}{% endif %}{% if transfer.received_at %} · {{ transfer.received_at|date:"d M Y, H:i" }}{% endif %}</span>
-              {% elif transfer.status == "REJECTED" %}
-                <br><span class="muted">Rejected: {{ transfer.rejection_note }}</span>
+                <form class="inline-form" method="post" action="{% url 'kitchen_restaurant_transfer_receive' transfer.pk %}">{% csrf_token %}<button class="transfer-btn" type="submit">Confirm receipt</button></form>
+                <form class="inline-form" method="post" action="{% url 'kitchen_restaurant_transfer_reject' transfer.pk %}">{% csrf_token %}<input name="rejection_note" type="text" placeholder="Reason for rejection" required><button class="transfer-btn danger" type="submit">Reject</button></form>
               {% endif %}
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="4" class="muted">No Kitchen-to-Restaurant transfers recorded yet.</td></tr>
+          <tr><td colspan="5"><div class="empty-state"><strong>No matching transfers</strong><br>Try changing your search or filters{% if can_request %}, or create a new snack transfer above{% endif %}.</div></td></tr>
         {% endfor %}
         </tbody>
       </table>
