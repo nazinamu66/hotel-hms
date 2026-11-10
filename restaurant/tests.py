@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from django.test import RequestFactory, SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase, TestCase
 
 from restaurant.views import cart_clear
 
