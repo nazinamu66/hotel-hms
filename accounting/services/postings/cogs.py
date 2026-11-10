@@ -65,7 +65,7 @@ def post_cogs_for_order(order):
             hotel=hotel,
             created_by=order.created_by,
             entry_type="COGS",
-            reference=f"FINISHED-FOOD-COGS-{order.id}",
+            reference=f"FOOD-COGS-{order.id}",
         )
 
     return {"drink_cogs": drink_cogs, "food_cogs": food_cogs}
