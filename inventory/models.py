@@ -231,6 +231,7 @@ class Product(models.Model):
     PRODUCT_TYPE = (
         ("RAW", "Raw Material"),
         ("FOOD", "Prepared Food"),
+        ("SNACK", "Prepared Snack"),
         ("DRINK", "Beverage"),
         ("HOUSEKEEPING", "Housekeeping Supply"),
         ("LAUNDRY", "Laundry Supply"),
@@ -389,7 +390,7 @@ class Product(models.Model):
         # ----------------------------------
         # FINISHED FOOD RULES
         # ----------------------------------
-        if self.product_type == "FOOD":
+        if self.product_type in ("FOOD", "SNACK"):
 
             # 🔥 FOOD is always produced, not purchased
             self.supply_source = "STORE"
