@@ -6,7 +6,7 @@
 @media(max-width:650px){.krm-head{flex-direction:column}.krm-card{padding:15px}}
 </style>
 <div class="krm">
-<header class="krm-head"><div><span class="krm-status">Management decision · {{ reconciliation.get_status_display }}</span><h1>Reconciliation REC-{{ reconciliation.pk }}</h1><p class="krm-muted">{{ reconciliation.department.hotel.name }} · {{ reconciliation.department.name }} · Handover #{{ reconciliation.handover_id }}</p></div><a class="krm-link" href="{% url 'kitchen_handover_reconciliation_queue' %}">← Review queue</a></header>
+<header class="krm-head"><div><span class="krm-status">Management decision · {{ reconciliation.get_status_display }}</span><h1>Reconciliation REC-{{ reconciliation.pk }}</h1><p class="krm-muted">{{ reconciliation.department.hotel.name }} · {{ reconciliation.department.name }} · Handover #{{ reconciliation.handover_id }}</p></div><a class="krm-link" href="{% url 'kitchen_handover_reconciliation_queue' %}">← Reconciliation history</a></header>
 <section class="krm-card"><h2>Investigation summary</h2><p class="krm-muted">Opened by {{ reconciliation.opened_by.get_full_name|default:reconciliation.opened_by.username }} · {{ reconciliation.opened_at|date:"d M Y, H:i" }} · Submitted {{ reconciliation.submitted_at|date:"d M Y, H:i" }}</p><div class="krm-note">{{ reconciliation.investigation_notes }}</div></section>
 <section class="krm-card"><h2>Physical count evidence</h2><p class="krm-muted">The fresh verified count is the Head Chef's investigation count. Before any later posting, the live book balance and a new physical count must be verified again.</p><div class="krm-table-wrap"><table><thead><tr><th>Storage</th><th>Item</th><th>Product</th><th>Outgoing</th><th>Incoming</th><th>Difference</th><th>Fresh verified</th><th>Investigation note</th></tr></thead><tbody>
 {% for line in reconciliation.lines.all %}<tr>
@@ -25,8 +25,6 @@
 <p class="krm-muted">Posted {{ line.adjusted_at|date:"d M Y, H:i" }} by {{ line.adjusted_by.get_full_name|default:line.adjusted_by.username }} · {{ line.adjustment_movement.get_movement_type_display }} · {{ line.adjustment_quantity }} {{ line.handover_line.unit }} · Value {{ line.adjustment_cost }} · Journal {{ line.adjustment_journal_id }}</p>
 {% elif not line.handover_line.product_id %}
 <p class="krm-muted">Unregistered item — cannot be adjusted in inventory.</p>
-{% elif reconciliation.reviewed_by_id == request.user.pk %}
-<p class="krm-muted">A different authorised manager must post this adjustment from the same approved record.</p>
 {% else %}
 <form method="post" action="{% url 'kitchen_handover_reconciliation_adjust' reconciliation.pk line.pk %}" class="krm-actions">
 {% csrf_token %}
