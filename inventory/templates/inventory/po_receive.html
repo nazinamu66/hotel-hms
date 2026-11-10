@@ -489,10 +489,10 @@ Receive Purchase Order #{{ po.id }}
                         </th>
 
                         <th class="right">Ordered</th>
-                        <th class="right">Received to Date</th>
-                        <th class="right">Outstanding</th>
-                        <th class="right">Receive Now</th>
-                        <th class="right">Unit Cost</th>
+                        <th class="right">Received to Date (purchase unit)</th>
+                        <th class="right">Outstanding (purchase unit)</th>
+                        <th class="right">Receive Now (purchase unit)</th>
+                        <th class="right">Unit Cost / purchase unit</th>
                         <th class="right">Order Value</th>
 
 
@@ -525,10 +525,10 @@ Receive Purchase Order #{{ po.id }}
                             <span class="receive-unit">{{ item.product.purchase_unit }}</span>
                         </td>
 
-                        <td class="right">{{ item.received_quantity }}</td>
+                        <td class="right">{{ item.received_quantity }} <span class="receive-unit">{{ item.product.purchase_unit|default:item.product.base_unit }}</span></td>
 
                         <td class="right">
-                            <strong>{{ item.outstanding_quantity }}</strong>
+                            <strong>{{ item.outstanding_quantity }}</strong> <span class="receive-unit">{{ item.product.purchase_unit|default:item.product.base_unit }}</span>
                         </td>
 
                         <td class="right">
@@ -549,7 +549,7 @@ Receive Purchase Order #{{ po.id }}
                             {% endif %}
                         </td>
 
-                        <td class="right">₦{{ item.unit_cost|floatformat:2 }} / unit</td>
+                        <td class="right">₦{{ item.unit_cost|floatformat:2 }} / {{ item.product.purchase_unit|default:item.product.base_unit }}</td>
                         <td class="right">₦{{ item.total_cost|floatformat:2 }} ordered</td>
 
                     </tr>
