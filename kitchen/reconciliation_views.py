@@ -5,6 +5,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction, models
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from accounts.decorators import role_required
 from .models import (
@@ -27,6 +28,7 @@ def _head_chef_department(user):
 
 
 @role_required("KITCHEN")
+@require_POST
 @transaction.atomic
 def kitchen_handover_reconciliation_open(request, handover_pk):
     department = _head_chef_department(request.user)
