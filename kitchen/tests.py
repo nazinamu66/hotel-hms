@@ -3649,7 +3649,7 @@ class KitchenSnackTransferTests(TestCase):
         )
         self.product = Product.objects.create(
             hotel=self.hotel, name="Samosa", sku="SNACK-TRANSFER-SAMOSA",
-            product_type="SNACK", usage_type="RESALE", base_unit="pcs",
+            product_type="SNACK", usage_type="RESALE", base_unit="pcs", price=Decimal("500.00"),
         )
         self.kitchen_stock = Stock.objects.create(
             product=self.product, department=self.kitchen, quantity=Decimal("10.000")
