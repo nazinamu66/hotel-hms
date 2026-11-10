@@ -1227,7 +1227,7 @@ def kitchen_management_report(request):
         order__created_at__date__lte=date_to,
         order__status__in=("CHARGED", "PAID"),
         order__is_refunded=False,
-        menu_item__product__product_type="FOOD",
+        menu_item__product__product_type__in=("FOOD", "SNACK"),
     ).select_related("order", "menu_item", "menu_item__product", "order__department__hotel")
 
     total_sales = Decimal("0.00")
