@@ -566,7 +566,7 @@ def product_create(request):
                     product = form.save(commit=False)
                     product.hotel = hotel
 
-                    if product.product_type in ("FOOD", "SNACK"):
+                    if product.product_type == "FOOD":
                         product.base_unit = "portion"
                         product.purchase_unit = "portion"
                         product.unit_multiplier = 1
@@ -2434,7 +2434,7 @@ def product_edit(request, pk):
                 with transaction.atomic():
                     product = form.save(commit=False)
 
-                    if product.product_type in ("FOOD", "SNACK"):
+                    if product.product_type == "FOOD":
                         product.base_unit = "portion"
                         product.purchase_unit = "portion"
                         product.unit_multiplier = 1
