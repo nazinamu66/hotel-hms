@@ -66,6 +66,7 @@ urlpatterns = [
 
     path("production/history/", views.production_history, name="kitchen_production_history"),
     path("production/transfers/", views.kitchen_restaurant_transfers, name="kitchen_restaurant_transfers"),
+    path("production/transfers/<int:pk>/", views.kitchen_restaurant_transfer_detail, name="kitchen_restaurant_transfer_detail"),
     path("production/transfers/<int:pk>/receive/", views.kitchen_restaurant_transfer_receive, name="kitchen_restaurant_transfer_receive"),
     path("production/transfers/<int:pk>/reject/", views.kitchen_restaurant_transfer_reject, name="kitchen_restaurant_transfer_reject"),
     path("production/overrides/", views.production_override_queue, name="production_override_queue"),
