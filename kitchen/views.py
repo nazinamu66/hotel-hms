@@ -3758,9 +3758,10 @@ def kitchen_restaurant_transfer_receive(request, pk):
         messages.error(request, "; ".join(exc.messages))
         return redirect("kitchen_restaurant_transfers")
     transfer.status = "RECEIVED"
+    transfer.to_department = restaurant
     transfer.received_by = request.user
     transfer.received_at = timezone.now()
-    transfer.save(update_fields=["status", "received_by", "received_at"])
+    transfer.save(update_fields=["status", "to_department", "received_by", "received_at"])
     messages.success(request, f"Received {transfer.quantity} {product.base_unit} of {product.name}. Restaurant stock and FIFO cost layers are updated.")
     return redirect("kitchen_restaurant_transfers")
 
