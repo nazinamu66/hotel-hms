@@ -512,6 +512,11 @@ Receive Purchase Order #{{ po.id }}
                             <span class="receive-product">
                                 {{ item.product.name }}
                             </span>
+                            <div class="receive-unit" style="display:block;margin:5px 0 0;">
+                                1 {{ item.product.purchase_unit|default:item.product.base_unit }}
+                                = {{ item.product.unit_multiplier|default:1 }} {{ item.product.base_unit }}
+                                · {{ item.base_quantity }} {{ item.product.base_unit }} ordered in total
+                            </div>
                         </td>
 
 
