@@ -3244,3 +3244,168 @@ class KitchenHandoverAcknowledgementTests(TestCase):
         self.assertEqual(line.system_quantity, Decimal("17.500"))
         self.assertEqual(line.outgoing_quantity, Decimal("15.250"))
         self.assertEqual(stock.quantity, Decimal("17.500"))
+
+
+
+class KitchenHandoverManagementReviewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        from kitchen.models import (
+            KitchenShiftHandover,
+            KitchenShiftHandoverLine,
+            KitchenHandoverReconciliation,
+            KitchenHandoverReconciliationLine,
+        )
+
+        cls.organization = Organization.objects.create(name="Handover Review Org")
+        cls.hotel = Hotel.objects.create(
+            organization=cls.organization, name="Handover Review Hotel",
+        )
+        cls.other_hotel = Hotel.objects.create(
+            organization=cls.organization, name="Other Handover Review Hotel",
+        )
+        cls.department = Department.objects.create(
+            hotel=cls.hotel, code="KHR", name="Review Kitchen",
+            department_type="KITCHEN",
+        )
+        cls.other_department = Department.objects.create(
+            hotel=cls.other_hotel, code="KHR2", name="Other Review Kitchen",
+            department_type="KITCHEN",
+        )
+        cls.location = KitchenStorageLocation.objects.create(
+            department=cls.department, name="Review Pantry", access_level="SHARED",
+        )
+        cls.head = User.objects.create_user(
+            username="review_head_chef", password="test-password",
+            role="KITCHEN", department=cls.department, is_department_head=True,
+        )
+        cls.incoming = User.objects.create_user(
+            username="review_incoming", password="test-password",
+            role="KITCHEN", department=cls.department,
+        )
+        cls.manager = User.objects.create_user(
+            username="review_manager", password="test-password",
+            role="MANAGER", hotel=cls.hotel,
+        )
+        cls.director = User.objects.create_user(
+            username="review_director", password="test-password",
+            role="DIRECTOR", organization=cls.organization,
+        )
+        cls.admin = User.objects.create_user(
+            username="review_admin", password="test-password", role="ADMIN",
+        )
+        cls.general_manager = User.objects.create_user(
+            username="review_general_manager", password="test-password",
+            role="GENERAL_MANAGER", organization=cls.organization,
+        )
+        cls.chief_accountant = User.objects.create_user(
+            username="review_chief_accountant", password="test-password",
+            role="CHIEF_ACCOUNTANT", organization=cls.organization,
+        )
+
+        product = Product.objects.create(
+            hotel=cls.hotel, name="Review Rice", sku="REVIEW-RICE-001",
+            product_type="RAW", base_unit="kg", cost_price=Decimal("10.00"),
+        )
+        cls.stock = Stock.objects.create(
+            product=product, department=cls.department, quantity=Decimal("20.000"),
+        )
+        handover = KitchenShiftHandover.objects.create(
+            department=cls.department, outgoing_user=cls.head,
+            incoming_user=cls.incoming, status="VARIANCE",
+            incoming_acknowledged=True,
+        )
+        handover_line = KitchenShiftHandoverLine.objects.create(
+            handover=handover, location=cls.location, product=product,
+            item_name="Review Rice", unit="kg",
+            outgoing_quantity=Decimal("20.000"),
+            incoming_quantity=Decimal("18.000"),
+        )
+        cls.reconciliation = KitchenHandoverReconciliation.objects.create(
+            handover=handover, department=cls.department, opened_by=cls.head,
+            status="SUBMITTED", investigation_notes="Recounted and checked movements.",
+        )
+        KitchenHandoverReconciliationLine.objects.create(
+            reconciliation=cls.reconciliation, handover_line=handover_line,
+            verified_quantity=Decimal("18.000"),
+            investigation_note="Fresh recount confirmed 18 kg.",
+        )
+
+        other_handover = KitchenShiftHandover.objects.create(
+            department=cls.other_department, outgoing_user=cls.head,
+            incoming_user=cls.incoming, status="VARIANCE",
+            incoming_acknowledged=True,
+        )
+        other_line = KitchenShiftHandoverLine.objects.create(
+            handover=other_handover,
+            location=KitchenStorageLocation.objects.create(
+                department=cls.other_department, name="Other Pantry", access_level="SHARED",
+            ),
+            item_name="Other Rice", unit="kg",
+            outgoing_quantity=Decimal("5.000"),
+            incoming_quantity=Decimal("4.000"),
+        )
+        cls.other_reconciliation = KitchenHandoverReconciliation.objects.create(
+            handover=other_handover, department=cls.other_department,
+            opened_by=cls.head, status="SUBMITTED",
+            investigation_notes="Other hotel investigation.",
+        )
+        KitchenHandoverReconciliationLine.objects.create(
+            reconciliation=cls.other_reconciliation, handover_line=other_line,
+            verified_quantity=Decimal("4.000"),
+        )
+
+    def test_manager_sees_only_submitted_reconciliations_for_own_hotel(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("kitchen_handover_reconciliation_queue"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"REC-{self.reconciliation.pk}")
+        self.assertNotContains(response, f"REC-{self.other_reconciliation.pk}")
+
+    def test_director_and_admin_can_open_management_queue(self):
+        for user in (self.director, self.admin):
+            self.client.force_login(user)
+            response = self.client.get(reverse("kitchen_handover_reconciliation_queue"))
+            self.assertEqual(response.status_code, 200)
+
+    def test_general_manager_and_chief_accountant_cannot_review(self):
+        for user in (self.general_manager, self.chief_accountant):
+            self.client.force_login(user)
+            response = self.client.get(reverse("kitchen_handover_reconciliation_queue"))
+            self.assertEqual(response.status_code, 403)
+
+    def test_manager_approval_records_decision_without_changing_stock(self):
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            reverse("kitchen_handover_reconciliation_review", args=[self.reconciliation.pk]),
+            {"action": "APPROVE", "approval_note": "Approved after review."},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.reconciliation.refresh_from_db()
+        self.stock.refresh_from_db()
+        self.assertEqual(self.reconciliation.status, "APPROVED")
+        self.assertEqual(self.reconciliation.reviewed_by, self.manager)
+        self.assertIsNotNone(self.reconciliation.reviewed_at)
+        self.assertEqual(self.reconciliation.approval_note, "Approved after review.")
+        self.assertEqual(self.stock.quantity, Decimal("20.000"))
+        self.assertEqual(StockMovement.objects.count(), 0)
+        self.assertEqual(JournalEntry.objects.count(), 0)
+
+    def test_reject_and_close_are_terminal_and_require_a_note(self):
+        self.client.force_login(self.manager)
+        url = reverse("kitchen_handover_reconciliation_review", args=[self.reconciliation.pk])
+        response = self.client.post(url, {"action": "REJECT", "approval_note": ""})
+        self.assertEqual(response.status_code, 302)
+        self.reconciliation.refresh_from_db()
+        self.assertEqual(self.reconciliation.status, "SUBMITTED")
+
+        response = self.client.post(url, {"action": "REJECT", "approval_note": "Evidence insufficient."})
+        self.assertEqual(response.status_code, 302)
+        self.reconciliation.refresh_from_db()
+        self.assertEqual(self.reconciliation.status, "REJECTED")
+        self.assertIsNotNone(self.reconciliation.closed_at)
+
+        response = self.client.post(url, {"action": "CLOSE", "approval_note": "Not a stock loss."})
+        self.assertEqual(response.status_code, 302)
+        self.reconciliation.refresh_from_db()
+        self.assertEqual(self.reconciliation.status, "REJECTED")
