@@ -274,3 +274,47 @@ class SnackPOSInventoryRoutingTests(TestCase):
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, "CHARGED")
         self.assertEqual(self.menu_item.category, "FOOD")
+
+class RefundedSnackWasteAccountingTests(SimpleTestCase):
+    @patch("accounting.services.journal.record_transaction")
+    @patch("kitchen.models.KitchenSpoilageRecord.objects.create")
+    def test_refunded_snack_waste_is_audited_under_restaurant_custody(
+        self, create_record, record_transaction
+    ):
+        from restaurant.workflows.refund_order import record_refunded_food_waste
+
+        kitchen = SimpleNamespace(hotel=SimpleNamespace())
+        restaurant = SimpleNamespace(name="Restaurant")
+        product = SimpleNamespace(
+            product_type="SNACK",
+            name="Samosa",
+            is_stock_item=lambda: True,
+        )
+        item = SimpleNamespace(
+            pk=91,
+            menu_item=SimpleNamespace(product=product),
+            cost_at_sale=Decimal("75.00"),
+            quantity=2,
+        )
+        order = SimpleNamespace(
+            id=92,
+            is_cogs_posted=True,
+            items=SimpleNamespace(select_related=lambda *args, **kwargs: [item]),
+        )
+        create_record.return_value = SimpleNamespace(pk=93)
+
+        record_refunded_food_waste(
+            order,
+            SimpleNamespace(pk=9),
+            kitchen,
+            "Customer returned prepared snack",
+            restaurant=restaurant,
+        )
+
+        self.assertIs(create_record.call_args.kwargs["department"], restaurant)
+        self.assertEqual(create_record.call_args.kwargs["product"], product)
+        self.assertEqual(create_record.call_args.kwargs["cost_amount"], Decimal("150.00"))
+        self.assertEqual(
+            record_transaction.call_args.kwargs["credit_system_key"],
+            "cost_of_goods_sold",
+        )
