@@ -221,6 +221,165 @@ class PendingShiftHandoverPOSGuardTests(SimpleTestCase):
             status="PENDING",
         )
 
+class PartialCashHandoverTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.urls import reverse
+        from inventory.models import Department, Hotel, Organization
+        from restaurant.models import Shift
+        from core.models import CashHandover
+
+        self.User = get_user_model()
+        self.reverse = reverse
+        self.CashHandover = CashHandover
+
+        organization = Organization.objects.create(name="Partial Handover Org")
+        self.hotel = Hotel.objects.create(
+            organization=organization,
+            name="Partial Handover Hotel",
+        )
+        self.department = Department.objects.create(
+            hotel=self.hotel,
+            code="PHR",
+            name="Partial Handover Restaurant",
+            department_type="RESTAURANT",
+        )
+        self.cashier = self.User.objects.create_user(
+            username="partial_handover_cashier",
+            password="test-password",
+            role="RESTAURANT",
+            hotel=self.hotel,
+            department=self.department,
+        )
+        self.manager = self.User.objects.create_user(
+            username="partial_handover_manager",
+            password="test-password",
+            role="MANAGER",
+            hotel=self.hotel,
+        )
+        self.other_cashier = self.User.objects.create_user(
+            username="partial_handover_other_cashier",
+            password="test-password",
+            role="RESTAURANT",
+            hotel=self.hotel,
+            department=self.department,
+        )
+        self.shift = Shift.objects.create(
+            user=self.cashier,
+            department=self.department,
+            opening_cash=Decimal("1500.00"),
+            status="OPEN",
+        )
+
+    def submit_partial_handover(self, amount="400.00"):
+        self.client.force_login(self.cashier)
+        return self.client.post(
+            self.reverse("restaurant_partial_cash_handover", args=[self.shift.pk]),
+            {
+                "handover_amount": amount,
+                "recipient": str(self.manager.pk),
+            },
+        )
+
+    def test_partial_handover_is_accepted_without_closing_shift_and_reduces_till_balance(self):
+        response = self.submit_partial_handover()
+        handover = self.CashHandover.objects.get()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.url,
+            self.reverse("restaurant_shift_detail", args=[self.shift.pk]),
+        )
+        self.assertEqual(handover.custody_type, "PARTIAL")
+        self.assertEqual(handover.expected_amount, Decimal("400.00"))
+        self.assertEqual(handover.sender_count, Decimal("400.00"))
+        self.assertEqual(handover.status, "PENDING")
+
+        self.shift.refresh_from_db()
+        self.assertEqual(self.shift.status, "OPEN")
+
+        self.client.force_login(self.manager)
+        accept_response = self.client.post(
+            self.reverse("cash_handover_accept", args=[handover.pk]),
+            {"recipient_count": "400.00"},
+        )
+        handover.refresh_from_db()
+        self.shift.refresh_from_db()
+
+        self.assertEqual(accept_response.status_code, 302)
+        self.assertEqual(
+            accept_response.url,
+            self.reverse("restaurant_shift_detail", args=[self.shift.pk]),
+        )
+        self.assertEqual(handover.status, "ACCEPTED")
+        self.assertEqual(self.shift.status, "OPEN")
+
+        self.client.force_login(self.cashier)
+        detail = self.client.get(
+            self.reverse("restaurant_shift_detail", args=[self.shift.pk])
+        )
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.context["partial_cash_handed_over"], Decimal("400.00"))
+        self.assertEqual(detail.context["expected_cash"], Decimal("1100.00"))
+
+    def test_partial_handover_cannot_exceed_available_till_cash(self):
+        response = self.submit_partial_handover(amount="1500.01")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "at most the available expected till cash")
+        self.assertFalse(self.CashHandover.objects.filter(shift=self.shift).exists())
+
+        self.shift.refresh_from_db()
+        self.assertEqual(self.shift.status, "OPEN")
+
+    def test_partial_handover_can_only_be_sent_to_manager_or_accountant(self):
+        self.client.force_login(self.cashier)
+        response = self.client.post(
+            self.reverse("restaurant_partial_cash_handover", args=[self.shift.pk]),
+            {
+                "handover_amount": "400.00",
+                "recipient": str(self.other_cashier.pk),
+            },
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(self.CashHandover.objects.filter(shift=self.shift).exists())
+
+    def test_partial_handover_variance_keeps_shift_open_and_blocks_final_close(self):
+        self.submit_partial_handover()
+        handover = self.CashHandover.objects.get()
+
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            self.reverse("cash_handover_accept", args=[handover.pk]),
+            {
+                "recipient_count": "390.00",
+                "variance_note": "Ten naira difference on the independent count.",
+            },
+        )
+        handover.refresh_from_db()
+        self.shift.refresh_from_db()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(handover.status, "VARIANCE")
+        self.assertEqual(self.shift.status, "OPEN")
+
+        self.client.force_login(self.cashier)
+        detail = self.client.get(
+            self.reverse("restaurant_shift_detail", args=[self.shift.pk])
+        )
+        self.assertEqual(detail.context["expected_cash"], Decimal("1100.00"))
+
+        close_response = self.client.post(self.reverse("restaurant_shift_close"), {})
+        self.assertEqual(close_response.status_code, 302)
+        self.assertEqual(
+            close_response.url,
+            self.reverse("restaurant_shift_detail", args=[self.shift.pk]),
+        )
+        self.shift.refresh_from_db()
+        self.assertEqual(self.shift.status, "OPEN")
+
+
 class SnackPOSInventoryRoutingTests(TestCase):
     def setUp(self):
         from django.contrib.auth import get_user_model
