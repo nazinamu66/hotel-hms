@@ -851,6 +851,13 @@
                                 </span>
                             {% endif %}
 
+                            {% if handover.custody_type == "PARTIAL" and handover.status == "PENDING" and handover.from_user_id == request.user.id %}
+                                <form method="post" action="{% url 'restaurant_partial_cash_handover_cancel' handover.id %}" style="margin-top:8px;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="action-btn action-secondary" style="padding:5px 8px;font-size:11px;">Cancel pending handover</button>
+                                </form>
+                            {% endif %}
+
                         </td>
 
                     </tr>
