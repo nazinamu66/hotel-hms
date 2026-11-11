@@ -721,8 +721,8 @@
 
                         <br>
 
-                        A supplier and unit costs are required before
-                        this request can be approved.
+                        A supplier and purchase-unit prices are required before
+                        this request can be approved. Prices are converted to the inventory base unit automatically.
 
                     </div>
 
@@ -770,7 +770,7 @@
                                 class="form-label"
                                 for="cost_{{ item.id }}"
                             >
-                                Unit Cost — {{ item.ingredient.name }} (₦ per {{ item.ingredient.base_unit }})
+                                Purchase-unit price — {{ item.ingredient.name }} (₦ per {{ item.ingredient.purchase_unit|default:item.ingredient.base_unit }})
                             </label>
 
                             <input
@@ -780,7 +780,7 @@
                                 class="form-control"
                                 step="0.01"
                                 min="0"
-                                placeholder="Enter cost per {{ item.ingredient.base_unit }}"
+                                placeholder="Enter price per {{ item.ingredient.purchase_unit|default:item.ingredient.base_unit }}"
                                 required
                             >
 
