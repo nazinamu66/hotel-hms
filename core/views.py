@@ -191,6 +191,17 @@ def cash_handover_accept(request, handover_id):
                 shift_id=new_shift.id,
             )
 
+        if handover.custody_type == "PARTIAL":
+            messages.success(
+                request,
+                f"Partial cash handover #{handover.id} accepted. "
+                f"Shift #{handover.shift_id} remains open.",
+            )
+            return redirect(
+                "restaurant_shift_detail",
+                shift_id=handover.shift_id,
+            )
+
         messages.success(
             request,
             f"Cash custody handover #{handover.id} accepted.",
