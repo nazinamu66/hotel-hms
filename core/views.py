@@ -197,6 +197,8 @@ def cash_handover_accept(request, handover_id):
                 f"Partial cash handover #{handover.id} accepted. "
                 f"Shift #{handover.shift_id} remains open.",
             )
+            if request.user.role == "ACCOUNTANT":
+                return redirect("cash_handover_list")
             return redirect(
                 "restaurant_shift_detail",
                 shift_id=handover.shift_id,
