@@ -1,11 +1,11 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from accounts.decorators import role_required
-from .models import MenuItem, POSOrder, POSOrderItem,RestaurantTable
+from .models import MenuItem, POSOrder, POSOrderItem, RestaurantTable, RestaurantSpoilageRecord
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
-from inventory.models import Stock
+from inventory.models import Stock, Product, stock_out
 from django.shortcuts import get_object_or_404
 from rooms.models import Room
 from billing.models import Folio, Payment
@@ -1329,3 +1329,220 @@ def shift_detail(request, shift_id):
             "expected_cash": expected_cash,
         },
     )
+
+# ---------------------------------------------------------------------------
+# Restaurant spoilage: report first; physical and accounting write-off only
+# after an authorized manager approves.
+# ---------------------------------------------------------------------------
+
+RESTAURANT_SPOILAGE_APPROVER_ROLES = {"MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN"}
+
+
+def _restaurant_spoilage_scope(user):
+    if user.role == "RESTAURANT":
+        department = user.department
+        if not department or department.department_type != "RESTAURANT":
+            raise PermissionDenied("You must be assigned to a Restaurant department.")
+        return RestaurantSpoilageRecord.objects.filter(department=department), department.hotel_id
+    hotels = get_accessible_hotels(user)
+    return RestaurantSpoilageRecord.objects.filter(department__hotel__in=hotels), None
+
+
+@role_required("RESTAURANT", "MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def restaurant_spoilage(request):
+    user = request.user
+    records, restaurant_hotel_id = _restaurant_spoilage_scope(user)
+    can_report = user.role == "RESTAURANT"
+    can_approve = user.role in RESTAURANT_SPOILAGE_APPROVER_ROLES
+
+    if request.method == "POST":
+        if not can_report:
+            raise PermissionDenied("Only Restaurant staff can report spoilage.")
+        try:
+            product = Product.objects.get(
+                pk=request.POST.get("product"),
+                hotel_id=restaurant_hotel_id,
+                product_type__in=("DRINK", "SNACK"),
+                is_active=True,
+            )
+        except (Product.DoesNotExist, ValueError, TypeError):
+            messages.error(request, "Select a valid Restaurant drink or prepared snack.")
+            return redirect("restaurant_spoilage")
+
+        try:
+            quantity = Decimal(request.POST.get("quantity", "").strip())
+        except (InvalidOperation, AttributeError, TypeError, ValueError):
+            messages.error(request, "Enter a valid spoilage quantity.")
+            return redirect("restaurant_spoilage")
+        if not quantity.is_finite() or quantity <= 0:
+            messages.error(request, "Spoilage quantity must be greater than zero.")
+            return redirect("restaurant_spoilage")
+
+        reason_code = request.POST.get("reason_code", "").strip()
+        valid_reasons = {value for value, _label in RestaurantSpoilageRecord.REASON_CHOICES}
+        if reason_code not in valid_reasons:
+            messages.error(request, "Choose a valid spoilage reason.")
+            return redirect("restaurant_spoilage")
+
+        department = user.department
+        stock = Stock.objects.filter(product=product, department=department).first()
+        pending_quantity = records.filter(
+            product=product, department=department, status="PENDING"
+        ).aggregate(total=models.Sum("quantity"))["total"] or Decimal("0")
+        available = (stock.quantity if stock else Decimal("0")) - pending_quantity
+        if quantity > available:
+            messages.error(
+                request,
+                f"Only {available} {product.base_unit} is available after pending reports.",
+            )
+            return redirect("restaurant_spoilage")
+
+        RestaurantSpoilageRecord.objects.create(
+            product=product,
+            department=department,
+            quantity=quantity,
+            reason_code=reason_code,
+            notes=request.POST.get("notes", "").strip(),
+            reported_by=user,
+        )
+        messages.success(
+            request,
+            "Spoilage report submitted for management approval. No stock or accounting balances have changed.",
+        )
+        return redirect("restaurant_spoilage")
+
+    search = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip().upper()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
+    if search:
+        records = records.filter(
+            Q(product__name__icontains=search)
+            | Q(notes__icontains=search)
+            | Q(review_note__icontains=search)
+            | Q(reported_by__username__icontains=search)
+            | Q(reported_by__first_name__icontains=search)
+            | Q(reported_by__last_name__icontains=search)
+        )
+    if status in {"PENDING", "APPROVED", "REJECTED"}:
+        records = records.filter(status=status)
+    else:
+        status = ""
+    if date_from:
+        try:
+            date.fromisoformat(date_from)
+            records = records.filter(reported_at__date__gte=date_from)
+        except ValueError:
+            date_from = ""
+    if date_to:
+        try:
+            date.fromisoformat(date_to)
+            records = records.filter(reported_at__date__lte=date_to)
+        except ValueError:
+            date_to = ""
+
+    products = Product.objects.filter(
+        hotel_id=restaurant_hotel_id,
+        product_type__in=("DRINK", "SNACK"),
+        is_active=True,
+        stocks__department=user.department,
+        stocks__quantity__gt=0,
+    ).distinct().order_by("name") if can_report else Product.objects.none()
+
+    return render(request, "restaurant/spoilage.html", {
+        "records": records.select_related(
+            "product", "department", "reported_by", "approved_by", "rejected_by", "stock_movement"
+        ).order_by("-reported_at", "-pk"),
+        "products": products,
+        "reason_choices": RestaurantSpoilageRecord.REASON_CHOICES,
+        "can_report": can_report,
+        "can_approve": can_approve,
+        "search": search,
+        "status_filter": status,
+        "date_from": date_from,
+        "date_to": date_to,
+        "result_count": records.count(),
+    })
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+@require_POST
+@transaction.atomic
+def restaurant_spoilage_review(request, pk):
+    records, _ = _restaurant_spoilage_scope(request.user)
+    record = get_object_or_404(
+        records.select_for_update().select_related("department", "product"),
+        pk=pk,
+    )
+    if record.status != "PENDING":
+        messages.info(request, "This spoilage report has already been processed.")
+        return redirect("restaurant_spoilage")
+    if record.reported_by_id == request.user.pk:
+        raise PermissionDenied("You cannot approve or reject your own spoilage report.")
+
+    decision = request.POST.get("decision", "").strip().upper()
+    review_note = request.POST.get("review_note", "").strip()
+    if decision == "REJECT":
+        record.status = "REJECTED"
+        record.rejected_by = request.user
+        record.rejected_at = timezone.now()
+        record.review_note = review_note
+        record.save(update_fields=["status", "rejected_by", "rejected_at", "review_note"])
+        messages.success(request, f"Spoilage report #{record.pk} rejected. No stock or accounting entries were changed.")
+        return redirect("restaurant_spoilage")
+    if decision != "APPROVE":
+        messages.error(request, "Choose approve or reject.")
+        return redirect("restaurant_spoilage")
+
+    try:
+        with transaction.atomic():
+            result = stock_out(
+                product=record.product,
+                department=record.department,
+                quantity=record.quantity,
+                user=request.user,
+                reason=f"Approved Restaurant spoilage #{record.pk}",
+                reference=f"RESTAURANT-SPOILAGE-{record.pk}",
+                allow_negative=False,
+                allow_uncosted_shortage=False,
+            )
+            cost = Decimal(str(result["total_cost"] or "0")).quantize(Decimal("0.01"))
+            record.stock_movement = result["movement"]
+            record.cost_amount = cost
+            record.status = "APPROVED"
+            record.approved_by = request.user
+            record.approved_at = timezone.now()
+            record.review_note = review_note
+            record.save(update_fields=[
+                "stock_movement", "cost_amount", "status", "approved_by", "approved_at", "review_note"
+            ])
+
+            if cost > 0:
+                from accounting.services.journal import get_system_account, post_journal_entry
+                hotel = record.department.hotel
+                expense = get_system_account(hotel, "spoilage_expense")
+                inventory_key = (
+                    "finished_goods_inventory"
+                    if record.product.product_type == "SNACK"
+                    else "inventory_asset"
+                )
+                inventory_account = get_system_account(hotel, inventory_key)
+                journal = post_journal_entry(
+                    hotel=hotel,
+                    description=f"Approved Restaurant spoilage #{record.pk} - {record.product.name}",
+                    created_by=request.user,
+                    entry_type="NORMAL",
+                    reference=f"RESTAURANT-SPOILAGE-{record.pk}",
+                    lines=[
+                        {"account": expense, "debit": cost},
+                        {"account": inventory_account, "credit": cost},
+                    ],
+                )
+                record.journal_entry = journal
+                record.save(update_fields=["journal_entry"])
+    except (ValidationError, ValueError) as exc:
+        messages.error(request, f"Approval failed; no stock or accounting changes were committed: {exc}")
+        return redirect("restaurant_spoilage")
+
+    messages.success(request, f"Spoilage report #{record.pk} approved. {record.quantity} {record.product.base_unit} deducted and accounting posted.")
+    return redirect("restaurant_spoilage")
