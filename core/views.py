@@ -198,7 +198,7 @@ def cash_handover_accept(request, handover_id):
                 f"Shift #{handover.shift_id} remains open.",
             )
             if request.user.role == "ACCOUNTANT":
-                return redirect("cash_handover_list")
+                return redirect("cash_custody_detail", handover_id=handover.id)
             return redirect(
                 "restaurant_shift_detail",
                 shift_id=handover.shift_id,
