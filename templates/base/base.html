@@ -690,7 +690,7 @@
         <!-- APPROVALS -->
         <!-- ========================= -->
 
-        {% if user|has_role:"MANAGER,ADMIN,DIRECTOR" %}
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
 
         <h4 class="menu-toggle"
             onclick="toggleMenu('approval_menu', this)">
@@ -730,6 +730,10 @@
                         </span>
                     {% endif %}
                 {% endfor %}
+            </a>
+
+            <a href="{% url 'restaurant_spoilage' %}">
+                Restaurant Spoilage Approvals
             </a>
 
             <a href="{% url 'refund_list' %}">
