@@ -318,3 +318,133 @@ class RefundedSnackWasteAccountingTests(SimpleTestCase):
             record_transaction.call_args.kwargs["credit_system_key"],
             "cost_of_goods_sold",
         )
+
+
+class RestaurantSpoilageApprovalTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Department, Hotel, Organization, Product, Stock
+        from restaurant.models import RestaurantSpoilageRecord
+
+        User = get_user_model()
+        org = Organization.objects.create(name="Restaurant Spoilage Org")
+        self.hotel = Hotel.objects.create(organization=org, name="Restaurant Spoilage Hotel")
+        self.restaurant = Department.objects.create(
+            hotel=self.hotel, code="RSP", name="Spoilage Restaurant",
+            department_type="RESTAURANT",
+        )
+        self.cashier = User.objects.create_user(
+            username="spoilage_cashier", password="test-password",
+            role="RESTAURANT", hotel=self.hotel, department=self.restaurant,
+        )
+        self.manager = User.objects.create_user(
+            username="spoilage_manager", password="test-password",
+            role="MANAGER", hotel=self.hotel,
+        )
+        self.product = Product.objects.create(
+            hotel=self.hotel, name="Cola Can", sku="SPOILAGE-COLA",
+            product_type="DRINK", usage_type="RESALE", base_unit="can",
+            price=Decimal("500.00"), cost_price=Decimal("250.00"),
+        )
+        self.stock = Stock.objects.create(
+            product=self.product, department=self.restaurant, quantity=Decimal("12"),
+        )
+        self.Record = RestaurantSpoilageRecord
+
+    def report_spoilage(self):
+        self.client.force_login(self.cashier)
+        return self.client.post("/restaurant/spoilage/", {
+            "product": self.product.pk,
+            "quantity": "2",
+            "reason_code": "OPENED",
+            "notes": "Can opened during service",
+        })
+
+    def test_report_stays_pending_without_stock_or_accounting_mutation(self):
+        from unittest.mock import patch
+
+        with patch("restaurant.views.stock_out") as stock_out:
+            response = self.report_spoilage()
+        self.assertEqual(response.status_code, 302)
+        record = self.Record.objects.get()
+        self.assertEqual(record.status, "PENDING")
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.quantity, Decimal("12"))
+        stock_out.assert_not_called()
+        self.assertIsNone(record.stock_movement_id)
+        self.assertEqual(record.cost_amount, Decimal("0.00"))
+
+    @patch("accounting.services.journal.post_journal_entry")
+    @patch("accounting.services.journal.get_system_account")
+    @patch("restaurant.views.stock_out")
+    def test_manager_approval_deducts_stock_and_posts_spoilage_journal(
+        self, stock_out_mock, get_account, post_journal
+    ):
+        from types import SimpleNamespace
+
+        self.report_spoilage()
+        record = self.Record.objects.get()
+        movement = SimpleNamespace(pk=88)
+        stock_out_mock.return_value = {
+            "movement": movement,
+            "total_cost": Decimal("500.00"),
+            "uncosted_quantity": Decimal("0"),
+        }
+        expense = SimpleNamespace(pk=1)
+        inventory = SimpleNamespace(pk=2)
+        get_account.side_effect = [expense, inventory]
+        journal = SimpleNamespace(pk=99)
+        post_journal.return_value = journal
+
+        self.client.force_login(self.manager)
+        response = self.client.post(
+            f"/restaurant/spoilage/{record.pk}/review/",
+            {"decision": "APPROVE", "review_note": "Verified"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        stock_out_mock.assert_called_once()
+        self.assertEqual(stock_out_mock.call_args.kwargs["department"], self.restaurant)
+        self.assertEqual(stock_out_mock.call_args.kwargs["quantity"], Decimal("2"))
+        post_journal.assert_called_once()
+        journal_kwargs = post_journal.call_args.kwargs
+        self.assertEqual(journal_kwargs["reference"], f"RESTAURANT-SPOILAGE-{record.pk}")
+        self.assertEqual(journal_kwargs["lines"][0]["debit"], Decimal("500.00"))
+        self.assertEqual(journal_kwargs["lines"][1]["credit"], Decimal("500.00"))
+        record.refresh_from_db()
+        self.assertEqual(record.status, "APPROVED")
+        self.assertEqual(record.cost_amount, Decimal("500.00"))
+        self.assertEqual(record.stock_movement_id, movement.pk)
+        self.assertEqual(record.journal_entry_id, journal.pk)
+
+    def test_reporter_cannot_approve_own_report(self):
+        from django.core.exceptions import PermissionDenied
+
+        self.report_spoilage()
+        record = self.Record.objects.get()
+        self.client.force_login(self.cashier)
+        response = self.client.post(
+            f"/restaurant/spoilage/{record.pk}/review/",
+            {"decision": "APPROVE"},
+        )
+        self.assertEqual(response.status_code, 403)
+        record.refresh_from_db()
+        self.assertEqual(record.status, "PENDING")
+
+    def test_rejection_does_not_deduct_stock(self):
+        from unittest.mock import patch
+
+        self.report_spoilage()
+        record = self.Record.objects.get()
+        self.client.force_login(self.manager)
+        with patch("restaurant.views.stock_out") as stock_out:
+            response = self.client.post(
+                f"/restaurant/spoilage/{record.pk}/review/",
+                {"decision": "REJECT", "review_note": "Not sufficiently documented"},
+            )
+        self.assertEqual(response.status_code, 302)
+        stock_out.assert_not_called()
+        record.refresh_from_db()
+        self.assertEqual(record.status, "REJECTED")
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.quantity, Decimal("12"))
