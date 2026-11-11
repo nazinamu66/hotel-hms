@@ -1092,7 +1092,11 @@ class DirectPurchaseItem(models.Model):
         default=Decimal("0.000"),
         help_text="Cumulative quantity received in the product's base unit.",
     )
-    unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
+    unit_cost = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        help_text="Cost per product base unit, derived from the supplier purchase-unit price.",
+    )
 
     @property
     def outstanding_quantity(self):
