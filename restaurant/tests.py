@@ -402,6 +402,20 @@ class RestaurantSpoilageApprovalTests(TestCase):
             {"decision": "APPROVE", "review_note": "Verified"},
         )
 
+        from django.contrib.messages import get_messages
+
+        print("RESPONSE STATUS:", response.status_code)
+        print("RESPONSE URL:", response.url)
+        print("MESSAGES:", [str(m) for m in get_messages(response.wsgi_request)])
+
+        record.refresh_from_db()
+        print("RECORD STATUS:", record.status)
+        print("COST AMOUNT:", record.cost_amount)
+        print("JOURNAL ENTRY:", record.journal_entry_id)
+        print("STOCK OUT RESULT:", stock_out_mock.return_value)
+        print("GET ACCOUNT CALLS:", get_account.call_count)
+        print("JOURNAL CALLS:", post_journal.call_count)
+
         self.assertEqual(response.status_code, 302)
         stock_out_mock.assert_called_once()
         self.assertEqual(stock_out_mock.call_args.kwargs["department"], self.restaurant)
