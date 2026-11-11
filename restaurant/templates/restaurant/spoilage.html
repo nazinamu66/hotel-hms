@@ -1,0 +1,46 @@
+{% extends "base/base.html" %}
+{% block title %}Restaurant Spoilage{% endblock %}
+{% block content %}
+<style>
+.rs-page{max-width:1250px;margin:0 auto;padding:22px 12px 42px;color:#172033}.rs-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:22px}.rs-head h1{margin:0;font-size:28px}.rs-muted{color:#64748b;font-size:13px;line-height:1.5}.rs-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;margin-bottom:20px;overflow:hidden;box-shadow:0 4px 16px rgba(15,23,42,.04)}.rs-card h2{font-size:18px;margin:0;padding:18px 20px;border-bottom:1px solid #edf0f4}.rs-body{padding:20px}.rs-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.rs-field{display:flex;flex-direction:column;gap:6px}.rs-field label{font-size:13px;font-weight:750;color:#475569}.rs-field input,.rs-field select,.rs-field textarea{box-sizing:border-box;width:100%;padding:10px 11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;background:#fff}.rs-btn{display:inline-flex;border:0;border-radius:8px;padding:10px 14px;background:#1d4ed8;color:#fff;font-weight:750;cursor:pointer;text-decoration:none}.rs-btn.good{background:#15803d}.rs-btn.bad{background:#b91c1c}.rs-btn.light{background:#eef2f7;color:#334155}.rs-table-wrap{overflow-x:auto}.rs-table{width:100%;border-collapse:collapse;min-width:950px}.rs-table th,.rs-table td{text-align:left;padding:12px 13px;border-bottom:1px solid #edf0f4;vertical-align:top;font-size:13px}.rs-table th{background:#f8fafc;color:#64748b;text-transform:uppercase;font-size:11px;letter-spacing:.04em}.rs-pill{display:inline-block;border-radius:30px;padding:5px 9px;font-size:11px;font-weight:800;background:#fef3c7;color:#92400e}.rs-pill.APPROVED{background:#dcfce7;color:#166534}.rs-pill.REJECTED{background:#fee2e2;color:#991b1b}.rs-actions{display:flex;gap:6px;flex-wrap:wrap}.rs-actions textarea{width:160px;min-height:34px;padding:6px;border:1px solid #cbd5e1;border-radius:7px}.rs-empty{text-align:center;padding:30px;color:#64748b}.rs-filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:16px}@media(max-width:850px){.rs-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.rs-grid,.rs-filters{grid-template-columns:1fr}.rs-head{flex-direction:column}.rs-body{padding:15px}}
+</style>
+<div class="rs-page">
+<header class="rs-head"><div><h1>Restaurant Spoilage</h1><p class="rs-muted">Report damaged, opened, expired or spoiled Restaurant stock. Reports remain pending until management approval; stock and accounting are untouched before approval.</p></div></header>
+
+{% if can_report %}
+<section class="rs-card"><h2>Log spoilage</h2><div class="rs-body">
+{% if products %}
+<form method="post">{% csrf_token %}
+<div class="rs-grid">
+<div class="rs-field"><label for="product">Drink or prepared snack</label><select id="product" name="product" required><option value="">Select product</option>{% for product in products %}<option value="{{ product.pk }}">{{ product.name }} · {{ product.base_unit }}</option>{% endfor %}</select></div>
+<div class="rs-field"><label for="quantity">Quantity ({{ "base unit" }})</label><input id="quantity" name="quantity" type="number" min="0.001" step="0.001" required></div>
+<div class="rs-field"><label for="reason_code">Reason</label><select id="reason_code" name="reason_code" required><option value="">Select reason</option>{% for value,label in reason_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+<div class="rs-field"><label for="notes">Details / notes</label><textarea id="notes" name="notes" rows="3" placeholder="Describe what happened, e.g. can opened during service"></textarea></div>
+</div><p class="rs-muted">Submitting creates a pending report only. It does not deduct stock or post accounting.</p><button class="rs-btn" type="submit">Submit for manager approval</button>
+</form>
+{% else %}<p class="rs-muted">No drinks or prepared snacks with available Restaurant stock were found.</p>{% endif %}
+</div></section>
+{% endif %}
+
+<section class="rs-card"><h2>Spoilage register · {{ result_count }} record{{ result_count|pluralize }}</h2><div class="rs-body">
+<form method="get" class="rs-filters">
+<div class="rs-field"><label>Search</label><input type="search" name="q" value="{{ search }}" placeholder="Product, reporter or notes"></div>
+<div class="rs-field"><label>Status</label><select name="status"><option value="">All</option><option value="PENDING" {% if status_filter == "PENDING" %}selected{% endif %}>Pending</option><option value="APPROVED" {% if status_filter == "APPROVED" %}selected{% endif %}>Approved</option><option value="REJECTED" {% if status_filter == "REJECTED" %}selected{% endif %}>Rejected</option></select></div>
+<div class="rs-field"><label>From</label><input type="date" name="date_from" value="{{ date_from }}"></div>
+<div class="rs-field"><label>To</label><input type="date" name="date_to" value="{{ date_to }}"></div>
+<div class="rs-actions"><button class="rs-btn" type="submit">Filter</button><a class="rs-btn light" href="{% url 'restaurant_spoilage' %}">Clear</a></div>
+</form>
+<div class="rs-table-wrap"><table class="rs-table"><thead><tr><th>Reported</th><th>Product / Department</th><th>Quantity</th><th>Reason / Notes</th><th>Reported by</th><th>Status / Cost</th><th>Management action</th></tr></thead><tbody>
+{% for record in records %}
+<tr><td>{{ record.reported_at|date:"d M Y H:i" }}<br><span class="rs-muted">RS-{{ record.pk }}</span></td><td><strong>{{ record.product.name }}</strong><br><span class="rs-muted">{{ record.department.name }}</span></td><td>{{ record.quantity|floatformat:3 }} {{ record.product.base_unit }}</td><td>{{ record.get_reason_code_display }}{% if record.notes %}<br><span class="rs-muted">{{ record.notes }}</span>{% endif %}</td><td>{{ record.reported_by|default:"Unknown" }}</td><td><span class="rs-pill {{ record.status }}">{{ record.get_status_display }}</span><br><strong>{{ record.cost_amount|floatformat:2 }}</strong></td><td>
+{% if record.status == "PENDING" and can_approve %}
+<form method="post" action="{% url 'restaurant_spoilage_review' record.pk %}">{% csrf_token %}<textarea name="review_note" placeholder="Approval / rejection note"></textarea><div class="rs-actions" style="margin-top:6px"><button class="rs-btn good" name="decision" value="APPROVE">Approve &amp; deduct</button><button class="rs-btn bad" name="decision" value="REJECT">Reject</button></div></form>
+{% elif record.status == "APPROVED" %}<span class="rs-muted">Approved by {{ record.approved_by|default:"—" }}<br>{{ record.approved_at|date:"d M Y H:i" }}{% if record.journal_entry_id %}<br>Journal #{{ record.journal_entry_id }}{% endif %}</span>
+{% elif record.status == "REJECTED" %}<span class="rs-muted">Rejected by {{ record.rejected_by|default:"—" }}<br>{{ record.review_note }}</span>
+{% else %}<span class="rs-muted">Awaiting management decision</span>{% endif %}
+</td></tr>
+{% empty %}<tr><td colspan="7" class="rs-empty">No spoilage reports match these filters.</td></tr>{% endfor %}
+</tbody></table></div>
+</div></section>
+</div>
+{% endblock %}
