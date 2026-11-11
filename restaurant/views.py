@@ -1461,9 +1461,10 @@ def shift_detail(request, shift_id):
         if payment.method in payment_summary:
             payment_summary[payment.method] += payment.amount
 
-    expected_cash = (
-        shift.opening_cash
-        + payment_summary["CASH"]
+    partial_cash_handed_over = _partial_cash_handed_over_total(shift)
+    expected_cash = max(
+        shift.opening_cash + payment_summary["CASH"] - partial_cash_handed_over,
+        Decimal("0.00"),
     )
 
     return render(
@@ -1477,6 +1478,8 @@ def shift_detail(request, shift_id):
             "total_sales": total_sales,
             "payment_summary": payment_summary,
             "expected_cash": expected_cash,
+            "partial_cash_handed_over": partial_cash_handed_over,
+            "can_partial_handover": user.role == "RESTAURANT" and shift.status == "OPEN",
         },
     )
 
