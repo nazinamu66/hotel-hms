@@ -212,7 +212,11 @@
         <div class="amount-box">
 
             <div class="amount-label">
-                Expected Cash
+                {% if handover.custody_type == "PARTIAL" %}
+                    Amount Being Handed Over
+                {% else %}
+                    Expected Cash
+                {% endif %}
             </div>
 
             <div class="amount">
