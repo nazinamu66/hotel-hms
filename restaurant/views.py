@@ -20,7 +20,7 @@ from django.utils import timezone
 from django.db.models import OuterRef, Subquery, Sum, DecimalField, Value,Q
 from django.db.models.functions import Coalesce
 from core.models import CashHandover
-from core.services.cash.handover import create_handover
+from core.services.cash.handover import create_handover, cancel_handover
 from accounting.models import BankAccount
 from accounts.services.access import get_accessible_hotels
 
@@ -802,6 +802,30 @@ def partial_cash_handover(request, shift_id):
         return redirect("restaurant_shift_detail", shift_id=shift.pk)
 
     return render(request, "restaurant/partial_cash_handover.html", context)
+
+
+@role_required("RESTAURANT")
+@require_POST
+@transaction.atomic
+def cancel_partial_cash_handover(request, handover_id):
+    handover = get_object_or_404(
+        CashHandover.objects.select_for_update().select_related("shift"),
+        pk=handover_id,
+        from_user=request.user,
+        custody_type="PARTIAL",
+        status="PENDING",
+        shift__status="OPEN",
+    )
+    try:
+        cancel_handover(handover_id=handover.pk, user=request.user)
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+    else:
+        messages.success(
+            request,
+            f"Partial cash handover #{handover.pk} cancelled. The amount is restored to the shift's expected till balance.",
+        )
+    return redirect("restaurant_shift_detail", shift_id=handover.shift_id)
 
 
 @role_required("RESTAURANT")
