@@ -15,7 +15,7 @@ from accounts.models import User
 from django.db import models, transaction
 from kitchen.models import KitchenTicketItem,KitchenTicket
 from restaurant.models import Shift
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 from django.db.models import OuterRef, Subquery, Sum, DecimalField, Value,Q
 from django.db.models.functions import Coalesce
