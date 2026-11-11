@@ -174,6 +174,8 @@ def cash_handover_accept(request, handover_id):
                 "The shift remains open pending review.",
             )
 
+            if handover.custody_type == "PARTIAL":
+                return redirect("cash_custody_detail", handover_id=handover.id)
             return redirect(
                 "cash_handover_list"
             )
