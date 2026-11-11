@@ -233,6 +233,12 @@
                 POS
             </a>
 
+            {% if user|has_role:"RESTAURANT,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
+                <a href="{% url 'restaurant_spoilage' %}">
+                    🗑️ Restaurant Spoilage
+                </a>
+            {% endif %}
+
             <a href="{% url 'kitchen_restaurant_transfers' %}">
                 📦 Incoming Snack Transfers
             </a>
