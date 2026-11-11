@@ -1441,13 +1441,15 @@ def restaurant_spoilage(request):
         except ValueError:
             date_to = ""
 
+    stocked_product_ids = Stock.objects.filter(
+        department=user.department, quantity__gt=0,
+        product__product_type__in=("DRINK", "SNACK"),
+        product__is_active=True,
+    ).values_list("product_id", flat=True) if can_report else []
     products = Product.objects.filter(
+        pk__in=stocked_product_ids,
         hotel_id=restaurant_hotel_id,
-        product_type__in=("DRINK", "SNACK"),
-        is_active=True,
-        stocks__department=user.department,
-        stocks__quantity__gt=0,
-    ).distinct().order_by("name") if can_report else Product.objects.none()
+    ).order_by("name") if can_report else Product.objects.none()
 
     return render(request, "restaurant/spoilage.html", {
         "records": records.select_related(
