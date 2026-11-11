@@ -49,6 +49,7 @@ class CashHandover(models.Model):
     CUSTODY_TYPES = (
         ("SHIFT", "Shift Handover"),
         ("CUSTODY", "Cash Custody"),
+        ("PARTIAL", "Partial Cash Handover"),
     )
 
     hotel = models.ForeignKey(
