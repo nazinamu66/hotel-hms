@@ -219,6 +219,13 @@
         Reconcile your shift and hand physical cash to the next custodian.
     </p>
 
+    {% if unresolved_partial_variance %}
+        <div class="pending-box">
+            <strong>Partial handover variance unresolved.</strong>
+            Management must resolve the earlier partial cash handover before this shift can be closed.
+        </div>
+    {% endif %}
+
     {% if pending_handover %}
         <div class="pending-box">
             <strong>Cash handover pending.</strong>
@@ -348,10 +355,11 @@
 
         <div class="handover-note">
             <strong>
-                Expected physical cash: ₦{{ expected_cash|floatformat:2 }}
+                Expected physical cash remaining: ₦{{ expected_cash|floatformat:2 }}
             </strong><br>
+            Partial cash already handed over: ₦{{ partial_cash_handed_over|floatformat:2 }}<br>
 
-            This is your opening cash plus payments explicitly recorded as Cash.
+            This is your opening cash plus payments explicitly recorded as Cash, less partial cash handovers already recorded.
             Refund transactions are listed separately below because the system
             does not yet record which original tender was used to return the money.
             Reconcile any cash refund against the physical till before entering
@@ -430,7 +438,7 @@
                 <button
                     type="submit"
                     class="btn-primary"
-                    {% if pending_handover %}disabled{% endif %}
+                    {% if pending_handover or unresolved_partial_variance %}disabled{% endif %}
                 >
                     Create Cash Handover →
                 </button>
