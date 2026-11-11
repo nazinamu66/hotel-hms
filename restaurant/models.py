@@ -449,3 +449,58 @@ class RestaurantTable(models.Model):
 
     def __str__(self):
         return self.name
+
+class RestaurantSpoilageRecord(models.Model):
+    """Restaurant stock loss awaiting management approval before write-off."""
+
+    REASON_CHOICES = (
+        ("OPENED", "Opened / unsealed"),
+        ("DAMAGED", "Damaged / broken"),
+        ("SPOILED", "Spoiled / contaminated"),
+        ("EXPIRED", "Expired"),
+        ("OTHER", "Other"),
+    )
+    STATUS_CHOICES = (
+        ("PENDING", "Pending approval"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    )
+
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, related_name="restaurant_spoilage_records"
+    )
+    department = models.ForeignKey(
+        Department, on_delete=models.PROTECT, related_name="restaurant_spoilage_records"
+    )
+    quantity = models.DecimalField(max_digits=12, decimal_places=3)
+    reason_code = models.CharField(max_length=20, choices=REASON_CHOICES)
+    notes = models.TextField(blank=True)
+    reported_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="reported_restaurant_spoilage"
+    )
+    reported_at = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="PENDING")
+    approved_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_restaurant_spoilage"
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejected_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="rejected_restaurant_spoilage"
+    )
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True)
+    stock_movement = models.OneToOneField(
+        StockMovement, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="restaurant_spoilage_record"
+    )
+    cost_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    journal_entry = models.ForeignKey(
+        "accounting.JournalEntry", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="restaurant_spoilage_records"
+    )
+
+    class Meta:
+        ordering = ["-reported_at", "-id"]
+
+    def __str__(self):
+        return f"Restaurant spoilage #{self.pk}: {self.product} x {self.quantity}"
