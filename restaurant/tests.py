@@ -400,7 +400,17 @@ class RestaurantSpoilageApprovalTests(TestCase):
         expense = SimpleNamespace(pk=1)
         inventory = SimpleNamespace(pk=2)
         get_account.side_effect = [expense, inventory]
-        journal = SimpleNamespace(pk=99)
+        from accounting.models import JournalEntry
+        from django.utils import timezone
+
+        journal = JournalEntry.objects.create(
+            hotel=self.hotel,
+            date=timezone.localdate(),
+            description="Test Restaurant spoilage journal",
+            reference=f"RESTAURANT-SPOILAGE-{record.pk}",
+            entry_type="NORMAL",
+            created_by=self.manager,
+        )
         post_journal.return_value = journal
 
         self.client.force_login(self.manager)
