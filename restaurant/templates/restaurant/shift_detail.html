@@ -377,6 +377,14 @@
             </a>
 
             {% if shift.status == "OPEN" %}
+                {% if can_partial_handover %}
+                    <a
+                        href="{% url 'restaurant_partial_cash_handover' shift.id %}"
+                        class="action-btn action-secondary"
+                    >
+                        Hand Over Part of Cash
+                    </a>
+                {% endif %}
                 <a
                     href="{% url 'restaurant_shift_close' %}"
                     class="action-btn action-primary"
@@ -509,7 +517,14 @@
                 </div>
 
                 <div class="summary-card">
-                    <div class="summary-label">Expected Cash</div>
+                    <div class="summary-label">Partial Cash Handed Over</div>
+                    <div class="summary-value">
+                        ₦{{ partial_cash_handed_over|floatformat:2 }}
+                    </div>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-label">Expected Cash Remaining</div>
                     <div class="summary-value">
                         ₦{{ expected_cash|floatformat:2 }}
                     </div>
