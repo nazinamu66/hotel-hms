@@ -119,6 +119,12 @@ def create_handover(
             raise ValidationError(
                 "Partial cash can only be handed to a Manager or Accountant."
             )
+        if expected_amount <= 0 or sender_count <= 0:
+            raise ValidationError("A partial cash handover amount must be greater than zero.")
+        if expected_amount != sender_count:
+            raise ValidationError(
+                "The partial handover amount must match the sender's declared cash count."
+            )
 
     return CashHandover.objects.create(
         hotel=department.hotel,
@@ -272,6 +278,10 @@ def accept_handover_and_transition(
         - close the sender's shift
         - recipient takes physical cash custody
         - recipient does not get a restaurant shift
+
+    For a PARTIAL handover linked to a shift:
+        - transfer only the declared amount
+        - keep the sender's shift open
 
     For a general CUSTODY handover without a shift:
         - record custody only
