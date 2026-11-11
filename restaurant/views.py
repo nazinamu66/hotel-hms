@@ -768,6 +768,10 @@ def partial_cash_handover(request, shift_id):
             messages.error(request, "The handover amount must be greater than zero.")
             return render(request, "restaurant/partial_cash_handover.html", context)
 
+        if amount != amount.quantize(Decimal("0.01")):
+            messages.error(request, "Enter the handover amount to no more than two decimal places.")
+            return render(request, "restaurant/partial_cash_handover.html", context)
+
         if amount > expected_cash:
             messages.error(
                 request,
