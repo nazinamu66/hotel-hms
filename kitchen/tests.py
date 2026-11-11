@@ -211,6 +211,51 @@ class IngredientRequestApprovalTests(TestCase):
         )
         self.assertEqual(DirectPurchaseItem.objects.count(), 0)
 
+    def test_manager_purchase_unit_price_is_converted_to_base_unit_cost(self):
+        self.ingredient.purchase_unit = "bag"
+        self.ingredient.unit_multiplier = 10
+        self.ingredient.save()
+        request_obj = self.make_direct_request()
+        self.client.force_login(self.manager)
+
+        response = self.client.post(
+            reverse("kitchen_ingredient_request_detail", args=[request_obj.pk]),
+            data=self.approve_payload(request_obj, cost="1000.00"),
+        )
+
+        purchase = DirectPurchase.objects.get(ingredient_request=request_obj)
+        item = purchase.items.get()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(item.quantity, Decimal("5.000"))
+        self.assertEqual(item.unit_cost, Decimal("100.0000"))
+        self.assertEqual(purchase.total_cost, Decimal("500.00"))
+
+    def test_urgent_purchase_converts_purchase_quantity_and_cost_to_base_units(self):
+        self.ingredient.purchase_unit = "carton"
+        self.ingredient.unit_multiplier = 12
+        self.ingredient.save()
+        self.client.force_login(self.requester)
+
+        response = self.client.post(
+            reverse("urgent_purchase_create"),
+            {
+                "supplier": str(self.supplier.pk),
+                "purchase_date": "2026-10-26",
+                "payment_source": "STAFF_FUNDS",
+                "urgent_reason": "Immediate service requirement",
+                "product_0": str(self.ingredient.pk),
+                "quantity_0": "2",
+                "unit_cost_0": "24000.00",
+            },
+        )
+
+        purchase = DirectPurchase.objects.get(urgent_purchase=True)
+        item = purchase.items.get()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(item.quantity, Decimal("24.000"))
+        self.assertEqual(item.unit_cost, Decimal("2000.0000"))
+        self.assertEqual(purchase.total_cost, Decimal("48000.00"))
+
     def test_valid_approval_creates_one_purchase_with_validated_total(self):
         request_obj = self.make_direct_request()
         self.client.force_login(self.manager)
