@@ -324,7 +324,14 @@ def kitchen_ingredient_request_detail(request, pk):
                     messages.error(request, f"Unit cost for {item.ingredient.name} must be finite and non-negative.")
                     return redirect(request.path)
 
-                validated_costs.append((item, cost))
+                multiplier = Decimal(str(item.ingredient.unit_multiplier or 1))
+                if multiplier < 1:
+                    messages.error(request, f"Purchase-unit conversion is not configured for {item.ingredient.name}.")
+                    return redirect(request.path)
+                # Prices are entered per purchase unit; request quantities stay
+                # in the product's inventory base unit.
+                base_unit_cost = (cost / multiplier).quantize(Decimal("0.0001"))
+                validated_costs.append((item, base_unit_cost))
 
             # Persist purchase and request state only after every line is valid.
             dp = DirectPurchase.objects.create(
@@ -525,7 +532,14 @@ def urgent_purchase_create(request):
             if not quantity.is_finite() or quantity <= 0 or not unit_cost.is_finite() or unit_cost < 0:
                 messages.error(request, f"Line {index + 1} must have a positive quantity and a valid non-negative cost.")
                 return redirect("urgent_purchase_create")
-            rows.append((product, quantity, unit_cost))
+            multiplier = Decimal(str(product.unit_multiplier or 1))
+            if multiplier < 1:
+                messages.error(request, f"Purchase-unit conversion is not configured for {product.name}.")
+                return redirect("urgent_purchase_create")
+            # Persist quantity and FIFO unit cost in inventory base units.
+            base_quantity = (quantity * multiplier).quantize(Decimal("0.001"))
+            base_unit_cost = (unit_cost / multiplier).quantize(Decimal("0.0001"))
+            rows.append((product, base_quantity, base_unit_cost))
             total += quantity * unit_cost
             index += 1
 
