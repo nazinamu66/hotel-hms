@@ -257,6 +257,12 @@ class PartialCashHandoverTests(TestCase):
             role="MANAGER",
             hotel=self.hotel,
         )
+        self.accountant = self.User.objects.create_user(
+            username="partial_handover_accountant",
+            password="test-password",
+            role="ACCOUNTANT",
+            hotel=self.hotel,
+        )
         self.other_cashier = self.User.objects.create_user(
             username="partial_handover_other_cashier",
             password="test-password",
@@ -344,6 +350,33 @@ class PartialCashHandoverTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertFalse(self.CashHandover.objects.filter(shift=self.shift).exists())
+
+    def test_accountant_can_accept_partial_handover_without_receiving_a_new_shift(self):
+        self.client.force_login(self.cashier)
+        response = self.client.post(
+            self.reverse("restaurant_partial_cash_handover", args=[self.shift.pk]),
+            {
+                "handover_amount": "300.00",
+                "recipient": str(self.accountant.pk),
+            },
+        )
+        handover = self.CashHandover.objects.get()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(handover.to_user_id, self.accountant.pk)
+
+        self.client.force_login(self.accountant)
+        accept_response = self.client.post(
+            self.reverse("cash_handover_accept", args=[handover.pk]),
+            {"recipient_count": "300.00"},
+        )
+        handover.refresh_from_db()
+        self.shift.refresh_from_db()
+
+        self.assertEqual(accept_response.status_code, 302)
+        self.assertEqual(accept_response.url, self.reverse("cash_handover_list"))
+        self.assertEqual(handover.status, "ACCEPTED")
+        self.assertEqual(self.shift.status, "OPEN")
 
     def test_partial_handover_variance_keeps_shift_open_and_blocks_final_close(self):
         self.submit_partial_handover()
