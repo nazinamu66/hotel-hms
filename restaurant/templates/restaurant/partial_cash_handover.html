@@ -1,0 +1,67 @@
+{% extends "base/base.html" %}
+{% block title %}Partial Cash Handover{% endblock %}
+{% block content %}
+<style>
+.pch-page{max-width:900px;margin:0 auto;padding:30px 20px 48px;color:#172033}
+.pch-header{margin-bottom:22px}.pch-title{margin:0;font-size:clamp(1.7rem,2.5vw,2.2rem);font-weight:850;letter-spacing:-.03em}
+.pch-subtitle{margin:8px 0 0;color:#64748b;line-height:1.55}
+.pch-card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;padding:22px;margin-bottom:16px;box-shadow:0 5px 20px rgba(15,23,42,.035)}
+.pch-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.pch-metric{padding:15px;border:1px solid #e8edf3;border-radius:11px}.pch-label{font-size:11px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.pch-value{font-size:20px;font-weight:850;margin-top:7px;font-variant-numeric:tabular-nums}
+.pch-field{margin-top:18px}.pch-field label{display:block;font-size:13px;font-weight:750;margin-bottom:7px}
+.pch-field input,.pch-field select{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font:inherit}
+.pch-note{padding:13px 15px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;color:#1e40af;line-height:1.5;margin-top:16px}
+.pch-warning{padding:13px 15px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;margin-bottom:14px}
+.pch-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.pch-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 15px;border-radius:9px;border:1px solid #cbd5e1;background:#fff;color:#334155;text-decoration:none;font-weight:750;cursor:pointer}
+.pch-btn-primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+@media(max-width:650px){.pch-page{padding:20px 12px}.pch-card{padding:16px}.pch-grid{grid-template-columns:1fr}}
+</style>
+<div class="pch-page">
+  <header class="pch-header">
+    <h1 class="pch-title">Partial Cash Handover</h1>
+    <p class="pch-subtitle">Hand over part of the cash in your till to a Manager or Accountant. Your current shift stays open and the remaining till balance stays with you.</p>
+  </header>
+
+  {% if messages %}{% for message in messages %}<div class="pch-warning">{{ message }}</div>{% endfor %}{% endif %}
+  {% if pending_handover %}
+    <div class="pch-warning">There is already a pending cash handover for this shift. Complete or cancel it before creating another.</div>
+  {% endif %}
+  {% if unresolved_variance %}
+    <div class="pch-warning">A previous partial cash handover has an unresolved variance. Management must resolve it before another partial handover.</div>
+  {% endif %}
+
+  <section class="pch-card">
+    <div class="pch-grid">
+      <div class="pch-metric"><div class="pch-label">Shift</div><div class="pch-value">#{{ shift.pk }}</div></div>
+      <div class="pch-metric"><div class="pch-label">Already handed over</div><div class="pch-value">₦{{ partial_cash_handed_over|floatformat:2 }}</div></div>
+      <div class="pch-metric"><div class="pch-label">Expected cash remaining</div><div class="pch-value">₦{{ expected_cash|floatformat:2 }}</div></div>
+    </div>
+
+    <div class="pch-note">Enter only the amount physically being handed to the recipient now. The recipient must independently count it. Once accepted, the amount is deducted from this shift's remaining expected cash; the shift itself is not closed or transferred.</div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="pch-field">
+        <label for="handover_amount">Amount to hand over (₦)</label>
+        <input id="handover_amount" name="handover_amount" type="number" min="0.01" max="{{ expected_cash }}" step="0.01" required {% if pending_handover or unresolved_variance %}disabled{% endif %}>
+      </div>
+      <div class="pch-field">
+        <label for="recipient">Hand cash to</label>
+        <select id="recipient" name="recipient" required {% if pending_handover or unresolved_variance %}disabled{% endif %}>
+          <option value="">Select Manager or Accountant</option>
+          {% for recipient in recipients %}
+            <option value="{{ recipient.pk }}">{{ recipient.get_full_name|default:recipient.username }} — {{ recipient.get_role_display }}</option>
+          {% empty %}
+            <option value="" disabled>No eligible recipients available</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="pch-actions">
+        <a class="pch-btn" href="{% url 'restaurant_shift_detail' shift.pk %}">Back to Shift</a>
+        <button class="pch-btn pch-btn-primary" type="submit" {% if pending_handover or unresolved_variance or expected_cash <= 0 or not recipients %}disabled{% endif %}>Create Partial Handover</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
