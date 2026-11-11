@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("accounting", "0001_initial"),
+        ("accounting", "0017_journalentry_opening_entry_type"),
         ("inventory", "0003_alter_stockmovement_options_and_more"),
         ("restaurant", "0023_alter_posorderitem_cost_at_sale_precision"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
