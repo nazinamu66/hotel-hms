@@ -381,6 +381,27 @@ class PartialCashHandoverTests(TestCase):
         self.assertEqual(handover.status, "ACCEPTED")
         self.assertEqual(self.shift.status, "OPEN")
 
+    def test_sender_can_cancel_pending_partial_handover_and_restore_till_balance(self):
+        self.submit_partial_handover()
+        handover = self.CashHandover.objects.get()
+
+        self.client.force_login(self.cashier)
+        response = self.client.post(
+            self.reverse("restaurant_partial_cash_handover_cancel", args=[handover.pk])
+        )
+        handover.refresh_from_db()
+        self.shift.refresh_from_db()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(handover.status, "CANCELLED")
+        self.assertEqual(self.shift.status, "OPEN")
+
+        detail = self.client.get(
+            self.reverse("restaurant_shift_detail", args=[self.shift.pk])
+        )
+        self.assertEqual(detail.context["partial_cash_handed_over"], Decimal("0.00"))
+        self.assertEqual(detail.context["expected_cash"], Decimal("1500.00"))
+
     def test_partial_handover_variance_keeps_shift_open_and_blocks_final_close(self):
         self.submit_partial_handover()
         handover = self.CashHandover.objects.get()
