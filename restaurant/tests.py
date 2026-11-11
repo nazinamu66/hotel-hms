@@ -380,11 +380,18 @@ class RestaurantSpoilageApprovalTests(TestCase):
     def test_manager_approval_deducts_stock_and_posts_spoilage_journal(
         self, stock_out_mock, get_account, post_journal
     ):
-        from types import SimpleNamespace
+        from inventory.models import StockMovement
 
         self.report_spoilage()
         record = self.Record.objects.get()
-        movement = SimpleNamespace(pk=88)
+        movement = StockMovement.objects.create(
+            product=self.product,
+            from_department=self.restaurant,
+            quantity=Decimal("2"),
+            movement_type="OUT",
+            created_by=self.manager,
+            reference=f"RESTAURANT-SPOILAGE-{record.pk}",
+        )
         stock_out_mock.return_value = {
             "movement": movement,
             "total_cost": Decimal("500.00"),
@@ -401,20 +408,6 @@ class RestaurantSpoilageApprovalTests(TestCase):
             f"/restaurant/spoilage/{record.pk}/review/",
             {"decision": "APPROVE", "review_note": "Verified"},
         )
-
-        from django.contrib.messages import get_messages
-
-        print("RESPONSE STATUS:", response.status_code)
-        print("RESPONSE URL:", response.url)
-        print("MESSAGES:", [str(m) for m in get_messages(response.wsgi_request)])
-
-        record.refresh_from_db()
-        print("RECORD STATUS:", record.status)
-        print("COST AMOUNT:", record.cost_amount)
-        print("JOURNAL ENTRY:", record.journal_entry_id)
-        print("STOCK OUT RESULT:", stock_out_mock.return_value)
-        print("GET ACCOUNT CALLS:", get_account.call_count)
-        print("JOURNAL CALLS:", post_journal.call_count)
 
         self.assertEqual(response.status_code, 302)
         stock_out_mock.assert_called_once()
