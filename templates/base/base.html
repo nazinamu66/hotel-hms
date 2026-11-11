@@ -702,7 +702,7 @@
 
             <!-- Management stock approval -->
 
-            {% if user|has_role:"MANAGER,DIRECTOR,ADMIN" %}
+            {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
 
             <a href="{% url 'kitchen_handover_reconciliation_queue' %}">
                 Kitchen Handover History
