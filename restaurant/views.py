@@ -681,6 +681,129 @@ def pos_order_detail(request, order_id):
     )
 
 
+def _partial_cash_handed_over_total(shift):
+    """Cash already removed from this shift's till through partial handovers."""
+    total = CashHandover.objects.filter(
+        shift=shift,
+        custody_type="PARTIAL",
+        status__in=("PENDING", "VARIANCE", "ACCEPTED", "RESOLVED"),
+    ).aggregate(total=Sum("sender_count"))["total"]
+    return total or Decimal("0.00")
+
+
+@role_required("RESTAURANT")
+@transaction.atomic
+def partial_cash_handover(request, shift_id):
+    """Transfer part of a cashier's physical cash without closing the shift."""
+    user = request.user
+    department = user.department
+    if not department or department.department_type != "RESTAURANT":
+        raise PermissionDenied("You must be assigned to a Restaurant department.")
+
+    shift = get_object_or_404(
+        Shift.objects.select_for_update(),
+        pk=shift_id,
+        user=user,
+        department=department,
+        status="OPEN",
+    )
+
+    pending_handover = CashHandover.objects.filter(
+        shift=shift,
+        status="PENDING",
+    ).first()
+    unresolved_variance = CashHandover.objects.filter(
+        shift=shift,
+        custody_type="PARTIAL",
+        status="VARIANCE",
+    ).exists()
+
+    cash_collected = Payment.objects.filter(
+        shift=shift,
+        method="CASH",
+    ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+    partial_cash_handed_over = _partial_cash_handed_over_total(shift)
+    expected_cash = max(
+        shift.opening_cash + cash_collected - partial_cash_handed_over,
+        Decimal("0.00"),
+    )
+
+    recipients = User.objects.filter(
+        is_active=True,
+        role__in=("MANAGER", "ACCOUNTANT"),
+        hotel=department.hotel,
+    ).order_by("role", "username")
+
+    context = {
+        "shift": shift,
+        "expected_cash": expected_cash,
+        "partial_cash_handed_over": partial_cash_handed_over,
+        "recipients": recipients,
+        "pending_handover": pending_handover,
+        "unresolved_variance": unresolved_variance,
+    }
+
+    if request.method == "POST":
+        if pending_handover:
+            messages.error(
+                request,
+                "Resolve the pending cash handover before starting another handover.",
+            )
+            return redirect("restaurant_shift_detail", shift_id=shift.pk)
+
+        if unresolved_variance:
+            messages.error(
+                request,
+                "Resolve the previous partial cash handover variance before handing over more cash.",
+            )
+            return redirect("restaurant_shift_detail", shift_id=shift.pk)
+
+        try:
+            amount = Decimal(request.POST.get("handover_amount", "").strip())
+        except (InvalidOperation, TypeError, ValueError):
+            messages.error(request, "Enter a valid amount to hand over.")
+            return render(request, "restaurant/partial_cash_handover.html", context)
+
+        if not amount.is_finite() or amount <= 0:
+            messages.error(request, "The handover amount must be greater than zero.")
+            return render(request, "restaurant/partial_cash_handover.html", context)
+
+        if amount > expected_cash:
+            messages.error(
+                request,
+                f"You can hand over at most the available expected till cash of ₦{expected_cash:,.2f}.",
+            )
+            return render(request, "restaurant/partial_cash_handover.html", context)
+
+        recipient = get_object_or_404(
+            recipients,
+            pk=request.POST.get("recipient", ""),
+        )
+
+        try:
+            handover = create_handover(
+                from_user=user,
+                to_user=recipient,
+                department=department,
+                expected_amount=amount,
+                sender_count=amount,
+                shift=shift,
+                custody_type="PARTIAL",
+            )
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+            return render(request, "restaurant/partial_cash_handover.html", context)
+
+        messages.success(
+            request,
+            f"Partial cash handover #{handover.pk} created. "
+            f"The shift remains open after the recipient confirms the amount.",
+        )
+        return redirect("restaurant_shift_detail", shift_id=shift.pk)
+
+    return render(request, "restaurant/partial_cash_handover.html", context)
+
+
 @role_required("RESTAURANT")
 @transaction.atomic
 def close_shift(request):
@@ -759,10 +882,16 @@ def close_shift(request):
         if payment.method in payment_summary:
             payment_summary[payment.method] += payment.amount
 
-    expected_cash = (
-        shift.opening_cash
-        + payment_summary["CASH"]
+    partial_cash_handed_over = _partial_cash_handed_over_total(shift)
+    expected_cash = max(
+        shift.opening_cash + payment_summary["CASH"] - partial_cash_handed_over,
+        Decimal("0.00"),
     )
+    unresolved_partial_variance = CashHandover.objects.filter(
+        shift=shift,
+        custody_type="PARTIAL",
+        status="VARIANCE",
+    ).exists()
 
     # --------------------------------------------------
     # Recipient options
@@ -809,6 +938,8 @@ def close_shift(request):
                     "unsettled_orders": unsettled_orders,
                     "payment_summary": payment_summary,
                     "expected_cash": expected_cash,
+                    "partial_cash_handed_over": partial_cash_handed_over,
+                    "unresolved_partial_variance": unresolved_partial_variance,
                     "recipients": recipients,
                     "pending_handover": pending_handover,
                 },
@@ -823,6 +954,13 @@ def close_shift(request):
                 "restaurant_shift_detail",
                 shift_id=shift.id,
             )
+
+        if unresolved_partial_variance:
+            messages.error(
+                request,
+                "Resolve the partial cash handover variance before closing this shift.",
+            )
+            return redirect("restaurant_shift_detail", shift_id=shift.id)
 
         recipient_id = request.POST.get("recipient")
         sender_count_raw = request.POST.get("sender_count", "").strip()
@@ -844,6 +982,8 @@ def close_shift(request):
                     "unsettled_orders": unsettled_orders,
                     "payment_summary": payment_summary,
                     "expected_cash": expected_cash,
+                    "partial_cash_handed_over": partial_cash_handed_over,
+                    "unresolved_partial_variance": unresolved_partial_variance,
                     "recipients": recipients,
                 },
             )
@@ -862,6 +1002,8 @@ def close_shift(request):
                     "total_sales": total_sales,
                     "payment_summary": payment_summary,
                     "expected_cash": expected_cash,
+                    "partial_cash_handed_over": partial_cash_handed_over,
+                    "unresolved_partial_variance": unresolved_partial_variance,
                     "recipients": recipients,
                 },
             )
@@ -882,6 +1024,8 @@ def close_shift(request):
                     "total_sales": total_sales,
                     "payment_summary": payment_summary,
                     "expected_cash": expected_cash,
+                    "partial_cash_handed_over": partial_cash_handed_over,
+                    "unresolved_partial_variance": unresolved_partial_variance,
                     "recipients": recipients,
                 },
             )
@@ -900,6 +1044,8 @@ def close_shift(request):
                     "total_sales": total_sales,
                     "payment_summary": payment_summary,
                     "expected_cash": expected_cash,
+                    "partial_cash_handed_over": partial_cash_handed_over,
+                    "unresolved_partial_variance": unresolved_partial_variance,
                     "recipients": recipients,
                 },
             )
@@ -936,6 +1082,8 @@ def close_shift(request):
                     "total_sales": total_sales,
                     "payment_summary": payment_summary,
                     "expected_cash": expected_cash,
+                    "partial_cash_handed_over": partial_cash_handed_over,
+                    "unresolved_partial_variance": unresolved_partial_variance,
                     "recipients": recipients,
                 },
             )
@@ -964,6 +1112,8 @@ def close_shift(request):
             "unsettled_orders": unsettled_orders,
             "payment_summary": payment_summary,
             "expected_cash": expected_cash,
+                    "partial_cash_handed_over": partial_cash_handed_over,
+                    "unresolved_partial_variance": unresolved_partial_variance,
             "recipients": recipients,
             "pending_handover": pending_handover,
         },
