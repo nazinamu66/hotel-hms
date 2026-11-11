@@ -402,6 +402,44 @@ class PartialCashHandoverTests(TestCase):
         self.assertEqual(detail.context["partial_cash_handed_over"], Decimal("0.00"))
         self.assertEqual(detail.context["expected_cash"], Decimal("1500.00"))
 
+    def test_final_shift_handover_uses_cash_remaining_after_partial_handover(self):
+        self.submit_partial_handover(amount="400.00")
+        partial = self.CashHandover.objects.get(custody_type="PARTIAL")
+
+        self.client.force_login(self.manager)
+        self.client.post(
+            self.reverse("cash_handover_accept", args=[partial.pk]),
+            {"recipient_count": "400.00"},
+        )
+        self.shift.refresh_from_db()
+        self.assertEqual(self.shift.status, "OPEN")
+
+        self.client.force_login(self.cashier)
+        close_response = self.client.post(
+            self.reverse("restaurant_shift_close"),
+            {
+                "sender_count": "1100.00",
+                "recipient": str(self.manager.pk),
+            },
+        )
+        self.assertEqual(close_response.status_code, 302)
+
+        final_handover = self.CashHandover.objects.get(
+            shift=self.shift,
+            custody_type="CUSTODY",
+        )
+        self.assertEqual(final_handover.expected_amount, Decimal("1100.00"))
+        self.assertEqual(final_handover.sender_count, Decimal("1100.00"))
+
+        self.client.force_login(self.manager)
+        self.client.post(
+            self.reverse("cash_handover_accept", args=[final_handover.pk]),
+            {"recipient_count": "1100.00"},
+        )
+        self.shift.refresh_from_db()
+        self.assertEqual(self.shift.status, "CLOSED")
+        self.assertEqual(self.shift.closing_cash, Decimal("1100.00"))
+
     def test_partial_handover_variance_keeps_shift_open_and_blocks_final_close(self):
         self.submit_partial_handover()
         handover = self.CashHandover.objects.get()
