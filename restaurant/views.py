@@ -779,9 +779,14 @@ def partial_cash_handover(request, shift_id):
             )
             return render(request, "restaurant/partial_cash_handover.html", context)
 
+        recipient_id = request.POST.get("recipient", "").strip()
+        if not recipient_id.isdigit():
+            messages.error(request, "Select a valid Manager or Accountant to receive the cash.")
+            return render(request, "restaurant/partial_cash_handover.html", context)
+
         recipient = get_object_or_404(
             recipients,
-            pk=request.POST.get("recipient", ""),
+            pk=int(recipient_id),
         )
 
         try:
