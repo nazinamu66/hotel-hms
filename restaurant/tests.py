@@ -374,7 +374,10 @@ class PartialCashHandoverTests(TestCase):
         self.shift.refresh_from_db()
 
         self.assertEqual(accept_response.status_code, 302)
-        self.assertEqual(accept_response.url, self.reverse("cash_handover_list"))
+        self.assertEqual(
+            accept_response.url,
+            self.reverse("cash_custody_detail", args=[handover.pk]),
+        )
         self.assertEqual(handover.status, "ACCEPTED")
         self.assertEqual(self.shift.status, "OPEN")
 
