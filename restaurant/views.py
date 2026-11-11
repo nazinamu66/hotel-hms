@@ -1504,6 +1504,7 @@ def shift_detail(request, shift_id):
             "expected_cash": expected_cash,
             "partial_cash_handed_over": partial_cash_handed_over,
             "can_partial_handover": user.role == "RESTAURANT" and shift.status == "OPEN",
+            "current_user_id": user.pk,
         },
     )
 
