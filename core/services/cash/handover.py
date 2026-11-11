@@ -56,7 +56,7 @@ def create_handover(
 
     _validate_same_scope(from_user, to_user, department)
 
-    if custody_type not in {"SHIFT", "CUSTODY"}:
+    if custody_type not in {"SHIFT", "CUSTODY", "PARTIAL"}:
         raise ValidationError("Invalid custody type.")
 
     expected_amount = Decimal(expected_amount)
@@ -91,7 +91,7 @@ def create_handover(
         if shift.status != "OPEN":
             raise ValidationError("Only an open shift can be handed over.")
 
-    if custody_type == "CUSTODY" and shift is not None:
+    if custody_type in {"CUSTODY", "PARTIAL"} and shift is not None:
         if from_user.role != "RESTAURANT":
             raise ValidationError(
                 "A custody handover linked to a shift must be initiated by a cashier."
@@ -110,6 +110,14 @@ def create_handover(
         if shift.status != "OPEN":
             raise ValidationError(
                 "Only an open shift can be handed over."
+            )
+
+    if custody_type == "PARTIAL":
+        if shift is None:
+            raise ValidationError("A partial cash handover must be linked to an open shift.")
+        if to_user.role not in {"MANAGER", "ACCOUNTANT"}:
+            raise ValidationError(
+                "Partial cash can only be handed to a Manager or Accountant."
             )
 
     return CashHandover.objects.create(
@@ -295,6 +303,16 @@ def accept_handover_and_transition(
 
     # A variance is not a completed custody transition.
     if handover.status != "ACCEPTED":
+        return handover, None
+
+    # A partial cash handover transfers only the declared cash amount.
+    # The cashier keeps the same active shift and continues from the
+    # remaining till balance.
+    if handover.custody_type == "PARTIAL":
+        if not handover.shift_id or handover.shift.status != "OPEN":
+            raise ValidationError(
+                "The linked shift must remain open for a partial cash handover."
+            )
         return handover, None
 
     # General custody with no source shift does not affect shifts.
