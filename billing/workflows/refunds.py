@@ -252,6 +252,7 @@ def reverse_charge_accounting(
 def reverse_charge_payments(
     charge,
     director,
+    payout_account,
 ):
     """
     Reverse payments that have been applied to the folio.
@@ -292,10 +293,10 @@ def reverse_charge_payments(
 
         hotel = charge.folio.hotel
 
-        cash = get_account(
-            hotel,
-            "1000",
-        )
+        if payout_account is None or payout_account.hotel_id != hotel.id:
+            raise ValidationError("Choose a valid bank account for this refund.")
+        if payout_account.account_type != "bank" or not payout_account.is_active or not payout_account.allow_posting:
+            raise ValidationError("The selected refund account must be an active, postable bank account.")
 
         receivable = get_account(
             hotel,
@@ -318,7 +319,7 @@ def reverse_charge_payments(
                     "debit": refund_amount,
                 },
                 {
-                    "account": cash,
+                    "account": payout_account,
                     "credit": refund_amount,
                 },
             ],
@@ -327,7 +328,8 @@ def reverse_charge_payments(
         Payment.objects.create(
             folio=charge.folio,
             amount=-refund_amount,
-            method="REFUND",
+            method="TRANSFER",
+            account=payout_account,
             collected_by=director,
             reference=(
                 f"CHARGE-PAYMENT-REFUND-"
@@ -379,6 +381,7 @@ def execute_charge_refund(
     refunded_payment_amount = reverse_charge_payments(
         charge,
         director,
+        refund_request.execution_account,
     )
 
     # Reverse the folio charge itself.
@@ -437,6 +440,8 @@ def execute_refund_request(
         )
 
     elif refund_request.source_type == "CHARGE":
+        if refund_request.execution_method != "TRANSFER" or not refund_request.execution_account_id:
+            raise ValidationError("Select a bank account and record the bank transfer before completing this refund.")
         execute_charge_refund(
             refund_request,
             director,
