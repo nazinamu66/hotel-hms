@@ -82,6 +82,15 @@
           </select>
         </div>
         <div class="audit-field"><label for="order-number">Order number</label><input id="order-number" type="number" min="1" name="order_number" value="{{ order_number }}" placeholder="e.g. 104"></div>
+        <div class="audit-field"><label for="shift">Cashier shift</label>
+          <select id="shift" name="shift">
+            <option value="">All shifts</option>
+            <option value="unassigned" {% if selected_shift == "unassigned" %}selected{% endif %}>No shift recorded</option>
+            {% for shift in shift_options %}
+              <option value="{{ shift.pk }}" {% if selected_shift == shift.pk|stringformat:"s" %}selected{% endif %}>#{{ shift.pk }} · {{ shift.user.get_full_name|default:shift.user.username }} · {{ shift.opened_at|date:"d M Y H:i" }} ({{ shift.get_status_display }})</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
       <div class="audit-actions">
         <button class="audit-btn" type="submit">Apply filters</button>
@@ -95,6 +104,33 @@
     <div class="audit-metric"><div class="audit-metric-label">Food portions sold</div><strong class="audit-metric-value">{{ total_quantity }}</strong></div>
     <div class="audit-metric"><div class="audit-metric-label">Food sales revenue</div><strong class="audit-metric-value">₦{{ total_revenue|floatformat:2 }}</strong></div>
     <div class="audit-metric"><div class="audit-metric-label">Food sale lines</div><strong class="audit-metric-value">{{ sales_rows|length }}</strong></div>
+  </section>
+
+  <section class="audit-panel">
+    <div class="audit-table-heading">
+      <div><h2>Sales by cashier shift</h2><p class="audit-note">Each row groups the currently filtered food sale lines by the shift attached to the POS order.</p></div>
+      <div class="audit-muted" style="font-size:12px">{{ shift_summaries|length }} shift group{{ shift_summaries|length|pluralize }}</div>
+    </div>
+    <div class="audit-table-wrap">
+      <table class="audit-table" style="min-width:760px">
+        <thead><tr><th>Shift</th><th>Cashier</th><th>Opened</th><th>Status</th><th>Food portions</th><th>Revenue</th><th>Sale lines</th></tr></thead>
+        <tbody>
+          {% for summary in shift_summaries %}
+          <tr>
+            <td>{% if summary.shift_id %}<strong class="audit-order">#{{ summary.shift_id }}</strong>{% else %}—{% endif %}</td>
+            <td>{{ summary.cashier }}</td>
+            <td>{% if summary.opened_at %}{{ summary.opened_at|date:"d M Y, H:i" }}{% else %}—{% endif %}</td>
+            <td>{{ summary.status }}</td>
+            <td>{{ summary.quantity }}</td>
+            <td><strong>₦{{ summary.revenue|floatformat:2 }}</strong></td>
+            <td>{{ summary.sale_lines }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="audit-empty">No shift totals are available for these filters.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <section class="audit-panel">
