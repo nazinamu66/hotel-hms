@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement, StockMovementCostAllocation, StockTransfer, Supplier, stock_out
 from accounting.models import Account, StaffReimbursement, JournalEntry, SupplierPayment
-from billing.models import Folio
+from billing.models import Folio, Guest
 from restaurant.models import MenuItem, POSOrder, POSOrderItem
 
 from kitchen.models import (
@@ -3827,3 +3827,179 @@ class KitchenSnackTransferTests(TestCase):
             name=self.product.name, product=self.product, price=Decimal("500.00")
         )
         self.assertEqual(menu_item.category, "FOOD")
+
+class KitchenFoodSalesShiftAuditTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.organization = Organization.objects.create(name="Food Audit Test Org")
+        cls.hotel = Hotel.objects.create(
+            organization=cls.organization,
+            name="Food Audit Test Hotel",
+        )
+        cls.restaurant = Department.objects.create(
+            hotel=cls.hotel,
+            code="FAR",
+            name="Food Audit Restaurant",
+            department_type="RESTAURANT",
+        )
+        cls.cashier = User.objects.create_user(
+            username="food_audit_cashier",
+            password="test-password",
+            role="RESTAURANT",
+            hotel=cls.hotel,
+            department=cls.restaurant,
+        )
+        cls.manager = User.objects.create_user(
+            username="food_audit_manager",
+            password="test-password",
+            role="MANAGER",
+            hotel=cls.hotel,
+        )
+        cls.product = Product.objects.create(
+            hotel=cls.hotel,
+            name="Audit Jollof Rice",
+            sku="FOOD-AUDIT-JOLLOF",
+            product_type="FOOD",
+            base_unit="portion",
+        )
+        cls.menu_item = MenuItem.objects.create(
+            name="Audit Jollof Rice",
+            product=cls.product,
+            price=Decimal("100.00"),
+            category="FOOD",
+        )
+        cls.guest = Guest.objects.create(
+            hotel=cls.hotel,
+            first_name="Audit",
+            last_name="Guest",
+        )
+        cls.folio = Folio.objects.create(
+            hotel=cls.hotel,
+            folio_type="WALKIN",
+            guest=cls.guest,
+        )
+        cls.shift_one = Shift.objects.create(
+            user=cls.cashier,
+            department=cls.restaurant,
+            status="CLOSED",
+            opening_cash=Decimal("0.00"),
+        )
+        cls.shift_two = Shift.objects.create(
+            user=cls.cashier,
+            department=cls.restaurant,
+            status="CLOSED",
+            opening_cash=Decimal("0.00"),
+        )
+
+        cls.order_one = POSOrder.objects.create(
+            department=cls.restaurant,
+            created_by=cls.cashier,
+            folio=cls.folio,
+            shift=cls.shift_one,
+            status="PAID",
+            total_amount=Decimal("200.00"),
+        )
+        POSOrderItem.objects.create(
+            order=cls.order_one,
+            menu_item=cls.menu_item,
+            quantity=2,
+            price=Decimal("100.00"),
+        )
+
+        cls.order_two = POSOrder.objects.create(
+            department=cls.restaurant,
+            created_by=cls.cashier,
+            folio=cls.folio,
+            shift=cls.shift_two,
+            status="CHARGED",
+            total_amount=Decimal("300.00"),
+        )
+        POSOrderItem.objects.create(
+            order=cls.order_two,
+            menu_item=cls.menu_item,
+            quantity=3,
+            price=Decimal("100.00"),
+        )
+
+        cls.unassigned_order = POSOrder.objects.create(
+            department=cls.restaurant,
+            created_by=cls.cashier,
+            folio=cls.folio,
+            shift=None,
+            status="PAID",
+            total_amount=Decimal("100.00"),
+        )
+        POSOrderItem.objects.create(
+            order=cls.unassigned_order,
+            menu_item=cls.menu_item,
+            quantity=1,
+            price=Decimal("100.00"),
+        )
+
+    def setUp(self):
+        self.client.force_login(self.manager)
+
+    def test_audit_groups_sales_by_shift_and_includes_unassigned_orders(self):
+        response = self.client.get(reverse("kitchen_food_sales_report"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total_quantity"], 6)
+        self.assertEqual(response.context["total_revenue"], Decimal("600.00"))
+
+        summaries = {
+            row["shift_id"]: row
+            for row in response.context["shift_summaries"]
+        }
+        self.assertEqual(set(summaries), {self.shift_one.pk, self.shift_two.pk, None})
+        self.assertEqual(summaries[self.shift_one.pk]["quantity"], 2)
+        self.assertEqual(summaries[self.shift_one.pk]["revenue"], Decimal("200.00"))
+        self.assertEqual(summaries[self.shift_one.pk]["sale_lines"], 1)
+        self.assertEqual(summaries[self.shift_two.pk]["quantity"], 3)
+        self.assertEqual(summaries[self.shift_two.pk]["revenue"], Decimal("300.00"))
+        self.assertEqual(summaries[None]["quantity"], 1)
+        self.assertEqual(summaries[None]["revenue"], Decimal("100.00"))
+
+    def test_shift_filter_limits_detail_rows_and_all_summary_totals(self):
+        response = self.client.get(
+            reverse("kitchen_food_sales_report"),
+            {"shift": str(self.shift_one.pk)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["selected_shift"], str(self.shift_one.pk))
+        self.assertEqual(response.context["total_quantity"], 2)
+        self.assertEqual(response.context["total_revenue"], Decimal("200.00"))
+        self.assertEqual(len(response.context["sales_rows"]), 1)
+        self.assertEqual(len(response.context["shift_summaries"]), 1)
+        self.assertEqual(
+            response.context["shift_summaries"][0]["shift_id"],
+            self.shift_one.pk,
+        )
+
+    def test_unassigned_shift_filter_shows_only_orders_without_a_shift(self):
+        response = self.client.get(
+            reverse("kitchen_food_sales_report"),
+            {"shift": "unassigned"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["selected_shift"], "unassigned")
+        self.assertEqual(response.context["total_quantity"], 1)
+        self.assertEqual(response.context["total_revenue"], Decimal("100.00"))
+        self.assertEqual(len(response.context["shift_summaries"]), 1)
+        self.assertIsNone(response.context["shift_summaries"][0]["shift_id"])
+
+    def test_csv_export_contains_shift_summary_and_applies_shift_filter(self):
+        response = self.client.get(
+            reverse("kitchen_food_sales_report"),
+            {"shift": str(self.shift_two.pk), "export": "csv"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode("utf-8-sig")
+        self.assertIn("Sales by shift", content)
+        self.assertIn(str(self.shift_two.pk), content)
+        self.assertIn("3,300.00", content.replace("300.00", "3,300.00") if False else content)
+        self.assertNotIn(str(self.order_one.pk), content)
+        self.assertNotIn(str(self.order_unassigned.pk), content)
+
