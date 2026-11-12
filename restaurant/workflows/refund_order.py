@@ -134,7 +134,7 @@ def reverse_revenue(order, hotel, user, refund_account=None):
     )
 
 
-def reverse_payment(order, user, *, method="CASH", account=None,
+def reverse_payment(order, user, *, method="TRANSFER", account=None,
                     reference="", note=""):
     if order.status != "PAID":
         return
@@ -249,7 +249,7 @@ def record_refunded_food_waste(order, user, kitchen, reason, restaurant=None):
 
 
 @transaction.atomic
-def refund_order(order, user, reason="", *, kitchen_outcome="UNPREPARED_RESTOCK", refund_method="CASH", refund_account=None, refund_reference="", refund_note=""):
+def refund_order(order, user, reason="", *, kitchen_outcome="UNPREPARED_RESTOCK", refund_method="TRANSFER", refund_account=None, refund_reference="", refund_note=""):
 
     validate_refund(order, user)
     if order.status == "PAID" and refund_method != "TRANSFER":
