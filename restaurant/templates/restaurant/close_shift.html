@@ -333,23 +333,9 @@
             </div>
 
             <div class="reconciliation-item">
-                <div class="reconciliation-label">Cash refunds</div>
+                <div class="reconciliation-label">Refund transactions</div>
                 <div class="reconciliation-value">
-                    ₦{{ refund_summary.CASH|floatformat:2 }}
-                </div>
-            </div>
-
-            <div class="reconciliation-item">
-                <div class="reconciliation-label">POS refunds</div>
-                <div class="reconciliation-value">
-                    ₦{{ refund_summary.POS|floatformat:2 }}
-                </div>
-            </div>
-
-            <div class="reconciliation-item">
-                <div class="reconciliation-label">Transfer refunds</div>
-                <div class="reconciliation-value">
-                    ₦{{ refund_summary.TRANSFER|floatformat:2 }}
+                    ₦{{ payment_summary.REFUND|floatformat:2 }}
                 </div>
             </div>
 
@@ -373,11 +359,12 @@
             </strong><br>
             Partial cash already handed over: ₦{{ partial_cash_handed_over|floatformat:2 }}<br>
 
-            This is your opening cash plus net Cash payments (cash received less cash refunds), less partial cash handovers already recorded.
-            Cash refunds reduce the expected physical till balance. POS and bank
-            transfer refunds are shown separately and do not reduce physical cash.
-            Any difference between your count and the expected amount will be
-            recorded as a variance for the recipient to verify.
+            This is your opening cash plus payments explicitly recorded as Cash, less partial cash handovers already recorded.
+            Refund transactions are listed separately below because the system
+            does not yet record which original tender was used to return the money.
+            Reconcile any cash refund against the physical till before entering
+            your count. Any difference will be recorded as a variance and must
+            be explained by the recipient.
         </div>
 
         <form method="post">
