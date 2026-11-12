@@ -4004,5 +4004,5 @@ class KitchenFoodSalesShiftAuditTests(TestCase):
         order_ids = {row[1] for row in rows if len(row) > 2 and row[1].isdigit()}
         self.assertIn(str(self.order_two.pk), order_ids)
         self.assertNotIn(str(self.order_one.pk), order_ids)
-        self.assertNotIn(str(self.order_unassigned.pk), order_ids)
+        self.assertNotIn(str(self.unassigned_order.pk), order_ids)
 
