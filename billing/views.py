@@ -10,8 +10,7 @@ from accounts.services.access import (
 )
 from accounts.services.decorators import role_required
 from billing.models import Charge, Payment, RefundRequest
-from accounting.models import Account, BankAccount
-from accounting.services.journal import get_system_account
+from accounting.models import BankAccount
 from billing.workflows.refunds import (
     approve_refund_request,
     create_refund_request,
@@ -320,88 +319,65 @@ def execute_refund(request, request_id):
 
     order = refund_request.pos_order if refund_request.source_type == "POS_ORDER" else None
     is_paid_pos = bool(order and order.status == "PAID")
-    bank_accounts = []
-    cash_account = None
+    # Every actual cash refund is paid by bank transfer only. An unpaid
+    # Restaurant room charge is a receivable reversal, not a payout.
+    bank_accounts = BankAccount.objects.filter(
+        hotel=hotel, is_active=True, account__is_active=True,
+        account__allow_posting=True,
+    ).select_related("account").order_by("bank_name", "account_name")
     original_payment = None
     if order:
         original_payment = Payment.objects.filter(
             folio=order.folio, reference=f"POS-{order.id}", amount__gt=0,
         ).select_related("account").order_by("collected_at", "id").first()
-    if order and is_paid_pos:
-        bank_accounts = BankAccount.objects.filter(
-            hotel=hotel, is_active=True, account__is_active=True,
-            account__allow_posting=True,
-        ).select_related("account").order_by("bank_name", "account_name")
-        try:
-            cash_account = get_system_account(hotel, "cash")
-        except (ValidationError, ValueError, Account.DoesNotExist):
-            cash_account = None
 
     if request.method == "GET":
         return render(request, "billing/refund_execute.html", {
             "refund": refund_request, "order": order, "is_paid_pos": is_paid_pos,
-            "bank_accounts": bank_accounts, "cash_account": cash_account,
-            "original_payment": original_payment,
+            "bank_accounts": bank_accounts, "original_payment": original_payment,
         })
 
-    if order:
-        method = request.POST.get("execution_method", "").strip()
-        account_id = request.POST.get("execution_account", "").strip()
-        reference = request.POST.get("execution_reference", "").strip()
-        note = request.POST.get("execution_note", "").strip()
-        external_confirmed = request.POST.get("external_refund_confirmed") == "on"
-        try:
-            if is_paid_pos:
-                if method not in {"CASH", "POS", "TRANSFER"}:
-                    raise ValidationError("Choose how the refund will be paid.")
-                if method == "CASH":
-                    if not cash_account:
-                        raise ValidationError("The hotel's Cash account is not configured.")
-                    payout_account = cash_account
-                else:
-                    bank_account = BankAccount.objects.filter(
-                        pk=account_id, hotel=hotel, is_active=True,
-                        account__is_active=True, account__allow_posting=True,
-                    ).select_related("account").first()
-                    if not bank_account:
-                        raise ValidationError("Choose an active bank account belonging to this hotel.")
-                    payout_account = bank_account.account
-                if method == "POS" and not external_confirmed:
-                    raise ValidationError("Confirm that the POS terminal/provider reversal has actually been completed.")
-                if method in {"POS", "TRANSFER"} and not reference:
-                    raise ValidationError("Enter the POS reversal or bank transfer reference.")
-            else:
-                method, payout_account, external_confirmed = "ROOM_REVERSAL", None, False
-
-            refund_request.execution_method = method
-            refund_request.execution_account = payout_account
-            refund_request.execution_reference = reference
-            refund_request.execution_note = note
-            refund_request.external_refund_confirmed = external_confirmed
-            refund_request.save(update_fields=[
-                "execution_method", "execution_account", "execution_reference",
-                "execution_note", "external_refund_confirmed",
-            ])
-            execute_refund_request(refund_request, request.user)
-            if refund_request.status == "KITCHEN_CONFIRMATION":
-                messages.success(request, f"Director authorization recorded for refund #{refund_request.id}; Kitchen confirmation is still required.")
-            else:
-                messages.success(request, f"Refund request #{refund_request.id} completed.")
-        except (ValidationError, ValueError) as exc:
-            messages.error(request, str(exc))
-            return render(request, "billing/refund_execute.html", {
-                "refund": refund_request, "order": order, "is_paid_pos": is_paid_pos,
-                "bank_accounts": bank_accounts, "cash_account": cash_account,
-                "original_payment": original_payment,
-                "form_error": str(exc),
-            })
-        return redirect("refund_list")
-
+    method = ""
+    payout_account = None
+    reference = request.POST.get("execution_reference", "").strip()
+    note = request.POST.get("execution_note", "").strip()
     try:
+        if order and order.status == "CHARGED":
+            method = "ROOM_REVERSAL"
+        else:
+            bank_account_id = request.POST.get("execution_account", "").strip()
+            bank_account = BankAccount.objects.filter(
+                pk=bank_account_id, hotel=hotel, is_active=True,
+                account__is_active=True, account__allow_posting=True,
+            ).select_related("account").first()
+            if not bank_account:
+                raise ValidationError("Choose an active bank account belonging to this hotel.")
+            if not reference:
+                raise ValidationError("Enter the bank transfer reference.")
+            method = "TRANSFER"
+            payout_account = bank_account.account
+
+        refund_request.execution_method = method
+        refund_request.execution_account = payout_account
+        refund_request.execution_reference = reference
+        refund_request.execution_note = note
+        refund_request.external_refund_confirmed = False
+        refund_request.save(update_fields=[
+            "execution_method", "execution_account", "execution_reference",
+            "execution_note", "external_refund_confirmed",
+        ])
         execute_refund_request(refund_request, request.user)
-        messages.success(request, f"Refund request #{refund_request.id} completed.")
+        if refund_request.status == "KITCHEN_CONFIRMATION":
+            messages.success(request, f"Director authorization recorded for refund #{refund_request.id}; Kitchen confirmation is still required.")
+        else:
+            messages.success(request, f"Refund request #{refund_request.id} completed.")
     except (ValidationError, ValueError) as exc:
         messages.error(request, str(exc))
+        return render(request, "billing/refund_execute.html", {
+            "refund": refund_request, "order": order, "is_paid_pos": is_paid_pos,
+            "bank_accounts": bank_accounts, "original_payment": original_payment,
+            "form_error": str(exc),
+        })
     return redirect("refund_list")
 
 
