@@ -365,6 +365,9 @@
             <a href="{% url 'kitchen_batch_profitability_report' %}">📈 Batch Profitability</a>
             <a href="{% url 'kitchen_spoilage_report' %}">🗑️ Spoilage Report</a>
             <a href="{% url 'kitchen_purchasing_report' %}">🧾 Purchasing & Fulfilment</a>
+            {% endif %}
+
+            {% if user.role == "KITCHEN" and user.is_department_head or user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
             <a href="{% url 'kitchen_food_sales_report' %}">🍽️ Food Sales &amp; Shift History</a>
             {% endif %}
 
