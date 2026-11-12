@@ -2077,6 +2077,15 @@ def kitchen_food_sales_report(request):
             filter_parts.append("Food item: " + (selected.name if selected else food_item_id))
         if order_number:
             filter_parts.append("Order: #" + order_number)
+        if shift_id == "unassigned":
+            filter_parts.append("Shift: No shift recorded")
+        elif shift_id.isdigit():
+            selected_shift = shift_options.filter(pk=int(shift_id)).first()
+            if selected_shift:
+                filter_parts.append(
+                    f"Shift: #{selected_shift.pk} - "
+                    f"{selected_shift.user.get_full_name() or selected_shift.user.username}"
+                )
         story.append(Paragraph(
             "Applied filters: " + (" · ".join(filter_parts) if filter_parts else "None"),
             styles["AuditSmall"],
@@ -2100,6 +2109,41 @@ def kitchen_food_sales_report(request):
             ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
         ]))
         story.append(summary)
+        story.append(Spacer(1, 4 * mm))
+        story.append(Paragraph("SALES BY SHIFT", styles["Heading2"]))
+        shift_data = [[
+            Paragraph("<b>Shift</b>", styles["AuditCell"]),
+            Paragraph("<b>Cashier</b>", styles["AuditCell"]),
+            Paragraph("<b>Status</b>", styles["AuditCell"]),
+            Paragraph("<b>Food portions</b>", styles["AuditCell"]),
+            Paragraph("<b>Revenue (NGN)</b>", styles["AuditCell"]),
+            Paragraph("<b>Sale lines</b>", styles["AuditCell"]),
+        ]]
+        for summary_row in shift_summaries:
+            shift_data.append([
+                Paragraph(f"#{summary_row['shift_id']}" if summary_row["shift_id"] else "-", styles["AuditCell"]),
+                Paragraph(str(summary_row["cashier"]), styles["AuditCell"]),
+                Paragraph(str(summary_row["status"]), styles["AuditCell"]),
+                str(summary_row["quantity"]),
+                f"{summary_row['revenue']:,.2f}",
+                str(summary_row["sale_lines"]),
+            ])
+        shift_table = Table(
+            shift_data,
+            colWidths=[20*mm, 45*mm, 25*mm, 25*mm, 35*mm, 20*mm],
+            repeatRows=1,
+            hAlign="LEFT",
+        )
+        shift_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
+            ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#cbd5e1")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.append(shift_table)
         story.append(Spacer(1, 5 * mm))
         headers = ["Date / time", "Order", "Shift", "Food item", "Qty", "Unit price", "Revenue", "Restaurant staff", "Kitchen staff recorded"]
         data = [[Paragraph(f"<b>{h}</b>", styles["AuditCell"]) for h in headers]]
@@ -2146,6 +2190,20 @@ def kitchen_food_sales_report(request):
         response["Content-Disposition"] = 'attachment; filename="restaurant-food-sales-audit.csv"'
         response.write("\\ufeff")
         writer = csv.writer(response)
+        writer.writerow(["Applied shift filter", shift_id or "All shifts"])
+        writer.writerow([])
+        writer.writerow(["Sales by shift"])
+        writer.writerow(["Shift ID", "Cashier", "Status", "Food portions", "Revenue", "Sale lines"])
+        for summary_row in shift_summaries:
+            writer.writerow([
+                summary_row["shift_id"] or "",
+                summary_row["cashier"],
+                summary_row["status"],
+                summary_row["quantity"],
+                summary_row["revenue"],
+                summary_row["sale_lines"],
+            ])
+        writer.writerow([])
         writer.writerow([
             "Date/time", "Order number", "Order status", "Shift ID",
             "Food item", "Quantity", "Unit price", "Revenue",
@@ -2183,6 +2241,9 @@ def kitchen_food_sales_report(request):
         "selected_kitchen_staff": kitchen_staff_id,
         "selected_food_item": food_item_id,
         "order_number": order_number,
+        "shift_options": shift_options,
+        "selected_shift": shift_id,
+        "shift_summaries": shift_summaries,
         "total_quantity": total_quantity,
         "total_revenue": total_revenue,
     })
