@@ -259,7 +259,7 @@ class PreparedFoodRefundIntegrationTests(TestCase):
 from django.test import SimpleTestCase
 
 
-class RefundBankTransferPolicyTests(SimpleTestCase):
+class RefundBankTransferPolicyTests(TestCase):
     def _request(self, method="TRANSFER", account=None):
         hotel = SimpleNamespace(id=71)
         bank_account = account or SimpleNamespace(
