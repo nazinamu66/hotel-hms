@@ -1847,7 +1847,7 @@ def kitchen_food_sales_report(request):
     import csv
     from django.http import HttpResponse
     from django.contrib.auth import get_user_model
-    from restaurant.models import POSOrderItem, MenuItem
+    from restaurant.models import POSOrderItem, MenuItem, Shift
 
     user = request.user
     if user.role not in {"MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT"}:
@@ -1882,6 +1882,7 @@ def kitchen_food_sales_report(request):
     kitchen_staff_id = request.GET.get("kitchen_staff", "").strip()
     food_item_id = request.GET.get("food_item", "").strip()
     order_number = request.GET.get("order_number", "").strip()
+    shift_id = request.GET.get("shift", "").strip()
 
     if date_from:
         try:
@@ -1928,6 +1929,25 @@ def kitchen_food_sales_report(request):
         else:
             rows = rows.none()
 
+    # Build shift options from the current hotel/date/staff/item/order scope,
+    # before applying the selected shift.
+    available_shift_ids = rows.order_by().values_list("order__shift_id", flat=True).distinct()
+    shift_options = (
+        Shift.objects.filter(pk__in=available_shift_ids)
+        .select_related("user", "department", "department__hotel")
+        .order_by("-opened_at", "-pk")
+    )
+    if shift_id == "unassigned":
+        rows = rows.filter(order__shift__isnull=True)
+    elif shift_id.isdigit():
+        selected_shift_id = int(shift_id)
+        if shift_options.filter(pk=selected_shift_id).exists():
+            rows = rows.filter(order__shift_id=selected_shift_id)
+        else:
+            shift_id = ""
+    else:
+        shift_id = ""
+
     sales_rows = []
     total_quantity = 0
     total_revenue = Decimal("0.00")
@@ -1946,6 +1966,30 @@ def kitchen_food_sales_report(request):
             "restaurant_staff": row.order.created_by,
             "kitchen_staff": kitchen_person,
         })
+
+    shift_summary_map = {}
+    for row in sales_rows:
+        shift = row["order"].shift
+        key = shift.pk if shift else None
+        if key not in shift_summary_map:
+            shift_summary_map[key] = {
+                "shift": shift,
+                "shift_id": key,
+                "cashier": (shift.user.get_full_name() or shift.user.username) if shift else "No shift recorded",
+                "status": shift.get_status_display() if shift else "Unassigned",
+                "opened_at": shift.opened_at if shift else None,
+                "quantity": 0,
+                "revenue": Decimal("0.00"),
+                "sale_lines": 0,
+            }
+        shift_summary_map[key]["quantity"] += row["quantity"]
+        shift_summary_map[key]["revenue"] += row["revenue"]
+        shift_summary_map[key]["sale_lines"] += 1
+    shift_summaries = sorted(
+        shift_summary_map.values(),
+        key=lambda item: item["opened_at"].timestamp() if item["opened_at"] else 0,
+        reverse=True,
+    )
 
     if request.GET.get("export") == "pdf":
         from io import BytesIO
