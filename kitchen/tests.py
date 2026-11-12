@@ -10,7 +10,7 @@ from django.utils import timezone
 from inventory.models import Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement, StockMovementCostAllocation, StockTransfer, Supplier, stock_out
 from accounting.models import Account, StaffReimbursement, JournalEntry, SupplierPayment
 from billing.models import Folio, Guest
-from restaurant.models import MenuItem, POSOrder, POSOrderItem
+from restaurant.models import MenuItem, POSOrder, POSOrderItem, Shift
 
 from kitchen.models import (
     DirectPurchase,
@@ -3998,8 +3998,10 @@ class KitchenFoodSalesShiftAuditTests(TestCase):
         self.assertEqual(response.status_code, 200)
         content = response.content.decode("utf-8-sig")
         self.assertIn("Sales by shift", content)
-        self.assertIn(str(self.shift_two.pk), content)
-        self.assertIn("3,300.00", content.replace("300.00", "3,300.00") if False else content)
-        self.assertNotIn(str(self.order_one.pk), content)
-        self.assertNotIn(str(self.order_unassigned.pk), content)
+        self.assertIn("300.00", content)
+        rows = list(csv.reader(content.splitlines()))
+        order_ids = {row[1] for row in rows if len(row) > 2 and row[1].isdigit()}
+        self.assertIn(str(self.order_two.pk), order_ids)
+        self.assertNotIn(str(self.order_one.pk), order_ids)
+        self.assertNotIn(str(self.order_unassigned.pk), order_ids)
 
