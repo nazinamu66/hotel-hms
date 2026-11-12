@@ -3856,6 +3856,20 @@ class KitchenFoodSalesShiftAuditTests(TestCase):
             role="MANAGER",
             hotel=cls.hotel,
         )
+        cls.kitchen_head = User.objects.create_user(
+            username="food_audit_kitchen_head",
+            password="test-password",
+            role="KITCHEN",
+            hotel=cls.hotel,
+            is_department_head=True,
+        )
+        cls.kitchen_staff = User.objects.create_user(
+            username="food_audit_kitchen_staff",
+            password="test-password",
+            role="KITCHEN",
+            hotel=cls.hotel,
+            is_department_head=False,
+        )
         cls.product = Product.objects.create(
             hotel=cls.hotel,
             name="Audit Jollof Rice",
@@ -3989,6 +4003,23 @@ class KitchenFoodSalesShiftAuditTests(TestCase):
         self.assertEqual(response.context["total_revenue"], Decimal("100.00"))
         self.assertEqual(len(response.context["shift_summaries"]), 1)
         self.assertIsNone(response.context["shift_summaries"][0]["shift_id"])
+
+    def test_kitchen_department_head_can_access_food_sales_and_dashboard_link(self):
+        self.client.force_login(self.kitchen_head)
+        report = self.client.get(reverse("kitchen_food_sales_report"))
+        self.assertEqual(report.status_code, 200)
+        self.assertEqual(report.context["total_quantity"], 6)
+        dashboard = self.client.get(reverse("kitchen_dashboard"))
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertContains(dashboard, "Food Sales &amp; Shift History", html=False)
+
+    def test_regular_kitchen_staff_cannot_access_food_sales_or_dashboard_link(self):
+        self.client.force_login(self.kitchen_staff)
+        report = self.client.get(reverse("kitchen_food_sales_report"))
+        self.assertEqual(report.status_code, 403)
+        dashboard = self.client.get(reverse("kitchen_dashboard"))
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertNotContains(dashboard, "Audit food sales, cashier shifts and revenue")
 
     def test_csv_export_contains_shift_summary_and_applies_shift_filter(self):
         response = self.client.get(
