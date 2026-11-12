@@ -1843,15 +1843,15 @@ def kitchen_spoilage_report(request):
 
 
 def kitchen_food_sales_report(request):
-    """Head-chef-only food sales audit for this Kitchen's own hotel."""
+    """Food sales audit for management and Kitchen department heads."""
     import csv
     from django.http import HttpResponse
     from django.contrib.auth import get_user_model
     from restaurant.models import POSOrderItem, MenuItem, Shift
 
     user = request.user
-    if user.role not in {"MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT"}:
-        raise PermissionDenied("Kitchen sales audit is restricted to management and accounting roles.")
+    if user.role not in {"MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT"} and not (user.role == "KITCHEN" and user.is_department_head):
+        raise PermissionDenied("Kitchen sales audit is restricted to management, accounting and Kitchen department heads.")
 
     UserModel = get_user_model()
     hotels = get_accessible_hotels(user)
