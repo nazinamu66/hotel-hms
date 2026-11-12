@@ -111,8 +111,15 @@ def reverse_revenue(order, hotel, user, refund_account=None):
     else:
         if refund_account is None:
             raise ValidationError(
-                "Select the account the refund will be paid from."
+                "Select the bank account the refund will be paid from."
             )
+        if (
+            refund_account.hotel_id != hotel.id
+            or refund_account.account_type != "bank"
+            or not refund_account.is_active
+            or not refund_account.allow_posting
+        ):
+            raise ValidationError("The refund must be paid from an active, postable bank account belonging to this hotel.")
         credit_account = refund_account
 
     record_transaction(
@@ -245,6 +252,8 @@ def record_refunded_food_waste(order, user, kitchen, reason, restaurant=None):
 def refund_order(order, user, reason="", *, kitchen_outcome="UNPREPARED_RESTOCK", refund_method="CASH", refund_account=None, refund_reference="", refund_note=""):
 
     validate_refund(order, user)
+    if order.status == "PAID" and refund_method != "TRANSFER":
+        raise ValidationError("Restaurant refunds must be paid by bank transfer.")
     if kitchen_outcome not in {"UNPREPARED_RESTOCK", "PREPARED_WASTE"}:
         raise ValidationError("A valid Kitchen outcome is required.")
 
