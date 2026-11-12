@@ -2120,9 +2120,15 @@ def kitchen_food_sales_report(request):
             Paragraph("<b>Sale lines</b>", styles["AuditCell"]),
         ]]
         for summary_row in shift_summaries:
+            cashier_label = (
+                str(summary_row["cashier"])
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+            )
             shift_data.append([
                 Paragraph(f"#{summary_row['shift_id']}" if summary_row["shift_id"] else "-", styles["AuditCell"]),
-                Paragraph(str(summary_row["cashier"]), styles["AuditCell"]),
+                Paragraph(cashier_label, styles["AuditCell"]),
                 Paragraph(str(summary_row["status"]), styles["AuditCell"]),
                 str(summary_row["quantity"]),
                 f"{summary_row['revenue']:,.2f}",
