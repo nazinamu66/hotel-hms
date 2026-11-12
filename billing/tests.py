@@ -253,3 +253,57 @@ class PreparedFoodRefundIntegrationTests(TestCase):
             ).count(),
             1,
         )
+
+
+
+from django.test import SimpleTestCase
+
+
+class RefundBankTransferPolicyTests(SimpleTestCase):
+    def _request(self, method="TRANSFER", account=None):
+        hotel = SimpleNamespace(id=71)
+        bank_account = account or SimpleNamespace(
+            hotel_id=hotel.id,
+            account_type="bank",
+            is_active=True,
+            allow_posting=True,
+        )
+        order = SimpleNamespace(
+            status="PAID",
+            department=SimpleNamespace(hotel=hotel),
+            items=FakeItems([]),
+        )
+        refund = SimpleNamespace(
+            status="APPROVED",
+            source_type="POS_ORDER",
+            pos_order=order,
+            execution_method=method,
+            execution_account=bank_account,
+            execution_reference="BANK-REF-001",
+            execution_note="Refund paid by bank transfer",
+            reason="Guest refund",
+            save=lambda **kwargs: None,
+            executed_by=None,
+            executed_at=None,
+        )
+        return refund, SimpleNamespace(is_active=True)
+
+    @patch("billing.workflows.refunds.validate_execution")
+    @patch("restaurant.workflows.refund_order.refund_order")
+    def test_paid_pos_refund_rejects_cash_or_pos_execution(self, refund_order, validate):
+        for method in ("CASH", "POS"):
+            refund, director = self._request(method=method)
+            with self.subTest(method=method):
+                with self.assertRaisesMessage(Exception, "bank transfer method"):
+                    execute_refund_request(refund, director)
+        refund_order.assert_not_called()
+
+    @patch("billing.workflows.refunds.validate_execution")
+    @patch("restaurant.workflows.refund_order.refund_order")
+    def test_paid_pos_refund_uses_selected_bank_account(self, refund_order, validate):
+        refund, director = self._request()
+        execute_refund_request(refund, director)
+        refund_order.assert_called_once()
+        self.assertEqual(refund_order.call_args.kwargs["refund_method"], "TRANSFER")
+        self.assertIs(refund_order.call_args.kwargs["refund_account"], refund.execution_account)
+        self.assertEqual(refund.status, "COMPLETED")
