@@ -259,13 +259,13 @@ def reverse_charge_payments(
 
     Normal payment accounting is:
 
-        Dr Cash
+        Dr Original payment account
         Cr Accounts Receivable
 
     Refund accounting is:
 
         Dr Accounts Receivable
-        Cr Cash
+        Cr Selected refund bank account
     """
 
     from billing.models import Payment
@@ -422,7 +422,9 @@ def execute_refund_request(
 
     if refund_request.source_type == "POS_ORDER":
         order = refund_request.pos_order
-        if order.status == "PAID":
+        # Some legacy/in-memory workflow callers do not expose status;
+        # persisted POS orders always do. Apply payout validation to paid orders.
+        if getattr(order, "status", None) == "PAID":
             payout_account = refund_request.execution_account
             hotel = order.department.hotel
             if refund_request.execution_method != "TRANSFER" or not refund_request.execution_reference:
@@ -462,8 +464,14 @@ def execute_refund_request(
         )
 
     elif refund_request.source_type == "CHARGE":
-        if refund_request.execution_method != "TRANSFER" or not refund_request.execution_account_id:
-            raise ValidationError("Select a bank account and record the bank transfer before completing this refund.")
+        if (
+            refund_request.execution_method != "TRANSFER"
+            or not refund_request.execution_account_id
+            or not (refund_request.execution_reference or "").strip()
+        ):
+            raise ValidationError(
+                "Select a bank account and record the bank transfer reference before completing this refund."
+            )
         execute_charge_refund(
             refund_request,
             director,
