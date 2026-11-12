@@ -313,6 +313,15 @@
                 📊 Production History
             </a>
 
+            {% if user.role == "KITCHEN" and user.is_department_head %}
+                <a href="{% url 'kitchen_storage_register' %}">
+                    ▤ Storage Register
+                </a>
+                <a href="{% url 'kitchen_restricted_stock' %}">
+                    🔒 Restricted Stock
+                </a>
+            {% endif %}
+
             {% if user.is_department_head or user|has_role:"MANAGER,ADMIN,DIRECTOR" %}
                 <h4 class="menu-toggle"
                     onclick="toggleMenu('kitchen_requests_menu', this)">
