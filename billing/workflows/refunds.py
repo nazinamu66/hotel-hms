@@ -368,6 +368,15 @@ def execute_charge_refund(
         raise ValidationError(
             "Only positive charges can be refunded."
         )
+    payout_account = refund_request.execution_account
+    if (
+        not payout_account
+        or payout_account.hotel_id != charge.folio.hotel_id
+        or payout_account.account_type != "bank"
+        or not payout_account.is_active
+        or not payout_account.allow_posting
+    ):
+        raise ValidationError("Choose an active, postable bank account belonging to this hotel.")
 
     # Reverse accounting for charge types that have
     # an existing revenue posting.
@@ -413,6 +422,19 @@ def execute_refund_request(
 
     if refund_request.source_type == "POS_ORDER":
         order = refund_request.pos_order
+        if order.status == "PAID":
+            payout_account = refund_request.execution_account
+            hotel = order.department.hotel
+            if refund_request.execution_method != "TRANSFER" or not refund_request.execution_reference:
+                raise ValidationError("A bank transfer method and transfer reference are required for paid Restaurant refunds.")
+            if (
+                not payout_account
+                or payout_account.hotel_id != hotel.id
+                or payout_account.account_type != "bank"
+                or not payout_account.is_active
+                or not payout_account.allow_posting
+            ):
+                raise ValidationError("Choose an active, postable bank account belonging to this hotel.")
         has_food = any(
             item.menu_item.product.product_type == "FOOD"
             for item in order.items.select_related("menu_item__product")
@@ -433,7 +455,7 @@ def execute_refund_request(
             user=director,
             reason=refund_request.reason,
             kitchen_outcome="UNPREPARED_RESTOCK",
-            refund_method=refund_request.execution_method or "CASH",
+            refund_method=refund_request.execution_method or "TRANSFER",
             refund_account=refund_request.execution_account,
             refund_reference=refund_request.execution_reference,
             refund_note=refund_request.execution_note,
@@ -499,7 +521,7 @@ def confirm_kitchen_refund(refund_request, kitchen_user, outcome, note=""):
         user=locked.director_authorized_by or kitchen_user,
         reason=locked.reason,
         kitchen_outcome=outcome,
-        refund_method=locked.execution_method or "CASH",
+        refund_method=locked.execution_method or "TRANSFER",
         refund_account=locked.execution_account,
         refund_reference=locked.execution_reference,
         refund_note=locked.execution_note,
