@@ -681,6 +681,29 @@ def pos_order_detail(request, order_id):
     )
 
 
+def _shift_payment_summary(payments):
+    """Return net tender totals and positive refund totals for a shift."""
+    summary = {
+        "CASH": Decimal("0.00"),
+        "POS": Decimal("0.00"),
+        "TRANSFER": Decimal("0.00"),
+    }
+    refunds = {
+        "CASH": Decimal("0.00"),
+        "POS": Decimal("0.00"),
+        "TRANSFER": Decimal("0.00"),
+    }
+
+    for payment in payments:
+        if payment.method not in summary:
+            continue
+        summary[payment.method] += payment.amount
+        if payment.amount < 0:
+            refunds[payment.method] += abs(payment.amount)
+
+    return summary, refunds
+
+
 def _partial_cash_handed_over_total(shift):
     """Cash already removed from this shift's till through partial handovers."""
     total = CashHandover.objects.filter(
@@ -904,16 +927,7 @@ def close_shift(request):
         .order_by("-collected_at")
     )
 
-    payment_summary = {
-        "CASH": Decimal("0.00"),
-        "POS": Decimal("0.00"),
-        "TRANSFER": Decimal("0.00"),
-        "REFUND": Decimal("0.00"),
-    }
-
-    for payment in payments:
-        if payment.method in payment_summary:
-            payment_summary[payment.method] += payment.amount
+    payment_summary, refund_summary = _shift_payment_summary(payments)
 
     partial_cash_handed_over = _partial_cash_handed_over_total(shift)
     expected_cash = max(
@@ -970,6 +984,7 @@ def close_shift(request):
                     "room_charge_sales": room_charge_sales,
                     "unsettled_orders": unsettled_orders,
                     "payment_summary": payment_summary,
+                    "refund_summary": refund_summary,
                     "expected_cash": expected_cash,
                     "partial_cash_handed_over": partial_cash_handed_over,
                     "unresolved_partial_variance": unresolved_partial_variance,
@@ -1014,6 +1029,7 @@ def close_shift(request):
                     "room_charge_sales": room_charge_sales,
                     "unsettled_orders": unsettled_orders,
                     "payment_summary": payment_summary,
+                    "refund_summary": refund_summary,
                     "expected_cash": expected_cash,
                     "partial_cash_handed_over": partial_cash_handed_over,
                     "unresolved_partial_variance": unresolved_partial_variance,
@@ -1034,6 +1050,7 @@ def close_shift(request):
                     "order_count": order_count,
                     "total_sales": total_sales,
                     "payment_summary": payment_summary,
+                    "refund_summary": refund_summary,
                     "expected_cash": expected_cash,
                     "partial_cash_handed_over": partial_cash_handed_over,
                     "unresolved_partial_variance": unresolved_partial_variance,
@@ -1056,6 +1073,7 @@ def close_shift(request):
                     "order_count": order_count,
                     "total_sales": total_sales,
                     "payment_summary": payment_summary,
+                    "refund_summary": refund_summary,
                     "expected_cash": expected_cash,
                     "partial_cash_handed_over": partial_cash_handed_over,
                     "unresolved_partial_variance": unresolved_partial_variance,
@@ -1076,6 +1094,7 @@ def close_shift(request):
                     "order_count": order_count,
                     "total_sales": total_sales,
                     "payment_summary": payment_summary,
+                    "refund_summary": refund_summary,
                     "expected_cash": expected_cash,
                     "partial_cash_handed_over": partial_cash_handed_over,
                     "unresolved_partial_variance": unresolved_partial_variance,
@@ -1114,6 +1133,7 @@ def close_shift(request):
                     "order_count": order_count,
                     "total_sales": total_sales,
                     "payment_summary": payment_summary,
+                    "refund_summary": refund_summary,
                     "expected_cash": expected_cash,
                     "partial_cash_handed_over": partial_cash_handed_over,
                     "unresolved_partial_variance": unresolved_partial_variance,
@@ -1144,6 +1164,7 @@ def close_shift(request):
             "room_charge_sales": room_charge_sales,
             "unsettled_orders": unsettled_orders,
             "payment_summary": payment_summary,
+            "refund_summary": refund_summary,
             "expected_cash": expected_cash,
             "partial_cash_handed_over": partial_cash_handed_over,
             "unresolved_partial_variance": unresolved_partial_variance,
@@ -1484,15 +1505,7 @@ def shift_detail(request, shift_id):
         or Decimal("0.00")
     )
 
-    payment_summary = {
-        "CASH": Decimal("0.00"),
-        "POS": Decimal("0.00"),
-        "TRANSFER": Decimal("0.00"),
-    }
-
-    for payment in payments:
-        if payment.method in payment_summary:
-            payment_summary[payment.method] += payment.amount
+    payment_summary, refund_summary = _shift_payment_summary(payments)
 
     partial_cash_handed_over = _partial_cash_handed_over_total(shift)
     expected_cash = max(
