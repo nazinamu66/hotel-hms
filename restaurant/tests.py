@@ -723,3 +723,45 @@ class RestaurantSpoilageApprovalTests(TestCase):
         self.assertEqual(record.status, "REJECTED")
         self.stock.refresh_from_db()
         self.assertEqual(self.stock.quantity, Decimal("12"))
+
+
+
+class ShiftPaymentSummaryTests(SimpleTestCase):
+    def test_refunds_reduce_only_their_actual_tender_summary(self):
+        from restaurant.views import _shift_payment_summary
+
+        payments = [
+            SimpleNamespace(method="CASH", amount=Decimal("1000.00")),
+            SimpleNamespace(method="CASH", amount=Decimal("-150.00")),
+            SimpleNamespace(method="POS", amount=Decimal("800.00")),
+            SimpleNamespace(method="POS", amount=Decimal("-200.00")),
+            SimpleNamespace(method="TRANSFER", amount=Decimal("500.00")),
+            SimpleNamespace(method="TRANSFER", amount=Decimal("-75.00")),
+        ]
+
+        summary, refunds = _shift_payment_summary(payments)
+
+        self.assertEqual(summary["CASH"], Decimal("850.00"))
+        self.assertEqual(summary["POS"], Decimal("600.00"))
+        self.assertEqual(summary["TRANSFER"], Decimal("425.00"))
+        self.assertEqual(refunds["CASH"], Decimal("150.00"))
+        self.assertEqual(refunds["POS"], Decimal("200.00"))
+        self.assertEqual(refunds["TRANSFER"], Decimal("75.00"))
+
+    def test_non_tender_payment_methods_are_ignored(self):
+        from restaurant.views import _shift_payment_summary
+
+        summary, refunds = _shift_payment_summary([
+            SimpleNamespace(method="DEPOSIT", amount=Decimal("300.00")),
+        ])
+
+        self.assertEqual(summary, {
+            "CASH": Decimal("0.00"),
+            "POS": Decimal("0.00"),
+            "TRANSFER": Decimal("0.00"),
+        })
+        self.assertEqual(refunds, {
+            "CASH": Decimal("0.00"),
+            "POS": Decimal("0.00"),
+            "TRANSFER": Decimal("0.00"),
+        })
