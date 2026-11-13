@@ -191,6 +191,7 @@ class PreparedFoodRefundIntegrationTests(TestCase):
         self.assertEqual(payout.reference, "TEST-BANK-REF")
         self.assertEqual(payout.executed_by, self.director)
         self.assertEqual(completed.status, "COMPLETED")
+        self.order.refresh_from_db()
         self.assertEqual(self.order.status, "CANCELLED")
 
     def test_prepared_waste_confirmation_posts_spoilage_and_does_not_restore_food_stock(self):
