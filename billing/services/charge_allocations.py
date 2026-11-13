@@ -47,9 +47,6 @@ def allocate_payment_fifo(payment):
     payment = Payment.objects.select_for_update().select_related("folio").get(pk=payment.pk)
     if payment.amount <= 0:
         raise ValidationError("Only positive payments can be allocated.")
-    if payment.method == "POS" and payment.reference.startswith("POS-"):
-        raise ValidationError("POS receipts must be allocated to their matching order charge.")
-
     folio = Folio.objects.select_for_update().get(pk=payment.folio_id)
     remaining = payment_unallocated(payment)
     if remaining <= 0:
