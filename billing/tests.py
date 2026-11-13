@@ -279,6 +279,7 @@ class RefundBankTransferPolicyTests(TestCase):
             source_type="POS_ORDER",
             pos_order=order,
             execution_method=method,
+            execution_amount=Decimal("100.00"),
             execution_account=bank_account,
             execution_reference="BANK-REF-001",
             execution_note="Refund paid by bank transfer",
