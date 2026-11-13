@@ -734,6 +734,7 @@ class RefundRequest(models.Model):
     )
     execution_reference = models.CharField(max_length=100, blank=True)
     execution_note = models.TextField(blank=True)
+    execution_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     external_refund_confirmed = models.BooleanField(default=False)
 
     def __str__(self):
@@ -745,3 +746,17 @@ class RefundRequest(models.Model):
             source = "Unknown Source"
 
         return f"Refund Request #{self.id} - {source} ({self.status})"
+
+class RefundExecution(models.Model):
+    """Auditable record of an actual Restaurant POS bank payout."""
+    refund_request = models.OneToOneField(RefundRequest, on_delete=models.PROTECT, related_name="payout")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    forfeited_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    account = models.ForeignKey("accounting.Account", on_delete=models.PROTECT, related_name="restaurant_refund_payouts")
+    reference = models.CharField(max_length=100)
+    note = models.TextField(blank=True)
+    executed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="restaurant_refund_payouts")
+    executed_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"POS refund payout #{self.pk} — ₦{self.amount:,.2f}"

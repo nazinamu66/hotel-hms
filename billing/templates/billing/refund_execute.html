@@ -26,6 +26,15 @@
 
     <form method="post">
         {% csrf_token %}
+        {% if is_paid_pos %}
+            <div class="form-group" style="margin-bottom:16px;">
+                <label for="execution_amount"><strong>Amount to refund (₦)</strong></label>
+                <input id="execution_amount" name="execution_amount" type="number" class="form-control"
+                       min="0.01" max="{{ max_refund_amount }}" step="0.01"
+                       value="{{ refund.execution_amount|default:'' }}" required>
+                <small>Maximum refundable: ₦{{ max_refund_amount|floatformat:2 }}. Any remaining balance is retained by the hotel as revenue.</small>
+            </div>
+        {% endif %}
         {% if not order or is_paid_pos %}
             <div class="form-group" style="margin-bottom:16px;">
                 <label for="execution_account"><strong>Refund bank account</strong></label>
@@ -47,7 +56,7 @@
                        value="{{ refund.execution_reference }}" placeholder="Bank transfer transaction reference" required>
             </div>
             <div class="alert alert-info">
-                Refunds are paid by bank transfer only. Select the hotel bank account used for the payout and enter the completed transfer reference.
+                Only the amount entered above will be paid by bank transfer and reversed from revenue. The unpaid balance is forfeited and remains hotel revenue.
             </div>
         {% elif order %}
             <div class="alert alert-info">

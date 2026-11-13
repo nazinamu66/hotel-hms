@@ -7,7 +7,7 @@ from accounting.services.journal import (
     record_transaction
 )
 
-from billing.models import RefundRequest
+from billing.models import RefundRequest, RefundExecution
 
 
 def validate_refund_request_source(refund_request):
@@ -410,90 +410,85 @@ def execute_charge_refund(
     }
 
 
-@transaction.atomic
-def execute_refund_request(
-    refund_request,
-    director,
-):
-    validate_execution(
-        refund_request,
-        director,
+def _create_pos_refund_payout(refund_request, director):
+    from decimal import Decimal
+    from billing.models import Payment
+    order = refund_request.pos_order
+    amount = refund_request.execution_amount
+    if order.status != "PAID":
+        return
+    if amount <= 0 or amount > order.total_amount:
+        raise ValidationError("The approved refund amount is invalid.")
+    if RefundExecution.objects.filter(refund_request=refund_request).exists():
+        raise ValidationError("A payout record already exists for this refund.")
+    original_collected = sum(
+        Payment.objects.select_for_update().filter(
+            folio=order.folio, reference=f"POS-{order.id}", amount__gt=0
+        ).values_list("amount", flat=True),
+        Decimal("0.00"),
+    )
+    if amount > original_collected:
+        raise ValidationError("The refund cannot exceed the amount actually collected for this POS order.")
+    RefundExecution.objects.create(
+        refund_request=refund_request,
+        amount=amount,
+        forfeited_amount=max(order.total_amount - amount, Decimal("0.00")),
+        account=refund_request.execution_account,
+        reference=refund_request.execution_reference,
+        note=refund_request.execution_note,
+        executed_by=director,
     )
 
-    if refund_request.source_type == "POS_ORDER":
-        order = refund_request.pos_order
-        # Some legacy/in-memory workflow callers do not expose status;
-        # persisted POS orders always do. Apply payout validation to paid orders.
-        if getattr(order, "status", None) == "PAID":
-            payout_account = refund_request.execution_account
-            hotel = order.department.hotel
-            if refund_request.execution_method != "TRANSFER" or not refund_request.execution_reference:
-                raise ValidationError("A bank transfer method and transfer reference are required for paid Restaurant refunds.")
-            if (
-                not payout_account
-                or payout_account.hotel_id != hotel.id
-                or payout_account.account_type != "bank"
-                or not payout_account.is_active
-                or not payout_account.allow_posting
-            ):
-                raise ValidationError("Choose an active, postable bank account belonging to this hotel.")
-        has_food = any(
-            item.menu_item.product.product_type == "FOOD"
-            for item in order.items.select_related("menu_item__product")
-        )
-        has_ticket = hasattr(order, "kitchen_ticket")
-        if has_food and has_ticket:
-            refund_request.status = "KITCHEN_CONFIRMATION"
-            refund_request.director_authorized_by = director
-            refund_request.director_authorized_at = timezone.now()
-            refund_request.save(update_fields=[
-                "status", "director_authorized_by", "director_authorized_at",
-            ])
-            return refund_request
 
-        from restaurant.workflows.refund_order import refund_order
-        refund_order(
-            order=order,
-            user=director,
-            reason=refund_request.reason,
-            kitchen_outcome="UNPREPARED_RESTOCK",
-            refund_method=refund_request.execution_method or "TRANSFER",
-            refund_account=refund_request.execution_account,
-            refund_reference=refund_request.execution_reference,
-            refund_note=refund_request.execution_note,
-        )
-
-    elif refund_request.source_type == "CHARGE":
-        if (
-            refund_request.execution_method != "TRANSFER"
-            or not refund_request.execution_account_id
-            or not (refund_request.execution_reference or "").strip()
-        ):
-            raise ValidationError(
-                "Select a bank account and record the bank transfer reference before completing this refund."
-            )
-        execute_charge_refund(
-            refund_request,
-            director,
-        )
-
-    else:
+@transaction.atomic
+def execute_refund_request(refund_request, director):
+    validate_execution(refund_request, director)
+    if refund_request.source_type == "CHARGE":
         raise ValidationError(
-            "Unsupported refund source."
+            "Charge refunds are temporarily unavailable until payments can be traced to their originating charge."
         )
+    if refund_request.source_type != "POS_ORDER":
+        raise ValidationError("Unsupported refund source.")
 
+    order = refund_request.pos_order
+    paid = getattr(order, "status", None) == "PAID"
+    if paid:
+        payout_account = refund_request.execution_account
+        hotel = order.department.hotel
+        if refund_request.execution_method != "TRANSFER" or not refund_request.execution_reference:
+            raise ValidationError("A bank transfer method and transfer reference are required for paid Restaurant refunds.")
+        if not payout_account or payout_account.hotel_id != hotel.id or payout_account.account_type != "bank" or not payout_account.is_active or not payout_account.allow_posting:
+            raise ValidationError("Choose an active, postable bank account belonging to this hotel.")
+        if refund_request.execution_amount <= 0 or refund_request.execution_amount > order.total_amount:
+            raise ValidationError("Enter a valid refund amount not exceeding the original POS charge.")
+
+    has_food = any(
+        item.menu_item.product.product_type == "FOOD"
+        for item in order.items.select_related("menu_item__product")
+    )
+    if has_food and hasattr(order, "kitchen_ticket"):
+        refund_request.status = "KITCHEN_CONFIRMATION"
+        refund_request.director_authorized_by = director
+        refund_request.director_authorized_at = timezone.now()
+        refund_request.save(update_fields=["status", "director_authorized_by", "director_authorized_at"])
+        return refund_request
+
+    from restaurant.workflows.refund_order import refund_order
+    refund_order(
+        order=order, user=director, reason=refund_request.reason,
+        kitchen_outcome="UNPREPARED_RESTOCK",
+        refund_amount=refund_request.execution_amount if paid else None,
+        refund_method=refund_request.execution_method or "TRANSFER",
+        refund_account=refund_request.execution_account,
+        refund_reference=refund_request.execution_reference,
+        refund_note=refund_request.execution_note,
+    )
+    if paid:
+        _create_pos_refund_payout(refund_request, director)
     refund_request.status = "COMPLETED"
     refund_request.executed_by = director
     refund_request.executed_at = timezone.now()
-
-    refund_request.save(
-        update_fields=[
-            "status",
-            "executed_by",
-            "executed_at",
-        ]
-    )
-
+    refund_request.save(update_fields=["status", "executed_by", "executed_at"])
     return refund_request
 
 
@@ -529,11 +524,15 @@ def confirm_kitchen_refund(refund_request, kitchen_user, outcome, note=""):
         user=locked.director_authorized_by or kitchen_user,
         reason=locked.reason,
         kitchen_outcome=outcome,
+        refund_amount=locked.execution_amount if order.status == "PAID" else None,
         refund_method=locked.execution_method or "TRANSFER",
         refund_account=locked.execution_account,
         refund_reference=locked.execution_reference,
         refund_note=locked.execution_note,
     )
+
+    if order.status == "PAID":
+        _create_pos_refund_payout(locked, locked.director_authorized_by or kitchen_user)
 
     locked.status = "COMPLETED"
     locked.kitchen_outcome = outcome

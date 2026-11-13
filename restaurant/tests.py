@@ -128,7 +128,7 @@ class RefundedFoodWasteAccountingTests(SimpleTestCase):
 
 class RefundShiftReconciliationTests(SimpleTestCase):
     @patch("restaurant.workflows.refund_order.Payment.objects.create")
-    def test_refund_payment_is_linked_to_originating_shift_and_keeps_actual_payout_method(
+    def test_refund_payment_is_excluded_from_originating_shift_and_keeps_actual_payout_method(
         self, create_payment
     ):
         shift = SimpleNamespace(pk=31)
@@ -159,7 +159,7 @@ class RefundShiftReconciliationTests(SimpleTestCase):
             amount=Decimal("-1250.00"),
             method="TRANSFER",
             account=account,
-            shift=shift,
+            shift=None,
             collected_by=user,
             reference="BANK-REFUND-778",
             note="Refund sent by bank transfer",

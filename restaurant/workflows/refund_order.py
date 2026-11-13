@@ -99,7 +99,7 @@ def restore_inventory(order, user, kitchen, restaurant, *, include_food=True):
                 is_opening_balance=False,
             )
 
-def reverse_revenue(order, hotel, user, refund_account=None):
+def reverse_revenue(order, hotel, user, refund_account=None, amount=None):
     # A CHARGED order was settled to the room folio: reverse the
     # receivable, not cash. A PAID order requires the Director's
     # selected payout account so the journal reflects the real outflow.
@@ -122,10 +122,11 @@ def reverse_revenue(order, hotel, user, refund_account=None):
             raise ValidationError("The refund must be paid from an active, postable bank account belonging to this hotel.")
         credit_account = refund_account
 
+    reversal_amount = order.total_amount if amount is None else amount
     record_transaction(
         debit_system_key="restaurant_revenue",
         credit_account=credit_account,
-        amount=order.total_amount,
+        amount=reversal_amount,
         description=f"Refund for POS Order #{order.id}",
         hotel=hotel,
         created_by=user,
@@ -134,32 +135,31 @@ def reverse_revenue(order, hotel, user, refund_account=None):
     )
 
 
-def reverse_payment(order, user, *, method="TRANSFER", account=None,
+def reverse_payment(order, user, *, amount=None, method="TRANSFER", account=None,
                     reference="", note=""):
     if order.status != "PAID":
         return
 
-    # Keep the refund as a separate negative payment and attach it to
-    # the originating shift. The original positive payment remains intact,
-    # preserving its tender method for audit and reconciliation.
+    # Management payout: deliberately excluded from Restaurant shift reconciliation.
+    refund_amount = order.total_amount if amount is None else amount
     Payment.objects.create(
         folio=order.folio,
-        amount=-order.total_amount,
+        amount=-refund_amount,
         method=method,
         account=account,
-        shift=order.shift,
+        shift=None,
         collected_by=user,
         reference=reference or f"POS-REFUND-{order.id}",
         note=note,
     )
 
-def reverse_folio(order):
-
+def reverse_folio(order, amount=None):
+    reversal_amount = order.total_amount if amount is None else amount
     Charge.objects.create(
         folio=order.folio,
         description=f"Refund for POS Order #{order.id}",
         department=order.department,
-        amount=-order.total_amount,
+        amount=-reversal_amount,
         reference=f"POS-REFUND-{order.id}",
     )
 
@@ -249,7 +249,7 @@ def record_refunded_food_waste(order, user, kitchen, reason, restaurant=None):
 
 
 @transaction.atomic
-def refund_order(order, user, reason="", *, kitchen_outcome="UNPREPARED_RESTOCK", refund_method="TRANSFER", refund_account=None, refund_reference="", refund_note=""):
+def refund_order(order, user, reason="", *, kitchen_outcome="UNPREPARED_RESTOCK", refund_amount=None, refund_method="TRANSFER", refund_account=None, refund_reference="", refund_note=""):
 
     validate_refund(order, user)
     if order.status == "PAID" and refund_method != "TRANSFER":
@@ -274,12 +274,20 @@ def refund_order(order, user, reason="", *, kitchen_outcome="UNPREPARED_RESTOCK"
     if order.is_cogs_posted:
         reverse_cogs_for_order(order, include_food=include_food)
 
-    reverse_revenue(order, hotel, user, refund_account=refund_account)
+    if order.status == "PAID":
+        if refund_amount is None or refund_amount <= 0 or refund_amount > order.total_amount:
+            raise ValidationError("Enter a valid refund amount not exceeding the original POS charge.")
+        reversal_amount = refund_amount
+    else:
+        reversal_amount = order.total_amount
+
+    reverse_revenue(order, hotel, user, refund_account=refund_account, amount=reversal_amount)
     reverse_payment(
-        order, user, method=refund_method, account=refund_account,
-        reference=refund_reference, note=refund_note,
+        order, user, amount=reversal_amount, method=refund_method, account=refund_account,
+        reference=f"POS-REFUND-{order.id}",
+        note=(f"Bank transfer reference: {refund_reference}. {refund_note}").strip(),
     )
-    reverse_folio(order)
+    reverse_folio(order, amount=reversal_amount)
 
     finalize_refund(order, user, reason)
 

@@ -1,3 +1,4 @@
+from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
@@ -9,7 +10,7 @@ from accounts.services.access import (
     user_can_access_hotel,
 )
 from accounts.services.decorators import role_required
-from billing.models import Charge, Payment, RefundRequest
+from billing.models import Charge, Payment, RefundRequest, RefundExecution
 from accounting.models import BankAccount
 from billing.workflows.refunds import (
     approve_refund_request,
@@ -326,15 +327,27 @@ def execute_refund(request, request_id):
         account__allow_posting=True,
     ).select_related("account").order_by("bank_name", "account_name")
     original_payment = None
+    max_refund_amount = Decimal("0.00")
     if order:
         original_payment = Payment.objects.filter(
             folio=order.folio, reference=f"POS-{order.id}", amount__gt=0,
         ).select_related("account").order_by("collected_at", "id").first()
+        collected = sum(
+            Payment.objects.filter(folio=order.folio, reference=f"POS-{order.id}", amount__gt=0).values_list("amount", flat=True),
+            Decimal("0.00"),
+        )
+        prior_refunds = sum(
+            RefundExecution.objects.filter(refund_request__pos_order=order).values_list("amount", flat=True),
+            Decimal("0.00"),
+        )
+        max_refund_amount = min(order.total_amount, collected) - prior_refunds
+        max_refund_amount = max(max_refund_amount, Decimal("0.00"))
 
     if request.method == "GET":
         return render(request, "billing/refund_execute.html", {
             "refund": refund_request, "order": order, "is_paid_pos": is_paid_pos,
             "bank_accounts": bank_accounts, "original_payment": original_payment,
+            "max_refund_amount": max_refund_amount,
         })
 
     method = ""
@@ -342,9 +355,17 @@ def execute_refund(request, request_id):
     reference = request.POST.get("execution_reference", "").strip()
     note = request.POST.get("execution_note", "").strip()
     try:
+        refund_amount = Decimal("0.00")
         if order and order.status == "CHARGED":
             method = "ROOM_REVERSAL"
-        else:
+        elif is_paid_pos:
+            raw_amount = request.POST.get("execution_amount", "").strip()
+            try:
+                refund_amount = Decimal(raw_amount)
+            except (InvalidOperation, TypeError):
+                raise ValidationError("Enter a valid refund amount.")
+            if not refund_amount.is_finite() or refund_amount <= 0 or refund_amount > max_refund_amount:
+                raise ValidationError(f"Refund amount must be greater than zero and no more than ₦{max_refund_amount:,.2f}.")
             bank_account_id = request.POST.get("execution_account", "").strip()
             bank_account = BankAccount.objects.filter(
                 pk=bank_account_id, hotel=hotel, is_active=True,
@@ -357,13 +378,14 @@ def execute_refund(request, request_id):
             method = "TRANSFER"
             payout_account = bank_account.account
 
+        refund_request.execution_amount = refund_amount
         refund_request.execution_method = method
         refund_request.execution_account = payout_account
         refund_request.execution_reference = reference
         refund_request.execution_note = note
         refund_request.external_refund_confirmed = False
         refund_request.save(update_fields=[
-            "execution_method", "execution_account", "execution_reference",
+            "execution_amount", "execution_method", "execution_account", "execution_reference",
             "execution_note", "external_refund_confirmed",
         ])
         execute_refund_request(refund_request, request.user)
@@ -376,6 +398,7 @@ def execute_refund(request, request_id):
         return render(request, "billing/refund_execute.html", {
             "refund": refund_request, "order": order, "is_paid_pos": is_paid_pos,
             "bank_accounts": bank_accounts, "original_payment": original_payment,
+            "max_refund_amount": max_refund_amount,
             "form_error": str(exc),
         })
     return redirect("refund_list")
