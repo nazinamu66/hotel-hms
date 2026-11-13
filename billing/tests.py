@@ -47,7 +47,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 
 from accounting.models import Account, JournalEntry
-from billing.models import Folio, RefundRequest
+from billing.models import Folio, Payment, RefundExecution, RefundRequest
 from inventory.models import Department, Hotel, Organization, Product, Stock
 from kitchen.models import KitchenSpoilageRecord
 from restaurant.models import MenuItem, POSOrder, POSOrderItem
@@ -161,6 +161,37 @@ class PreparedFoodRefundIntegrationTests(TestCase):
                 system_key=system_key,
                 is_system=True,
             )
+
+    @patch("restaurant.workflows.refund_order.refund_order")
+    def test_paid_kitchen_refund_records_payout_after_order_is_cancelled(self, refund_order):
+        bank = Account.objects.create(hotel=self.hotel, code="9590", name="Refund Test Bank", account_type="bank")
+        Payment.objects.create(folio=self.folio, amount=Decimal("3000.00"), method="CASH", collected_by=self.restaurant_user, reference=f"POS-{self.order.pk}")
+        self.order.status = "PAID"
+        self.order.save(update_fields=["status"])
+
+        refund = RefundRequest.objects.create(
+            source_type="POS_ORDER", pos_order=self.order, reason="Partial refund after Kitchen review",
+            requested_by=self.restaurant_user, status="KITCHEN_CONFIRMATION", director_authorized_by=self.director,
+            execution_method="TRANSFER", execution_account=bank, execution_reference="TEST-BANK-REF",
+            execution_amount=Decimal("2000.00"),
+        )
+
+        def cancel_order(**kwargs):
+            order = kwargs["order"]
+            order.status = "CANCELLED"
+            order.save(update_fields=["status"])
+            return order
+
+        refund_order.side_effect = cancel_order
+        completed = confirm_kitchen_refund(refund, self.kitchen_user, "UNPREPARED_RESTOCK", "Not served")
+        payout = RefundExecution.objects.get(refund_request=completed)
+        self.assertEqual(payout.amount, Decimal("2000.00"))
+        self.assertEqual(payout.forfeited_amount, Decimal("1000.00"))
+        self.assertEqual(payout.account, bank)
+        self.assertEqual(payout.reference, "TEST-BANK-REF")
+        self.assertEqual(payout.executed_by, self.director)
+        self.assertEqual(completed.status, "COMPLETED")
+        self.assertEqual(self.order.status, "CANCELLED")
 
     def test_prepared_waste_confirmation_posts_spoilage_and_does_not_restore_food_stock(self):
         record_transaction(

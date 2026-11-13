@@ -518,20 +518,23 @@ def confirm_kitchen_refund(refund_request, kitchen_user, outcome, note=""):
     ):
         raise ValidationError("Kitchen staff can only confirm refunds for their own hotel's Kitchen.")
 
+    # Preserve the original settlement state; refund_order changes status to CANCELLED.
+    was_paid = order.status == "PAID"
+
     from restaurant.workflows.refund_order import refund_order
     refund_order(
         order=order,
         user=locked.director_authorized_by or kitchen_user,
         reason=locked.reason,
         kitchen_outcome=outcome,
-        refund_amount=locked.execution_amount if order.status == "PAID" else None,
+        refund_amount=locked.execution_amount if was_paid else None,
         refund_method=locked.execution_method or "TRANSFER",
         refund_account=locked.execution_account,
         refund_reference=locked.execution_reference,
         refund_note=locked.execution_note,
     )
 
-    if order.status == "PAID":
+    if was_paid:
         _create_pos_refund_payout(locked, locked.director_authorized_by or kitchen_user)
 
     locked.status = "COMPLETED"
