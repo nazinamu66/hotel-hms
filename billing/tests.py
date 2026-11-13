@@ -270,6 +270,7 @@ class RefundBankTransferPolicyTests(TestCase):
         )
         order = SimpleNamespace(
             status="PAID",
+            total_amount=Decimal("100.00"),
             department=SimpleNamespace(hotel=hotel),
             items=FakeItems([]),
         )
