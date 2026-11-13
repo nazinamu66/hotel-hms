@@ -299,8 +299,9 @@ class RefundBankTransferPolicyTests(TestCase):
         refund_order.assert_not_called()
 
     @patch("billing.workflows.refunds.validate_execution")
+    @patch("billing.workflows.refunds._create_pos_refund_payout")
     @patch("restaurant.workflows.refund_order.refund_order")
-    def test_paid_pos_refund_uses_selected_bank_account(self, refund_order, validate):
+    def test_paid_pos_refund_uses_selected_bank_account(self, refund_order, create_payout, validate):
         refund, director = self._request()
         execute_refund_request(refund, director)
         refund_order.assert_called_once()

@@ -415,7 +415,7 @@ def _create_pos_refund_payout(refund_request, director):
     from billing.models import Payment
     order = refund_request.pos_order
     amount = refund_request.execution_amount
-    if order.status != "PAID":
+    if refund_request.execution_method != "TRANSFER":
         return
     if amount <= 0 or amount > order.total_amount:
         raise ValidationError("The approved refund amount is invalid.")
