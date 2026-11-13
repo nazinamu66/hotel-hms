@@ -400,9 +400,10 @@ class PaidPOSPartialRefundAccountingIntegrationTests(TestCase):
             shift=shift, collected_by=cashier, reference=f"POS-{order.pk}",
         )
 
-        revenue = Account.objects.create(
-            hotel=hotel, code="9710", name="Partial Refund Restaurant Revenue",
-            account_type="income", system_key="restaurant_revenue", is_system=True,
+        # Hotel creation provisions the Chart of Accounts, including this
+        # system account. Reuse it rather than creating a duplicate system key.
+        revenue = Account.objects.get(
+            hotel=hotel, system_key="restaurant_revenue", is_system=True,
         )
         bank = Account.objects.create(
             hotel=hotel, code="9720", name="Partial Refund Bank",
