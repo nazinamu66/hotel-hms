@@ -26,7 +26,7 @@ def _allocated_from_payment(payment):
 
 def charge_outstanding(charge):
     """Outstanding amount covered by the new allocation ledger."""
-    if charge.amount <= 0:
+    if charge.amount <= 0 or not charge.allocation_enabled:
         return ZERO
     return max(charge.amount - _allocated_to_charge(charge), ZERO)
 
@@ -54,7 +54,7 @@ def allocate_payment_fifo(payment):
 
     charges = (
         Charge.objects.select_for_update()
-        .filter(folio=folio, amount__gt=0)
+        .filter(folio=folio, amount__gt=0, allocation_enabled=True)
         .order_by("created_at", "id")
     )
     created = []
@@ -90,6 +90,8 @@ def allocate_payment_to_charge(payment, charge):
         raise ValidationError("Payment and charge must belong to the same hotel.")
     if charge.amount <= 0:
         raise ValidationError("Only positive charges can receive allocations.")
+    if not charge.allocation_enabled:
+        raise ValidationError("This historical charge must be reconciled before it can receive an allocation.")
 
     remaining_payment = payment_unallocated(payment)
     remaining_charge = charge_outstanding(charge)
@@ -112,6 +114,7 @@ def allocate_payment_to_charge(payment, charge):
 def get_charge_allocation_status(charge):
     allocated = _allocated_to_charge(charge)
     return {
+        "reconciled": charge.allocation_enabled,
         "allocated": allocated,
-        "outstanding": max(charge.amount - allocated, ZERO),
+        "outstanding": max(charge.amount - allocated, ZERO) if charge.allocation_enabled else None,
     }

@@ -273,6 +273,10 @@ class Charge(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     reference = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    allocation_enabled = models.BooleanField(
+        default=True,
+        help_text="Only charges created after allocation rollout or explicitly reconciled are eligible for automatic allocation.",
+    )
 
     def __str__(self):
         return f"{self.description} - {self.amount}"
