@@ -342,3 +342,135 @@ class RefundBankTransferPolicyTests(TestCase):
         self.assertEqual(refund_order.call_args.kwargs["refund_method"], "TRANSFER")
         self.assertIs(refund_order.call_args.kwargs["refund_account"], refund.execution_account)
         self.assertEqual(refund.status, "COMPLETED")
+
+
+
+class PaidPOSPartialRefundAccountingIntegrationTests(TestCase):
+    """Exercise the complete paid-POS refund and its financial records."""
+
+    def test_partial_refund_preserves_original_receipt_and_balances_folio(self):
+        User = get_user_model()
+        organization = Organization.objects.create(name="Partial Refund Accounting Org")
+        hotel = Hotel.objects.create(organization=organization, name="Partial Refund Accounting Hotel")
+        restaurant = Department.objects.create(
+            hotel=hotel, code="PRA", name="Partial Refund Restaurant",
+            department_type="RESTAURANT",
+        )
+        kitchen = Department.objects.create(
+            hotel=hotel, code="PAK", name="Partial Refund Kitchen",
+            department_type="KITCHEN",
+        )
+        cashier = User.objects.create_user(
+            username="partial_refund_cashier", password="test-password",
+            role="RESTAURANT", hotel=hotel, department=restaurant,
+        )
+        director = User.objects.create_user(
+            username="partial_refund_director", password="test-password",
+            role="DIRECTOR", hotel=hotel,
+        )
+
+        from restaurant.models import Shift
+        from billing.models import Charge
+
+        shift = Shift.objects.create(user=cashier, department=restaurant)
+        folio = Folio.objects.create(hotel=hotel, folio_type="WALKIN")
+        product = Product.objects.create(
+            hotel=hotel, name="Partial Refund Cola", sku="PARTIAL-REFUND-COLA",
+            product_type="DRINK", usage_type="RESALE", base_unit="can",
+        )
+        menu_item = MenuItem.objects.create(
+            name="Partial Refund Cola", product=product, price=Decimal("7000.00"),
+        )
+        Stock.objects.create(product=product, department=restaurant, quantity=Decimal("0.000"))
+
+        order = POSOrder.objects.create(
+            department=restaurant, created_by=cashier, folio=folio, shift=shift,
+            total_amount=Decimal("7000.00"), status="PAID", is_cogs_posted=False,
+        )
+        POSOrderItem.objects.create(
+            order=order, menu_item=menu_item, quantity=1, price=Decimal("7000.00"),
+        )
+        original_charge = Charge.objects.create(
+            folio=folio, description=f"Restaurant Order #{order.pk}",
+            department=restaurant, amount=Decimal("7000.00"),
+            reference=f"POS-{order.pk}",
+        )
+        original_payment = Payment.objects.create(
+            folio=folio, amount=Decimal("7000.00"), method="CASH",
+            shift=shift, collected_by=cashier, reference=f"POS-{order.pk}",
+        )
+
+        revenue = Account.objects.create(
+            hotel=hotel, code="9710", name="Partial Refund Restaurant Revenue",
+            account_type="income", system_key="restaurant_revenue", is_system=True,
+        )
+        bank = Account.objects.create(
+            hotel=hotel, code="9720", name="Partial Refund Bank",
+            account_type="bank",
+        )
+        refund = RefundRequest.objects.create(
+            source_type="POS_ORDER", pos_order=order,
+            requested_by=cashier, reason="Guest returned part of the order",
+            status="APPROVED", execution_method="TRANSFER",
+            execution_account=bank, execution_reference="BANK-PARTIAL-5000",
+            execution_amount=Decimal("5000.00"),
+        )
+
+        completed = execute_refund_request(refund, director)
+
+        self.assertEqual(completed.status, "COMPLETED")
+        order.refresh_from_db()
+        self.assertEqual(order.status, "CANCELLED")
+        self.assertTrue(order.is_refunded)
+
+        # The original receipt and its cashier shift are immutable.
+        original_payment.refresh_from_db()
+        self.assertEqual(original_payment.amount, Decimal("7000.00"))
+        self.assertEqual(original_payment.shift_id, shift.pk)
+        self.assertEqual(
+            Payment.objects.filter(
+                folio=folio, reference=f"POS-{order.pk}", amount__gt=0,
+            ).count(),
+            1,
+        )
+
+        refund_payment = Payment.objects.get(
+            folio=folio, reference=f"POS-REFUND-{order.pk}", amount__lt=0,
+        )
+        self.assertEqual(refund_payment.amount, Decimal("-5000.00"))
+        self.assertIsNone(refund_payment.shift_id)
+        self.assertEqual(refund_payment.account, bank)
+
+        # Folio charges and payments both retain the unrefunded ₦2,000.
+        self.assertEqual(
+            sum(folio.charges.values_list("amount", flat=True)),
+            Decimal("2000.00"),
+        )
+        self.assertEqual(
+            sum(folio.payments.values_list("amount", flat=True)),
+            Decimal("2000.00"),
+        )
+        self.assertEqual(original_charge.amount, Decimal("7000.00"))
+
+        payout = RefundExecution.objects.get(refund_request=completed)
+        self.assertEqual(payout.amount, Decimal("5000.00"))
+        self.assertEqual(payout.forfeited_amount, Decimal("2000.00"))
+        self.assertEqual(payout.account, bank)
+        self.assertEqual(payout.reference, "BANK-PARTIAL-5000")
+        self.assertEqual(payout.executed_by, director)
+
+        journal = JournalEntry.objects.get(
+            hotel=hotel, reference=f"POS-REFUND-{order.pk}", entry_type="REFUND",
+        )
+        journal_lines = {
+            line.account_id: (line.debit, line.credit)
+            for line in journal.lines.select_related("account")
+        }
+        self.assertEqual(
+            journal_lines[revenue.pk],
+            (Decimal("5000.00"), Decimal("0.00")),
+        )
+        self.assertEqual(
+            journal_lines[bank.pk],
+            (Decimal("0.00"), Decimal("5000.00")),
+        )
