@@ -296,7 +296,7 @@ class POSOrder(models.Model):
 
         self._validate_hotel_integrity()
 
-        Payment.objects.create(
+        payment = Payment.objects.create(
             folio=self.folio,
             amount=self.total_amount,
             method=method,
@@ -305,6 +305,14 @@ class POSOrder(models.Model):
             collected_by=self.created_by,
             reference=f"POS-{self.id}"
         )
+
+        charge = Charge.objects.get(
+            folio=self.folio,
+            reference=f"POS-{self.id}",
+            amount=self.total_amount,
+        )
+        from billing.services.charge_allocations import allocate_payment_to_charge
+        allocate_payment_to_charge(payment, charge)
 
         self.status = "PAID"
         self.save(update_fields=["status"])

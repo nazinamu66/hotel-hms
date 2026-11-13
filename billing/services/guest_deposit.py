@@ -358,4 +358,7 @@ def apply_guest_deposit(
         collected_by=user,
     )
 
+    from billing.services.charge_allocations import allocate_payment_fifo
+    allocate_payment_fifo(payment)
+
     return payment, transaction_record

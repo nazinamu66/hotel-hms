@@ -378,6 +378,65 @@ class Payment(models.Model):
     def __str__(self):
         return f"{self.method} – {self.amount}"
 
+class ChargePaymentAllocation(models.Model):
+    """Auditable application of one folio payment to one specific charge."""
+
+    ALLOCATION_TYPE_CHOICES = (
+        ("FIFO", "Folio FIFO"),
+        ("POS_DIRECT", "POS order direct"),
+    )
+
+    charge = models.ForeignKey(
+        Charge,
+        on_delete=models.PROTECT,
+        related_name="payment_allocations",
+    )
+    payment = models.ForeignKey(
+        Payment,
+        on_delete=models.PROTECT,
+        related_name="charge_allocations",
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    allocation_type = models.CharField(
+        max_length=20,
+        choices=ALLOCATION_TYPE_CHOICES,
+        default="FIFO",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="charge_payment_allocations_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=Decimal("0.00")),
+                name="charge_payment_allocation_amount_positive",
+            ),
+        ]
+
+    def clean(self):
+        if self.charge_id and self.payment_id:
+            if self.charge.folio_id != self.payment.folio_id:
+                raise ValidationError(
+                    "Payment and charge must belong to the same folio."
+                )
+            if self.charge.folio.hotel_id != self.payment.folio.hotel_id:
+                raise ValidationError(
+                    "Payment and charge must belong to the same hotel."
+                )
+        if self.amount is not None and self.amount <= 0:
+            raise ValidationError("Allocation amount must be greater than zero.")
+
+    def __str__(self):
+        return f"Payment #{self.payment_id} → Charge #{self.charge_id}: {self.amount}"
+
+
 
 # =========================
 # GUEST DEPOSIT

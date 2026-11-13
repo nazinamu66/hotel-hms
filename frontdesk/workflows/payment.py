@@ -116,6 +116,9 @@ def take_payment_for_folio(
 
     post_payment_to_accounting(payment)
 
+    from billing.services.charge_allocations import allocate_payment_fifo
+    allocate_payment_fifo(payment)
+
     return payment
 
 
