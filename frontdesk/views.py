@@ -1090,6 +1090,7 @@ def take_payment(request, room_id):
 
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
+@transaction.atomic
 def take_folio_payment(request, folio_id):
     """Receive a payment against a guest's selected folio from Guest Profile."""
     from decimal import Decimal, InvalidOperation
@@ -1098,7 +1099,7 @@ def take_folio_payment(request, folio_id):
 
     hotel = request.user.department.hotel
     folio = get_object_or_404(
-        Folio.objects.select_related("guest", "room", "hotel"),
+        Folio.objects.select_for_update().select_related("guest", "room", "hotel"),
         pk=folio_id,
         hotel=hotel,
     )
