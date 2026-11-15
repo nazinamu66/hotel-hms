@@ -82,56 +82,14 @@ def create_extension_charges(
     additional_nights,
     charged_by=None,
 ):
-    if not folio.room or not folio.room.category:
-        raise ValidationError(
-            "Room or room category is missing."
-        )
-
-    rate = getattr(
-        folio.room.category,
-        "rate",
-        None,
-    )
-
-    if not rate or not rate.is_active:
-        raise ValidationError(
-            "No active rate for this room category."
-        )
-
-    department = Department.objects.get(
-        hotel=folio.hotel,
-        department_type="FRONTDESK",
-        is_active=True,
-    )
-
-    from accounting.services.postings.room_charge import (
-        post_room_charge,
-    )
+    from billing.services.room_pricing import create_room_night_charge
 
     for night_number in range(additional_nights):
-        charge_date = (
-            first_charge_date
-            + timedelta(days=night_number)
-        )
-
-        amount = rate.price_per_night
-
-        charge = Charge.objects.create(
+        charge_date = first_charge_date + timedelta(days=night_number)
+        create_room_night_charge(
             folio=folio,
-            description=(
-                f"Room charge – {charge_date}"
-            ),
-            department=department,
-            amount=amount,
-            reference=(
-                f"ROOM-{folio.room.room_number}-{charge_date}"
-            ),
-        )
-
-        post_room_charge(
-            folio,
-            charge.amount,
-            charged_by,
+            charge_date=charge_date,
+            charged_by=charged_by,
         )
 
 
