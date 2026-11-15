@@ -133,6 +133,7 @@ class FrontdeskOverpaymentCreditTests(TestCase):
             ).exists()
         )
         self.assertEqual(payment.amount, Decimal("2000.00"))
+        self.assertEqual(payment.applied_amount, Decimal("2000.00"))
         post_accounting.assert_called_once_with(payment)
 
     @patch("frontdesk.workflows.payment.post_payment_to_accounting")
@@ -147,6 +148,7 @@ class FrontdeskOverpaymentCreditTests(TestCase):
         self.folio.refresh_from_db()
         self.assertEqual(self.folio.balance, Decimal("1250.00"))
         self.assertEqual(payment.amount, Decimal("750.00"))
+        self.assertEqual(payment.applied_amount, Decimal("750.00"))
         self.assertFalse(GuestDeposit.objects.filter(guest=self.guest).exists())
         post_accounting.assert_called_once_with(payment)
 
@@ -225,3 +227,26 @@ class FrontdeskOverpaymentCreditTests(TestCase):
             note="",
         )
         post_accounting.assert_not_called()
+
+    @patch("frontdesk.workflows.payment.post_payment_to_accounting")
+    def test_overpayment_on_unreconciled_legacy_charge_reduces_folio_without_guessing_charge(
+        self, post_accounting
+    ):
+        self.charge.allocation_enabled = False
+        self.charge.save(update_fields=["allocation_enabled"])
+
+        payment = take_payment_for_folio(
+            folio=self.folio,
+            user=self.user,
+            amount=Decimal("10000.00"),
+            method="CASH",
+        )
+
+        self.folio.refresh_from_db()
+        deposit = GuestDeposit.objects.get(guest=self.guest, hotel=self.hotel)
+
+        self.assertEqual(payment.applied_amount, Decimal("2000.00"))
+        self.assertEqual(self.folio.balance, Decimal("0.00"))
+        self.assertEqual(deposit.balance, Decimal("8000.00"))
+        self.assertFalse(ChargePaymentAllocation.objects.filter(payment=payment).exists())
+        post_accounting.assert_called_once_with(payment)
