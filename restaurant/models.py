@@ -299,6 +299,7 @@ class POSOrder(models.Model):
         payment = Payment.objects.create(
             folio=self.folio,
             allocation_tracking_enabled=True,
+            applied_amount=self.total_amount,
             amount=self.total_amount,
             method=method,
             account=account,
