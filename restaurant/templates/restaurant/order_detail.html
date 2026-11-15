@@ -452,6 +452,46 @@
 
 
     <!-- ========================= -->
+
+    {% if user.role == "RESTAURANT" and order.status == "CHARGED" and order.folio.folio_type == "ROOM" and room_charge_outstanding > 0 %}
+    <div class="order-card">
+        <h2 class="section-title">Collect Room Payment</h2>
+        <p>Collect against this existing room charge. No second sale or stock deduction will be created.</p>
+        <p><strong>Outstanding: ₦{{ room_charge_outstanding|floatformat:2 }}</strong></p>
+        <form method="post" action="{% url 'restaurant_collect_room_order_payment' order.id %}">
+            {% csrf_token %}
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+                <label>Amount<input type="number" name="amount" min="0.01" max="{{ room_charge_outstanding }}" step="0.01" value="{{ room_charge_outstanding }}" required></label>
+                <label>Payment method
+                    <select name="method" id="room-order-payment-method" required>
+                        <option value="CASH">Cash</option><option value="POS">POS</option><option value="TRANSFER">Bank Transfer</option>
+                    </select>
+                </label>
+                <label>Reference (required for POS/Transfer)<input type="text" name="reference" maxlength="100"></label>
+                <label id="room-order-bank-field" style="display:none;">Bank account
+                    <select name="bank_account"><option value="">Select bank account</option>
+                        {% for bank in collection_bank_accounts %}<option value="{{ bank.id }}">{{ bank.bank_name }} — {{ bank.account_name }} ({{ bank.account_number }})</option>{% endfor %}
+                    </select>
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:14px;">Record Collection</button>
+        </form>
+    </div>
+    <script>
+    (function () {
+        const method = document.getElementById("room-order-payment-method");
+        const bankField = document.getElementById("room-order-bank-field");
+        function updateBankField() {
+            const needsBank = method.value === "POS" || method.value === "TRANSFER";
+            bankField.style.display = needsBank ? "block" : "none";
+            bankField.querySelector("select").required = needsBank;
+        }
+        method.addEventListener("change", updateBankField);
+        updateBankField();
+    })();
+    </script>
+    {% endif %}
+
     <!-- REFUND -->
     <!-- ========================= -->
 
