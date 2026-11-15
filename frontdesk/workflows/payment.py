@@ -1,4 +1,5 @@
 from django.db import transaction
+from decimal import Decimal
 from django.core.exceptions import ValidationError
 
 from billing.models import Payment, Folio, GuestDeposit, GuestDepositTransaction
@@ -128,7 +129,6 @@ def take_payment_for_folio(
                 "An overpayment requires a guest-linked folio so the excess can be credited safely."
             )
         from accounting.services.journal import record_transaction
-        from accounting.services.journal import get_system_account
 
         deposit, _ = GuestDeposit.objects.select_for_update().get_or_create(
             guest=folio.guest,
