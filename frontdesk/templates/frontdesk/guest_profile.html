@@ -522,7 +522,6 @@
     ">
 
         <div>
-
             <div style="
                 font-size:13px;
                 font-weight:600;
@@ -534,12 +533,15 @@
             </div>
 
             <h3 style="margin:5px 0 0;">
-                Room {{ active_folio.room.room_number }}
+                {% if active_folio.room %}
+                    Room {{ active_folio.room.room_number }}
+                {% else %}
+                    Walk-in Folio
+                {% endif %}
             </h3>
-
         </div>
 
-
+        {% if active_folio.room %}
         <a
             href="{% url 'frontdesk_active_stay' active_folio.room.id %}"
             style="
@@ -555,49 +557,28 @@
         >
             View Stay
         </a>
+        {% endif %}
 
     </div>
-
 
     <div style="
         display:grid;
         grid-template-columns:repeat(2, minmax(0, 1fr));
         gap:18px;
     ">
-
         <div>
-            <div style="
-                font-size:12px;
-                color:#6b7280;
-            ">
-                Check-in
-            </div>
-
-            <div style="
-                margin-top:4px;
-                font-weight:600;
-            ">
+            <div style="font-size:12px;color:#6b7280;">Check-in</div>
+            <div style="margin-top:4px;font-weight:600;">
                 {{ active_folio.check_in_at }}
             </div>
         </div>
 
-
         <div>
-            <div style="
-                font-size:12px;
-                color:#6b7280;
-            ">
-                Scheduled Checkout
-            </div>
-
-            <div style="
-                margin-top:4px;
-                font-weight:600;
-            ">
+            <div style="font-size:12px;color:#6b7280;">Scheduled Checkout</div>
+            <div style="margin-top:4px;font-weight:600;">
                 {{ active_folio.check_out_at|default:"—" }}
             </div>
         </div>
-
     </div>
 
 </section>
