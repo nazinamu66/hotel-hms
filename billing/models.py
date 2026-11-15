@@ -873,6 +873,16 @@ class GroupReservation(models.Model):
         max_length=20, choices=STATUS_CHOICES, default="DRAFT"
     )
     agreement_notes = models.TextField(blank=True)
+    ROOM_BILLING_PARTY_CHOICES = (
+        ("COMPANY", "Company"),
+        ("INDIVIDUAL", "Occupant"),
+    )
+    room_billing_party = models.CharField(
+        max_length=12,
+        choices=ROOM_BILLING_PARTY_CHOICES,
+        default="COMPANY",
+        help_text="Who is responsible for negotiated room-night charges.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
@@ -896,6 +906,44 @@ class GroupReservation(models.Model):
 
     def __str__(self):
         return f"{self.reference} – {self.company.name}"
+
+
+class GroupReservationRate(models.Model):
+    """Negotiated nightly rate for one room category within a group agreement."""
+
+    group_reservation = models.ForeignKey(
+        GroupReservation,
+        on_delete=models.PROTECT,
+        related_name="room_rates",
+    )
+    room_category = models.ForeignKey(
+        RoomCategory,
+        on_delete=models.PROTECT,
+        related_name="group_reservation_rates",
+    )
+    nightly_rate = models.DecimalField(max_digits=12, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["room_category__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["group_reservation", "room_category"],
+                name="unique_group_room_category_rate",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(nightly_rate__gt=0),
+                name="group_room_rate_positive",
+            ),
+        ]
+
+    def clean(self):
+        if self.nightly_rate is not None and self.nightly_rate <= 0:
+            raise ValidationError("Negotiated nightly rate must be greater than zero.")
+
+    def __str__(self):
+        return f"{self.group_reservation.reference} – {self.room_category.name}: {self.nightly_rate}"
 
 
 class GroupReservationRoom(models.Model):
@@ -938,6 +986,13 @@ class GroupReservationRoom(models.Model):
         max_length=20, choices=STATUS_CHOICES, default="RESERVED"
     )
     occupant_note = models.TextField(blank=True)
+    negotiated_nightly_rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Optional occupant-specific nightly rate override.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -961,6 +1016,8 @@ class GroupReservationRoom(models.Model):
                 raise ValidationError("Linked folio must belong to this occupant and hotel.")
         if self.check_in_date and self.check_out_date and self.check_out_date <= self.check_in_date:
             raise ValidationError("Room allocation check-out must be after check-in.")
+        if self.negotiated_nightly_rate is not None and self.negotiated_nightly_rate <= 0:
+            raise ValidationError("Occupant-specific nightly rate must be greater than zero.")
 
     def __str__(self):
         return f"{self.group_reservation.reference} – {self.guest.full_name}"
