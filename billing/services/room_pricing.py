@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 
-from billing.models import Charge, GroupReservationRate
+from billing.models import Charge, GroupReservationRate, GroupReservationRoom
 
 
 def get_room_night_pricing(folio):
@@ -15,9 +15,8 @@ def get_room_night_pricing(folio):
     allocation = None
     try:
         allocation = folio.group_allocation
-    except Exception:
-        # The reverse OneToOne descriptor raises RelatedObjectDoesNotExist
-        # when this is an ordinary individual folio.
+    except GroupReservationRoom.DoesNotExist:
+        # Ordinary individual folio; no corporate allocation is linked.
         allocation = None
 
     if allocation is not None:
