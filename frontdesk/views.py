@@ -1,5 +1,6 @@
 from accounts.decorators import role_required
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib import messages
 from rooms.models import Room, RoomCategory
 from django.db import transaction
@@ -976,6 +977,9 @@ def take_payment(request, room_id):
     )
 
     folio = Folio.get_active_room_folio(room)
+    guest_deposit = GuestDeposit.objects.filter(
+        guest=folio.guest, hotel=room.hotel
+    ).first() if folio and folio.guest_id else None
 
     if request.method == "POST":
 
@@ -1079,8 +1083,93 @@ def take_payment(request, room_id):
             "folio": folio,
             "balance": folio.balance,
             "bank_accounts": bank_accounts,
+            "guest_deposit": guest_deposit,
+            "cancel_url": reverse("frontdesk_active_stay", args=[room.id]),
         },
     )
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def take_folio_payment(request, folio_id):
+    """Receive a payment against a guest's selected folio from Guest Profile."""
+    from decimal import Decimal, InvalidOperation
+    from accounting.models import BankAccount
+    from frontdesk.workflows.payment import take_payment_for_folio
+
+    hotel = request.user.department.hotel
+    folio = get_object_or_404(
+        Folio.objects.select_related("guest", "room", "hotel"),
+        pk=folio_id,
+        hotel=hotel,
+    )
+
+    guest_profile_url = (
+        reverse("frontdesk_guest_profile", args=[folio.guest_id])
+        if folio.guest_id else reverse("frontdesk_room_board")
+    )
+
+    if folio.is_closed:
+        messages.error(request, "This folio is closed and cannot receive payments.")
+        return redirect(guest_profile_url)
+
+    if request.method == "POST":
+        try:
+            amount = Decimal(request.POST.get("amount", "0"))
+            method = request.POST.get("method", "").strip().upper()
+            reference = request.POST.get("reference", "").strip()
+            note = request.POST.get("note", "").strip()
+            bank_account = None
+
+            if method in ("POS", "TRANSFER"):
+                bank_account = get_object_or_404(
+                    BankAccount.objects.select_related("account"),
+                    id=request.POST.get("bank_account", "").strip(),
+                    hotel=hotel,
+                    is_active=True,
+                )
+
+            take_payment_for_folio(
+                folio=folio,
+                user=request.user,
+                amount=amount,
+                method=method,
+                reference=reference,
+                note=note,
+                bank_account=bank_account,
+            )
+        except (ValidationError, InvalidOperation, ValueError) as exc:
+            messages.error(request, str(exc))
+            return redirect(request.path)
+        except Exception as exc:
+            messages.error(request, str(exc))
+            return redirect(request.path)
+
+        messages.success(request, "Payment recorded successfully.")
+        return redirect(guest_profile_url)
+
+    bank_accounts = (
+        BankAccount.objects.select_related("account")
+        .filter(hotel=hotel, is_active=True)
+        .order_by("-is_default", "bank_name")
+    )
+    guest_deposit = (
+        GuestDeposit.objects.filter(guest=folio.guest, hotel=hotel).first()
+        if folio.guest_id else None
+    )
+
+    return render(
+        request,
+        "frontdesk/payment.html",
+        {
+            "room": folio.room,
+            "folio": folio,
+            "balance": folio.balance,
+            "bank_accounts": bank_accounts,
+            "guest_deposit": guest_deposit,
+            "cancel_url": guest_profile_url,
+        },
+    )
+
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def checkout(request, room_id):
