@@ -994,8 +994,8 @@ class GroupReservationRoom(models.Model):
         group = self.group_reservation
         if self.guest_id and self.guest.hotel_id != group.hotel_id:
             raise ValidationError("Occupant must belong to the group's hotel.")
-        if self.room_category_id and self.room_category.hotel_id != group.hotel_id:
-            raise ValidationError("Room category must belong to the group's hotel.")
+        # RoomCategory is a shared catalogue model and is not hotel-scoped.
+        # Hotel ownership is established by the selected Room instead.
         if self.room_id and self.room.hotel_id != group.hotel_id:
             raise ValidationError("Room must belong to the group's hotel.")
         if self.room_id and self.room_category_id and self.room.category_id != self.room_category_id:
