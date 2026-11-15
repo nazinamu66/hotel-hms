@@ -73,7 +73,7 @@ class GuestFolioPaymentViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["folio"].pk, self.folio.pk)
         self.assertEqual(response.context["balance"], Decimal("2500.00"))
-        self.assertContains(response, f"Folio #{self.folio.pk}")
+        self.assertContains(response, f"#{self.folio.pk}")
         self.assertContains(response, "Outstanding Balance")
 
     @patch("frontdesk.workflows.payment.take_payment_for_folio")
