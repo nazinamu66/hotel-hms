@@ -105,15 +105,8 @@ def add_group_occupant(
         note=f"Group reservation {group.reference}",
     )
 
-    # Keep the existing reservation-guarantee behavior. A missing guarantee
-    # must not invalidate an otherwise valid reservation.
-    from billing.services.reservation_deposit import create_reservation_guarantee
-
-    try:
-        create_reservation_guarantee(reservation=reservation, user=user)
-    except ValidationError:
-        pass
-
+    # Corporate group stays follow the company's agreement rather than
+    # automatically earmarking the occupant's personal deposit guarantee.
     allocation = GroupReservationRoom(
         group_reservation=group,
         guest=guest,
