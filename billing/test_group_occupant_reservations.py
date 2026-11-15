@@ -1,10 +1,20 @@
 from datetime import date
+from decimal import Decimal
+from types import SimpleNamespace
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from billing.models import Company, GroupReservation, GroupReservationRoom, Guest, Reservation
+from billing.models import (
+    Company,
+    GroupReservation,
+    GroupReservationRate,
+    GroupReservationRoom,
+    Guest,
+    Reservation,
+)
 from billing.services.group_reservations import add_group_occupant
+from billing.services.room_pricing import get_room_night_pricing
 from inventory.models import Hotel, Organization
 from rooms.models import Room, RoomCategory
 
@@ -108,3 +118,66 @@ class GroupOccupantReservationTests(TestCase):
         )
         allocation.full_clean()
 
+
+
+class GroupRoomPricingTests(GroupOccupantReservationTests):
+    def _allocation(self, override=None):
+        allocation = GroupReservationRoom(
+            group_reservation=self.group,
+            guest=self.guest,
+            room_category=self.category,
+            check_in_date=self.group.check_in_date,
+            check_out_date=self.group.check_out_date,
+            negotiated_nightly_rate=override,
+        )
+        return allocation
+
+    def _folio_stub(self, allocation):
+        return SimpleNamespace(
+            group_allocation=allocation,
+            room=SimpleNamespace(category=self.category),
+        )
+
+    def test_group_category_rate_is_selected_for_occupant(self):
+        GroupReservationRate.objects.create(
+            group_reservation=self.group,
+            room_category=self.category,
+            nightly_rate=Decimal("18500.00"),
+        )
+        allocation = self._allocation()
+
+        result = get_room_night_pricing(self._folio_stub(allocation))
+
+        self.assertEqual(result[0], allocation)
+        self.assertEqual(result[1], Decimal("18500.00"))
+        self.assertEqual(result[2], "GROUP")
+        self.assertEqual(result[3], "COMPANY")
+
+    def test_occupant_override_takes_precedence_over_group_rate(self):
+        GroupReservationRate.objects.create(
+            group_reservation=self.group,
+            room_category=self.category,
+            nightly_rate=Decimal("18500.00"),
+        )
+        allocation = self._allocation(Decimal("16000.00"))
+
+        result = get_room_night_pricing(self._folio_stub(allocation))
+
+        self.assertEqual(result[1], Decimal("16000.00"))
+        self.assertEqual(result[2], "OVERRIDE")
+        self.assertEqual(result[3], "COMPANY")
+
+    def test_group_can_assign_room_nights_to_occupant(self):
+        self.group.room_billing_party = "INDIVIDUAL"
+        self.group.save(update_fields=["room_billing_party"])
+        GroupReservationRate.objects.create(
+            group_reservation=self.group,
+            room_category=self.category,
+            nightly_rate=Decimal("18500.00"),
+        )
+
+        result = get_room_night_pricing(
+            self._folio_stub(self._allocation())
+        )
+
+        self.assertEqual(result[3], "INDIVIDUAL")
