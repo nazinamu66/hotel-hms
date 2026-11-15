@@ -25,6 +25,15 @@ def find_available_room(reservation):
         exclude_reservation_id=reservation.pk,
     )
 
+    # Honor an explicit room assignment; do not silently move the occupant.
+    if reservation.room_id:
+        assigned_room = available_rooms.filter(pk=reservation.room_id).first()
+        if not assigned_room:
+            raise ValidationError(
+                f"Assigned room {reservation.room.room_number} is no longer available."
+            )
+        return assigned_room
+
     available_room = available_rooms.first()
 
     if not available_room:
@@ -77,5 +86,13 @@ def check_in_reservation(
         reservation,
         room,
     )
+
+    # Keep the group allocation synchronized with the individual check-in.
+    allocation = getattr(reservation, "group_allocation", None)
+    if allocation is not None:
+        allocation.room = room
+        allocation.folio = folio
+        allocation.status = "CHECKED_IN"
+        allocation.save(update_fields=["room", "folio", "status"])
 
     return room, folio
