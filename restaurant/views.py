@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from inventory.models import Stock, Product, stock_out
 from django.shortcuts import get_object_or_404
 from rooms.models import Room
-from billing.models import Folio, Payment
+from billing.models import Folio, Payment, Charge
 from datetime import date
 from inventory.models import Department
 from accounts.models import User
@@ -639,6 +639,93 @@ def pos_order_receipt(request, order_id):
     })
 
 
+
+@role_required("RESTAURANT")
+@require_POST
+@transaction.atomic
+def collect_room_order_payment(request, order_id):
+    """Collect an outstanding room-charged POS order against its original charge."""
+    user = request.user
+    department = user.department
+    if not department or department.department_type != "RESTAURANT":
+        raise PermissionDenied("Restaurant department access is required.")
+
+    order = get_object_or_404(
+        POSOrder.objects.select_for_update().select_related("folio", "department__hotel"),
+        pk=order_id, department=department, status="CHARGED", folio__folio_type="ROOM",
+    )
+    if order.is_refunded:
+        messages.error(request, "A refunded order cannot receive payment.")
+        return redirect("restaurant_order_detail", order_id=order.pk)
+
+    shift = Shift.objects.select_for_update().filter(
+        user=user, department=department, status="OPEN",
+    ).first()
+    if not shift:
+        messages.error(request, "Open your Restaurant shift before collecting payment.")
+        return redirect("restaurant_order_detail", order_id=order.pk)
+    if CashHandover.objects.filter(shift=shift, from_user=user, status="PENDING").exists():
+        messages.error(request, "A cash handover is pending for this shift.")
+        return redirect("restaurant_order_detail", order_id=order.pk)
+
+    charge = get_object_or_404(
+        Charge.objects.select_for_update(),
+        folio=order.folio, reference=f"POS-{order.pk}",
+        amount=order.total_amount, department=department,
+    )
+    from billing.services.charge_allocations import charge_outstanding
+    outstanding = charge_outstanding(charge)
+    if outstanding <= 0:
+        messages.info(request, "This order has already been fully settled.")
+        return redirect("restaurant_order_detail", order_id=order.pk)
+
+    try:
+        amount = Decimal(request.POST.get("amount", "").strip())
+    except (InvalidOperation, TypeError, ValueError):
+        messages.error(request, "Enter a valid payment amount.")
+        return redirect("restaurant_order_detail", order_id=order.pk)
+    if not amount.is_finite() or amount <= 0 or amount > outstanding:
+        messages.error(request, f"Payment must be greater than zero and no more than ₦{outstanding:,.2f}.")
+        return redirect("restaurant_order_detail", order_id=order.pk)
+    if amount != amount.quantize(Decimal("0.01")):
+        messages.error(request, "Payment can have no more than two decimal places.")
+        return redirect("restaurant_order_detail", order_id=order.pk)
+
+    method = request.POST.get("method", "").strip().upper()
+    if method not in ("CASH", "POS", "TRANSFER"):
+        messages.error(request, "Select a valid payment method.")
+        return redirect("restaurant_order_detail", order_id=order.pk)
+    reference = request.POST.get("reference", "").strip()
+    if method in ("POS", "TRANSFER") and not reference:
+        messages.error(request, "Payment reference is required for POS and bank transfer.")
+        return redirect("restaurant_order_detail", order_id=order.pk)
+
+    account = None
+    if method in ("POS", "TRANSFER"):
+        bank = get_object_or_404(
+            BankAccount.objects.select_related("account"),
+            pk=request.POST.get("bank_account"),
+            hotel=department.hotel, is_active=True, account__is_active=True,
+        )
+        account = bank.account
+
+    payment = Payment.objects.create(
+        folio=order.folio, amount=amount, method=method, account=account,
+        shift=shift, collected_by=user, reference=reference or f"POS-COLLECTION-{order.pk}-{timezone.now():%Y%m%d%H%M%S}",
+        note=f"Collection against room-charged Restaurant Order #{order.pk}",
+    )
+    from accounting.services.postings.payment import post_payment
+    from billing.services.charge_allocations import allocate_payment_to_charge
+    post_payment(payment)
+    allocate_payment_to_charge(payment, charge)
+
+    if charge_outstanding(charge) == 0:
+        order.status = "PAID"
+        order.save(update_fields=["status"])
+    messages.success(request, f"₦{amount:,.2f} collected against Restaurant Order #{order.pk}.")
+    return redirect("restaurant_order_detail", order_id=order.pk)
+
+
 @role_required("RESTAURANT", "MANAGER", "ADMIN")
 def pos_order_detail(request, order_id):
     if request.user.role == "RESTAURANT":
@@ -670,6 +757,15 @@ def pos_order_detail(request, order_id):
         .first()
     )
 
+    room_charge_outstanding = Decimal("0.00")
+    if order.folio.folio_type == "ROOM" and order.status == "CHARGED":
+        from billing.services.charge_allocations import charge_outstanding
+        room_charge = Charge.objects.filter(
+            folio=order.folio, reference=f"POS-{order.pk}", amount=order.total_amount
+        ).first()
+        if room_charge:
+            room_charge_outstanding = charge_outstanding(room_charge)
+
     return render(
         request,
         "restaurant/order_detail.html",
@@ -677,6 +773,10 @@ def pos_order_detail(request, order_id):
             "order": order,
             "ticket": ticket,
             "refund_request": refund_request,
+            "room_charge_outstanding": room_charge_outstanding,
+            "collection_bank_accounts": BankAccount.objects.filter(
+                hotel=order.department.hotel, is_active=True, account__is_active=True
+            ).select_related("account").order_by("-is_default", "bank_name"),
         },
     )
 
