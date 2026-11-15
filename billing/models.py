@@ -239,13 +239,12 @@ class Folio(models.Model):
             .aggregate(total=models.Sum("amount"))["total"]
             or Decimal("0.00")
         )
-        from billing.models import ChargePaymentAllocation
-        allocated_total = (
-            ChargePaymentAllocation.objects.filter(payment__folio=self)
-            .aggregate(total=models.Sum("amount"))["total"]
+        tracked_total = (
+            self.payments.filter(allocation_tracking_enabled=True)
+            .aggregate(total=models.Sum("applied_amount"))["total"]
             or Decimal("0.00")
         )
-        return legacy_total + allocated_total
+        return legacy_total + tracked_total
 
     @property
     def balance(self):
@@ -382,6 +381,12 @@ class Payment(models.Model):
     allocation_tracking_enabled = models.BooleanField(
         default=False,
         help_text="Folio balance uses applied allocations rather than the full receipt amount.",
+    )
+    applied_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Amount of this receipt applied to the folio; excess is held as guest credit.",
     )
     method = models.CharField(max_length=20, choices=METHOD_CHOICES)
     reference = models.CharField(
