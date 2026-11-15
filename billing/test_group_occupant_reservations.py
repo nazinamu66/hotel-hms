@@ -3,7 +3,7 @@ from datetime import date
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from billing.models import Company, GroupReservation, GroupReservationRoom, Guest
+from billing.models import Company, GroupReservation, GroupReservationRoom, Guest, Reservation
 from billing.services.group_reservations import add_group_occupant
 from inventory.models import Hotel, Organization
 from rooms.models import Room, RoomCategory
@@ -61,7 +61,9 @@ class GroupOccupantReservationTests(TestCase):
         self.assertEqual(allocation.reservation.number_of_rooms, 1)
         self.assertEqual(allocation.reservation.room, self.room)
         self.assertEqual(
-            ReservationCount.for_group(self.group.pk),
+            Reservation.objects.filter(
+                group_allocation__group_reservation=self.group
+            ).count(),
             1,
         )
 
@@ -106,11 +108,3 @@ class GroupOccupantReservationTests(TestCase):
         )
         allocation.full_clean()
 
-
-class ReservationCount:
-    @staticmethod
-    def for_group(group_id):
-        from billing.models import Reservation
-        return Reservation.objects.filter(
-            group_allocation__group_reservation_id=group_id
-        ).count()
