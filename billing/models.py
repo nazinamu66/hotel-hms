@@ -230,7 +230,22 @@ class Folio(models.Model):
 
     @property
     def total_payments(self):
-        return sum(p.amount for p in self.payments.all())
+        # New allocation-aware receipts reduce the folio only by the amount
+        # actually applied to charges. Their unapplied remainder is a guest
+        # liability, not a negative folio balance. Legacy payments retain
+        # their historical balance treatment until explicitly reconciled.
+        legacy_total = (
+            self.payments.filter(allocation_tracking_enabled=False)
+            .aggregate(total=models.Sum("amount"))["total"]
+            or Decimal("0.00")
+        )
+        from billing.models import ChargePaymentAllocation
+        allocated_total = (
+            ChargePaymentAllocation.objects.filter(payment__folio=self)
+            .aggregate(total=models.Sum("amount"))["total"]
+            or Decimal("0.00")
+        )
+        return legacy_total + allocated_total
 
     @property
     def balance(self):
@@ -364,6 +379,10 @@ class Payment(models.Model):
         blank=True,
     )    
     amount = models.DecimalField(max_digits=12, decimal_places=2)
+    allocation_tracking_enabled = models.BooleanField(
+        default=False,
+        help_text="Folio balance uses applied allocations rather than the full receipt amount.",
+    )
     method = models.CharField(max_length=20, choices=METHOD_CHOICES)
     reference = models.CharField(
         max_length=100,
@@ -488,6 +507,7 @@ class GuestDepositTransaction(models.Model):
     TYPE_CHOICES = (
         ("RECEIVED", "Deposit Received"),
         ("APPLIED", "Deposit Applied"),
+        ("UNAPPLIED_CREDIT", "Unapplied Folio Credit"),
         ("REFUNDED", "Deposit Refunded"),
         ("FORFEITED", "Reservation Guarantee Forfeited"),
 
