@@ -44,7 +44,12 @@ def get_room_night_pricing(folio):
     if not standard_rate or not standard_rate.is_active:
         raise ValidationError("No active rate for this room category.")
 
-    return allocation, Decimal(standard_rate.price_per_night), "STANDARD", "INDIVIDUAL"
+    billing_party = (
+        allocation.group_reservation.room_billing_party
+        if allocation is not None
+        else "INDIVIDUAL"
+    )
+    return allocation, Decimal(standard_rate.price_per_night), "STANDARD", billing_party
 
 
 def create_room_night_charge(*, folio, charge_date, charged_by=None):
