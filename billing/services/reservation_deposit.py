@@ -11,6 +11,7 @@ from billing.models import (
     Reservation,
     ReservationDeposit,
     GuestDepositTransaction,
+    GroupReservationRoom,
 
 )
 
@@ -275,7 +276,7 @@ def create_reservation_guarantee(
     allocation = None
     try:
         allocation = reservation.group_allocation
-    except Exception:
+    except GroupReservationRoom.DoesNotExist:
         allocation = None
 
     if allocation is not None and allocation.negotiated_nightly_rate is not None:
