@@ -196,3 +196,32 @@ class FrontdeskOverpaymentCreditTests(TestCase):
             next_charge.pk,
         )
         post_accounting.assert_called_once_with(original_payment)
+
+    @patch("billing.services.guest_deposit.apply_guest_deposit")
+    @patch("frontdesk.workflows.payment.post_payment_to_accounting")
+    def test_guest_deposit_method_uses_deposit_ledger_not_cash_receipt_posting(
+        self, post_accounting, apply_deposit
+    ):
+        expected_payment = Payment(
+            folio=self.folio,
+            amount=Decimal("500.00"),
+            method="DEPOSIT",
+        )
+        apply_deposit.return_value = (expected_payment, object())
+
+        result = take_payment_for_folio(
+            folio=self.folio,
+            user=self.user,
+            amount=Decimal("500.00"),
+            method="DEPOSIT",
+        )
+
+        self.assertIs(result, expected_payment)
+        apply_deposit.assert_called_once_with(
+            folio=self.folio,
+            amount=Decimal("500.00"),
+            user=self.user,
+            reference="",
+            note="",
+        )
+        post_accounting.assert_not_called()
