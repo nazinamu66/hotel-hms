@@ -131,39 +131,21 @@ class Folio(models.Model):
 
     def apply_daily_room_charge(self, charged_by=None):
         """
-        Apply one room-night charge.
-
-        CCH billing rule:
-        - First room night is charged immediately at check-in.
-        - The same room night is not charged again merely because
-        the calendar date changes.
-        - A subsequent room night becomes chargeable only after
-        the normal 12:00 PM checkout boundary has passed.
+        Apply one room-night charge using the group's negotiated rate when
+        this folio belongs to a corporate allocation. Individual stays retain
+        the standard room-category rate.
         """
-
         if self.folio_type != "ROOM" or self.is_closed:
             return
 
         if not self.room or not self.room.category:
             raise ValidationError("Room or category missing.")
 
-        rate = getattr(self.room.category, "rate", None)
-
-        if not rate or not rate.is_active:
-            raise ValidationError(
-                "No active rate for this room category."
-            )
-
         today = timezone.localdate()
 
-        # First room-night charge:
-        # check-in charges the current room night immediately.
         if self.last_room_charge_date is None:
             charge_date = timezone.localdate(self.check_in_at)
-
         else:
-            # The guest's next room night is not billable until
-            # the normal 12:00 PM checkout boundary has passed.
             checkout_boundary = timezone.make_aware(
                 timezone.datetime.combine(
                     self.last_room_charge_date,
@@ -174,55 +156,26 @@ class Folio(models.Model):
             if timezone.now() <= checkout_boundary:
                 return
 
-            # Do not create another room-night charge if the guest's
-            # current stay has already reached its scheduled checkout.
             if self.check_out_at:
                 scheduled_checkout = self.check_out_at
-
                 if timezone.is_naive(scheduled_checkout):
-                    scheduled_checkout = timezone.make_aware(
-                        scheduled_checkout
-                    )
-
+                    scheduled_checkout = timezone.make_aware(scheduled_checkout)
                 if timezone.now() >= scheduled_checkout:
                     return
 
             charge_date = today
-
-            # Prevent duplicate charging of the same room-night.
             if self.last_room_charge_date == charge_date:
                 return
 
-        charge = Charge.objects.create(
+        from billing.services.room_pricing import create_room_night_charge
+        create_room_night_charge(
             folio=self,
-            description=f"Room charge – {charge_date}",
-            department=Department.objects.get(
-                hotel=self.room.hotel,
-                department_type="FRONTDESK",
-                is_active=True,
-            ),
-            amount=Decimal(rate.price_per_night),
-            reference=f"ROOM-{self.room.room_number}-{charge_date}",
-        )
-
-        # Accounting must succeed before the room charge is considered posted.
-        from accounting.services.postings.room_charge import (
-            post_room_charge,
-        )
-
-        post_room_charge(
-            self,
-            charge.amount,
-            charged_by,
+            charge_date=charge_date,
+            charged_by=charged_by,
         )
 
         self.last_room_charge_date = charge_date
-
-        self.save(
-            update_fields=[
-                "last_room_charge_date",
-            ]
-        )
+        self.save(update_fields=["last_room_charge_date"])
 
     @property
     def total_charges(self):
