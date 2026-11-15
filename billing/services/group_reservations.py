@@ -105,8 +105,6 @@ def add_group_occupant(
         note=f"Group reservation {group.reference}",
     )
 
-    # Corporate group stays follow the company's agreement rather than
-    # automatically earmarking the occupant's personal deposit guarantee.
     allocation = GroupReservationRoom(
         group_reservation=group,
         guest=guest,
@@ -119,5 +117,15 @@ def add_group_occupant(
     )
     allocation.full_clean()
     allocation.save()
+
+    # Company-paid room nights do not consume the occupant's personal deposit.
+    # If the agreement makes the occupant responsible, retain the normal
+    # guarantee workflow, valued at the negotiated rate where one exists.
+    if group.room_billing_party == "INDIVIDUAL":
+        from billing.services.reservation_deposit import create_reservation_guarantee
+        try:
+            create_reservation_guarantee(reservation=reservation, user=user)
+        except ValidationError:
+            pass
 
     return allocation
