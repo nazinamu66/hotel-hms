@@ -848,3 +848,261 @@ class RefundExecution(models.Model):
 
     def __str__(self):
         return f"POS refund payout #{self.pk} — ₦{self.amount:,.2f}"
+
+
+# ============================================================================
+# COMPANY AND GROUP RESERVATIONS
+# These models extend the existing individual Guest / Reservation / Folio
+# records. Individual folios remain the financial source of truth.
+# ============================================================================
+
+class Company(models.Model):
+    """A corporate customer belonging to one hotel."""
+
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.PROTECT,
+        related_name="corporate_customers",
+    )
+    name = models.CharField(max_length=200)
+    registration_number = models.CharField(max_length=100, blank=True)
+    billing_address = models.TextField(blank=True)
+    contact_person = models.CharField(max_length=150, blank=True)
+    phone = models.CharField(max_length=50, blank=True)
+    email = models.EmailField(blank=True)
+    tax_number = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="companies_created",
+    )
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "name"],
+                name="unique_company_name_per_hotel",
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class GroupReservation(models.Model):
+    """Master corporate booking; room stays remain individual reservations."""
+
+    STATUS_CHOICES = (
+        ("DRAFT", "Draft"),
+        ("CONFIRMED", "Confirmed"),
+        ("IN_HOUSE", "In House"),
+        ("COMPLETED", "Completed"),
+        ("CANCELLED", "Cancelled"),
+    )
+
+    hotel = models.ForeignKey(
+        Hotel, on_delete=models.PROTECT, related_name="group_reservations"
+    )
+    company = models.ForeignKey(
+        Company, on_delete=models.PROTECT, related_name="group_reservations"
+    )
+    reference = models.CharField(max_length=40)
+    name = models.CharField(
+        max_length=200, blank=True,
+        help_text="Optional event, project or group name.",
+    )
+    check_in_date = models.DateField()
+    check_out_date = models.DateField()
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default="DRAFT"
+    )
+    agreement_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="group_reservations_created",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "reference"],
+                name="unique_group_reference_per_hotel",
+            ),
+        ]
+
+    def clean(self):
+        if self.hotel_id and self.company_id and self.company.hotel_id != self.hotel_id:
+            raise ValidationError("Company and group reservation must belong to the same hotel.")
+        if self.check_in_date and self.check_out_date and self.check_out_date <= self.check_in_date:
+            raise ValidationError("Group check-out date must be after check-in date.")
+
+    def __str__(self):
+        return f"{self.reference} – {self.company.name}"
+
+
+class GroupReservationRoom(models.Model):
+    """One named occupant and one room allocation within a group booking."""
+
+    STATUS_CHOICES = (
+        ("RESERVED", "Reserved"),
+        ("CHECKED_IN", "Checked In"),
+        ("CHECKED_OUT", "Checked Out"),
+        ("CANCELLED", "Cancelled"),
+    )
+
+    group_reservation = models.ForeignKey(
+        GroupReservation,
+        on_delete=models.PROTECT,
+        related_name="room_allocations",
+    )
+    guest = models.ForeignKey(
+        Guest, on_delete=models.PROTECT, related_name="group_room_allocations"
+    )
+    room_category = models.ForeignKey(
+        RoomCategory, on_delete=models.PROTECT,
+        related_name="group_room_allocations",
+    )
+    room = models.ForeignKey(
+        Room, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="group_room_allocations",
+    )
+    reservation = models.OneToOneField(
+        Reservation, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="group_allocation",
+    )
+    folio = models.OneToOneField(
+        Folio, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="group_allocation",
+    )
+    check_in_date = models.DateField()
+    check_out_date = models.DateField()
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default="RESERVED"
+    )
+    occupant_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def clean(self):
+        group = self.group_reservation
+        if self.guest_id and self.guest.hotel_id != group.hotel_id:
+            raise ValidationError("Occupant must belong to the group's hotel.")
+        if self.room_category_id and self.room_category.hotel_id != group.hotel_id:
+            raise ValidationError("Room category must belong to the group's hotel.")
+        if self.room_id and self.room.hotel_id != group.hotel_id:
+            raise ValidationError("Room must belong to the group's hotel.")
+        if self.room_id and self.room_category_id and self.room.category_id != self.room_category_id:
+            raise ValidationError("Assigned room does not match the selected category.")
+        if self.reservation_id:
+            if self.reservation.hotel_id != group.hotel_id or self.reservation.guest_id != self.guest_id:
+                raise ValidationError("Linked reservation must belong to this occupant and hotel.")
+        if self.folio_id:
+            if self.folio.hotel_id != group.hotel_id or self.folio.guest_id != self.guest_id:
+                raise ValidationError("Linked folio must belong to this occupant and hotel.")
+        if self.check_in_date and self.check_out_date and self.check_out_date <= self.check_in_date:
+            raise ValidationError("Room allocation check-out must be after check-in.")
+
+    def __str__(self):
+        return f"{self.group_reservation.reference} – {self.guest.full_name}"
+
+
+class CompanyServicePolicy(models.Model):
+    """Services covered by a company's agreement for a particular group stay.
+
+    A policy is scoped to a group reservation so later contract changes do not
+    silently rewrite the terms of an earlier stay.
+    """
+
+    COVERAGE_CHOICES = (
+        ("COVERED", "Company Covered"),
+        ("EXCLUDED", "Occupant Pays"),
+    )
+
+    group_reservation = models.ForeignKey(
+        GroupReservation, on_delete=models.PROTECT,
+        related_name="service_policies",
+    )
+    service_code = models.CharField(
+        max_length=60,
+        help_text="Stable service key, e.g. ROOM, BREAKFAST, LAUNDRY.",
+    )
+    service_name = models.CharField(max_length=120)
+    coverage = models.CharField(
+        max_length=12, choices=COVERAGE_CHOICES, default="EXCLUDED"
+    )
+    amount_limit_per_occupant = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text="Optional currency allowance per occupant for the entire stay.",
+    )
+    quantity_limit_per_occupant = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Optional service quantity allowance per occupant for the entire stay.",
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["service_name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["group_reservation", "service_code"],
+                name="unique_group_service_policy",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(amount_limit_per_occupant__isnull=True)
+                    | models.Q(amount_limit_per_occupant__gte=0)
+                ),
+                name="company_service_amount_limit_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(quantity_limit_per_occupant__isnull=True)
+                    | models.Q(quantity_limit_per_occupant__gte=0)
+                ),
+                name="company_service_quantity_limit_nonnegative",
+            ),
+        ]
+
+    def clean(self):
+        if self.amount_limit_per_occupant is not None and self.amount_limit_per_occupant < 0:
+            raise ValidationError("Amount allowance cannot be negative.")
+        if self.quantity_limit_per_occupant is not None and self.quantity_limit_per_occupant < 0:
+            raise ValidationError("Quantity allowance cannot be negative.")
+
+    def __str__(self):
+        return f"{self.group_reservation.reference}: {self.service_name}"
+
+
+# Charges retain the payer decision made when the service is posted. The
+# default is INDIVIDUAL so all existing charge creation paths remain unchanged.
+Charge.BILLING_PARTY_CHOICES = (
+    ("INDIVIDUAL", "Occupant"),
+    ("COMPANY", "Company"),
+)
+Charge.add_to_class(
+    "billing_party",
+    models.CharField(
+        max_length=12,
+        choices=Charge.BILLING_PARTY_CHOICES,
+        default="INDIVIDUAL",
+        db_index=True,
+    ),
+)
+Charge.add_to_class(
+    "group_room_allocation",
+    models.ForeignKey(
+        GroupReservationRoom,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="charges",
+    ),
+)
