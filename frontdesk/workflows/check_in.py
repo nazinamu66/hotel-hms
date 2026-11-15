@@ -117,7 +117,7 @@ def validate_active_folio(room):
         )
 
 
-def create_folio(room, guest, expected_checkout, user=None):
+def create_folio(room, guest, expected_checkout, user=None, group_allocation=None):
     folio = Folio.objects.create(
         folio_type="ROOM",
         room=room,
@@ -163,6 +163,13 @@ def create_folio(room, guest, expected_checkout, user=None):
         ]
     )
 
+    # Link corporate allocation before posting the first room-night charge.
+    if group_allocation is not None:
+        group_allocation.room = room
+        group_allocation.folio = folio
+        group_allocation.status = "CHECKED_IN"
+        group_allocation.save(update_fields=["room", "folio", "status"])
+
     FolioRoomHistory.objects.create(
         folio=folio,
         room=room,
@@ -191,6 +198,7 @@ def check_in_guest(
     data=None,
     guest=None,
     expected_checkout=None,
+    group_allocation=None,
 ):
 
     validate_check_in(room)
@@ -223,6 +231,7 @@ def check_in_guest(
         guest,
         expected_checkout,
         user=user,
+        group_allocation=group_allocation,
     )
 
 
