@@ -182,6 +182,7 @@
                     "
                 >
                     Payment Amount
+                    <span style="display:block;font-size:12px;font-weight:400;color:#6b7280;margin-top:3px;">You may pay more than the outstanding balance. Any excess will be saved as guest credit.</span>
                 </label>
 
                 <div style="position:relative;">
@@ -201,7 +202,6 @@
                         type="number"
                         step="0.01"
                         min="0.01"
-                        max="{{ balance }}"
                         name="amount"
                         id="amount"
                         value="{{ balance }}"
