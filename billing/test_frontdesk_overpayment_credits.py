@@ -10,6 +10,7 @@ from billing.models import (
     GuestDepositTransaction, Payment,
 )
 from frontdesk.workflows.payment import take_payment_for_folio
+from billing.services.guest_deposit import apply_guest_deposit
 from inventory.models import Department, Hotel, Organization
 
 
@@ -148,3 +149,50 @@ class FrontdeskOverpaymentCreditTests(TestCase):
         self.assertEqual(payment.amount, Decimal("750.00"))
         self.assertFalse(GuestDeposit.objects.filter(guest=self.guest).exists())
         post_accounting.assert_called_once_with(payment)
+
+    @patch("frontdesk.workflows.payment.post_payment_to_accounting")
+    def test_unapplied_credit_can_later_be_applied_to_another_folio(self, post_accounting):
+        original_payment = take_payment_for_folio(
+            folio=self.folio,
+            user=self.user,
+            amount=Decimal("10000.00"),
+            method="CASH",
+        )
+        deposit = GuestDeposit.objects.get(guest=self.guest, hotel=self.hotel)
+        next_folio = Folio.objects.create(
+            hotel=self.hotel,
+            folio_type="ROOM",
+            guest=self.guest,
+        )
+        next_charge = Charge.objects.create(
+            folio=next_folio,
+            description="Next stay charge",
+            department=self.frontdesk,
+            amount=Decimal("3000.00"),
+            reference="NEXT-STAY-CHARGE",
+        )
+
+        deposit_payment, transaction_record = apply_guest_deposit(
+            folio=next_folio,
+            amount=Decimal("3000.00"),
+            user=self.user,
+            reference="APPLY-CREDIT-3000",
+            note="Apply existing guest credit",
+        )
+
+        self.folio.refresh_from_db()
+        next_folio.refresh_from_db()
+        deposit.refresh_from_db()
+
+        self.assertEqual(original_payment.amount, Decimal("10000.00"))
+        self.assertEqual(self.folio.balance, Decimal("0.00"))
+        self.assertEqual(next_folio.balance, Decimal("0.00"))
+        self.assertEqual(deposit.balance, Decimal("5000.00"))
+        self.assertEqual(deposit_payment.amount, Decimal("3000.00"))
+        self.assertTrue(deposit_payment.allocation_tracking_enabled)
+        self.assertEqual(transaction_record.transaction_type, "APPLIED")
+        self.assertEqual(
+            ChargePaymentAllocation.objects.get(payment=deposit_payment).charge_id,
+            next_charge.pk,
+        )
+        post_accounting.assert_called_once_with(original_payment)
