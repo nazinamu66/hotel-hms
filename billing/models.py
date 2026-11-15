@@ -1116,3 +1116,34 @@ Charge.add_to_class(
         related_name="charges",
     ),
 )
+Charge.add_to_class(
+    "room_night_date",
+    models.DateField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="The room-night date represented by this room charge.",
+    ),
+)
+Charge.add_to_class(
+    "room_rate",
+    models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Immutable nightly rate snapshot used when this charge was posted.",
+    ),
+)
+Charge.add_to_class(
+    "room_rate_source",
+    models.CharField(
+        max_length=12,
+        choices=[
+            ("STANDARD", "Standard category rate"),
+            ("GROUP", "Group negotiated rate"),
+            ("OVERRIDE", "Occupant override"),
+        ],
+        blank=True,
+    ),
+)
