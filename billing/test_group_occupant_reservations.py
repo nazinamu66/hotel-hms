@@ -120,7 +120,38 @@ class GroupOccupantReservationTests(TestCase):
 
 
 
-class GroupRoomPricingTests(GroupOccupantReservationTests):
+class GroupRoomPricingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        organization = Organization.objects.create(name="Group Pricing Test Org")
+        cls.hotel = Hotel.objects.create(
+            organization=organization,
+            name="Group Pricing Test Hotel",
+        )
+        cls.category = RoomCategory.objects.create(name="Group Pricing Standard")
+        cls.room = Room.objects.create(
+            hotel=cls.hotel,
+            room_number="GP01",
+            category=cls.category,
+        )
+        cls.guest = Guest.objects.create(
+            hotel=cls.hotel,
+            first_name="Hauwa",
+            last_name="Abdullahi",
+        )
+        cls.company = Company.objects.create(
+            hotel=cls.hotel,
+            name="Group Pricing Ltd",
+        )
+        cls.group = GroupReservation.objects.create(
+            hotel=cls.hotel,
+            company=cls.company,
+            reference="GROUP-PRICING-001",
+            check_in_date=date(2027, 2, 10),
+            check_out_date=date(2027, 2, 15),
+            status="CONFIRMED",
+        )
+
     def _allocation(self, override=None):
         allocation = GroupReservationRoom(
             group_reservation=self.group,
