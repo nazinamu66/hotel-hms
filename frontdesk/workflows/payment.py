@@ -103,6 +103,17 @@ def take_payment_for_folio(
         bank_account=bank_account,
     )
 
+    if method == "DEPOSIT":
+        from billing.services.guest_deposit import apply_guest_deposit
+        payment, _transaction = apply_guest_deposit(
+            folio=folio,
+            amount=amount,
+            user=user,
+            reference=reference,
+            note=note,
+        )
+        return payment
+
     payment = create_payment(
         folio=folio,
         amount=amount,
