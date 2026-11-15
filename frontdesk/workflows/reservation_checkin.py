@@ -75,11 +75,14 @@ def check_in_reservation(
 
     
 
+    allocation = getattr(reservation, "group_allocation", None)
+
     folio = check_in_guest(
         room=room,
         user=user,
         guest=reservation.guest,
         expected_checkout=reservation.check_out_date,
+        group_allocation=allocation,
     )
 
     mark_reservation_checked_in(
@@ -87,12 +90,6 @@ def check_in_reservation(
         room,
     )
 
-    # Keep the group allocation synchronized with the individual check-in.
-    allocation = getattr(reservation, "group_allocation", None)
-    if allocation is not None:
-        allocation.room = room
-        allocation.folio = folio
-        allocation.status = "CHECKED_IN"
-        allocation.save(update_fields=["room", "folio", "status"])
+    # Group allocation was linked before the first room charge was posted.
 
     return room, folio
