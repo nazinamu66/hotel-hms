@@ -39,7 +39,7 @@ def payment_unallocated(payment):
 
 
 @transaction.atomic
-def allocate_payment_fifo(payment):
+def allocate_payment_fifo(payment, allocation_limit=None):
     """
     Allocate a newly received general folio payment to the oldest positive
     outstanding charges. Historical payments are deliberately not backfilled.
@@ -49,6 +49,8 @@ def allocate_payment_fifo(payment):
         raise ValidationError("Only positive payments can be allocated.")
     folio = Folio.objects.select_for_update().get(pk=payment.folio_id)
     remaining = payment_unallocated(payment)
+    if allocation_limit is not None:
+        remaining = min(remaining, max(Decimal(str(allocation_limit)), ZERO))
     if remaining <= 0:
         return []
 
