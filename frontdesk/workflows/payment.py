@@ -95,6 +95,8 @@ def take_payment_for_folio(
     method = (method or "").strip().upper()
     folio = Folio.objects.select_for_update().select_related("guest", "hotel").get(pk=folio.pk)
 
+    folio_balance_before = max(folio.balance, Decimal("0.00"))
+
     validate_payment(
         folio=folio,
         amount=amount,
@@ -126,14 +128,17 @@ def take_payment_for_folio(
 
     post_payment_to_accounting(payment)
 
-    from billing.services.charge_allocations import allocate_payment_fifo, payment_unallocated
-    allocate_payment_fifo(payment)
+    from billing.services.charge_allocations import allocate_payment_fifo
+    allocate_payment_fifo(payment, allocation_limit=folio_balance_before)
+
+    payment.applied_amount = min(payment.amount, folio_balance_before)
+    payment.save(update_fields=["applied_amount"])
 
     # Any receipt amount not applied to eligible folio charges is retained
     # as a guest credit. Cash/bank was already debited and A/R credited by
     # post_payment; this entry reclassifies only the excess from A/R to the
     # guest-deposit liability, without recording the cash twice.
-    unapplied = payment_unallocated(payment)
+    unapplied = payment.amount - payment.applied_amount
     if unapplied > 0:
         if not folio.guest_id:
             raise ValidationError(
