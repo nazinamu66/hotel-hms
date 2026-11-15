@@ -230,10 +230,10 @@ class Folio(models.Model):
 
     @property
     def total_payments(self):
-        # New allocation-aware receipts reduce the folio only by the amount
-        # actually applied to charges. Their unapplied remainder is a guest
-        # liability, not a negative folio balance. Legacy payments retain
-        # their historical balance treatment until explicitly reconciled.
+        # Allocation-aware receipts reduce the folio only by the amount
+        # applied to its verified balance. Charge-level allocations are kept
+        # separately where available; legacy balances are not guessed by charge.
+        # Any unapplied receipt remainder is held as a guest liability.
         legacy_total = (
             self.payments.filter(allocation_tracking_enabled=False)
             .aggregate(total=models.Sum("amount"))["total"]
