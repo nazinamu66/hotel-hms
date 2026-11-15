@@ -352,6 +352,7 @@ def apply_guest_deposit(
     payment = Payment.objects.create(
         folio=folio,
         allocation_tracking_enabled=True,
+        applied_amount=amount,
         amount=amount,
         method="DEPOSIT",
         reference=reference,
