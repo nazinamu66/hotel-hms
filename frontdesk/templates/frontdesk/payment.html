@@ -48,7 +48,7 @@
         </div>
 
         <h3 style="margin:6px 0 22px;">
-            Room {{ room.room_number }}
+            {% if room %}Room {{ room.room_number }}{% else %}Walk-in Folio{% endif %}
         </h3>
 
         <div style="display:grid;gap:17px;">
@@ -123,7 +123,7 @@
                     font-size:24px;
                     font-weight:700;
                 ">
-                    ₦{{ folio.guest.deposits.first.balance|default:"0.00"|floatformat:2 }}
+                    ₦{{ guest_deposit.balance|default:"0.00"|floatformat:2 }}
                 </div>
 
                 <div style="
@@ -464,7 +464,7 @@
                 </button>
 
                 <a
-                    href="{% url 'frontdesk_active_stay' room.id %}"
+                    href="{{ cancel_url }}"
                     style="
                         text-decoration:none;
                         padding:11px 18px;
