@@ -710,7 +710,7 @@ def collect_room_order_payment(request, order_id):
         account = bank.account
 
     payment = Payment.objects.create(
-        folio=order.folio, allocation_tracking_enabled=True, amount=amount, method=method,
+        folio=order.folio, allocation_tracking_enabled=True, applied_amount=amount, amount=amount, method=method,
         shift=shift, collected_by=user, reference=reference or f"POS-COLLECTION-{order.pk}-{timezone.now():%Y%m%d%H%M%S}",
         note=f"Collection against room-charged Restaurant Order #{order.pk}",
     )
