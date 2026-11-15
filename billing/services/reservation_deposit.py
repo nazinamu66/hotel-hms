@@ -270,18 +270,34 @@ def create_reservation_guarantee(
             "Reservation check-out date must be after check-in date."
         )
 
-    rate = getattr(
-        reservation.room_category,
-        "rate",
-        None,
-    )
+    # Corporate reservations use the agreed rate for guarantee valuation
+    # when the occupant, rather than the company, is responsible for the room.
+    allocation = None
+    try:
+        allocation = reservation.group_allocation
+    except Exception:
+        allocation = None
 
-    if not rate or not rate.is_active:
-        raise ValidationError(
-            "No active rate for this room category."
-        )
-
-    nightly_rate = rate.price_per_night
+    if allocation is not None and allocation.negotiated_nightly_rate is not None:
+        nightly_rate = allocation.negotiated_nightly_rate
+    elif allocation is not None:
+        from billing.models import GroupReservationRate
+        negotiated = GroupReservationRate.objects.filter(
+            group_reservation=allocation.group_reservation,
+            room_category=allocation.room_category,
+        ).first()
+        if negotiated is not None:
+            nightly_rate = negotiated.nightly_rate
+        else:
+            rate = getattr(reservation.room_category, "rate", None)
+            if not rate or not rate.is_active:
+                raise ValidationError("No active rate for this room category.")
+            nightly_rate = rate.price_per_night
+    else:
+        rate = getattr(reservation.room_category, "rate", None)
+        if not rate or not rate.is_active:
+            raise ValidationError("No active rate for this room category.")
+        nightly_rate = rate.price_per_night
 
     number_of_nights = (
         reservation.check_out_date
