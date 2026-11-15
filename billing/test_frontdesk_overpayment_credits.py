@@ -99,6 +99,7 @@ class FrontdeskOverpaymentCreditTests(TestCase):
 
         self.assertEqual(payment.amount, Decimal("10000.00"))
         self.assertTrue(payment.allocation_tracking_enabled)
+        self.assertEqual(payment.applied_amount, Decimal("2000.00"))
         self.assertEqual(allocation.charge_id, self.charge.pk)
         self.assertEqual(allocation.amount, Decimal("2000.00"))
         self.assertEqual(self.folio.balance, Decimal("0.00"))
