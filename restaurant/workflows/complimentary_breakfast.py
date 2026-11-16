@@ -112,7 +112,10 @@ def redeem_complimentary_breakfast(*, user, source_charge_id, cart):
         source_charge.room_night_date != room_night_date
         or source_charge.room_rate_source != "STANDARD"
         or source_charge.discount_percentage != Decimal("0.00")
-        or not source_charge.room_rate
+        or source_charge.room_rate is None
+        or source_charge.original_room_rate is None
+        or source_charge.room_rate <= 0
+        or source_charge.original_room_rate <= 0
         or source_charge.room_rate != source_charge.original_room_rate
         or source_charge.amount != source_charge.room_rate
     ):
