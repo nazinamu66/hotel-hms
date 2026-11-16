@@ -15,7 +15,15 @@ from datetime import timedelta, datetime
 from maintenance.models import MaintenanceTicket
 from django.core.exceptions import ValidationError
 from frontdesk.workflows.check_in import check_in_guest
-from django.http import JsonResponse, FileResponse
+from django.http import JsonResponse, FileResponse, HttpResponse
+from io import BytesIO
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_RIGHT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as PDFImage
+from xml.sax.saxutils import escape
 
 from billing.models import (
     Payment,
@@ -486,25 +494,170 @@ def build_invoice_context(folio):
 
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
+def _invoice_pdf_response(context):
+    """Render a downloadable folio invoice PDF."""
+    buffer = BytesIO()
+    folio = context["folio"]
+    business = context["business"]
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4, rightMargin=16*mm, leftMargin=16*mm,
+        topMargin=15*mm, bottomMargin=16*mm,
+        title=f"Invoice {folio.pk}",
+        author=business.name if business else "Hotel",
+    )
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name="HotelTitle", parent=styles["Title"],
+        fontSize=17, leading=21, textColor=colors.HexColor("#17365D"),
+        alignment=0, spaceAfter=3))
+    styles.add(ParagraphStyle(name="InvoiceHeading", parent=styles["Heading1"],
+        fontSize=18, leading=22, textColor=colors.HexColor("#17365D")))
+    styles.add(ParagraphStyle(name="SectionHeading", parent=styles["Heading2"],
+        fontSize=10, leading=13, textColor=colors.HexColor("#294766"),
+        spaceBefore=12, spaceAfter=5))
+    styles.add(ParagraphStyle(name="SmallMuted", parent=styles["BodyText"],
+        fontSize=8, leading=11, textColor=colors.HexColor("#64748B")))
+    styles.add(ParagraphStyle(name="CellText", parent=styles["BodyText"],
+        fontSize=8, leading=10, wordWrap="CJK"))
+    styles.add(ParagraphStyle(name="CellRight", parent=styles["CellText"], alignment=TA_RIGHT))
+    styles.add(ParagraphStyle(name="CellBold", parent=styles["CellText"], fontName="Helvetica-Bold"))
+    styles.add(ParagraphStyle(name="CellBoldRight", parent=styles["CellBold"], alignment=TA_RIGHT))
+
+    def p(value, style="CellText"):
+        return Paragraph(escape(str(value if value is not None else "—")), styles[style])
+
+    def amount(value):
+        return f"NGN {Decimal(value or 0):,.2f}"
+
+    story = []
+    brand_cells = []
+    if business and business.logo:
+        try:
+            brand_cells.append(PDFImage(business.logo.path, width=25*mm, height=20*mm, kind="proportional"))
+        except (AttributeError, OSError, ValueError):
+            pass
+    company = [Paragraph(escape(business.name if business else "Hotel Management System"), styles["HotelTitle"])]
+    if business:
+        for line in (business.address, f"Phone: {business.phone}" if business.phone else "",
+                     f"Email: {business.email}" if business.email else ""):
+            if line:
+                company.append(Paragraph(escape(str(line)), styles["SmallMuted"]))
+    brand_cells.append(company)
+    brand = Table([brand_cells], colWidths=[30*mm, 148*mm] if len(brand_cells) == 2 else [178*mm])
+    brand.setStyle(TableStyle([
+        ("VALIGN",(0,0),(-1,-1),"MIDDLE"), ("LINEBELOW",(0,0),(-1,-1),1.5,colors.HexColor("#244F7E")),
+        ("BOTTOMPADDING",(0,0),(-1,-1),10), ("LEFTPADDING",(0,0),(-1,-1),0),
+        ("RIGHTPADDING",(0,0),(-1,-1),0),
+    ]))
+    story += [brand, Spacer(1, 8*mm)]
+
+    guest, room = context["guest"], context["room"]
+    guest_name = f"{guest.first_name} {guest.last_name}" if guest else "Guest information unavailable"
+    title = Table([[
+        Paragraph("FINAL INVOICE", styles["InvoiceHeading"]),
+        Paragraph(f"<b>INVOICE #{folio.pk}</b><br/>Issued {folio.created_at:%d %b %Y}",
+                  ParagraphStyle("InvoiceMeta", parent=styles["SmallMuted"], alignment=TA_RIGHT)),
+    ]], colWidths=[100*mm, 78*mm])
+    title.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"BOTTOM"),
+        ("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0)]))
+    story += [title, Spacer(1, 5*mm)]
+
+    details = [
+        [p("BILLED TO","CellBold"), p("STAY DETAILS","CellBold")],
+        [p(guest_name), p(f"Room {room.room_number}" if room else "Room —")],
+        [p(guest.phone if guest else "—"), p(f"Folio reference: {folio.pk}")],
+        [p(guest.email if guest else "—"), p(f"Invoice date: {folio.created_at:%d %b %Y}")],
+    ]
+    meta = Table(details, colWidths=[89*mm,89*mm])
+    meta.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,-1),colors.HexColor("#F5F8FC")),
+        ("BOX",(0,0),(-1,-1),0.5,colors.HexColor("#DCE5EF")),
+        ("INNERGRID",(0,0),(-1,-1),0.25,colors.HexColor("#E4EAF1")),
+        ("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),9),
+        ("RIGHTPADDING",(0,0),(-1,-1),9),("TOPPADDING",(0,0),(-1,-1),6),
+        ("BOTTOMPADDING",(0,0),(-1,-1),6),
+    ]))
+    story.append(meta)
+
+    for department, data in context["charges_by_department"].items():
+        story.append(Paragraph(escape(str(department)), styles["SectionHeading"]))
+        rows = [[p("Description","CellBold"),p("Amount","CellBoldRight")]]
+        for charge in data["charges"]:
+            rows.append([p(charge.description),p(amount(charge.amount),"CellRight")])
+        rows.append([p("Department subtotal","CellBoldRight"),p(amount(data["subtotal"]),"CellBoldRight")])
+        table = Table(rows,colWidths=[128*mm,50*mm],repeatRows=1)
+        table.setStyle(TableStyle([
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#EEF3F8")),
+            ("BACKGROUND",(0,-1),(-1,-1),colors.HexColor("#F5F8FC")),
+            ("LINEBELOW",(0,0),(-1,0),0.7,colors.HexColor("#CFD9E5")),
+            ("LINEABOVE",(0,-1),(-1,-1),0.7,colors.HexColor("#CFD9E5")),
+            ("LINEBELOW",(0,1),(-1,-2),0.25,colors.HexColor("#E6EBF1")),
+            ("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),8),
+            ("RIGHTPADDING",(0,0),(-1,-1),8),("TOPPADDING",(0,0),(-1,-1),6),
+            ("BOTTOMPADDING",(0,0),(-1,-1),6),
+        ]))
+        story.append(table)
+
+    story.append(Paragraph("Payments received",styles["SectionHeading"]))
+    payment_rows=[[p("Payment method","CellBold"),p("Date received","CellBold"),p("Amount","CellBoldRight")]]
+    for payment in context["payments"]:
+        payment_rows.append([p(payment.method),p(payment.collected_at.strftime("%d %b %Y, %H:%M")),
+                             p(amount(payment.amount),"CellRight")])
+    if not context["payments"]:
+        payment_rows.append([p("No payments recorded"),"", ""])
+    payment_table=Table(payment_rows,colWidths=[60*mm,68*mm,50*mm],repeatRows=1)
+    payment_table.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#EEF3F8")),
+        ("LINEBELOW",(0,0),(-1,0),0.7,colors.HexColor("#CFD9E5")),
+        ("LINEBELOW",(0,1),(-1,-1),0.25,colors.HexColor("#E6EBF1")),
+        ("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),8),
+        ("RIGHTPADDING",(0,0),(-1,-1),8),("TOPPADDING",(0,0),(-1,-1),6),
+        ("BOTTOMPADDING",(0,0),(-1,-1),6),
+    ]))
+    story.append(payment_table)
+
+    totals=[
+        [p("Total charges","CellBold"),p(amount(context["total_charges"]),"CellBoldRight")],
+        [p("Total payments","CellBold"),p(amount(context["total_payments"]),"CellBoldRight")],
+        [p("Outstanding balance","CellBold"),p(amount(context["balance"]),"CellBoldRight")],
+    ]
+    summary=Table(totals,colWidths=[65*mm,48*mm],hAlign="RIGHT")
+    summary.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,-2),colors.HexColor("#F5F8FC")),
+        ("BACKGROUND",(0,-1),(-1,-1),colors.HexColor("#EAF1F8")),
+        ("BOX",(0,0),(-1,-1),0.6,colors.HexColor("#D5DFEA")),
+        ("INNERGRID",(0,0),(-1,-1),0.25,colors.HexColor("#E0E7EF")),
+        ("LEFTPADDING",(0,0),(-1,-1),9),("RIGHTPADDING",(0,0),(-1,-1),9),
+        ("TOPPADDING",(0,0),(-1,-1),7),("BOTTOMPADDING",(0,0),(-1,-1),7),
+    ]))
+    story += [Spacer(1,7*mm),summary]
+
+    def page_footer(canvas, document):
+        canvas.saveState()
+        canvas.setFont("Helvetica",8)
+        canvas.setFillColor(colors.HexColor("#718096"))
+        canvas.drawString(16*mm,9*mm,f"{business.name if business else 'Hotel'} · Invoice #{folio.pk}")
+        canvas.drawRightString(A4[0]-16*mm,9*mm,f"Page {document.page}")
+        canvas.restoreState()
+
+    doc.build(story,onFirstPage=page_footer,onLaterPages=page_footer)
+    pdf=buffer.getvalue()
+    buffer.close()
+    response=HttpResponse(pdf,content_type="application/pdf")
+    response["Content-Disposition"]=f'attachment; filename="invoice-{folio.pk}.pdf"'
+    response["Content-Length"]=str(len(pdf))
+    return response
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
 def invoice_pdf_view(request, folio_id):
-    folio = get_object_or_404(Folio, id=folio_id)
-
-    context = build_invoice_context(folio)  # reuse logic
-
-    return render(request, "frontdesk/invoice_pdf.html", context)
+    folio=get_object_or_404(Folio,id=folio_id,hotel=request.user.department.hotel)
+    return _invoice_pdf_response(build_invoice_context(folio))
 
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def invoice_view(request, folio_id):
-
-    folio = get_object_or_404(Folio, id=folio_id)
-    context = build_invoice_context(folio)
-
-    return render(
-        request,
-        "frontdesk/invoice.html",
-        context
-    )
+    folio=get_object_or_404(Folio,id=folio_id,hotel=request.user.department.hotel)
+    return render(request,"frontdesk/invoice.html",build_invoice_context(folio))
 
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
