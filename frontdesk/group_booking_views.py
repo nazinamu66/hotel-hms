@@ -3,10 +3,11 @@ from django.db.models import Count, Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
+from uuid import uuid4
 
 from accounts.decorators import role_required
 from billing.models import Company, GroupReservation
-from .group_booking_forms import CompanyForm
+from .group_booking_forms import CompanyForm, GroupReservationForm
 
 
 def _frontdesk_hotel(user):
@@ -93,4 +94,39 @@ def group_reservation_dashboard(request):
         "group_count": GroupReservation.objects.filter(hotel=hotel).count(),
         "in_house_count": GroupReservation.objects.filter(hotel=hotel, status="IN_HOUSE").count(),
         "upcoming_count": GroupReservation.objects.filter(hotel=hotel, status__in=["DRAFT", "CONFIRMED"]).count(),
+    })
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+@require_http_methods(["GET", "POST"])
+def group_reservation_create(request):
+    hotel = _frontdesk_hotel(request.user)
+    if hotel is None:
+        return HttpResponseForbidden("Your account is not linked to a hotel.")
+    if not Company.objects.filter(hotel=hotel, is_active=True).exists():
+        messages.info(request, "Register an active corporate client before creating a group reservation.")
+        return redirect("frontdesk_company_create")
+
+    form = GroupReservationForm(
+        request.POST or None,
+        hotel=hotel,
+    )
+    if request.method == "POST" and form.is_valid():
+        group = form.save(commit=False)
+        group.hotel = hotel
+        group.created_by = request.user
+        group.reference = f"GRP-{uuid4().hex[:10].upper()}"
+        try:
+            group.full_clean()
+            group.save()
+        except Exception as exc:
+            form.add_error(None, str(exc))
+        else:
+            messages.success(request, f"Group reservation {group.reference} created. You can now add occupants.")
+            return redirect("frontdesk_group_reservations")
+
+    return render(request, "frontdesk/group_reservation_form.html", {
+        "form": form,
+        "page_title": "Create group reservation",
+        "submit_label": "Create group reservation",
     })
