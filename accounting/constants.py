@@ -71,6 +71,8 @@ LAUNDRY_EXPENSE = "laundry_expense"
 
 RESTAURANT_EXPENSE = "restaurant_expense"
 
+COMPLIMENTARY_MEALS_EXPENSE = "complimentary_meals_expense"
+
 UTILITIES_EXPENSE = "utilities_expense"
 
 
@@ -378,6 +380,16 @@ DEFAULT_ACCOUNTS = [
         "is_system": True,
         "allow_posting": True,
         "allow_manual_entries": True,
+    },
+
+    {
+        "code": "5310",
+        "name": "Complimentary Meals Expense",
+        "system_key": COMPLIMENTARY_MEALS_EXPENSE,
+        "type": EXPENSE,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": False,
     },
 
     {
