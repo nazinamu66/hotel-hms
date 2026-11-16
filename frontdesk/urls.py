@@ -29,6 +29,7 @@ from .views import (
     request_complimentary_room_nights,
     complimentary_room_night_queue,
     decide_complimentary_room_night,
+    bulk_decide_complimentary_room_nights,
     complimentary_register,
 )
 
@@ -55,6 +56,7 @@ urlpatterns = [
     path("reservations/<int:reservation_id>/checkin/",reservation_checkin,name="frontdesk_reservation_checkin"),
     path("reservations/<int:reservation_id>/complimentary-nights/request/", request_complimentary_room_nights, name="frontdesk_complimentary_room_night_request"),
     path("complimentary-room-nights/", complimentary_room_night_queue, name="frontdesk_complimentary_room_night_queue"),
+    path("complimentary-room-nights/bulk-decide/", bulk_decide_complimentary_room_nights, name="frontdesk_complimentary_room_night_bulk_decide"),
     path("complimentary-register/", complimentary_register, name="frontdesk_complimentary_register"),
     path("complimentary-room-nights/<int:waiver_id>/<str:decision>/", decide_complimentary_room_night, name="frontdesk_complimentary_room_night_decide"),
     path("reservations/<int:reservation_id>/cancel/",reservation_cancel,name="frontdesk_reservation_cancel",),
