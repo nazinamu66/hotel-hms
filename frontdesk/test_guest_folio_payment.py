@@ -252,3 +252,47 @@ class GuestFolioPaymentViewTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         checkout_guest.assert_called_once_with(room=room, user=self.user)
+
+
+    def test_reservation_calendar_reuses_category_day_availability(self):
+        category, _ = RoomCategory.objects.get_or_create(
+            name="Calendar Performance Test Category",
+        )
+        Room.objects.create(
+            hotel=self.hotel,
+            room_number="CAL-01",
+            category=category,
+            status="AVAILABLE",
+        )
+        Room.objects.create(
+            hotel=self.hotel,
+            room_number="CAL-02",
+            category=category,
+            status="AVAILABLE",
+        )
+
+        with patch("frontdesk.views.get_available_rooms", wraps=__import__(
+            "frontdesk.services", fromlist=["get_available_rooms"]
+        ).get_available_rooms) as availability_lookup:
+            response = self.client.get(
+                reverse("frontdesk_reservation_calendar"),
+                {"start": "2026-11-17"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["days"]), 14)
+        self.assertEqual(len(response.context["calendar"]), 2)
+        # Two rooms share one category, so availability is checked once
+        # per date rather than once per room/date cell.
+        self.assertEqual(availability_lookup.call_count, 14)
+
+    def test_reservation_calendar_ignores_invalid_category_filter(self):
+        response = self.client.get(
+            reverse("frontdesk_reservation_calendar"),
+            {"category": "not-a-category", "room": "NO-MATCH"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["calendar"], [])
+        self.assertEqual(response.context["filters"]["category"], "")
+        self.assertEqual(response.context["filters"]["room"], "NO-MATCH")
