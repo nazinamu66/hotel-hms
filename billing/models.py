@@ -264,6 +264,47 @@ class Charge(models.Model):
     original_room_rate = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     discount_percentage = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal("0.00"))
 
+    BILLING_PARTY_CHOICES = (
+        ("INDIVIDUAL", "Occupant"),
+        ("COMPANY", "Company"),
+    )
+    billing_party = models.CharField(
+        max_length=12,
+        choices=BILLING_PARTY_CHOICES,
+        default="INDIVIDUAL",
+        db_index=True,
+    )
+    group_room_allocation = models.ForeignKey(
+        "billing.GroupReservationRoom",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="charges",
+    )
+    room_night_date = models.DateField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="The room-night date represented by this room charge.",
+    )
+    room_rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Immutable nightly rate snapshot used when this charge was posted.",
+    )
+    ROOM_RATE_SOURCE_CHOICES = (
+        ("STANDARD", "Standard category rate"),
+        ("GROUP", "Group negotiated rate"),
+        ("OVERRIDE", "Occupant override"),
+    )
+    room_rate_source = models.CharField(
+        max_length=12,
+        choices=ROOM_RATE_SOURCE_CHOICES,
+        blank=True,
+    )
+
     def __str__(self):
         return f"{self.description} - {self.amount}"
 
