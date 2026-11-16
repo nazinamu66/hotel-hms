@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from billing.models import Charge, Folio, Guest
+from rooms.models import Room, RoomCategory
 from inventory.models import Department, Hotel, Organization
 
 
@@ -198,3 +199,56 @@ class GuestFolioPaymentViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+
+    def _create_active_stay_room(self, guest=None):
+        category, _ = RoomCategory.objects.get_or_create(
+            name="Guest Folio Payment Test Category",
+        )
+        room = Room.objects.create(
+            hotel=self.hotel,
+            room_number="GFP-01",
+            category=category,
+            status="OCCUPIED",
+        )
+        folio = Folio.objects.create(
+            hotel=self.hotel,
+            folio_type="ROOM",
+            room=room,
+            guest=guest,
+        )
+        return room, folio
+
+    def test_active_stay_handles_missing_guest_record(self):
+        room, folio = self._create_active_stay_room(guest=None)
+
+        response = self.client.get(
+            reverse("frontdesk_active_stay", args=[room.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["folio"].pk, folio.pk)
+        self.assertContains(response, "Guest information missing")
+        self.assertContains(response, "Guest details have not been recorded")
+
+    @patch("frontdesk.workflows.checkout.checkout_guest")
+    def test_checkout_rejects_get_without_running_checkout_workflow(self, checkout_guest):
+        room, _folio = self._create_active_stay_room(guest=self.guest)
+
+        response = self.client.get(
+            reverse("frontdesk_checkout", args=[room.pk])
+        )
+
+        self.assertEqual(response.status_code, 405)
+        checkout_guest.assert_not_called()
+
+    @patch("frontdesk.workflows.checkout.checkout_guest")
+    def test_checkout_runs_only_after_post(self, checkout_guest):
+        room, folio = self._create_active_stay_room(guest=self.guest)
+
+        response = self.client.post(
+            reverse("frontdesk_checkout", args=[room.pk])
+        )
+
+        self.assertEqual(response.status_code, 302)
+        checkout_guest.assert_called_once_with(room=room, user=self.user)
