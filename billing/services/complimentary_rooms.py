@@ -1,4 +1,5 @@
 from decimal import Decimal, ROUND_HALF_UP
+from datetime import timedelta
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -81,7 +82,7 @@ def request_complimentary_nights(*, reservation, start_date, end_date, reason, u
             requested_by=user,
         )
         created.append(waiver)
-        day += timezone.timedelta(days=1)
+        day += timedelta(days=1)
     return created
 
 
