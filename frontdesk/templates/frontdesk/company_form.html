@@ -1,0 +1,11 @@
+{% extends "base/base.html" %}
+{% block title %}{{ page_title }} | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.cf-page{max-width:1050px;margin:0 auto;padding:12px 2px 40px;color:#172033}.cf-head{margin-bottom:18px}.cf-title{font-size:1.75rem;font-weight:850;letter-spacing:-.04em;margin:0 0 5px}.cf-sub{color:#64748b;font-size:.88rem;margin:0}.cf-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;box-shadow:0 3px 14px rgba(15,23,42,.04)}.cf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.cf-field{display:flex;flex-direction:column;gap:6px}.cf-field.wide{grid-column:1/-1}.cf-field label{font-size:.74rem;font-weight:850;color:#64748b}.cf-field input,.cf-field textarea{width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:10px 12px;font:inherit;font-size:.85rem;box-sizing:border-box}.cf-check{display:flex;align-items:center;gap:9px;font-size:.84rem;font-weight:750}.cf-errors{color:#b91c1c;font-size:.78rem}.cf-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}.cf-btn{border:0;border-radius:9px;padding:11px 17px;background:#1e3a5f;color:#fff;font-weight:850;cursor:pointer;text-decoration:none}.cf-back{padding:11px 15px;color:#475569;text-decoration:none;font-weight:800}@media(max-width:650px){.cf-grid{grid-template-columns:1fr}.cf-field.wide{grid-column:auto}}
+</style>
+<div class="cf-page"><div class="cf-head"><h1 class="cf-title">{{ page_title }}</h1><p class="cf-sub">Company details are private to this hotel.</p></div>
+<form method="post" class="cf-card">{% csrf_token %}{% if form.non_field_errors %}<div class="cf-errors">{{ form.non_field_errors }}</div>{% endif %}<div class="cf-grid">
+{% for field in form %}<div class="cf-field {% if field.name == 'billing_address' or field.name == 'notes' %}wide{% endif %}">{% if field.name == 'is_active' %}<label class="cf-check">{{ field }} {{ field.label }}</label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}{% if field.errors %}<div class="cf-errors">{{ field.errors }}</div>{% endif %}</div>{% endfor %}
+</div><div class="cf-actions"><a class="cf-back" href="{% url 'frontdesk_company_list' %}">Cancel</a><button class="cf-btn" type="submit">{{ submit_label }}</button></div></form></div>
+{% endblock %}
