@@ -3,6 +3,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import transaction
 
 from accounting.services.journal import record_transaction
+from accounting.models import Account
 
 
 CURRENCY_QUANTUM = Decimal("0.01")
@@ -43,6 +44,50 @@ def post_cogs_for_order(order):
     # retries idempotent through record_transaction().
     drink_cogs = _money(drink_cogs)
     food_cogs = _money(food_cogs)
+
+    if order.is_complimentary_breakfast:
+        # Hotels created before this feature receive the new control account
+        # on first use, without changing existing account balances.
+        expense, _ = Account.objects.get_or_create(
+            hotel=hotel,
+            code="5310",
+            defaults={
+                "name": "Complimentary Meals Expense",
+                "account_type": "expense",
+                "system_key": "complimentary_meals_expense",
+                "is_system": True,
+                "allow_posting": True,
+                "allow_manual_entries": False,
+                "is_active": True,
+            },
+        )
+        if expense.system_key != "complimentary_meals_expense":
+            raise ValueError(
+                "Account code 5310 is already in use. Configure the Complimentary Meals Expense account before redeeming breakfast."
+            )
+        if drink_cogs > 0:
+            record_transaction(
+                debit_account=expense,
+                credit_system_key="inventory_asset",
+                amount=drink_cogs,
+                description=f"Complimentary breakfast drink cost for POS Order #{order.id}",
+                hotel=hotel,
+                created_by=order.created_by,
+                entry_type="COMPLIMENTARY_MEAL",
+                reference=f"COMP-BREAKFAST-DRINK-COGS-{order.id}",
+            )
+        if food_cogs > 0:
+            record_transaction(
+                debit_account=expense,
+                credit_system_key="finished_goods_inventory",
+                amount=food_cogs,
+                description=f"Complimentary breakfast food cost for POS Order #{order.id}",
+                hotel=hotel,
+                created_by=order.created_by,
+                entry_type="COMPLIMENTARY_MEAL",
+                reference=f"COMP-BREAKFAST-FOOD-COGS-{order.id}",
+            )
+        return {"drink_cogs": drink_cogs, "food_cogs": food_cogs}
 
     if drink_cogs > 0:
         record_transaction(
