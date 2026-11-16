@@ -62,7 +62,7 @@
             <h1 class="tb-title">Today's Arrivals &amp; Departures</h1>
             <p class="tb-subtitle">A live working list of guests expected today and guests currently staying at the hotel.</p>
         </div>
-        <div class="tb-date">{{ arrivals.0.check_in_date|date:"D, d M Y"|default:"Today's operations" }}</div>
+        <div class="tb-date">{% now "D, d M Y" %}</div>
     </header>
 
     <section class="tb-stats" aria-label="Today's operational summary">
