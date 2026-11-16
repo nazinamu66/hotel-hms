@@ -145,7 +145,7 @@
 
     .rd-stat-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 14px;
         margin-bottom: 20px;
     }
@@ -279,7 +279,7 @@
 
     @media (max-width: 768px) {
         .rd-stat-grid {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         .rd-info-list {
@@ -316,9 +316,9 @@
                 <span>Reservation #{{ reservation.id }}</span>
             </div>
 
-            <h1 class="rd-title">Reservation details</h1>
+            <h1 class="rd-title">{{ reservation.guest.first_name }} {{ reservation.guest.last_name }}</h1>
             <p class="rd-subtitle">
-                Review booking information and manage the guest's arrival.
+                Reservation details · Booking #{{ reservation.id }} · {{ reservation.hotel.name }}
             </p>
         </div>
 
@@ -372,9 +372,12 @@
         <div class="rd-stat">
             <div class="rd-stat-label">Rooms reserved</div>
             <div class="rd-stat-value">{{ reservation.number_of_rooms }}</div>
-            <div class="rd-stat-caption">
-                {{ reservation.room_category }}
-            </div>
+            <div class="rd-stat-caption">{{ reservation.room_category }}</div>
+        </div>
+        <div class="rd-stat">
+            <div class="rd-stat-label">Published nightly rate</div>
+            <div class="rd-stat-value">{% if reservation.room_category.nightly_rate %}₦{{ reservation.room_category.nightly_rate|floatformat:2 }}{% else %}Not configured{% endif %}</div>
+            <div class="rd-stat-caption">Before any approved discount or negotiated rate</div>
         </div>
     </div>
 
@@ -489,6 +492,21 @@
 
         <div class="col-12">
 <style>
+.rd-complimentary-card{border-color:#dce8e6}
+.rd-complimentary-card .rd-card-header{background:linear-gradient(110deg,#f0fdfa,#fff)}
+.rd-complimentary-card .rd-icon{background:#ccfbf1;color:#0f766e}
+.rd-complimentary-history-wrap{border:1px solid #e8edf3;border-radius:12px;overflow:hidden}
+.rd-complimentary-history{margin:0}
+.rd-complimentary-history th{white-space:nowrap}
+.rd-waiver-status{display:inline-flex;align-items:center;padding:5px 9px;border-radius:99px;font-size:.72rem;font-weight:800;white-space:nowrap}
+.rd-waiver-pending{background:#fef3c7;color:#92400e}
+.rd-waiver-approved{background:#dbeafe;color:#1d4ed8}
+.rd-waiver-consumed{background:#dcfce7;color:#166534}
+.rd-waiver-rejected{background:#fee2e2;color:#b91c1c}
+.rd-complimentary-hint{max-width:620px}
+.rd-complimentary-form{box-shadow:0 2px 8px rgba(15,23,42,.025)}
+.rd-complimentary-actions .rd-btn{min-height:44px}
+@media(max-width:420px){.rd-stat-grid{grid-template-columns:1fr}}
 .rd-complimentary-help{padding:13px 16px;border:1px solid #dbe5f0;background:#f7faff;border-radius:12px;color:#475569;font-size:.88rem;line-height:1.55;margin-bottom:20px}
 .rd-complimentary-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;padding:18px;background:#fbfcfe;border:1px solid #e7edf4;border-radius:14px;margin-bottom:22px}
 .rd-complimentary-field{display:flex;flex-direction:column;gap:7px;min-width:0}
@@ -518,10 +536,10 @@
 <div class="rd-complimentary-actions"><button class="rd-btn rd-btn-primary" type="submit">Submit for management approval</button><span class="rd-complimentary-hint">For one night, enter the same date in both fields. Submit separate requests for non-consecutive nights.</span></div>
 </form>
 {% elif reservation.status == "CANCELLED" or reservation.status == "NO_SHOW" %}<div class="rd-complimentary-help">This reservation is {{ reservation.get_status_display|lower }}. New complimentary room requests cannot be submitted.</div>{% endif %}
-<div class="table-responsive"><table class="rd-complimentary-history"><thead><tr><th>Night</th><th>Waived value</th><th>Status</th><th>Requested by</th><th>Authorised by</th></tr></thead><tbody>
-{% for waiver in reservation.complimentary_room_nights.all %}<tr><td>{{ waiver.room_night_date|date:"d M Y" }}</td><td>₦{{ waiver.waived_amount|floatformat:2 }}</td><td>{{ waiver.get_status_display }}</td><td>{{ waiver.requested_by }}</td><td>{{ waiver.approved_by|default:"—" }}</td></tr>{% empty %}<tr><td colspan="5"><div class="rd-complimentary-empty">No complimentary nights have been requested for this reservation.</div></td></tr>{% endfor %}
+<div class="table-responsive rd-complimentary-history-wrap"><table class="rd-complimentary-history"><thead><tr><th>Room night</th><th>Waived value</th><th>Approval status</th><th>Requested by</th><th>Authorised by</th></tr></thead><tbody>
+{% for waiver in reservation.complimentary_room_nights.all %}<tr><td><strong>{{ waiver.room_night_date|date:"d M Y" }}</strong></td><td><strong>₦{{ waiver.waived_amount|floatformat:2 }}</strong></td><td>{% if waiver.status == "PENDING" %}<span class="rd-waiver-status rd-waiver-pending">Pending approval</span>{% elif waiver.status == "APPROVED" %}<span class="rd-waiver-status rd-waiver-approved">Approved</span>{% elif waiver.status == "CONSUMED" %}<span class="rd-waiver-status rd-waiver-consumed">Consumed</span>{% elif waiver.status == "REJECTED" %}<span class="rd-waiver-status rd-waiver-rejected">Rejected</span>{% else %}<span class="rd-waiver-status">{{ waiver.get_status_display }}</span>{% endif %}{% if waiver.rejection_reason %}<small class="rd-muted d-block mt-1">{{ waiver.rejection_reason }}</small>{% endif %}</td><td>{{ waiver.requested_by }}</td><td>{{ waiver.approved_by|default:"Awaiting decision" }}{% if waiver.approved_at %}<small class="rd-muted d-block">{{ waiver.approved_at|date:"d M Y, H:i" }}</small>{% endif %}</td></tr>{% empty %}<tr><td colspan="5"><div class="rd-complimentary-empty">No complimentary nights have been requested for this reservation.</div></td></tr>{% endfor %}
 </tbody></table></div>
-{% if request.user.role == "MANAGER" or request.user.role == "DIRECTOR" or request.user.role == "ADMIN" %}<a href="{% url 'frontdesk_complimentary_room_night_queue' %}" class="rd-btn rd-btn-secondary">Open complimentary approval queue</a>{% endif %}
+{% if request.user.role == "MANAGER" or request.user.role == "GENERAL_MANAGER" or request.user.role == "DIRECTOR" or request.user.role == "ADMIN" %}<a href="{% url 'frontdesk_complimentary_room_night_queue' %}" class="rd-btn rd-btn-secondary">Open complimentary approval queue</a>{% endif %}
 </div></section></div>
 
     </div>
