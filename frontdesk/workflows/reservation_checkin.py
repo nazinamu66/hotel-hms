@@ -83,6 +83,7 @@ def check_in_reservation(
         guest=reservation.guest,
         expected_checkout=reservation.check_out_date,
         group_allocation=allocation,
+        reservation=reservation,
     )
 
     mark_reservation_checked_in(
