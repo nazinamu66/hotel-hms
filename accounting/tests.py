@@ -167,3 +167,37 @@ class GuestLaundryChargePostingTests(SimpleTestCase):
 
         with self.assertRaises(ValidationError):
             post_guest_laundry_charge(order, charge)
+
+
+
+class ComplimentaryBreakfastCostPostingTests(TestCase):
+    @patch("accounting.services.postings.cogs.Account.objects.get_or_create")
+    @patch("accounting.services.postings.cogs.record_transaction")
+    def test_breakfast_cost_is_expensed_not_posted_as_restaurant_cogs(
+        self, record, get_or_create
+    ):
+        from accounting.services.postings.cogs import post_cogs_for_order
+
+        hotel = object()
+        expense = SimpleNamespace(system_key="complimentary_meals_expense")
+        get_or_create.return_value = (expense, True)
+        order = make_order([
+            make_item("DRINK", "5.125", 2, "Tea"),
+            make_item("FOOD", "12.345", 1, "Eggs"),
+        ])
+        order.is_complimentary_breakfast = True
+        order.department.hotel = hotel
+
+        result = post_cogs_for_order(order)
+
+        self.assertEqual(result["drink_cogs"], Decimal("10.25"))
+        self.assertEqual(result["food_cogs"], Decimal("12.35"))
+        self.assertEqual(record.call_count, 2)
+        self.assertEqual(
+            {call.kwargs["reference"] for call in record.call_args_list},
+            {"COMP-BREAKFAST-DRINK-COGS-123", "COMP-BREAKFAST-FOOD-COGS-123"},
+        )
+        for posting in record.call_args_list:
+            self.assertEqual(posting.kwargs["debit_account"], expense)
+            self.assertEqual(posting.kwargs["entry_type"], "COMPLIMENTARY_MEAL")
+        get_or_create.assert_called_once()
