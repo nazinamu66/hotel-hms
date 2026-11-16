@@ -104,6 +104,12 @@
     <article class="kmr-card"><div class="kmr-label">Estimated gross profit</div><div class="kmr-value">{{ estimated_gross_profit|floatformat:2 }}</div><div class="kmr-note">Revenue less recorded sale-time COGS; not a substitute for the accounting P&amp;L.</div></article>
   </div>
 
+  <h2 class="kmr-section">Complimentary breakfast</h2>
+  <div class="kmr-grid">
+    <article class="kmr-card"><div class="kmr-label">Breakfast items served</div><div class="kmr-value">{{ complimentary_breakfast_quantity }}</div><div class="kmr-note">Actual menu quantities redeemed against qualifying full-rate room nights.</div></article>
+    <article class="kmr-card"><div class="kmr-label">Complimentary breakfast cost</div><div class="kmr-value">{{ complimentary_breakfast_cost|floatformat:2 }}</div><div class="kmr-note">Historical FIFO cost expensed to Complimentary Meals Expense.</div></article>
+  </div>
+
   <h2 class="kmr-section">Production and waste</h2>
   <div class="kmr-grid">
     <article class="kmr-card"><div class="kmr-label">Completed production batches</div><div class="kmr-value">{{ production_count }}</div><div class="kmr-note">Executed batches recorded during this period.</div></article>
