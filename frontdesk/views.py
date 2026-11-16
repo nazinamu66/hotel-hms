@@ -1772,12 +1772,8 @@ def reservation_cancel(request, reservation_id):
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def reservation_calendar(request):
-
     hotel = request.user.department.hotel
 
-    # -------------------------
-    # Filters
-    # -------------------------
     start = request.GET.get("start")
     category_id = request.GET.get("category")
     room_number = request.GET.get("room")
@@ -1785,74 +1781,89 @@ def reservation_calendar(request):
     if start:
         try:
             start_date = datetime.strptime(start[:10], "%Y-%m-%d").date()
-        except ValueError:
+        except (TypeError, ValueError):
             start_date = timezone.now().date()
     else:
         start_date = timezone.now().date()
 
     days = [start_date + timedelta(days=i) for i in range(14)]
-
     prev_week = start_date - timedelta(days=7)
     next_week = start_date + timedelta(days=7)
 
-    # -------------------------
-    # Rooms Query
-    # -------------------------
+    categories = (
+        RoomCategory.objects
+        .filter(rooms__hotel=hotel)
+        .distinct()
+        .order_by("name")
+    )
+
+    # Ignore stale or cross-hotel category filters rather than applying
+    # an arbitrary category ID to the room and reservation queries.
+    if category_id and categories.filter(pk=category_id).exists():
+        selected_category_id = category_id
+    else:
+        selected_category_id = None
+
     rooms = Room.objects.filter(hotel=hotel).select_related("category")
-
-    if category_id:
-        rooms = rooms.filter(category_id=category_id)
-
+    if selected_category_id:
+        rooms = rooms.filter(category_id=selected_category_id)
     if room_number:
         rooms = rooms.filter(room_number__icontains=room_number)
+    rooms = list(rooms.order_by("room_number"))
 
-    rooms = rooms.order_by("room_number")
-
-    # -------------------------
-    # Reservations
-    # -------------------------
-    reservations = (
-        Reservation.objects
-        .filter(
+    # Load guaranteed bookings overlapping the visible window once.
+    reservations = list(
+        Reservation.objects.filter(
             hotel=hotel,
             status="RESERVED",
             reservation_deposit__status="GUARANTEED",
+            check_in_date__lt=days[-1] + timedelta(days=1),
+            check_out_date__gt=start_date,
         )
-        .select_related(
-            "guest",
-            "room_category",
-            "reservation_deposit",
-        )
+        .select_related("guest", "room_category", "reservation_deposit", "room")
+        .order_by("check_in_date", "id")
+        .distinct()
     )
 
-    
+    # Index room-assigned reservations by room and occupied calendar day.
+    reservation_by_room_day = {}
+    for reservation in reservations:
+        if reservation.room_id is None:
+            continue
+        first_day = max(start_date, reservation.check_in_date)
+        last_day = min(days[-1], reservation.check_out_date - timedelta(days=1))
+        current_day = first_day
+        while current_day <= last_day:
+            reservation_by_room_day.setdefault(
+                (reservation.room_id, current_day), reservation
+            )
+            current_day += timedelta(days=1)
+
+    # Availability is category/day based. Calculate it once for each
+    # distinct category and date, not once for every physical room cell.
+    available_room_ids_by_category_day = {}
     calendar = []
 
     for room in rooms:
-        row = {
-            "room": room,
-            "days": [],
-        }
+        row = {"room": room, "days": []}
 
         for day in days:
-            reservation = reservations.filter(
-                room=room,
-                check_in_date__lte=day,
-                check_out_date__gt=day,
-            ).first()
+            cache_key = (room.category_id, day)
+            if cache_key not in available_room_ids_by_category_day:
+                available_room_ids_by_category_day[cache_key] = set(
+                    get_available_rooms(
+                        hotel=hotel,
+                        category=room.category,
+                        check_in=day,
+                        check_out=day + timedelta(days=1),
+                    ).values_list("id", flat=True)
+                )
 
-            available_room_ids = get_available_rooms(
-                hotel=hotel,
-                category=room.category,
-                check_in=day,
-                check_out=day + timedelta(days=1),
-            ).values_list("id", flat=True)
-
+            reservation = reservation_by_room_day.get((room.id, day))
             is_available = (
-                room.id in available_room_ids
+                room.id in available_room_ids_by_category_day[cache_key]
                 and reservation is None
             )
-
             row["days"].append({
                 "date": day,
                 "reservation": reservation,
@@ -1862,28 +1873,14 @@ def reservation_calendar(request):
 
         calendar.append(row)
 
-
-    categories = (
-        RoomCategory.objects
-        .filter(rooms__hotel=hotel)
-        .distinct()
-        .order_by("name")
-    )
-
-    category_reservations = (
-        reservations
-        .filter(
-            room__isnull=True,
-            check_in_date__lt=days[-1] + timedelta(days=1),
-            check_out_date__gt=start_date,
+    category_reservations = [
+        reservation for reservation in reservations
+        if reservation.room_id is None
+        and (
+            not selected_category_id
+            or str(reservation.room_category_id) == str(selected_category_id)
         )
-        .order_by("check_in_date", "id")
-    )
-
-    if category_id:
-        category_reservations = category_reservations.filter(
-            room_category_id=category_id
-        )
+    ]
 
     context = {
         "calendar": calendar,
@@ -1893,17 +1890,15 @@ def reservation_calendar(request):
         "next_week": next_week,
         "categories": categories,
         "category_reservations": category_reservations,
-        "filters": request.GET
+        "filters": {
+            "start": start,
+            "category": selected_category_id or "",
+            "room": room_number or "",
+        },
     }
 
-    return render(
-        request,
-        "frontdesk/reservation_calendar.html",
-        context
-    )
+    return render(request, "frontdesk/reservation_calendar.html", context)
 
-
-@role_required("FRONTDESK", "MANAGER", "ADMIN")
 def calendar_create_reservation(request):
     from frontdesk.workflows.reservation import create_reservation
 
