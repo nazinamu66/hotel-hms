@@ -1830,6 +1830,59 @@ def complimentary_room_night_queue(request):
 
 
 @role_required("MANAGER", "DIRECTOR", "ADMIN")
+def bulk_decide_complimentary_room_nights(request):
+    """Approve or reject a selected batch of pending room-night waivers atomically."""
+    from billing.models import ComplimentaryRoomNight
+    from billing.services.complimentary_rooms import decide_complimentary_night
+    from accounts.services.access import get_accessible_hotels
+
+    if request.method != "POST":
+        return redirect("frontdesk_complimentary_room_night_queue")
+
+    decision = request.POST.get("decision", "").strip().lower()
+    waiver_ids = list(dict.fromkeys(request.POST.getlist("waiver_ids")))
+    rejection_reason = request.POST.get("rejection_reason", "").strip()
+
+    if decision not in ("approve", "reject") or not waiver_ids:
+        messages.error(request, "Select at least one pending room-night request and choose an action.")
+        return redirect("frontdesk_complimentary_room_night_queue")
+    if decision == "reject" and not rejection_reason:
+        messages.error(request, "A rejection reason is required for the selected requests.")
+        return redirect("frontdesk_complimentary_room_night_queue")
+
+    accessible_hotels = get_accessible_hotels(request.user)
+    waivers = list(
+        ComplimentaryRoomNight.objects.select_related("reservation", "folio")
+        .filter(
+            pk__in=waiver_ids,
+            status="PENDING",
+            reservation__hotel__in=accessible_hotels,
+        )
+        .order_by("id")
+    )
+    if len(waivers) != len(waiver_ids):
+        messages.error(request, "One or more selected requests are no longer pending or are outside your hotel access. No changes were made.")
+        return redirect("frontdesk_complimentary_room_night_queue")
+
+    try:
+        with transaction.atomic():
+            for waiver in waivers:
+                decide_complimentary_night(
+                    waiver=waiver,
+                    user=request.user,
+                    approve=(decision == "approve"),
+                    rejection_reason=rejection_reason,
+                )
+    except ValidationError as exc:
+        messages.error(request, f"No requests were changed. {exc}")
+        return redirect("frontdesk_complimentary_room_night_queue")
+
+    action_label = "approved" if decision == "approve" else "rejected"
+    messages.success(request, f"{len(waivers)} complimentary room-night request(s) {action_label}.")
+    return redirect("frontdesk_complimentary_room_night_queue")
+
+
+@role_required("MANAGER", "DIRECTOR", "ADMIN")
 def decide_complimentary_room_night(request, waiver_id, decision):
     from billing.models import ComplimentaryRoomNight
     from billing.services.complimentary_rooms import decide_complimentary_night
@@ -1943,6 +1996,7 @@ def complimentary_register(request):
         "food_records": food_records,
         "food_rows": food_rows,
         "room_status_choices": ComplimentaryRoomNight.STATUS_CHOICES,
+        "pending_room_count": ComplimentaryRoomNight.objects.filter(status="PENDING", reservation__hotel__in=hotels).count(),
         "room_value": room_value,
         "food_cost": food_cost,
         "room_count": room_records.count(),
