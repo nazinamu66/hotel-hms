@@ -208,6 +208,12 @@
                 Today's Arrivals / Departures
             </a>
 
+            {% if user|has_role:"MANAGER,DIRECTOR,ADMIN" %}
+            <a href="{% url 'frontdesk_complimentary_room_night_queue' %}">
+                Complimentary Room Approvals
+            </a>
+            {% endif %}
+
         </div>
 
         {% endif %}
