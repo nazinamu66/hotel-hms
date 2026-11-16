@@ -1776,3 +1776,82 @@ def arrivals_departures_today(request):
             "in_house": in_house
         }
     )
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def request_complimentary_room_nights(request, reservation_id):
+    from datetime import datetime
+    from billing.services.complimentary_rooms import request_complimentary_nights
+
+    if request.method != "POST":
+        return redirect("frontdesk_reservation_detail", reservation_id=reservation_id)
+
+    reservation = get_object_or_404(
+        Reservation,
+        pk=reservation_id,
+        hotel=request.user.department.hotel,
+    )
+    try:
+        start_date = datetime.strptime(request.POST.get("start_date", ""), "%Y-%m-%d").date()
+        end_date = datetime.strptime(request.POST.get("end_date", ""), "%Y-%m-%d").date()
+        created = request_complimentary_nights(
+            reservation=reservation,
+            start_date=start_date,
+            end_date=end_date,
+            reason=request.POST.get("reason", ""),
+            user=request.user,
+        )
+        messages.success(request, f"Submitted {len(created)} complimentary room-night request(s) for approval.")
+    except (ValueError, ValidationError) as exc:
+        messages.error(request, str(exc) or "Enter valid dates.")
+    return redirect("frontdesk_reservation_detail", reservation_id=reservation_id)
+
+
+@role_required("MANAGER", "DIRECTOR", "ADMIN")
+def complimentary_room_night_queue(request):
+    from billing.models import ComplimentaryRoomNight
+
+    hotel = request.user.department.hotel if request.user.role != "ADMIN" else None
+    requests_qs = ComplimentaryRoomNight.objects.select_related(
+        "reservation", "reservation__guest", "reservation__hotel",
+        "requested_by", "folio", "folio__room",
+    ).filter(status="PENDING").order_by("requested_at")
+    if hotel is not None:
+        requests_qs = requests_qs.filter(reservation__hotel=hotel)
+    return render(
+        request,
+        "frontdesk/complimentary_room_night_queue.html",
+        {"complimentary_requests": requests_qs},
+    )
+
+
+@role_required("MANAGER", "DIRECTOR", "ADMIN")
+def decide_complimentary_room_night(request, waiver_id, decision):
+    from billing.models import ComplimentaryRoomNight
+    from billing.services.complimentary_rooms import decide_complimentary_night
+
+    if request.method != "POST" or decision not in ("approve", "reject"):
+        messages.error(request, "Invalid complimentary-night decision.")
+        return redirect("frontdesk_complimentary_room_night_queue")
+
+    waiver = get_object_or_404(
+        ComplimentaryRoomNight.objects.select_related("reservation"),
+        pk=waiver_id,
+    )
+    if request.user.role != "ADMIN":
+        user_hotel = getattr(getattr(request.user, "department", None), "hotel", None)
+        if not user_hotel or waiver.reservation.hotel_id != user_hotel.pk:
+            messages.error(request, "You do not have access to this hotel's request.")
+            return redirect("frontdesk_complimentary_room_night_queue")
+
+    try:
+        decide_complimentary_night(
+            waiver=waiver,
+            user=request.user,
+            approve=(decision == "approve"),
+            rejection_reason=request.POST.get("rejection_reason", ""),
+        )
+        messages.success(request, "Complimentary room-night request " + ("approved." if decision == "approve" else "rejected."))
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+    return redirect("frontdesk_complimentary_room_night_queue")
