@@ -9,7 +9,7 @@ from inventory.models import Stock, Product, stock_out
 from django.shortcuts import get_object_or_404
 from rooms.models import Room
 from billing.models import Folio, Payment, Charge
-from datetime import date
+from datetime import date, timedelta
 from inventory.models import Department
 from accounts.models import User
 from django.db import models, transaction
@@ -615,7 +615,9 @@ def pos_order_receipt(request, order_id):
     payment = Payment.objects.filter(
         reference=f"POS-{order.id}",
     ).order_by("-collected_at").first()
-    if order.folio.folio_type == "ROOM":
+    if order.is_complimentary_breakfast:
+        payment_label = "COMPLIMENTARY BREAKFAST"
+    elif order.folio.folio_type == "ROOM":
         payment_label = "ROOM CHARGE"
     elif payment:
         payment_label = payment.get_method_display()
@@ -1892,7 +1894,7 @@ def complimentary_breakfast(request):
         "restaurant/complimentary_breakfast.html",
         {
             "breakfast_date": breakfast_date,
-            "room_night_date": breakfast_date - timezone.timedelta(days=1),
+            "room_night_date": breakfast_date - timedelta(days=1),
             "qualifying_charges": qualifying_charges,
             "menu_items": menu_items,
         },
