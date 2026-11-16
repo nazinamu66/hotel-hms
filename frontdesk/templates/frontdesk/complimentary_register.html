@@ -88,16 +88,18 @@
       <table class="table table-hover align-middle mb-0">
         <thead><tr><th>Breakfast date</th><th>Hotel / Room</th><th>Guest</th><th>Items</th><th>FIFO cost</th><th>Redeemed by</th><th>Order</th></tr></thead>
         <tbody>
-        {% for redemption in food_records %}
+        {% for row in food_rows %}
+          {% with redemption=row.redemption %}
           <tr>
             <td>{{ redemption.breakfast_date|date:"d M Y" }}</td>
             <td>{{ redemption.folio.hotel.name }}<br><span class="text-muted small">{{ redemption.room.room_number }}</span></td>
             <td>{{ redemption.folio.guest }}</td>
             <td>{% for line in redemption.order.items.all %}<div>{{ line.menu_item.name }} × {{ line.quantity }}</div>{% endfor %}</td>
-            <td>₦{% with total=0 %}{{ redemption.food_cost|default:"—" }}{% endwith %}{% for line in redemption.order.items.all %}{% endfor %}</td>
+            <td>₦{{ row.food_cost|floatformat:2 }}</td>
             <td>{{ redemption.redeemed_by }}<br><span class="text-muted small">{{ redemption.redeemed_at|date:"d M Y H:i" }}</span></td>
             <td>#{{ redemption.order_id }}</td>
           </tr>
+          {% endwith %}
         {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">No complimentary food records for this filter.</td></tr>{% endfor %}
         </tbody>
       </table>
