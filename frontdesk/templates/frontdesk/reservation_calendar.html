@@ -30,6 +30,7 @@
     .rc-nav { display:flex; gap:7px; }
     .rc-nav a { display:inline-flex; min-height:36px; align-items:center; justify-content:center; padding:0 12px; border:1px solid #dbe3ec; border-radius:8px; background:#fff; color:#334155; text-decoration:none; font-size:12px; font-weight:800; }
     .rc-nav a:hover { border-color:#9aafc8; background:#f8fafc; }
+    .rc-nav a.rc-today { background:#eff6ff; border-color:#dbeafe; color:#24558a; }
     .rc-legend { display:flex; align-items:center; gap:12px; color:#64748b; font-size:11px; font-weight:700; }
     .rc-legend-item { display:flex; align-items:center; gap:6px; white-space:nowrap; }
     .rc-swatch { width:10px; height:10px; border-radius:3px; border:1px solid rgba(15,23,42,.08); }
@@ -50,6 +51,7 @@
     .rc-calendar th:last-child, .rc-calendar td:last-child { border-right:0; }
     .rc-room { position:sticky; left:0; z-index:1; padding:0 14px 0 18px !important; background:#fbfcfe; text-align:left !important; color:#26364b; font-size:12px; font-weight:800; white-space:nowrap; }
     .rc-room-label { display:inline-flex; align-items:center; gap:8px; }
+    .rc-room-meta { display:block; margin:3px 0 0 15px; color:#94a3b8; font-size:10px; font-weight:600; }
     .rc-room-dot { width:7px; height:7px; border-radius:50%; background:#9aabc0; }
     .rc-cell-available { background:#f0fdf4; }
     .rc-cell-available:hover { background:#dcfce7; }
@@ -139,6 +141,7 @@
         <div class="rc-toolbar-right">
             <nav class="rc-nav" aria-label="Calendar date navigation">
                 <a href="?start={{ prev_week|date:'Y-m-d' }}{% if filters.category %}&category={{ filters.category|urlencode }}{% endif %}{% if filters.room %}&room={{ filters.room|urlencode }}{% endif %}">← Previous 7 days</a>
+                <a class="rc-today" href="?start={{ today|date:'Y-m-d' }}{% if filters.category %}&category={{ filters.category|urlencode }}{% endif %}{% if filters.room %}&room={{ filters.room|urlencode }}{% endif %}">Today</a>
                 <a href="?start={{ next_week|date:'Y-m-d' }}{% if filters.category %}&category={{ filters.category|urlencode }}{% endif %}{% if filters.room %}&room={{ filters.room|urlencode }}{% endif %}">Next 7 days →</a>
             </nav>
             <div class="rc-legend" aria-label="Calendar legend">
@@ -176,11 +179,12 @@
                         <tr>
                             <th scope="row" class="rc-room">
                                 <span class="rc-room-label"><span class="rc-room-dot"></span>Room {{ row.room.room_number }}</span>
+                                <span class="rc-room-meta">{{ row.room.category.name }}</span>
                             </th>
                             {% for day in row.days %}
                                 {% if day.reservation %}
                                     <td class="rc-cell-reserved">
-                                        <a href="{% url 'frontdesk_reservation_detail' day.reservation.id %}" class="rc-action rc-res" title="View reservation #{{ day.reservation.id }}" aria-label="View reservation #{{ day.reservation.id }}">RES</a>
+                                        <a href="{% url 'frontdesk_reservation_detail' day.reservation.id %}" class="rc-action rc-res" title="Reservation #{{ day.reservation.id }}{% if day.reservation.guest %} · {{ day.reservation.guest }}{% endif %} · {{ day.reservation.check_in_date|date:'d M' }}–{{ day.reservation.check_out_date|date:'d M' }}" aria-label="Open reservation #{{ day.reservation.id }}{% if day.reservation.guest %} for {{ day.reservation.guest }}{% endif %}">RES</a>
                                     </td>
                                 {% elif day.is_available %}
                                     <td class="rc-cell-available">
