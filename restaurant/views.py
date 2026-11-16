@@ -1957,8 +1957,13 @@ def restaurant_menu_management(request):
             )
         return redirect(f"/restaurant/menu-management/?hotel={hotel.pk}")
 
+    eligible_product_scope = {
+        "product__hotel__in": hotels,
+        "product__usage_type": "RESALE",
+        "product__product_type__in": ("FOOD", "SNACK", "DRINK"),
+    }
     menu_items = MenuItem.objects.filter(
-        product__hotel__in=hotels,
+        **eligible_product_scope,
     ).select_related("product", "product__hotel")
 
     if hotel:
@@ -1994,11 +1999,17 @@ def restaurant_menu_management(request):
         "search_query": search_query,
         "selected_category": category,
         "breakfast_filter": breakfast_filter,
-        "total_items": MenuItem.objects.filter(product__hotel__in=hotels).count(),
+        "total_items": MenuItem.objects.filter(
+            product__hotel=hotel,
+            product__usage_type="RESALE",
+            product__product_type__in=("FOOD", "SNACK", "DRINK"),
+        ).count() if hotel else 0,
         "breakfast_items": MenuItem.objects.filter(
-            product__hotel__in=hotels,
+            product__hotel=hotel,
+            product__usage_type="RESALE",
+            product__product_type__in=("FOOD", "SNACK", "DRINK"),
             is_breakfast_item=True,
-        ).count(),
+        ).count() if hotel else 0,
         "result_count": menu_items.count(),
     }
     return render(request, "restaurant/menu_management.html", context)
