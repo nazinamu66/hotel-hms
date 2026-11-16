@@ -26,6 +26,9 @@ from .views import (
     guest_deposit_receive,
     guest_search_api,
     reservation_detail,
+    request_complimentary_room_nights,
+    complimentary_room_night_queue,
+    decide_complimentary_room_night,
 )
 
 urlpatterns = [
@@ -49,6 +52,9 @@ urlpatterns = [
     path("reservations/create/",create_reservation,name="frontdesk_create_reservation"),
     path("reservations/<int:reservation_id>/",reservation_detail,name="frontdesk_reservation_detail",),
     path("reservations/<int:reservation_id>/checkin/",reservation_checkin,name="frontdesk_reservation_checkin"),
+    path("reservations/<int:reservation_id>/complimentary-nights/request/", request_complimentary_room_nights, name="frontdesk_complimentary_room_night_request"),
+    path("complimentary-room-nights/", complimentary_room_night_queue, name="frontdesk_complimentary_room_night_queue"),
+    path("complimentary-room-nights/<int:waiver_id>/<str:decision>/", decide_complimentary_room_night, name="frontdesk_complimentary_room_night_decide"),
     path("reservations/<int:reservation_id>/cancel/",reservation_cancel,name="frontdesk_reservation_cancel",),
     path("guests/create/",guest_create,name="frontdesk_guest_create"),
     path("guests/<int:guest_id>/edit/",guest_edit,name="frontdesk_guest_edit",),
