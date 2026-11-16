@@ -1886,6 +1886,7 @@ def reservation_calendar(request):
         "calendar": calendar,
         "days": days,
         "start_date": start_date,
+        "today": timezone.localdate(),
         "prev_week": prev_week,
         "next_week": next_week,
         "categories": categories,
