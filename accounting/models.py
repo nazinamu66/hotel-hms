@@ -271,6 +271,7 @@ class JournalEntry(models.Model):
             ("CLOSING", "Closing"),
             ("PRODUCTION", "Production"),
             ("OPENING", "Opening Balance"),
+            ("COMPLIMENTARY_MEAL", "Complimentary Meal"),
         ],
         default="NORMAL"
     )
