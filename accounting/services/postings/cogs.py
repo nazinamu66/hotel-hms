@@ -45,7 +45,7 @@ def post_cogs_for_order(order):
     drink_cogs = _money(drink_cogs)
     food_cogs = _money(food_cogs)
 
-    if order.is_complimentary_breakfast:
+    if getattr(order, "is_complimentary_breakfast", False):
         # Hotels created before this feature receive the new control account
         # on first use, without changing existing account balances.
         expense, _ = Account.objects.get_or_create(
