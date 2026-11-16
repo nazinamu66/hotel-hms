@@ -184,6 +184,21 @@ class Folio(models.Model):
             if self.last_room_charge_date == charge_date:
                 return
 
+        from billing.models import ComplimentaryRoomNight
+        waiver = ComplimentaryRoomNight.objects.select_for_update().filter(
+            folio=self,
+            reservation=self.reservation,
+            room_night_date=charge_date,
+            status="APPROVED",
+        ).first()
+        if waiver is not None:
+            waiver.status = "CONSUMED"
+            waiver.consumed_at = timezone.now()
+            waiver.save(update_fields=["status", "consumed_at"])
+            self.last_room_charge_date = charge_date
+            self.save(update_fields=["last_room_charge_date"])
+            return
+
         from billing.services.room_pricing import create_room_night_charge
         create_room_night_charge(
             folio=self,
@@ -1216,3 +1231,64 @@ Charge.add_to_class(
         blank=True,
     ),
 )
+
+
+
+class ComplimentaryRoomNight(models.Model):
+    STATUS_CHOICES = (
+        ("PENDING", "Pending approval"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+        ("CONSUMED", "Consumed"),
+    )
+
+    reservation = models.ForeignKey(
+        Reservation,
+        on_delete=models.PROTECT,
+        related_name="complimentary_room_nights",
+    )
+    folio = models.ForeignKey(
+        Folio,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="complimentary_room_nights",
+    )
+    room_night_date = models.DateField()
+    waived_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    rate_source = models.CharField(max_length=12, blank=True)
+    reason = models.TextField()
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="PENDING")
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="complimentary_nights_requested",
+    )
+    requested_at = models.DateTimeField(default=timezone.now)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        null=True, blank=True, related_name="complimentary_nights_approved",
+    )
+    approved_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["room_night_date", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["reservation", "room_night_date"],
+                name="unique_complimentary_reservation_night",
+            ),
+        ]
+
+    def clean(self):
+        if self.reservation_id:
+            if self.room_night_date < self.reservation.check_in_date or self.room_night_date >= self.reservation.check_out_date:
+                raise ValidationError("Complimentary date must fall within the reservation stay.")
+            if self.folio_id and self.folio.reservation_id != self.reservation_id:
+                raise ValidationError("Complimentary night folio must belong to the same reservation.")
+        if self.waived_amount is not None and self.waived_amount < 0:
+            raise ValidationError("Waived amount cannot be negative.")
+
+    def __str__(self):
+        return f"Complimentary night {self.reservation_id} – {self.room_night_date} ({self.status})"
