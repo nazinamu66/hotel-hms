@@ -144,6 +144,37 @@
         color: #1e293b;
     }
 
+    .guest-detail-link {
+        color: inherit;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .guest-detail-link:hover {
+        color: #0f766e;
+        text-decoration: underline;
+    }
+
+    .details-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 10px;
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #cbd5e1;
+        text-decoration: none;
+        border-radius: 7px;
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .details-btn:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+
     .date {
         white-space: nowrap;
     }
@@ -295,9 +326,13 @@
                     </td>
 
                     <td>
-                        <span class="guest-name">
+                        <a
+                            href="{% url 'frontdesk_reservation_detail' r.id %}"
+                            class="guest-name guest-detail-link"
+                            title="Open reservation #{{ r.id }}"
+                        >
                             {{ r.guest.first_name }} {{ r.guest.last_name }}
-                        </span>
+                        </a>
                     </td>
 
                     <td>
@@ -404,6 +439,14 @@
         <div class="action-group">
 
             <a
+                href="{% url 'frontdesk_reservation_detail' r.id %}"
+                class="details-btn"
+                title="View full reservation details"
+            >
+                View
+            </a>
+
+            <a
                 href="{% url 'frontdesk_reservation_checkin' r.id %}"
                 class="action-btn"
             >
@@ -435,15 +478,24 @@
 
     {% elif r.status == "CHECKED_IN" %}
 
+        <a
+            href="{% url 'frontdesk_reservation_detail' r.id %}"
+            class="details-btn"
+        >
+            View
+        </a>
         <span style="color:#64748b;font-size:13px;">
             In-house
         </span>
 
     {% else %}
 
-        <span style="color:#94a3b8;font-size:13px;">
-            —
-        </span>
+        <a
+            href="{% url 'frontdesk_reservation_detail' r.id %}"
+            class="details-btn"
+        >
+            View
+        </a>
 
     {% endif %}
 
