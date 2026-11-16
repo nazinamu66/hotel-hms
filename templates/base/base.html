@@ -654,6 +654,21 @@
         {% endif %}
 
 
+
+        <!-- ========================= -->
+        <!-- MANAGEMENT AUDIT REGISTERS -->
+        <!-- ========================= -->
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN,CHIEF_ACCOUNTANT" %}
+        <h4 class="menu-toggle {% if request.resolver_match.url_name == 'frontdesk_complimentary_register' %}active-menu{% endif %}"
+            onclick="toggleMenu('management_registers_menu', this)">
+            <span class="arrow">▸</span>
+            Management Registers
+        </h4>
+        <div id="management_registers_menu" class="menu-section {% if request.resolver_match.url_name == 'frontdesk_complimentary_register' %}open{% endif %}">
+            <a href="{% url 'frontdesk_complimentary_register' %}">Complimentary Register</a>
+        </div>
+        {% endif %}
+
         <!-- ========================= -->
         <!-- PROCUREMENT -->
         <!-- ========================= -->
