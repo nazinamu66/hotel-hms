@@ -4,6 +4,7 @@ from django.db import transaction
 
 from accounting.services.journal import record_transaction
 from accounting.models import Account
+from accounting.constants import COMPLIMENTARY_MEALS_EXPENSE
 
 
 CURRENCY_QUANTUM = Decimal("0.01")
@@ -54,7 +55,7 @@ def post_cogs_for_order(order):
             defaults={
                 "name": "Complimentary Meals Expense",
                 "account_type": "expense",
-                "system_key": "complimentary_meals_expense",
+                "system_key": COMPLIMENTARY_MEALS_EXPENSE,
                 "is_system": True,
                 "allow_posting": True,
                 "allow_manual_entries": False,
@@ -62,7 +63,7 @@ def post_cogs_for_order(order):
             },
         )
         if (
-            expense.system_key != "complimentary_meals_expense"
+            expense.system_key != COMPLIMENTARY_MEALS_EXPENSE
             or not expense.is_active
             or not expense.allow_posting
         ):
