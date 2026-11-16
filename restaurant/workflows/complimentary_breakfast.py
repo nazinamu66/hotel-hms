@@ -33,7 +33,6 @@ def eligible_breakfast_charges(hotel, breakfast_date=None):
             folio__hotel=hotel,
             folio__folio_type="ROOM",
             folio__room__isnull=False,
-            folio__is_closed=False,
             room_night_date=room_night_date,
             room_rate_source="STANDARD",
             discount_percentage=Decimal("0.00"),
@@ -100,7 +99,6 @@ def redeem_complimentary_breakfast(*, user, source_charge_id, cart):
             folio__hotel=hotel,
             folio__folio_type="ROOM",
             folio__room__isnull=False,
-            folio__is_closed=False,
         )
         .first()
     )
