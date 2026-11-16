@@ -27,8 +27,9 @@ class POSOrderAdmin(admin.ModelAdmin):
 
 @admin.register(MenuItem)
 class MenuItemAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'price', 'is_active')
-    list_filter = ('category', 'is_active')
+    list_display = ('name', 'category', 'price', 'is_active', 'is_breakfast_item')
+    list_filter = ('category', 'is_active', 'is_breakfast_item')
+    list_editable = ('is_breakfast_item',)
 
 
 @admin.register(ComplimentaryBreakfastRedemption)
