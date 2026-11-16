@@ -492,31 +492,36 @@
                 <div class="rd-card-header">
                     <span class="rd-icon" aria-hidden="true">&#127873;</span>
                     <div>
-                        <h3>Complimentary accommodation</h3>
-                        <div class="rd-subtitle small">Request a full or partial stay waiver; each night requires management approval.</div>
+                        <h3>Complimentary room accommodation</h3>
+                        <div class="rd-subtitle small">Record a complimentary-night request against this reservation. Each night is subject to independent management approval.</div>
                     </div>
                 </div>
                 <div class="rd-card-body">
                     {% if reservation.status == "RESERVED" or reservation.status == "CHECKED_IN" %}
+                    <div class="rd-note mb-3">
+                        <strong>How this works:</strong> Select the room night(s), provide a clear reason and submit. The request will remain pending until an authorised manager approves or rejects it. Frontdesk cannot approve its own request.
+                    </div>
                     <form method="post" action="{% url 'frontdesk_complimentary_room_night_request' reservation.id %}" class="row g-3 mb-4">
                         {% csrf_token %}
                         <div class="col-md-4">
-                            <label class="form-label">First night</label>
-                            <input type="date" class="form-control" name="start_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" required>
+                            <label class="form-label fw-semibold">First complimentary night</label>
+                            <input type="date" class="form-control" name="start_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" max="{{ reservation.check_out_date|date:'Y-m-d' }}" required>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Last night (inclusive)</label>
-                            <input type="date" class="form-control" name="end_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}"  required>
+                            <label class="form-label fw-semibold">Last complimentary night</label>
+                            <input type="date" class="form-control" name="end_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" max="{{ reservation.check_out_date|date:'Y-m-d' }}" required>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Reason for complimentary accommodation</label>
-                            <textarea class="form-control" name="reason" rows="2" required></textarea>
+                            <label class="form-label fw-semibold">Reason / authorisation context</label>
+                            <textarea class="form-control" name="reason" rows="3" maxlength="2000" placeholder="Explain why the guest is receiving complimentary accommodation..." required></textarea>
                         </div>
-                        <div class="col-12">
-                            <button class="btn btn-primary" type="submit">Submit nights for approval</button>
-                            <span class="small text-muted ms-2">Use the same date for a single night. For non-consecutive nights, submit separate requests.</span>
+                        <div class="col-12 d-flex flex-wrap align-items-center gap-3">
+                            <button class="rd-btn rd-btn-primary" type="submit">Submit complimentary room request</button>
+                            <span class="small text-muted">For one night, use the same date in both fields. Submit separate requests for non-consecutive nights.</span>
                         </div>
                     </form>
+                    {% elif reservation.status == "CANCELLED" or reservation.status == "NO_SHOW" %}
+                    <div class="rd-note mb-3">This reservation is {{ reservation.get_status_display|lower }}. New complimentary room requests cannot be submitted.</div>
                     {% endif %}
                     <div class="table-responsive">
                         <table class="table table-sm align-middle">
@@ -537,7 +542,7 @@
                         </table>
                     </div>
                     {% if request.user.role == "MANAGER" or request.user.role == "DIRECTOR" or request.user.role == "ADMIN" %}
-                    <a href="{% url 'frontdesk_complimentary_room_night_queue' %}" class="btn btn-sm btn-outline-secondary">Open approval queue</a>
+                    <a href="{% url 'frontdesk_complimentary_room_night_queue' %}" class="rd-btn rd-btn-secondary">Review pending complimentary requests</a>
                     {% endif %}
                 </div>
             </section>
