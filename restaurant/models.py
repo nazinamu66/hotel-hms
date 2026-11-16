@@ -532,6 +532,9 @@ class ComplimentaryBreakfastRedemption(models.Model):
     folio = models.ForeignKey(
         "billing.Folio", on_delete=models.PROTECT, related_name="breakfast_redemptions"
     )
+    room = models.ForeignKey(
+        "rooms.Room", on_delete=models.PROTECT, related_name="breakfast_redemptions"
+    )
     source_charge = models.ForeignKey(
         "billing.Charge", on_delete=models.PROTECT, related_name="breakfast_redemptions"
     )
@@ -548,7 +551,7 @@ class ComplimentaryBreakfastRedemption(models.Model):
     class Meta:
         ordering = ["-redeemed_at", "-id"]
         constraints = [
-            models.UniqueConstraint(fields=["folio", "breakfast_date"], name="unique_room_breakfast_redemption_per_day"),
+            models.UniqueConstraint(fields=["room", "breakfast_date"], name="unique_room_breakfast_redemption_per_day"),
             models.UniqueConstraint(fields=["source_charge"], name="unique_breakfast_redemption_per_room_night"),
         ]
 
@@ -558,6 +561,8 @@ class ComplimentaryBreakfastRedemption(models.Model):
                 raise ValidationError("Redemption order must be marked as complimentary breakfast.")
             if self.order.folio_id != self.folio_id:
                 raise ValidationError("Redemption order and folio must match.")
+        if self.folio_id and self.room_id and self.folio.room_id != self.room_id:
+            raise ValidationError("Redemption room and folio room must match.")
         if self.source_charge_id and self.source_charge.folio_id != self.folio_id:
             raise ValidationError("Qualifying room charge and folio must match.")
 
