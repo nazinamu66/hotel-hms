@@ -490,6 +490,60 @@
         <div class="col-12">
             <section class="rd-card">
                 <div class="rd-card-header">
+                    <span class="rd-icon" aria-hidden="true">&#127873;</span>
+                    <div>
+                        <h3>Complimentary accommodation</h3>
+                        <div class="rd-subtitle small">Request a full or partial stay waiver; each night requires management approval.</div>
+                    </div>
+                </div>
+                <div class="rd-card-body">
+                    {% if reservation.status == "RESERVED" or reservation.status == "CHECKED_IN" %}
+                    <form method="post" action="{% url 'frontdesk_complimentary_room_night_request' reservation.id %}" class="row g-3 mb-4">
+                        {% csrf_token %}
+                        <div class="col-md-4">
+                            <label class="form-label">First night</label>
+                            <input type="date" class="form-control" name="start_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" max="{{ reservation.check_out_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Last night (inclusive)</label>
+                            <input type="date" class="form-control" name="end_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" max="{{ reservation.check_out_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Reason for complimentary accommodation</label>
+                            <textarea class="form-control" name="reason" rows="2" required></textarea>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-primary" type="submit">Submit nights for approval</button>
+                            <span class="small text-muted ms-2">Use the same date for a single night. For non-consecutive nights, submit separate requests.</span>
+                        </div>
+                    </form>
+                    {% endif %}
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead><tr><th>Night</th><th>Waived value</th><th>Status</th><th>Requested by</th><th>Authorised by</th></tr></thead>
+                            <tbody>
+                            {% for waiver in reservation.complimentary_room_nights.all %}
+                                <tr>
+                                    <td>{{ waiver.room_night_date|date:"d M Y" }}</td>
+                                    <td>₦{{ waiver.waived_amount|floatformat:2 }}</td>
+                                    <td>{{ waiver.get_status_display }}</td>
+                                    <td>{{ waiver.requested_by }}</td>
+                                    <td>{{ waiver.approved_by|default:"—" }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="5" class="text-muted">No complimentary nights requested.</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <a href="{% url 'frontdesk_complimentary_room_night_queue' %}" class="btn btn-sm btn-outline-secondary">Open approval queue</a>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12">
+            <section class="rd-card">
+                <div class="rd-card-header">
                     <span class="rd-icon" aria-hidden="true">&#128203;</span>
                     <div>
                         <h3>Guarantee and notes</h3>
