@@ -1858,3 +1858,90 @@ def decide_complimentary_room_night(request, waiver_id, decision):
     except ValidationError as exc:
         messages.error(request, str(exc))
     return redirect("frontdesk_complimentary_room_night_queue")
+
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN", "CHIEF_ACCOUNTANT")
+def complimentary_register(request):
+    """Read-only management register for complimentary room nights and food."""
+    from billing.models import ComplimentaryRoomNight
+    from restaurant.models import ComplimentaryBreakfastRedemption
+    from accounts.services.access import get_accessible_hotels
+    from django.utils.dateparse import parse_date
+
+    hotels = get_accessible_hotels(request.user)
+    hotel_id = request.GET.get("hotel", "").strip()
+    date_from_raw = request.GET.get("date_from", "").strip()
+    date_to_raw = request.GET.get("date_to", "").strip()
+    register_type = request.GET.get("type", "all").strip().lower()
+    status = request.GET.get("status", "").strip().upper()
+
+    if register_type not in ("all", "rooms", "food"):
+        register_type = "all"
+
+    date_from = parse_date(date_from_raw) if date_from_raw else None
+    date_to = parse_date(date_to_raw) if date_to_raw else None
+    if date_from_raw and not date_from:
+        date_from_raw = ""
+    if date_to_raw and not date_to:
+        date_to_raw = ""
+
+    selected_hotel = None
+    if hotel_id:
+        selected_hotel = hotels.filter(pk=hotel_id).first()
+
+    room_records = ComplimentaryRoomNight.objects.select_related(
+        "reservation", "reservation__guest", "reservation__hotel",
+        "reservation__room", "folio", "folio__room",
+        "requested_by", "approved_by",
+    ).filter(reservation__hotel__in=hotels)
+    food_records = ComplimentaryBreakfastRedemption.objects.select_related(
+        "folio", "folio__guest", "folio__hotel", "room",
+        "source_charge", "order", "redeemed_by",
+    ).prefetch_related("order__items__menu_item").filter(folio__hotel__in=hotels)
+
+    if selected_hotel:
+        room_records = room_records.filter(reservation__hotel=selected_hotel)
+        food_records = food_records.filter(folio__hotel=selected_hotel)
+    if date_from:
+        room_records = room_records.filter(room_night_date__gte=date_from)
+        food_records = food_records.filter(breakfast_date__gte=date_from)
+    if date_to:
+        room_records = room_records.filter(room_night_date__lte=date_to)
+        food_records = food_records.filter(breakfast_date__lte=date_to)
+    if status and status in ("PENDING", "APPROVED", "REJECTED", "CONSUMED"):
+        room_records = room_records.filter(status=status)
+
+    room_records = room_records.order_by("-room_night_date", "-requested_at")
+    food_records = food_records.order_by("-breakfast_date", "-redeemed_at")
+
+    room_value = sum(
+        (record.waived_amount or Decimal("0.00"))
+        for record in room_records
+        if record.status in ("APPROVED", "CONSUMED")
+    )
+    food_cost = Decimal("0.00")
+    for redemption in food_records:
+        for item in redemption.order.items.all():
+            food_cost += (item.cost_at_sale or Decimal("0.00")) * item.quantity
+
+    if register_type == "rooms":
+        food_records = food_records.none()
+    elif register_type == "food":
+        room_records = room_records.none()
+
+    return render(request, "frontdesk/complimentary_register.html", {
+        "hotels": hotels,
+        "selected_hotel": selected_hotel,
+        "room_records": room_records,
+        "food_records": food_records,
+        "room_value": room_value,
+        "food_cost": food_cost,
+        "room_count": room_records.count(),
+        "food_count": food_records.count(),
+        "register_type": register_type,
+        "status_filter": status,
+        "date_from": date_from_raw,
+        "date_to": date_to_raw,
+    })
+
