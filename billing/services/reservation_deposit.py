@@ -300,6 +300,14 @@ def create_reservation_guarantee(
             raise ValidationError("No active rate for this room category.")
         nightly_rate = rate.price_per_night
 
+    discount_percent = Decimal(getattr(reservation, "room_discount_percent", 0) or 0)
+    if discount_percent:
+        if allocation is not None:
+            raise ValidationError("Receptionist discounts cannot be combined with negotiated group rates.")
+        nightly_rate = (
+            Decimal(nightly_rate) * (Decimal("100") - discount_percent) / Decimal("100")
+        ).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+
     number_of_nights = (
         reservation.check_out_date
         - reservation.check_in_date
