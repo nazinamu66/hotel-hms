@@ -438,17 +438,7 @@
 
         <div class="action-group">
 
-            <a
-                href="{% url 'frontdesk_reservation_detail' r.id %}"
-                class="details-btn"
-                title="View full reservation details"
-            >
-                View
-            </a>
-
-            <a
-                href="{% url 'frontdesk_reservation_checkin' r.id %}"
-                class="action-btn"
+            <a href="{% url 'frontdesk_reservation_detail' r.id %}" class="action-btn" title="Open reservation details and continue to check-in"
             >
                 Check-in
             </a>
