@@ -15,7 +15,7 @@ from datetime import timedelta, datetime
 from maintenance.models import MaintenanceTicket
 from django.core.exceptions import ValidationError
 from frontdesk.workflows.check_in import check_in_guest
-from django.http import JsonResponse, FileResponse, HttpResponse
+from django.http import JsonResponse, FileResponse, HttpResponse, HttpResponseNotAllowed
 from io import BytesIO
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_RIGHT
@@ -870,11 +870,18 @@ def active_stay(request, room_id):
         hotel=request.user.department.hotel
     )
 
-    folio = Folio.objects.filter(
-        folio_type='ROOM',
-        room=room,
-        is_closed=False
-    ).first()
+    folio = (
+        Folio.objects
+        .filter(
+            folio_type="ROOM",
+            room=room,
+            hotel=room.hotel,
+            is_closed=False,
+        )
+        .select_related("guest", "room", "room__category")
+        .prefetch_related("charges__department", "payments", "room_history__room")
+        .first()
+    )
 
     if not folio:
         messages.error(request, "No active stay for this room.")
@@ -905,7 +912,7 @@ def active_stay(request, room_id):
         "time": folio.created_at,
         "type": "checkin",
         "label": "Check-in",
-        "description": f"{guest.first_name} {guest.last_name} checked in",
+        "description": (f"{guest.first_name} {guest.last_name} checked in" if guest else "Guest details have not been recorded"),
         "amount": None,
     })
 
@@ -914,7 +921,7 @@ def active_stay(request, room_id):
         timeline.append({
             "time": charge.created_at,
             "type": "charge",
-            "label": charge.department.name,
+            "label": charge.department.name if charge.department else "Other",
             "description": charge.description,
             "amount": charge.amount,
         })
@@ -1346,6 +1353,9 @@ def take_folio_payment(request, folio_id):
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def checkout(request, room_id):
+
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
 
     from frontdesk.workflows.checkout import checkout_guest
 
