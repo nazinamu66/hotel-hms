@@ -1786,10 +1786,11 @@ def request_complimentary_room_nights(request, reservation_id):
     if request.method != "POST":
         return redirect("frontdesk_reservation_detail", reservation_id=reservation_id)
 
+    from accounts.services.access import get_accessible_hotels
     reservation = get_object_or_404(
         Reservation,
         pk=reservation_id,
-        hotel=request.user.department.hotel,
+        hotel__in=get_accessible_hotels(request.user),
     )
     try:
         start_date = datetime.strptime(request.POST.get("start_date", ""), "%Y-%m-%d").date()
