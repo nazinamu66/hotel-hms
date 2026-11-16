@@ -8,6 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
+        ("accounting", "0018_complimentary_meal_entry_type"),
         ("billing", "0036_complimentary_room_night"),
         ("restaurant", "0024_restaurantspoilagerecord"),
         ("rooms", "0012_alter_amenity_hotel"),
