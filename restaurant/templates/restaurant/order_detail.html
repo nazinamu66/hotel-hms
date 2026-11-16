@@ -363,7 +363,9 @@
 
                 <span class="meta-value">
 
-                    {% if order.folio.folio_type == "ROOM" %}
+                    {% if order.is_complimentary_breakfast %}
+                        Complimentary Breakfast — Room {{ order.folio.room.room_number }}
+                    {% elif order.folio.folio_type == "ROOM" %}
 
                         Room {{ order.folio.room.room_number }}
 
