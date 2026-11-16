@@ -1256,6 +1256,7 @@ def kitchen_management_report(request):
         order__created_at__date__lte=date_to,
         order__status__in=("CHARGED", "PAID"),
         order__is_refunded=False,
+        order__is_complimentary_breakfast=False,
         menu_item__product__product_type__in=("FOOD", "SNACK"),
     ).select_related("order", "menu_item", "menu_item__product", "order__department__hotel")
 
@@ -1608,6 +1609,8 @@ def kitchen_batch_profitability_report(request):
         "produced": sum((Decimal(row["quantity_produced"]) for row in rows), Decimal("0.000")),
         "production_cost": sum((row["production_cost"] for row in rows), Decimal("0.00")),
         "sold": sum((row["quantity_sold"] for row in rows), Decimal("0.000")),
+        "complimentary": sum((row["quantity_complimentary"] for row in rows), Decimal("0.000")),
+        "complimentary_cost": sum((row["complimentary_cost"] for row in rows), Decimal("0.00")),
         "revenue": sum((row["sales_revenue"] for row in rows), Decimal("0.00")),
         "cogs": sum((row["sales_cogs"] for row in rows), Decimal("0.00")),
         "gross_profit": sum((row["gross_profit"] for row in rows), Decimal("0.00")),
