@@ -2,7 +2,7 @@ from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from accounts.decorators import role_required
-from .models import MenuItem, POSOrder, POSOrderItem, RestaurantTable, RestaurantSpoilageRecord
+from .models import MenuItem, POSOrder, POSOrderItem, RestaurantTable, RestaurantSpoilageRecord, ComplimentaryBreakfastRedemption
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from inventory.models import Stock, Product, stock_out
@@ -1897,5 +1897,9 @@ def complimentary_breakfast(request):
             "room_night_date": breakfast_date - timedelta(days=1),
             "qualifying_charges": qualifying_charges,
             "menu_items": menu_items,
+            "today_redemptions": ComplimentaryBreakfastRedemption.objects.filter(
+                room__hotel=restaurant.hotel,
+                breakfast_date=breakfast_date,
+            ).select_related("room", "folio__guest", "redeemed_by", "order").order_by("redeemed_at"),
         },
     )
