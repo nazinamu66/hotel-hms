@@ -8,8 +8,8 @@ class POSOrderItemInline(admin.TabularInline):
 
 @admin.register(POSOrder)
 class POSOrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'department', 'status', 'total_amount', 'created_at')
-    list_filter = ('status', 'department')
+    list_display = ('id', 'department', 'status', 'total_amount', 'is_complimentary_breakfast', 'created_at')
+    list_filter = ('status', 'department', 'is_complimentary_breakfast')
     inlines = [POSOrderItemInline]
     actions = ['charge_orders', 'mark_as_paid']
 
@@ -35,5 +35,5 @@ class MenuItemAdmin(admin.ModelAdmin):
 class ComplimentaryBreakfastRedemptionAdmin(admin.ModelAdmin):
     list_display = ("id", "room", "folio", "breakfast_date", "room_night_date", "order", "redeemed_by", "redeemed_at")
     list_filter = ("breakfast_date", "room__hotel")
-    search_fields = ("room__room_number", "folio__guest__full_name", "source_charge__reference")
+    search_fields = ("room__room_number", "folio__guest__first_name", "folio__guest__last_name", "source_charge__reference")
     readonly_fields = ("folio", "room", "source_charge", "order", "room_night_date", "breakfast_date", "redeemed_by", "redeemed_at")
