@@ -1,0 +1,109 @@
+{% extends "base/base.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1">Complimentary Register</h2>
+      <p class="text-muted mb-0">Management audit of complimentary room nights and breakfast redemptions.</p>
+    </div>
+  </div>
+
+  <form method="get" class="card card-body mb-4">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Hotel</label>
+        <select name="hotel" class="form-select">
+          <option value="">All accessible hotels</option>
+          {% for hotel in hotels %}
+            <option value="{{ hotel.pk }}" {% if selected_hotel and selected_hotel.pk == hotel.pk %}selected{% endif %}>{{ hotel.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">From</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">To</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Register</label>
+        <select name="type" class="form-select">
+          <option value="all" {% if register_type == "all" %}selected{% endif %}>All benefits</option>
+          <option value="rooms" {% if register_type == "rooms" %}selected{% endif %}>Rooms only</option>
+          <option value="food" {% if register_type == "food" %}selected{% endif %}>Food only</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Room status</label>
+        <select name="status" class="form-select">
+          <option value="">All statuses</option>
+          {% for value,label in room_status_choices %}
+            <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+          {% if status_filter and status_filter not in "PENDING APPROVED REJECTED CONSUMED" %}<option value="{{ status_filter }}" selected>{{ status_filter }}</option>{% endif %}
+        </select>
+      </div>
+      <div class="col-md-1"><button class="btn btn-primary w-100">Apply</button></div>
+    </div>
+  </form>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card card-body h-100"><div class="text-muted small">Room-night records</div><div class="fs-3 fw-semibold">{{ room_count }}</div></div></div>
+    <div class="col-md-3"><div class="card card-body h-100"><div class="text-muted small">Approved / consumed room value</div><div class="fs-4 fw-semibold">₦{{ room_value|floatformat:2 }}</div></div></div>
+    <div class="col-md-3"><div class="card card-body h-100"><div class="text-muted small">Breakfast redemptions</div><div class="fs-3 fw-semibold">{{ food_count }}</div></div></div>
+    <div class="col-md-3"><div class="card card-body h-100"><div class="text-muted small">Breakfast FIFO cost</div><div class="fs-4 fw-semibold">₦{{ food_cost|floatformat:2 }}</div></div></div>
+  </div>
+
+  {% if register_type != "food" %}
+  <div class="card mb-4">
+    <div class="card-header fw-semibold">Complimentary Rooms</div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Night</th><th>Hotel / Room</th><th>Guest</th><th>Value</th><th>Reason</th><th>Requested by</th><th>Approved by</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for item in room_records %}
+          <tr>
+            <td>{{ item.room_night_date|date:"d M Y" }}</td>
+            <td>{{ item.reservation.hotel.name }}<br><span class="text-muted small">{% if item.folio and item.folio.room %}{{ item.folio.room.room_number }}{% elif item.reservation.room %}{{ item.reservation.room.room_number }}{% else %}—{% endif %}</span></td>
+            <td>{{ item.reservation.guest }}</td>
+            <td>₦{{ item.waived_amount|floatformat:2 }}</td>
+            <td>{{ item.reason }}</td>
+            <td>{{ item.requested_by }}</td>
+            <td>{{ item.approved_by|default:"—" }}</td>
+            <td><span class="badge bg-{% if item.status == 'REJECTED' %}danger{% elif item.status == 'PENDING' %}warning text-dark{% elif item.status == 'CONSUMED' %}success{% else %}primary{% endif %}">{{ item.get_status_display }}</span></td>
+          </tr>
+        {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No complimentary room records for this filter.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if register_type != "rooms" %}
+  <div class="card">
+    <div class="card-header fw-semibold">Complimentary Food</div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Breakfast date</th><th>Hotel / Room</th><th>Guest</th><th>Items</th><th>FIFO cost</th><th>Redeemed by</th><th>Order</th></tr></thead>
+        <tbody>
+        {% for redemption in food_records %}
+          <tr>
+            <td>{{ redemption.breakfast_date|date:"d M Y" }}</td>
+            <td>{{ redemption.folio.hotel.name }}<br><span class="text-muted small">{{ redemption.room.room_number }}</span></td>
+            <td>{{ redemption.folio.guest }}</td>
+            <td>{% for line in redemption.order.items.all %}<div>{{ line.menu_item.name }} × {{ line.quantity }}</div>{% endfor %}</td>
+            <td>₦{% with total=0 %}{{ redemption.food_cost|default:"—" }}{% endwith %}{% for line in redemption.order.items.all %}{% endfor %}</td>
+            <td>{{ redemption.redeemed_by }}<br><span class="text-muted small">{{ redemption.redeemed_at|date:"d M Y H:i" }}</span></td>
+            <td>#{{ redemption.order_id }}</td>
+          </tr>
+        {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">No complimentary food records for this filter.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer text-muted small">Food cost is calculated from the recorded FIFO unit cost multiplied by redeemed quantity.</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
