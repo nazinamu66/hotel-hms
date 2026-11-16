@@ -61,7 +61,11 @@ def post_cogs_for_order(order):
                 "is_active": True,
             },
         )
-        if expense.system_key != "complimentary_meals_expense":
+        if (
+            expense.system_key != "complimentary_meals_expense"
+            or not expense.is_active
+            or not expense.allow_posting
+        ):
             raise ValueError(
                 "Account code 5310 is already in use. Configure the Complimentary Meals Expense account before redeeming breakfast."
             )
