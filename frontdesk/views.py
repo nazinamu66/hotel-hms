@@ -1318,13 +1318,15 @@ def reservation_list(request):
     date_to = request.GET.get("to", "").strip()
 
     if search:
-        reservations = reservations.filter(
+        search_filter = (
             Q(guest__first_name__icontains=search)
             | Q(guest__last_name__icontains=search)
             | Q(guest__phone__icontains=search)
             | Q(guest__email__icontains=search)
-            | Q(id__icontains=search)
         )
+        if search.isdigit():
+            search_filter |= Q(id=int(search))
+        reservations = reservations.filter(search_filter)
 
     valid_statuses = {choice[0] for choice in Reservation._meta.get_field("status").choices}
     if status in valid_statuses:
