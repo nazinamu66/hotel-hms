@@ -1882,6 +1882,7 @@ def complimentary_breakfast(request):
     menu_items = (
         MenuItem.objects.filter(
             is_active=True,
+            is_breakfast_item=True,
             product__hotel_id=restaurant.hotel_id,
             product__usage_type="RESALE",
             product__product_type__in=("FOOD", "SNACK", "DRINK"),
