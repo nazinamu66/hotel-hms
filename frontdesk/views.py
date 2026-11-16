@@ -650,6 +650,8 @@ def check_in(request, room_id):
             "expected_checkout": request.POST.get(
                 "expected_checkout"
             ),
+            "room_discount_percent": request.POST.get("room_discount_percent", "0"),
+            "room_discount_reason": request.POST.get("room_discount_reason", ""),
         }
 
         try:
@@ -1355,6 +1357,8 @@ def create_reservation(request):
                 number_of_rooms=request.POST.get("number_of_rooms", 1),
                 check_in=request.POST.get("check_in"),
                 check_out=request.POST.get("check_out"),
+                discount_percent=request.POST.get("room_discount_percent", "0"),
+                discount_reason=request.POST.get("room_discount_reason", ""),
             )
 
         except ValidationError as e:
@@ -1708,6 +1712,8 @@ def calendar_create_reservation(request):
                 room=room,
                 check_in=check_in,
                 check_out=request.POST.get("check_out"),
+                discount_percent=request.POST.get("room_discount_percent", "0"),
+                discount_reason=request.POST.get("room_discount_reason", ""),
             )
         except ValidationError as e:
             messages.error(request, " ".join(e.messages))
