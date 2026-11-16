@@ -3,6 +3,7 @@ from .group_booking_views import (
     company_list,
     company_create,
     company_edit,
+    group_reservation_create,
     group_reservation_dashboard,
 )
 from .views import (
@@ -44,6 +45,7 @@ urlpatterns = [
     path('corporate/companies/new/', company_create, name='frontdesk_company_create'),
     path('corporate/companies/<int:company_id>/edit/', company_edit, name='frontdesk_company_edit'),
     path('corporate/groups/', group_reservation_dashboard, name='frontdesk_group_reservations'),
+    path('corporate/groups/new/', group_reservation_create, name='frontdesk_group_reservation_create'),
     path('', room_board, name='frontdesk_room_board'),
     path('check-in/<int:room_id>/', check_in, name='frontdesk_check_in'),
     path('stay/<int:room_id>/', active_stay, name='frontdesk_active_stay'),
