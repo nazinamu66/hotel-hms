@@ -64,6 +64,8 @@ def post_cogs_for_order(order):
         )
         if (
             expense.system_key != COMPLIMENTARY_MEALS_EXPENSE
+            or expense.account_type != "expense"
+            or not expense.is_system
             or not expense.is_active
             or not expense.allow_posting
         ):
