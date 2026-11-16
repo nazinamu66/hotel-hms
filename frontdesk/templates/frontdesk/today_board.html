@@ -1,60 +1,171 @@
 {% extends "base/base.html" %}
 
-{% block title %}Today's Activity{% endblock %}
+{% block title %}Today's Arrivals & Departures{% endblock %}
 
 {% block content %}
+<style>
+    .tb-page { color:#172033; }
+    .tb-header { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; margin-bottom:22px; }
+    .tb-eyebrow { margin:0 0 6px; color:#64748b; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+    .tb-title { margin:0; color:#172033; font-size:28px; line-height:1.2; font-weight:800; letter-spacing:-.035em; }
+    .tb-subtitle { margin:7px 0 0; color:#64748b; font-size:14px; }
+    .tb-date { padding:9px 12px; border:1px solid #dce5ef; border-radius:9px; background:#fff; color:#40536c; font-size:12px; font-weight:800; white-space:nowrap; }
+    .tb-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:20px; }
+    .tb-stat { display:flex; align-items:center; gap:13px; padding:17px 18px; border:1px solid #e5eaf1; border-radius:13px; background:#fff; box-shadow:0 5px 18px rgba(15,23,42,.04); }
+    .tb-stat-icon { display:flex; width:40px; height:40px; flex:0 0 40px; align-items:center; justify-content:center; border-radius:11px; font-size:19px; font-weight:800; }
+    .tb-stat-blue .tb-stat-icon { background:#e8f1ff; color:#2563a6; }
+    .tb-stat-amber .tb-stat-icon { background:#fff3df; color:#b76b12; }
+    .tb-stat-green .tb-stat-icon { background:#e5f7ed; color:#16804a; }
+    .tb-stat-value { display:block; color:#172033; font-size:23px; line-height:1.1; font-weight:800; }
+    .tb-stat-label { display:block; margin-top:4px; color:#718096; font-size:11px; font-weight:700; }
+    .tb-section { margin-bottom:20px; overflow:hidden; border:1px solid #e5eaf1; border-radius:14px; background:#fff; box-shadow:0 5px 18px rgba(15,23,42,.04); }
+    .tb-section-head { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:17px 19px; border-bottom:1px solid #edf1f5; }
+    .tb-section-title { display:flex; align-items:center; gap:9px; margin:0; color:#1e293b; font-size:15px; font-weight:800; }
+    .tb-section-title .tb-mark { width:8px; height:8px; border-radius:50%; background:#3b82c4; }
+    .tb-departures .tb-mark { background:#d9912b; }
+    .tb-inhouse .tb-mark { background:#23945b; }
+    .tb-section-note { margin:4px 0 0; color:#94a3b8; font-size:12px; }
+    .tb-count { min-width:27px; padding:5px 9px; border-radius:20px; background:#edf4ff; color:#285b91; text-align:center; font-size:11px; font-weight:800; }
+    .tb-departures .tb-count { background:#fff3df; color:#a96313; }
+    .tb-inhouse .tb-count { background:#e5f7ed; color:#167447; }
+    .tb-table-wrap { overflow-x:auto; }
+    .tb-table { width:100%; border-collapse:collapse; }
+    .tb-table th { padding:11px 15px; background:#f8fafc; color:#718096; text-align:left; font-size:10px; font-weight:800; letter-spacing:.055em; text-transform:uppercase; white-space:nowrap; }
+    .tb-table td { padding:13px 15px; border-top:1px solid #edf1f5; color:#475569; font-size:12px; white-space:nowrap; }
+    .tb-table tbody tr:hover { background:#fbfdff; }
+    .tb-guest { color:#1e293b; font-weight:800; }
+    .tb-sub { display:block; margin-top:3px; color:#94a3b8; font-size:11px; font-weight:500; }
+    .tb-status { display:inline-flex; align-items:center; padding:5px 8px; border-radius:20px; background:#edf4ff; color:#285b91; font-size:10px; font-weight:800; }
+    .tb-status-amber { background:#fff3df; color:#a96313; }
+    .tb-status-green { background:#e5f7ed; color:#167447; }
+    .tb-money { color:#1e293b; font-weight:800; font-variant-numeric:tabular-nums; }
+    .tb-actions { display:flex; align-items:center; gap:7px; }
+    .tb-btn { display:inline-flex; min-height:31px; align-items:center; justify-content:center; padding:0 10px; border:1px solid #d8e2ed; border-radius:7px; background:#fff; color:#38516e; text-decoration:none; font-size:11px; font-weight:800; cursor:pointer; }
+    .tb-btn:hover { background:#f5f8fc; color:#1e426b; }
+    .tb-btn-primary { border-color:#24558a; background:#24558a; color:#fff; }
+    .tb-btn-primary:hover { border-color:#1b426d; background:#1b426d; color:#fff; }
+    .tb-empty { padding:28px 18px; color:#8291a4; text-align:center; font-size:12px; }
+    .tb-empty strong { display:block; margin-bottom:4px; color:#475569; font-size:13px; }
+    @media(max-width:760px) {
+        .tb-header { flex-direction:column; }
+        .tb-date { width:100%; box-sizing:border-box; }
+        .tb-stats { grid-template-columns:1fr; gap:9px; }
+        .tb-stat { padding:13px 15px; }
+        .tb-section-head { padding:14px 15px; }
+    }
+</style>
 
-<h2>Today's Operations</h2>
+<div class="tb-page">
+    <header class="tb-header">
+        <div>
+            <p class="tb-eyebrow">Front Desk / Daily Operations</p>
+            <h1 class="tb-title">Today's Arrivals &amp; Departures</h1>
+            <p class="tb-subtitle">A live working list of guests expected today and guests currently staying at the hotel.</p>
+        </div>
+        <div class="tb-date">{{ arrivals.0.check_in_date|date:"D, d M Y"|default:"Today's operations" }}</div>
+    </header>
 
-<h3>Arrivals Today</h3>
+    <section class="tb-stats" aria-label="Today's operational summary">
+        <article class="tb-stat tb-stat-blue">
+            <span class="tb-stat-icon">↓</span>
+            <div><span class="tb-stat-value">{{ arrivals|length }}</span><span class="tb-stat-label">Expected arrivals</span></div>
+        </article>
+        <article class="tb-stat tb-stat-amber">
+            <span class="tb-stat-icon">↑</span>
+            <div><span class="tb-stat-value">{{ departures|length }}</span><span class="tb-stat-label">Expected departures</span></div>
+        </article>
+        <article class="tb-stat tb-stat-green">
+            <span class="tb-stat-icon">⌂</span>
+            <div><span class="tb-stat-value">{{ in_house|length }}</span><span class="tb-stat-label">Current in-house stays</span></div>
+        </article>
+    </section>
 
-<table>
-<tr>
-<th>Guest</th>
-<th>Room Type</th>
-<th>Status</th>
-</tr>
+    <section class="tb-section tb-arrivals">
+        <div class="tb-section-head">
+            <div><h2 class="tb-section-title"><span class="tb-mark"></span>Arrivals today</h2><p class="tb-section-note">Reservations scheduled to check in today</p></div>
+            <span class="tb-count">{{ arrivals|length }}</span>
+        </div>
+        {% if arrivals %}
+            <div class="tb-table-wrap">
+                <table class="tb-table">
+                    <thead><tr><th>Guest</th><th>Room category</th><th>Room assignment</th><th>Booking</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for r in arrivals %}
+                            <tr>
+                                <td><span class="tb-guest">{{ r.guest.full_name }}</span><span class="tb-sub">Reservation #{{ r.id }}</span></td>
+                                <td>{{ r.room_category.name }}</td>
+                                <td>{% if r.room %}Room {{ r.room.room_number }}{% else %}<span class="tb-status tb-status-amber">Assignment pending</span>{% endif %}</td>
+                                <td><span class="tb-status">Reserved</span></td>
+                                <td><div class="tb-actions">
+                                    <a class="tb-btn" href="{% url 'frontdesk_reservation_detail' r.id %}">Details</a>
+                                    <form method="post" action="{% url 'frontdesk_reservation_checkin' r.id %}" style="margin:0;">
+                                        {% csrf_token %}
+                                        <button class="tb-btn tb-btn-primary" type="submit" onclick="return confirm('Check in {{ r.guest.first_name }} {{ r.guest.last_name }} for reservation #{{ r.id }}?')">Check in →</button>
+                                    </form>
+                                </div></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="tb-empty"><strong>No arrivals scheduled today</strong>There are no reservations due to check in today.</div>
+        {% endif %}
+    </section>
 
-{% for r in arrivals %}
+    <section class="tb-section tb-departures">
+        <div class="tb-section-head">
+            <div><h2 class="tb-section-title"><span class="tb-mark"></span>Departures today</h2><p class="tb-section-note">Guests with a scheduled checkout today</p></div>
+            <span class="tb-count">{{ departures|length }}</span>
+        </div>
+        {% if departures %}
+            <div class="tb-table-wrap">
+                <table class="tb-table">
+                    <thead><tr><th>Guest</th><th>Room</th><th>Checkout</th><th>Outstanding balance</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for f in departures %}
+                            <tr>
+                                <td><span class="tb-guest">{{ f.guest.full_name }}</span><span class="tb-sub">Folio #{{ f.id }}</span></td>
+                                <td>Room {{ f.room.room_number }}</td>
+                                <td>{{ f.check_out_at|date:"H:i"|default:"Scheduled today" }}</td>
+                                <td class="tb-money">₦{{ f.balance|floatformat:2 }}</td>
+                                <td><a class="tb-btn tb-btn-primary" href="{% url 'frontdesk_active_stay' f.room_id %}">Open stay →</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="tb-empty"><strong>No departures scheduled today</strong>There are no active folios due to check out today.</div>
+        {% endif %}
+    </section>
 
-<tr>
-<td>{{ r.guest }}</td>
-<td>{{ r.room_category }}</td>
-<td>{{ r.status }}</td>
-</tr>
-
-{% empty %}
-<tr>
-<td colspan="3">No arrivals today</td>
-</tr>
-{% endfor %}
-
-</table>
-
-
-<h3>Departures Today</h3>
-
-<table>
-<tr>
-<th>Guest</th>
-<th>Room</th>
-<th>Balance</th>
-</tr>
-
-{% for f in departures %}
-
-<tr>
-<td>{{ f.guest }}</td>
-<td>{{ f.room.room_number }}</td>
-<td>{{ f.balance }}</td>
-</tr>
-
-{% empty %}
-<tr>
-<td colspan="3">No departures today</td>
-</tr>
-{% endfor %}
-
-</table>
-
+    <section class="tb-section tb-inhouse">
+        <div class="tb-section-head">
+            <div><h2 class="tb-section-title"><span class="tb-mark"></span>Guests currently in-house</h2><p class="tb-section-note">All open room folios for this hotel</p></div>
+            <span class="tb-count">{{ in_house|length }}</span>
+        </div>
+        {% if in_house %}
+            <div class="tb-table-wrap">
+                <table class="tb-table">
+                    <thead><tr><th>Guest</th><th>Room</th><th>Checked in</th><th>Balance</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for f in in_house %}
+                            <tr>
+                                <td><span class="tb-guest">{{ f.guest.full_name|default:"Guest record unavailable" }}</span><span class="tb-sub">Folio #{{ f.id }}</span></td>
+                                <td>{% if f.room %}Room {{ f.room.room_number }}{% else %}—{% endif %}</td>
+                                <td>{{ f.check_in_at|date:"d M Y, H:i" }}</td>
+                                <td class="tb-money">₦{{ f.balance|floatformat:2 }}</td>
+                                <td><span class="tb-status tb-status-green">In house</span></td>
+                                <td>{% if f.room_id %}<a class="tb-btn" href="{% url 'frontdesk_active_stay' f.room_id %}">Open stay</a>{% else %}—{% endif %}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="tb-empty"><strong>No guests currently in-house</strong>Open room stays will appear here.</div>
+        {% endif %}
+    </section>
+</div>
 {% endblock %}
