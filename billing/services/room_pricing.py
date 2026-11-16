@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.exceptions import ValidationError
 
@@ -57,7 +57,24 @@ def create_room_night_charge(*, folio, charge_date, charged_by=None):
     if not folio.room or not folio.room.category:
         raise ValidationError("Room or category missing.")
 
-    allocation, amount, source, billing_party = get_room_night_pricing(folio)
+    allocation, original_rate, source, billing_party = get_room_night_pricing(folio)
+    discount_percent = Decimal(getattr(folio, "room_discount_percent", 0) or 0)
+
+    if discount_percent not in (
+        Decimal("0.00"), Decimal("5.00"), Decimal("10.00"), Decimal("15.00")
+    ):
+        raise ValidationError("Room discount must be 0%, 5%, 10% or 15%.")
+
+    if allocation is not None and discount_percent:
+        raise ValidationError("Receptionist discounts cannot be combined with negotiated group or occupant rates.")
+
+    if discount_percent and not getattr(folio, "room_discount_reason", "").strip():
+        raise ValidationError("A reason is required when applying a room discount.")
+
+    discount_amount = (original_rate * discount_percent / Decimal("100")).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
+    amount = original_rate - discount_amount
     if amount <= 0:
         raise ValidationError("Room-night rate must be greater than zero.")
 
@@ -81,6 +98,8 @@ def create_room_night_charge(*, folio, charge_date, charged_by=None):
         room_night_date=charge_date,
         room_rate=amount,
         room_rate_source=source,
+        original_room_rate=original_rate,
+        discount_percentage=discount_percent,
     )
 
     from accounting.services.postings.room_charge import post_room_charge
