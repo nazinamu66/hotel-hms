@@ -25,10 +25,12 @@ from .views import (
     restaurant_spoilage_review,
     ready_food_alerts,
     ready_food_ticket_print,
+    complimentary_breakfast,
 )
 
 urlpatterns = [
     path("pos/", pos_v2, name="restaurant_pos"),
+    path("complimentary-breakfast/", complimentary_breakfast, name="restaurant_complimentary_breakfast"),
     path("spoilage/", restaurant_spoilage, name="restaurant_spoilage"),
     path("spoilage/<int:pk>/review/", restaurant_spoilage_review, name="restaurant_spoilage_review"),
     path("ready-food-alerts/", ready_food_alerts, name="restaurant_ready_food_alerts"),
