@@ -1464,6 +1464,10 @@ def create_reservation(request):
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def reservation_checkin(request, reservation_id):
 
+    if request.method != "POST":
+        messages.error(request, "Check-in must be confirmed using the Check-in button.")
+        return redirect("frontdesk_reservation_detail", reservation_id=reservation_id)
+
     from frontdesk.workflows.reservation_checkin import (
         check_in_reservation,
     )
