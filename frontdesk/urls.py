@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import (
+from .group_booking_views import (\n    company_list,\n    company_create,\n    company_edit,\n    group_reservation_dashboard,\n)\nfrom .views import (
     room_board,
     check_in,
     active_stay,
@@ -33,7 +33,7 @@ from .views import (
     complimentary_register,
 )
 
-urlpatterns = [
+urlpatterns = [\n    path('corporate/companies/', company_list, name='frontdesk_company_list'),\n    path('corporate/companies/new/', company_create, name='frontdesk_company_create'),\n    path('corporate/companies/<int:company_id>/edit/', company_edit, name='frontdesk_company_edit'),\n    path('corporate/groups/', group_reservation_dashboard, name='frontdesk_group_reservations'),
     path('', room_board, name='frontdesk_room_board'),
     path('check-in/<int:room_id>/', check_in, name='frontdesk_check_in'),
     path('stay/<int:room_id>/', active_stay, name='frontdesk_active_stay'),
