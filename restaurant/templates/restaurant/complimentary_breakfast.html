@@ -68,4 +68,34 @@
     </div>
     {% endif %}
 </div>
+
+{% if today_redemptions %}
+<div style="max-width:1100px;margin:22px auto;padding:0 18px;">
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;">
+        <h2 style="font-size:18px;margin:0 0 14px;">Today's completed redemptions</h2>
+        <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="text-align:left;color:#64748b;font-size:12px;text-transform:uppercase;">
+                    <th style="padding:10px;border-bottom:1px solid #e2e8f0;">Room</th>
+                    <th style="padding:10px;border-bottom:1px solid #e2e8f0;">Guest</th>
+                    <th style="padding:10px;border-bottom:1px solid #e2e8f0;">Kitchen Order</th>
+                    <th style="padding:10px;border-bottom:1px solid #e2e8f0;">Redeemed By</th>
+                    <th style="padding:10px;border-bottom:1px solid #e2e8f0;">Time</th>
+                </tr></thead>
+                <tbody>
+                    {% for redemption in today_redemptions %}
+                    <tr>
+                        <td style="padding:10px;border-bottom:1px solid #f1f5f9;">{{ redemption.room.room_number }}</td>
+                        <td style="padding:10px;border-bottom:1px solid #f1f5f9;">{{ redemption.folio.guest|default:"Guest" }}</td>
+                        <td style="padding:10px;border-bottom:1px solid #f1f5f9;"><a href="{% url 'restaurant_order_detail' redemption.order_id %}">#{{ redemption.order_id }}</a></td>
+                        <td style="padding:10px;border-bottom:1px solid #f1f5f9;">{{ redemption.redeemed_by }}</td>
+                        <td style="padding:10px;border-bottom:1px solid #f1f5f9;">{{ redemption.redeemed_at|date:"H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
