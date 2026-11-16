@@ -1811,13 +1811,13 @@ def request_complimentary_room_nights(request, reservation_id):
 def complimentary_room_night_queue(request):
     from billing.models import ComplimentaryRoomNight
 
-    hotel = request.user.department.hotel if request.user.role != "ADMIN" else None
+    from accounts.services.access import get_accessible_hotels
+    accessible_hotels = get_accessible_hotels(request.user)
     requests_qs = ComplimentaryRoomNight.objects.select_related(
         "reservation", "reservation__guest", "reservation__hotel",
         "requested_by", "folio", "folio__room",
     ).filter(status="PENDING").order_by("requested_at")
-    if hotel is not None:
-        requests_qs = requests_qs.filter(reservation__hotel=hotel)
+    requests_qs = requests_qs.filter(reservation__hotel__in=accessible_hotels)
     return render(
         request,
         "frontdesk/complimentary_room_night_queue.html",
@@ -1838,11 +1838,10 @@ def decide_complimentary_room_night(request, waiver_id, decision):
         ComplimentaryRoomNight.objects.select_related("reservation"),
         pk=waiver_id,
     )
-    if request.user.role != "ADMIN":
-        user_hotel = getattr(getattr(request.user, "department", None), "hotel", None)
-        if not user_hotel or waiver.reservation.hotel_id != user_hotel.pk:
-            messages.error(request, "You do not have access to this hotel's request.")
-            return redirect("frontdesk_complimentary_room_night_queue")
+    from accounts.services.access import user_can_access_hotel
+    if not user_can_access_hotel(request.user, waiver.reservation.hotel):
+        messages.error(request, "You do not have access to this hotel's request.")
+        return redirect("frontdesk_complimentary_room_night_queue")
 
     try:
         decide_complimentary_night(
