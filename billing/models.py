@@ -90,6 +90,23 @@ class Folio(models.Model):
         null=True,
         blank=True
     )
+
+    reservation = models.ForeignKey(
+        "billing.Reservation",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="folios",
+    )
+    room_discount_percent = models.DecimalField(
+        max_digits=4, decimal_places=2, default=Decimal("0.00"),
+        help_text="Approved fixed receptionist discount copied from the reservation or walk-in check-in.",
+    )
+    room_discount_reason = models.CharField(max_length=255, blank=True)
+    room_discount_applied_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="room_discounts_applied",
+    )
     check_in_at = models.DateTimeField(default=timezone.now)
     check_out_at = models.DateTimeField(null=True, blank=True)
 
@@ -244,6 +261,8 @@ class Charge(models.Model):
         default=True,
         help_text="Only charges created after allocation rollout or explicitly reconciled are eligible for automatic allocation.",
     )
+    original_room_rate = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    discount_percentage = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal("0.00"))
 
     def __str__(self):
         return f"{self.description} - {self.amount}"
@@ -560,6 +579,15 @@ class Reservation(models.Model):
 
     check_in_date = models.DateField()
     check_out_date = models.DateField()
+    room_discount_percent = models.DecimalField(
+        max_digits=4, decimal_places=2, default=Decimal("0.00"),
+        help_text="Only 0%, 5%, 10% or 15% may be selected.",
+    )
+    room_discount_reason = models.CharField(max_length=255, blank=True)
+    room_discount_applied_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="reservation_room_discounts_applied",
+    )
 
     status = models.CharField(
         max_length=20,
