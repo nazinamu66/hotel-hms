@@ -34,7 +34,7 @@ body{margin:0;background:#f1f5f9;color:#111;font-family:Arial,Helvetica,sans-ser
     {% if hotel.location %}<div class="location">{{ hotel.location }}</div>{% endif %}
     <hr class="rule">
     <div class="headline">READY FOR COLLECTION</div>
-    <div class="meta"><strong>KITCHEN TICKET #{{ ticket.id }}</strong><br>Order #{{ order.id }}<br>{{ location }}</div>
+    <div class="meta"><strong>KITCHEN TICKET #{{ ticket.id }}</strong><br>Order #{{ order.id }}<br>{% if order.is_complimentary_breakfast %}<strong>COMPLIMENTARY BREAKFAST</strong><br>{% endif %}{{ location }}</div>
   </div>
   <hr class="rule">
   <div class="meta"><strong>READY AT:</strong> {% now "d M Y, H:i" %}</div>
