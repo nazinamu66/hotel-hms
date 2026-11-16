@@ -148,7 +148,19 @@ def create_reservation_record(
     check_in,
     check_out,
     user,
+    discount_percent="0",
+    discount_reason="",
 ):
+
+    from decimal import Decimal
+    try:
+        discount_percent = Decimal(str(discount_percent or "0"))
+    except Exception:
+        raise ValidationError("Invalid room discount selection.")
+    if discount_percent not in (Decimal("0"), Decimal("5"), Decimal("10"), Decimal("15")):
+        raise ValidationError("Room discount must be 0%, 5%, 10% or 15%.")
+    if discount_percent and not (discount_reason or "").strip():
+        raise ValidationError("A reason is required when applying a room discount.")
 
     return Reservation.objects.create(
         guest=guest,
@@ -159,6 +171,9 @@ def create_reservation_record(
         number_of_rooms=number_of_rooms,
         check_out_date=check_out,
         created_by=user,
+        room_discount_percent=discount_percent,
+        room_discount_reason=(discount_reason or "").strip(),
+        room_discount_applied_by=user if discount_percent else None,
     )
 
 
@@ -171,6 +186,8 @@ def create_reservation(
     number_of_rooms=1,
     check_in=None,
     check_out=None,
+    discount_percent="0",
+    discount_reason="",
 ):
 
     number_of_rooms, check_in, check_out = validate_reservation_data(
@@ -215,6 +232,8 @@ def create_reservation(
         check_in,
         check_out,
         user,
+        discount_percent=discount_percent,
+        discount_reason=discount_reason,
     )
 
     from billing.services.reservation_deposit import (
