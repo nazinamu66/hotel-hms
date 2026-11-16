@@ -703,7 +703,8 @@ def room_board(request):
         .order_by("category__name", "room_number")
     )
 
-    today = timezone.now().date()
+    # Use the active hotel-local date; UTC .date() can still be yesterday after local midnight.
+    today = timezone.localdate()
     tomorrow = today + timedelta(days=1)
 
     expected_departures_today = set(
