@@ -1306,22 +1306,55 @@ def night_audit(request):
 def reservation_list(request):
 
     hotel = request.user.department.hotel
-
     reservations = (
         Reservation.objects
         .filter(hotel=hotel)
-        .select_related(
-            "guest",
-            "room_category",
-            "reservation_deposit",
-        )
-        .order_by("-created_at")
+        .select_related("guest", "room_category", "reservation_deposit", "room")
     )
+
+    search = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip()
+    date_from = request.GET.get("from", "").strip()
+    date_to = request.GET.get("to", "").strip()
+
+    if search:
+        reservations = reservations.filter(
+            Q(guest__first_name__icontains=search)
+            | Q(guest__last_name__icontains=search)
+            | Q(guest__phone__icontains=search)
+            | Q(guest__email__icontains=search)
+            | Q(id__icontains=search)
+        )
+
+    valid_statuses = {choice[0] for choice in Reservation._meta.get_field("status").choices}
+    if status in valid_statuses:
+        reservations = reservations.filter(status=status)
+
+    if date_from:
+        try:
+            reservations = reservations.filter(check_in_date__gte=datetime.strptime(date_from, "%Y-%m-%d").date())
+        except ValueError:
+            date_from = ""
+
+    if date_to:
+        try:
+            reservations = reservations.filter(check_in_date__lte=datetime.strptime(date_to, "%Y-%m-%d").date())
+        except ValueError:
+            date_to = ""
+
+    reservations = reservations.order_by("-check_in_date", "-created_at")
 
     return render(
         request,
         "frontdesk/reservations.html",
-        {"reservations": reservations}
+        {
+            "reservations": reservations,
+            "search": search,
+            "selected_status": status,
+            "date_from": date_from,
+            "date_to": date_to,
+            "status_choices": Reservation._meta.get_field("status").choices,
+        },
     )
 
 
