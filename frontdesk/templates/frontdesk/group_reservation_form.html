@@ -1,0 +1,31 @@
+{% extends "base/base.html" %}
+{% block title %}{{ page_title }} | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.gr-form-page{max-width:900px;margin:0 auto;padding:14px 2px 40px;color:#172033}.gr-form-card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;padding:24px;box-shadow:0 3px 14px rgba(15,23,42,.04)}.gr-form-title{font-size:1.7rem;font-weight:850;letter-spacing:-.04em;margin:0 0 6px}.gr-form-sub{color:#64748b;margin:0 0 22px}.gr-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}.gr-field.full{grid-column:1/-1}.gr-field label{display:block;font-size:.78rem;font-weight:800;color:#475569;margin-bottom:7px}.gr-field input,.gr-field select,.gr-field textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:11px 12px;font:inherit;background:#fff}.gr-errors{color:#b91c1c;font-size:.78rem;margin-top:5px}.gr-actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}.gr-submit{border:0;border-radius:10px;background:#243b80;color:#fff;padding:12px 17px;font-weight:850;cursor:pointer}.gr-cancel{display:inline-flex;align-items:center;padding:12px 16px;border-radius:10px;background:#eaf1f8;color:#24476b;text-decoration:none;font-weight:800}@media(max-width:650px){.gr-fields{grid-template-columns:1fr}.gr-field.full{grid-column:auto}}
+</style>
+<div class="gr-form-page">
+  <div class="gr-form-card">
+    <h1 class="gr-form-title">{{ page_title }}</h1>
+    <p class="gr-form-sub">Set up the corporate stay first. You can add individual occupants and allocate rooms after saving.</p>
+    <form method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="gr-errors">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="gr-fields">
+        {% for field in form %}
+          <div class="gr-field {% if field.name == 'agreement_notes' %}full{% endif %}">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<small style="display:block;color:#64748b;margin-top:5px">{{ field.help_text }}</small>{% endif %}
+            {% for error in field.errors %}<div class="gr-errors">{{ error }}</div>{% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+      <div class="gr-actions">
+        <button class="gr-submit" type="submit">{{ submit_label }}</button>
+        <a class="gr-cancel" href="{% url 'frontdesk_group_reservations' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
