@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import MenuItem, POSOrder, POSOrderItem
+from .models import MenuItem, POSOrder, POSOrderItem, ComplimentaryBreakfastRedemption
 
 class POSOrderItemInline(admin.TabularInline):
     model = POSOrderItem
@@ -29,3 +29,11 @@ class POSOrderAdmin(admin.ModelAdmin):
 class MenuItemAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'price', 'is_active')
     list_filter = ('category', 'is_active')
+
+
+@admin.register(ComplimentaryBreakfastRedemption)
+class ComplimentaryBreakfastRedemptionAdmin(admin.ModelAdmin):
+    list_display = ("id", "room", "folio", "breakfast_date", "room_night_date", "order", "redeemed_by", "redeemed_at")
+    list_filter = ("breakfast_date", "room__hotel")
+    search_fields = ("room__room_number", "folio__guest__full_name", "source_charge__reference")
+    readonly_fields = ("folio", "room", "source_charge", "order", "room_night_date", "breakfast_date", "redeemed_by", "redeemed_at")
