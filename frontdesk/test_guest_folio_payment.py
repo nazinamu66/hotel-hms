@@ -141,3 +141,60 @@ class GuestFolioPaymentViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+
+    def test_invoice_pdf_endpoint_returns_a_real_pdf_attachment(self):
+        response = self.client.get(
+            reverse("frontdesk_invoice_pdf", args=[self.folio.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("attachment;", response["Content-Disposition"])
+        self.assertTrue(response.content.startswith(b"%PDF-"))
+
+    def test_invoice_page_is_scoped_to_the_users_hotel(self):
+        other_org = Organization.objects.create(name="Other Invoice Org")
+        other_hotel = Hotel.objects.create(
+            organization=other_org,
+            name="Other Invoice Hotel",
+        )
+        other_guest = Guest.objects.create(
+            hotel=other_hotel,
+            first_name="Other",
+            last_name="Invoice Guest",
+        )
+        other_folio = Folio.objects.create(
+            hotel=other_hotel,
+            folio_type="ROOM",
+            guest=other_guest,
+        )
+
+        response = self.client.get(
+            reverse("frontdesk_invoice", args=[other_folio.pk])
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_invoice_pdf_is_scoped_to_the_users_hotel(self):
+        other_org = Organization.objects.create(name="Other PDF Invoice Org")
+        other_hotel = Hotel.objects.create(
+            organization=other_org,
+            name="Other PDF Invoice Hotel",
+        )
+        other_guest = Guest.objects.create(
+            hotel=other_hotel,
+            first_name="Other",
+            last_name="PDF Guest",
+        )
+        other_folio = Folio.objects.create(
+            hotel=other_hotel,
+            folio_type="ROOM",
+            guest=other_guest,
+        )
+
+        response = self.client.get(
+            reverse("frontdesk_invoice_pdf", args=[other_folio.pk])
+        )
+
+        self.assertEqual(response.status_code, 404)
