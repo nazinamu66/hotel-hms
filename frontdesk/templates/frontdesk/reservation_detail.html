@@ -534,15 +534,21 @@
 
         <div class="rd-action-group">
             {% if reservation.status == "RESERVED" %}
-                <a href="{% url 'frontdesk_reservation_checkin' reservation.id %}"
-                   class="rd-btn rd-btn-primary">
-                    Check in guest &rarr;
-                </a>
+                <form method="post" action="{% url 'frontdesk_reservation_checkin' reservation.id %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="rd-btn rd-btn-primary"
+                            onclick="return confirm('Check in {{ reservation.guest|escapejs }} for reservation #{{ reservation.id }}?');">
+                        Check in guest &rarr;
+                    </button>
+                </form>
 
-                <a href="{% url 'frontdesk_reservation_cancel' reservation.id %}"
-                   class="rd-btn rd-btn-danger">
-                    Cancel reservation
-                </a>
+                <form method="post" action="{% url 'frontdesk_reservation_cancel' reservation.id %}" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="rd-btn rd-btn-danger"
+                            onclick="return confirm('Cancel reservation #{{ reservation.id }}?');">
+                        Cancel reservation
+                    </button>
+                </form>
             {% endif %}
 
             {% if reservation.status == "CHECKED_IN" and reservation.room %}
