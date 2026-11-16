@@ -465,6 +465,23 @@
                                 {{ reservation.check_out_date|date:"l, d M Y" }}
                             </div>
                         </div>
+
+                        <div>
+                            <div class="rd-info-label">Room discount</div>
+                            <div class="rd-info-value">
+                                {{ reservation.room_discount_percent|floatformat:0 }}%
+                            </div>
+                        </div>
+                        {% if reservation.room_discount_percent %}
+                        <div>
+                            <div class="rd-info-label">Discount reason</div>
+                            <div class="rd-info-value">{{ reservation.room_discount_reason }}</div>
+                        </div>
+                        <div>
+                            <div class="rd-info-label">Applied by</div>
+                            <div class="rd-info-value">{{ reservation.room_discount_applied_by|default:"—" }}</div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </section>
