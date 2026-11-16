@@ -138,6 +138,10 @@ class POSOrder(models.Model):
         related_name="refunded_orders"
     )
     refund_reason = models.TextField(blank=True)
+    is_complimentary_breakfast = models.BooleanField(
+        default=False,
+        help_text="Order redeems a complimentary breakfast entitlement and is not guest revenue.",
+    )
 
     def __str__(self):
         return f"POS-{self.id} ({self.status})"
@@ -265,13 +269,14 @@ class POSOrder(models.Model):
         # =========================
         # CREATE FOLIO CHARGE
         # =========================
-        Charge.objects.create(
-            folio=self.folio,
-            description=f"Restaurant Order #{self.id}",
-            department=self.department,
-            amount=total,
-            reference=f"POS-{self.id}",
-        )
+        if not self.is_complimentary_breakfast:
+            Charge.objects.create(
+                folio=self.folio,
+                description=f"Restaurant Order #{self.id}",
+                department=self.department,
+                amount=total,
+                reference=f"POS-{self.id}",
+            )
 
         # =========================
         # FINALIZE ORDER
@@ -290,6 +295,9 @@ class POSOrder(models.Model):
     # =====================================
     @transaction.atomic
     def pay_order(self, method="CASH", account=None):
+
+        if self.is_complimentary_breakfast:
+            raise ValidationError("Complimentary breakfast orders cannot receive guest payments.")
 
         if self.status != "CHARGED":
             raise ValidationError("Only CHARGED orders can be paid.")
@@ -514,3 +522,42 @@ class RestaurantSpoilageRecord(models.Model):
 
     def __str__(self):
         return f"Restaurant spoilage #{self.pk}: {self.product} x {self.quantity}"
+
+
+class ComplimentaryBreakfastRedemption(models.Model):
+    """Audit record proving a room's one breakfast entitlement was redeemed."""
+
+    folio = models.ForeignKey(
+        "billing.Folio", on_delete=models.PROTECT, related_name="breakfast_redemptions"
+    )
+    source_charge = models.ForeignKey(
+        "billing.Charge", on_delete=models.PROTECT, related_name="breakfast_redemptions"
+    )
+    order = models.OneToOneField(
+        POSOrder, on_delete=models.PROTECT, related_name="breakfast_redemption"
+    )
+    room_night_date = models.DateField()
+    breakfast_date = models.DateField()
+    redeemed_by = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name="complimentary_breakfast_redemptions"
+    )
+    redeemed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-redeemed_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(fields=["folio", "breakfast_date"], name="unique_room_breakfast_redemption_per_day"),
+            models.UniqueConstraint(fields=["source_charge"], name="unique_breakfast_redemption_per_room_night"),
+        ]
+
+    def clean(self):
+        if self.order_id:
+            if not self.order.is_complimentary_breakfast:
+                raise ValidationError("Redemption order must be marked as complimentary breakfast.")
+            if self.order.folio_id != self.folio_id:
+                raise ValidationError("Redemption order and folio must match.")
+        if self.source_charge_id and self.source_charge.folio_id != self.folio_id:
+            raise ValidationError("Qualifying room charge and folio must match.")
+
+    def __str__(self):
+        return "Breakfast redemption: folio %s on %s" % (self.folio_id, self.breakfast_date)
