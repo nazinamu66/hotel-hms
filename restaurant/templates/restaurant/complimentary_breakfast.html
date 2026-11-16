@@ -1,0 +1,71 @@
+{% extends "base/base.html" %}
+
+{% block content %}
+<div style="max-width:1100px;margin:28px auto;padding:0 18px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:22px;">
+        <div>
+            <h1 style="margin:0 0 6px;">Complimentary Breakfast</h1>
+            <p style="margin:0;color:#64748b;">
+                One redemption per room, based on a full published-rate room night charged yesterday.
+            </p>
+        </div>
+        <a href="{% url 'restaurant_pos_v2' %}" style="color:#2563eb;text-decoration:none;font-weight:600;">Back to Restaurant POS</a>
+    </div>
+
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:15px 18px;margin-bottom:22px;">
+        <strong>Breakfast date:</strong> {{ breakfast_date|date:"D, d M Y" }}
+        <span style="margin:0 8px;color:#94a3b8;">·</span>
+        <strong>Qualifying room night:</strong> {{ room_night_date|date:"D, d M Y" }}
+        <p style="margin:7px 0 0;color:#475569;font-size:13px;">
+            Unpaid full-rate room charges qualify. Discounted, negotiated and complimentary room nights do not.
+        </p>
+    </div>
+
+    {% if qualifying_charges %}
+    <form method="post" style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:22px;">
+        {% csrf_token %}
+        <h2 style="font-size:18px;margin:0 0 14px;">1. Select the guest room</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:25px;">
+            {% for charge in qualifying_charges %}
+            <label style="display:flex;gap:10px;align-items:flex-start;border:1px solid #cbd5e1;border-radius:10px;padding:13px;cursor:pointer;">
+                <input type="radio" name="source_charge" value="{{ charge.id }}" required style="margin-top:4px;">
+                <span>
+                    <strong>Room {{ charge.folio.room.room_number }}</strong><br>
+                    <span style="color:#475569;font-size:13px;">{{ charge.folio.guest|default:"Guest" }}</span><br>
+                    <span style="color:#64748b;font-size:12px;">Full-rate charge · ₦{{ charge.amount|floatformat:2 }}</span>
+                </span>
+            </label>
+            {% endfor %}
+        </div>
+
+        <h2 style="font-size:18px;margin:0 0 6px;">2. Select the actual breakfast items served</h2>
+        <p style="color:#64748b;font-size:13px;margin:0 0 14px;">Enter quantities for the items the guest receives. Leave unused items at zero.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">
+            {% for item in menu_items %}
+            <label style="display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid #e2e8f0;border-radius:10px;padding:12px;">
+                <span>
+                    <strong>{{ item.name }}</strong><br>
+                    <small style="color:#64748b;">{{ item.get_category_display }}</small>
+                </span>
+                <input type="number" name="item_{{ item.id }}" value="0" min="0" step="1" style="width:76px;padding:8px;border:1px solid #cbd5e1;border-radius:8px;">
+            </label>
+            {% empty %}
+            <p style="color:#b91c1c;">No active restaurant menu items are configured for breakfast.</p>
+            {% endfor %}
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:22px;">
+            <button type="submit" {% if not menu_items %}disabled{% endif %} style="background:#0f172a;color:#fff;border:0;border-radius:9px;padding:12px 20px;font-weight:700;cursor:pointer;">
+                Redeem Complimentary Breakfast
+            </button>
+        </div>
+    </form>
+    {% else %}
+    <div style="background:#fff;border:1px dashed #cbd5e1;border-radius:14px;padding:34px;text-align:center;">
+        <h2 style="margin:0 0 8px;font-size:18px;">No eligible rooms today</h2>
+        <p style="margin:0;color:#64748b;">There are no unredeemed full published-rate room charges for yesterday.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
