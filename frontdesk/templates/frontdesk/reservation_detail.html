@@ -488,113 +488,41 @@
         </div>
 
         <div class="col-12">
-            <section class="rd-card">
-                <div class="rd-card-header">
-                    <span class="rd-icon" aria-hidden="true">&#127873;</span>
-                    <div>
-                        <h3>Complimentary room accommodation</h3>
-                        <div class="rd-subtitle small">Record a complimentary-night request against this reservation. Each night is subject to independent management approval.</div>
-                    </div>
-                </div>
-                <div class="rd-card-body">
-                    {% if reservation.status == "RESERVED" or reservation.status == "CHECKED_IN" %}
-                    <div class="rd-note mb-3">
-                        <strong>How this works:</strong> Select the room night(s), provide a clear reason and submit. The request will remain pending until an authorised manager approves or rejects it. Frontdesk cannot approve its own request.
-                    </div>
-                    <form method="post" action="{% url 'frontdesk_complimentary_room_night_request' reservation.id %}" class="row g-3 mb-4">
-                        {% csrf_token %}
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">First complimentary night</label>
-                            <input type="date" class="form-control" name="start_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Last complimentary night</label>
-                            <input type="date" class="form-control" name="end_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" max="{{ reservation.check_out_date|date:'Y-m-d' }}" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">Reason / authorisation context</label>
-                            <textarea class="form-control" name="reason" rows="3" maxlength="2000" placeholder="Explain why the guest is receiving complimentary accommodation..." required></textarea>
-                        </div>
-                        <div class="col-12 d-flex flex-wrap align-items-center gap-3">
-                            <button class="rd-btn rd-btn-primary" type="submit">Submit complimentary room request</button>
-                            <span class="small text-muted">For one night, use the same date in both fields. Submit separate requests for non-consecutive nights.</span>
-                        </div>
-                    </form>
-                    {% elif reservation.status == "CANCELLED" or reservation.status == "NO_SHOW" %}
-                    <div class="rd-note mb-3">This reservation is {{ reservation.get_status_display|lower }}. New complimentary room requests cannot be submitted.</div>
-                    {% endif %}
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle">
-                            <thead><tr><th>Night</th><th>Waived value</th><th>Status</th><th>Requested by</th><th>Authorised by</th></tr></thead>
-                            <tbody>
-                            {% for waiver in reservation.complimentary_room_nights.all %}
-                                <tr>
-                                    <td>{{ waiver.room_night_date|date:"d M Y" }}</td>
-                                    <td>₦{{ waiver.waived_amount|floatformat:2 }}</td>
-                                    <td>{{ waiver.get_status_display }}</td>
-                                    <td>{{ waiver.requested_by }}</td>
-                                    <td>{{ waiver.approved_by|default:"—" }}</td>
-                                </tr>
-                            {% empty %}
-                                <tr><td colspan="5" class="text-muted">No complimentary nights requested.</td></tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% if request.user.role == "MANAGER" or request.user.role == "DIRECTOR" or request.user.role == "ADMIN" %}
-                    <a href="{% url 'frontdesk_complimentary_room_night_queue' %}" class="rd-btn rd-btn-secondary">Review pending complimentary requests</a>
-                    {% endif %}
-                </div>
-            </section>
-        </div>
-
-        <div class="col-12">
-            <section class="rd-card">
-                <div class="rd-card-header">
-                    <span class="rd-icon" aria-hidden="true">&#128203;</span>
-                    <div>
-                        <h3>Guarantee and notes</h3>
-                        <div class="rd-subtitle small">
-                            Booking assurance and additional information
-                        </div>
-                    </div>
-                </div>
-
-                <div class="rd-card-body">
-                    <div class="rd-info-list mb-4">
-                        <div>
-                            <div class="rd-info-label">Guarantee status</div>
-                            <div class="rd-info-value">
-                                {% if reservation.reservation_deposit %}
-                                    {{ reservation.reservation_deposit.status }}
-                                {% else %}
-                                    <span class="rd-empty">No deposit record</span>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="rd-info-label">Reservation created</div>
-                            <div class="rd-info-value">
-                                {{ reservation.created_at|date:"d M Y, H:i" }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="rd-info-label">Reservation notes</div>
-
-                    {% if reservation.note %}
-                        <div class="rd-note">
-                            {{ reservation.note|linebreaksbr }}
-                        </div>
-                    {% else %}
-                        <div class="rd-note rd-empty">
-                            No notes have been added to this reservation.
-                        </div>
-                    {% endif %}
-                </div>
-            </section>
-        </div>
+<style>
+.rd-complimentary-help{padding:13px 16px;border:1px solid #dbe5f0;background:#f7faff;border-radius:12px;color:#475569;font-size:.88rem;line-height:1.55;margin-bottom:20px}
+.rd-complimentary-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px;padding:18px;background:#fbfcfe;border:1px solid #e7edf4;border-radius:14px;margin-bottom:22px}
+.rd-complimentary-field{display:flex;flex-direction:column;gap:7px;min-width:0}
+.rd-complimentary-field label{font-size:.8rem;font-weight:750;color:#334155}
+.rd-complimentary-field input,.rd-complimentary-field textarea{display:block;width:100%;max-width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;background:#fff;padding:11px 12px;color:#172033;font:inherit;font-size:.9rem;min-height:44px}
+.rd-complimentary-field textarea{min-height:104px;resize:vertical;line-height:1.5}
+.rd-complimentary-field input:focus,.rd-complimentary-field textarea:focus{outline:none;border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.12)}
+.rd-complimentary-reason,.rd-complimentary-actions{grid-column:1/-1}
+.rd-complimentary-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.rd-complimentary-hint{font-size:.77rem;color:#64748b;line-height:1.45}
+.rd-complimentary-history{width:100%;border-collapse:collapse;margin:0 0 16px}
+.rd-complimentary-history th{background:#f1f5f9;color:#475569;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;padding:11px 12px;text-align:left}
+.rd-complimentary-history td{padding:12px;border-bottom:1px solid #e8edf3;font-size:.84rem;color:#334155}
+.rd-complimentary-empty{padding:17px 12px;color:#64748b;text-align:center;background:#fafbfd}
+@media(max-width:650px){.rd-complimentary-form{grid-template-columns:1fr;padding:14px}.rd-complimentary-reason,.rd-complimentary-actions{grid-column:auto}}
+</style>
+<section class="rd-card rd-complimentary-card">
+<div class="rd-card-header"><span class="rd-icon" aria-hidden="true">&#127873;</span><div><h3>Complimentary room accommodation</h3><div class="rd-subtitle small">Request a complimentary room night for this guest. Each night requires approval by a different authorised manager.</div></div></div>
+<div class="rd-card-body">
+{% if reservation.status == "RESERVED" or reservation.status == "CHECKED_IN" %}
+<div class="rd-complimentary-help"><strong>Before you submit:</strong> Choose one night or a continuous range, then explain who authorised the complimentary stay and why. The request is not active until management approves it. Frontdesk cannot approve its own request.</div>
+<form method="post" action="{% url 'frontdesk_complimentary_room_night_request' reservation.id %}" class="rd-complimentary-form">
+{% csrf_token %}
+<div class="rd-complimentary-field"><label for="complimentary-start">First complimentary night</label><input id="complimentary-start" type="date" name="start_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" required></div>
+<div class="rd-complimentary-field"><label for="complimentary-end">Last complimentary night</label><input id="complimentary-end" type="date" name="end_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" max="{{ reservation.check_out_date|date:'Y-m-d' }}" required></div>
+<div class="rd-complimentary-field rd-complimentary-reason"><label for="complimentary-reason">Reason and authorisation details</label><textarea id="complimentary-reason" name="reason" maxlength="2000" placeholder="Example: Complimentary accommodation approved by the Director for a visiting company representative. Include the approving person's name or the business reason." required></textarea></div>
+<div class="rd-complimentary-actions"><button class="rd-btn rd-btn-primary" type="submit">Submit for management approval</button><span class="rd-complimentary-hint">For one night, enter the same date in both fields. Submit separate requests for non-consecutive nights.</span></div>
+</form>
+{% elif reservation.status == "CANCELLED" or reservation.status == "NO_SHOW" %}<div class="rd-complimentary-help">This reservation is {{ reservation.get_status_display|lower }}. New complimentary room requests cannot be submitted.</div>{% endif %}
+<div class="table-responsive"><table class="rd-complimentary-history"><thead><tr><th>Night</th><th>Waived value</th><th>Status</th><th>Requested by</th><th>Authorised by</th></tr></thead><tbody>
+{% for waiver in reservation.complimentary_room_nights.all %}<tr><td>{{ waiver.room_night_date|date:"d M Y" }}</td><td>₦{{ waiver.waived_amount|floatformat:2 }}</td><td>{{ waiver.get_status_display }}</td><td>{{ waiver.requested_by }}</td><td>{{ waiver.approved_by|default:"—" }}</td></tr>{% empty %}<tr><td colspan="5"><div class="rd-complimentary-empty">No complimentary nights have been requested for this reservation.</div></td></tr>{% endfor %}
+</tbody></table></div>
+{% if request.user.role == "MANAGER" or request.user.role == "DIRECTOR" or request.user.role == "ADMIN" %}<a href="{% url 'frontdesk_complimentary_room_night_queue' %}" class="rd-btn rd-btn-secondary">Open complimentary approval queue</a>{% endif %}
+</div></section></div>
 
     </div>
 
