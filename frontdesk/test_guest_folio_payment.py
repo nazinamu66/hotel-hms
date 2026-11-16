@@ -1,3 +1,4 @@
+from datetime import date, datetime, timezone as dt_timezone
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -5,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from billing.models import Charge, Folio, Guest
+from billing.models import Charge, Folio, Guest, Reservation
 from rooms.models import Room, RoomCategory
 from inventory.models import Department, Hotel, Organization
 
@@ -296,3 +297,34 @@ class GuestFolioPaymentViewTests(TestCase):
         self.assertEqual(response.context["calendar"], [])
         self.assertEqual(response.context["filters"]["category"], "")
         self.assertEqual(response.context["filters"]["room"], "NO-MATCH")
+
+
+    def test_arrivals_board_uses_local_date_after_utc_midnight_boundary(self):
+        category, _ = RoomCategory.objects.get_or_create(
+            name="Local Date Arrivals Test Category",
+        )
+        reservation = Reservation.objects.create(
+            hotel=self.hotel,
+            guest=self.guest,
+            room_category=category,
+            check_in_date=date(2026, 11, 17),
+            check_out_date=date(2026, 11, 18),
+            status="RESERVED",
+            created_by=self.user,
+        )
+
+        # At 00:15 in UTC+1 it is still 23:15 UTC on the previous day.
+        utc_now = datetime(2026, 11, 16, 23, 15, tzinfo=dt_timezone.utc)
+        with patch("frontdesk.views.timezone.now", return_value=utc_now), patch(
+            "frontdesk.views.timezone.localdate",
+            return_value=date(2026, 11, 17),
+        ):
+            response = self.client.get(reverse("frontdesk_today_board"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(response.context["arrivals"].values_list("id", flat=True)),
+            [reservation.id],
+        )
+        self.assertContains(response, "Expected arrivals")
+        self.assertContains(response, "Guest")
