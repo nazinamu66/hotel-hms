@@ -1915,30 +1915,38 @@ def complimentary_register(request):
     room_records = room_records.order_by("-room_night_date", "-requested_at")
     food_records = food_records.order_by("-breakfast_date", "-redeemed_at")
 
+    if register_type == "rooms":
+        food_records = food_records.none()
+    elif register_type == "food":
+        room_records = room_records.none()
+
     room_value = sum(
         (record.waived_amount or Decimal("0.00"))
         for record in room_records
         if record.status in ("APPROVED", "CONSUMED")
     )
+    food_rows = []
     food_cost = Decimal("0.00")
     for redemption in food_records:
-        for item in redemption.order.items.all():
-            food_cost += (item.cost_at_sale or Decimal("0.00")) * item.quantity
+        redemption_cost = sum(
+            ((item.cost_at_sale or Decimal("0.00")) * item.quantity)
+            for item in redemption.order.items.all()
+        )
+        food_cost += redemption_cost
+        food_rows.append({"redemption": redemption, "food_cost": redemption_cost})
 
-    if register_type == "rooms":
-        food_records = food_records.none()
-    elif register_type == "food":
-        room_records = room_records.none()
 
     return render(request, "frontdesk/complimentary_register.html", {
         "hotels": hotels,
         "selected_hotel": selected_hotel,
         "room_records": room_records,
         "food_records": food_records,
+        "food_rows": food_rows,
+        "room_status_choices": ComplimentaryRoomNight.STATUS_CHOICES,
         "room_value": room_value,
         "food_cost": food_cost,
         "room_count": room_records.count(),
-        "food_count": food_records.count(),
+        "food_count": len(food_rows),
         "register_type": register_type,
         "status_filter": status,
         "date_from": date_from_raw,
