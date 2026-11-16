@@ -1,465 +1,87 @@
 {% extends "base/base.html" %}
-
-{% block title %}Guest Search{% endblock %}
-
-{% block header %}
-
-<div>
-    <div style="
-        font-size:13px;
-        font-weight:600;
-        color:#6b7280;
-        text-transform:uppercase;
-        letter-spacing:.04em;
-    ">
-        Front Desk
-    </div>
-
-    <h2 style="margin:5px 0 0;">
-        Guest Search
-    </h2>
-</div>
-
-{% endblock %}
-
-
+{% block title %}Guest Directory | Hotel HMS{% endblock %}
 {% block content %}
-
-<div style="
-    max-width:1200px;
-    margin:0 auto;
-">
-
-
-    <!-- SEARCH HEADER -->
-
-    <section class="card" style="margin-bottom:24px;">
-
-        <div style="
-            display:flex;
-            justify-content:space-between;
-            align-items:flex-start;
-            gap:20px;
-            flex-wrap:wrap;
-        ">
-
-            <div>
-
-                <div style="
-                    font-size:13px;
-                    font-weight:600;
-                    color:#6b7280;
-                    text-transform:uppercase;
-                    letter-spacing:.04em;
-                ">
-                    Guest Directory
-                </div>
-
-                <h3 style="
-                    margin:5px 0 0;
-                ">
-                    Find a Guest
-                </h3>
-
-                <div style="
-                    margin-top:6px;
-                    color:#6b7280;
-                    font-size:14px;
-                ">
-                    Search by name, phone, email or ID / passport number.
-                </div>
-
-            </div>
-
-
-            <a
-                href="{% url 'frontdesk_guest_create' %}"
-                style="
-                    text-decoration:none;
-                    padding:11px 18px;
-                    border-radius:9px;
-                    background:#2563eb;
-                    color:#fff;
-                    font-size:14px;
-                    font-weight:700;
-                    white-space:nowrap;
-                "
-            >
-                + Create Guest
-            </a>
-
-        </div>
-
-
-        <form
-            method="get"
-            style="
-                display:flex;
-                gap:10px;
-                margin-top:22px;
-                flex-wrap:wrap;
-            "
-        >
-
-            <input
-                type="text"
-                name="q"
-                value="{{ query }}"
-                placeholder="Search name, phone, email or ID / passport..."
-                style="
-                    flex:1;
-                    min-width:280px;
-                    box-sizing:border-box;
-                    padding:13px 15px;
-                    border:1px solid #cbd5e1;
-                    border-radius:9px;
-                    font-size:15px;
-                    background:#fff;
-                "
-            >
-
-            <button
-                type="submit"
-                style="
-                    border:0;
-                    padding:13px 20px;
-                    border-radius:9px;
-                    background:#111827;
-                    color:#fff;
-                    font-size:14px;
-                    font-weight:700;
-                    cursor:pointer;
-                "
-            >
-                Search
-            </button>
-
-            {% if query %}
-            <a
-                href="{% url 'frontdesk_guest_search' %}"
-                style="
-                    display:flex;
-                    align-items:center;
-                    text-decoration:none;
-                    padding:13px 18px;
-                    border-radius:9px;
-                    border:1px solid #cbd5e1;
-                    background:#fff;
-                    color:#374151;
-                    font-size:14px;
-                    font-weight:600;
-                "
-            >
-                Clear
-            </a>
-            {% endif %}
-
-        </form>
-
-    </section>
-
-
-    <!-- RESULTS -->
-
-    <section class="card">
-
-        <div style="
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-            margin-bottom:18px;
-        ">
-
-            <div>
-
-                <div style="
-                    font-size:13px;
-                    font-weight:600;
-                    color:#6b7280;
-                    text-transform:uppercase;
-                    letter-spacing:.04em;
-                ">
-                    Results
-                </div>
-
-                <h3 style="margin:5px 0 0;">
-                    Guests
-                </h3>
-
-            </div>
-
-            {% if guests %}
-            <div style="
-                font-size:13px;
-                color:#6b7280;
-            ">
-                {{ guests|length }} guest{{ guests|length|pluralize }}
-            </div>
-            {% endif %}
-
-        </div>
-
-
-        {% if guests %}
-
-        <div style="
-            overflow-x:auto;
-            border:1px solid #e5e7eb;
-            border-radius:12px;
-        ">
-
-            <table style="
-                width:100%;
-                border-collapse:collapse;
-                min-width:850px;
-            ">
-
-                <thead>
-
-                    <tr style="
-                        background:#f8fafc;
-                        text-align:left;
-                    ">
-
-                        <th style="padding:13px 15px;">
-                            Guest
-                        </th>
-
-                        <th style="padding:13px 15px;">
-                            Phone
-                        </th>
-
-                        <th style="padding:13px 15px;">
-                            Email
-                        </th>
-
-                        <th style="padding:13px 15px;">
-                            ID / Passport
-                        </th>
-
-                        <th style="padding:13px 15px;">
-                            Document
-                        </th>
-
-                        <th style="padding:13px 15px;">
-                            Actions
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-
-                <tbody>
-
-                {% for guest in guests %}
-
-                    <tr style="
-                        border-top:1px solid #e5e7eb;
-                    ">
-
-                        <!-- GUEST -->
-
-                        <td style="
-                            padding:15px;
-                        ">
-
-                            <div style="
-                                font-weight:700;
-                                color:#111827;
-                            ">
-                                {{ guest.full_name }}
-                            </div>
-
-                            <div style="
-                                margin-top:3px;
-                                font-size:12px;
-                                color:#6b7280;
-                            ">
-                                {{ guest.nationality|default:"Nationality not recorded" }}
-                            </div>
-
-                        </td>
-
-
-                        <!-- PHONE -->
-
-                        <td style="
-                            padding:15px;
-                            color:#374151;
-                        ">
-                            {{ guest.phone|default:"—" }}
-                        </td>
-
-
-                        <!-- EMAIL -->
-
-                        <td style="
-                            padding:15px;
-                            color:#374151;
-                        ">
-                            {{ guest.email|default:"—" }}
-                        </td>
-
-
-                        <!-- ID -->
-
-                        <td style="
-                            padding:15px;
-                            color:#374151;
-                            font-weight:600;
-                        ">
-                            {{ guest.id_number|default:"—" }}
-                        </td>
-
-
-                        <!-- DOCUMENT -->
-
-                        <td style="padding:15px;">
-
-                            {% if guest.id_document %}
-
-                                <span style="
-                                    display:inline-block;
-                                    padding:5px 9px;
-                                    border-radius:999px;
-                                    background:#dcfce7;
-                                    color:#166534;
-                                    font-size:12px;
-                                    font-weight:700;
-                                ">
-                                    ID on File
-                                </span>
-
-                            {% else %}
-
-                                <span style="
-                                    display:inline-block;
-                                    padding:5px 9px;
-                                    border-radius:999px;
-                                    background:#f3f4f6;
-                                    color:#6b7280;
-                                    font-size:12px;
-                                    font-weight:700;
-                                ">
-                                    No ID
-                                </span>
-
-                            {% endif %}
-
-                        </td>
-
-
-                        <!-- ACTIONS -->
-
-                        <td style="
-                            padding:15px;
-                        ">
-
-                            <div style="
-                                display:flex;
-                                gap:8px;
-                                align-items:center;
-                            ">
-
-                                <a
-                                    href="{% url 'frontdesk_guest_profile' guest.id %}"
-                                    style="
-                                        text-decoration:none;
-                                        padding:8px 12px;
-                                        border-radius:7px;
-                                        background:#111827;
-                                        color:#fff;
-                                        font-size:13px;
-                                        font-weight:600;
-                                    "
-                                >
-                                    View
-                                </a>
-
-
-                                <a
-                                    href="{% url 'frontdesk_guest_edit' guest.id %}"
-                                    style="
-                                        text-decoration:none;
-                                        padding:8px 12px;
-                                        border-radius:7px;
-                                        border:1px solid #cbd5e1;
-                                        background:#fff;
-                                        color:#374151;
-                                        font-size:13px;
-                                        font-weight:600;
-                                    "
-                                >
-                                    Edit
-                                </a>
-
-                            </div>
-
-                        </td>
-
-                    </tr>
-
-                {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-        {% else %}
-
-        <div style="
-            padding:40px 20px;
-            text-align:center;
-            border:1px dashed #cbd5e1;
-            border-radius:12px;
-            color:#6b7280;
-        ">
-
-            <div style="
-                font-size:16px;
-                font-weight:700;
-                color:#374151;
-            ">
-                No guests found
-            </div>
-
-            <div style="
-                margin-top:6px;
-                font-size:14px;
-            ">
-                {% if query %}
-                    No guest matches "{{ query }}".
-                {% else %}
-                    There are no guest records yet.
-                {% endif %}
-            </div>
-
-            <a
-                href="{% url 'frontdesk_guest_create' %}"
-                style="
-                    display:inline-block;
-                    margin-top:16px;
-                    text-decoration:none;
-                    padding:10px 16px;
-                    border-radius:8px;
-                    background:#2563eb;
-                    color:#fff;
-                    font-size:14px;
-                    font-weight:700;
-                "
-            >
-                + Create Guest
-            </a>
-
-        </div>
-
-        {% endif %}
-
-    </section>
-
+<style>
+.gs-page{max-width:1450px;margin:0 auto;padding:10px 2px 40px;color:#172033}
+.gs-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.gs-title{font-size:1.75rem;font-weight:850;letter-spacing:-.04em;margin:0 0 5px}
+.gs-sub{font-size:.88rem;color:#64748b;margin:0}
+.gs-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:800;font-size:.84rem}
+.gs-primary:hover{background:#1d4ed8;color:white;text-decoration:none}
+.gs-search{display:flex;gap:10px;align-items:center;margin-bottom:18px;padding:17px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 3px 12px rgba(15,23,42,.035)}
+.gs-search-icon{color:#94a3b8;flex:0 0 auto}
+.gs-search input{flex:1;min-width:0;height:46px;border:1px solid #cbd5e1;border-radius:9px;padding:0 13px;font:inherit;font-size:.9rem;color:#172033}
+.gs-search input:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.gs-search button{height:46px;padding:0 19px;border:0;border-radius:9px;background:#1e293b;color:#fff;font-size:.83rem;font-weight:800;cursor:pointer}
+.gs-clear{padding:10px 12px;color:#64748b;text-decoration:none;font-size:.8rem;font-weight:750}
+.gs-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 3px 14px rgba(15,23,42,.04)}
+.gs-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 19px;border-bottom:1px solid #edf1f5}
+.gs-card-head h2{font-size:1rem;font-weight:850;margin:0 0 3px}
+.gs-card-head p{font-size:.77rem;color:#64748b;margin:0}
+.gs-count{padding:5px 10px;border-radius:99px;background:#eff6ff;color:#1d4ed8;font-size:.75rem;font-weight:850;white-space:nowrap}
+.gs-table-wrap{overflow-x:auto}
+.gs-table{width:100%;min-width:850px;border-collapse:collapse}
+.gs-table th{padding:12px 16px;background:#f8fafc;color:#64748b;font-size:.67rem;letter-spacing:.07em;text-transform:uppercase;text-align:left;font-weight:850;white-space:nowrap}
+.gs-table td{padding:13px 16px;border-top:1px solid #edf1f5;color:#475569;font-size:.82rem;vertical-align:middle}
+.gs-row{cursor:pointer;transition:background .12s}
+.gs-row:hover{background:#f7faff}
+.gs-guest{display:flex;align-items:center;gap:10px;min-width:180px}
+.gs-avatar{width:38px;height:38px;display:grid;place-items:center;flex:0 0 auto;border-radius:12px;background:#eff6ff;color:#1d4ed8;font-weight:850;font-size:.78rem}
+.gs-guest strong{display:block;color:#172033;font-size:.84rem}
+.gs-guest small{display:block;color:#94a3b8;font-size:.72rem;margin-top:3px}
+.gs-document{display:inline-flex;padding:5px 9px;border-radius:99px;font-size:.68rem;font-weight:850;white-space:nowrap}
+.gs-doc-yes{background:#dcfce7;color:#166534}.gs-doc-no{background:#f1f5f9;color:#64748b}
+.gs-actions{display:flex;align-items:center;gap:7px;white-space:nowrap}
+.gs-view{padding:7px 11px;border-radius:8px;background:#1e293b;color:#fff;text-decoration:none;font-size:.74rem;font-weight:800}
+.gs-edit{padding:7px 10px;border-radius:8px;border:1px solid #cbd5e1;color:#475569;text-decoration:none;font-size:.74rem;font-weight:800}
+.gs-empty{padding:55px 20px;text-align:center;color:#64748b}
+.gs-empty-icon{width:48px;height:48px;display:grid;place-items:center;margin:0 auto 12px;border-radius:15px;background:#f1f5f9;color:#64748b;font-size:1.4rem}
+.gs-empty strong{display:block;color:#334155;font-size:.95rem;margin-bottom:5px}
+.gs-empty p{margin:0;font-size:.82rem}
+.gs-empty a{display:inline-flex;margin-top:15px}
+@media(max-width:600px){.gs-page{padding:6px 0 30px}.gs-title{font-size:1.45rem}.gs-head .gs-primary{width:100%}.gs-search{flex-wrap:wrap;padding:12px}.gs-search input{flex-basis:calc(100% - 36px)}.gs-search button{flex:1}.gs-clear{padding:10px}.gs-card-head{align-items:flex-start}}
+</style>
+<div class="gs-page">
+  <header class="gs-head">
+    <div><h1 class="gs-title">Guest Directory</h1><p class="gs-sub">Find guest records, verify identity details and review stay history.</p></div>
+    <a href="{% url 'frontdesk_guest_create' %}" class="gs-primary">＋ Create guest</a>
+  </header>
+
+  <form method="get" class="gs-search" role="search">
+    <svg class="gs-search-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+    <input type="search" name="q" value="{{ query }}" placeholder="Search by guest name, phone, email or ID / passport number" aria-label="Search guests">
+    <button type="submit">Search guests</button>
+    {% if query %}<a class="gs-clear" href="{% url 'frontdesk_guest_search' %}">Clear</a>{% endif %}
+  </form>
+
+  <section class="gs-card">
+    <div class="gs-card-head">
+      <div><h2>{% if query %}Search results{% else %}Recently added guests{% endif %}</h2><p>{% if query %}Matching records in this hotel's guest directory{% else %}The latest guest records for this hotel{% endif %}</p></div>
+      <span class="gs-count">{{ guests|length }} record{{ guests|length|pluralize }}</span>
+    </div>
+    {% if guests %}
+    <div class="gs-table-wrap"><table class="gs-table">
+      <thead><tr><th>Guest</th><th>Phone</th><th>Email</th><th>ID / Passport</th><th>Identity document</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for guest in guests %}
+        <tr class="gs-row" data-href="{% url 'frontdesk_guest_profile' guest.id %}" tabindex="0" aria-label="Open guest profile for {{ guest.full_name }}">
+          <td><div class="gs-guest"><span class="gs-avatar">{{ guest.first_name|default:"G"|slice:":1" }}{{ guest.last_name|default:""|slice:":1" }}</span><span><strong>{{ guest.full_name }}</strong><small>{{ guest.nationality|default:"Nationality not recorded" }}</small></span></div></td>
+          <td>{{ guest.phone|default:"—" }}</td><td>{{ guest.email|default:"—" }}</td><td>{{ guest.id_number|default:"—" }}</td>
+          <td>{% if guest.id_document %}<span class="gs-document gs-doc-yes">ID on file</span>{% else %}<span class="gs-document gs-doc-no">No document</span>{% endif %}</td>
+          <td><div class="gs-actions"><a class="gs-view" href="{% url 'frontdesk_guest_profile' guest.id %}">Open profile</a><a class="gs-edit" href="{% url 'frontdesk_guest_edit' guest.id %}">Edit</a></div></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}
+      <div class="gs-empty"><div class="gs-empty-icon">⌕</div><strong>{% if query %}No matching guests found{% else %}No guest records yet{% endif %}</strong><p>{% if query %}No guest matches "{{ query }}". Check the spelling or try a phone number or ID.{% else %}Create a guest record to begin building your guest directory.{% endif %}</p><a href="{% url 'frontdesk_guest_create' %}" class="gs-primary">＋ Create guest</a></div>
+    {% endif %}
+  </section>
 </div>
-
+<script>
+document.querySelectorAll(".gs-row").forEach(function(row){
+  row.addEventListener("click",function(event){if(event.target.closest("a,button"))return;window.location.href=row.dataset.href;});
+  row.addEventListener("keydown",function(event){if((event.key==="Enter"||event.key===" ")&&event.target===row){event.preventDefault();window.location.href=row.dataset.href;}});
+});
+</script>
 {% endblock %}
