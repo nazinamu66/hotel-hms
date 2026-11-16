@@ -147,6 +147,8 @@ def redeem_complimentary_breakfast(*, user, source_charge_id, cart):
             raise ValidationError("Enter a valid quantity for each breakfast item.")
         if quantity <= 0:
             continue
+        if quantity > 1:
+            raise ValidationError("Only one portion of each selected breakfast item is allowed per room per day.")
 
         menu_item = MenuItem.objects.select_related("product").filter(
             pk=item_id,
