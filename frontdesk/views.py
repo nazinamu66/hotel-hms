@@ -499,24 +499,24 @@ def _invoice_pdf_response(context):
     folio = context["folio"]
     business = context["business"]
     doc = SimpleDocTemplate(
-        buffer, pagesize=A4, rightMargin=16*mm, leftMargin=16*mm,
-        topMargin=15*mm, bottomMargin=16*mm,
+        buffer, pagesize=A4, rightMargin=12*mm, leftMargin=12*mm,
+        topMargin=10*mm, bottomMargin=13*mm,
         title=f"Invoice {folio.pk}",
         author=business.name if business else "Hotel",
     )
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name="HotelTitle", parent=styles["Title"],
-        fontSize=17, leading=21, textColor=colors.HexColor("#17365D"),
+        fontSize=15, leading=17, textColor=colors.HexColor("#17365D"),
         alignment=0, spaceAfter=3))
     styles.add(ParagraphStyle(name="InvoiceHeading", parent=styles["Heading1"],
-        fontSize=18, leading=22, textColor=colors.HexColor("#17365D")))
+        fontSize=16, leading=18, textColor=colors.HexColor("#17365D")))
     styles.add(ParagraphStyle(name="SectionHeading", parent=styles["Heading2"],
-        fontSize=10, leading=13, textColor=colors.HexColor("#294766"),
-        spaceBefore=12, spaceAfter=5))
+        fontSize=9, leading=10, textColor=colors.HexColor("#294766"),
+        spaceBefore=6, spaceAfter=3))
     styles.add(ParagraphStyle(name="SmallMuted", parent=styles["BodyText"],
-        fontSize=8, leading=11, textColor=colors.HexColor("#64748B")))
+        fontSize=7, leading=8, textColor=colors.HexColor("#64748B")))
     styles.add(ParagraphStyle(name="CellText", parent=styles["BodyText"],
-        fontSize=8, leading=10, wordWrap="CJK"))
+        fontSize=7, leading=8, wordWrap="CJK"))
     styles.add(ParagraphStyle(name="CellRight", parent=styles["CellText"], alignment=TA_RIGHT))
     styles.add(ParagraphStyle(name="CellBold", parent=styles["CellText"], fontName="Helvetica-Bold"))
     styles.add(ParagraphStyle(name="CellBoldRight", parent=styles["CellBold"], alignment=TA_RIGHT))
@@ -531,7 +531,7 @@ def _invoice_pdf_response(context):
     brand_cells = []
     if business and business.logo:
         try:
-            brand_cells.append(PDFImage(business.logo.path, width=25*mm, height=20*mm, kind="proportional"))
+            brand_cells.append(PDFImage(business.logo.path, width=21*mm, height=16*mm, kind="proportional"))
         except (AttributeError, OSError, ValueError):
             pass
     company = [Paragraph(escape(business.name if business else "Hotel Management System"), styles["HotelTitle"])]
@@ -547,7 +547,7 @@ def _invoice_pdf_response(context):
         ("BOTTOMPADDING",(0,0),(-1,-1),10), ("LEFTPADDING",(0,0),(-1,-1),0),
         ("RIGHTPADDING",(0,0),(-1,-1),0),
     ]))
-    story += [brand, Spacer(1, 8*mm)]
+    story += [brand, Spacer(1, 4*mm)]
 
     guest, room = context["guest"], context["room"]
     guest_name = f"{guest.first_name} {guest.last_name}" if guest else "Guest information unavailable"
@@ -558,7 +558,7 @@ def _invoice_pdf_response(context):
     ]], colWidths=[100*mm, 78*mm])
     title.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"BOTTOM"),
         ("LEFTPADDING",(0,0),(-1,-1),0),("RIGHTPADDING",(0,0),(-1,-1),0)]))
-    story += [title, Spacer(1, 5*mm)]
+    story += [title, Spacer(1, 3*mm)]
 
     details = [
         [p("BILLED TO","CellBold"), p("STAY DETAILS","CellBold")],
@@ -573,7 +573,7 @@ def _invoice_pdf_response(context):
         ("INNERGRID",(0,0),(-1,-1),0.25,colors.HexColor("#E4EAF1")),
         ("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),9),
         ("RIGHTPADDING",(0,0),(-1,-1),9),("TOPPADDING",(0,0),(-1,-1),6),
-        ("BOTTOMPADDING",(0,0),(-1,-1),6),
+        ("BOTTOMPADDING",(0,0),(-1,-1),4),
     ]))
     story.append(meta)
 
@@ -591,8 +591,8 @@ def _invoice_pdf_response(context):
             ("LINEABOVE",(0,-1),(-1,-1),0.7,colors.HexColor("#CFD9E5")),
             ("LINEBELOW",(0,1),(-1,-2),0.25,colors.HexColor("#E6EBF1")),
             ("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),8),
-            ("RIGHTPADDING",(0,0),(-1,-1),8),("TOPPADDING",(0,0),(-1,-1),6),
-            ("BOTTOMPADDING",(0,0),(-1,-1),6),
+            ("RIGHTPADDING",(0,0),(-1,-1),8),("TOPPADDING",(0,0),(-1,-1),3),
+            ("BOTTOMPADDING",(0,0),(-1,-1),3),
         ]))
         story.append(table)
 
@@ -609,8 +609,8 @@ def _invoice_pdf_response(context):
         ("LINEBELOW",(0,0),(-1,0),0.7,colors.HexColor("#CFD9E5")),
         ("LINEBELOW",(0,1),(-1,-1),0.25,colors.HexColor("#E6EBF1")),
         ("VALIGN",(0,0),(-1,-1),"TOP"),("LEFTPADDING",(0,0),(-1,-1),8),
-        ("RIGHTPADDING",(0,0),(-1,-1),8),("TOPPADDING",(0,0),(-1,-1),6),
-        ("BOTTOMPADDING",(0,0),(-1,-1),6),
+        ("RIGHTPADDING",(0,0),(-1,-1),8),("TOPPADDING",(0,0),(-1,-1),3),
+        ("BOTTOMPADDING",(0,0),(-1,-1),3),
     ]))
     story.append(payment_table)
 
@@ -626,9 +626,9 @@ def _invoice_pdf_response(context):
         ("BOX",(0,0),(-1,-1),0.6,colors.HexColor("#D5DFEA")),
         ("INNERGRID",(0,0),(-1,-1),0.25,colors.HexColor("#E0E7EF")),
         ("LEFTPADDING",(0,0),(-1,-1),9),("RIGHTPADDING",(0,0),(-1,-1),9),
-        ("TOPPADDING",(0,0),(-1,-1),7),("BOTTOMPADDING",(0,0),(-1,-1),7),
+        ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
     ]))
-    story += [Spacer(1,7*mm),summary]
+    story += [Spacer(1,3*mm),summary]
 
     def page_footer(canvas, document):
         canvas.saveState()
