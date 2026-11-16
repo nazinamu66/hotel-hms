@@ -117,12 +117,41 @@ def validate_active_folio(room):
         )
 
 
-def create_folio(room, guest, expected_checkout, user=None, group_allocation=None):
+def create_folio(
+    room, guest, expected_checkout, user=None, group_allocation=None,
+    reservation=None, discount_percent=None, discount_reason="",
+):
+    if reservation is not None:
+        discount_percent = reservation.room_discount_percent
+        discount_reason = reservation.room_discount_reason
+        discount_applied_by = reservation.room_discount_applied_by
+    else:
+        from decimal import Decimal
+        try:
+            discount_percent = Decimal(str(discount_percent or "0"))
+        except Exception:
+            raise ValidationError("Invalid room discount selection.")
+        discount_applied_by = user if discount_percent else None
+
+    from decimal import Decimal
+    if discount_percent not in (
+        Decimal("0.00"), Decimal("5.00"), Decimal("10.00"), Decimal("15.00")
+    ):
+        raise ValidationError("Room discount must be 0%, 5%, 10% or 15%.")
+    if discount_percent and not (discount_reason or "").strip():
+        raise ValidationError("A reason is required when applying a room discount.")
+    if group_allocation is not None and discount_percent:
+        raise ValidationError("Receptionist discounts cannot be combined with negotiated group rates.")
+
     folio = Folio.objects.create(
         folio_type="ROOM",
         room=room,
         guest=guest,
         hotel=room.hotel,
+        reservation=reservation,
+        room_discount_percent=discount_percent,
+        room_discount_reason=(discount_reason or "").strip(),
+        room_discount_applied_by=discount_applied_by,
     )
 
     if expected_checkout:
@@ -199,6 +228,9 @@ def check_in_guest(
     guest=None,
     expected_checkout=None,
     group_allocation=None,
+    reservation=None,
+    discount_percent=None,
+    discount_reason="",
 ):
 
     validate_check_in(room)
@@ -232,6 +264,9 @@ def check_in_guest(
         expected_checkout,
         user=user,
         group_allocation=group_allocation,
+        reservation=reservation,
+        discount_percent=discount_percent,
+        discount_reason=discount_reason,
     )
 
 
