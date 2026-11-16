@@ -93,6 +93,8 @@ def decide_complimentary_night(*, waiver, user, approve, rejection_reason=""):
     ).get(pk=waiver.pk)
     if waiver.status != "PENDING":
         raise ValidationError("Only pending complimentary requests can be decided.")
+    if waiver.requested_by_id == user.pk:
+        raise ValidationError("The person who requested a complimentary night cannot authorise their own request.")
     if approve:
         if waiver.folio_id and Charge.objects.filter(
             folio=waiver.folio, room_night_date=waiver.room_night_date
