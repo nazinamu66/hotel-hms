@@ -257,6 +257,9 @@ def check_in_guest(
     expected_checkout = normalize_expected_checkout(
         expected_checkout
     )
+    if discount_percent is None and data:
+        discount_percent = data.get("room_discount_percent", "0")
+        discount_reason = data.get("room_discount_reason", "")
 
     folio = create_folio(
         room,
