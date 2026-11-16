@@ -32,6 +32,8 @@ def eligible_breakfast_charges(hotel, breakfast_date=None):
         Charge.objects.filter(
             folio__hotel=hotel,
             folio__folio_type="ROOM",
+            folio__room__isnull=False,
+            folio__is_closed=False,
             room_night_date=room_night_date,
             room_rate_source="STANDARD",
             discount_percentage=Decimal("0.00"),
@@ -49,10 +51,10 @@ def eligible_breakfast_charges(hotel, breakfast_date=None):
             breakfast_date=breakfast_date
         ).values_list("source_charge_id", flat=True)
     )
-    redeemed_folio_ids = set(
+    redeemed_room_ids = set(
         ComplimentaryBreakfastRedemption.objects.filter(
             breakfast_date=breakfast_date
-        ).values_list("folio_id", flat=True)
+        ).values_list("room_id", flat=True)
     )
     waived_folio_ids = set(
         ComplimentaryRoomNight.objects.filter(
@@ -65,7 +67,7 @@ def eligible_breakfast_charges(hotel, breakfast_date=None):
     return [
         charge for charge in charges
         if charge.pk not in redeemed_charge_ids
-        and charge.folio_id not in redeemed_folio_ids
+        and charge.folio.room_id not in redeemed_room_ids
         and charge.folio_id not in waived_folio_ids
     ]
 
@@ -124,7 +126,7 @@ def redeem_complimentary_breakfast(*, user, source_charge_id, cart):
         raise ValidationError("A complimentary room night does not qualify for breakfast.")
 
     if ComplimentaryBreakfastRedemption.objects.filter(
-        folio=source_charge.folio, breakfast_date=breakfast_date
+        room=source_charge.folio.room, breakfast_date=breakfast_date
     ).exists():
         raise ValidationError("This room has already redeemed breakfast today.")
 
@@ -195,6 +197,7 @@ def redeem_complimentary_breakfast(*, user, source_charge_id, cart):
 
     redemption = ComplimentaryBreakfastRedemption.objects.create(
         folio=source_charge.folio,
+        room=source_charge.folio.room,
         source_charge=source_charge,
         order=order,
         room_night_date=room_night_date,
