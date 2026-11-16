@@ -99,6 +99,8 @@ def redeem_complimentary_breakfast(*, user, source_charge_id, cart):
             pk=source_charge_id,
             folio__hotel=hotel,
             folio__folio_type="ROOM",
+            folio__room__isnull=False,
+            folio__is_closed=False,
         )
         .first()
     )
