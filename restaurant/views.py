@@ -1835,3 +1835,65 @@ def restaurant_spoilage_review(request, pk):
 
     messages.success(request, f"Spoilage report #{record.pk} approved. {record.quantity} {record.product.base_unit} deducted and accounting posted.")
     return redirect("restaurant_spoilage")
+
+
+@role_required("RESTAURANT")
+def complimentary_breakfast(request):
+    """Redeem today's one-per-room breakfast entitlement against actual menu items."""
+    from restaurant.workflows.complimentary_breakfast import (
+        eligible_breakfast_charges,
+        redeem_complimentary_breakfast,
+    )
+
+    user = request.user
+    restaurant = user.department
+    if not restaurant or restaurant.department_type != "RESTAURANT" or not restaurant.hotel_id:
+        raise PermissionDenied("Restaurant department access is required.")
+
+    breakfast_date = timezone.localdate()
+    if request.method == "POST":
+        cart = {}
+        for key, value in request.POST.items():
+            if key.startswith("item_"):
+                item_id = key[5:]
+                if item_id.isdigit() and value.strip():
+                    cart[item_id] = value.strip()
+        try:
+            redemption = redeem_complimentary_breakfast(
+                user=user,
+                source_charge_id=request.POST.get("source_charge"),
+                cart=cart,
+            )
+        except (ValidationError, ValueError) as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(
+                request,
+                "Complimentary breakfast redeemed for Room %s. Kitchen order #%s created."
+                % (redemption.folio.room.room_number, redemption.order_id),
+            )
+            return redirect("restaurant_complimentary_breakfast")
+
+    qualifying_charges = eligible_breakfast_charges(
+        restaurant.hotel, breakfast_date=breakfast_date
+    )
+    menu_items = (
+        MenuItem.objects.filter(
+            is_active=True,
+            product__hotel_id=restaurant.hotel_id,
+            product__usage_type="RESALE",
+            product__product_type__in=("FOOD", "SNACK", "DRINK"),
+        )
+        .select_related("product")
+        .order_by("category", "name")
+    )
+    return render(
+        request,
+        "restaurant/complimentary_breakfast.html",
+        {
+            "breakfast_date": breakfast_date,
+            "room_night_date": breakfast_date - timezone.timedelta(days=1),
+            "qualifying_charges": qualifying_charges,
+            "menu_items": menu_items,
+        },
+    )
