@@ -502,7 +502,7 @@
                         {% csrf_token %}
                         <div class="col-md-4">
                             <label class="form-label">First night</label>
-                            <input type="date" class="form-control" name="start_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" max="{{ reservation.check_out_date|date:'Y-m-d' }}" required>
+                            <input type="date" class="form-control" name="start_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Last night (inclusive)</label>
@@ -536,7 +536,9 @@
                             </tbody>
                         </table>
                     </div>
+                    {% if request.user.role == "MANAGER" or request.user.role == "DIRECTOR" or request.user.role == "ADMIN" %}
                     <a href="{% url 'frontdesk_complimentary_room_night_queue' %}" class="btn btn-sm btn-outline-secondary">Open approval queue</a>
+                    {% endif %}
                 </div>
             </section>
         </div>
