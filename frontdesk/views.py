@@ -1309,7 +1309,7 @@ def reservation_list(request):
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def reservation_detail(request, reservation_id):
-    hotel = request.user.department.hotel
+    from accounts.services.access import get_accessible_hotels
 
     reservation = get_object_or_404(
         Reservation.objects.select_related(
@@ -1317,9 +1317,12 @@ def reservation_detail(request, reservation_id):
             "room_category",
             "reservation_deposit",
             "room",
+        ).prefetch_related(
+            "complimentary_room_nights__requested_by",
+            "complimentary_room_nights__approved_by",
         ),
         id=reservation_id,
-        hotel=hotel,
+        hotel__in=get_accessible_hotels(request.user),
     )
 
     return render(
