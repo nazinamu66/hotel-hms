@@ -493,7 +493,6 @@ def build_invoice_context(folio):
     }
 
 
-@role_required("FRONTDESK", "MANAGER", "ADMIN")
 def _invoice_pdf_response(context):
     """Render a downloadable folio invoice PDF."""
     buffer = BytesIO()
