@@ -1799,10 +1799,13 @@ def reservation_calendar(request):
 
     # Ignore stale or cross-hotel category filters rather than applying
     # an arbitrary category ID to the room and reservation queries.
-    if category_id and categories.filter(pk=category_id).exists():
-        selected_category_id = category_id
-    else:
-        selected_category_id = None
+    selected_category_id = None
+    if category_id:
+        try:
+            if categories.filter(pk=category_id).exists():
+                selected_category_id = category_id
+        except (TypeError, ValueError):
+            selected_category_id = None
 
     rooms = Room.objects.filter(hotel=hotel).select_related("category")
     if selected_category_id:
