@@ -1904,3 +1904,101 @@ def complimentary_breakfast(request):
             ).select_related("room", "folio__guest", "redeemed_by", "order").order_by("redeemed_at"),
         },
     )
+
+
+
+@role_required("ADMIN", "DIRECTOR", "GENERAL_MANAGER", "MANAGER")
+def restaurant_menu_management(request):
+    """
+    Hotel-scoped management screen for existing Restaurant MenuItems.
+    Management users can configure breakfast eligibility without Django Admin.
+    """
+    from accounts.services.access import get_accessible_hotels
+
+    hotels = (
+        get_accessible_hotels(request.user)
+        .filter(is_active=True)
+        .order_by("name")
+    )
+
+    hotel_id = (
+        request.POST.get("hotel")
+        if request.method == "POST"
+        else request.GET.get("hotel")
+    )
+    hotel = None
+
+    if hotel_id:
+        hotel = get_object_or_404(hotels, pk=hotel_id)
+    elif hotels.count() == 1:
+        hotel = hotels.first()
+
+    if request.method == "POST":
+        if not hotel:
+            messages.error(request, "Select a hotel before updating its menu.")
+            return redirect("restaurant_menu_management")
+
+        item = get_object_or_404(
+            MenuItem.objects.select_related("product"),
+            pk=request.POST.get("item_id"),
+            product__hotel=hotel,
+        )
+        value = request.POST.get("is_breakfast_item", "").strip()
+        if value not in {"0", "1"}:
+            messages.error(request, "Invalid breakfast eligibility value.")
+        else:
+            item.is_breakfast_item = value == "1"
+            item.save(update_fields=["is_breakfast_item"])
+            messages.success(
+                request,
+                f"{item.name} "
+                + ("is now eligible for complimentary breakfast." if item.is_breakfast_item
+                   else "has been removed from complimentary breakfast eligibility."),
+            )
+        return redirect(f"/restaurant/menu-management/?hotel={hotel.pk}")
+
+    menu_items = MenuItem.objects.filter(
+        product__hotel__in=hotels,
+    ).select_related("product", "product__hotel")
+
+    if hotel:
+        menu_items = menu_items.filter(product__hotel=hotel)
+
+    search_query = request.GET.get("q", "").strip()
+    if search_query:
+        menu_items = menu_items.filter(
+            models.Q(name__icontains=search_query)
+            | models.Q(product__name__icontains=search_query)
+            | models.Q(product__sku__icontains=search_query)
+        )
+
+    category = request.GET.get("category", "").strip().upper()
+    if category in {"FOOD", "DRINK"}:
+        menu_items = menu_items.filter(category=category)
+    else:
+        category = ""
+
+    breakfast_filter = request.GET.get("breakfast", "").strip()
+    if breakfast_filter == "yes":
+        menu_items = menu_items.filter(is_breakfast_item=True)
+    elif breakfast_filter == "no":
+        menu_items = menu_items.filter(is_breakfast_item=False)
+    else:
+        breakfast_filter = ""
+
+    menu_items = menu_items.order_by("category", "name")
+    context = {
+        "hotels": hotels,
+        "hotel": hotel,
+        "menu_items": menu_items,
+        "search_query": search_query,
+        "selected_category": category,
+        "breakfast_filter": breakfast_filter,
+        "total_items": MenuItem.objects.filter(product__hotel__in=hotels).count(),
+        "breakfast_items": MenuItem.objects.filter(
+            product__hotel__in=hotels,
+            is_breakfast_item=True,
+        ).count(),
+        "result_count": menu_items.count(),
+    }
+    return render(request, "restaurant/menu_management.html", context)
