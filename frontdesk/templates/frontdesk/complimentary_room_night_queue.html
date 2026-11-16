@@ -1,43 +1,78 @@
 {% extends "base/base.html" %}
+{% block title %}Complimentary Room Approvals | Hotel HMS{% endblock %}
 {% block content %}
-<div class="container py-4" style="max-width:1100px;">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h2 class="mb-1">Complimentary accommodation approvals</h2>
-      <p class="text-muted mb-0">Review room-night waivers requested by Frontdesk.</p>
-    </div>
-    <a class="btn btn-outline-secondary" href="{% url 'frontdesk_room_board' %}">Back to Frontdesk</a>
-  </div>
+<style>
+.ca-page{max-width:1380px;margin:0 auto;padding:28px 22px 50px;color:#172033}
+.ca-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}
+.ca-title{font-size:clamp(1.6rem,2.4vw,2.1rem);font-weight:850;letter-spacing:-.04em;margin:0 0 6px}
+.ca-sub{margin:0;color:#64748b;font-size:.9rem}
+.ca-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 4px 18px rgba(15,23,42,.035)}
+.ca-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 18px;border-bottom:1px solid #edf1f5}
+.ca-count{font-size:.78rem;font-weight:850;color:#1e40af;background:#dbeafe;border-radius:99px;padding:6px 10px}
+.ca-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.ca-btn{border:0;border-radius:9px;padding:10px 15px;font-weight:800;font-size:.82rem;cursor:pointer}
+.ca-approve{background:#0f766e;color:white}.ca-reject{background:#fff;color:#b91c1c;border:1px solid #fecaca}
+.ca-reason{height:39px;min-width:240px;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font:inherit;font-size:.82rem}
+.ca-select{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:750;color:#475569}
+.ca-list{padding:4px 18px}
+.ca-item{display:grid;grid-template-columns:24px minmax(220px,1.3fr) minmax(160px,1fr) minmax(120px,.7fr) minmax(170px,1fr);gap:14px;align-items:center;padding:16px 2px;border-bottom:1px solid #edf1f5}
+.ca-item:last-child{border-bottom:0}
+.ca-main{font-weight:850;color:#172033}.ca-meta{font-size:.76rem;color:#64748b;margin-top:4px;line-height:1.45}
+.ca-value{font-weight:850;white-space:nowrap}
+.ca-reason{font-size:.82rem;color:#475569;line-height:1.45}
+.ca-check{width:17px;height:17px;accent-color:#0f766e}
+.ca-empty{padding:48px 20px;text-align:center;color:#64748b}
+.ca-empty strong{display:block;color:#334155;margin-bottom:5px}
+.ca-note{padding:13px 17px;color:#64748b;font-size:.78rem;border-top:1px solid #edf1f5}
+@media(max-width:850px){.ca-item{grid-template-columns:24px 1fr 1fr}.ca-item .ca-reason{grid-column:2/-1}}
+@media(max-width:580px){.ca-page{padding:18px 12px 36px}.ca-head{flex-direction:column}.ca-item{grid-template-columns:22px 1fr}.ca-item>*:not(:first-child){grid-column:2}.ca-actions{width:100%}.ca-reason{min-width:100%}}
+</style>
+<div class="ca-page">
+  <header class="ca-head">
+    <div><h1 class="ca-title">Complimentary Room Approvals</h1><p class="ca-sub">Review and approve room-night waivers. Select multiple nights to decide them together.</p></div>
+    <a href="{% url 'frontdesk_complimentary_register' %}" class="btn btn-outline-secondary">Open complimentary register</a>
+  </header>
 
-  {% for item in complimentary_requests %}
-  <div class="card mb-3 shadow-sm">
-    <div class="card-body">
-      <div class="d-flex justify-content-between flex-wrap gap-2">
-        <div>
-          <h5 class="mb-1">{{ item.reservation.guest.full_name }} · Reservation #{{ item.reservation_id }}</h5>
-          <div class="text-muted small">{{ item.reservation.hotel.name }} · {{ item.room_night_date|date:"d M Y" }}</div>
-        </div>
-        <strong>₦{{ item.waived_amount|floatformat:2 }} waived</strong>
-      </div>
-      <p class="my-3">{{ item.reason|linebreaksbr }}</p>
-      <div class="small text-muted mb-3">
-        Requested by {{ item.requested_by }} on {{ item.requested_at|date:"d M Y, H:i" }} · Rate source: {{ item.rate_source }}
-      </div>
-      <div class="d-flex flex-wrap gap-2">
-        <form method="post" action="{% url 'frontdesk_complimentary_room_night_decide' item.id 'approve' %}">
-          {% csrf_token %}
-          <button class="btn btn-success" type="submit">Approve waiver</button>
-        </form>
-        <form method="post" action="{% url 'frontdesk_complimentary_room_night_decide' item.id 'reject' %}" class="d-flex gap-2 flex-wrap">
-          {% csrf_token %}
-          <input class="form-control" name="rejection_reason" required placeholder="Reason for rejection" style="min-width:240px;">
-          <button class="btn btn-outline-danger" type="submit">Reject</button>
-        </form>
+  <form method="post" action="{% url 'frontdesk_complimentary_room_night_bulk_decide' %}" class="ca-card" id="complimentary-bulk-form">
+    {% csrf_token %}
+    <div class="ca-toolbar">
+      <div class="ca-select"><input type="checkbox" class="ca-check" id="select-all"><label for="select-all">Select all pending requests</label><span class="ca-count">{{ complimentary_requests|length }} pending nights</span></div>
+      <div class="ca-actions">
+        <input type="text" class="ca-reason" name="rejection_reason" placeholder="Required only when rejecting selected requests">
+        <button type="submit" class="ca-btn ca-approve" name="decision" value="approve" onclick="return confirmBulk('approve')">Approve selected</button>
+        <button type="submit" class="ca-btn ca-reject" name="decision" value="reject" onclick="return confirmBulk('reject')">Reject selected</button>
       </div>
     </div>
-  </div>
-  {% empty %}
-  <div class="alert alert-light border">There are no pending complimentary accommodation requests.</div>
-  {% endfor %}
+    <div class="ca-list">
+      {% for item in complimentary_requests %}
+      <label class="ca-item">
+        <input type="checkbox" class="ca-check request-check" name="waiver_ids" value="{{ item.id }}">
+        <span><span class="ca-main">{{ item.reservation.guest.full_name }}</span><span class="ca-meta">{{ item.reservation.hotel.name }} · Reservation #{{ item.reservation_id }}{% if item.reservation.room %} · Room {{ item.reservation.room.room_number }}{% endif %}</span></span>
+        <span><span class="ca-main">{{ item.room_night_date|date:"d M Y" }}</span><span class="ca-meta">Requested by {{ item.requested_by }} · {{ item.requested_at|date:"d M Y, H:i" }}</span></span>
+        <span class="ca-value">₦{{ item.waived_amount|floatformat:2 }}</span>
+        <span class="ca-reason">{{ item.reason|linebreaksbr }}<span class="ca-meta">Rate source: {{ item.rate_source }}</span></span>
+      </label>
+      {% empty %}
+      <div class="ca-empty"><strong>No pending complimentary room requests</strong>New requests submitted by Frontdesk will appear here.</div>
+      {% endfor %}
+    </div>
+    {% if complimentary_requests %}
+    <div class="ca-note">Bulk decisions are processed as one transaction. If any selected request cannot be approved (for example, the requester is also the approver or a room charge already exists), none of the selected requests will be changed. Each approved night still receives its own audit record.</div>
+    {% endif %}
+  </form>
 </div>
+<script>
+(function(){
+  const all=document.getElementById("select-all");
+  const boxes=Array.from(document.querySelectorAll(".request-check"));
+  if(all){all.addEventListener("change",function(){boxes.forEach(box=>box.checked=all.checked);});}
+  boxes.forEach(box=>box.addEventListener("change",function(){if(all){all.checked=boxes.length>0&&boxes.every(item=>item.checked);all.indeterminate=boxes.some(item=>item.checked)&&!all.checked;}}));
+})();
+function confirmBulk(action){
+  const count=document.querySelectorAll(".request-check:checked").length;
+  if(!count){alert("Select at least one pending room-night request.");return false;}
+  if(action==="reject"&&!document.querySelector('[name="rejection_reason"]').value.trim()){alert("Enter a rejection reason.");return false;}
+  return confirm((action==="approve"?"Approve ":"Reject ")+count+" selected complimentary room-night request(s)?");
+}
+</script>
 {% endblock %}
