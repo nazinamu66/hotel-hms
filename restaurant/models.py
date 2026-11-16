@@ -177,6 +177,8 @@ class POSOrder(models.Model):
 
         if self.status != "OPEN":
             raise ValidationError("Only OPEN orders can be charged.")
+        if self.is_complimentary_breakfast and self.folio.folio_type != "ROOM":
+            raise ValidationError("Complimentary breakfast must be assigned to a guest room folio.")
 
         hotel = self._validate_hotel_integrity()
 
