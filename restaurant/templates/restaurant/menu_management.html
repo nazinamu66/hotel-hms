@@ -1,0 +1,139 @@
+{% extends "base/base.html" %}
+
+{% block title %}Restaurant Menu Management{% endblock %}
+
+{% block content %}
+<style>
+.menu-admin{max-width:1450px;margin:0 auto;color:#172033}
+.menu-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:22px}
+.menu-head h1{margin:0 0 6px;font-size:clamp(1.6rem,2.5vw,2.1rem);font-weight:850;letter-spacing:-.035em}
+.menu-head p{margin:0;color:#64748b;font-size:.92rem}
+.menu-card{background:#fff;border:1px solid #e5eaf1;border-radius:14px;box-shadow:0 3px 14px rgba(15,23,42,.04)}
+.menu-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.menu-stat{padding:17px 19px}
+.menu-stat span{display:block;color:#64748b;font-size:.73rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.menu-stat strong{display:block;margin-top:5px;font-size:1.65rem;font-weight:850}
+.menu-toolbar{display:flex;align-items:end;gap:12px;flex-wrap:wrap;padding:16px;margin-bottom:16px}
+.menu-field{display:flex;flex-direction:column;gap:6px;min-width:150px}
+.menu-field.grow{flex:1;min-width:210px}
+.menu-field label{font-size:.75rem;font-weight:800;color:#475569}
+.menu-field input,.menu-field select{height:41px;padding:8px 11px;border:1px solid #d7e0eb;border-radius:9px;background:#fff;color:#172033;font-size:.86rem}
+.menu-btn{height:41px;padding:0 15px;border:0;border-radius:9px;background:#1d4ed8;color:#fff;font-size:.84rem;font-weight:800;cursor:pointer}
+.menu-reset{align-self:center;color:#64748b;text-decoration:none;font-size:.84rem;font-weight:700;padding:10px}
+.menu-table-wrap{overflow-x:auto}
+.menu-table{width:100%;min-width:760px;border-collapse:collapse}
+.menu-table th{padding:13px 16px;background:#f8fafc;border-bottom:1px solid #e8edf4;text-align:left;color:#64748b;font-size:.69rem;letter-spacing:.07em;text-transform:uppercase}
+.menu-table td{padding:15px 16px;border-bottom:1px solid #edf1f5;font-size:.86rem;vertical-align:middle}
+.menu-table tr:last-child td{border-bottom:0}
+.item-name{font-weight:800;color:#172033}
+.item-meta{display:block;margin-top:3px;color:#64748b;font-size:.75rem}
+.menu-pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:.7rem;font-weight:850}
+.pill-food{background:#dcfce7;color:#166534}.pill-drink{background:#dbeafe;color:#1d4ed8}
+.pill-on{background:#dcfce7;color:#166534}.pill-off{background:#f1f5f9;color:#64748b}
+.menu-toggle-btn{min-width:135px;padding:8px 11px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#334155;font-size:.78rem;font-weight:800;cursor:pointer}
+.menu-toggle-btn.enable{border-color:#bbf7d0;background:#f0fdf4;color:#166534}
+.menu-toggle-btn.disable{border-color:#fecaca;background:#fff7f7;color:#b91c1c}
+.menu-empty{padding:48px 20px;text-align:center;color:#64748b}
+.menu-empty strong{display:block;margin-bottom:5px;color:#334155}
+.menu-note{padding:14px 16px;margin-bottom:16px;background:#eff6ff;border:1px solid #dbeafe;border-radius:11px;color:#1e40af;font-size:.83rem;line-height:1.5}
+@media(max-width:700px){.menu-head{flex-direction:column}.menu-stats{grid-template-columns:1fr 1fr}.menu-toolbar{align-items:stretch}.menu-field,.menu-field.grow{min-width:100%}.menu-btn{width:100%}}
+</style>
+
+<div class="menu-admin">
+    <header class="menu-head">
+        <div>
+            <h1>Restaurant Menu Management</h1>
+            <p>Manage which existing menu items can be served as complimentary breakfast.</p>
+        </div>
+    </header>
+
+    {% if hotels|length > 1 or not hotel %}
+    <form method="get" class="menu-card menu-toolbar">
+        <div class="menu-field grow">
+            <label for="hotel">Hotel</label>
+            <select name="hotel" id="hotel" required>
+                <option value="">Select a hotel</option>
+                {% for available_hotel in hotels %}
+                    <option value="{{ available_hotel.pk }}" {% if hotel and hotel.pk == available_hotel.pk %}selected{% endif %}>{{ available_hotel.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button class="menu-btn" type="submit">Open Menu</button>
+    </form>
+    {% endif %}
+
+    {% if hotel %}
+        <div class="menu-stats">
+            <div class="menu-card menu-stat"><span>Menu items</span><strong>{{ total_items }}</strong></div>
+            <div class="menu-card menu-stat"><span>Breakfast eligible</span><strong>{{ breakfast_items }}</strong></div>
+            <div class="menu-card menu-stat"><span>Matching results</span><strong>{{ result_count }}</strong></div>
+        </div>
+
+        <div class="menu-note">
+            <strong>{{ hotel.name }}</strong> — Choose the actual dishes and drinks that may be redeemed under the hotel's one-breakfast-per-room entitlement. This setting does not change menu prices, recipes, stock or normal POS availability.
+        </div>
+
+        <form method="get" class="menu-card menu-toolbar">
+            <input type="hidden" name="hotel" value="{{ hotel.pk }}">
+            <div class="menu-field grow">
+                <label for="q">Search menu</label>
+                <input type="search" id="q" name="q" value="{{ search_query }}" placeholder="Search menu item, product or SKU">
+            </div>
+            <div class="menu-field">
+                <label for="category">Category</label>
+                <select name="category" id="category">
+                    <option value="">All categories</option>
+                    <option value="FOOD" {% if selected_category == "FOOD" %}selected{% endif %}>Food</option>
+                    <option value="DRINK" {% if selected_category == "DRINK" %}selected{% endif %}>Drinks</option>
+                </select>
+            </div>
+            <div class="menu-field">
+                <label for="breakfast">Breakfast eligibility</label>
+                <select name="breakfast" id="breakfast">
+                    <option value="">All items</option>
+                    <option value="yes" {% if breakfast_filter == "yes" %}selected{% endif %}>Breakfast eligible</option>
+                    <option value="no" {% if breakfast_filter == "no" %}selected{% endif %}>Not eligible</option>
+                </select>
+            </div>
+            <button class="menu-btn" type="submit">Apply filters</button>
+            <a class="menu-reset" href="{% url 'restaurant_menu_management' %}?hotel={{ hotel.pk }}">Reset</a>
+        </form>
+
+        <div class="menu-card menu-table-wrap">
+            <table class="menu-table">
+                <thead>
+                    <tr><th>Menu item</th><th>Category</th><th>Product type</th><th>Regular price</th><th>Breakfast status</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    {% for item in menu_items %}
+                    <tr>
+                        <td><span class="item-name">{{ item.name }}</span><span class="item-meta">{{ item.product.sku }} · {{ item.product.hotel.name }}</span></td>
+                        <td><span class="menu-pill {% if item.category == 'FOOD' %}pill-food{% else %}pill-drink{% endif %}">{{ item.get_category_display }}</span></td>
+                        <td>{{ item.product.get_product_type_display }}</td>
+                        <td>₦{{ item.price|floatformat:2 }}</td>
+                        <td>{% if item.is_breakfast_item %}<span class="menu-pill pill-on">Breakfast eligible</span>{% else %}<span class="menu-pill pill-off">Not eligible</span>{% endif %}</td>
+                        <td>
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="hotel" value="{{ hotel.pk }}">
+                                <input type="hidden" name="item_id" value="{{ item.pk }}">
+                                <input type="hidden" name="is_breakfast_item" value="{% if item.is_breakfast_item %}0{% else %}1{% endif %}">
+                                {% if item.is_breakfast_item %}
+                                    <button class="menu-toggle-btn disable" type="submit">Remove from breakfast</button>
+                                {% else %}
+                                    <button class="menu-toggle-btn enable" type="submit">Allow for breakfast</button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="menu-empty"><strong>No menu items found</strong>Try changing the search or filters. Only existing menu items linked to this hotel are shown.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="menu-card menu-empty"><strong>No accessible hotels</strong>Your account does not currently have access to an active hotel.</div>
+    {% endif %}
+</div>
+{% endblock %}
