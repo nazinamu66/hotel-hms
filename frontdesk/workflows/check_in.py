@@ -192,6 +192,15 @@ def create_folio(
         ]
     )
 
+    # Attach approved reservation-night waivers before the first charge is posted.
+    if reservation is not None:
+        from billing.models import ComplimentaryRoomNight
+        ComplimentaryRoomNight.objects.filter(
+            reservation=reservation,
+            status__in=["PENDING", "APPROVED"],
+            folio__isnull=True,
+        ).update(folio=folio)
+
     # Link corporate allocation before posting the first room-night charge.
     if group_allocation is not None:
         group_allocation.room = room
