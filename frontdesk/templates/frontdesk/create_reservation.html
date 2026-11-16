@@ -1,698 +1,291 @@
 {% extends "base/base.html" %}
 
-{% block title %}Create Reservation{% endblock %}
+{% block title %}New Reservation | Hotel HMS{% endblock %}
 
 {% block content %}
-
 <style>
-
-    .page-header {
-        margin-bottom: 24px;
-    }
-
-    .page-title {
-        margin: 0;
-        font-size: 28px;
-        font-weight: 700;
-        color: #1f2937;
-    }
-
-    .page-subtitle {
-        margin: 6px 0 0;
-        color: #6b7280;
-        font-size: 14px;
-    }
-
-    .reservation-card {
-        max-width: 760px;
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 28px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-
-    .form-group {
-        margin-bottom: 20px;
-    }
-
-    .form-group.full-width {
-        grid-column: 1 / -1;
-    }
-
-    .form-label {
-        display: block;
-        margin-bottom: 7px;
-        font-size: 13px;
-        font-weight: 700;
-        color: #334155;
-    }
-
-    .form-control {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 11px 13px;
-        border: 1px solid #cbd5e1;
-        border-radius: 8px;
-        background: white;
-        color: #1e293b;
-        font-size: 14px;
-    }
-
-    .form-control:focus {
-        outline: none;
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37,99,235,.12);
-    }
-
-    /* =========================
-       GUEST SEARCH
-       ========================= */
-
-    .field-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 7px;
-        gap: 10px;
-    }
-
-    .field-header .form-label {
-        margin: 0;
-    }
-
-    .add-guest-link {
-        font-size: 13px;
-        font-weight: 600;
-        color: #2563eb;
-        text-decoration: none;
-    }
-
-    .add-guest-link:hover {
-        text-decoration: underline;
-    }
-
-    .guest-picker {
-        position: relative;
-    }
-
-    .guest-search-input {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 11px 13px;
-        border: 1px solid #cbd5e1;
-        border-radius: 8px;
-        background: white;
-        color: #1e293b;
-        font-size: 14px;
-    }
-
-    .guest-search-input:focus {
-        outline: none;
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37,99,235,.12);
-    }
-
-    .guest-results {
-        display: none;
-        position: absolute;
-        z-index: 1000;
-        left: 0;
-        right: 0;
-        top: calc(100% + 4px);
-        background: white;
-        border: 1px solid #dbe2ea;
-        border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.10);
-        max-height: 280px;
-        overflow-y: auto;
-    }
-
-    .guest-result {
-        width: 100%;
-        display: block;
-        text-align: left;
-        border: 0;
-        border-bottom: 1px solid #eef2f7;
-        background: white;
-        padding: 12px 14px;
-        cursor: pointer;
-    }
-
-    .guest-result:last-child {
-        border-bottom: none;
-    }
-
-    .guest-result:hover {
-        background: #f5f8ff;
-    }
-
-    .guest-result strong {
-        display: block;
-        color: #1e293b;
-        font-size: 14px;
-    }
-
-    .guest-result span {
-        display: block;
-        margin-top: 3px;
-        color: #64748b;
-        font-size: 12px;
-    }
-
-    .guest-no-results {
-        padding: 14px;
-        color: #64748b;
-        font-size: 14px;
-    }
-
-    .selected-guest {
-        display: none;
-        margin-top: 8px;
-        padding: 8px 12px;
-        background: #f0fdf4;
-        border: 1px solid #bbf7d0;
-        border-radius: 7px;
-        color: #166534;
-        font-size: 13px;
-    }
-
-    /* =========================
-       ACTIONS
-       ========================= */
-
-    .actions {
-        display: flex;
-        gap: 10px;
-        margin-top: 8px;
-    }
-
-    .primary-btn {
-        padding: 10px 18px;
-        background: #2563eb;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-    }
-
-    .primary-btn:hover {
-        background: #1d4ed8;
-    }
-
-    .secondary-btn {
-        padding: 10px 18px;
-        background: #f8fafc;
-        color: #475569;
-        border: 1px solid #cbd5e1;
-        border-radius: 8px;
-        font-weight: 600;
-        text-decoration: none;
-    }
-
-    .secondary-btn:hover {
-        background: #f1f5f9;
-    }
-
-    @media (max-width: 650px) {
-
-        .reservation-card {
-            padding: 20px;
-        }
-
-        .form-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .form-group.full-width {
-            grid-column: auto;
-        }
-
-        .actions {
-            flex-direction: column;
-        }
-
-        .primary-btn,
-        .secondary-btn {
-            text-align: center;
-        }
-
-    }
-
+.res-page{max-width:1180px;margin:0 auto;padding:12px 2px 42px;color:#172033}
+.res-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}
+.res-eyebrow{font-size:.7rem;font-weight:850;letter-spacing:.11em;text-transform:uppercase;color:#2563eb;margin:0 0 7px}
+.res-title{font-size:1.8rem;line-height:1.15;font-weight:850;letter-spacing:-.045em;margin:0 0 7px;color:#172033}
+.res-subtitle{font-size:.88rem;color:#64748b;margin:0;max-width:620px;line-height:1.55}
+.res-back{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid #dbe3ed;border-radius:9px;color:#475569;text-decoration:none;font-size:.8rem;font-weight:800;background:#fff}
+.res-layout{display:grid;grid-template-columns:minmax(0,1fr) 285px;gap:18px;align-items:start}
+.res-card,.res-aside-card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;box-shadow:0 4px 16px rgba(15,23,42,.035)}
+.res-card{overflow:visible}
+.res-card-head{padding:19px 22px;border-bottom:1px solid #edf1f5}
+.res-card-head h2{font-size:1rem;font-weight:850;margin:0 0 4px}
+.res-card-head p{font-size:.78rem;color:#64748b;margin:0}
+.res-form{padding:22px}
+.res-section{margin:0 0 23px}
+.res-section:last-of-type{margin-bottom:0}
+.res-section-title{display:flex;align-items:center;gap:9px;margin:0 0 15px;font-size:.8rem;font-weight:850;color:#334155}
+.res-section-number{width:25px;height:25px;border-radius:8px;display:grid;place-items:center;background:#eff6ff;color:#1d4ed8;font-size:.72rem}
+.res-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.res-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.res-field.full{grid-column:1/-1}
+.res-label{font-size:.74rem;font-weight:800;color:#475569}
+.res-control{width:100%;height:44px;box-sizing:border-box;padding:9px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#172033;font:inherit;font-size:.83rem;min-width:0}
+.res-control:focus,.res-search:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.res-hint{font-size:.7rem;color:#94a3b8;line-height:1.4}
+.res-picker{position:relative}
+.res-search{width:100%;height:44px;box-sizing:border-box;padding:9px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#172033;font:inherit;font-size:.83rem}
+.res-guest-results{display:none;position:absolute;z-index:30;top:calc(100% + 5px);left:0;right:0;max-height:260px;overflow:auto;background:#fff;border:1px solid #dbe3ed;border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,.13)}
+.res-guest-result{display:block;width:100%;padding:11px 13px;text-align:left;border:0;border-bottom:1px solid #eef2f7;background:#fff;cursor:pointer}
+.res-guest-result:last-child{border-bottom:0}
+.res-guest-result:hover,.res-guest-result:focus{background:#f5f8ff;outline:none}
+.res-guest-result strong{display:block;font-size:.82rem;color:#172033}
+.res-guest-result span{display:block;margin-top:3px;font-size:.7rem;color:#64748b}
+.res-no-results{padding:13px;color:#64748b;font-size:.78rem}
+.res-selected{display:none;margin-top:8px;padding:9px 11px;border:1px solid #bbf7d0;border-radius:9px;background:#f0fdf4;color:#166534;font-size:.76rem}
+.res-field-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.res-add-guest{font-size:.73rem;font-weight:850;color:#2563eb;text-decoration:none;white-space:nowrap}
+.res-add-guest:hover{text-decoration:underline}
+.res-divider{height:1px;background:#edf1f5;margin:22px 0}
+.res-actions{display:flex;justify-content:flex-end;align-items:center;gap:9px;padding-top:22px;margin-top:22px;border-top:1px solid #edf1f5}
+.res-submit{height:43px;padding:0 17px;border:0;border-radius:9px;background:#1d4ed8;color:#fff;font-size:.8rem;font-weight:850;cursor:pointer}
+.res-submit:hover{background:#1e40af}
+.res-cancel{height:43px;display:inline-flex;align-items:center;padding:0 15px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#475569;text-decoration:none;font-size:.8rem;font-weight:800}
+.res-aside{display:grid;gap:14px}
+.res-aside-card{padding:17px}
+.res-aside-card h3{font-size:.82rem;font-weight:850;margin:0 0 12px;color:#263449}
+.res-tip{display:flex;gap:10px;margin:11px 0 0;align-items:flex-start}
+.res-tip-icon{width:25px;height:25px;flex:0 0 25px;display:grid;place-items:center;border-radius:8px;background:#f1f5f9;color:#475569;font-size:.75rem;font-weight:850}
+.res-tip p{font-size:.72rem;color:#64748b;line-height:1.5;margin:1px 0 0}
+.res-policy{font-size:.72rem;color:#64748b;line-height:1.55;margin:0}
+.res-policy strong{color:#334155}
+@media(max-width:900px){.res-layout{grid-template-columns:minmax(0,1fr) 245px}}
+@media(max-width:720px){.res-layout{grid-template-columns:1fr}.res-aside{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.res-page{padding:6px 0 30px}.res-title{font-size:1.5rem}.res-form{padding:17px}.res-card-head{padding:17px}.res-grid{grid-template-columns:1fr}.res-field.full{grid-column:auto}.res-aside{grid-template-columns:1fr}.res-actions{flex-direction:column-reverse;align-items:stretch}.res-submit,.res-cancel{width:100%;justify-content:center;box-sizing:border-box}}
 </style>
 
+<div class="res-page">
+  <header class="res-head">
+    <div>
+      <p class="res-eyebrow">Frontdesk · Reservations</p>
+      <h1 class="res-title">Create a reservation</h1>
+      <p class="res-subtitle">Set up a guest stay by selecting the guest, room category and stay dates. Availability is checked when you submit the reservation.</p>
+    </div>
+    <a class="res-back" href="{% url 'frontdesk_reservations' %}">← Back to reservations</a>
+  </header>
 
-<div class="page-header">
+  <div class="res-layout">
+    <section class="res-card">
+      <div class="res-card-head">
+        <h2>Reservation details</h2>
+        <p>Fields marked as required must be completed before submission.</p>
+      </div>
 
-    <h1 class="page-title">
-        Create Reservation
-    </h1>
-
-    <p class="page-subtitle">
-        Schedule a guest stay by selecting the guest, room category and dates.
-    </p>
-
-</div>
-
-
-<div class="reservation-card">
-
-    <form method="post">
-
+      <form method="post" class="res-form">
         {% csrf_token %}
 
-        <div class="form-grid">
-
-
-            <!-- =========================
-                 GUEST
-                 ========================= -->
-
-            <div class="form-group full-width">
-
-                <div class="field-header">
-
-                    <label class="form-label">
-                        Guest
-                    </label>
-
-                    <a
-                        href="{% url 'frontdesk_guest_create' %}?next=reservation"
-                        class="add-guest-link"
-                    >
-                        + Add Guest
-                    </a>
-
-                </div>
-
-
-                <div class="guest-picker">
-
-                    <input
-                        type="text"
-                        id="guest-search"
-                        class="guest-search-input"
-                        placeholder="Search guest by name, phone, email or ID..."
-                        autocomplete="off"
-                    >
-
-
-                    <input
-                        type="hidden"
-                        name="guest"
-                        id="guest-id"
-                        value="{{ selected_guest_id|default:'' }}"
-                    >
-
-
-                    <div
-                        id="guest-results"
-                        class="guest-results"
-                    ></div>
-
-                </div>
-
-
-                <div
-                    id="selected-guest"
-                    class="selected-guest"
-                >
-
-                    {% if selected_guest_id %}
-
-                        {% for g in guests %}
-
-                            {% if selected_guest_id == g.id|stringformat:"s" %}
-
-                                <strong>
-                                    {{ g.full_name }}
-                                </strong>
-
-                                {% if g.phone %}
-                                    — {{ g.phone }}
-                                {% endif %}
-
-                            {% endif %}
-
-                        {% endfor %}
-
+        <section class="res-section">
+          <h3 class="res-section-title"><span class="res-section-number">1</span> Guest information</h3>
+          <div class="res-grid">
+            <div class="res-field full">
+              <div class="res-field-head">
+                <label class="res-label" for="guest-search">Guest <span aria-hidden="true">*</span></label>
+                <a href="{% url 'frontdesk_guest_create' %}?next=reservation" class="res-add-guest">＋ Add new guest</a>
+              </div>
+              <div class="res-picker">
+                <input type="text" id="guest-search" class="res-search" placeholder="Search by name, phone, email or ID number" autocomplete="off" aria-label="Search for a guest">
+                <input type="hidden" name="guest" id="guest-id" value="{{ selected_guest_id|default:'' }}" required>
+                <div id="guest-results" class="res-guest-results" role="listbox" aria-label="Guest search results"></div>
+              </div>
+              <div id="selected-guest" class="res-selected" aria-live="polite">
+                {% if selected_guest_id %}
+                  {% for g in guests %}
+                    {% if selected_guest_id == g.id|stringformat:"s" %}
+                      <strong>{{ g.full_name }}</strong>{% if g.phone %} — {{ g.phone }}{% endif %}
                     {% endif %}
-
-                </div>
-
+                  {% endfor %}
+                {% endif %}
+              </div>
+              <span class="res-hint">Choose a guest from the search results. You can add a new guest if they are not registered.</span>
             </div>
+          </div>
+        </section>
 
+        <div class="res-divider"></div>
 
-            <!-- =========================
-                 ROOM CATEGORY
-                 ========================= -->
-
-            <div class="form-group">
-
-                <label class="form-label">
-                    Room Category
-                </label>
-
-                <select
-                    name="category"
-                    required
-                    class="form-control"
-                >
-
-                    <option value="">
-                        Select Room Category
-                    </option>
-
-                    {% for c in categories %}
-
-                        <option value="{{ c.id }}">
-                            {{ c.name }}
-                        </option>
-
-                    {% endfor %}
-
-                </select>
-
+        <section class="res-section">
+          <h3 class="res-section-title"><span class="res-section-number">2</span> Room and stay</h3>
+          <div class="res-grid">
+            <div class="res-field">
+              <label class="res-label" for="room-category">Room category <span aria-hidden="true">*</span></label>
+              <select id="room-category" name="category" required class="res-control">
+                <option value="">Select room category</option>
+                {% for c in categories %}
+                  <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+              </select>
             </div>
-
-            <div class="form-group">
-
-                <label class="form-label">
-                    Number of Rooms
-                </label>
-
-                <input
-                    type="number"
-                    name="number_of_rooms"
-                    value="1"
-                    min="1"
-                    required
-                    class="form-control"
-                >
-
+            <div class="res-field">
+              <label class="res-label" for="number-of-rooms">Number of rooms <span aria-hidden="true">*</span></label>
+              <input id="number-of-rooms" type="number" name="number_of_rooms" value="1" min="1" step="1" required class="res-control">
+              <span class="res-hint">Availability is validated for the full stay.</span>
             </div>
-
-            <div class="form-group">
-                <label class="form-label">Room Discount</label>
-                <select name="room_discount_percent" class="form-control">
-                    <option value="0">No discount</option>
-                    <option value="5">5%</option>
-                    <option value="10">10%</option>
-                    <option value="15">15%</option>
-                </select>
+            <div class="res-field">
+              <label class="res-label" for="check-in">Check-in date <span aria-hidden="true">*</span></label>
+              <input id="check-in" type="date" name="check_in" required class="res-control">
             </div>
-
-            <div class="form-group">
-                <label class="form-label">Discount Reason</label>
-                <input type="text" name="room_discount_reason" maxlength="255"
-                       class="form-control" placeholder="Required when a discount is selected">
+            <div class="res-field">
+              <label class="res-label" for="check-out">Check-out date <span aria-hidden="true">*</span></label>
+              <input id="check-out" type="date" name="check_out" required class="res-control">
             </div>
+          </div>
+        </section>
 
+        <div class="res-divider"></div>
 
-            <!-- =========================
-                 CHECK-IN
-                 ========================= -->
-
-            <div class="form-group">
-
-                <label class="form-label">
-                    Check-in Date
-                </label>
-
-                <input
-                    type="date"
-                    name="check_in"
-                    required
-                    class="form-control"
-                >
-
+        <section class="res-section">
+          <h3 class="res-section-title"><span class="res-section-number">3</span> Room discount</h3>
+          <div class="res-grid">
+            <div class="res-field">
+              <label class="res-label" for="room-discount">Discount</label>
+              <select id="room-discount" name="room_discount_percent" class="res-control">
+                <option value="0">No discount</option>
+                <option value="5">5%</option>
+                <option value="10">10%</option>
+                <option value="15">15%</option>
+              </select>
             </div>
-
-
-            <!-- =========================
-                 CHECK-OUT
-                 ========================= -->
-
-            <div class="form-group">
-
-                <label class="form-label">
-                    Check-out Date
-                </label>
-
-                <input
-                    type="date"
-                    name="check_out"
-                    required
-                    class="form-control"
-                >
-
+            <div class="res-field">
+              <label class="res-label" for="discount-reason">Discount reason</label>
+              <input id="discount-reason" type="text" name="room_discount_reason" maxlength="255" class="res-control" placeholder="Enter reason when discount applies">
+              <span class="res-hint">A reason is required for any discount above 0%.</span>
             </div>
+          </div>
+        </section>
 
-
+        <div class="res-actions">
+          <a href="{% url 'frontdesk_reservations' %}" class="res-cancel">Cancel</a>
+          <button type="submit" class="res-submit">Create reservation →</button>
         </div>
+      </form>
+    </section>
 
-
-        <!-- =========================
-             ACTIONS
-             ========================= -->
-
-        <div class="actions">
-
-            <button
-                type="submit"
-                class="primary-btn"
-            >
-                Create Reservation
-            </button>
-
-
-            <a
-                href="{% url 'frontdesk_reservations' %}"
-                class="secondary-btn"
-            >
-                Cancel
-            </a>
-
-        </div>
-
-    </form>
-
+    <aside class="res-aside">
+      <section class="res-aside-card">
+        <h3>Before you create</h3>
+        <div class="res-tip"><span class="res-tip-icon">1</span><p>Select the correct guest record. Guest details are searched within your hotel.</p></div>
+        <div class="res-tip"><span class="res-tip-icon">2</span><p>Choose the room category and number of rooms required for the stay.</p></div>
+        <div class="res-tip"><span class="res-tip-icon">3</span><p>Enter the check-in and check-out dates. Check-out must be after check-in.</p></div>
+      </section>
+      <section class="res-aside-card">
+        <h3>Reservation guarantee</h3>
+        <p class="res-policy">The system checks the guest's deposit against the reservation guarantee requirement after the booking is created. A reservation can remain valid while its guarantee is <strong>pending</strong>.</p>
+      </section>
+      <section class="res-aside-card">
+        <h3>Discount control</h3>
+        <p class="res-policy">Only <strong>5%, 10% and 15%</strong> discounts are available. A reason must be supplied whenever a discount is applied.</p>
+      </section>
+    </aside>
+  </div>
 </div>
 
-
 <script>
-
 document.addEventListener("DOMContentLoaded", function () {
+  const searchInput = document.getElementById("guest-search");
+  const guestIdInput = document.getElementById("guest-id");
+  const resultsBox = document.getElementById("guest-results");
+  const selectedGuestBox = document.getElementById("selected-guest");
+  let searchTimer = null;
 
-    const searchInput = document.getElementById("guest-search");
-    const guestIdInput = document.getElementById("guest-id");
-    const resultsBox = document.getElementById("guest-results");
-    const selectedGuestBox = document.getElementById("selected-guest");
+  if (guestIdInput.value) {
+    const selectedText = selectedGuestBox.textContent.trim();
+    if (selectedText) {
+      selectedGuestBox.style.display = "block";
+      searchInput.value = selectedText;
+    }
+  }
 
-    let searchTimer = null;
+  function showMessage(message) {
+    resultsBox.replaceChildren();
+    const item = document.createElement("div");
+    item.className = "res-no-results";
+    item.textContent = message;
+    resultsBox.appendChild(item);
+    resultsBox.style.display = "block";
+  }
 
+  searchInput.addEventListener("input", function () {
+    const query = this.value.trim();
+    guestIdInput.value = "";
+    selectedGuestBox.style.display = "none";
+    selectedGuestBox.replaceChildren();
+    clearTimeout(searchTimer);
 
-    /*
-     * If the page was opened after creating a guest,
-     * show the selected guest immediately.
-     */
-    if (guestIdInput.value) {
-
-        const selectedText = selectedGuestBox.textContent.trim();
-
-        if (selectedText) {
-            selectedGuestBox.style.display = "block";
-            searchInput.value = selectedText;
-        }
-
+    if (!query) {
+      resultsBox.replaceChildren();
+      resultsBox.style.display = "none";
+      return;
     }
 
-
-    /*
-     * Search guests
-     */
-    searchInput.addEventListener("input", function () {
-
-        const query = this.value.trim();
-
-        /*
-         * User is changing the search,
-         * so the old selected guest is no longer valid.
-         */
-        guestIdInput.value = "";
-
-        selectedGuestBox.style.display = "none";
-        selectedGuestBox.innerHTML = "";
-
-        clearTimeout(searchTimer);
-
-
-        if (!query) {
-
-            resultsBox.innerHTML = "";
-            resultsBox.style.display = "none";
-
+    searchTimer = setTimeout(function () {
+      fetch("{% url 'frontdesk_guest_search_api' %}?q=" + encodeURIComponent(query))
+        .then(function (response) {
+          if (!response.ok) throw new Error("Search request failed");
+          return response.json();
+        })
+        .then(function (data) {
+          resultsBox.replaceChildren();
+          if (!data.results || !data.results.length) {
+            showMessage("No guests found");
             return;
-        }
+          }
 
+          data.results.forEach(function (guest) {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "res-guest-result";
+            item.setAttribute("role", "option");
 
-        searchTimer = setTimeout(function () {
+            const name = document.createElement("strong");
+            name.textContent = guest.name || "Guest";
+            item.appendChild(name);
 
-            fetch(
-                "{% url 'frontdesk_guest_search_api' %}?q="
-                + encodeURIComponent(query)
-            )
+            const details = [guest.phone, guest.email, guest.id_number].filter(Boolean);
+            if (details.length) {
+              const detail = document.createElement("span");
+              detail.textContent = details.join(" · ");
+              item.appendChild(detail);
+            }
 
-            .then(function (response) {
+            item.addEventListener("click", function () {
+              guestIdInput.value = guest.id;
+              searchInput.value = guest.name || "";
+              selectedGuestBox.replaceChildren();
 
-                if (!response.ok) {
-                    throw new Error("Search request failed");
-                }
+              const selectedName = document.createElement("strong");
+              selectedName.textContent = guest.name || "Guest selected";
+              selectedGuestBox.appendChild(selectedName);
 
-                return response.json();
+              if (guest.phone) {
+                selectedGuestBox.appendChild(document.createTextNode(" — " + guest.phone));
+              }
 
-            })
-
-            .then(function (data) {
-
-                resultsBox.innerHTML = "";
-
-
-                if (!data.results.length) {
-
-                    resultsBox.innerHTML = `
-                        <div class="guest-no-results">
-                            No guests found
-                        </div>
-                    `;
-
-                    resultsBox.style.display = "block";
-
-                    return;
-                }
-
-
-                data.results.forEach(function (guest) {
-
-                    const item = document.createElement("button");
-
-                    item.type = "button";
-                    item.className = "guest-result";
-
-
-                    const details = [];
-
-                    if (guest.phone) {
-                        details.push(guest.phone);
-                    }
-
-                    if (guest.email) {
-                        details.push(guest.email);
-                    }
-
-                    if (guest.id_number) {
-                        details.push(guest.id_number);
-                    }
-
-
-                    item.innerHTML = `
-                        <strong>${guest.name}</strong>
-
-                        ${
-                            details.length
-                            ? `<span>${details.join(" · ")}</span>`
-                            : ""
-                        }
-                    `;
-
-
-                    item.addEventListener("click", function () {
-
-                        /*
-                         * Store the real database ID.
-                         */
-                        guestIdInput.value = guest.id;
-
-
-                        /*
-                         * Show guest name in the search field.
-                         */
-                        searchInput.value = guest.name;
-
-
-                        /*
-                         * Show selected guest confirmation.
-                         */
-                        selectedGuestBox.innerHTML = `
-                            <strong>${guest.name}</strong>
-                            ${
-                                guest.phone
-                                ? ` — ${guest.phone}`
-                                : ""
-                            }
-                        `;
-
-                        selectedGuestBox.style.display = "block";
-
-
-                        /*
-                         * Close results.
-                         */
-                        resultsBox.innerHTML = "";
-                        resultsBox.style.display = "none";
-
-                    });
-
-
-                    resultsBox.appendChild(item);
-
-                });
-
-
-                resultsBox.style.display = "block";
-
-            })
-
-
-            .catch(function () {
-
-                resultsBox.innerHTML = `
-                    <div class="guest-no-results">
-                        Unable to search guests.
-                    </div>
-                `;
-
-                resultsBox.style.display = "block";
-
+              selectedGuestBox.style.display = "block";
+              resultsBox.replaceChildren();
+              resultsBox.style.display = "none";
             });
 
-        }, 250);
+            resultsBox.appendChild(item);
+          });
 
-    });
+          resultsBox.style.display = "block";
+        })
+        .catch(function () {
+          showMessage("Unable to search guests. Please try again.");
+        });
+    }, 250);
+  });
 
-
-    /*
-     * Close dropdown when clicking elsewhere.
-     */
-    document.addEventListener("click", function (event) {
-
-        if (!event.target.closest(".guest-picker")) {
-
-            resultsBox.style.display = "none";
-
-        }
-
-    });
-
+  document.addEventListener("click", function (event) {
+    if (!event.target.closest(".res-picker")) {
+      resultsBox.style.display = "none";
+    }
+  });
 });
-
 </script>
-
 {% endblock %}
