@@ -150,6 +150,7 @@ def redeem_complimentary_breakfast(*, user, source_charge_id, cart):
         menu_item = MenuItem.objects.select_related("product").filter(
             pk=item_id,
             is_active=True,
+            is_breakfast_item=True,
             product__hotel_id=hotel.pk,
             product__usage_type="RESALE",
             product__product_type__in=("FOOD", "SNACK", "DRINK"),
