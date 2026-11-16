@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Guest, Folio, Charge, Payment
+from .models import Guest, Folio, Charge, Payment, ComplimentaryRoomNight
 
 
 @admin.register(Guest)
@@ -63,3 +63,14 @@ class ChargeAdmin(admin.ModelAdmin):
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('method', 'amount', 'collected_at', 'reference')
+
+
+@admin.register(ComplimentaryRoomNight)
+class ComplimentaryRoomNightAdmin(admin.ModelAdmin):
+    list_display = (
+        "reservation", "room_night_date", "waived_amount",
+        "status", "requested_by", "approved_by",
+    )
+    list_filter = ("status", "room_night_date", "rate_source")
+    search_fields = ("reservation__guest__first_name", "reservation__guest__last_name", "reason")
+    readonly_fields = ("requested_at", "approved_at", "consumed_at")
