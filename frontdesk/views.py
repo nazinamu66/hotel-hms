@@ -1970,7 +1970,7 @@ def calendar_create_reservation(request):
 def arrivals_departures_today(request):
 
     hotel = request.user.department.hotel
-    today = timezone.now().date()
+    today = timezone.localdate()
 
     arrivals = Reservation.objects.filter(
         hotel=hotel,
