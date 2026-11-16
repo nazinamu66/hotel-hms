@@ -179,7 +179,7 @@ class ComplimentaryBreakfastCostPostingTests(TestCase):
         from accounting.services.postings.cogs import post_cogs_for_order
 
         hotel = object()
-        expense = SimpleNamespace(system_key="complimentary_meals_expense", is_active=True, allow_posting=True)
+        expense = SimpleNamespace(system_key="complimentary_meals_expense", account_type="expense", is_system=True, is_active=True, allow_posting=True)
         get_or_create.return_value = (expense, True)
         order = make_order([
             make_item("DRINK", "5.125", 2, "Tea"),
