@@ -562,13 +562,18 @@ def room_board(request):
         ).values_list("room_id", flat=True)
     )
 
-    # Reservations
-    reservations_today = set(
+    # Today's arrivals: keep the actual reservation records for the dashboard list.
+    arrivals_today_qs = (
         Reservation.objects.filter(
             hotel=hotel,
             check_in_date=today,
-            status="RESERVED"
-        ).values_list("room_id", flat=True)
+            status="RESERVED",
+        )
+        .select_related("guest", "room_category", "room")
+        .order_by("check_in_date", "guest__last_name", "guest__first_name")
+    )
+    reservations_today = set(
+        arrivals_today_qs.values_list("room_id", flat=True)
     )
 
     arrivals_tomorrow = set(
@@ -577,6 +582,17 @@ def room_board(request):
             check_in_date=tomorrow,
             status="RESERVED"
         ).values_list("room_id", flat=True)
+    )
+
+    # Today's expected departures, including the current folio balance.
+    departures_today_qs = (
+        Folio.objects.filter(
+            hotel=hotel,
+            is_closed=False,
+            check_out_at__date=today,
+        )
+        .select_related("guest", "room", "reservation")
+        .order_by("check_out_at", "room__room_number")
     )
 
     # Active folios
@@ -594,18 +610,18 @@ def room_board(request):
         ).values_list("room_id", flat=True)
     )
 
+    total_rooms = rooms.count()
+    occupied_rooms = rooms.filter(status="OCCUPIED").count()
     stats = {
+        "total": total_rooms,
         "available": rooms.filter(status="AVAILABLE").count(),
-        "occupied": rooms.filter(status="OCCUPIED").count(),
+        "occupied": occupied_rooms,
         "dirty": rooms.filter(
             status__in=["VACANT_DIRTY", "OCCUPIED_DIRTY"]
         ).count(),
-        "arrivals": len(reservations_today),
-        "departures": Folio.objects.filter(
-            hotel=hotel,
-            check_out_at__date=today,
-            is_closed=False
-        ).count()
+        "arrivals": arrivals_today_qs.count(),
+        "departures": departures_today_qs.count(),
+        "occupancy_percent": round((occupied_rooms / total_rooms) * 100) if total_rooms else 0,
     }
 
     categories = {}
@@ -619,6 +635,8 @@ def room_board(request):
         {
             "categories": categories,
             "stats": stats,
+            "arrivals_today": arrivals_today_qs,
+            "departures_today": departures_today_qs,
             "folio_map": folio_map,
             "reservations_today": reservations_today,
             "arrivals_tomorrow": arrivals_tomorrow,
