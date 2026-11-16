@@ -1811,7 +1811,7 @@ def request_complimentary_room_nights(request, reservation_id):
     return redirect("frontdesk_reservation_detail", reservation_id=reservation_id)
 
 
-@role_required("MANAGER", "DIRECTOR", "ADMIN")
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
 def complimentary_room_night_queue(request):
     from billing.models import ComplimentaryRoomNight
 
@@ -1829,7 +1829,7 @@ def complimentary_room_night_queue(request):
     )
 
 
-@role_required("MANAGER", "DIRECTOR", "ADMIN")
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
 def bulk_decide_complimentary_room_nights(request):
     """Approve or reject a selected batch of pending room-night waivers atomically."""
     from billing.models import ComplimentaryRoomNight
@@ -1882,7 +1882,7 @@ def bulk_decide_complimentary_room_nights(request):
     return redirect("frontdesk_complimentary_room_night_queue")
 
 
-@role_required("MANAGER", "DIRECTOR", "ADMIN")
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
 def decide_complimentary_room_night(request, waiver_id, decision):
     from billing.models import ComplimentaryRoomNight
     from billing.services.complimentary_rooms import decide_complimentary_night
