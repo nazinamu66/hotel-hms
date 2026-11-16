@@ -14,6 +14,9 @@ from accounting.services.postings.cogs_reversal import (reverse_cogs_for_order,)
 
 def validate_refund(order, user):
 
+    if getattr(order, "is_complimentary_breakfast", False):
+        raise ValidationError("Complimentary breakfast redemptions are not guest sales and cannot be refunded.")
+
     if order.is_refunded:
         raise ValidationError("Order already refunded.")
 
