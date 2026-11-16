@@ -47,6 +47,11 @@
       <h1 class="cr-title">Complimentary Register</h1>
       <p class="cr-subtitle">A complete management audit trail for complimentary room nights and food redemptions.</p>
     </div>
+    {% if request.user.role == "MANAGER" or request.user.role == "GENERAL_MANAGER" or request.user.role == "DIRECTOR" or request.user.role == "ADMIN" %}
+    <a href="{% url 'frontdesk_complimentary_room_night_queue' %}" class="cr-btn" style="display:inline-flex;align-items:center;text-decoration:none;height:auto;min-height:42px;">
+      Review pending room approvals ({{ pending_room_count }})
+    </a>
+    {% endif %}
   </header>
 
   <form method="get" class="cr-card cr-filter">
