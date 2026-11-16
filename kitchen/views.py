@@ -1089,13 +1089,21 @@ def _build_batch_profitability_rows(batches, scoped_hotels):
         sold_cogs = Decimal("0.00")
         spoiled_qty = Decimal("0.000")
         spoiled_cost = Decimal("0.00")
+        complimentary_qty = Decimal("0.000")
+        complimentary_cost = Decimal("0.00")
         sales_by_order = {}
 
         for allocation in layer_allocations:
             movement = allocation.movement
             if movement.movement_type != "OUT":
                 continue
-            if movement.reference.startswith("POS-"):
+            if movement.reference.startswith("COMP-BREAKFAST-"):
+                try:
+                    order_id = int(movement.reference[len("COMP-BREAKFAST-"):])
+                except ValueError:
+                    continue
+                sales_by_order.setdefault(order_id, []).append(allocation)
+            elif movement.reference.startswith("POS-"):
                 try:
                     order_id = int(movement.reference[4:])
                 except ValueError:
@@ -1134,13 +1142,18 @@ def _build_batch_profitability_rows(batches, scoped_hotels):
                 ).first()
                 if not line:
                     continue
-                sold_qty += allocated_qty
-                sold_cogs += sum(
+                allocated_cost = sum(
                     (allocation.total_cost for allocation in allocations),
                     Decimal("0.00"),
                 )
+                if order.is_complimentary_breakfast:
+                    complimentary_qty += allocated_qty
+                    complimentary_cost += allocated_cost
+                else:
+                    sold_qty += allocated_qty
+                    sold_cogs += allocated_cost
                 total_product_allocated = StockMovementCostAllocation.objects.filter(
-                    movement__reference=f"POS-{order_id}",
+                    movement__reference__in=(f"POS-{order_id}", f"COMP-BREAKFAST-{order_id}"),
                     movement__product=product,
                     movement__movement_type="OUT",
                 ).aggregate(total=Sum("quantity"))["total"] or Decimal("0.000")
@@ -1176,7 +1189,7 @@ def _build_batch_profitability_rows(batches, scoped_hotels):
         traceability_status = "TRACEABLE" if layers.exists() else "UNATTRIBUTED"
         reconciliation_gap = (
             Decimal(batch.quantity_produced)
-            - sold_qty - spoiled_qty - remaining_qty
+            - sold_qty - complimentary_qty - spoiled_qty - remaining_qty
             if traceability_status == "TRACEABLE"
             else None
         )
@@ -1187,6 +1200,8 @@ def _build_batch_profitability_rows(batches, scoped_hotels):
             "quantity_produced": batch.quantity_produced,
             "production_cost": actual_production_cost,
             "quantity_sold": sold_qty,
+            "quantity_complimentary": complimentary_qty,
+            "complimentary_cost": complimentary_cost,
             "sales_revenue": sales_revenue,
             "sales_cogs": sold_cogs,
             "gross_profit": sales_revenue - sold_cogs,
@@ -1243,6 +1258,21 @@ def kitchen_management_report(request):
         order__is_refunded=False,
         menu_item__product__product_type__in=("FOOD", "SNACK"),
     ).select_related("order", "menu_item", "menu_item__product", "order__department__hotel")
+
+    complimentary_items = POSOrderItem.objects.filter(
+        order__department__hotel__in=scoped_hotels,
+        order__created_at__date__gte=date_from,
+        order__created_at__date__lte=date_to,
+        order__status__in=("CHARGED", "PAID"),
+        order__is_refunded=False,
+        order__is_complimentary_breakfast=True,
+        menu_item__product__product_type__in=("FOOD", "SNACK", "DRINK"),
+    ).select_related("order", "menu_item__product")
+    complimentary_breakfast_quantity = sum((item.quantity for item in complimentary_items), 0)
+    complimentary_breakfast_cost = sum(
+        ((item.cost_at_sale or Decimal("0")) * item.quantity for item in complimentary_items),
+        Decimal("0.00"),
+    )
 
     total_sales = Decimal("0.00")
     sales_cogs = Decimal("0.00")
@@ -1348,6 +1378,8 @@ def kitchen_management_report(request):
         "sales_cogs": sales_cogs,
         "estimated_gross_profit": total_sales - sales_cogs,
         "total_sold": total_sold,
+        "complimentary_breakfast_quantity": complimentary_breakfast_quantity,
+        "complimentary_breakfast_cost": complimentary_breakfast_cost,
         "production_count": production_count,
         "portions_produced": portions_produced,
         "production_cost": production_cost,
@@ -1870,6 +1902,7 @@ def kitchen_food_sales_report(request):
         menu_item__product__product_type="FOOD",
         order__status__in=["CHARGED", "PAID"],
         order__is_refunded=False,
+        order__is_complimentary_breakfast=False,
     ).select_related(
         "order", "order__created_by", "order__shift",
         "menu_item", "menu_item__product",
