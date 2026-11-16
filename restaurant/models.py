@@ -232,8 +232,16 @@ class POSOrder(models.Model):
                 department=stock_department,
                 quantity=qty,
                 user=self.created_by,
-                reason="Restaurant POS sale",
-                reference=f"POS-{self.id}",
+                reason=(
+                    "Complimentary breakfast redemption"
+                    if self.is_complimentary_breakfast
+                    else "Restaurant POS sale"
+                ),
+                reference=(
+                    f"COMP-BREAKFAST-{self.id}"
+                    if self.is_complimentary_breakfast
+                    else f"POS-{self.id}"
+                ),
             )
 
             # The FIFO engine is now the source of the historical
