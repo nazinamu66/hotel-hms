@@ -2,7 +2,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import transaction, models
 from django.utils import timezone
 
 from billing.models import (
@@ -28,6 +28,15 @@ def _reservation_rate(reservation):
     if not rate or not rate.is_active:
         raise ValidationError("No active rate exists for this room category.")
     return Decimal(rate.price_per_night), "STANDARD"
+
+
+def _has_room_charge(folio, night_date):
+    # Check both the structured date field and the legacy room-charge
+    # reference format so older posted room nights are not waived again.
+    return Charge.objects.filter(folio=folio).filter(
+        models.Q(room_night_date=night_date)
+        | models.Q(reference__startswith="ROOM-", reference__endswith=f"-{night_date.isoformat()}")
+    ).exists()
 
 
 @transaction.atomic
@@ -61,9 +70,7 @@ def request_complimentary_nights(*, reservation, start_date, end_date, reason, u
     created = []
     day = start_date
     while day <= end_date:
-        if folio and Charge.objects.filter(
-            folio=folio, room_night_date=day
-        ).exists():
+        if folio and _has_room_charge(folio, day):
             raise ValidationError(
                 f"{day:%d %b %Y} already has a posted room charge. "
                 "Use the authorised credit/refund workflow for retrospective adjustments."
@@ -93,12 +100,12 @@ def decide_complimentary_night(*, waiver, user, approve, rejection_reason=""):
     ).get(pk=waiver.pk)
     if waiver.status != "PENDING":
         raise ValidationError("Only pending complimentary requests can be decided.")
+    if waiver.reservation.status not in ("RESERVED", "CHECKED_IN"):
+        raise ValidationError("The reservation is no longer eligible for complimentary accommodation.")
     if waiver.requested_by_id == user.pk:
         raise ValidationError("The person who requested a complimentary night cannot authorise their own request.")
     if approve:
-        if waiver.folio_id and Charge.objects.filter(
-            folio=waiver.folio, room_night_date=waiver.room_night_date
-        ).exists():
+        if waiver.folio_id and _has_room_charge(waiver.folio, waiver.room_night_date):
             raise ValidationError("A room charge has already been posted for this date.")
         waiver.status = "APPROVED"
         waiver.approved_by = user
