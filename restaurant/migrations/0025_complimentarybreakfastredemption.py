@@ -10,6 +10,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ("billing", "0036_complimentary_room_night"),
         ("restaurant", "0024_restaurantspoilagerecord"),
+        ("rooms", "0012_alter_amenity_hotel"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -30,6 +31,7 @@ class Migration(migrations.Migration):
                 ("breakfast_date", models.DateField()),
                 ("redeemed_at", models.DateTimeField(default=django.utils.timezone.now)),
                 ("folio", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="breakfast_redemptions", to="billing.folio")),
+                ("room", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="breakfast_redemptions", to="rooms.room")),
                 ("order", models.OneToOneField(on_delete=django.db.models.deletion.PROTECT, related_name="breakfast_redemption", to="restaurant.posorder")),
                 ("redeemed_by", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="complimentary_breakfast_redemptions", to=settings.AUTH_USER_MODEL)),
                 ("source_charge", models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="breakfast_redemptions", to="billing.charge")),
@@ -38,7 +40,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name="complimentarybreakfastredemption",
-            constraint=models.UniqueConstraint(fields=("folio", "breakfast_date"), name="unique_room_breakfast_redemption_per_day"),
+            constraint=models.UniqueConstraint(fields=("room", "breakfast_date"), name="unique_room_breakfast_redemption_per_day"),
         ),
         migrations.AddConstraint(
             model_name="complimentarybreakfastredemption",
