@@ -1,0 +1,43 @@
+{% extends "base/base.html" %}
+{% block content %}
+<div class="container py-4" style="max-width:1100px;">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="mb-1">Complimentary accommodation approvals</h2>
+      <p class="text-muted mb-0">Review room-night waivers requested by Frontdesk.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'frontdesk_room_board' %}">Back to Frontdesk</a>
+  </div>
+
+  {% for item in complimentary_requests %}
+  <div class="card mb-3 shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between flex-wrap gap-2">
+        <div>
+          <h5 class="mb-1">{{ item.reservation.guest.full_name }} · Reservation #{{ item.reservation_id }}</h5>
+          <div class="text-muted small">{{ item.reservation.hotel.name }} · {{ item.room_night_date|date:"d M Y" }}</div>
+        </div>
+        <strong>₦{{ item.waived_amount|floatformat:2 }} waived</strong>
+      </div>
+      <p class="my-3">{{ item.reason|linebreaksbr }}</p>
+      <div class="small text-muted mb-3">
+        Requested by {{ item.requested_by }} on {{ item.requested_at|date:"d M Y, H:i" }} · Rate source: {{ item.get_rate_source_display|default:item.rate_source }}
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <form method="post" action="{% url 'frontdesk_complimentary_room_night_decide' item.id 'approve' %}">
+          {% csrf_token %}
+          <button class="btn btn-success" type="submit">Approve waiver</button>
+        </form>
+        <form method="post" action="{% url 'frontdesk_complimentary_room_night_decide' item.id 'reject' %}" class="d-flex gap-2 flex-wrap">
+          {% csrf_token %}
+          <input class="form-control" name="rejection_reason" required placeholder="Reason for rejection" style="min-width:240px;">
+          <button class="btn btn-outline-danger" type="submit">Reject</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="alert alert-light border">There are no pending complimentary accommodation requests.</div>
+  {% endfor %}
+</div>
+{% endblock %}
