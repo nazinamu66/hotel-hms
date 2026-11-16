@@ -505,7 +505,7 @@
                         {% csrf_token %}
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">First complimentary night</label>
-                            <input type="date" class="form-control" name="start_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" max="{{ reservation.check_out_date|date:'Y-m-d' }}" required>
+                            <input type="date" class="form-control" name="start_date" min="{{ reservation.check_in_date|date:'Y-m-d' }}" required>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Last complimentary night</label>
