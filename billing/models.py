@@ -1175,64 +1175,6 @@ class CompanyServicePolicy(models.Model):
         return f"{self.group_reservation.reference}: {self.service_name}"
 
 
-# Charges retain the payer decision made when the service is posted. The
-# default is INDIVIDUAL so all existing charge creation paths remain unchanged.
-Charge.BILLING_PARTY_CHOICES = (
-    ("INDIVIDUAL", "Occupant"),
-    ("COMPANY", "Company"),
-)
-Charge.add_to_class(
-    "billing_party",
-    models.CharField(
-        max_length=12,
-        choices=Charge.BILLING_PARTY_CHOICES,
-        default="INDIVIDUAL",
-        db_index=True,
-    ),
-)
-Charge.add_to_class(
-    "group_room_allocation",
-    models.ForeignKey(
-        GroupReservationRoom,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="charges",
-    ),
-)
-Charge.add_to_class(
-    "room_night_date",
-    models.DateField(
-        null=True,
-        blank=True,
-        db_index=True,
-        help_text="The room-night date represented by this room charge.",
-    ),
-)
-Charge.add_to_class(
-    "room_rate",
-    models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        help_text="Immutable nightly rate snapshot used when this charge was posted.",
-    ),
-)
-Charge.add_to_class(
-    "room_rate_source",
-    models.CharField(
-        max_length=12,
-        choices=[
-            ("STANDARD", "Standard category rate"),
-            ("GROUP", "Group negotiated rate"),
-            ("OVERRIDE", "Occupant override"),
-        ],
-        blank=True,
-    ),
-)
-
-
 
 class ComplimentaryRoomNight(models.Model):
     STATUS_CHOICES = (
