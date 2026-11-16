@@ -110,9 +110,15 @@
         <a class="as-btn as-btn-blue" href="{% url 'frontdesk_extend_stay' room.id %}">Extend Stay</a>
         <a class="as-btn as-btn-purple" href="{% url 'frontdesk_change_room' room.id %}">Change Room</a>
         {% if folio.balance == 0 %}
-            <a class="as-btn as-btn-green" href="{% url 'frontdesk_checkout' room.id %}" onclick="return confirm('Check out the guest in Room {{ room.room_number }}?')">Checkout</a>
+            <form method="post" action="{% url 'frontdesk_checkout' room.id %}" style="display:inline;" onsubmit="return confirm('Check out the guest in Room {{ room.room_number }}?')">
+                {% csrf_token %}
+                <button class="as-btn as-btn-green" type="submit">Checkout</button>
+            </form>
         {% elif can_force_checkout %}
-            <a class="as-btn as-btn-orange" href="{% url 'frontdesk_checkout' room.id %}" onclick="return confirm('Force checkout with an outstanding balance of ₦{{ folio.balance|floatformat:2 }}?')">Force Checkout</a>
+            <form method="post" action="{% url 'frontdesk_checkout' room.id %}" style="display:inline;" onsubmit="return confirm('Force checkout with an outstanding balance of ₦{{ folio.balance|floatformat:2 }}?')">
+                {% csrf_token %}
+                <button class="as-btn as-btn-orange" type="submit">Force Checkout</button>
+            </form>
         {% endif %}
         <a class="as-btn" href="{% url 'frontdesk_room_board' %}">← Back to Room Board</a>
     </nav>
@@ -143,7 +149,7 @@
                     <div><span class="as-detail-label">Nights</span><span class="as-detail-value">{{ folio.nights }}</span></div>
                 </div>
                 <div class="as-rate">
-                    <span class="as-detail-label">Standard category nightly rate</span>
+                    <span class="as-detail-label">Standard category rate (reference)</span>
                     <div class="as-rate-value">₦{{ room.category.rate.price_per_night|floatformat:2|default:"—" }}</div>
                 </div>
             </div>
