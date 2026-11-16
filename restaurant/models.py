@@ -37,6 +37,10 @@ class MenuItem(models.Model):
         default='DRINK'
     )
     is_active = models.BooleanField(default=True)
+    is_breakfast_item = models.BooleanField(
+        default=False,
+        help_text="Allow this existing menu item to be selected for complimentary breakfast redemptions.",
+    )
 
     def save(self, *args, **kwargs):
         if self.product_id:
