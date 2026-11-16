@@ -1,0 +1,2 @@
+# Optional dependencies for server-generated Front Desk PDF documents
+reportlab>=4.2,<5.0
