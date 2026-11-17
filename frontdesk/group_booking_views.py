@@ -524,7 +524,7 @@ def event_detail(request, event_id):
     if hotel is None:
         return HttpResponseForbidden("Your account is not linked to a hotel.")
     event = get_object_or_404(
-        EventBooking.objects.select_related("company", "group_reservation").prefetch_related("order_lines", "participants__guest", "participants__room_allocation__room"),
+        EventBooking.objects.select_related("company", "group_reservation").prefetch_related("order_lines", "participants__guest", "participants__reservation__room"),
         pk=event_id, hotel=hotel,
     )
     line_form = EventOrderLineForm(prefix="line")
@@ -554,12 +554,12 @@ def event_detail(request, event_id):
                 participant = participant_form.save(commit=False)
                 participant.event = event
                 if participant.participant_type == "IN_HOUSE":
-                    participant.guest = participant.room_allocation.guest
+                    participant.guest = participant.reservation.guest
                     participant.external_name = ""
                     participant.external_organization = ""
                 else:
                     participant.guest = None
-                    participant.room_allocation = None
+                    participant.reservation = None
                 try:
                     participant.full_clean()
                     participant.save()
