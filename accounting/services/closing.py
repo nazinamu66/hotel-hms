@@ -21,10 +21,15 @@ def close_period(hotel, user=None, business_day_date=None):
     if business_day_date is None:
         business_day = get_current_business_day(hotel)
     else:
-        business_day, _ = BusinessDay.objects.get_or_create(
+        business_day = BusinessDay.objects.filter(
             hotel=hotel,
             date=business_day_date,
-        )
+        ).first()
+        if business_day is None:
+            raise ValueError(
+                f"No BusinessDay record exists for {business_day_date}; "
+                "the day was not created or closed."
+            )
 
     if business_day.is_closed:
         raise ValueError(f"Business day {business_day.date} is already closed.")
