@@ -1,12 +1,13 @@
 from datetime import date
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from billing.models import Company, GroupReservation, Guest, GroupReservationRoom
+from billing.models import Company, GroupReservation, GroupReservationRate, Guest, GroupReservationRoom
 from inventory.models import Department, Hotel, Organization
-from rooms.models import Room, RoomCategory
+from rooms.models import Room, RoomCategory, RoomRate
 
 
 class CorporateFrontdeskViewTests(TestCase):
@@ -191,6 +192,64 @@ class CorporateFrontdeskViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Guest.objects.filter(hotel=self.hotel).count(), 1)
+
+    def test_group_room_rates_can_be_saved_per_category(self):
+        category = RoomCategory.objects.create(name="Corporate Deluxe")
+        Room.objects.create(
+            hotel=self.hotel, room_number="CD-01", category=category,
+        )
+        RoomRate.objects.create(category=category, price_per_night="50000.00")
+        url = reverse("frontdesk_group_room_rates_update", args=[self.group.pk])
+        response = self.client.post(url, {f"rate_{category.pk}": "42000.00"})
+        self.assertRedirects(
+            response,
+            reverse("frontdesk_group_reservation_detail", args=[self.group.pk]),
+        )
+        rate = GroupReservationRate.objects.get(
+            group_reservation=self.group, room_category=category,
+        )
+        self.assertEqual(rate.nightly_rate, Decimal("42000.00"))
+
+    def test_blank_group_room_rate_removes_override(self):
+        category = RoomCategory.objects.create(name="Corporate Economy")
+        Room.objects.create(
+            hotel=self.hotel, room_number="CE-01", category=category,
+        )
+        GroupReservationRate.objects.create(
+            group_reservation=self.group,
+            room_category=category,
+            nightly_rate="30000.00",
+        )
+        response = self.client.post(
+            reverse("frontdesk_group_room_rates_update", args=[self.group.pk]),
+            {f"rate_{category.pk}": ""},
+        )
+        self.assertRedirects(
+            response,
+            reverse("frontdesk_group_reservation_detail", args=[self.group.pk]),
+        )
+        self.assertFalse(
+            GroupReservationRate.objects.filter(
+                group_reservation=self.group, room_category=category,
+            ).exists()
+        )
+
+    def test_group_room_rates_are_locked_after_confirmation(self):
+        category = RoomCategory.objects.create(name="Corporate Executive")
+        Room.objects.create(
+            hotel=self.hotel, room_number="CX-01", category=category,
+        )
+        self.group.status = "CONFIRMED"
+        self.group.save(update_fields=["status"])
+        self.client.post(
+            reverse("frontdesk_group_room_rates_update", args=[self.group.pk]),
+            {f"rate_{category.pk}": "61000.00"},
+        )
+        self.assertFalse(
+            GroupReservationRate.objects.filter(
+                group_reservation=self.group, room_category=category,
+            ).exists()
+        )
 
     def test_company_from_another_hotel_is_not_editable(self):
         other_org = Organization.objects.create(name="Other Corporate Org")
