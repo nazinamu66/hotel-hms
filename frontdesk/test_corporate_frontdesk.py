@@ -4,8 +4,9 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from billing.models import Company, GroupReservation
+from billing.models import Company, GroupReservation, Guest, GroupReservationRoom
 from inventory.models import Department, Hotel, Organization
+from rooms.models import Room, RoomCategory
 
 
 class CorporateFrontdeskViewTests(TestCase):
@@ -129,6 +130,67 @@ class CorporateFrontdeskViewTests(TestCase):
         self.assertFalse(
             GroupReservation.objects.filter(name="Invalid cross-hotel group").exists()
         )
+
+    def test_group_detail_shows_booking_and_occupant_action(self):
+        response = self.client.get(
+            reverse("frontdesk_group_reservation_detail", args=[self.group.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.group.reference)
+        self.assertContains(response, "Add occupant")
+
+    def test_add_new_group_occupant_creates_guest_reservation_and_allocation(self):
+        category = RoomCategory.objects.create(name="Corporate Standard")
+        Room.objects.create(
+            hotel=self.hotel, room_number="CS-01", category=category,
+        )
+        response = self.client.post(
+            reverse("frontdesk_group_occupant_add", args=[self.group.pk]),
+            {
+                "guest_mode": "NEW",
+                "first_name": "Fatima",
+                "last_name": "Yusuf",
+                "phone": "08022223333",
+                "email": "fatima@example.test",
+                "nationality": "Nigerian",
+                "id_number": "NIN-NEW-001",
+                "room_category": category.pk,
+                "room": "",
+                "check_in_date": "2027-04-01",
+                "check_out_date": "2027-04-04",
+                "occupant_note": "",
+            },
+        )
+        self.assertRedirects(
+            response,
+            reverse("frontdesk_group_reservation_detail", args=[self.group.pk]),
+        )
+        guest = Guest.objects.get(hotel=self.hotel, id_number="NIN-NEW-001")
+        allocation = GroupReservationRoom.objects.get(
+            group_reservation=self.group, guest=guest,
+        )
+        self.assertIsNotNone(allocation.reservation_id)
+        self.assertEqual(allocation.reservation.guest_id, guest.pk)
+
+    def test_new_group_occupant_warns_on_possible_duplicate_guest(self):
+        category = RoomCategory.objects.create(name="Duplicate Check Category")
+        Room.objects.create(hotel=self.hotel, room_number="DC-01", category=category)
+        Guest.objects.create(
+            hotel=self.hotel, first_name="Existing", last_name="Guest",
+            phone="08033334444",
+        )
+        response = self.client.post(
+            reverse("frontdesk_group_occupant_add", args=[self.group.pk]),
+            {
+                "guest_mode": "NEW", "first_name": "New", "last_name": "Person",
+                "phone": "08033334444", "email": "", "nationality": "",
+                "id_number": "", "room_category": category.pk, "room": "",
+                "check_in_date": "2027-04-01", "check_out_date": "2027-04-04",
+                "occupant_note": "",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Guest.objects.filter(hotel=self.hotel).count(), 1)
 
     def test_company_from_another_hotel_is_not_editable(self):
         other_org = Organization.objects.create(name="Other Corporate Org")
