@@ -1,0 +1,33 @@
+{% extends "base/base.html" %}
+{% block title %}Create Company Invoice | {{ group.company.name }}{% endblock %}
+{% block content %}
+<style>
+.ci-page{max-width:1250px;margin:18px auto 42px;color:#172033}.ci-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.ci-title{font-size:1.75rem;font-weight:850;margin:0 0 5px}.ci-muted{color:#64748b;font-size:.85rem;margin:0}.ci-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:15px;box-shadow:0 3px 14px rgba(15,23,42,.04)}.ci-btn{display:inline-flex;padding:10px 15px;border:0;border-radius:9px;background:#243b80;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}.ci-btn.alt{background:#eaf1f8;color:#24476b}.ci-field{max-width:420px;margin-bottom:13px}.ci-field label{display:block;font-size:.76rem;font-weight:800;margin-bottom:6px}.ci-field input,.ci-field textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}.ci-table{width:100%;border-collapse:collapse;min-width:650px}.ci-table th{text-align:left;background:#f8fafc;color:#64748b;text-transform:uppercase;font-size:.68rem;padding:11px}.ci-table td{padding:12px;border-top:1px solid #edf1f5;font-size:.84rem}.ci-empty{text-align:center;color:#64748b;padding:28px}
+</style>
+<div class="ci-page">
+  <div class="ci-head">
+    <div><p class="ci-muted"><a href="{% url 'frontdesk_group_reservation_detail' group.pk %}">{{ group.reference }}</a> / Corporate invoicing</p><h1 class="ci-title">Create final company invoice</h1><p class="ci-muted">{{ group.company.name }} · {{ group.check_in_date|date:"d M Y" }} – {{ group.check_out_date|date:"d M Y" }}</p></div>
+    <a class="ci-btn alt" href="{% url 'frontdesk_group_reservation_detail' group.pk %}">Back to booking</a>
+  </div>
+  <section class="ci-card">
+    <h2 style="font-size:1rem;margin:0 0 6px">Un-invoiced company charges</h2>
+    <p class="ci-muted">Only posted company-billed room charges for this group are included. Occupant charges are excluded. Breakfast and other departmental services are not yet included in this first invoice workflow.</p>
+    <div style="overflow:auto;margin-top:14px"><table class="ci-table"><thead><tr><th>Charge</th><th>Date</th><th>Amount</th></tr></thead><tbody>
+      {% for row in unbilled_charges %}<tr><td>{{ row.charges__description }}</td><td>{{ row.charges__created_at|date:"d M Y" }}</td><td>₦{{ row.charges__amount|floatformat:2 }}</td></tr>
+      {% empty %}<tr><td colspan="3" class="ci-empty">There are no un-invoiced company room charges for this group.</td></tr>{% endfor %}
+    </tbody></table></div>
+    <div style="display:flex;justify-content:flex-end;padding-top:14px;font-size:1.05rem"><strong>Available to invoice: ₦{{ available_total|floatformat:2 }}</strong></div>
+  </section>
+  {% if available_total > 0 %}
+  <section class="ci-card">
+    <h2 style="font-size:1rem;margin:0 0 14px">Invoice details</h2>
+    <form method="post">{% csrf_token %}
+      <div class="ci-field"><label for="due_date">Payment due date (optional)</label><input id="due_date" type="date" name="due_date" min="{{ today|date:'Y-m-d' }}"></div>
+      <div class="ci-field"><label for="notes">Invoice notes (optional)</label><textarea id="notes" name="notes" rows="3" placeholder="Payment terms or instructions"></textarea></div>
+      <p class="ci-muted" style="margin-bottom:14px">This creates a draft for review. No accounting entry is posted when the invoice is created or issued; the underlying room charges have already posted to accounts receivable and room revenue.</p>
+      <button class="ci-btn" type="submit">Create draft invoice</button>
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
