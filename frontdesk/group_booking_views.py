@@ -239,8 +239,27 @@ def group_reservation_detail(request, group_id):
     has_posted_room_charges = Charge.objects.filter(
         group_room_allocation__group_reservation=group
     ).exists()
+    company_invoices = list(
+        CompanyInvoice.objects.filter(group_reservation=group).order_by("-created_at")
+    )
+    issued_invoices = [invoice for invoice in company_invoices if invoice.status == "ISSUED"]
+    company_invoiced_total = sum((invoice.total_amount for invoice in issued_invoices), Decimal("0.00"))
+    company_settled_total = sum((invoice.amount_paid for invoice in issued_invoices), Decimal("0.00"))
+    company_balance_due = sum((invoice.balance_due for invoice in issued_invoices), Decimal("0.00"))
+    unbilled_company_total = Charge.objects.filter(
+        group_room_allocation__group_reservation=group,
+        billing_party="COMPANY",
+        amount__gt=0,
+        company_invoice_link__isnull=True,
+    ).aggregate(total=__import__("django.db.models", fromlist=["Sum"]).Sum("amount"))["total"] or Decimal("0.00")
+    company_deposit = CompanyDeposit.objects.filter(hotel=hotel, company=group.company).first()
     context = {
         "group": group,
+        "company_invoiced_total": company_invoiced_total,
+        "company_settled_total": company_settled_total,
+        "company_balance_due": company_balance_due,
+        "unbilled_company_total": unbilled_company_total,
+        "company_deposit_balance": company_deposit.balance if company_deposit else Decimal("0.00"),
         "allocations": allocations,
         "rate_rows": rate_rows,
         "has_posted_room_charges": has_posted_room_charges,
@@ -249,7 +268,7 @@ def group_reservation_detail(request, group_id):
         "reserved_count": allocations.filter(status="RESERVED").count(),
         "checked_out_count": allocations.filter(status="CHECKED_OUT").count(),
         "company_documents": group.company_documents.prefetch_related("lines").all(),
-        "company_invoices": CompanyInvoice.objects.filter(group_reservation=group).order_by("-created_at"),
+        "company_invoices": company_invoices,
     }
     return render(request, "frontdesk/group_reservation_detail.html", context)
 
