@@ -103,5 +103,10 @@ def create_room_night_charge(*, folio, charge_date, charged_by=None):
     )
 
     from accounting.services.postings.room_charge import post_room_charge
-    post_room_charge(folio, charge.amount, charged_by)
+    post_room_charge(
+        folio,
+        charge.amount,
+        charged_by,
+        reference=f"ROOM-CHARGE-{charge.pk}",
+    )
     return charge

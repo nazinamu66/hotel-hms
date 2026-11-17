@@ -201,3 +201,35 @@ class ComplimentaryBreakfastCostPostingTests(TestCase):
             self.assertEqual(posting.kwargs["debit_account"], expense)
             self.assertEqual(posting.kwargs["entry_type"], "COMPLIMENTARY_MEAL")
         get_or_create.assert_called_once()
+
+
+class RoomChargePostingReferenceTests(SimpleTestCase):
+    @patch("accounting.services.postings.room_charge.post_journal_entry")
+    @patch("accounting.services.postings.room_charge.get_account")
+    def test_room_charge_uses_unique_charge_reference(self, get_account, post_journal_entry):
+        from accounting.services.postings.room_charge import post_room_charge
+        hotel = SimpleNamespace(id=12)
+        folio = SimpleNamespace(id=81, hotel=hotel, room=SimpleNamespace(room_number="204"))
+        receivable, revenue = object(), object()
+        get_account.side_effect = [receivable, revenue]
+        amount, user = Decimal("35000.00"), object()
+        post_room_charge(folio, amount, user, reference="ROOM-CHARGE-9001")
+        get_account.assert_has_calls([call(hotel, "1100"), call(hotel, "4000")])
+        kwargs = post_journal_entry.call_args.kwargs
+        self.assertEqual(kwargs["reference"], "ROOM-CHARGE-9001")
+        self.assertEqual(kwargs["description"], "Room charge folio #81")
+        self.assertEqual(kwargs["created_by"], user)
+        self.assertEqual(kwargs["lines"], [
+            {"account": receivable, "debit": amount},
+            {"account": revenue, "credit": amount},
+        ])
+
+    @patch("accounting.services.postings.room_charge.post_journal_entry")
+    @patch("accounting.services.postings.room_charge.get_account")
+    def test_legacy_room_charge_call_keeps_compatible_reference(self, get_account, post_journal_entry):
+        from accounting.services.postings.room_charge import post_room_charge
+        hotel = SimpleNamespace(id=12)
+        folio = SimpleNamespace(id=82, hotel=hotel, room=SimpleNamespace(room_number="205"))
+        get_account.side_effect = [object(), object()]
+        post_room_charge(folio, Decimal("20000.00"), None)
+        self.assertEqual(post_journal_entry.call_args.kwargs["reference"], "ROOM-205")
