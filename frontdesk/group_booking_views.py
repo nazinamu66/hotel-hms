@@ -10,7 +10,7 @@ from decimal import Decimal
 from rooms.models import RoomCategory
 
 from accounts.decorators import role_required
-from billing.models import Company, GroupReservation, GroupReservationRate, Guest, Charge, CompanyDeposit, CompanyDepositTransaction
+from billing.models import Company, GroupReservation, GroupReservationRate, Guest, Charge, CompanyDeposit, CompanyDepositTransaction, CompanyInvoice
 from .group_booking_forms import CompanyForm, GroupReservationForm, GroupOccupantForm, GroupRoomRatesForm
 
 
