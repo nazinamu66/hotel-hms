@@ -15,6 +15,11 @@ from .company_document_views import (
     company_document_detail,
     company_document_pdf,
 )
+from .company_invoice_views import (
+    company_invoice_create,
+    company_invoice_detail,
+    company_invoice_pdf,
+)
 from .views import (
     room_board,
     check_in,
@@ -63,6 +68,9 @@ urlpatterns = [
     path('corporate/groups/<int:group_id>/documents/<int:document_id>/edit/', company_document_form, name='frontdesk_company_document_edit'),
     path('corporate/documents/<int:document_id>/', company_document_detail, name='frontdesk_company_document_detail'),
     path('corporate/documents/<int:document_id>/pdf/', company_document_pdf, name='frontdesk_company_document_pdf'),
+    path('corporate/groups/<int:group_id>/invoices/new/', company_invoice_create, name='frontdesk_company_invoice_create'),
+    path('corporate/invoices/<int:invoice_id>/', company_invoice_detail, name='frontdesk_company_invoice_detail'),
+    path('corporate/invoices/<int:invoice_id>/pdf/', company_invoice_pdf, name='frontdesk_company_invoice_pdf'),
     path('', room_board, name='frontdesk_room_board'),
     path('check-in/<int:room_id>/', check_in, name='frontdesk_check_in'),
     path('stay/<int:room_id>/', active_stay, name='frontdesk_active_stay'),
