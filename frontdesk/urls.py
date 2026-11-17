@@ -6,6 +6,7 @@ from .group_booking_views import (
     group_reservation_create,
     group_reservation_dashboard,
     group_reservation_detail,
+    group_room_rates_update,
     group_occupant_add,
 )
 from .views import (
@@ -49,6 +50,7 @@ urlpatterns = [
     path('corporate/groups/', group_reservation_dashboard, name='frontdesk_group_reservations'),
     path('corporate/groups/new/', group_reservation_create, name='frontdesk_group_reservation_create'),
     path('corporate/groups/<int:group_id>/', group_reservation_detail, name='frontdesk_group_reservation_detail'),
+    path('corporate/groups/<int:group_id>/room-rates/', group_room_rates_update, name='frontdesk_group_room_rates_update'),
     path('corporate/groups/<int:group_id>/occupants/add/', group_occupant_add, name='frontdesk_group_occupant_add'),
     path('', room_board, name='frontdesk_room_board'),
     path('check-in/<int:room_id>/', check_in, name='frontdesk_check_in'),
