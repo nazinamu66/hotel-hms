@@ -91,6 +91,10 @@ def check_in_reservation(
         room,
     )
 
+    if allocation is not None:
+        from billing.services.group_reservations import sync_group_reservation_status
+        sync_group_reservation_status(allocation.group_reservation)
+
     # Group allocation was linked before the first room charge was posted.
 
     return room, folio
