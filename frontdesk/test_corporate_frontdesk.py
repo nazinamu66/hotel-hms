@@ -41,6 +41,9 @@ class CorporateFrontdeskViewTests(TestCase):
         response = self.client.get(reverse("frontdesk_company_list"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "North Star Limited")
+        self.assertContains(response, reverse("frontdesk_company_deposit", args=[self.company.pk]))
+        self.assertContains(response, "Deposit balance")
+        self.assertContains(response, "₦0.00")
 
     def test_company_create_assigns_current_hotel_and_creator(self):
         response = self.client.post(reverse("frontdesk_company_create"), {
