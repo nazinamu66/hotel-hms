@@ -1,5 +1,6 @@
 from decimal import Decimal
 from io import BytesIO
+import os
 from xml.sax.saxutils import escape
 
 from django.contrib import messages
@@ -23,6 +24,9 @@ from reportlab.lib.enums import TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import reportlab
 from reportlab.platypus import Image as PDFImage, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from .company_document_forms import CompanyDocumentHeaderForm, CompanyDocumentLineFormSet
@@ -186,28 +190,66 @@ def company_document_pdf(request, document_id):
         title=f"{document.get_document_type_display()} {document.document_number}",
         author=business.name if business else "Hotel",
     )
+    # Register a Unicode font that contains the Nigerian naira glyph. The
+    # fallback uses the unambiguous ISO currency code if the host has no such
+    # font installed, rather than rendering a missing-glyph square.
+    reportlab_fonts = os.path.join(os.path.dirname(reportlab.__file__), "fonts")
+    font_candidates = [
+        ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+        ("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+         "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf"),
+        ("/Library/Fonts/Arial Unicode.ttf", "/Library/Fonts/Arial Unicode.ttf"),
+        (os.path.join(reportlab_fonts, "Vera.ttf"),
+         os.path.join(reportlab_fonts, "VeraBd.ttf")),
+    ]
+    body_font = "Helvetica"
+    bold_font = "Helvetica-Bold"
+    supports_naira = False
+    for regular_path, bold_path in font_candidates:
+        if not os.path.isfile(regular_path):
+            continue
+        try:
+            candidate = TTFont("CorporateUnicode", regular_path)
+            if 0x20A6 not in candidate.face.charWidths:
+                continue
+            pdfmetrics.registerFont(candidate)
+            body_font = "CorporateUnicode"
+            supports_naira = True
+            if os.path.isfile(bold_path):
+                try:
+                    pdfmetrics.registerFont(TTFont("CorporateUnicodeBold", bold_path))
+                    bold_font = "CorporateUnicodeBold"
+                except Exception:
+                    bold_font = body_font
+            else:
+                bold_font = body_font
+            break
+        except Exception:
+            continue
+
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(
-        name="CorpBrand", parent=styles["Title"], fontSize=16, leading=19,
+        name="CorpBrand", parent=styles["Title"], fontName=body_font, fontSize=16, leading=19,
         textColor=colors.HexColor("#17365D"), alignment=0, spaceAfter=3,
     ))
     styles.add(ParagraphStyle(
-        name="CorpHeading", parent=styles["Heading1"], fontSize=16, leading=19,
+        name="CorpHeading", parent=styles["Heading1"], fontName=bold_font, fontSize=16, leading=19,
         textColor=colors.HexColor("#17365D"), spaceAfter=5,
     ))
     styles.add(ParagraphStyle(
-        name="CorpSmall", parent=styles["BodyText"], fontSize=8, leading=10,
+        name="CorpSmall", parent=styles["BodyText"], fontName=body_font, fontSize=8, leading=10,
         textColor=colors.HexColor("#64748B"),
     ))
     styles.add(ParagraphStyle(
-        name="CorpCell", parent=styles["BodyText"], fontSize=8, leading=10,
+        name="CorpCell", parent=styles["BodyText"], fontName=body_font, fontSize=8, leading=10,
         wordWrap="CJK",
     ))
     styles.add(ParagraphStyle(
         name="CorpRight", parent=styles["CorpCell"], alignment=TA_RIGHT,
     ))
     styles.add(ParagraphStyle(
-        name="CorpBold", parent=styles["CorpCell"], fontName="Helvetica-Bold",
+        name="CorpBold", parent=styles["CorpCell"], fontName=bold_font,
     ))
     styles.add(ParagraphStyle(
         name="CorpBoldRight", parent=styles["CorpBold"], alignment=TA_RIGHT,
@@ -217,6 +259,8 @@ def company_document_pdf(request, document_id):
         return Paragraph(escape(str(value if value is not None else "—")), styles[style])
 
     currency = business.currency if business and business.currency else "₦"
+    if "₦" in str(currency) and not supports_naira:
+        currency = "NGN "
     def money(value):
         return f"{currency}{Decimal(value or 0):,.2f}"
 
@@ -289,7 +333,7 @@ def company_document_pdf(request, document_id):
     ]))
     story += [recipient_table, Spacer(1, 5*mm)]
 
-    rows = [[p("Description", "CorpBold"), p("Qty", "CorpBoldRight"), p("Unit / multiplier", "CorpBold"), p("Unit price", "CorpBoldRight"), p("Amount", "CorpBoldRight")]]
+    rows = [[p("Description", "CorpBold"), p("Qty", "CorpBoldRight"), p("Multiplier", "CorpBold"), p("Unit price", "CorpBoldRight"), p("Amount", "CorpBoldRight")]]
     for line in document.lines.all():
         rows.append([
             p(line.description),
@@ -298,7 +342,7 @@ def company_document_pdf(request, document_id):
             p(money(line.unit_price), "CorpRight"),
             p(money(line.line_total), "CorpRight"),
         ])
-    items = Table(rows, colWidths=[76*mm, 19*mm, 22*mm, 30*mm, 31*mm], repeatRows=1)
+    items = Table(rows, colWidths=[68*mm, 17*mm, 30*mm, 31*mm, 32*mm], repeatRows=1)
     items.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EEF3F8")),
         ("LINEBELOW", (0, 0), (-1, 0), 0.7, colors.HexColor("#CFD9E5")),
@@ -346,7 +390,7 @@ def company_document_pdf(request, document_id):
 
     def footer(canvas, doc):
         canvas.saveState()
-        canvas.setFont("Helvetica", 7)
+        canvas.setFont(body_font, 7)
         canvas.setFillColor(colors.HexColor("#718096"))
         canvas.drawString(14*mm, 9*mm, f"{business.name if business else 'Hotel'} · {document.document_number}")
         canvas.drawRightString(A4[0] - 14*mm, 9*mm, f"Page {doc.page}")
