@@ -47,10 +47,14 @@
     <p class="gd-muted" style="margin-top:12px;font-size:.76rem">Negotiated rates apply to future room-night charges. Previously posted charges retain their original rate and pricing source.</p>
   </section>
   <section class="gd-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px"><h2 style="font-size:1.05rem;margin:0">Occupants and room allocations</h2>{% if group.status == "DRAFT" or group.status == "CONFIRMED" %}<a class="gd-btn" href="{% url 'frontdesk_group_occupant_add' group.pk %}">+ Add occupant</a>{% endif %}</div>
-    <div style="overflow:auto"><table class="gd-table"><thead><tr><th>Guest</th><th>Room category</th><th>Room</th><th>Stay</th><th>Reservation</th><th>Status</th></tr></thead><tbody>
-    {% for allocation in allocations %}<tr><td><strong>{{ allocation.guest.full_name }}</strong><div style="color:#94a3b8">{{ allocation.guest.phone|default:"" }}</div></td><td>{{ allocation.room_category.name }}</td><td>{{ allocation.room.room_number|default:"Not assigned" }}</td><td>{{ allocation.check_in_date|date:"d M" }} – {{ allocation.check_out_date|date:"d M Y" }}</td><td>{% if allocation.reservation_id %}<a href="{% url 'frontdesk_reservation_detail' allocation.reservation_id %}">#{{ allocation.reservation_id }}</a>{% else %}—{% endif %}</td><td><span class="gd-pill">{{ allocation.get_status_display }}</span></td></tr>
-    {% empty %}<tr><td colspan="6" class="gd-empty">No occupants added yet. Add the first guest to begin room allocation.</td></tr>{% endfor %}
+    <form method="post" action="{% url 'frontdesk_group_bulk_checkin' group.pk %}">
+      {% csrf_token %}
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button type="submit" class="gd-btn" style="border:0;cursor:pointer">Check in selected occupants</button></div>
+      <div style="overflow:auto"><table class="gd-table"><thead><tr><th>Select</th><th>Guest</th><th>Room category</th><th>Room</th><th>Stay</th><th>Reservation</th><th>Status</th></tr></thead><tbody>
+    {% for allocation in allocations %}<tr><td>{% if allocation.status == "RESERVED" and allocation.reservation_id %}<input type="checkbox" name="allocation_ids" value="{{ allocation.pk }}" aria-label="Select {{ allocation.guest.full_name }}">{% else %}—{% endif %}</td><td><strong>{{ allocation.guest.full_name }}</strong><div style="color:#94a3b8">{{ allocation.guest.phone|default:"" }}</div></td><td>{{ allocation.room_category.name }}</td><td>{{ allocation.room.room_number|default:"Not assigned" }}</td><td>{{ allocation.check_in_date|date:"d M" }} – {{ allocation.check_out_date|date:"d M Y" }}</td><td>{% if allocation.reservation_id %}<a href="{% url 'frontdesk_reservation_detail' allocation.reservation_id %}">#{{ allocation.reservation_id }}</a>{% else %}—{% endif %}</td><td><span class="gd-pill">{{ allocation.get_status_display }}</span></td></tr>
+    {% empty %}<tr><td colspan="7" class="gd-empty">No occupants added yet. Add the first guest to begin room allocation.</td></tr>{% endfor %}
     </tbody></table></div>
+    </form>
   </section>
 
   <section class="gd-card">
