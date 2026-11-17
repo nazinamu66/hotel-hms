@@ -1,0 +1,49 @@
+{% extends "base/base.html" %}
+{% block title %}{{ page_title }} | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.cd-form-page{max-width:1180px;margin:16px auto 42px;color:#172033}.cd-form-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.cd-form-title{font-size:1.65rem;font-weight:850;margin:0 0 5px}.cd-muted{color:#64748b;font-size:.85rem}.cd-panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:15px;box-shadow:0 3px 14px rgba(15,23,42,.04)}.cd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.cd-field{margin-bottom:12px}.cd-field label{display:block;font-size:.76rem;font-weight:800;margin-bottom:5px}.cd-field input,.cd-field select,.cd-field textarea{box-sizing:border-box;width:100%;padding:10px 11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}.cd-lines{width:100%;border-collapse:collapse;min-width:820px}.cd-lines th{background:#f8fafc;color:#64748b;text-transform:uppercase;font-size:.68rem;text-align:left;padding:11px}.cd-lines td{padding:8px;border-top:1px solid #edf1f5}.cd-lines input{width:100%;box-sizing:border-box;padding:9px;border:1px solid #cbd5e1;border-radius:7px}.cd-btn{display:inline-flex;padding:11px 16px;border:0;border-radius:9px;background:#243b80;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}.cd-btn.alt{background:#eaf1f8;color:#24476b}.cd-error{color:#b91c1c;font-size:.78rem}.cd-actions{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap}@media(max-width:700px){.cd-grid{grid-template-columns:1fr}}
+</style>
+<div class="cd-form-page">
+  <div class="cd-form-head">
+    <div><p class="cd-muted"><a href="{% url 'frontdesk_group_reservation_detail' group.pk %}">{{ group.reference }}</a> / Corporate documents</p><h1 class="cd-form-title">{{ page_title }}</h1><p class="cd-muted">{{ group.company.name }} · {{ group.check_in_date|date:"d M Y" }} – {{ group.check_out_date|date:"d M Y" }}</p></div>
+    <a class="cd-btn alt" href="{% url 'frontdesk_group_reservation_detail' group.pk %}">Back to booking</a>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    {% if header_form.non_field_errors %}<div class="cd-error">{{ header_form.non_field_errors }}</div>{% endif %}
+    <section class="cd-panel">
+      <h2 style="font-size:1rem;margin:0 0 14px">Document details</h2>
+      <div class="cd-grid">
+        {% for field in header_form %}
+          <div class="cd-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="cd-error">{{ error }}</div>{% endfor %}</div>
+        {% endfor %}
+      </div>
+    </section>
+    <section class="cd-panel">
+      <h2 style="font-size:1rem;margin:0 0 5px">Items and pricing</h2>
+      <p class="cd-muted">Enter quantities independently of occupant registrations. Example: 20 rooms × 4 nights, or breakfast × guest count × breakfast days.</p>
+      {{ line_formset.management_form }}
+      {% if line_formset.non_form_errors %}<div class="cd-error">{{ line_formset.non_form_errors }}</div>{% endif %}
+      <div style="overflow:auto;margin-top:12px">
+        <table class="cd-lines">
+          <thead><tr><th style="width:36%">Description</th><th>Quantity</th><th>Unit</th><th>Unit price (₦)</th><th>Remove</th></tr></thead>
+          <tbody>
+          {% for form in line_formset %}
+            <tr>
+              <td>{{ form.description }}{% for error in form.description.errors %}<div class="cd-error">{{ error }}</div>{% endfor %}</td>
+              <td>{{ form.quantity }}{% for error in form.quantity.errors %}<div class="cd-error">{{ error }}</div>{% endfor %}</td>
+              <td>{{ form.unit }}{% for error in form.unit.errors %}<div class="cd-error">{{ error }}</div>{% endfor %}</td>
+              <td>{{ form.unit_price }}{% for error in form.unit_price.errors %}<div class="cd-error">{{ error }}</div>{% endfor %}</td>
+              <td>{{ form.DELETE }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="cd-muted">Five item rows are provided. Save the draft to review its calculated totals before issuing it.</p>
+    </section>
+    <div class="cd-actions"><a class="cd-btn alt" href="{% url 'frontdesk_group_reservation_detail' group.pk %}">Cancel</a><button class="cd-btn" type="submit">Save draft</button></div>
+  </form>
+</div>
+{% endblock %}
