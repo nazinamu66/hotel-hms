@@ -77,5 +77,31 @@
       </tbody>
     </table></div>
   </section>
+
+  <section class="gd-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <div><h2 style="font-size:1.05rem;margin:0 0 5px">Final company invoices</h2><p class="gd-muted">Reconcile posted company-billed room charges, apply company deposits and record settlement.</p></div>
+      <a class="gd-btn" href="{% url 'frontdesk_company_invoice_create' group.pk %}">+ Create final invoice</a>
+    </div>
+    <div style="overflow:auto"><table class="gd-table" style="min-width:760px">
+      <thead><tr><th>Invoice</th><th>Issue date</th><th>Due date</th><th>Total</th><th>Balance due</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>
+      {% for invoice in company_invoices %}
+        <tr>
+          <td><strong>{{ invoice.invoice_number }}</strong></td>
+          <td>{{ invoice.issue_date|date:"d M Y" }}</td>
+          <td>{{ invoice.due_date|date:"d M Y"|default:"—" }}</td>
+          <td>₦{{ invoice.total_amount|floatformat:2 }}</td>
+          <td>₦{{ invoice.balance_due|floatformat:2 }}</td>
+          <td><span class="gd-pill">{{ invoice.get_status_display }}</span></td>
+          <td><a href="{% url 'frontdesk_company_invoice_detail' invoice.pk %}">Open</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="gd-empty">No final company invoices have been created for this booking.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+
 </div>
 {% endblock %}
