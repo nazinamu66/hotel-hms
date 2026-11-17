@@ -7,7 +7,7 @@ from decimal import Decimal
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("accounting", "0018_complimentary_meal_entry_type"),
+        ("accounting", "0019_corporate_deposits_account"),
         ("billing", "0036_complimentary_room_night"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]

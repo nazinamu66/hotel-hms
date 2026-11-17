@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Guest, Folio, Charge, Payment, ComplimentaryRoomNight
+from .models import Guest, Folio, Charge, Payment, ComplimentaryRoomNight, CompanyDeposit, CompanyDepositTransaction
 
 
 @admin.register(Guest)
@@ -74,3 +74,18 @@ class ComplimentaryRoomNightAdmin(admin.ModelAdmin):
     list_filter = ("status", "room_night_date", "rate_source")
     search_fields = ("reservation__guest__first_name", "reservation__guest__last_name", "reason")
     readonly_fields = ("requested_at", "approved_at", "consumed_at")
+
+
+@admin.register(CompanyDeposit)
+class CompanyDepositAdmin(admin.ModelAdmin):
+    list_display = ("company", "hotel", "balance", "updated_at")
+    search_fields = ("company__name",)
+    readonly_fields = ("balance", "created_at", "updated_at")
+
+
+@admin.register(CompanyDepositTransaction)
+class CompanyDepositTransactionAdmin(admin.ModelAdmin):
+    list_display = ("deposit", "transaction_type", "amount", "payment_method", "reference", "created_at")
+    list_filter = ("transaction_type", "payment_method", "created_at")
+    search_fields = ("deposit__company__name", "reference", "note")
+    readonly_fields = ("created_at",)

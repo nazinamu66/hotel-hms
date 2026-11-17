@@ -10,7 +10,7 @@ from decimal import Decimal
 from rooms.models import RoomCategory
 
 from accounts.decorators import role_required
-from billing.models import Company, GroupReservation, GroupReservationRate, Guest, Charge
+from billing.models import Company, GroupReservation, GroupReservationRate, Guest, Charge, CompanyDeposit, CompanyDepositTransaction
 from .group_booking_forms import CompanyForm, GroupReservationForm, GroupOccupantForm, GroupRoomRatesForm
 
 
@@ -321,4 +321,66 @@ def group_occupant_add(request, group_id):
     return render(request, "frontdesk/group_occupant_form.html", {
         "form": form,
         "group": group,
+    })
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+@require_http_methods(["GET", "POST"])
+def company_deposit_manage(request, company_id):
+    from accounting.models import BankAccount
+    from billing.services.company_deposit import receive_company_deposit, refund_company_deposit
+
+    hotel = _frontdesk_hotel(request.user)
+    if hotel is None:
+        return HttpResponseForbidden("Your account is not linked to a hotel.")
+    company = get_object_or_404(Company, pk=company_id, hotel=hotel)
+    deposit = CompanyDeposit.objects.filter(hotel=hotel, company=company).first()
+
+    if request.method == "POST":
+        try:
+            action = request.POST.get("action", "").strip().upper()
+            method = request.POST.get("method", "").strip().upper()
+            bank_account = None
+            if method in ("POS", "TRANSFER"):
+                bank_account = get_object_or_404(
+                    BankAccount.objects.select_related("account"),
+                    pk=request.POST.get("bank_account"),
+                    hotel=hotel,
+                    is_active=True,
+                )
+            params = {
+                "company": company,
+                "hotel": hotel,
+                "amount": request.POST.get("amount", "0"),
+                "method": method,
+                "user": request.user,
+                "reference": request.POST.get("reference", "").strip(),
+                "note": request.POST.get("note", "").strip(),
+                "bank_account": bank_account,
+            }
+            if action == "RECEIVE":
+                _, record = receive_company_deposit(**params)
+                messages.success(request, f"Company deposit of ₦{record.amount:,.2f} received successfully.")
+            elif action == "REFUND":
+                _, record = refund_company_deposit(**params)
+                messages.success(request, f"Company deposit refund of ₦{record.amount:,.2f} recorded successfully.")
+            else:
+                raise ValidationError("Select whether this is a deposit receipt or refund.")
+        except (ValidationError, ValueError) as exc:
+            messages.error(request, str(exc))
+        return redirect("frontdesk_company_deposit", company_id=company.pk)
+
+    bank_accounts = BankAccount.objects.select_related("account").filter(
+        hotel=hotel, is_active=True
+    ).order_by("-is_default", "bank_name")
+    transactions = (
+        CompanyDepositTransaction.objects.filter(deposit=deposit)
+        .select_related("created_by", "bank_account").order_by("-created_at")[:50]
+        if deposit else []
+    )
+    return render(request, "frontdesk/company_deposit_manage.html", {
+        "company": company,
+        "balance": deposit.balance if deposit else Decimal("0.00"),
+        "transactions": transactions,
+        "bank_accounts": bank_accounts,
     })
