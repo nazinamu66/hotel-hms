@@ -466,3 +466,130 @@ def company_deposit_manage(request, company_id):
         "transactions": transactions,
         "bank_accounts": bank_accounts,
     })
+
+
+# ---------------------------------------------------------------------------
+# Corporate event management
+# ---------------------------------------------------------------------------
+from billing.models import EventBooking, EventParticipant, EventOrderLine
+from .group_booking_forms import EventBookingForm, EventOrderLineForm, EventParticipantForm
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def event_dashboard(request):
+    hotel = _frontdesk_hotel(request.user)
+    if hotel is None:
+        return HttpResponseForbidden("Your account is not linked to a hotel.")
+    events = EventBooking.objects.filter(hotel=hotel).select_related("company").order_by("-event_date", "-service_time")
+    status = request.GET.get("status", "").strip()
+    if status in dict(EventBooking.STATUS_CHOICES):
+        events = events.filter(status=status)
+    return render(request, "frontdesk/event_dashboard.html", {
+        "events": events,
+        "status_filter": status,
+        "status_choices": EventBooking.STATUS_CHOICES,
+        "total_count": EventBooking.objects.filter(hotel=hotel).count(),
+        "draft_count": EventBooking.objects.filter(hotel=hotel, status="DRAFT").count(),
+        "released_count": EventBooking.objects.filter(hotel=hotel, status="RELEASED").count(),
+    })
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+@require_http_methods(["GET", "POST"])
+def event_create(request):
+    hotel = _frontdesk_hotel(request.user)
+    if hotel is None:
+        return HttpResponseForbidden("Your account is not linked to a hotel.")
+    form = EventBookingForm(request.POST or None, hotel=hotel)
+    if request.method == "POST" and form.is_valid():
+        event = form.save(commit=False)
+        event.hotel = hotel
+        event.created_by = request.user
+        event.reference = f"EVT-{uuid4().hex[:10].upper()}"
+        try:
+            event.full_clean()
+            event.save()
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        else:
+            messages.success(request, f"Event {event.reference} created.")
+            return redirect("frontdesk_event_detail", event_id=event.pk)
+    return render(request, "frontdesk/event_form.html", {"form": form, "page_title": "Create corporate event"})
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+@require_http_methods(["GET", "POST"])
+def event_detail(request, event_id):
+    hotel = _frontdesk_hotel(request.user)
+    if hotel is None:
+        return HttpResponseForbidden("Your account is not linked to a hotel.")
+    event = get_object_or_404(
+        EventBooking.objects.select_related("company", "group_reservation").prefetch_related("order_lines", "participants__guest", "participants__room_allocation__room"),
+        pk=event_id, hotel=hotel,
+    )
+    line_form = EventOrderLineForm(prefix="line")
+    participant_form = EventParticipantForm(prefix="participant", event=event)
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "add_line":
+            line_form = EventOrderLineForm(request.POST, prefix="line")
+            if event.status not in ("DRAFT", "AGREED"):
+                messages.error(request, "Order lines cannot be changed after release.")
+            elif line_form.is_valid():
+                line = line_form.save(commit=False)
+                line.event = event
+                try:
+                    line.full_clean()
+                    line.save()
+                except ValidationError as exc:
+                    line_form.add_error(None, exc)
+                else:
+                    messages.success(request, "Event order line added.")
+                    return redirect("frontdesk_event_detail", event_id=event.pk)
+        elif action == "add_participant":
+            participant_form = EventParticipantForm(request.POST, prefix="participant", event=event)
+            if event.status not in ("DRAFT", "AGREED"):
+                messages.error(request, "Participants cannot be changed after release.")
+            elif participant_form.is_valid():
+                participant = participant_form.save(commit=False)
+                participant.event = event
+                if participant.participant_type == "IN_HOUSE":
+                    participant.guest = participant.room_allocation.guest
+                    participant.external_name = ""
+                    participant.external_organization = ""
+                else:
+                    participant.guest = None
+                    participant.room_allocation = None
+                try:
+                    participant.full_clean()
+                    participant.save()
+                except ValidationError as exc:
+                    participant_form.add_error(None, exc)
+                else:
+                    messages.success(request, "Event participant added.")
+                    return redirect("frontdesk_event_detail", event_id=event.pk)
+        elif action == "mark_agreed":
+            if event.status != "DRAFT":
+                messages.error(request, "Only draft events can be marked agreed.")
+            elif not event.agreement_notes.strip():
+                messages.error(request, "Record the agreed commercial terms before approval.")
+            else:
+                event.status = "AGREED"
+                event.full_clean()
+                event.save(update_fields=["status", "updated_at"])
+                messages.success(request, "Commercial agreement recorded. The event is not yet visible to operations.")
+                return redirect("frontdesk_event_detail", event_id=event.pk)
+        elif action == "release":
+            try:
+                event.release_to_operations(request.user)
+            except ValidationError as exc:
+                messages.error(request, "; ".join(exc.messages))
+            else:
+                messages.success(request, "Event released to Kitchen and Restaurant.")
+                return redirect("frontdesk_event_detail", event_id=event.pk)
+    return render(request, "frontdesk/event_detail.html", {
+        "event": event,
+        "line_form": line_form,
+        "participant_form": participant_form,
+        "order_total": sum((line.total_price for line in event.order_lines.all()), Decimal("0.00")),
+    })
