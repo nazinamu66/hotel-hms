@@ -34,7 +34,7 @@
               <td><strong>{{ row.category.name }}</strong></td>
               <td>{% if row.standard_rate != None %}₦{{ row.standard_rate|floatformat:2 }}{% else %}<span style="color:#b45309">No active standard rate</span>{% endif %}</td>
               <td>{% if group.status == "DRAFT" and not has_posted_room_charges %}<input type="number" name="rate_{{ row.category.pk }}" min="0.01" step="0.01" placeholder="Use standard rate" value="{% if row.negotiated_rate %}{{ row.negotiated_rate.nightly_rate }}{% endif %}" style="width:180px;max-width:100%;padding:9px 10px;border:1px solid #cbd5e1;border-radius:8px">{% elif row.negotiated_rate %}₦{{ row.negotiated_rate.nightly_rate|floatformat:2 }}{% else %}Standard rate{% endif %}</td>
-              <td>{% if row.negotiated_rate and row.standard_rate != None %}₦{{ row.standard_rate|add:"-"|add:row.negotiated_rate.nightly_rate|floatformat:2 }}{% else %}—{% endif %}</td>
+              <td>{% if row.saving != None %}₦{{ row.saving|floatformat:2 }}{% else %}—{% endif %}</td>
             </tr>
           {% endfor %}
           </tbody>
