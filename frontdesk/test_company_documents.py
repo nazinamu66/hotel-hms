@@ -62,6 +62,17 @@ class CorporateDocumentWorkflowTests(TestCase):
         data.update(overrides)
         return data
 
+    def test_group_detail_exposes_corporate_document_workflow(self):
+        response = self.client.get(
+            reverse("frontdesk_group_reservation_detail", args=[self.group.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            reverse("frontdesk_company_document_create", args=[self.group.pk]),
+        )
+        self.assertContains(response, "Corporate quotations and proforma invoices")
+
     def test_create_quotation_saves_manual_quantities_and_calculates_total(self):
         response = self.client.post(
             reverse("frontdesk_company_document_create", args=[self.group.pk]),
