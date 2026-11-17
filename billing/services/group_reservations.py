@@ -129,3 +129,38 @@ def add_group_occupant(
             pass
 
     return allocation
+
+
+def sync_group_reservation_status(group_reservation):
+    """Derive the master booking status from its occupant allocations."""
+    allocations = group_reservation.room_allocations.exclude(status="CANCELLED")
+    if not allocations.exists():
+        return group_reservation
+    if allocations.filter(status="CHECKED_IN").exists():
+        new_status = "IN_HOUSE"
+    elif not allocations.exclude(status="CHECKED_OUT").exists():
+        new_status = "COMPLETED"
+    else:
+        return group_reservation
+    if group_reservation.status != new_status:
+        group_reservation.status = new_status
+        group_reservation.save(update_fields=["status"])
+    return group_reservation
+
+
+@transaction.atomic
+def mark_group_allocation_checked_out(folio):
+    """Update the group occupant only after the normal folio checkout succeeds."""
+    allocation = (
+        GroupReservationRoom.objects.select_for_update()
+        .select_related("group_reservation")
+        .filter(folio=folio)
+        .first()
+    )
+    if allocation is None:
+        return None
+    if allocation.status == "CHECKED_IN":
+        allocation.status = "CHECKED_OUT"
+        allocation.save(update_fields=["status"])
+    sync_group_reservation_status(allocation.group_reservation)
+    return allocation
