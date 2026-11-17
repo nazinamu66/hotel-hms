@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
@@ -251,7 +251,7 @@ def group_reservation_detail(request, group_id):
         billing_party="COMPANY",
         amount__gt=0,
         company_invoice_link__isnull=True,
-    ).aggregate(total=__import__("django.db.models", fromlist=["Sum"]).Sum("amount"))["total"] or Decimal("0.00")
+    ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
     company_deposit = CompanyDeposit.objects.filter(hotel=hotel, company=group.company).first()
     context = {
         "group": group,
