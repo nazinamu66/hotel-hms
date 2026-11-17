@@ -470,7 +470,7 @@ def build_invoice_context(folio):
         }
     )
 
-    for charge in folio.charges.select_related("department"):
+    for charge in folio.charges.filter(billing_party="INDIVIDUAL").select_related("department"):
         dept = charge.department.name
 
         charges_by_department[dept]["charges"].append(charge)
@@ -668,7 +668,7 @@ def folio_invoice(request, folio_id):
         "subtotal": Decimal("0.00")
     })
 
-    for charge in folio.charges.select_related("department"):
+    for charge in folio.charges.filter(billing_party="INDIVIDUAL").select_related("department"):
         dept = charge.department.name
         grouped[dept]["charges"].append(charge)
         grouped[dept]["subtotal"] += charge.amount
@@ -923,7 +923,11 @@ def active_stay(request, room_id):
             "time": charge.created_at,
             "type": "charge",
             "label": charge.department.name if charge.department else "Other",
-            "description": charge.description,
+            "description": (
+                f"Company billed — {charge.description}"
+                if charge.billing_party == "COMPANY"
+                else f"Occupant billed — {charge.description}"
+            ),
             "amount": charge.amount,
         })
 
