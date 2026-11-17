@@ -194,6 +194,8 @@ class CorporateFrontdeskViewTests(TestCase):
         self.assertEqual(Guest.objects.filter(hotel=self.hotel).count(), 1)
 
     def test_group_room_rates_can_be_saved_per_category(self):
+        self.group.status = "DRAFT"
+        self.group.save(update_fields=["status"])
         category = RoomCategory.objects.create(name="Corporate Deluxe")
         Room.objects.create(
             hotel=self.hotel, room_number="CD-01", category=category,
@@ -211,6 +213,8 @@ class CorporateFrontdeskViewTests(TestCase):
         self.assertEqual(rate.nightly_rate, Decimal("42000.00"))
 
     def test_blank_group_room_rate_removes_override(self):
+        self.group.status = "DRAFT"
+        self.group.save(update_fields=["status"])
         category = RoomCategory.objects.create(name="Corporate Economy")
         Room.objects.create(
             hotel=self.hotel, room_number="CE-01", category=category,
