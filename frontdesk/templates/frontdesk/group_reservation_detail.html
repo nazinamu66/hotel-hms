@@ -7,7 +7,7 @@
 <div class="gd-page">
   <div class="gd-head">
     <div><p class="gd-muted"><a href="{% url 'frontdesk_group_reservations' %}">Group Reservations</a> / {{ group.reference }}</p><h1 class="gd-title">{{ group.name|default:"Corporate stay" }}</h1><p class="gd-muted">{{ group.company.name }} · {{ group.reference }}</p></div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap"><a class="gd-btn alt" href="{% url 'frontdesk_group_reservations' %}">Back to groups</a>{% if group.status == "DRAFT" or group.status == "CONFIRMED" %}<a class="gd-btn" href="{% url 'frontdesk_group_occupant_add' group.pk %}">+ Add occupant</a>{% endif %}</div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap"><a class="gd-btn alt" href="{% url 'frontdesk_group_reservations' %}">Back to groups</a><a class='gd-btn' href="{% url 'frontdesk_company_deposit' group.company_id %}">Company deposits</a>{% if group.status == "DRAFT" or group.status == "CONFIRMED" %}<a class="gd-btn" href="{% url 'frontdesk_group_occupant_add' group.pk %}">+ Add occupant</a>{% endif %}</div>
   </div>
   <div class="gd-stats"><div class="gd-stat"><small>Total occupants</small><strong>{{ occupant_count }}</strong></div><div class="gd-stat"><small>Reserved</small><strong>{{ reserved_count }}</strong></div><div class="gd-stat"><small>Checked in</small><strong>{{ checked_in_count }}</strong></div><div class="gd-stat"><small>Checked out</small><strong>{{ checked_out_count }}</strong></div></div>
   <section class="gd-card"><div class="gd-grid">
