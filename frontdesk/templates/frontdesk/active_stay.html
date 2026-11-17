@@ -37,7 +37,7 @@
     .as-detail-value { display:block; margin-top:4px; color:#334155; font-size:13px; font-weight:700; overflow-wrap:anywhere; }
     .as-rate { margin-top:17px; padding-top:15px; border-top:1px solid #edf1f5; }
     .as-rate-value { margin-top:4px; color:#172033; font-size:25px; font-weight:800; }
-    .as-stat-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+    .as-stat-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
     .as-stat { padding:17px 18px; border:1px solid #e5eaf1; border-radius:13px; background:#fff; box-shadow:0 5px 18px rgba(15,23,42,.04); }
     .as-stat-label { display:block; color:#8291a4; font-size:10px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
     .as-stat-value { display:block; margin-top:6px; color:#172033; font-size:23px; font-weight:800; font-variant-numeric:tabular-nums; }
@@ -157,8 +157,9 @@
     </section>
 
     <section class="as-stat-grid" aria-label="Folio financial summary">
-        <article class="as-stat"><span class="as-stat-label">Total charges</span><strong class="as-stat-value">₦{{ folio.total_charges|floatformat:2 }}</strong></article>
-        <article class="as-stat"><span class="as-stat-label">Total payments</span><strong class="as-stat-value">₦{{ folio.total_payments|floatformat:2 }}</strong></article>
+        <article class="as-stat"><span class="as-stat-label">Occupant charges</span><strong class="as-stat-value">₦{{ folio.total_charges|floatformat:2 }}</strong></article>
+        <article class="as-stat"><span class="as-stat-label">Company charges</span><strong class="as-stat-value">₦{{ folio.total_company_charges|floatformat:2 }}</strong></article>
+        <article class="as-stat"><span class="as-stat-label">Occupant payments</span><strong class="as-stat-value">₦{{ folio.total_payments|floatformat:2 }}</strong></article>
         <article class="as-stat as-stat-balance"><span class="as-stat-label">Outstanding balance</span><strong class="as-stat-value">₦{{ folio.balance|floatformat:2 }}</strong></article>
     </section>
 
@@ -216,12 +217,12 @@
                         <h3 style="margin:0 0 9px;color:#334155;font-size:13px;font-weight:800;">{{ dept }}</h3>
                         <div class="as-scroll" style="border:1px solid #edf1f5;border-radius:9px;">
                             <table class="as-table">
-                                <thead><tr><th>Description</th><th>Date</th><th class="as-amount">Amount</th></tr></thead>
+                                <thead><tr><th>Description</th><th>Billed to</th><th>Date</th><th class="as-amount">Amount</th></tr></thead>
                                 <tbody>
                                     {% for c in data.charges %}
-                                        <tr><td>{{ c.description }}</td><td>{{ c.created_at|date:"d M Y, H:i" }}</td><td class="as-amount">₦{{ c.amount|floatformat:2 }}</td></tr>
+                                        <tr><td>{{ c.description }}</td><td>{{ c.get_billing_party_display }}</td><td>{{ c.created_at|date:"d M Y, H:i" }}</td><td class="as-amount">₦{{ c.amount|floatformat:2 }}</td></tr>
                                     {% endfor %}
-                                    <tr class="as-subtotal"><th colspan="2">Subtotal</th><th>₦{{ data.total|floatformat:2 }}</th></tr>
+                                    <tr class="as-subtotal"><th colspan="3">Department subtotal (all billing parties)</th><th>₦{{ data.total|floatformat:2 }}</th></tr>
                                 </tbody>
                             </table>
                         </div>
