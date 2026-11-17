@@ -6,10 +6,11 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 from uuid import uuid4
+from rooms.models import RoomCategory
 
 from accounts.decorators import role_required
-from billing.models import Company, GroupReservation, Guest
-from .group_booking_forms import CompanyForm, GroupReservationForm, GroupOccupantForm
+from billing.models import Company, GroupReservation, GroupReservationRate, Guest, Charge
+from .group_booking_forms import CompanyForm, GroupReservationForm, GroupOccupantForm, GroupRoomRatesForm
 
 
 def _frontdesk_hotel(user):
@@ -135,6 +136,66 @@ def group_reservation_create(request):
 
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
+@require_http_methods(["POST"])
+def group_room_rates_update(request, group_id):
+    hotel = _frontdesk_hotel(request.user)
+    if hotel is None:
+        return HttpResponseForbidden("Your account is not linked to a hotel.")
+    group = get_object_or_404(GroupReservation, pk=group_id, hotel=hotel)
+
+    if group.status != "DRAFT":
+        messages.error(request, "Negotiated room rates can only be changed while the group booking is in Draft status.")
+        return redirect("frontdesk_group_reservation_detail", group_id=group.pk)
+
+    if Charge.objects.filter(group_room_allocation__group_reservation=group).exists():
+        messages.error(request, "Rates cannot be changed after room charges have been posted for this group.")
+        return redirect("frontdesk_group_reservation_detail", group_id=group.pk)
+
+    categories = RoomCategory.objects.filter(
+        is_active=True,
+        rooms__hotel=hotel,
+    ).distinct().order_by("name")
+    existing_rates = {
+        rate.room_category_id: rate
+        for rate in GroupReservationRate.objects.filter(group_reservation=group)
+    }
+    form = GroupRoomRatesForm(
+        request.POST,
+        categories=categories,
+        existing_rates=existing_rates,
+    )
+    if form.is_valid():
+        from django.db import transaction
+        with transaction.atomic():
+            for category in categories:
+                value = form.cleaned_data.get(f"rate_{category.pk}")
+                if value is None:
+                    GroupReservationRate.objects.filter(
+                        group_reservation=group,
+                        room_category=category,
+                    ).delete()
+                    continue
+                rate, _ = GroupReservationRate.objects.update_or_create(
+                    group_reservation=group,
+                    room_category=category,
+                    defaults={"nightly_rate": value},
+                )
+                rate.full_clean()
+                rate.save()
+        messages.success(request, "Negotiated room rates saved for this group.")
+    else:
+        messages.error(
+            request,
+            "Please correct the negotiated rates: "
+            + "; ".join(
+                f"{field}: {', '.join(errors)}"
+                for field, errors in form.errors.items()
+            ),
+        )
+    return redirect("frontdesk_group_reservation_detail", group_id=group.pk)
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
 def group_reservation_detail(request, group_id):
     hotel = _frontdesk_hotel(request.user)
     if hotel is None:
@@ -150,9 +211,30 @@ def group_reservation_detail(request, group_id):
         hotel=hotel,
     )
     allocations = group.room_allocations.all()
+    categories = RoomCategory.objects.filter(
+        is_active=True,
+        rooms__hotel=hotel,
+    ).distinct().order_by("name")
+    negotiated_rates = {
+        rate.room_category_id: rate
+        for rate in GroupReservationRate.objects.filter(group_reservation=group)
+    }
+    rate_rows = []
+    for category in categories:
+        standard = getattr(getattr(category, "rate", None), "price_per_night", None)
+        rate_rows.append({
+            "category": category,
+            "standard_rate": standard,
+            "negotiated_rate": negotiated_rates.get(category.pk),
+        })
+    has_posted_room_charges = Charge.objects.filter(
+        group_room_allocation__group_reservation=group
+    ).exists()
     context = {
         "group": group,
         "allocations": allocations,
+        "rate_rows": rate_rows,
+        "has_posted_room_charges": has_posted_room_charges,
         "occupant_count": allocations.count(),
         "checked_in_count": allocations.filter(status="CHECKED_IN").count(),
         "reserved_count": allocations.filter(status="RESERVED").count(),
