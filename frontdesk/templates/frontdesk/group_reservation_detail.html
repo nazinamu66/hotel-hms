@@ -7,7 +7,7 @@
 <div class="gd-page">
   <div class="gd-head">
     <div><p class="gd-muted"><a href="{% url 'frontdesk_group_reservations' %}">Group Reservations</a> / {{ group.reference }}</p><h1 class="gd-title">{{ group.name|default:"Corporate stay" }}</h1><p class="gd-muted">{{ group.company.name }} · {{ group.reference }}</p></div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap"><a class="gd-btn alt" href="{% url 'frontdesk_group_reservations' %}">Back to groups</a><a class='gd-btn' href="{% url 'frontdesk_company_deposit' group.company_id %}">Company deposits</a>{% if group.status == "DRAFT" or group.status == "CONFIRMED" %}<a class="gd-btn" href="{% url 'frontdesk_group_occupant_add' group.pk %}">+ Add occupant</a>{% endif %}</div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap"><a class="gd-btn alt" href="{% url 'frontdesk_group_reservations' %}">Back to groups</a><a class="gd-btn" href="{% url 'frontdesk_company_document_create' group.pk %}">+ Quote / Proforma</a><a class='gd-btn' href="{% url 'frontdesk_company_deposit' group.company_id %}">Company deposits</a>{% if group.status == "DRAFT" or group.status == "CONFIRMED" %}<a class="gd-btn" href="{% url 'frontdesk_group_occupant_add' group.pk %}">+ Add occupant</a>{% endif %}</div>
   </div>
   <div class="gd-stats"><div class="gd-stat"><small>Total occupants</small><strong>{{ occupant_count }}</strong></div><div class="gd-stat"><small>Reserved</small><strong>{{ reserved_count }}</strong></div><div class="gd-stat"><small>Checked in</small><strong>{{ checked_in_count }}</strong></div><div class="gd-stat"><small>Checked out</small><strong>{{ checked_out_count }}</strong></div></div>
   <section class="gd-card"><div class="gd-grid">
@@ -51,6 +51,31 @@
     {% for allocation in allocations %}<tr><td><strong>{{ allocation.guest.full_name }}</strong><div style="color:#94a3b8">{{ allocation.guest.phone|default:"" }}</div></td><td>{{ allocation.room_category.name }}</td><td>{{ allocation.room.room_number|default:"Not assigned" }}</td><td>{{ allocation.check_in_date|date:"d M" }} – {{ allocation.check_out_date|date:"d M Y" }}</td><td>{% if allocation.reservation_id %}<a href="{% url 'frontdesk_reservation_detail' allocation.reservation_id %}">#{{ allocation.reservation_id }}</a>{% else %}—{% endif %}</td><td><span class="gd-pill">{{ allocation.get_status_display }}</span></td></tr>
     {% empty %}<tr><td colspan="6" class="gd-empty">No occupants added yet. Add the first guest to begin room allocation.</td></tr>{% endfor %}
     </tbody></table></div>
+  </section>
+
+  <section class="gd-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <div><h2 style="font-size:1.05rem;margin:0 0 5px">Corporate quotations and proforma invoices</h2><p class="gd-muted">Prepare a quotation or proforma invoice for this company's booking. Issued documents retain their original prices.</p></div>
+      <a class="gd-btn" href="{% url 'frontdesk_company_document_create' group.pk %}">+ New document</a>
+    </div>
+    <div style="overflow:auto"><table class="gd-table" style="min-width:720px">
+      <thead><tr><th>Document</th><th>Number</th><th>Date</th><th>Valid until</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>
+      {% for document in company_documents %}
+        <tr>
+          <td>{{ document.get_document_type_display }}</td>
+          <td><strong>{{ document.document_number }}</strong></td>
+          <td>{{ document.issue_date|date:"d M Y" }}</td>
+          <td>{{ document.valid_until|date:"d M Y"|default:"—" }}</td>
+          <td>₦{{ document.total_amount|floatformat:2 }}</td>
+          <td><span class="gd-pill">{{ document.get_status_display }}</span></td>
+          <td><a href="{% url 'frontdesk_company_document_detail' document.pk %}">Open</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="gd-empty">No quotations or proforma invoices have been created for this booking.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
   </section>
 </div>
 {% endblock %}
