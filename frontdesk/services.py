@@ -11,10 +11,13 @@ def get_available_rooms(
     check_out,
     exclude_reservation_id=None,
 ):
-    # All physical rooms in this hotel's selected category.
+    # Only operationally available rooms can be assigned at check-in.
+    # VACANT_DIRTY rooms must be released by Housekeeping first;
+    # occupied and out-of-order rooms must never be selected.
     rooms = Room.objects.filter(
         hotel=hotel,
         category=category,
+        status="AVAILABLE",
     )
 
     # Guaranteed reservations overlapping the requested stay.
@@ -31,10 +34,8 @@ def get_available_rooms(
     # When checking a reservation in, don't let it consume
     # availability a second time against its own room category.
     if exclude_reservation_id is not None:
-        overlapping_reservations = (
-            overlapping_reservations.exclude(
-                pk=exclude_reservation_id
-            )
+        overlapping_reservations = overlapping_reservations.exclude(
+            pk=exclude_reservation_id
         )
 
     # Rooms already assigned to overlapping reservations.
@@ -44,9 +45,7 @@ def get_available_rooms(
         .values_list("room_id", flat=True)
     )
 
-    # Preserve the existing active-folio behavior for now.
-    # Only exclude rooms whose active stays overlap
-    # the requested date range.
+    # Exclude active stays whose dates overlap the requested stay.
     active_folios = Folio.objects.filter(
         hotel=hotel,
         folio_type="ROOM",
@@ -55,10 +54,6 @@ def get_available_rooms(
     ).filter(
         Q(check_out_at__isnull=True)
         | Q(check_out_at__date__gte=check_in)
-    )
-
-    occupied_room_ids = list(
-        active_folios.values_list("room_id", flat=True)
     )
 
     occupied_room_ids = list(
@@ -83,11 +78,7 @@ def get_available_rooms(
         available_room_ids = list(
             available_rooms.values_list("id", flat=True)
         )
-
-        available_room_ids = available_room_ids[
-            category_reserved_count:
-        ]
-
+        available_room_ids = available_room_ids[category_reserved_count:]
         available_rooms = rooms.filter(
             id__in=available_room_ids
         ).order_by("room_number", "id")
