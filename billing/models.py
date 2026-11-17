@@ -1341,3 +1341,131 @@ class CompanyDepositTransaction(models.Model):
 
     def __str__(self):
         return f"{self.transaction_type} – ₦{self.amount:,.2f}"
+
+
+# ============================================================================
+# CORPORATE QUOTATIONS AND PROFORMA INVOICES
+# These are commercial documents only. They do not create accounting entries.
+# ============================================================================
+
+class CompanyDocument(models.Model):
+    TYPE_CHOICES = (
+        ("QUOTATION", "Quotation"),
+        ("PROFORMA", "Proforma Invoice"),
+    )
+    STATUS_CHOICES = (
+        ("DRAFT", "Draft"),
+        ("ISSUED", "Issued"),
+        ("VOID", "Void"),
+    )
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="company_documents")
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="documents")
+    group_reservation = models.ForeignKey(
+        GroupReservation, on_delete=models.PROTECT, related_name="company_documents"
+    )
+    document_type = models.CharField(max_length=12, choices=TYPE_CHOICES)
+    document_number = models.CharField(max_length=40)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="DRAFT")
+    issue_date = models.DateField(default=timezone.localdate)
+    valid_until = models.DateField(null=True, blank=True)
+
+    # Recipient and booking snapshots preserve the issued document's contents.
+    company_name_snapshot = models.CharField(max_length=200)
+    company_address_snapshot = models.TextField(blank=True)
+    company_contact_snapshot = models.CharField(max_length=150, blank=True)
+    company_phone_snapshot = models.CharField(max_length=50, blank=True)
+    company_email_snapshot = models.EmailField(blank=True)
+    group_reference_snapshot = models.CharField(max_length=40)
+    group_name_snapshot = models.CharField(max_length=200, blank=True)
+    stay_check_in = models.DateField()
+    stay_check_out = models.DateField()
+
+    terms = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+    subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    tax_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+
+    converted_from = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="converted_documents",
+    )
+    created_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="company_documents_created",
+    )
+    issued_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="company_documents_issued",
+    )
+    issued_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "document_number"],
+                name="unique_company_document_number_per_hotel",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(subtotal__gte=0) & models.Q(tax_amount__gte=0) & models.Q(total_amount__gte=0),
+                name="company_document_totals_nonnegative",
+            ),
+        ]
+
+    def clean(self):
+        if self.company_id and self.hotel_id and self.company.hotel_id != self.hotel_id:
+            raise ValidationError("Company document and company must belong to the same hotel.")
+        if self.group_reservation_id:
+            if self.group_reservation.hotel_id != self.hotel_id:
+                raise ValidationError("Group reservation must belong to the document hotel.")
+            if self.group_reservation.company_id != self.company_id:
+                raise ValidationError("Group reservation must belong to the document company.")
+        if self.valid_until and self.valid_until < self.issue_date:
+            raise ValidationError("Document validity date cannot be before its issue date.")
+        if self.converted_from_id:
+            source = self.converted_from
+            if source.hotel_id != self.hotel_id or source.company_id != self.company_id:
+                raise ValidationError("Converted document must belong to the same hotel and company.")
+            if source.document_type != "QUOTATION" or self.document_type != "PROFORMA":
+                raise ValidationError("Only a quotation can be converted to a proforma invoice.")
+
+    def __str__(self):
+        return f"{self.get_document_type_display()} {self.document_number}"
+
+
+class CompanyDocumentLine(models.Model):
+    document = models.ForeignKey(
+        CompanyDocument, on_delete=models.PROTECT, related_name="lines"
+    )
+    description = models.CharField(max_length=240)
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    unit = models.CharField(max_length=30, blank=True)
+    unit_price = models.DecimalField(max_digits=14, decimal_places=2)
+    line_total = models.DecimalField(max_digits=16, decimal_places=2, default=Decimal("0.00"))
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["sort_order", "id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(quantity__gt=0), name="company_doc_line_quantity_positive"),
+            models.CheckConstraint(condition=models.Q(unit_price__gte=0), name="company_doc_line_price_nonnegative"),
+        ]
+
+    def clean(self):
+        if self.quantity is not None and self.quantity <= 0:
+            raise ValidationError("Document line quantity must be greater than zero.")
+        if self.unit_price is not None and self.unit_price < 0:
+            raise ValidationError("Document line unit price cannot be negative.")
+
+    def save(self, *args, **kwargs):
+        self.line_total = (
+            (self.quantity or Decimal("0.00")) * (self.unit_price or Decimal("0.00"))
+        ).quantize(Decimal("0.01"))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.description} – {self.line_total:,.2f}"
