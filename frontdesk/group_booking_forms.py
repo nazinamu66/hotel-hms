@@ -1,6 +1,6 @@
 from django import forms
 
-from billing.models import Company, GroupReservation
+from billing.models import Company, GroupReservation, Reservation
 
 
 class CompanyForm(forms.ModelForm):
