@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Guest, Folio, Charge, Payment, ComplimentaryRoomNight, CompanyDeposit, CompanyDepositTransaction
+from .models import Guest, Folio, Charge, Payment, ComplimentaryRoomNight, CompanyDeposit, CompanyDepositTransaction, CompanyDocument, CompanyDocumentLine
 
 
 @admin.register(Guest)
@@ -89,3 +89,18 @@ class CompanyDepositTransactionAdmin(admin.ModelAdmin):
     list_filter = ("transaction_type", "payment_method", "created_at")
     search_fields = ("deposit__company__name", "reference", "note")
     readonly_fields = ("created_at",)
+
+
+class CompanyDocumentLineInline(admin.TabularInline):
+    model = CompanyDocumentLine
+    extra = 0
+    readonly_fields = ("line_total",)
+
+
+@admin.register(CompanyDocument)
+class CompanyDocumentAdmin(admin.ModelAdmin):
+    list_display = ("document_number", "document_type", "company", "hotel", "total_amount", "status", "issue_date")
+    list_filter = ("document_type", "status", "issue_date", "hotel")
+    search_fields = ("document_number", "company_name_snapshot", "company__name", "group_reference_snapshot")
+    readonly_fields = ("document_number", "subtotal", "tax_amount", "total_amount", "created_at", "updated_at", "issued_at")
+    inlines = [CompanyDocumentLineInline]
