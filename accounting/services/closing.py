@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -8,6 +9,7 @@ from accounting.services.journal import post_journal_entry
 from accounting.utils import get_current_business_day
 
 
+@transaction.atomic
 def close_period(hotel, user=None, business_day_date=None):
     """
     Close one hotel's business day.
@@ -67,17 +69,21 @@ def close_period(hotel, user=None, business_day_date=None):
 
     if total_profit > 0:
         lines.append({"account": retained, "credit": total_profit})
-    else:
+    elif total_profit < 0:
         lines.append({"account": retained, "debit": abs(total_profit)})
 
-    entry = post_journal_entry(
-        hotel=hotel,
-        description=f"Closing Entry - {closing_date}",
-        lines=lines,
-        created_by=user,
-        entry_type="CLOSING",
-        business_day=business_day,
-    )
+    # A day with no income or expenses has nothing to journalize, but it
+    # must still be marked closed and the next business day opened.
+    entry = None
+    if lines:
+        entry = post_journal_entry(
+            hotel=hotel,
+            description=f"Closing Entry - {closing_date}",
+            lines=lines,
+            created_by=user,
+            entry_type="CLOSING",
+            business_day=business_day,
+        )
 
     business_day.is_closed = True
     business_day.closed_at = timezone.now()
