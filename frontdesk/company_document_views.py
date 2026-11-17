@@ -83,7 +83,9 @@ def company_document_form(request, group_id, document_id=None):
             initial=_line_initial(document) if document else None,
         )
 
-    if request.method == "POST" and header_form.is_valid() and line_formset.is_valid():
+    header_valid = header_form.is_valid() if request.method == "POST" else False
+    lines_valid = line_formset.is_valid() if request.method == "POST" else False
+    if request.method == "POST" and header_valid and lines_valid:
         lines = [
             {
                 "description": item["description"],
