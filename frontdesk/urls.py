@@ -8,6 +8,7 @@ from .group_booking_views import (
     group_reservation_detail,
     group_room_rates_update,
     group_occupant_add,
+    company_deposit_manage,
 )
 from .views import (
     room_board,
@@ -47,6 +48,7 @@ urlpatterns = [
     path('corporate/companies/', company_list, name='frontdesk_company_list'),
     path('corporate/companies/new/', company_create, name='frontdesk_company_create'),
     path('corporate/companies/<int:company_id>/edit/', company_edit, name='frontdesk_company_edit'),
+    path('corporate/companies/<int:company_id>/deposit/', company_deposit_manage, name='frontdesk_company_deposit'),
     path('corporate/groups/', group_reservation_dashboard, name='frontdesk_group_reservations'),
     path('corporate/groups/new/', group_reservation_create, name='frontdesk_group_reservation_create'),
     path('corporate/groups/<int:group_id>/', group_reservation_detail, name='frontdesk_group_reservation_detail'),

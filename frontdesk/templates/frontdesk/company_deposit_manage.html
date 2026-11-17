@@ -1,0 +1,58 @@
+{% extends "base/base.html" %}
+{% block title %}Company Deposit | {{ company.name }}{% endblock %}
+{% block content %}
+<style>
+.cd-page{max-width:1180px;margin:0 auto;padding:18px 4px 42px;color:#172033}.cd-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:18px}.cd-title{font-size:1.8rem;font-weight:850;letter-spacing:-.04em;margin:0 0 5px}.cd-muted{color:#64748b;font-size:.86rem;margin:0}.cd-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 3px 14px rgba(15,23,42,.04)}.cd-balance{font-size:2rem;font-weight:850;margin-top:6px}.cd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.cd-field{margin-bottom:13px}.cd-field label{display:block;font-size:.78rem;font-weight:750;margin-bottom:6px}.cd-field input,.cd-field select,.cd-field textarea{width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}.cd-btn{border:0;border-radius:9px;padding:11px 16px;background:#243b80;color:white;font-weight:800;cursor:pointer}.cd-btn.refund{background:#7f1d1d}.cd-table{width:100%;border-collapse:collapse;min-width:720px}.cd-table th{text-align:left;background:#f8fafc;color:#64748b;font-size:.68rem;text-transform:uppercase;padding:11px}.cd-table td{padding:12px;border-top:1px solid #edf1f5;font-size:.82rem}.cd-empty{text-align:center;color:#64748b;padding:28px}@media(max-width:760px){.cd-grid{grid-template-columns:1fr}}
+</style>
+<div class="cd-page">
+  <div class="cd-head">
+    <div><p class="cd-muted"><a href="{% url 'frontdesk_company_list' %}">Corporate clients</a> / {{ company.name }}</p><h1 class="cd-title">Company deposit</h1><p class="cd-muted">{{ company.name }} · {{ company.phone|default:"No phone recorded" }}</p></div>
+    <a href="{% url 'frontdesk_group_reservations' %}" class="cd-muted">Back to group bookings</a>
+  </div>
+  <section class="cd-card">
+    <div class="cd-muted">Available company deposit balance</div>
+    <div class="cd-balance">₦{{ balance|floatformat:2 }}</div>
+    <p class="cd-muted">Advance funds are held as a liability. They are not room revenue and are not applied to an invoice until explicitly allocated.</p>
+  </section>
+  <div class="cd-grid">
+    <section class="cd-card">
+      <h2 style="font-size:1.05rem;margin:0 0 5px">Receive company deposit</h2>
+      <p class="cd-muted" style="margin-bottom:16px">Record an advance paid by the company.</p>
+      <form method="post">{% csrf_token %}<input type="hidden" name="action" value="RECEIVE">
+        <div class="cd-field"><label>Amount (₦)</label><input type="number" name="amount" min="0.01" step="0.01" required></div>
+        <div class="cd-field"><label>Payment method</label><select name="method" required onchange="toggleCompanyBank(this,'receive')"><option value="">Select method</option><option value="CASH">Cash</option><option value="POS">POS</option><option value="TRANSFER">Bank Transfer</option></select></div>
+        <div id="receive-bank" style="display:none"><div class="cd-field"><label>Receiving bank account</label><select name="bank_account"><option value="">Select bank account</option>{% for bank in bank_accounts %}<option value="{{ bank.pk }}">{{ bank.bank_name }} — {{ bank.account_number }}</option>{% endfor %}</select></div><div class="cd-field"><label>Payment reference</label><input name="reference" maxlength="100"></div></div>
+        <div class="cd-field"><label>Note</label><textarea name="note" rows="2" placeholder="e.g. Advance for group booking"></textarea></div>
+        <button class="cd-btn" type="submit">Receive deposit</button>
+      </form>
+    </section>
+    <section class="cd-card">
+      <h2 style="font-size:1.05rem;margin:0 0 5px">Refund company deposit</h2>
+      <p class="cd-muted" style="margin-bottom:16px">Refunds cannot exceed the available balance.</p>
+      <form method="post">{% csrf_token %}<input type="hidden" name="action" value="REFUND">
+        <div class="cd-field"><label>Amount (₦)</label><input type="number" name="amount" min="0.01" max="{{ balance }}" step="0.01" required></div>
+        <div class="cd-field"><label>Refund method</label><select name="method" required onchange="toggleCompanyBank(this,'refund')"><option value="">Select method</option><option value="CASH">Cash</option><option value="POS">POS</option><option value="TRANSFER">Bank Transfer</option></select></div>
+        <div id="refund-bank" style="display:none"><div class="cd-field"><label>Paying bank account</label><select name="bank_account"><option value="">Select bank account</option>{% for bank in bank_accounts %}<option value="{{ bank.pk }}">{{ bank.bank_name }} — {{ bank.account_number }}</option>{% endfor %}</select></div><div class="cd-field"><label>Refund reference</label><input name="reference" maxlength="100"></div></div>
+        <div class="cd-field"><label>Note</label><textarea name="note" rows="2" placeholder="Reason for refund"></textarea></div>
+        <button class="cd-btn refund" type="submit">Record refund</button>
+      </form>
+    </section>
+  </div>
+  <section class="cd-card">
+    <h2 style="font-size:1.05rem;margin:0 0 14px">Deposit transaction history</h2>
+    <div style="overflow:auto"><table class="cd-table"><thead><tr><th>Date</th><th>Type</th><th>Method</th><th>Amount</th><th>Reference</th><th>Recorded by</th></tr></thead><tbody>
+      {% for item in transactions %}<tr><td>{{ item.created_at|date:"d M Y, H:i" }}</td><td>{{ item.get_transaction_type_display }}</td><td>{{ item.get_payment_method_display|default:"—" }}</td><td>₦{{ item.amount|floatformat:2 }}</td><td>{{ item.reference|default:"—" }}</td><td>{{ item.created_by|default:"—" }}</td></tr>
+      {% empty %}<tr><td colspan="6" class="cd-empty">No company deposit transactions recorded yet.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+</div>
+<script>
+function toggleCompanyBank(select, prefix){
+  const show = ["POS","TRANSFER"].includes(select.value);
+  const panel = document.getElementById(prefix+"-bank");
+  panel.style.display = show ? "block" : "none";
+  panel.querySelector('select[name="bank_account"]').required = show;
+  panel.querySelector('input[name="reference"]').required = show;
+}
+</script>
+{% endblock %}
