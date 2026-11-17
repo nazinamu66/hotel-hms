@@ -156,26 +156,27 @@ class EventOrderLineForm(forms.ModelForm):
 class EventParticipantForm(forms.ModelForm):
     class Meta:
         model = EventParticipant
-        fields = ["participant_type", "room_allocation", "external_name", "external_organization", "note"]
+        fields = ["participant_type", "reservation", "external_name", "external_organization", "note"]
         widgets = {"note": forms.TextInput(attrs={"placeholder": "Optional attendee note"})}
 
     def __init__(self, *args, event=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.event = event
-        allocations = GroupReservationRoom.objects.filter(
-            group_reservation=event.group_reservation,
+        reservations = Reservation.objects.filter(
+            hotel=event.hotel,
             status="CHECKED_IN",
             room__isnull=False,
-        ).select_related("guest", "room") if event and event.group_reservation_id else GroupReservationRoom.objects.none()
-        self.fields["room_allocation"].queryset = allocations
-        self.fields["room_allocation"].required = False
+        ).select_related("guest", "room").order_by("guest__last_name", "guest__first_name") if event else Reservation.objects.none()
+        self.fields["reservation"].queryset = reservations
+        self.fields["reservation"].required = False
+        self.fields["reservation"].label = "Checked-in guest / room"
 
     def clean(self):
         cleaned = super().clean()
         kind = cleaned.get("participant_type")
-        allocation = cleaned.get("room_allocation")
-        if kind == "IN_HOUSE" and not allocation:
-            self.add_error("room_allocation", "Select a checked-in guest and room.")
+        reservation = cleaned.get("reservation")
+        if kind == "IN_HOUSE" and not reservation:
+            self.add_error("reservation", "Select a checked-in hotel guest and room.")
         if kind == "EXTERNAL" and not (cleaned.get("external_name") or "").strip():
             self.add_error("external_name", "Enter the participant's name.")
         return cleaned
