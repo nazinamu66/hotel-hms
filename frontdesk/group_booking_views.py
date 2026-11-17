@@ -255,6 +255,63 @@ def group_reservation_detail(request, group_id):
 
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
+@require_http_methods(["POST"])
+def group_reservation_bulk_checkin(request, group_id):
+    """Check in selected occupants using the standard reservation workflow."""
+    hotel = _frontdesk_hotel(request.user)
+    if hotel is None:
+        return HttpResponseForbidden("Your account is not linked to a hotel.")
+
+    group = get_object_or_404(GroupReservation, pk=group_id, hotel=hotel)
+    selected_ids = list(dict.fromkeys(request.POST.getlist("allocation_ids")))
+    if not selected_ids:
+        messages.error(request, "Select at least one reserved occupant to check in.")
+        return redirect("frontdesk_group_reservation_detail", group_id=group.pk)
+
+    allocations = list(
+        group.room_allocations.select_related("reservation", "guest").filter(
+            pk__in=selected_ids,
+            status="RESERVED",
+            reservation__isnull=False,
+        ).order_by("pk")
+    )
+    if len(allocations) != len(selected_ids):
+        messages.error(
+            request,
+            "One or more selected occupants are no longer reserved or do not have a linked reservation. No check-ins were attempted.",
+        )
+        return redirect("frontdesk_group_reservation_detail", group_id=group.pk)
+
+    from frontdesk.workflows.reservation_checkin import check_in_reservation
+
+    checked_in = []
+    failures = []
+    for allocation in allocations:
+        try:
+            with transaction.atomic():
+                room, folio = check_in_reservation(
+                    reservation=allocation.reservation,
+                    user=request.user,
+                )
+            checked_in.append(f"{allocation.guest.full_name} (Room {room.room_number})")
+        except Exception as exc:
+            failures.append(f"{allocation.guest.full_name}: {exc}")
+
+    if checked_in:
+        messages.success(
+            request,
+            f"Checked in {len(checked_in)} occupant(s): " + ", ".join(checked_in) + ".",
+        )
+    if failures:
+        messages.warning(
+            request,
+            f"{len(failures)} occupant(s) could not be checked in: " + " | ".join(failures),
+        )
+
+    return redirect("frontdesk_group_reservation_detail", group_id=group.pk)
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
 @require_http_methods(["GET", "POST"])
 def group_occupant_add(request, group_id):
     hotel = _frontdesk_hotel(request.user)
