@@ -31,8 +31,13 @@ def _method_and_bank(hotel, method, bank_account):
         return method, None
     if not bank_account:
         raise ValidationError("Select the hotel bank account receiving or paying the funds.")
-    if bank_account.hotel_id != hotel.id or not bank_account.is_active:
-        raise ValidationError("Selected bank account is inactive or belongs to another hotel.")
+    if (
+        bank_account.hotel_id != hotel.id
+        or bank_account.account.hotel_id != hotel.id
+        or bank_account.account.account_type != "bank"
+        or not bank_account.is_active
+    ):
+        raise ValidationError("Selected bank account is inactive, invalid or belongs to another hotel.")
     return method, bank_account
 
 
@@ -110,6 +115,10 @@ def refund_company_deposit(
     """Refund unallocated corporate deposit funds and reduce the liability."""
     if not hotel:
         raise ValidationError("Hotel is required.")
+    if not company:
+        raise ValidationError("Corporate client is required.")
+    if company.hotel_id != hotel.id:
+        raise ValidationError("Corporate client does not belong to this hotel.")
     amount = _amount(amount)
     method, bank_account = _method_and_bank(hotel, method, bank_account)
     reference = (reference or "").strip()
@@ -122,8 +131,6 @@ def refund_company_deposit(
     ).first()
     if deposit is None:
         raise ValidationError("This company has no deposit balance.")
-    if company.hotel_id != hotel.id:
-        raise ValidationError("Corporate client does not belong to this hotel.")
     if amount > deposit.balance:
         raise ValidationError(
             f"Refund exceeds the available company deposit balance of ₦{deposit.balance:,.2f}."
