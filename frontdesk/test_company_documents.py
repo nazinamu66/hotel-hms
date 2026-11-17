@@ -96,6 +96,7 @@ class CorporateDocumentWorkflowTests(TestCase):
             reverse("frontdesk_company_document_create", args=[self.group.pk]),
             self._document_post(
                 **{
+                    "lines-TOTAL_FORMS": "3",
                     "lines-0-description": "Rooms",
                     "lines-0-quantity": "10",
                     "lines-0-unit": "4",
@@ -104,6 +105,10 @@ class CorporateDocumentWorkflowTests(TestCase):
                     "lines-1-quantity": "10",
                     "lines-1-unit": "4",
                     "lines-1-unit_price": "2500.00",
+                    "lines-2-description": "Lunch",
+                    "lines-2-quantity": "10",
+                    "lines-2-unit": "4",
+                    "lines-2-unit_price": "3000.00",
                 }
             ),
         )
@@ -120,8 +125,12 @@ class CorporateDocumentWorkflowTests(TestCase):
             document.lines.get(description="Breakfast").line_total,
             Decimal("100000.00"),
         )
-        self.assertEqual(document.subtotal, Decimal("1500000.00"))
-        self.assertEqual(document.total_amount, Decimal("1500000.00"))
+        self.assertEqual(
+            document.lines.get(description="Lunch").line_total,
+            Decimal("120000.00"),
+        )
+        self.assertEqual(document.subtotal, Decimal("1620000.00"))
+        self.assertEqual(document.total_amount, Decimal("1620000.00"))
 
     def test_issue_locks_document_and_preserves_company_snapshot(self):
         self.client.post(
