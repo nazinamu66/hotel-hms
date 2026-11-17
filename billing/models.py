@@ -1234,3 +1234,110 @@ class ComplimentaryRoomNight(models.Model):
 
     def __str__(self):
         return f"Complimentary night {self.reservation_id} – {self.room_night_date} ({self.status})"
+
+
+
+# ============================================================================
+# CORPORATE DEPOSITS
+# Corporate funds are liabilities until applied to company receivables or
+# refunded. They are deliberately separate from individual GuestDeposit.
+# ============================================================================
+
+class CompanyDeposit(models.Model):
+    hotel = models.ForeignKey(
+        Hotel,
+        on_delete=models.PROTECT,
+        related_name="company_deposits",
+    )
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.PROTECT,
+        related_name="deposits",
+    )
+    balance = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "company"],
+                name="unique_company_deposit_per_hotel",
+            ),
+        ]
+
+    def clean(self):
+        if self.hotel_id and self.company_id and self.company.hotel_id != self.hotel_id:
+            raise ValidationError("Company deposit and company must belong to the same hotel.")
+        if self.balance is not None and self.balance < 0:
+            raise ValidationError("Company deposit balance cannot be negative.")
+
+    def __str__(self):
+        return f"{self.company.name} – Deposit ₦{self.balance:,.2f}"
+
+
+class CompanyDepositTransaction(models.Model):
+    TYPE_CHOICES = (
+        ("RECEIVED", "Deposit Received"),
+        ("APPLIED", "Applied to Company Invoice"),
+        ("REFUNDED", "Deposit Refunded"),
+        ("ADJUSTMENT", "Balance Adjustment"),
+    )
+    METHOD_CHOICES = (
+        ("CASH", "Cash"),
+        ("POS", "POS"),
+        ("TRANSFER", "Bank Transfer"),
+    )
+
+    deposit = models.ForeignKey(
+        CompanyDeposit,
+        on_delete=models.PROTECT,
+        related_name="transactions",
+    )
+    transaction_type = models.CharField(max_length=12, choices=TYPE_CHOICES)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    payment_method = models.CharField(
+        max_length=12,
+        choices=METHOD_CHOICES,
+        blank=True,
+    )
+    bank_account = models.ForeignKey(
+        "accounting.BankAccount",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="company_deposit_transactions",
+    )
+    reference = models.CharField(max_length=100, blank=True)
+    note = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="company_deposit_transactions_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=Decimal("0.00")),
+                name="company_deposit_transaction_amount_positive",
+            ),
+        ]
+
+    def clean(self):
+        if self.amount is not None and self.amount <= 0:
+            raise ValidationError("Company deposit transaction amount must be greater than zero.")
+        if self.bank_account_id and self.deposit_id:
+            if self.bank_account.hotel_id != self.deposit.hotel_id:
+                raise ValidationError("Bank account must belong to the company deposit hotel.")
+
+    def __str__(self):
+        return f"{self.transaction_type} – ₦{self.amount:,.2f}"

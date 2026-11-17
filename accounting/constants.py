@@ -45,7 +45,7 @@ ACCOUNTS_PAYABLE = "accounts_payable"
 
 SUPPLIER_ADVANCES = "supplier_advances"
 
-GUEST_DEPOSITS = "guest_deposits"
+GUEST_DEPOSITS = "guest_deposits"\n\nCORPORATE_DEPOSITS = "corporate_deposits"
 
 OWNER_CAPITAL = "owner_capital"
 
@@ -250,6 +250,16 @@ DEFAULT_ACCOUNTS = [
         "code": "2100",
         "name": "Guest Deposits",
         "system_key": GUEST_DEPOSITS,
+        "type": CURRENT_LIABILITY,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": False,
+    },
+
+    {
+        "code": "2110",
+        "name": "Corporate Deposits",
+        "system_key": CORPORATE_DEPOSITS,
         "type": CURRENT_LIABILITY,
         "is_system": True,
         "allow_posting": True,
