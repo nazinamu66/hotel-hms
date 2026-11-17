@@ -305,3 +305,53 @@ class CurrentBusinessDayTests(TestCase):
 
         with self.assertRaises(ValidationError):
             get_current_business_day(self.hotel)
+
+
+class EnsureDailyBusinessDaysCommandTests(TestCase):
+    def setUp(self):
+        from inventory.models import Hotel
+        self.hotel = Hotel.objects.create(name="Daily Business Day Test Hotel")
+
+    @patch("accounting.services.business_day.timezone.localdate")
+    def test_command_creates_today_for_each_hotel(self, localdate):
+        from datetime import date
+        from django.core.management import call_command
+        from accounting.models import BusinessDay
+        from io import StringIO
+
+        target_date = date(2026, 11, 18)
+        localdate.return_value = target_date
+        output = StringIO()
+
+        call_command("ensure_business_days", stdout=output)
+
+        day = BusinessDay.objects.get(hotel=self.hotel, date=target_date)
+        self.assertFalse(day.is_closed)
+        self.assertIn("1 created", output.getvalue())
+
+    @patch("accounting.services.business_day.timezone.localdate")
+    def test_command_is_idempotent_and_does_not_reopen_closed_day(self, localdate):
+        from datetime import date
+        from django.core.management import call_command
+        from accounting.models import BusinessDay
+        from io import StringIO
+
+        target_date = date(2026, 11, 18)
+        localdate.return_value = target_date
+        day = BusinessDay.objects.create(
+            hotel=self.hotel,
+            date=target_date,
+            is_closed=True,
+        )
+        output = StringIO()
+
+        call_command("ensure_business_days", stdout=output)
+        call_command("ensure_business_days", stdout=StringIO())
+
+        day.refresh_from_db()
+        self.assertTrue(day.is_closed)
+        self.assertEqual(
+            BusinessDay.objects.filter(hotel=self.hotel, date=target_date).count(),
+            1,
+        )
+        self.assertIn("1 already existed", output.getvalue())
