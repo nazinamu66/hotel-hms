@@ -249,6 +249,7 @@ def group_reservation_detail(request, group_id):
         "reserved_count": allocations.filter(status="RESERVED").count(),
         "checked_out_count": allocations.filter(status="CHECKED_OUT").count(),
         "company_documents": group.company_documents.prefetch_related("lines").all(),
+        "company_invoices": CompanyInvoice.objects.filter(group_reservation=group).order_by("-created_at"),
     }
     return render(request, "frontdesk/group_reservation_detail.html", context)
 
