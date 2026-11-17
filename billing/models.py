@@ -1349,8 +1349,17 @@ class CompanyDepositTransaction(models.Model):
         if self.amount is not None and self.amount <= 0:
             raise ValidationError("Company deposit transaction amount must be greater than zero.")
         if self.bank_account_id and self.deposit_id:
-            if self.bank_account.hotel_id != self.deposit.hotel_id:
+            if self.bank_account.hotel_id != self.deposit.hotel_id or self.bank_account.account.hotel_id != self.deposit.hotel_id:
                 raise ValidationError("Bank account must belong to the company deposit hotel.")
+        if self.transaction_type == "APPLIED":
+            if not self.company_invoice_id:
+                raise ValidationError("An applied company deposit must reference its company invoice.")
+            if self.deposit_id and self.company_invoice_id:
+                invoice = self.company_invoice
+                if invoice.hotel_id != self.deposit.hotel_id or invoice.company_id != self.deposit.company_id:
+                    raise ValidationError("Deposit and invoice must belong to the same company and hotel.")
+        elif self.company_invoice_id:
+            raise ValidationError("Only deposit applications may reference a company invoice.")
 
     def __str__(self):
         return f"{self.transaction_type} – ₦{self.amount:,.2f}"
@@ -1607,6 +1616,10 @@ class CompanyInvoiceCharge(models.Model):
                 raise ValidationError("Charge and invoice must belong to the same hotel.")
             if not charge.group_room_allocation_id or charge.group_room_allocation.group_reservation_id != invoice.group_reservation_id:
                 raise ValidationError("Charge must belong to the invoice's group reservation.")
+            if invoice.status != "DRAFT":
+                raise ValidationError("Charge lines can only be added to a draft company invoice.")
+            if self.amount is not None and self.amount != charge.amount:
+                raise ValidationError("Invoice charge amount must match the source charge amount.")
 
     def __str__(self):
         return f"{self.description_snapshot} – ₦{self.amount:,.2f}"
@@ -1648,8 +1661,10 @@ class CompanyInvoicePayment(models.Model):
     def clean(self):
         if self.amount is not None and self.amount <= 0:
             raise ValidationError("Company invoice payment must be greater than zero.")
+        if self.invoice_id and self.invoice.status != "ISSUED":
+            raise ValidationError("Payments can only be recorded against an issued company invoice.")
         if self.bank_account_id and self.invoice_id:
-            if self.bank_account.hotel_id != self.invoice.hotel_id:
+            if self.bank_account.hotel_id != self.invoice.hotel_id or self.bank_account.account.hotel_id != self.invoice.hotel_id:
                 raise ValidationError("Payment bank account must belong to the invoice hotel.")
 
     def __str__(self):
