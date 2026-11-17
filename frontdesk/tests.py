@@ -62,3 +62,48 @@ class GroupReservationStatusTests(SimpleTestCase):
 
         self.assertEqual(group.status, "CONFIRMED")
         group.save.assert_not_called()
+
+
+
+from decimal import Decimal
+from billing.models import CompanyInvoice
+from frontdesk.company_invoice_views import _company_statement_metrics
+
+
+class CompanyStatementMetricsTests(SimpleTestCase):
+    def invoice(self, status, total, paid, balance):
+        return SimpleNamespace(
+            status=status,
+            total_amount=Decimal(total),
+            amount_paid=Decimal(paid),
+            balance_due=Decimal(balance),
+        )
+
+    def test_statement_totals_include_issued_invoices_without_rewriting_them(self):
+        issued_a = self.invoice("ISSUED", "60000.00", "60000.00", "0.00")
+        issued_b = self.invoice("ISSUED", "30000.00", "30000.00", "0.00")
+        draft = self.invoice("DRAFT", "12000.00", "0.00", "12000.00")
+        void = self.invoice("VOID", "5000.00", "0.00", "5000.00")
+
+        metrics = _company_statement_metrics(
+            [issued_a, issued_b, draft, void],
+            Decimal("15000.00"),
+            Decimal("25000.00"),
+        )
+
+        self.assertEqual(metrics["invoiced_total"], Decimal("90000.00"))
+        self.assertEqual(metrics["settled_total"], Decimal("90000.00"))
+        self.assertEqual(metrics["outstanding_total"], Decimal("0.00"))
+        self.assertEqual(metrics["unbilled_total"], Decimal("15000.00"))
+        self.assertEqual(metrics["deposit_balance"], Decimal("25000.00"))
+        self.assertEqual(issued_a.total_amount, Decimal("60000.00"))
+        self.assertEqual(issued_b.total_amount, Decimal("30000.00"))
+
+    def test_statement_handles_no_invoices_or_deposit(self):
+        metrics = _company_statement_metrics([], Decimal("0.00"), Decimal("0.00"))
+
+        self.assertEqual(metrics["invoiced_total"], Decimal("0.00"))
+        self.assertEqual(metrics["settled_total"], Decimal("0.00"))
+        self.assertEqual(metrics["outstanding_total"], Decimal("0.00"))
+        self.assertEqual(metrics["unbilled_total"], Decimal("0.00"))
+        self.assertEqual(metrics["deposit_balance"], Decimal("0.00"))
