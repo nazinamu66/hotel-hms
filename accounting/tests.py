@@ -233,3 +233,72 @@ class RoomChargePostingReferenceTests(SimpleTestCase):
         get_account.side_effect = [object(), object()]
         post_room_charge(folio, Decimal("20000.00"), None)
         self.assertEqual(post_journal_entry.call_args.kwargs["reference"], "ROOM-205")
+
+
+class CurrentBusinessDayTests(TestCase):
+    def setUp(self):
+        from inventory.models import Hotel
+        self.hotel = Hotel.objects.create(name="Business Day Test Hotel")
+
+    @patch("accounting.utils.timezone.localdate")
+    def test_stale_open_day_does_not_remain_current(self, localdate):
+        from datetime import date, timedelta
+        from accounting.models import BusinessDay
+        from accounting.utils import get_current_business_day
+
+        today = date(2026, 11, 17)
+        localdate.return_value = today
+        BusinessDay.objects.create(
+            hotel=self.hotel,
+            date=today - timedelta(days=1),
+            is_closed=False,
+        )
+
+        current = get_current_business_day(self.hotel)
+
+        self.assertEqual(current.date, today)
+        self.assertFalse(current.is_closed)
+        self.assertEqual(
+            BusinessDay.objects.filter(hotel=self.hotel, date=today).count(),
+            1,
+        )
+
+    @patch("accounting.utils.timezone.localdate")
+    def test_existing_open_today_is_reused(self, localdate):
+        from datetime import date
+        from accounting.models import BusinessDay
+        from accounting.utils import get_current_business_day
+
+        today = date(2026, 11, 17)
+        localdate.return_value = today
+        existing = BusinessDay.objects.create(
+            hotel=self.hotel,
+            date=today,
+            is_closed=False,
+        )
+
+        current = get_current_business_day(self.hotel)
+
+        self.assertEqual(current.pk, existing.pk)
+        self.assertEqual(
+            BusinessDay.objects.filter(hotel=self.hotel, date=today).count(),
+            1,
+        )
+
+    @patch("accounting.utils.timezone.localdate")
+    def test_closed_today_blocks_new_posting_day_lookup(self, localdate):
+        from datetime import date
+        from django.core.exceptions import ValidationError
+        from accounting.models import BusinessDay
+        from accounting.utils import get_current_business_day
+
+        today = date(2026, 11, 17)
+        localdate.return_value = today
+        BusinessDay.objects.create(
+            hotel=self.hotel,
+            date=today,
+            is_closed=True,
+        )
+
+        with self.assertRaises(ValidationError):
+            get_current_business_day(self.hotel)
