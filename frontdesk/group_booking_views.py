@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -6,8 +7,8 @@ from django.views.decorators.http import require_http_methods
 from uuid import uuid4
 
 from accounts.decorators import role_required
-from billing.models import Company, GroupReservation
-from .group_booking_forms import CompanyForm, GroupReservationForm
+from billing.models import Company, GroupReservation, Guest
+from .group_booking_forms import CompanyForm, GroupReservationForm, GroupOccupantForm
 
 
 def _frontdesk_hotel(user):
@@ -129,4 +130,103 @@ def group_reservation_create(request):
         "form": form,
         "page_title": "Create group reservation",
         "submit_label": "Create group reservation",
+    })
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def group_reservation_detail(request, group_id):
+    hotel = _frontdesk_hotel(request.user)
+    if hotel is None:
+        return HttpResponseForbidden("Your account is not linked to a hotel.")
+    group = get_object_or_404(
+        GroupReservation.objects.select_related("company").prefetch_related(
+            "room_allocations__guest",
+            "room_allocations__room",
+            "room_allocations__room_category",
+            "room_allocations__reservation",
+        ),
+        pk=group_id,
+        hotel=hotel,
+    )
+    allocations = group.room_allocations.all()
+    context = {
+        "group": group,
+        "allocations": allocations,
+        "occupant_count": allocations.count(),
+        "checked_in_count": allocations.filter(status="CHECKED_IN").count(),
+        "reserved_count": allocations.filter(status="RESERVED").count(),
+        "checked_out_count": allocations.filter(status="CHECKED_OUT").count(),
+    }
+    return render(request, "frontdesk/group_reservation_detail.html", context)
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+@require_http_methods(["GET", "POST"])
+def group_occupant_add(request, group_id):
+    hotel = _frontdesk_hotel(request.user)
+    if hotel is None:
+        return HttpResponseForbidden("Your account is not linked to a hotel.")
+    group = get_object_or_404(GroupReservation, pk=group_id, hotel=hotel)
+    form = GroupOccupantForm(
+        request.POST or None,
+        hotel=hotel,
+        group=group,
+    )
+    if request.method == "POST" and form.is_valid():
+        data = form.cleaned_data
+        try:
+            with transaction.atomic():
+                if data["guest_mode"] == "NEW":
+                    # Avoid silently creating a duplicate guest record.
+                    matches = Guest.objects.filter(hotel=hotel)
+                    duplicate = None
+                    if data.get("phone"):
+                        duplicate = matches.filter(phone=data["phone"]).first()
+                    if duplicate is None and data.get("email"):
+                        duplicate = matches.filter(email__iexact=data["email"]).first()
+                    if duplicate is None and data.get("id_number"):
+                        duplicate = matches.filter(id_number__iexact=data["id_number"]).first()
+                    if duplicate:
+                        raise ValidationError(
+                            f"A possible existing guest was found: {duplicate.full_name} "
+                            f"(Guest #{duplicate.pk}). Select the existing guest instead."
+                        )
+                    guest = Guest.objects.create(
+                        hotel=hotel,
+                        first_name=data["first_name"],
+                        last_name=data["last_name"],
+                        phone=data.get("phone", ""),
+                        email=data.get("email", ""),
+                        nationality=data.get("nationality", ""),
+                        id_number=data.get("id_number", ""),
+                    )
+                else:
+                    guest = data["guest"]
+
+                from billing.services.group_reservations import add_group_occupant
+                allocation = add_group_occupant(
+                    group_reservation_id=group.pk,
+                    guest_id=guest.pk,
+                    room_category_id=data["room_category"].pk,
+                    room_id=data["room"].pk if data.get("room") else None,
+                    check_in_date=data["check_in_date"],
+                    check_out_date=data["check_out_date"],
+                    occupant_note=data.get("occupant_note", ""),
+                    user=request.user,
+                )
+        except ValidationError as exc:
+            form.add_error(None, str(exc))
+        except Exception as exc:
+            form.add_error(None, f"Unable to add this occupant: {exc}")
+        else:
+            messages.success(
+                request,
+                f"{allocation.guest.full_name} added to group {group.reference}. "
+                f"Reservation #{allocation.reservation_id} created.",
+            )
+            return redirect("frontdesk_group_reservation_detail", group_id=group.pk)
+
+    return render(request, "frontdesk/group_occupant_form.html", {
+        "form": form,
+        "group": group,
     })
