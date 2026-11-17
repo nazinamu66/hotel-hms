@@ -271,10 +271,10 @@ class CurrentBusinessDayTests(TestCase):
 
         today = date(2026, 11, 17)
         localdate.return_value = today
-        existing = BusinessDay.objects.create(
+        existing, _ = BusinessDay.objects.get_or_create(
             hotel=self.hotel,
             date=today,
-            is_closed=False,
+            defaults={"is_closed": False},
         )
 
         current = get_current_business_day(self.hotel)
@@ -294,11 +294,14 @@ class CurrentBusinessDayTests(TestCase):
 
         today = date(2026, 11, 17)
         localdate.return_value = today
-        BusinessDay.objects.create(
+        business_day, _ = BusinessDay.objects.get_or_create(
             hotel=self.hotel,
             date=today,
-            is_closed=True,
+            defaults={"is_closed": True},
         )
+        if not business_day.is_closed:
+            business_day.is_closed = True
+            business_day.save(update_fields=["is_closed"])
 
         with self.assertRaises(ValidationError):
             get_current_business_day(self.hotel)
