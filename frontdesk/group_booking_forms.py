@@ -45,3 +45,47 @@ class GroupReservationForm(forms.ModelForm):
         self.fields["company"].queryset = Company.objects.filter(
             hotel=hotel, is_active=True
         ).order_by("name") if hotel else Company.objects.none()
+
+
+class GroupOccupantForm(forms.Form):
+    guest_mode = forms.ChoiceField(
+        choices=(("EXISTING", "Existing guest"), ("NEW", "New guest")),
+        initial="EXISTING",
+    )
+    guest = forms.ModelChoiceField(queryset=None, required=False)
+    first_name = forms.CharField(max_length=75, required=False)
+    last_name = forms.CharField(max_length=75, required=False)
+    phone = forms.CharField(max_length=50, required=False)
+    email = forms.EmailField(required=False)
+    nationality = forms.CharField(max_length=100, required=False)
+    id_number = forms.CharField(max_length=100, required=False)
+    room_category = forms.ModelChoiceField(queryset=None)
+    room = forms.ModelChoiceField(queryset=None, required=False)
+    check_in_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+    check_out_date = forms.DateField(widget=forms.DateInput(attrs={"type": "date"}))
+    occupant_note = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
+
+    def __init__(self, *args, hotel=None, group=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from billing.models import Guest
+        from rooms.models import Room, RoomCategory
+        self.fields["guest"].queryset = Guest.objects.filter(hotel=hotel).order_by("first_name", "last_name") if hotel else Guest.objects.none()
+        self.fields["room_category"].queryset = RoomCategory.objects.filter(
+            is_active=True, rooms__hotel=hotel
+        ).distinct().order_by("name") if hotel else RoomCategory.objects.none()
+        self.fields["room"].queryset = Room.objects.filter(
+            hotel=hotel, status__in=["AVAILABLE", "VACANT_DIRTY"]
+        ).select_related("category").order_by("room_number") if hotel else Room.objects.none()
+        if group:
+            self.fields["check_in_date"].initial = group.check_in_date
+            self.fields["check_out_date"].initial = group.check_out_date
+
+    def clean(self):
+        cleaned = super().clean()
+        mode = cleaned.get("guest_mode")
+        if mode == "EXISTING" and not cleaned.get("guest"):
+            self.add_error("guest", "Select an existing guest.")
+        if mode == "NEW":
+            if not cleaned.get("first_name") or not cleaned.get("last_name"):
+                self.add_error("first_name", "First and last name are required for a new guest.")
+        return cleaned
