@@ -1759,10 +1759,12 @@ class EventBooking(models.Model):
                 raise ValidationError("Add at least one food or beverage line before releasing the event.")
             if not event.participants.exists():
                 raise ValidationError("Add or confirm the event participants before release.")
-            if event.participants.filter(participant_type="IN_HOUSE").exclude(
-                room_allocation__status="CHECKED_IN"
+            if event.participants.filter(participant_type="IN_HOUSE").filter(
+                models.Q(reservation__isnull=True)
+                | ~models.Q(reservation__status="CHECKED_IN")
+                | models.Q(reservation__room__isnull=True)
             ).exists():
-                raise ValidationError("Every in-house participant must be checked in before release.")
+                raise ValidationError("Every in-house participant must have a checked-in reservation and assigned room before release.")
             event.status = "RELEASED"
             event.released_at = timezone.now()
             event.released_by = user
@@ -1784,8 +1786,8 @@ class EventParticipant(models.Model):
     event = models.ForeignKey(EventBooking, on_delete=models.CASCADE, related_name="participants")
     participant_type = models.CharField(max_length=12, choices=PARTICIPANT_TYPES)
     guest = models.ForeignKey(Guest, on_delete=models.PROTECT, null=True, blank=True, related_name="event_participations")
-    room_allocation = models.ForeignKey(
-        GroupReservationRoom, on_delete=models.PROTECT, null=True, blank=True,
+    reservation = models.ForeignKey(
+        "billing.Reservation", on_delete=models.PROTECT, null=True, blank=True,
         related_name="event_participations",
     )
     external_name = models.CharField(max_length=150, blank=True)
@@ -1802,23 +1804,23 @@ class EventParticipant(models.Model):
         if self.event.status not in ("DRAFT", "AGREED"):
             raise ValidationError("Participants cannot be changed after an event is released or cancelled.")
         if self.participant_type == "IN_HOUSE":
-            if not self.guest_id or not self.room_allocation_id:
-                raise ValidationError("In-house participants require a guest and group room allocation.")
-            if self.room_allocation.group_reservation.hotel_id != self.event.hotel_id:
-                raise ValidationError("Participant room allocation belongs to another hotel.")
-            if not self.room_allocation.room_id:
-                raise ValidationError("In-house participants must have an assigned room before event release.")
-            if self.room_allocation.guest_id != self.guest_id:
-                raise ValidationError("Participant guest must match the selected room allocation.")
-            if self.room_allocation.group_reservation_id != self.event.group_reservation_id:
-                raise ValidationError("In-house participant must belong to the event's linked group reservation.")
+            if not self.guest_id or not self.reservation_id:
+                raise ValidationError("In-house participants require a hotel guest and checked-in reservation.")
+            if self.guest.hotel_id != self.event.hotel_id:
+                raise ValidationError("Participant guest belongs to another hotel.")
+            if self.reservation.hotel_id != self.event.hotel_id:
+                raise ValidationError("Participant reservation belongs to another hotel.")
+            if self.reservation.guest_id != self.guest_id:
+                raise ValidationError("Participant guest must match the selected reservation.")
+            if self.reservation.status != "CHECKED_IN" or not self.reservation.room_id:
+                raise ValidationError("In-house participants must have a checked-in reservation with an assigned room.")
             if self.external_name:
                 raise ValidationError("Do not enter an external name for an in-house participant.")
         elif self.participant_type == "EXTERNAL":
             if not self.external_name.strip():
                 raise ValidationError({"external_name": "External participant name is required."})
-            if self.guest_id or self.room_allocation_id:
-                raise ValidationError("External participants must not be linked to a hotel guest or room.")
+            if self.guest_id or self.reservation_id:
+                raise ValidationError("External participants must not be linked to a hotel guest or reservation.")
         else:
             raise ValidationError({"participant_type": "Select a valid participant type."})
 
@@ -1828,7 +1830,7 @@ class EventParticipant(models.Model):
 
     @property
     def room_number(self):
-        return self.room_allocation.room.room_number if self.room_allocation_id and self.room_allocation.room_id else ""
+        return self.reservation.room.room_number if self.reservation_id and self.reservation.room_id else ""
 
 
 class EventOrderLine(models.Model):
