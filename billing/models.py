@@ -1318,6 +1318,13 @@ class CompanyDepositTransaction(models.Model):
         blank=True,
         related_name="company_deposit_transactions",
     )
+    company_invoice = models.ForeignKey(
+        "billing.CompanyInvoice",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="deposit_applications",
+    )
     reference = models.CharField(max_length=100, blank=True)
     note = models.TextField(blank=True)
     created_by = models.ForeignKey(
@@ -1475,3 +1482,175 @@ class CompanyDocumentLine(models.Model):
 
     def __str__(self):
         return f"{self.description} – {self.line_total:,.2f}"
+
+
+
+# ============================================================================
+# FINAL CORPORATE INVOICES
+# These documents reconcile existing company-billed charges. Issuing an invoice
+# does not post revenue or receivables a second time.
+# ============================================================================
+
+class CompanyInvoice(models.Model):
+    STATUS_CHOICES = (
+        ("DRAFT", "Draft"),
+        ("ISSUED", "Issued"),
+        ("VOID", "Void"),
+    )
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="company_invoices")
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="invoices")
+    group_reservation = models.ForeignKey(
+        GroupReservation, on_delete=models.PROTECT, related_name="company_invoices"
+    )
+    invoice_number = models.CharField(max_length=40)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="DRAFT")
+    issue_date = models.DateField(default=timezone.localdate)
+    due_date = models.DateField(null=True, blank=True)
+    company_name_snapshot = models.CharField(max_length=200)
+    company_address_snapshot = models.TextField(blank=True)
+    company_contact_snapshot = models.CharField(max_length=150, blank=True)
+    company_phone_snapshot = models.CharField(max_length=50, blank=True)
+    company_email_snapshot = models.EmailField(blank=True)
+    group_reference_snapshot = models.CharField(max_length=40)
+    group_name_snapshot = models.CharField(max_length=200, blank=True)
+    stay_check_in = models.DateField()
+    stay_check_out = models.DateField()
+    subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="company_invoices_created",
+    )
+    issued_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="company_invoices_issued",
+    )
+    issued_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "invoice_number"],
+                name="unique_company_invoice_number_per_hotel",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(subtotal__gte=0) & models.Q(total_amount__gte=0),
+                name="company_invoice_totals_nonnegative",
+            ),
+        ]
+
+    def clean(self):
+        if self.company_id and self.hotel_id and self.company.hotel_id != self.hotel_id:
+            raise ValidationError("Company invoice and company must belong to the same hotel.")
+        if self.group_reservation_id:
+            if self.group_reservation.hotel_id != self.hotel_id:
+                raise ValidationError("Group reservation must belong to the invoice hotel.")
+            if self.group_reservation.company_id != self.company_id:
+                raise ValidationError("Group reservation must belong to the invoice company.")
+        if self.due_date and self.due_date < self.issue_date:
+            raise ValidationError("Invoice due date cannot be before its issue date.")
+
+    @property
+    def deposit_applied(self):
+        return self.deposit_applications.filter(
+            transaction_type="APPLIED"
+        ).aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
+
+    @property
+    def direct_payments_total(self):
+        return self.payments.aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
+
+    @property
+    def amount_paid(self):
+        return self.deposit_applied + self.direct_payments_total
+
+    @property
+    def balance_due(self):
+        return max(self.total_amount - self.amount_paid, Decimal("0.00"))
+
+    def __str__(self):
+        return f"Invoice {self.invoice_number} – {self.company_name_snapshot}"
+
+
+class CompanyInvoiceCharge(models.Model):
+    invoice = models.ForeignKey(
+        CompanyInvoice, on_delete=models.PROTECT, related_name="charge_lines"
+    )
+    charge = models.OneToOneField(
+        Charge, on_delete=models.PROTECT, related_name="company_invoice_link"
+    )
+    description_snapshot = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name="company_invoice_charge_amount_positive",
+            ),
+        ]
+
+    def clean(self):
+        if self.charge_id and self.invoice_id:
+            charge = self.charge
+            invoice = self.invoice
+            if charge.billing_party != "COMPANY":
+                raise ValidationError("Only company-billed charges can be placed on a company invoice.")
+            if charge.folio.hotel_id != invoice.hotel_id:
+                raise ValidationError("Charge and invoice must belong to the same hotel.")
+            if not charge.group_room_allocation_id or charge.group_room_allocation.group_reservation_id != invoice.group_reservation_id:
+                raise ValidationError("Charge must belong to the invoice's group reservation.")
+
+    def __str__(self):
+        return f"{self.description_snapshot} – ₦{self.amount:,.2f}"
+
+
+class CompanyInvoicePayment(models.Model):
+    METHOD_CHOICES = (
+        ("CASH", "Cash"),
+        ("POS", "POS"),
+        ("TRANSFER", "Bank Transfer"),
+    )
+
+    invoice = models.ForeignKey(
+        CompanyInvoice, on_delete=models.PROTECT, related_name="payments"
+    )
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    method = models.CharField(max_length=12, choices=METHOD_CHOICES)
+    bank_account = models.ForeignKey(
+        "accounting.BankAccount", null=True, blank=True,
+        on_delete=models.PROTECT, related_name="company_invoice_payments",
+    )
+    reference = models.CharField(max_length=100, blank=True)
+    note = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="company_invoice_payments_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(amount__gt=0),
+                name="company_invoice_payment_amount_positive",
+            ),
+        ]
+
+    def clean(self):
+        if self.amount is not None and self.amount <= 0:
+            raise ValidationError("Company invoice payment must be greater than zero.")
+        if self.bank_account_id and self.invoice_id:
+            if self.bank_account.hotel_id != self.invoice.hotel_id:
+                raise ValidationError("Payment bank account must belong to the invoice hotel.")
+
+    def __str__(self):
+        return f"{self.method} – ₦{self.amount:,.2f} ({self.invoice.invoice_number})"
