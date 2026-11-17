@@ -6,6 +6,7 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 from uuid import uuid4
+from decimal import Decimal
 from rooms.models import RoomCategory
 
 from accounts.decorators import role_required
@@ -226,6 +227,11 @@ def group_reservation_detail(request, group_id):
             "category": category,
             "standard_rate": standard,
             "negotiated_rate": negotiated_rates.get(category.pk),
+            "saving": (
+                Decimal(standard) - Decimal(negotiated_rates[category.pk].nightly_rate)
+                if standard is not None and category.pk in negotiated_rates
+                else None
+            ),
         })
     has_posted_room_charges = Charge.objects.filter(
         group_room_allocation__group_reservation=group
