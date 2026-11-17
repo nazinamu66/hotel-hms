@@ -9,9 +9,9 @@ from django.utils import timezone
 from billing.models import CompanyDocument, CompanyDocumentLine
 
 
-def _document_number(hotel, document_type):
+def _document_number(hotel, document_type, issue_date=None):
     prefix = "QT" if document_type == "QUOTATION" else "PI"
-    year = timezone.localdate().year
+    year = (issue_date or timezone.localdate()).year
     # Random suffix avoids collisions between simultaneous Frontdesk users.
     for _ in range(10):
         number = f"{prefix}-{year}-{uuid4().hex[:8].upper()}"
@@ -29,7 +29,7 @@ def _snapshot_document(*, group, document_type, user, valid_until=None, terms=""
         company=company,
         group_reservation=group,
         document_type=document_type,
-        document_number=_document_number(group.hotel, document_type),
+        document_number=_document_number(group.hotel, document_type, issue_date=issue_date),
         issue_date=issue_date or timezone.localdate(),
         valid_until=valid_until,
         company_name_snapshot=company.name,
