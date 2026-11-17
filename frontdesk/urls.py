@@ -10,6 +10,9 @@ from .group_booking_views import (
     group_occupant_add,
     group_reservation_bulk_checkin,
     company_deposit_manage,
+    event_dashboard,
+    event_create,
+    event_detail,
 )
 from .company_document_views import (
     company_document_form,
@@ -57,6 +60,9 @@ from .views import (
 )
 
 urlpatterns = [
+    path('corporate/events/', event_dashboard, name='frontdesk_event_dashboard'),
+    path('corporate/events/new/', event_create, name='frontdesk_event_create'),
+    path('corporate/events/<int:event_id>/', event_detail, name='frontdesk_event_detail'),
     path('corporate/companies/', company_list, name='frontdesk_company_list'),
     path('corporate/companies/new/', company_create, name='frontdesk_company_create'),
     path('corporate/companies/<int:company_id>/edit/', company_edit, name='frontdesk_company_edit'),
