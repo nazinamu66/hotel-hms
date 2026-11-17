@@ -44,13 +44,14 @@ class ChargePaymentAllocationTests(TestCase):
             folio_type="WALKIN",
         )
 
-    def make_charge(self, amount, reference):
+    def make_charge(self, amount, reference, billing_party="INDIVIDUAL"):
         return Charge.objects.create(
             folio=self.folio,
             department=self.frontdesk,
             description=reference,
             amount=Decimal(amount),
             reference=reference,
+            billing_party=billing_party,
         )
 
     def make_payment(self, amount, reference="GENERAL-RECEIPT", method="TRANSFER"):
@@ -79,6 +80,37 @@ class ChargePaymentAllocationTests(TestCase):
         self.assertEqual(charge_outstanding(first), Decimal("0.00"))
         self.assertEqual(charge_outstanding(second), Decimal("2000.00"))
         self.assertEqual(payment_unallocated(payment), Decimal("0.00"))
+
+    def test_company_charges_are_excluded_from_occupant_folio_total(self):
+        self.make_charge("2000.00", "OCCUPANT-ROOM-SERVICE")
+        self.make_charge("35000.00", "COMPANY-ROOM-NIGHT", billing_party="COMPANY")
+
+        self.assertEqual(self.folio.total_charges, Decimal("2000.00"))
+        self.assertEqual(self.folio.total_company_charges, Decimal("35000.00"))
+        self.assertEqual(self.folio.balance, Decimal("2000.00"))
+
+    def test_fifo_never_allocates_occupant_payment_to_company_charge(self):
+        company_charge = self.make_charge(
+            "35000.00", "COMPANY-ROOM-NIGHT", billing_party="COMPANY"
+        )
+        occupant_charge = self.make_charge("2500.00", "OCCUPANT-LAUNDRY")
+        payment = self.make_payment("2500.00")
+
+        allocations = allocate_payment_fifo(payment)
+
+        self.assertEqual(len(allocations), 1)
+        self.assertEqual(allocations[0].charge_id, occupant_charge.pk)
+        self.assertEqual(charge_outstanding(company_charge), Decimal("0.00"))
+        self.assertEqual(charge_outstanding(occupant_charge), Decimal("0.00"))
+
+    def test_company_charge_rejects_direct_occupant_payment_allocation(self):
+        company_charge = self.make_charge(
+            "35000.00", "COMPANY-ROOM-NIGHT", billing_party="COMPANY"
+        )
+        payment = self.make_payment("1000.00")
+
+        with self.assertRaisesMessage(ValidationError, "Company-billed charges"):
+            allocate_payment_to_charge(payment, company_charge)
 
     def test_partial_payment_leaves_charge_balance_outstanding(self):
         charge = self.make_charge("7000.00", "ROOM-001-2026-11-02")
