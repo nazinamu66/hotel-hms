@@ -10,6 +10,11 @@ from .group_booking_views import (
     group_occupant_add,
     company_deposit_manage,
 )
+from .company_document_views import (
+    company_document_form,
+    company_document_detail,
+    company_document_pdf,
+)
 from .views import (
     room_board,
     check_in,
@@ -54,6 +59,10 @@ urlpatterns = [
     path('corporate/groups/<int:group_id>/', group_reservation_detail, name='frontdesk_group_reservation_detail'),
     path('corporate/groups/<int:group_id>/room-rates/', group_room_rates_update, name='frontdesk_group_room_rates_update'),
     path('corporate/groups/<int:group_id>/occupants/add/', group_occupant_add, name='frontdesk_group_occupant_add'),
+    path('corporate/groups/<int:group_id>/documents/new/', company_document_form, name='frontdesk_company_document_create'),
+    path('corporate/groups/<int:group_id>/documents/<int:document_id>/edit/', company_document_form, name='frontdesk_company_document_edit'),
+    path('corporate/documents/<int:document_id>/', company_document_detail, name='frontdesk_company_document_detail'),
+    path('corporate/documents/<int:document_id>/pdf/', company_document_pdf, name='frontdesk_company_document_pdf'),
     path('', room_board, name='frontdesk_room_board'),
     path('check-in/<int:room_id>/', check_in, name='frontdesk_check_in'),
     path('stay/<int:room_id>/', active_stay, name='frontdesk_active_stay'),
