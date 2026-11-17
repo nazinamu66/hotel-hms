@@ -169,7 +169,10 @@ def group_room_rates_update(request, group_id):
         from django.db import transaction
         with transaction.atomic():
             for category in categories:
-                value = form.cleaned_data.get(f"rate_{category.pk}")
+                field_name = f"rate_{category.pk}"
+                if field_name not in request.POST:
+                    continue
+                value = form.cleaned_data.get(field_name)
                 if value is None:
                     GroupReservationRate.objects.filter(
                         group_reservation=group,
