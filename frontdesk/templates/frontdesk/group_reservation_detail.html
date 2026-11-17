@@ -18,6 +18,34 @@
     <div><div class="gd-label">Created by</div><div class="gd-value">{{ group.created_by|default:"—" }}</div></div>
     <div><div class="gd-label">Agreement notes</div><div class="gd-value">{{ group.agreement_notes|default:"—"|linebreaksbr }}</div></div>
   </div></section>
+  <section class="gd-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+      <div><h2 style="font-size:1.05rem;margin:0 0 5px">Negotiated room rates</h2><p class="gd-muted">Set one nightly rate per room category for this group booking only. Leave a rate blank to use the hotel's standard category rate.</p></div>
+      {% if group.status == "DRAFT" and not has_posted_room_charges %}<span class="gd-pill">Draft agreement · editable</span>{% elif has_posted_room_charges %}<span class="gd-pill">Locked · room charges posted</span>{% else %}<span class="gd-pill">Locked · booking not in draft</span>{% endif %}
+    </div>
+    {% if rate_rows %}
+      <form method="post" action="{% url 'frontdesk_group_room_rates_update' group.pk %}">
+        {% csrf_token %}
+        <div style="overflow:auto"><table class="gd-table" style="min-width:650px">
+          <thead><tr><th>Room category</th><th>Standard nightly rate</th><th>Negotiated nightly rate</th><th>Saving per night</th></tr></thead>
+          <tbody>
+          {% for row in rate_rows %}
+            <tr>
+              <td><strong>{{ row.category.name }}</strong></td>
+              <td>{% if row.standard_rate != None %}₦{{ row.standard_rate|floatformat:2 }}{% else %}<span style="color:#b45309">No active standard rate</span>{% endif %}</td>
+              <td>{% if group.status == "DRAFT" and not has_posted_room_charges %}<input type="number" name="rate_{{ row.category.pk }}" min="0.01" step="0.01" placeholder="Use standard rate" value="{% if row.negotiated_rate %}{{ row.negotiated_rate.nightly_rate }}{% endif %}" style="width:180px;max-width:100%;padding:9px 10px;border:1px solid #cbd5e1;border-radius:8px">{% elif row.negotiated_rate %}₦{{ row.negotiated_rate.nightly_rate|floatformat:2 }}{% else %}Standard rate{% endif %}</td>
+              <td>{% if row.negotiated_rate and row.standard_rate != None %}₦{{ row.standard_rate|add:"-"|add:row.negotiated_rate.nightly_rate|floatformat:2 }}{% else %}—{% endif %}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+        {% if group.status == "DRAFT" and not has_posted_room_charges %}<div style="display:flex;justify-content:flex-end;margin-top:14px"><button type="submit" class="gd-btn" style="border:0;cursor:pointer">Save negotiated rates</button></div>{% endif %}
+      </form>
+    {% else %}
+      <p class="gd-empty">No active room categories are configured for this hotel yet.</p>
+    {% endif %}
+    <p class="gd-muted" style="margin-top:12px;font-size:.76rem">Negotiated rates apply to future room-night charges. Previously posted charges retain their original rate and pricing source.</p>
+  </section>
   <section class="gd-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px"><h2 style="font-size:1.05rem;margin:0">Occupants and room allocations</h2>{% if group.status == "DRAFT" or group.status == "CONFIRMED" %}<a class="gd-btn" href="{% url 'frontdesk_group_occupant_add' group.pk %}">+ Add occupant</a>{% endif %}</div>
     <div style="overflow:auto"><table class="gd-table"><thead><tr><th>Guest</th><th>Room category</th><th>Room</th><th>Stay</th><th>Reservation</th><th>Status</th></tr></thead><tbody>
     {% for allocation in allocations %}<tr><td><strong>{{ allocation.guest.full_name }}</strong><div style="color:#94a3b8">{{ allocation.guest.phone|default:"" }}</div></td><td>{{ allocation.room_category.name }}</td><td>{{ allocation.room.room_number|default:"Not assigned" }}</td><td>{{ allocation.check_in_date|date:"d M" }} – {{ allocation.check_out_date|date:"d M Y" }}</td><td>{% if allocation.reservation_id %}<a href="{% url 'frontdesk_reservation_detail' allocation.reservation_id %}">#{{ allocation.reservation_id }}</a>{% else %}—{% endif %}</td><td><span class="gd-pill">{{ allocation.get_status_display }}</span></td></tr>
