@@ -1,0 +1,87 @@
+{% extends "base/base.html" %}
+{% block title %}{{ invoice.invoice_number }} | Company Invoice{% endblock %}
+{% block content %}
+<style>
+.ci-page{max-width:1350px;margin:18px auto 42px;color:#172033}.ci-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.ci-title{font-size:1.75rem;font-weight:850;margin:0 0 5px}.ci-muted{color:#64748b;font-size:.85rem;margin:0}.ci-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:15px;box-shadow:0 3px 14px rgba(15,23,42,.04)}.ci-btn{display:inline-flex;padding:10px 14px;border:0;border-radius:9px;background:#243b80;color:#fff;text-decoration:none;font-size:.8rem;font-weight:800;cursor:pointer}.ci-btn.alt{background:#eaf1f8;color:#24476b}.ci-btn.warn{background:#7f1d1d}.ci-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.ci-stat{padding:14px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc}.ci-stat small{display:block;color:#64748b;text-transform:uppercase;font-size:.67rem;font-weight:850}.ci-stat strong{display:block;font-size:1.2rem;margin-top:5px}.ci-table{width:100%;border-collapse:collapse;min-width:720px}.ci-table th{text-align:left;background:#f8fafc;color:#64748b;text-transform:uppercase;font-size:.68rem;padding:11px}.ci-table td{padding:12px;border-top:1px solid #edf1f5;font-size:.83rem}.ci-pill{display:inline-block;padding:5px 9px;border-radius:99px;background:#dbeafe;color:#1d4ed8;font-size:.7rem;font-weight:850}.ci-field{margin-bottom:12px}.ci-field label{display:block;font-size:.76rem;font-weight:800;margin-bottom:5px}.ci-field input,.ci-field select,.ci-field textarea{width:100%;max-width:440px;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}.ci-actions{display:flex;gap:9px;flex-wrap:wrap}.ci-empty{text-align:center;color:#64748b;padding:25px}@media(max-width:900px){.ci-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.ci-grid{grid-template-columns:1fr}}
+</style>
+<div class="ci-page">
+  <div class="ci-head">
+    <div><p class="ci-muted"><a href="{% url 'frontdesk_group_reservation_detail' group.pk %}">{{ group.reference }}</a> / Company invoice</p><h1 class="ci-title">{{ invoice.invoice_number }}</h1><p class="ci-muted">{{ invoice.company_name_snapshot }} · {{ invoice.get_status_display }}</p></div>
+    <div class="ci-actions"><a class="ci-btn alt" href="{% url 'frontdesk_group_reservation_detail' group.pk %}">Back to booking</a><a class="ci-btn" href="{% url 'frontdesk_company_invoice_pdf' invoice.pk %}">Download PDF</a></div>
+  </div>
+  <section class="ci-card">
+    <div class="ci-grid">
+      <div class="ci-stat"><small>Invoice total</small><strong>₦{{ invoice.total_amount|floatformat:2 }}</strong></div>
+      <div class="ci-stat"><small>Deposits applied</small><strong>₦{{ invoice.deposit_applied|floatformat:2 }}</strong></div>
+      <div class="ci-stat"><small>Direct payments</small><strong>₦{{ invoice.direct_payments_total|floatformat:2 }}</strong></div>
+      <div class="ci-stat"><small>Balance due</small><strong>₦{{ invoice.balance_due|floatformat:2 }}</strong></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-top:18px">
+      <div><div class="ci-muted">Bill to</div><strong>{{ invoice.company_name_snapshot }}</strong><div class="ci-muted">{{ invoice.company_address_snapshot|default:"" }}</div></div>
+      <div><div class="ci-muted">Group booking</div><strong>{{ invoice.group_name_snapshot|default:invoice.group_reference_snapshot }}</strong><div class="ci-muted">{{ invoice.stay_check_in|date:"d M Y" }} – {{ invoice.stay_check_out|date:"d M Y" }}</div></div>
+      <div><div class="ci-muted">Dates</div><strong>Issued: {{ invoice.issue_date|date:"d M Y" }}</strong><div class="ci-muted">Due: {{ invoice.due_date|date:"d M Y"|default:"Not specified" }}</div></div>
+    </div>
+    {% if invoice.notes %}<p class="ci-muted" style="margin-top:14px">{{ invoice.notes|linebreaksbr }}</p>{% endif %}
+  </section>
+  <section class="ci-card">
+    <h2 style="font-size:1rem;margin:0 0 12px">Invoiced company charges</h2>
+    <div style="overflow:auto"><table class="ci-table"><thead><tr><th>Description</th><th>Room</th><th>Guest</th><th>Charge date</th><th>Amount</th></tr></thead><tbody>
+      {% for line in invoice.charge_lines.all %}<tr><td>{{ line.description_snapshot }}</td><td>{{ line.charge.folio.room.room_number|default:"—" }}</td><td>{{ line.charge.folio.guest.full_name|default:"—" }}</td><td>{{ line.charge.created_at|date:"d M Y" }}</td><td>₦{{ line.amount|floatformat:2 }}</td></tr>
+      {% empty %}<tr><td colspan="5" class="ci-empty">No invoice lines.</td></tr>{% endfor %}
+    </tbody></table></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px"><strong>Total: ₦{{ invoice.total_amount|floatformat:2 }}</strong></div>
+  </section>
+  {% if invoice.status == "DRAFT" %}
+  <section class="ci-card">
+    <h2 style="font-size:1rem;margin:0 0 8px">Issue invoice</h2>
+    <p class="ci-muted" style="margin-bottom:12px">Issuing finalises this document for the company. It does not post revenue or receivables again.</p>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="ISSUE"><button class="ci-btn" type="submit">Issue company invoice</button></form>
+  </section>
+  {% elif invoice.status == "ISSUED" and invoice.balance_due > 0 %}
+  <div class="ci-grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+    <section class="ci-card">
+      <h2 style="font-size:1rem;margin:0 0 5px">Apply company deposit</h2>
+      <p class="ci-muted" style="margin-bottom:14px">Available deposit balance: <strong>₦{{ deposit_balance|floatformat:2 }}</strong></p>
+      {% if deposit_balance > 0 %}
+      <form method="post">{% csrf_token %}<input type="hidden" name="action" value="APPLY_DEPOSIT">
+        <div class="ci-field"><label>Amount (₦)</label><input type="number" name="amount" min="0.01" max="{{ deposit_balance }}" step="0.01" required></div>
+        <div class="ci-field"><label>Note</label><textarea name="note" rows="2" placeholder="Optional application note"></textarea></div>
+        <button class="ci-btn" type="submit">Apply deposit</button>
+      </form>
+      {% else %}<p class="ci-muted">No available company deposit to apply.</p>{% endif %}
+    </section>
+    <section class="ci-card">
+      <h2 style="font-size:1rem;margin:0 0 5px">Record direct payment</h2>
+      <p class="ci-muted" style="margin-bottom:14px">Record a separate cash, POS or transfer payment against the outstanding invoice.</p>
+      <form method="post">{% csrf_token %}<input type="hidden" name="action" value="RECORD_PAYMENT">
+        <div class="ci-field"><label>Amount (₦)</label><input type="number" name="amount" min="0.01" max="{{ invoice.balance_due }}" step="0.01" required></div>
+        <div class="ci-field"><label>Payment method</label><select name="method" required onchange="toggleInvoiceBank(this)"><option value="">Select method</option><option value="CASH">Cash</option><option value="POS">POS</option><option value="TRANSFER">Bank Transfer</option></select></div>
+        <div id="invoice-bank" style="display:none">
+          <div class="ci-field"><label>Hotel bank account</label><select name="bank_account"><option value="">Select account</option>{% for bank in bank_accounts %}<option value="{{ bank.pk }}">{{ bank.bank_name }} — {{ bank.account_number }}</option>{% endfor %}</select></div>
+          <div class="ci-field"><label>Transaction reference</label><input name="reference" maxlength="100"></div>
+        </div>
+        <div class="ci-field"><label>Note</label><textarea name="note" rows="2" placeholder="Optional payment note"></textarea></div>
+        <button class="ci-btn" type="submit">Record payment</button>
+      </form>
+    </section>
+  </div>
+  {% endif %}
+  <section class="ci-card">
+    <h2 style="font-size:1rem;margin:0 0 12px">Settlement history</h2>
+    <div style="overflow:auto"><table class="ci-table"><thead><tr><th>Date</th><th>Type</th><th>Method</th><th>Reference / Note</th><th>Amount</th><th>Recorded by</th></tr></thead><tbody>
+      {% for item in invoice.deposit_applications.all %}<tr><td>{{ item.created_at|date:"d M Y, H:i" }}</td><td>Deposit applied</td><td>Company deposit</td><td>{{ item.note|default:"—" }}</td><td>₦{{ item.amount|floatformat:2 }}</td><td>{{ item.created_by|default:"—" }}</td></tr>{% endfor %}
+      {% for item in invoice.payments.all %}<tr><td>{{ item.created_at|date:"d M Y, H:i" }}</td><td>Direct payment</td><td>{{ item.get_method_display }}</td><td>{{ item.reference|default:item.note|default:"—" }}</td><td>₦{{ item.amount|floatformat:2 }}</td><td>{{ item.created_by|default:"—" }}</td></tr>{% endfor %}
+      {% if not invoice.deposit_applications.all and not invoice.payments.all %}<tr><td colspan="6" class="ci-empty">No settlement transactions have been recorded.</td></tr>{% endif %}
+    </tbody></table></div>
+  </section>
+</div>
+<script>
+function toggleInvoiceBank(select){
+  const show=["POS","TRANSFER"].includes(select.value);
+  const panel=document.getElementById("invoice-bank");
+  panel.style.display=show?"block":"none";
+  panel.querySelector('select[name="bank_account"]').required=show;
+  panel.querySelector('input[name="reference"]').required=show;
+}
+</script>
+{% endblock %}
