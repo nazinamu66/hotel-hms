@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 from io import BytesIO
+import os
 from xml.sax.saxutils import escape
 
 from django.contrib import messages
@@ -25,6 +26,8 @@ from reportlab.lib.enums import TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Image as PDFImage, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from .group_booking_views import _frontdesk_hotel
@@ -453,14 +456,47 @@ def company_group_statement_pdf(request, group_id):
     styles.add(ParagraphStyle(
         name="GroupStatementRight", parent=styles["GroupStatementCell"], alignment=TA_RIGHT,
     ))
+    # Helvetica does not contain the Nigerian Naira glyph. Prefer a Unicode font
+    # available in the deployment image; fall back to an unambiguous NGN prefix.
+    naira_font_registered = False
+    font_candidates = (
+        os.path.join(os.path.dirname(__file__), "static", "fonts", "DejaVuSans.ttf"),
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+        "/usr/local/share/fonts/DejaVuSans.ttf",
+    )
+    for font_path in font_candidates:
+        if os.path.isfile(font_path):
+            try:
+                pdfmetrics.registerFont(TTFont("GroupStatementDejaVu", font_path))
+                naira_font_registered = True
+                break
+            except (OSError, ValueError):
+                continue
+    styles.add(ParagraphStyle(
+        name="GroupStatementCurrencyRight",
+        parent=styles["GroupStatementRight"],
+        fontName="GroupStatementDejaVu" if naira_font_registered else "Helvetica",
+    ))
     def para(value, style="GroupStatementCell"):
         return Paragraph(escape(str(value if value is not None else "—")), styles[style])
 
     currency = business.currency if business and business.currency else "₦"
+    currency_prefix = currency if (currency != "₦" or naira_font_registered) else "NGN "
     def money(value):
-        return f"{currency}{Decimal(value or 0):,.2f}"
+        return f"{currency_prefix}{Decimal(value or 0):,.2f}"
 
-    story = [Paragraph(escape(business.name if business else hotel.name), styles["GroupStatementTitle"])]
+    brand_cells = []
+    if business and business.logo:
+        try:
+            brand_cells.append(PDFImage(
+                business.logo.path, width=25*mm, height=20*mm, kind="proportional"
+            ))
+        except (AttributeError, OSError, ValueError):
+            pass
+    business_lines = [Paragraph(
+        escape(business.name if business else hotel.name), styles["GroupStatementTitle"]
+    )]
     if business:
         for line in (
             business.address,
@@ -469,7 +505,20 @@ def company_group_statement_pdf(request, group_id):
             f"Email: {business.email}" if business.email else "",
         ):
             if line:
-                story.append(para(line, "GroupStatementSmall"))
+                business_lines.append(para(line, "GroupStatementSmall"))
+    brand_cells.append(business_lines)
+    brand = Table(
+        [brand_cells],
+        colWidths=[30*mm, 148*mm] if len(brand_cells) == 2 else [178*mm],
+    )
+    brand.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LINEBELOW", (0, 0), (-1, -1), 1.3, colors.HexColor("#244F7E")),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story = [brand]
     story += [Spacer(1, 4*mm), Paragraph("CONSOLIDATED COMPANY STATEMENT", styles["Heading1"])]
     info = [
         [para("BILL TO"), para("GROUP BOOKING")],
@@ -492,11 +541,11 @@ def company_group_statement_pdf(request, group_id):
     story += [info_table, Spacer(1, 4*mm)]
 
     totals = [
-        [para("Issued invoices"), para(money(metrics["invoiced_total"]), "GroupStatementRight")],
-        [para("Payments and deposits applied"), para(money(metrics["settled_total"]), "GroupStatementRight")],
-        [para("Outstanding on issued invoices"), para(money(metrics["outstanding_total"]), "GroupStatementRight")],
-        [para("Unbilled company charges"), para(money(metrics["unbilled_total"]), "GroupStatementRight")],
-        [para("Company deposit balance (hotel-wide)"), para(money(metrics["deposit_balance"]), "GroupStatementRight")],
+        [para("Issued invoices"), para(money(metrics["invoiced_total"]), "GroupStatementCurrencyRight")],
+        [para("Payments and deposits applied"), para(money(metrics["settled_total"]), "GroupStatementCurrencyRight")],
+        [para("Outstanding on issued invoices"), para(money(metrics["outstanding_total"]), "GroupStatementCurrencyRight")],
+        [para("Unbilled company charges"), para(money(metrics["unbilled_total"]), "GroupStatementCurrencyRight")],
+        [para("Company deposit balance (hotel-wide)"), para(money(metrics["deposit_balance"]), "GroupStatementCurrencyRight")],
     ]
     totals_table = Table(totals, colWidths=[100*mm, 78*mm])
     totals_table.setStyle(TableStyle([
@@ -516,9 +565,9 @@ def company_group_statement_pdf(request, group_id):
             para(invoice.invoice_number),
             para(invoice.issue_date.strftime("%d %b %Y")),
             para(invoice.get_status_display()),
-            para(money(invoice.total_amount), "GroupStatementRight"),
-            para(money(invoice.amount_paid), "GroupStatementRight"),
-            para(money(invoice.balance_due), "GroupStatementRight"),
+            para(money(invoice.total_amount), "GroupStatementCurrencyRight"),
+            para(money(invoice.amount_paid), "GroupStatementCurrencyRight"),
+            para(money(invoice.balance_due), "GroupStatementCurrencyRight"),
         ])
     if len(invoice_rows) == 1:
         invoice_rows.append([para("No company invoices recorded.")]+[""]*5)
@@ -545,7 +594,7 @@ def company_group_statement_pdf(request, group_id):
             para(charge.description),
             para(f"{guest} / {room}"),
             para(charge.created_at.strftime("%d %b %Y")),
-            para(money(charge.amount), "GroupStatementRight"),
+            para(money(charge.amount), "GroupStatementCurrencyRight"),
         ])
     if len(charge_rows) == 1:
         charge_rows.append([para("No unbilled company charges.")]+[""]*3)
