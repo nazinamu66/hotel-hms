@@ -94,7 +94,13 @@ class CompanyDepositTransactionAdmin(admin.ModelAdmin):
 class CompanyDocumentLineInline(admin.TabularInline):
     model = CompanyDocumentLine
     extra = 0
-    readonly_fields = ("line_total",)
+    readonly_fields = ("description", "quantity", "unit", "unit_price", "line_total", "sort_order")
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(CompanyDocument)
@@ -102,5 +108,14 @@ class CompanyDocumentAdmin(admin.ModelAdmin):
     list_display = ("document_number", "document_type", "company", "hotel", "total_amount", "status", "issue_date")
     list_filter = ("document_type", "status", "issue_date", "hotel")
     search_fields = ("document_number", "company_name_snapshot", "company__name", "group_reference_snapshot")
-    readonly_fields = ("document_number", "subtotal", "tax_amount", "total_amount", "created_at", "updated_at", "issued_at")
+    readonly_fields = tuple(field.name for field in CompanyDocument._meta.fields)
     inlines = [CompanyDocumentLineInline]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
