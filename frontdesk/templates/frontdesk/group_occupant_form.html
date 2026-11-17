@@ -1,0 +1,43 @@
+{% extends "base/base.html" %}
+{% block title %}Add Occupant | {{ group.reference }}{% endblock %}
+{% block content %}
+<style>
+.go-page{max-width:950px;margin:0 auto;padding:14px 2px 40px;color:#172033}.go-card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;padding:24px;box-shadow:0 3px 14px rgba(15,23,42,.04)}.go-title{font-size:1.65rem;font-weight:850;letter-spacing:-.04em;margin:0 0 5px}.go-sub{color:#64748b;margin:0 0 22px}.go-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.go-field.full{grid-column:1/-1}.go-field label{display:block;font-size:.77rem;font-weight:800;color:#475569;margin-bottom:7px}.go-field input,.go-field select,.go-field textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:11px 12px;font:inherit;background:#fff}.go-errors{color:#b91c1c;font-size:.8rem;margin:8px 0}.go-actions{display:flex;gap:10px;margin-top:22px}.go-submit,.go-cancel{border:0;border-radius:10px;padding:12px 16px;font-weight:850;text-decoration:none}.go-submit{background:#243b80;color:white}.go-cancel{background:#eaf1f8;color:#24476b}@media(max-width:650px){.go-grid{grid-template-columns:1fr}.go-field.full{grid-column:auto}}
+</style>
+<div class="go-page"><div class="go-card">
+  <p class="go-sub"><a href="{% url 'frontdesk_group_reservation_detail' group.pk %}">{{ group.reference }}</a> · {{ group.company.name }}</p>
+  <h1 class="go-title">Add group occupant</h1><p class="go-sub">Choose an existing hotel guest or register a new guest, then create their individual reservation.</p>
+  <form method="post">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="go-errors">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="go-grid">
+      <div class="go-field"><label for="{{ form.guest_mode.id_for_label }}">Guest type</label>{{ form.guest_mode }}</div>
+      <div class="go-field" id="existing-guest-field"><label for="{{ form.guest.id_for_label }}">Select existing guest</label>{{ form.guest }}{% for e in form.guest.errors %}<div class="go-errors">{{ e }}</div>{% endfor %}</div>
+      <div class="go-field new-guest-field"><label for="{{ form.first_name.id_for_label }}">First name</label>{{ form.first_name }}{% for e in form.first_name.errors %}<div class="go-errors">{{ e }}</div>{% endfor %}</div>
+      <div class="go-field new-guest-field"><label for="{{ form.last_name.id_for_label }}">Last name</label>{{ form.last_name }}{% for e in form.last_name.errors %}<div class="go-errors">{{ e }}</div>{% endfor %}</div>
+      <div class="go-field new-guest-field"><label for="{{ form.phone.id_for_label }}">Phone</label>{{ form.phone }}</div>
+      <div class="go-field new-guest-field"><label for="{{ form.email.id_for_label }}">Email</label>{{ form.email }}</div>
+      <div class="go-field new-guest-field"><label for="{{ form.nationality.id_for_label }}">Nationality</label>{{ form.nationality }}</div>
+      <div class="go-field new-guest-field"><label for="{{ form.id_number.id_for_label }}">Passport / ID number</label>{{ form.id_number }}</div>
+      <div class="go-field"><label for="{{ form.room_category.id_for_label }}">Room category</label>{{ form.room_category }}{% for e in form.room_category.errors %}<div class="go-errors">{{ e }}</div>{% endfor %}</div>
+      <div class="go-field"><label for="{{ form.room.id_for_label }}">Assign specific room (optional)</label>{{ form.room }}<small style="color:#64748b">Leave blank to reserve by category without assigning a room yet.</small></div>
+      <div class="go-field"><label for="{{ form.check_in_date.id_for_label }}">Check-in date</label>{{ form.check_in_date }}{% for e in form.check_in_date.errors %}<div class="go-errors">{{ e }}</div>{% endfor %}</div>
+      <div class="go-field"><label for="{{ form.check_out_date.id_for_label }}">Check-out date</label>{{ form.check_out_date }}{% for e in form.check_out_date.errors %}<div class="go-errors">{{ e }}</div>{% endfor %}</div>
+      <div class="go-field full"><label for="{{ form.occupant_note.id_for_label }}">Occupant notes</label>{{ form.occupant_note }}</div>
+    </div>
+    <div class="go-actions"><button class="go-submit" type="submit">Add occupant and create reservation</button><a class="go-cancel" href="{% url 'frontdesk_group_reservation_detail' group.pk %}">Cancel</a></div>
+  </form>
+</div></div>
+<script>
+(function(){
+ const mode=document.getElementById("id_guest_mode");
+ const existing=document.getElementById("existing-guest-field");
+ const newFields=document.querySelectorAll(".new-guest-field");
+ function update(){
+   const isNew=mode && mode.value==="NEW";
+   existing.style.display=isNew?"none":"block";
+   newFields.forEach(el=>el.style.display=isNew?"block":"none");
+ }
+ if(mode){mode.addEventListener("change",update);update();}
+})();
+</script>
+{% endblock %}
