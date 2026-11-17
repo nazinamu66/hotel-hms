@@ -20,6 +20,7 @@ from .company_invoice_views import (
     company_invoice_create,
     company_invoice_detail,
     company_invoice_pdf,
+    company_group_statement_pdf,
 )
 from .views import (
     room_board,
@@ -71,6 +72,7 @@ urlpatterns = [
     path('corporate/documents/<int:document_id>/', company_document_detail, name='frontdesk_company_document_detail'),
     path('corporate/documents/<int:document_id>/pdf/', company_document_pdf, name='frontdesk_company_document_pdf'),
     path('corporate/groups/<int:group_id>/invoices/new/', company_invoice_create, name='frontdesk_company_invoice_create'),
+    path('corporate/groups/<int:group_id>/statement.pdf', company_group_statement_pdf, name='frontdesk_company_group_statement_pdf'),
     path('corporate/invoices/<int:invoice_id>/', company_invoice_detail, name='frontdesk_company_invoice_detail'),
     path('corporate/invoices/<int:invoice_id>/pdf/', company_invoice_pdf, name='frontdesk_company_invoice_pdf'),
     path('', room_board, name='frontdesk_room_board'),
