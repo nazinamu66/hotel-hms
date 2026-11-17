@@ -263,6 +263,10 @@ def group_reservation_bulk_checkin(request, group_id):
         return HttpResponseForbidden("Your account is not linked to a hotel.")
 
     group = get_object_or_404(GroupReservation, pk=group_id, hotel=hotel)
+    if group.status not in ("DRAFT", "CONFIRMED", "IN_HOUSE"):
+        messages.error(request, "Occupants cannot be checked in for a cancelled or completed group booking.")
+        return redirect("frontdesk_group_reservation_detail", group_id=group.pk)
+
     selected_ids = list(dict.fromkeys(request.POST.getlist("allocation_ids")))
     if not selected_ids:
         messages.error(request, "Select at least one reserved occupant to check in.")
