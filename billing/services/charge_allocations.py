@@ -26,7 +26,7 @@ def _allocated_from_payment(payment):
 
 def charge_outstanding(charge):
     """Outstanding amount covered by the new allocation ledger."""
-    if charge.amount <= 0 or not charge.allocation_enabled:
+    if charge.amount <= 0 or not charge.allocation_enabled or charge.billing_party != "INDIVIDUAL":
         return ZERO
     return max(charge.amount - _allocated_to_charge(charge), ZERO)
 
@@ -56,7 +56,12 @@ def allocate_payment_fifo(payment, allocation_limit=None):
 
     charges = (
         Charge.objects.select_for_update()
-        .filter(folio=folio, amount__gt=0, allocation_enabled=True)
+        .filter(
+            folio=folio,
+            amount__gt=0,
+            allocation_enabled=True,
+            billing_party="INDIVIDUAL",
+        )
         .order_by("created_at", "id")
     )
     created = []
@@ -92,6 +97,8 @@ def allocate_payment_to_charge(payment, charge):
         raise ValidationError("Payment and charge must belong to the same hotel.")
     if charge.amount <= 0:
         raise ValidationError("Only positive charges can receive allocations.")
+    if charge.billing_party != "INDIVIDUAL":
+        raise ValidationError("Company-billed charges cannot receive occupant payment allocations.")
     if not charge.allocation_enabled:
         raise ValidationError("This historical charge must be reconciled before it can receive an allocation.")
 
