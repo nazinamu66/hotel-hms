@@ -22,12 +22,12 @@
     </section>
     <section class="cd-panel">
       <h2 style="font-size:1rem;margin:0 0 5px">Items and pricing</h2>
-      <p class="cd-muted">Enter quantities independently of occupant registrations. Example: 20 rooms × 4 nights, or breakfast × guest count × breakfast days.</p>
+      <p class="cd-muted">Enter the quantity and a numeric unit multiplier separately. Example: 20 rooms × 4 nights. Enter 4 in Unit; leave it blank or enter 1 for a single unit.</p>
       {{ line_formset.management_form }}
       {% if line_formset.non_form_errors %}<div class="cd-error">{{ line_formset.non_form_errors }}</div>{% endif %}
       <div style="overflow:auto;margin-top:12px">
         <table class="cd-lines">
-          <thead><tr><th style="width:36%">Description</th><th>Quantity</th><th>Unit</th><th>Unit price (₦)</th><th>Remove</th></tr></thead>
+          <thead><tr><th style="width:36%">Description</th><th>Quantity</th><th>Unit / multiplier</th><th>Unit price (₦)</th><th>Remove</th></tr></thead>
           <tbody>
           {% for form in line_formset %}
             <tr>
