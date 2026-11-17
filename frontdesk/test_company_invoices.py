@@ -151,7 +151,6 @@ class CorporateInvoiceFrontdeskTests(TestCase):
             check_in_date=date(2026, 12, 1),
             check_out_date=date(2026, 12, 2),
         )
-        from billing.models import CompanyInvoice
         foreign_invoice = CompanyInvoice.objects.create(
             hotel=other_hotel,
             company=other_company,
