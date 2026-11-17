@@ -91,6 +91,38 @@ class CorporateDocumentWorkflowTests(TestCase):
         self.assertEqual(document.lines.get(description="Breakfast").quantity, Decimal("80.00"))
         self.assertTrue(document.document_number.startswith("QT-2027-"))
 
+    def test_numeric_unit_multiplier_is_included_in_line_and_document_totals(self):
+        response = self.client.post(
+            reverse("frontdesk_company_document_create", args=[self.group.pk]),
+            self._document_post(
+                **{
+                    "lines-0-description": "Rooms",
+                    "lines-0-quantity": "10",
+                    "lines-0-unit": "4",
+                    "lines-0-unit_price": "35000.00",
+                    "lines-1-description": "Breakfast",
+                    "lines-1-quantity": "10",
+                    "lines-1-unit": "4",
+                    "lines-1-unit_price": "2500.00",
+                }
+            ),
+        )
+        document = CompanyDocument.objects.get(group_reservation=self.group)
+        self.assertRedirects(
+            response,
+            reverse("frontdesk_company_document_detail", args=[document.pk]),
+        )
+        self.assertEqual(
+            document.lines.get(description="Rooms").line_total,
+            Decimal("1400000.00"),
+        )
+        self.assertEqual(
+            document.lines.get(description="Breakfast").line_total,
+            Decimal("100000.00"),
+        )
+        self.assertEqual(document.subtotal, Decimal("1500000.00"))
+        self.assertEqual(document.total_amount, Decimal("1500000.00"))
+
     def test_issue_locks_document_and_preserves_company_snapshot(self):
         self.client.post(
             reverse("frontdesk_company_document_create", args=[self.group.pk]),
