@@ -146,6 +146,7 @@ class CorporateDocumentWorkflowTests(TestCase):
             list(proforma.lines.values_list("description", "quantity", "unit_price")),
             list(quotation.lines.values_list("description", "quantity", "unit_price")),
         )
+        quotation.refresh_from_db()
         self.assertEqual(quotation.status, "ISSUED")
 
     def test_only_issued_quotation_can_be_converted(self):
