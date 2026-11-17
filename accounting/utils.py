@@ -1,40 +1,34 @@
-from accounting.models import AccountingPeriod
-from accounting.models import BusinessDay
+from accounting.models import AccountingPeriod, BusinessDay
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 
 def is_date_locked(hotel, date):
-
     return AccountingPeriod.objects.filter(
         hotel=hotel,
         start_date__lte=date,
         end_date__gte=date,
-        is_closed=True
+        is_closed=True,
     ).exists()
 
 
 def get_current_business_day(hotel):
+    """
+    Return this hotel's business day for its current local calendar date.
 
-    from django.utils import timezone
-    from datetime import timedelta
-    from accounting.models import BusinessDay
+    An older open day must never remain the posting date indefinitely.
+    A closed day for today is deliberately not reopened automatically.
+    """
+    today = timezone.localdate()
+    business_day, _ = BusinessDay.objects.get_or_create(
+        hotel=hotel,
+        date=today,
+    )
 
-    # get latest day (open OR closed)
-    last_day = BusinessDay.objects.filter(
-        hotel=hotel
-    ).order_by("-date").first()
-
-    if not last_day:
-        return BusinessDay.objects.create(
-            hotel=hotel,
-            date=timezone.now().date()
+    if business_day.is_closed:
+        raise ValidationError(
+            f"The business day for {today} is closed. "
+            "No further accounting entries can be posted today."
         )
 
-    if last_day.is_closed:
-        # 🔥 CREATE NEW DAY AUTOMATICALLY
-        return BusinessDay.objects.create(
-            hotel=hotel,
-            date=last_day.date + timedelta(days=1)
-        )
-
-    return last_day
+    return business_day
