@@ -3,7 +3,7 @@ from django.conf import settings
 from inventory.models import Department
 # from rooms.models import Room
 from django.core.exceptions import ValidationError
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.utils import timezone
 from inventory.models import Hotel
 from rooms.models import Room,RoomCategory
@@ -1484,8 +1484,20 @@ class CompanyDocumentLine(models.Model):
             raise ValidationError("Document line unit price cannot be negative.")
 
     def save(self, *args, **kwargs):
+        # Numeric Unit values act as multipliers (e.g. 10 rooms x 4 nights).
+        # Descriptive legacy values such as "room nights" remain multiplier 1.
+        unit_value = (self.unit or "").strip()
+        try:
+            unit_multiplier = Decimal(unit_value) if unit_value else Decimal("1")
+        except (InvalidOperation, TypeError, ValueError):
+            unit_multiplier = Decimal("1")
+        if unit_multiplier <= 0:
+            raise ValidationError("Document line unit multiplier must be greater than zero.")
+
         self.line_total = (
-            (self.quantity or Decimal("0.00")) * (self.unit_price or Decimal("0.00"))
+            (self.quantity or Decimal("0.00"))
+            * unit_multiplier
+            * (self.unit_price or Decimal("0.00"))
         ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         super().save(*args, **kwargs)
 
