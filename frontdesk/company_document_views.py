@@ -289,7 +289,7 @@ def company_document_pdf(request, document_id):
     ]))
     story += [recipient_table, Spacer(1, 5*mm)]
 
-    rows = [[p("Description", "CorpBold"), p("Qty", "CorpBoldRight"), p("Unit", "CorpBold"), p("Unit price", "CorpBoldRight"), p("Amount", "CorpBoldRight")]]
+    rows = [[p("Description", "CorpBold"), p("Qty", "CorpBoldRight"), p("Unit / multiplier", "CorpBold"), p("Unit price", "CorpBoldRight"), p("Amount", "CorpBoldRight")]]
     for line in document.lines.all():
         rows.append([
             p(line.description),
