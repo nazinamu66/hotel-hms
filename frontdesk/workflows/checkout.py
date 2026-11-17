@@ -80,6 +80,9 @@ def checkout_guest(room, user):
 
     close_room_history(folio)
 
+    from billing.services.group_reservations import mark_group_allocation_checked_out
+    mark_group_allocation_checked_out(folio)
+
     update_room_status(room)
 
     return folio
