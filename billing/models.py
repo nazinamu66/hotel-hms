@@ -1799,11 +1799,15 @@ class EventParticipant(models.Model):
     def clean(self):
         if not self.event_id:
             return
+        if self.event.status not in ("DRAFT", "AGREED"):
+            raise ValidationError("Participants cannot be changed after an event is released or cancelled.")
         if self.participant_type == "IN_HOUSE":
             if not self.guest_id or not self.room_allocation_id:
                 raise ValidationError("In-house participants require a guest and group room allocation.")
             if self.room_allocation.group_reservation.hotel_id != self.event.hotel_id:
                 raise ValidationError("Participant room allocation belongs to another hotel.")
+            if not self.room_allocation.room_id:
+                raise ValidationError("In-house participants must have an assigned room before event release.")
             if self.room_allocation.guest_id != self.guest_id:
                 raise ValidationError("Participant guest must match the selected room allocation.")
             if self.room_allocation.group_reservation_id != self.event.group_reservation_id:
