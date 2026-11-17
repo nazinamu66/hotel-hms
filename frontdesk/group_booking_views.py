@@ -28,7 +28,7 @@ def company_list(request):
     companies = Company.objects.filter(hotel=hotel)
     if query:
         companies = companies.filter(Q(name__icontains=query) | Q(contact_person__icontains=query) | Q(phone__icontains=query) | Q(email__icontains=query) | Q(registration_number__icontains=query))
-    companies = companies.annotate(group_count=Count("group_reservations", distinct=True)).order_by("name")
+    companies = companies.annotate(group_count=Count("group_reservations", distinct=True)).prefetch_related("deposits").order_by("name")
     return render(request, "frontdesk/company_list.html", {
         "companies": companies, "query": query,
         "active_count": Company.objects.filter(hotel=hotel, is_active=True).count(),
