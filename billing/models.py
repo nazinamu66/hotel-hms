@@ -3,7 +3,7 @@ from django.conf import settings
 from inventory.models import Department
 # from rooms.models import Room
 from django.core.exceptions import ValidationError
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from django.utils import timezone
 from inventory.models import Hotel
 from rooms.models import Room,RoomCategory
@@ -1464,7 +1464,7 @@ class CompanyDocumentLine(models.Model):
     def save(self, *args, **kwargs):
         self.line_total = (
             (self.quantity or Decimal("0.00")) * (self.unit_price or Decimal("0.00"))
-        ).quantize(Decimal("0.01"))
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         super().save(*args, **kwargs)
 
     def __str__(self):
