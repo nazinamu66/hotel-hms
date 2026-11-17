@@ -1681,3 +1681,180 @@ class CompanyInvoicePayment(models.Model):
 
     def __str__(self):
         return f"{self.method} – ₦{self.amount:,.2f} ({self.invoice.invoice_number})"
+
+
+# ============================================================================
+# CORPORATE EVENTS
+# ============================================================================
+class EventBooking(models.Model):
+    """Commercial and operational master record for a hotel event."""
+
+    STATUS_CHOICES = (
+        ("DRAFT", "Draft"),
+        ("AGREED", "Agreed"),
+        ("RELEASED", "Released to Operations"),
+        ("COMPLETED", "Completed"),
+        ("CANCELLED", "Cancelled"),
+    )
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="event_bookings")
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="event_bookings")
+    group_reservation = models.ForeignKey(
+        GroupReservation, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="event_bookings",
+    )
+    reference = models.CharField(max_length=40)
+    name = models.CharField(max_length=200)
+    event_type = models.CharField(max_length=80, blank=True)
+    event_date = models.DateField()
+    service_time = models.TimeField()
+    location = models.CharField(max_length=200, blank=True)
+    expected_participants = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="DRAFT", db_index=True)
+    agreement_notes = models.TextField(blank=True)
+    released_at = models.DateTimeField(null=True, blank=True)
+    released_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="events_released",
+    )
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="events_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["event_date", "service_time", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["hotel", "reference"], name="unique_event_reference_per_hotel"),
+            models.CheckConstraint(condition=models.Q(expected_participants__gte=0), name="event_participant_count_nonnegative"),
+        ]
+
+    def clean(self):
+        if self.company_id and self.hotel_id and self.company.hotel_id != self.hotel_id:
+            raise ValidationError("Event company must belong to the event hotel.")
+        if self.group_reservation_id:
+            if self.group_reservation.hotel_id != self.hotel_id:
+                raise ValidationError("Linked group reservation must belong to the event hotel.")
+            if self.group_reservation.company_id != self.company_id:
+                raise ValidationError("Event company must match the linked group reservation company.")
+            if self.group_reservation.status == "CANCELLED":
+                raise ValidationError("An event cannot be linked to a cancelled group reservation.")
+        if self.status in ("AGREED", "RELEASED", "COMPLETED") and not self.agreement_notes.strip():
+            raise ValidationError({"agreement_notes": "Record the agreed commercial terms before approval."})
+        if self.status in ("RELEASED", "COMPLETED") and not self.released_at:
+            raise ValidationError({"released_at": "Released events must have a release timestamp."})
+
+    def release_to_operations(self, user):
+        """Release only an agreed event with a confirmed attendee list."""
+        from django.db import transaction
+        from django.utils import timezone
+
+        with transaction.atomic():
+            event = self.__class__.objects.select_for_update().get(pk=self.pk)
+            if event.status != "AGREED":
+                raise ValidationError("Only agreed events can be released to operations.")
+            if not event.order_lines.exists():
+                raise ValidationError("Add at least one food or beverage line before releasing the event.")
+            if not event.participants.exists():
+                raise ValidationError("Add or confirm the event participants before release.")
+            if event.participants.filter(participant_type="IN_HOUSE").exclude(
+                room_allocation__status="CHECKED_IN"
+            ).exists():
+                raise ValidationError("Every in-house participant must be checked in before release.")
+            event.status = "RELEASED"
+            event.released_at = timezone.now()
+            event.released_by = user
+            event.full_clean()
+            event.save(update_fields=["status", "released_at", "released_by", "updated_at"])
+            self.refresh_from_db()
+        return self
+
+    def __str__(self):
+        return f"{self.reference} – {self.name}"
+
+
+class EventParticipant(models.Model):
+    PARTICIPANT_TYPES = (
+        ("IN_HOUSE", "In-house guest"),
+        ("EXTERNAL", "External participant"),
+    )
+
+    event = models.ForeignKey(EventBooking, on_delete=models.CASCADE, related_name="participants")
+    participant_type = models.CharField(max_length=12, choices=PARTICIPANT_TYPES)
+    guest = models.ForeignKey(Guest, on_delete=models.PROTECT, null=True, blank=True, related_name="event_participations")
+    room_allocation = models.ForeignKey(
+        GroupReservationRoom, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="event_participations",
+    )
+    external_name = models.CharField(max_length=150, blank=True)
+    external_organization = models.CharField(max_length=150, blank=True)
+    note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["participant_type", "id"]
+
+    def clean(self):
+        if not self.event_id:
+            return
+        if self.participant_type == "IN_HOUSE":
+            if not self.guest_id or not self.room_allocation_id:
+                raise ValidationError("In-house participants require a guest and group room allocation.")
+            if self.room_allocation.group_reservation.hotel_id != self.event.hotel_id:
+                raise ValidationError("Participant room allocation belongs to another hotel.")
+            if self.room_allocation.guest_id != self.guest_id:
+                raise ValidationError("Participant guest must match the selected room allocation.")
+            if self.room_allocation.group_reservation_id != self.event.group_reservation_id:
+                raise ValidationError("In-house participant must belong to the event's linked group reservation.")
+            if self.external_name:
+                raise ValidationError("Do not enter an external name for an in-house participant.")
+        elif self.participant_type == "EXTERNAL":
+            if not self.external_name.strip():
+                raise ValidationError({"external_name": "External participant name is required."})
+            if self.guest_id or self.room_allocation_id:
+                raise ValidationError("External participants must not be linked to a hotel guest or room.")
+        else:
+            raise ValidationError({"participant_type": "Select a valid participant type."})
+
+    @property
+    def display_name(self):
+        return self.guest.full_name if self.guest_id else self.external_name
+
+    @property
+    def room_number(self):
+        return self.room_allocation.room.room_number if self.room_allocation_id and self.room_allocation.room_id else ""
+
+
+class EventOrderLine(models.Model):
+    LINE_TYPES = (("FOOD", "Food"), ("BEVERAGE", "Beverage"), ("OTHER", "Other"))
+
+    event = models.ForeignKey(EventBooking, on_delete=models.CASCADE, related_name="order_lines")
+    line_type = models.CharField(max_length=10, choices=LINE_TYPES)
+    description = models.CharField(max_length=200)
+    quantity = models.DecimalField(max_digits=12, decimal_places=3)
+    unit_price = models.DecimalField(max_digits=14, decimal_places=2)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(quantity__gt=0), name="event_line_quantity_positive"),
+            models.CheckConstraint(condition=models.Q(unit_price__gte=0), name="event_line_unit_price_nonnegative"),
+        ]
+
+    def clean(self):
+        if self.quantity is not None and self.quantity <= 0:
+            raise ValidationError({"quantity": "Quantity must be greater than zero."})
+        if self.unit_price is not None and self.unit_price < 0:
+            raise ValidationError({"unit_price": "Unit price cannot be negative."})
+        if self.event_id and self.event.status not in ("DRAFT", "AGREED"):
+            raise ValidationError("Event order lines cannot be changed after release or cancellation.")
+
+    @property
+    def total_price(self):
+        return (self.quantity * self.unit_price).quantize(Decimal("0.01"))
+
+    def __str__(self):
+        return f"{self.description} × {self.quantity}"
