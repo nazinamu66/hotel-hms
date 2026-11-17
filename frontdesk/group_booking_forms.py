@@ -89,3 +89,27 @@ class GroupOccupantForm(forms.Form):
             if not cleaned.get("first_name") or not cleaned.get("last_name"):
                 self.add_error("first_name", "First and last name are required for a new guest.")
         return cleaned
+
+
+class GroupRoomRatesForm(forms.Form):
+    """One optional negotiated nightly rate per room category for this group."""
+
+    def __init__(self, *args, categories=None, existing_rates=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        existing_rates = existing_rates or {}
+        self.categories = list(categories or [])
+        for category in self.categories:
+            current = existing_rates.get(category.pk)
+            self.fields[f"rate_{category.pk}"] = forms.DecimalField(
+                label=category.name,
+                required=False,
+                min_value=0.01,
+                max_digits=12,
+                decimal_places=2,
+                initial=current.nightly_rate if current else None,
+                widget=forms.NumberInput(attrs={
+                    "step": "0.01",
+                    "min": "0.01",
+                    "placeholder": "Use standard rate",
+                }),
+            )
