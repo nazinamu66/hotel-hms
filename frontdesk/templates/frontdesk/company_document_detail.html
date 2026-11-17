@@ -1,0 +1,55 @@
+{% extends "base/base.html" %}
+{% block title %}{{ document.document_number }} | Corporate Document{% endblock %}
+{% block content %}
+<style>
+.cd-page{max-width:1180px;margin:16px auto 42px;color:#172033}.cd-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.cd-title{font-size:1.7rem;font-weight:850;margin:0 0 5px}.cd-muted{color:#64748b;font-size:.85rem}.cd-panel{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:15px;box-shadow:0 3px 14px rgba(15,23,42,.04)}.cd-btn{display:inline-flex;padding:10px 14px;border:0;border-radius:9px;background:#243b80;color:#fff;text-decoration:none;font-size:.8rem;font-weight:800;cursor:pointer}.cd-btn.alt{background:#eaf1f8;color:#24476b}.cd-btn.warn{background:#7f1d1d}.cd-table{width:100%;border-collapse:collapse;min-width:700px}.cd-table th{background:#f8fafc;color:#64748b;text-transform:uppercase;font-size:.68rem;text-align:left;padding:11px}.cd-table td{padding:12px;border-top:1px solid #edf1f5;font-size:.84rem}.cd-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.cd-label{font-size:.68rem;color:#64748b;text-transform:uppercase;font-weight:850}.cd-value{font-weight:750;margin-top:4px}.cd-pill{display:inline-block;padding:5px 9px;border-radius:99px;background:#dbeafe;color:#1d4ed8;font-size:.7rem;font-weight:850}.cd-actions{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:700px){.cd-grid{grid-template-columns:1fr}}
+</style>
+<div class="cd-page">
+  <div class="cd-head">
+    <div><p class="cd-muted"><a href="{% url 'frontdesk_group_reservation_detail' group.pk %}">{{ group.reference }}</a> / Corporate document</p><h1 class="cd-title">{{ document.get_document_type_display }}</h1><p class="cd-muted">{{ document.document_number }} · {{ document.company_name_snapshot }}</p></div>
+    <div class="cd-actions">
+      <a class="cd-btn alt" href="{% url 'frontdesk_group_reservation_detail' group.pk %}">Back to booking</a>
+      <a class="cd-btn" href="{% url 'frontdesk_company_document_pdf' document.pk %}">Download PDF</a>
+      {% if document.status == "DRAFT" %}<a class="cd-btn alt" href="{% url 'frontdesk_company_document_edit' group.pk document.pk %}">Edit draft</a>{% endif %}
+    </div>
+  </div>
+  <section class="cd-panel">
+    <div class="cd-grid">
+      <div><div class="cd-label">Document number</div><div class="cd-value">{{ document.document_number }}</div></div>
+      <div><div class="cd-label">Status</div><div class="cd-value"><span class="cd-pill">{{ document.get_status_display }}</span></div></div>
+      <div><div class="cd-label">Issue date</div><div class="cd-value">{{ document.issue_date|date:"d M Y" }}</div></div>
+      <div><div class="cd-label">Valid until</div><div class="cd-value">{{ document.valid_until|date:"d M Y"|default:"—" }}</div></div>
+      <div><div class="cd-label">Corporate client</div><div class="cd-value">{{ document.company_name_snapshot }}</div></div>
+      <div><div class="cd-label">Stay period</div><div class="cd-value">{{ document.stay_check_in|date:"d M Y" }} – {{ document.stay_check_out|date:"d M Y" }}</div></div>
+    </div>
+  </section>
+  <section class="cd-panel">
+    <h2 style="font-size:1rem;margin:0 0 12px">Document items</h2>
+    <div style="overflow:auto"><table class="cd-table"><thead><tr><th>Description</th><th>Quantity</th><th>Unit</th><th>Unit price</th><th>Amount</th></tr></thead><tbody>
+      {% for line in document.lines.all %}<tr><td>{{ line.description }}</td><td>{{ line.quantity|floatformat:2 }}</td><td>{{ line.unit|default:"—" }}</td><td>₦{{ line.unit_price|floatformat:2 }}</td><td>₦{{ line.line_total|floatformat:2 }}</td></tr>{% endfor %}
+    </tbody></table></div>
+    <div style="max-width:340px;margin:16px 0 0 auto">
+      <div style="display:flex;justify-content:space-between;padding:7px 0"><span>Subtotal</span><strong>₦{{ document.subtotal|floatformat:2 }}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0"><span>Tax</span><strong>₦{{ document.tax_amount|floatformat:2 }}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid #cbd5e1;font-size:1.08rem"><strong>Total</strong><strong>₦{{ document.total_amount|floatformat:2 }}</strong></div>
+    </div>
+    {% if document.terms %}<h3 style="font-size:.9rem;margin:18px 0 5px">Terms and conditions</h3><p class="cd-muted">{{ document.terms|linebreaksbr }}</p>{% endif %}
+    {% if document.notes %}<p class="cd-muted">{{ document.notes|linebreaksbr }}</p>{% endif %}
+  </section>
+  {% if document.status == "DRAFT" %}
+    <section class="cd-panel">
+      <h2 style="font-size:1rem;margin:0 0 8px">Issue document</h2>
+      <p class="cd-muted">Issuing locks this document's prices and recipient details. It does not create a receipt or accounting entry.</p>
+      <form method="post" class="cd-actions">{% csrf_token %}<input type="hidden" name="action" value="ISSUE"><button class="cd-btn" type="submit">Issue {{ document.get_document_type_display }}</button></form>
+    </section>
+  {% elif document.document_type == "QUOTATION" and document.status == "ISSUED" %}
+    <section class="cd-panel">
+      <h2 style="font-size:1rem;margin:0 0 8px">Convert to proforma invoice</h2>
+      <p class="cd-muted">Creates a separate proforma invoice using the same item descriptions, quantities and agreed prices. The issued quotation remains unchanged.</p>
+      <form method="post" class="cd-actions">{% csrf_token %}<input type="hidden" name="action" value="CONVERT"><button class="cd-btn" type="submit">Create proforma invoice</button></form>
+    </section>
+  {% endif %}
+  {% if document.converted_from %}<p class="cd-muted">Converted from quotation <a href="{% url 'frontdesk_company_document_detail' document.converted_from.pk %}">{{ document.converted_from.document_number }}</a>.</p>{% endif %}
+  {% if document.converted_documents.all %}<section class="cd-panel"><h2 style="font-size:1rem;margin:0 0 8px">Related documents</h2>{% for related in document.converted_documents.all %}<p><a href="{% url 'frontdesk_company_document_detail' related.pk %}">{{ related.get_document_type_display }} — {{ related.document_number }}</a> ({{ related.get_status_display }})</p>{% endfor %}</section>{% endif %}
+</div>
+{% endblock %}
