@@ -45,7 +45,9 @@ ACCOUNTS_PAYABLE = "accounts_payable"
 
 SUPPLIER_ADVANCES = "supplier_advances"
 
-GUEST_DEPOSITS = "guest_deposits"\n\nCORPORATE_DEPOSITS = "corporate_deposits"
+GUEST_DEPOSITS = "guest_deposits"
+
+CORPORATE_DEPOSITS = "corporate_deposits"
 
 OWNER_CAPITAL = "owner_capital"
 
