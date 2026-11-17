@@ -83,6 +83,20 @@
   </section>
 
   <section class="gd-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+      <div><h2 style="font-size:1.05rem;margin:0 0 5px">Company billing summary</h2><p class="gd-muted">Read-only consolidated view of issued invoices, settlements and charges still awaiting invoicing.</p></div>
+      <a class="gd-btn" href="{% url 'frontdesk_company_group_statement_pdf' group.pk %}">Download consolidated statement (PDF)</a>
+    </div>
+    <div class="gd-stats" style="margin:0">
+      <div class="gd-stat"><small>Issued invoices</small><strong>₦{{ company_invoiced_total|floatformat:2 }}</strong></div>
+      <div class="gd-stat"><small>Settled</small><strong>₦{{ company_settled_total|floatformat:2 }}</strong></div>
+      <div class="gd-stat"><small>Outstanding</small><strong>₦{{ company_balance_due|floatformat:2 }}</strong></div>
+      <div class="gd-stat"><small>Unbilled charges</small><strong>₦{{ unbilled_company_total|floatformat:2 }}</strong></div>
+    </div>
+    <p class="gd-muted" style="margin-top:12px">Current company deposit balance (hotel-wide): <strong>₦{{ company_deposit_balance|floatformat:2 }}</strong>. This is informational and is not automatically deducted from this group's balance.</p>
+  </section>
+
+  <section class="gd-card">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
       <div><h2 style="font-size:1.05rem;margin:0 0 5px">Final company invoices</h2><p class="gd-muted">Reconcile posted company-billed room charges, apply company deposits and record settlement.</p></div>
       <a class="gd-btn" href="{% url 'frontdesk_company_invoice_create' group.pk %}">+ Create final invoice</a>
