@@ -9,8 +9,6 @@ from accounting.utils import is_date_locked
 from accounting.utils import get_current_business_day
 
 
-
-
 @transaction.atomic
 def post_journal_entry(
     hotel,
@@ -19,9 +17,8 @@ def post_journal_entry(
     reference=None,
     created_by=None,
     entry_type="NORMAL",
+    business_day=None,
 ):
-
-    from decimal import Decimal
 
     if not lines or len(lines) < 2:
         raise ValueError("Journal entry must have at least 2 lines.")
@@ -30,7 +27,6 @@ def post_journal_entry(
     total_credit = Decimal("0")
 
     for line in lines:
-
         debit = Decimal(str(line.get("debit", 0)))
         credit = Decimal(str(line.get("credit", 0)))
 
@@ -54,7 +50,7 @@ def post_journal_entry(
     if total_debit <= 0:
         raise ValueError("Amount must be greater than zero.")
 
-    # 🔥 IDEMPOTENCY CHECK
+    # Idempotency check.
     if reference:
         existing = JournalEntry.objects.filter(
             hotel=hotel,
@@ -65,7 +61,15 @@ def post_journal_entry(
         if existing:
             return existing
 
-    business_day = get_current_business_day(hotel)
+    # Normal entries use today's business day. Period-closing entries may
+    # explicitly target the historical business day being closed.
+    if business_day is None:
+        business_day = get_current_business_day(hotel)
+    else:
+        if business_day.hotel_id != hotel.id:
+            raise ValueError("Business day does not belong to this hotel.")
+        if business_day.is_closed:
+            raise ValueError("Cannot post to a closed business day.")
 
     entry = JournalEntry.objects.create(
         hotel=hotel,
@@ -89,17 +93,17 @@ def post_journal_entry(
 
     return entry
 
+
 def get_account(hotel, code):
     return Account.objects.get(hotel=hotel, code=code)
 
-def get_system_account(hotel,system_key,):
+
+def get_system_account(hotel, system_key):
     return Account.objects.get(
         hotel=hotel,
         system_key=system_key,
         is_system=True,
     )
-
-# accounting/services/journal.py
 
 
 def record_transaction(
@@ -120,50 +124,28 @@ def record_transaction(
     if amount is None or amount <= 0:
         raise ValueError("Amount must be greater than zero")
 
-    # Resolve debit account.
-    # Explicit account takes precedence over a system account.
     if debit_account is not None:
         if debit_account.hotel_id != hotel.id:
             raise ValueError("Debit account does not belong to this hotel")
     elif debit_system_key:
-        debit_account = get_system_account(
-            hotel,
-            debit_system_key,
-        )
+        debit_account = get_system_account(hotel, debit_system_key)
     else:
-        raise ValueError(
-            "Either debit_account or debit_system_key is required"
-        )
+        raise ValueError("Either debit_account or debit_system_key is required")
 
-    # Resolve credit account.
-    # Explicit account takes precedence over a system account.
     if credit_account is not None:
         if credit_account.hotel_id != hotel.id:
             raise ValueError("Credit account does not belong to this hotel")
     elif credit_system_key:
-        credit_account = get_system_account(
-            hotel,
-            credit_system_key,
-        )
+        credit_account = get_system_account(hotel, credit_system_key)
     else:
-        raise ValueError(
-            "Either credit_account or credit_system_key is required"
-        )
+        raise ValueError("Either credit_account or credit_system_key is required")
 
     if debit_account == credit_account:
-        raise ValueError(
-            "Debit and credit accounts cannot be the same"
-        )
+        raise ValueError("Debit and credit accounts cannot be the same")
 
     lines = [
-        {
-            "account": debit_account,
-            "debit": amount,
-        },
-        {
-            "account": credit_account,
-            "credit": amount,
-        },
+        {"account": debit_account, "debit": amount},
+        {"account": credit_account, "credit": amount},
     ]
 
     return post_journal_entry(
