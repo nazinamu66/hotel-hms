@@ -211,7 +211,13 @@ class Folio(models.Model):
 
     @property
     def total_charges(self):
-        return sum(c.amount for c in self.charges.all())
+        """Charges payable by the occupant; company-billed charges stay on the group ledger."""
+        return sum(c.amount for c in self.charges.filter(billing_party="INDIVIDUAL"))
+
+    @property
+    def total_company_charges(self):
+        """Company-responsible charges recorded on this occupant's operational folio."""
+        return sum(c.amount for c in self.charges.filter(billing_party="COMPANY"))
 
     @property
     def total_payments(self):
