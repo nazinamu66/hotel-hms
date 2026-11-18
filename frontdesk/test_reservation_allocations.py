@@ -429,6 +429,18 @@ class TodayBoardAllocationTests(TestCase):
 
     def test_arrivals_board_lists_each_remaining_room_allocation(self):
         today = timezone.localdate()
+        Room.objects.create(
+            hotel=self.hotel,
+            room_number="TB-01",
+            category=self.category,
+            status="AVAILABLE",
+        )
+        Room.objects.create(
+            hotel=self.hotel,
+            room_number="TB-02",
+            category=self.category,
+            status="AVAILABLE",
+        )
         reservation = create_reservation(
             hotel=self.hotel,
             user=self.user,
@@ -454,7 +466,7 @@ class TodayBoardAllocationTests(TestCase):
         response = self.client.get(reverse("frontdesk_today_board"))
 
         self.assertEqual(response.status_code, 200)
-        arrivals = list(response.context["arrivals"])
+        arrivals = list(response.context["allocation_arrivals"])
         self.assertEqual([item.pk for item in arrivals], [second.pk])
         self.assertContains(response, "Second Occupant")
         self.assertContains(
