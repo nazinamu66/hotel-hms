@@ -173,6 +173,7 @@ def check_in_room_allocation(allocation_id, hotel, user):
         guest=allocation.guest,
         expected_checkout=allocation.check_out_date,
         reservation=reservation,
+        reservation_room_allocation=allocation,
     )
 
     allocation.room = room
