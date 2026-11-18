@@ -699,7 +699,8 @@ def recipe_ingredients_api(request, recipe_id):
     else:
         version = recipe.active_version
 
-    if not version or version.status not in ("APPROVED", "SUPERSEDED"):
+    allowed_statuses = ("APPROVED", "SUPERSEDED") if event_line_id else ("APPROVED",)
+    if not version or version.status not in allowed_statuses:
         return JsonResponse(
             {"error": "This food has no valid approved recipe version. Ask the Kitchen Head to approve one."},
             status=409,
