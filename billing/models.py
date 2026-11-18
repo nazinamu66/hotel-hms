@@ -177,7 +177,11 @@ class Folio(models.Model):
                 scheduled_checkout = self.check_out_at
                 if timezone.is_naive(scheduled_checkout):
                     scheduled_checkout = timezone.make_aware(scheduled_checkout)
-                if timezone.now() >= scheduled_checkout:
+
+                # The checkout date is not another room night. This date-based
+                # guard is important because Night Audit runs before the
+                # 12:00 PM checkout time.
+                if today >= timezone.localdate(scheduled_checkout):
                     return
 
             charge_date = today
