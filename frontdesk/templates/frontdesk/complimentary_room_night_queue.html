@@ -47,7 +47,7 @@
       {% for item in complimentary_requests %}
       <label class="ca-item">
         <input type="checkbox" class="ca-check request-check" name="waiver_ids" value="{{ item.id }}">
-        <span><span class="ca-main">{{ item.reservation.guest.full_name }}</span><span class="ca-meta">{{ item.reservation.hotel.name }} · Reservation #{{ item.reservation_id }}{% if item.reservation.room %} · Room {{ item.reservation.room.room_number }}{% endif %}</span></span>
+        <span><span class="ca-main">{{ item.reservation.guest.full_name }}</span><span class="ca-meta">{{ item.reservation.hotel.name }} · Reservation #{{ item.reservation_id }}{% if item.allocation %} · Allocation {{ item.allocation.allocation_number }}{% if item.allocation.room %} / Room {{ item.allocation.room.room_number }}{% endif %}{% elif item.reservation.room %} · Room {{ item.reservation.room.room_number }}{% endif %}</span></span>
         <span><span class="ca-main">{{ item.room_night_date|date:"d M Y" }}</span><span class="ca-meta">Requested by {{ item.requested_by }} · {{ item.requested_at|date:"d M Y, H:i" }}</span></span>
         <span class="ca-value">₦{{ item.waived_amount|floatformat:2 }}</span>
         <span class="ca-reason">{{ item.reason|linebreaksbr }}<span class="ca-meta">Rate source: {{ item.rate_source }}</span></span>
