@@ -509,6 +509,59 @@ class TodayBoardAllocationTests(TestCase):
         self.assertEqual(first.status, "CHECKED_OUT")
         self.assertEqual(second.status, "CHECKED_IN")
 
+    @patch("billing.models.Folio.apply_daily_room_charge")
+    def test_room_board_shows_remaining_allocation_after_partial_checkin(self, apply_charge):
+        today = timezone.localdate()
+        first_room = Room.objects.create(
+            hotel=self.hotel,
+            room_number="TB-RB-01",
+            category=self.category,
+            status="AVAILABLE",
+        )
+        second_room = Room.objects.create(
+            hotel=self.hotel,
+            room_number="TB-RB-02",
+            category=self.category,
+            status="AVAILABLE",
+        )
+        reservation = create_reservation(
+            hotel=self.hotel,
+            user=self.user,
+            guest_id=self.primary_guest.pk,
+            category_id=self.category.pk,
+            number_of_rooms=2,
+            check_in=today,
+            check_out=today + timedelta(days=2),
+        )
+        first, second = list(
+            reservation.room_allocations.order_by("allocation_number")
+        )
+        second.guest = self.second_guest
+        second.room = second_room
+        second.save(update_fields=["guest", "room"])
+
+        # The master reservation is now CHECKED_IN, but its second room is
+        # still reserved and must remain visible on the main Room Board.
+        first, checked_in_room, folio = check_in_room_allocation(
+            first.pk, self.hotel, self.user
+        )
+        self.assertEqual(checked_in_room.pk, first_room.pk)
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.status, "CHECKED_IN")
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("frontdesk_room_board"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(response.context["allocation_arrivals_today"].values_list("pk", flat=True)),
+            [second.pk],
+        )
+        self.assertEqual(response.context["stats"]["arrivals"], 1)
+        self.assertIn(second_room.pk, response.context["reservations_today"])
+        self.assertContains(response, "Second Occupant")
+        self.assertContains(response, "TB-RB-02")
+
     def test_arrivals_board_lists_each_remaining_room_allocation(self):
         today = timezone.localdate()
         Room.objects.create(
