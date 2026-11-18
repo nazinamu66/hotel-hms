@@ -10,14 +10,28 @@ from billing.models import (
 
 
 def validate_check_in(room):
+    """
+    Only rooms released as AVAILABLE by Housekeeping may be checked in.
+    This shared guard protects both walk-in and reservation check-in flows.
+    """
+    if room.status == "AVAILABLE":
+        return
 
-    if room.status in [
-        "OCCUPIED",
-        "OCCUPIED_DIRTY",
-    ]:
+    if room.status in ("OCCUPIED", "OCCUPIED_DIRTY"):
+        raise ValidationError("Room is already occupied.")
+
+    if room.status == "VACANT_DIRTY":
         raise ValidationError(
-            "Room is already occupied."
+            "Room is not ready for check-in. Housekeeping must complete "
+            "and pass inspection first."
         )
+
+    if room.status == "OUT_OF_ORDER":
+        raise ValidationError(
+            "Room is out of order and cannot be checked in."
+        )
+
+    raise ValidationError("Room is not available for check-in.")
 
 def normalize_expected_checkout(expected_checkout):
     """
