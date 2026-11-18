@@ -1,6 +1,7 @@
 from django import forms
 from inventory.models import Product
 from .models import Recipe, RecipeItem
+from billing.models import EventOrderLine
 from .models import IngredientRestockRequest, IngredientRestockItem
 from django.forms import inlineformset_factory
 from django.forms import inlineformset_factory, BaseInlineFormSet
@@ -158,3 +159,16 @@ class ProductionBatchForm(forms.Form):
         min_value=1,
         label="Portions Produced"
     )
+    event_order_line = forms.ModelChoiceField(
+        queryset=EventOrderLine.objects.none(),
+        required=False,
+        label="Corporate event food line (optional)",
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        recipe = cleaned.get("recipe")
+        event_line = cleaned.get("event_order_line")
+        if event_line and event_line.recipe_id != getattr(recipe, "pk", None):
+            self.add_error("event_order_line", "The selected event line must use the selected Kitchen recipe.")
+        return cleaned
