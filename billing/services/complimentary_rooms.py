@@ -123,6 +123,8 @@ def decide_complimentary_night(*, waiver, user, approve, rejection_reason=""):
         raise ValidationError("Only pending complimentary requests can be decided.")
     if waiver.reservation.status not in ("RESERVED", "CHECKED_IN"):
         raise ValidationError("The reservation is no longer eligible for complimentary accommodation.")
+    if waiver.allocation_id and waiver.allocation.status not in ("RESERVED", "CHECKED_IN"):
+        raise ValidationError("The selected room allocation is no longer eligible for complimentary accommodation.")
     if waiver.requested_by_id == user.pk:
         raise ValidationError("The person who requested a complimentary night cannot authorise their own request.")
     if approve:
