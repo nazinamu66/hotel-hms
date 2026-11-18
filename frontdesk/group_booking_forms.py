@@ -116,6 +116,7 @@ class GroupRoomRatesForm(forms.Form):
 
 
 from billing.models import EventBooking, EventParticipant, EventOrderLine, GroupReservationRoom
+from kitchen.models import Recipe
 
 
 class EventBookingForm(forms.ModelForm):
@@ -146,11 +147,31 @@ class EventBookingForm(forms.ModelForm):
 class EventOrderLineForm(forms.ModelForm):
     class Meta:
         model = EventOrderLine
-        fields = ["line_type", "description", "quantity", "unit_price", "notes"]
+        fields = ["line_type", "recipe", "description", "quantity", "unit_price", "notes"]
         widgets = {
             "quantity": forms.NumberInput(attrs={"step": "0.001", "min": "0.001"}),
             "unit_price": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
         }
+
+    def __init__(self, *args, event=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["recipe"].queryset = (
+            Recipe.objects.filter(
+                is_active=True,
+                product__hotel_id=event.hotel_id,
+            ).select_related("product").order_by("name")
+            if event else Recipe.objects.none()
+        )
+        self.fields["recipe"].required = False
+        self.fields["recipe"].label = "Kitchen recipe (required for food)"
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("line_type") == "FOOD" and not cleaned.get("recipe"):
+            self.add_error("recipe", "Select the approved Kitchen recipe for this food line.")
+        if cleaned.get("line_type") != "FOOD" and cleaned.get("recipe"):
+            self.add_error("recipe", "Only food lines can be linked to a Kitchen recipe.")
+        return cleaned
 
 
 class EventParticipantForm(forms.ModelForm):
