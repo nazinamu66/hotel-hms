@@ -546,6 +546,10 @@
                                 {% csrf_token %}
                                 <button type="submit" class="rd-btn rd-btn-primary" onclick="return confirm('Check in {{ allocation.guest|escapejs }} for Room {{ allocation.allocation_number }}?');">Check in this room →</button>
                             </form>
+                            <form method="post" action="{% url 'frontdesk_reservation_allocation_no_show' reservation.id allocation.id %}" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="rd-btn rd-btn-danger" onclick="return confirm('Mark Room allocation {{ allocation.allocation_number }} as No-Show? Only this room will be affected. No deposit will be forfeited.');">Mark No-Show</button>
+                            </form>
                             {% endif %}
                         </div>
                         {% if allocation.status == "RESERVED" or allocation.status == "CHECKED_IN" %}
