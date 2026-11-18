@@ -1924,8 +1924,8 @@ class EventOrderLine(models.Model):
                 raise ValidationError({"recipe_version": "The pinned version must belong to the selected recipe."})
         elif self.line_type != "FOOD" and (self.recipe_id or self.recipe_version_id):
             raise ValidationError({"recipe": "Only FOOD event lines can be linked to a Kitchen recipe."})
-        if self.event_id and self.event.status not in ("DRAFT", "AGREED"):
-            raise ValidationError("Event order lines cannot be changed after release or cancellation.")
+        if self.event_id and self.event.status != "DRAFT":
+            raise ValidationError("Event order lines are locked once the commercial agreement is recorded.")
         if self.event_id and self.event.status == "AGREED" and self.pk:
             original = EventOrderLine.objects.filter(pk=self.pk).values(
                 "recipe_id", "recipe_version_id", "quantity", "line_type"
