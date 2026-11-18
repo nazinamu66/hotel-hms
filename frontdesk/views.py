@@ -1385,6 +1385,7 @@ def take_folio_payment(request, folio_id):
 
 
 @role_required("DIRECTOR", "ADMIN")
+@role_required("DIRECTOR", "ADMIN")
 def waive_folio_balance_view(request, folio_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
