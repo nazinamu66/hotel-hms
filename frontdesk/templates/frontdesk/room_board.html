@@ -99,16 +99,25 @@
     </div>
     <div class="fb-ops-grid">
       <article class="fb-ops-card">
-        <div class="fb-ops-card-head"><div><span class="fb-kicker">CHECK-IN</span><h3>Today's arrivals</h3></div><span class="fb-count fb-count-blue">{{ arrivals_today|length }}</span></div>
-        {% for reservation in arrivals_today %}
-          <a class="fb-op-row" href="{% url 'frontdesk_reservation_detail' reservation.id %}">
-            <span class="fb-op-avatar">{{ reservation.guest.first_name|default:"G"|slice:":1" }}{{ reservation.guest.last_name|default:""|slice:":1" }}</span>
-            <span class="fb-op-main"><strong>{{ reservation.guest.full_name }}</strong><small>{{ reservation.room_category.name }} · {% if reservation.room %}Room {{ reservation.room.room_number }}{% else %}Room assignment pending{% endif %}</small></span>
-            <span class="fb-op-tag">Reserved</span>
-          </a>
-        {% empty %}
+        <div class="fb-ops-card-head"><div><span class="fb-kicker">CHECK-IN</span><h3>Today's arrivals</h3></div><span class="fb-count fb-count-blue">{{ stats.arrivals }}</span></div>
+        {% if arrivals_today or allocation_arrivals_today %}
+          {% for reservation in arrivals_today %}
+            <a class="fb-op-row" href="{% url 'frontdesk_reservation_detail' reservation.id %}">
+              <span class="fb-op-avatar">{{ reservation.guest.first_name|default:"G"|slice:":1" }}{{ reservation.guest.last_name|default:""|slice:":1" }}</span>
+              <span class="fb-op-main"><strong>{{ reservation.guest.full_name }}</strong><small>{{ reservation.room_category.name }} · {% if reservation.room %}Room {{ reservation.room.room_number }}{% else %}Room assignment pending{% endif %}</small></span>
+              <span class="fb-op-tag">Reserved</span>
+            </a>
+          {% endfor %}
+          {% for allocation in allocation_arrivals_today %}
+            <a class="fb-op-row" href="{% url 'frontdesk_reservation_detail' allocation.reservation_id %}">
+              <span class="fb-op-avatar">{{ allocation.guest.first_name|default:"G"|slice:":1" }}{{ allocation.guest.last_name|default:""|slice:":1" }}</span>
+              <span class="fb-op-main"><strong>{{ allocation.guest.full_name }}</strong><small>{{ allocation.reservation.room_category.name }} · Room {{ allocation.allocation_number }}{% if allocation.room %} · {{ allocation.room.room_number }}{% else %} · Assignment pending{% endif %}</small></span>
+              <span class="fb-op-tag">Reserved</span>
+            </a>
+          {% endfor %}
+        {% else %}
           <div class="fb-op-empty">No arrivals scheduled for today.</div>
-        {% endfor %}
+        {% endif %}
         <a class="fb-card-link" href="{% url 'frontdesk_reservations' %}">View reservations →</a>
       </article>
       <article class="fb-ops-card">
