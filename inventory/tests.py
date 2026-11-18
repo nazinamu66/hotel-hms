@@ -822,6 +822,9 @@ class PartialPurchaseOrderReceivingTests(TestCase):
                 str(self.item.pk): "0",
                 str(equipment_item.pk): "2",
             },
+            asset_details={
+                str(equipment_item.pk): [{}, {}],
+            },
         )
 
         from maintenance.models import MaintenanceAsset
