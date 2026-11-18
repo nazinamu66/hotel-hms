@@ -77,6 +77,8 @@ COMPLIMENTARY_MEALS_EXPENSE = "complimentary_meals_expense"
 
 UTILITIES_EXPENSE = "utilities_expense"
 
+GUEST_BALANCE_WAIVER_EXPENSE = "guest_balance_waiver_expense"
+
 
 # ==================================================
 # ACCOUNT GROUPS
@@ -170,6 +172,16 @@ DEFAULT_ACCOUNTS = [
         "code": "5150",
         "name": "Laundry Expense",
         "system_key": LAUNDRY_EXPENSE,
+        "type": EXPENSE,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": True,
+    },
+
+    {
+        "code": "5400",
+        "name": "Guest Balance Waiver Expense",
+        "system_key": GUEST_BALANCE_WAIVER_EXPENSE,
         "type": EXPENSE,
         "is_system": True,
         "allow_posting": True,
