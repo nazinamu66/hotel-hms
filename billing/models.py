@@ -1757,6 +1757,14 @@ class EventBooking(models.Model):
                 raise ValidationError("Only agreed events can be released to operations.")
             if not event.order_lines.exists():
                 raise ValidationError("Add at least one food or beverage line before releasing the event.")
+            if event.order_lines.filter(line_type="FOOD", recipe__isnull=True).exists():
+                raise ValidationError("Link every event food line to an approved Kitchen recipe before release.")
+            if event.order_lines.filter(line_type="FOOD").exclude(
+                recipe__is_active=True,
+                recipe__active_version__status="APPROVED",
+                recipe__active_version__items__isnull=False,
+            ).exists():
+                raise ValidationError("Every event food line must use an active recipe with an approved ingredient version.")
             if not event.participants.exists():
                 raise ValidationError("Add or confirm the event participants before release.")
             if event.participants.filter(participant_type="IN_HOUSE").filter(
@@ -1863,11 +1871,16 @@ class EventOrderLine(models.Model):
             raise ValidationError({"quantity": "Quantity must be greater than zero."})
         if self.unit_price is not None and self.unit_price < 0:
             raise ValidationError({"unit_price": "Unit price cannot be negative."})
+        if self.line_type == "FOOD" and not self.recipe_id:
+            raise ValidationError({"recipe": "Select the Kitchen recipe for this food line."})
         if self.line_type == "FOOD" and self.recipe_id:
             if self.recipe.product.hotel_id != self.event.hotel_id:
                 raise ValidationError({"recipe": "The recipe must belong to the event hotel."})
             if not self.recipe.is_active:
                 raise ValidationError({"recipe": "Select an active Kitchen recipe."})
+            version = self.recipe.active_version
+            if not version or version.status != "APPROVED" or not version.items.exists():
+                raise ValidationError({"recipe": "The recipe must have an approved version with ingredients."})
         elif self.line_type != "FOOD" and self.recipe_id:
             raise ValidationError({"recipe": "Only FOOD event lines can be linked to a Kitchen recipe."})
         if self.event_id and self.event.status not in ("DRAFT", "AGREED"):
