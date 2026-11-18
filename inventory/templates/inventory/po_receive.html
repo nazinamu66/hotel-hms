@@ -345,6 +345,73 @@ Receive Purchase Order #{{ po.id }}
             width: 100%;
         }
     }
+
+
+    /* Modern receiving workspace */
+    .receive-page { max-width: 1320px; padding-top: 4px; }
+    .receive-header { align-items: center; margin-bottom: 28px; }
+    .receive-header h2 { font-size: clamp(25px, 2.5vw, 32px); letter-spacing: -.04em; }
+    .receive-header p { max-width: 720px; }
+    .receive-back { min-height: 44px; border-radius: 11px; transition: .18s ease; }
+    .receive-back:hover { border-color: #98a2b3; transform: translateY(-1px); }
+    .receive-card, .receive-confirm { border-color: #e5eaf1; border-radius: 17px; box-shadow: 0 8px 26px rgba(16,24,40,.055); }
+    .receive-card { margin-bottom: 20px; }
+    .receive-card-header { padding: 22px 26px; background: linear-gradient(180deg,#fff 0%,#fbfcfe 100%); }
+    .receive-card-header h3 { font-size: 19px; letter-spacing: -.025em; }
+    .receive-card-body { padding: 25px 26px; }
+    .receive-info-grid { gap: 20px; }
+    .receive-info-grid > div { min-width: 0; padding: 15px 16px; border: 1px solid #edf0f5; border-radius: 12px; background: #fbfcfe; }
+    .receive-label { display: block; margin-bottom: 7px; color: #667085; font-size: 11px; letter-spacing: .07em; }
+    .receive-value { font-size: 15px; }
+    .receive-badge { min-height: 28px; }
+    .receive-table-wrap { padding-top: 12px; }
+    .receive-table { border-collapse: separate; border-spacing: 0; min-width: 900px; }
+    .receive-table th { padding: 15px 13px; background: #f7f9fc; color: #667085; font-size: 11px; }
+    .receive-table th:first-child { border-radius: 9px 0 0 0; }
+    .receive-table th:last-child { border-radius: 0 9px 0 0; }
+    .receive-table td { padding: 18px 13px; border-bottom: 1px solid #edf0f5; }
+    .receive-table tbody tr:hover { background: #fbfcff; }
+    .receive-product { font-size: 14px; }
+    .receive-table input[type=number] { width: 108px !important; min-height: 44px; padding: 9px 11px !important; border: 1px solid #cfd8e5 !important; border-radius: 10px !important; background: #fff; font-weight: 700; }
+    .receive-table input[type=number]:focus, .equipment-field input:focus, .equipment-field select:focus, #receipt_notes:focus { outline: 3px solid rgba(37,99,235,.13); border-color: #6b9ff0 !important; }
+    #equipment-details-card { border-color: #dbe7f6; }
+    #equipment-details-card .receive-card-header { background: #f7faff; }
+    .equipment-group { padding: 4px 0 20px; }
+    .equipment-group + .equipment-group { padding-top: 22px; border-top: 1px solid #e9eef5; }
+    .equipment-group-title { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 14px; color:#263449; font-size:16px; font-weight:750; }
+    .equipment-count { padding:5px 10px; border-radius:999px; background:#eaf2ff; color:#2458a6; font-size:11px; font-weight:750; white-space:nowrap; }
+    .equipment-unit { margin:12px 0; padding:19px; border:1px solid #e5eaf1; border-radius:14px; background:#fbfcfe; }
+    .equipment-unit-head { display:flex; align-items:center; gap:10px; margin-bottom:15px; color:#344054; font-size:13px; font-weight:750; }
+    .equipment-unit-number { display:inline-grid; place-items:center; width:27px; height:27px; border-radius:8px; background:#e9eff8; color:#344054; }
+    .equipment-fields-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; }
+    .equipment-field { display:block; min-width:0; color:#475467; font-size:12px; font-weight:650; }
+    .equipment-field input, .equipment-field select { display:block; width:100%; min-height:43px; box-sizing:border-box; margin-top:7px; padding:10px 11px !important; border:1px solid #d5dce7 !important; border-radius:9px !important; background:#fff; color:#263449; font:inherit; font-size:14px; font-weight:500; }
+    .receive-destination { border-left-width:4px; border-radius:12px; padding:19px 21px; }
+    .receive-payment-note { border-radius:12px; }
+    .receive-confirm { padding:26px; }
+    .receive-confirm-title { font-size:20px; letter-spacing:-.025em; }
+    .receive-confirm-text { line-height:1.65; }
+    #receipt_notes { min-height:100px; padding:13px 14px !important; border:1px solid #d5dce7 !important; border-radius:10px !important; font:inherit; resize:vertical; }
+    .receive-actions { justify-content:flex-end; gap:12px; }
+    .receive-button { min-height:47px; padding:0 21px; border-radius:10px; transition:transform .16s ease, box-shadow .16s ease, background .16s ease; }
+    .receive-button:hover { transform:translateY(-1px); }
+    .receive-submit { background:#175cd3; box-shadow:0 4px 10px rgba(23,92,211,.16); }
+    .receive-submit:hover { background:#1849a9; box-shadow:0 7px 16px rgba(23,92,211,.2); }
+    .receive-warning { padding-top:14px; border-top:1px solid #edf0f5; }
+    @media(max-width:900px) { .equipment-fields-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:650px) {
+        .receive-header { align-items:stretch; }
+        .receive-back { align-self:flex-start; }
+        .receive-card-header, .receive-card-body { padding:18px; }
+        .receive-info-grid { grid-template-columns:1fr 1fr; gap:10px; }
+        .receive-info-grid > div { padding:12px; }
+        .equipment-fields-grid { grid-template-columns:1fr; gap:12px; }
+        .equipment-unit { padding:14px; }
+        .receive-confirm { padding:19px; }
+        .receive-actions { flex-direction:column-reverse; }
+        .receive-button { width:100%; }
+    }
+
 </style>
 
 
@@ -737,6 +804,7 @@ Receive Purchase Order #{{ po.id }}
     const detailCard = document.getElementById("equipment-details-card");
     const detailHost = document.getElementById("equipment-details");
     if (!detailCard || !detailHost) return;
+
     const rooms = [{% for room in rooms %}{id:"{{ room.pk }}",label:"Room {{ room.room_number|escapejs }}"},{% endfor %}];
     const locations = [{% for location in locations %}{id:"{{ location.pk }}",label:"{{ location.name|escapejs }} · {{ location.get_location_type_display|escapejs }}"},{% endfor %}];
     const items = [
@@ -746,45 +814,98 @@ Receive Purchase Order #{{ po.id }}
         {% endif %}
         {% endfor %}
     ];
-    function selectOptions(options, emptyLabel) {
-        return '<option value="">'+emptyLabel+'</option>' + options.map(o =>
-            '<option value="'+o.id+'">'+o.label+'</option>'
-        ).join('');
+
+    function makeField(name, labelText, type) {
+        const label = document.createElement("label");
+        label.className = "equipment-field";
+        label.appendChild(document.createTextNode(labelText));
+        const input = document.createElement("input");
+        input.type = type;
+        input.name = name;
+        label.appendChild(input);
+        return label;
     }
+
+    function makeSelect(name, labelText, options, emptyLabel) {
+        const label = document.createElement("label");
+        label.className = "equipment-field";
+        label.appendChild(document.createTextNode(labelText));
+        const select = document.createElement("select");
+        select.name = name;
+        const empty = document.createElement("option");
+        empty.value = "";
+        empty.textContent = emptyLabel;
+        select.appendChild(empty);
+        options.forEach(optionData => {
+            const option = document.createElement("option");
+            option.value = optionData.id;
+            option.textContent = optionData.label;
+            select.appendChild(option);
+        });
+        label.appendChild(select);
+        return label;
+    }
+
     function render() {
-        detailHost.innerHTML = "";
+        detailHost.replaceChildren();
         let hasEquipment = false;
+
         items.forEach(item => {
-            const quantityInput = document.querySelector('[name="received_'+item.id+'"]');
+            const quantityInput = document.querySelector('[name="received_' + item.id + '"]');
             const quantity = Math.max(0, Math.min(item.outstanding, parseInt(quantityInput?.value || "0", 10) || 0));
             if (!quantity) return;
             hasEquipment = true;
+
             const group = document.createElement("section");
-            group.style.cssText = "padding:16px 0;border-bottom:1px solid #eaecf0";
-            group.innerHTML = '<h4 style="margin:0 0 12px">'+item.name+' · '+quantity+' unit(s)</h4>';
-            for (let i=1;i<=quantity;i++) {
-                const prefix = 'asset_'+item.id+'_'+i+'_';
+            group.className = "equipment-group";
+            const heading = document.createElement("h4");
+            heading.className = "equipment-group-title";
+            const productName = document.createElement("span");
+            productName.textContent = item.name;
+            const count = document.createElement("span");
+            count.className = "equipment-count";
+            count.textContent = quantity + (quantity === 1 ? " unit" : " units");
+            heading.append(productName, count);
+            group.appendChild(heading);
+
+            for (let i = 1; i <= quantity; i++) {
+                const prefix = "asset_" + item.id + "_" + i + "_";
                 const unit = document.createElement("div");
-                unit.style.cssText = "padding:14px;margin:10px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px";
-                unit.innerHTML = '<strong>Unit '+i+'</strong><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:12px">'+
-                    field(prefix+'serial_number','Serial number','text')+
-                    field(prefix+'manufacturer','Manufacturer','text')+
-                    field(prefix+'model_number','Model number','text')+
-                    field(prefix+'warranty_expiry','Warranty expiry','date')+
-                    '<label>Condition<select name="'+prefix+'condition" style="display:block;width:100%;padding:9px"><option value="NEW">New</option><option value="GOOD">Good</option><option value="FAIR">Fair</option><option value="POOR">Poor</option><option value="DAMAGED">Damaged</option></select></label>'+
-                    '<label>Room (optional)<select name="'+prefix+'room" style="display:block;width:100%;padding:9px">'+selectOptions(rooms,'Unassigned')+'</select></label>'+
-                    '<label>Non-room location (optional)<select name="'+prefix+'location" style="display:block;width:100%;padding:9px">'+selectOptions(locations,'Unassigned')+'</select></label></div>';
+                unit.className = "equipment-unit";
+                const unitHead = document.createElement("div");
+                unitHead.className = "equipment-unit-head";
+                const number = document.createElement("span");
+                number.className = "equipment-unit-number";
+                number.textContent = i;
+                const unitTitle = document.createElement("span");
+                unitTitle.textContent = "Equipment unit " + i;
+                unitHead.append(number, unitTitle);
+                unit.appendChild(unitHead);
+
+                const grid = document.createElement("div");
+                grid.className = "equipment-fields-grid";
+                grid.append(
+                    makeField(prefix + "serial_number", "Serial number", "text"),
+                    makeField(prefix + "manufacturer", "Manufacturer", "text"),
+                    makeField(prefix + "model_number", "Model number", "text"),
+                    makeField(prefix + "warranty_expiry", "Warranty expiry", "date"),
+                    makeSelect(prefix + "condition", "Condition", [
+                        {id:"NEW",label:"New"}, {id:"GOOD",label:"Good"}, {id:"FAIR",label:"Fair"},
+                        {id:"POOR",label:"Poor"}, {id:"DAMAGED",label:"Damaged"}
+                    ], "Select condition"),
+                    makeSelect(prefix + "room", "Room (optional)", rooms, "Unassigned"),
+                    makeSelect(prefix + "location", "Non-room location (optional)", locations, "Unassigned")
+                );
+                unit.appendChild(grid);
                 group.appendChild(unit);
             }
             detailHost.appendChild(group);
         });
         detailCard.style.display = hasEquipment ? "block" : "none";
     }
-    function field(name,label,type) {
-        return '<label>'+label+'<input type="'+type+'" name="'+name+'" style="display:block;width:100%;box-sizing:border-box;padding:9px;border:1px solid #d0d5dd;border-radius:7px"></label>';
-    }
+
     items.forEach(item => {
-        const input = document.querySelector('[name="received_'+item.id+'"]');
+        const input = document.querySelector('[name="received_' + item.id + '"]');
         if (input) input.addEventListener("input", render);
     });
     render();
