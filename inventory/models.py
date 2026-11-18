@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.text import slugify
 from decimal import Decimal
+from datetime import date
 
 
 
@@ -718,10 +719,13 @@ class PurchaseOrder(models.Model):
     )
 
     @transaction.atomic
-    def receive(self, user, quantities, notes=""):
+    def receive(self, user, quantities, notes="", asset_details=None):
         """Record one partial or complete physical delivery against this PO."""
-        from maintenance.models import MaintenanceAsset
+        from maintenance.models import MaintenanceAsset, MaintenanceLocation
+        from frontdesk.models import Room
         from accounting.services.postings.purchase import post_inventory_receipt
+
+        asset_details = asset_details or {}
 
         po = PurchaseOrder.objects.select_for_update().get(pk=self.pk)
         if po.status not in ("APPROVED", "PARTIALLY_RECEIVED"):
@@ -781,19 +785,68 @@ class PurchaseOrder(models.Model):
                     raise ValidationError(
                         f"Equipment {product.name} must have a positive unit cost."
                     )
-                for _ in range(quantity):
-                    MaintenanceAsset.objects.create(
+                unit_details = asset_details.get(str(item.pk), [])
+                if len(unit_details) != quantity:
+                    raise ValidationError(
+                        f"Enter equipment details for all {quantity} unit(s) of {product.name}."
+                    )
+
+                for unit_number, details in enumerate(unit_details, start=1):
+                    details = details or {}
+                    serial_number = (details.get("serial_number") or "").strip()
+                    manufacturer = (details.get("manufacturer") or "").strip()
+                    model_number = (details.get("model_number") or "").strip()
+                    warranty_raw = (details.get("warranty_expiry") or "").strip()
+                    condition = (details.get("condition") or "NEW").strip().upper()
+                    room_id = (details.get("room") or "").strip()
+                    location_id = (details.get("location") or "").strip()
+
+                    if room_id and location_id:
+                        raise ValidationError(
+                            f"Equipment unit {unit_number} of {product.name}: choose a room or a location, not both."
+                        )
+                    try:
+                        warranty_expiry = date.fromisoformat(warranty_raw) if warranty_raw else None
+                    except ValueError:
+                        raise ValidationError(
+                            f"Equipment unit {unit_number} of {product.name} has an invalid warranty expiry date."
+                        )
+
+                    room = None
+                    location = None
+                    if room_id:
+                        room = Room.objects.filter(pk=room_id, hotel=po.department.hotel).first()
+                        if room is None:
+                            raise ValidationError(
+                                f"Equipment unit {unit_number} of {product.name} has an invalid room."
+                            )
+                    if location_id:
+                        location = MaintenanceLocation.objects.filter(
+                            pk=location_id, hotel=po.department.hotel, is_active=True, status="ACTIVE"
+                        ).first()
+                        if location is None:
+                            raise ValidationError(
+                                f"Equipment unit {unit_number} of {product.name} has an invalid location."
+                            )
+
+                    asset = MaintenanceAsset(
                         hotel=po.department.hotel,
                         product=product,
                         purchase_item=item,
-                        name=product.name,
+                        name=f"{product.name} {unit_number}" if quantity > 1 else product.name,
                         asset_type=product.name,
-                        manufacturer="",
-                        model_number="",
+                        serial_number=serial_number,
+                        manufacturer=manufacturer,
+                        model_number=model_number,
                         purchase_date=timezone.localdate(),
                         purchase_cost=item.unit_cost,
-                        condition="NEW",
+                        warranty_expiry=warranty_expiry,
+                        condition=condition,
+                        room=room,
+                        location=location,
                     )
+                    asset.full_clean()
+                    asset.save()
                 continue
 
             stock_in(
