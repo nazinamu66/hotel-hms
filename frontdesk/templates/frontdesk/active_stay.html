@@ -115,9 +115,21 @@
                 <button class="as-btn as-btn-green" type="submit">Checkout</button>
             </form>
         {% elif can_force_checkout %}
-            <form method="post" action="{% url 'frontdesk_checkout' room.id %}" style="display:inline;" onsubmit="return confirm('Force checkout with an outstanding balance of ₦{{ folio.balance|floatformat:2 }}?')">
+            <form method="post" action="{% url 'frontdesk_checkout' room.id %}" style="display:inline; min-width:260px;" onsubmit="return confirm('Authorise checkout while retaining the outstanding balance of ₦{{ folio.balance|floatformat:2 }}?')">
                 {% csrf_token %}
-                <button class="as-btn as-btn-orange" type="submit">Force Checkout</button>
+                <label for="checkout-reason">Reason for outstanding-balance checkout</label>
+                <textarea id="checkout-reason" name="reason" required minlength="3" rows="2" placeholder="Enter the approval reason"></textarea>
+                <button class="as-btn as-btn-orange" type="submit">Authorise Checkout</button>
+            </form>
+        {% endif %}
+        {% if can_waive_balance and folio.balance > 0 %}
+            <form method="post" action="{% url 'frontdesk_folio_waive_balance' folio.id %}" style="display:inline; min-width:260px;" onsubmit="return confirm('Record this balance waiver? This creates an accounting write-off.')">
+                {% csrf_token %}
+                <label for="waiver-amount">Waiver amount (outstanding ₦{{ folio.balance|floatformat:2 }})</label>
+                <input id="waiver-amount" name="amount" type="number" min="0.01" max="{{ folio.balance }}" step="0.01" required placeholder="Amount to waive">
+                <label for="waiver-reason">Waiver reason</label>
+                <textarea id="waiver-reason" name="reason" required minlength="3" rows="2" placeholder="Explain why the balance is being waived"></textarea>
+                <button class="as-btn as-btn-purple" type="submit">Waive Balance</button>
             </form>
         {% endif %}
         <a class="as-btn" href="{% url 'frontdesk_room_board' %}">← Back to Room Board</a>
