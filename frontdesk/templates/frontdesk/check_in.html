@@ -1,83 +1,285 @@
 {% extends "base/base.html" %}
 
-{% block title %}Check In{% endblock %}
-
-{% block header %}
-<h2>Check In – Room {{ room.room_number }}</h2>
-{% endblock %}
+{% block title %}Walk-in Check-in · Room {{ room.room_number }}{% endblock %}
 
 {% block content %}
+<style>
+.ci-page{max-width:1120px;margin:0 auto;padding:12px 2px 42px;color:#172033}
+.ci-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.ci-eyebrow{font-size:.7rem;font-weight:850;letter-spacing:.1em;text-transform:uppercase;color:#2563eb;margin:0 0 7px}
+.ci-title{font-size:1.75rem;font-weight:850;letter-spacing:-.04em;margin:0 0 6px}
+.ci-subtitle{color:#64748b;font-size:.87rem;margin:0}
+.ci-back{padding:9px 13px;border:1px solid #dbe3ed;border-radius:9px;text-decoration:none;color:#475569;background:#fff;font-size:.8rem;font-weight:800}
+.ci-layout{display:grid;grid-template-columns:minmax(0,1fr) 285px;gap:17px;align-items:start}
+.ci-card,.ci-side{background:#fff;border:1px solid #e2e8f0;border-radius:15px;box-shadow:0 4px 16px rgba(15,23,42,.035)}
+.ci-card{overflow:hidden}
+.ci-card-head{padding:18px 21px;border-bottom:1px solid #edf1f5}
+.ci-card-head h2{font-size:.98rem;margin:0 0 4px;font-weight:850}
+.ci-card-head p{font-size:.76rem;color:#64748b;margin:0}
+.ci-form{padding:21px}
+.ci-section{margin-bottom:23px}
+.ci-section:last-of-type{margin-bottom:0}
+.ci-section-title{display:flex;align-items:center;gap:9px;font-size:.82rem;font-weight:850;color:#334155;margin:0 0 14px}
+.ci-step{width:25px;height:25px;border-radius:8px;background:#eff6ff;color:#1d4ed8;display:grid;place-items:center;font-size:.72rem}
+.ci-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ci-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ci-field.full{grid-column:1/-1}
+.ci-label{font-size:.73rem;font-weight:800;color:#475569}
+.ci-control{box-sizing:border-box;width:100%;height:43px;padding:9px 11px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#172033;font:inherit;font-size:.82rem}
+.ci-control:focus,.ci-search:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+.ci-hint{font-size:.69rem;color:#94a3b8;line-height:1.45}
+.ci-mode{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.ci-mode button{border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#475569;padding:9px 13px;font-size:.76rem;font-weight:800;cursor:pointer}
+.ci-mode button.active{border-color:#93c5fd;background:#eff6ff;color:#1d4ed8}
+.ci-picker{position:relative}
+.ci-search{width:100%;height:43px;box-sizing:border-box;padding:9px 11px;border:1px solid #cbd5e1;border-radius:9px;font:inherit;font-size:.82rem}
+.ci-results{display:none;position:absolute;z-index:20;top:calc(100% + 5px);left:0;right:0;max-height:240px;overflow:auto;background:#fff;border:1px solid #dbe3ed;border-radius:10px;box-shadow:0 12px 28px rgba(15,23,42,.13)}
+.ci-result{display:block;width:100%;padding:11px 12px;text-align:left;border:0;border-bottom:1px solid #eef2f7;background:#fff;cursor:pointer}
+.ci-result:hover{background:#f5f8ff}
+.ci-result strong{display:block;font-size:.8rem;color:#172033}
+.ci-result small{display:block;margin-top:3px;color:#64748b;font-size:.69rem}
+.ci-selected{display:none;margin-top:9px;padding:10px 12px;border:1px solid #bbf7d0;border-radius:9px;background:#f0fdf4;color:#166534;font-size:.76rem}
+.ci-new-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ci-divider{height:1px;background:#edf1f5;margin:21px 0}
+.ci-aside{display:grid;gap:13px}
+.ci-side{padding:17px}
+.ci-side h3{font-size:.8rem;font-weight:850;margin:0 0 12px;color:#263449}
+.ci-room-number{font-size:1.55rem;font-weight:900;letter-spacing:-.04em}
+.ci-room-category{color:#64748b;font-size:.75rem;margin-top:2px}
+.ci-rate{margin-top:14px;padding-top:13px;border-top:1px solid #edf1f5}
+.ci-rate strong{display:block;font-size:1.05rem;font-weight:900}
+.ci-rate span{font-size:.69rem;color:#64748b}
+.ci-tip{font-size:.72rem;line-height:1.55;color:#64748b;margin:0}
+.ci-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:21px;margin-top:22px;border-top:1px solid #edf1f5}
+.ci-submit,.ci-cancel{height:43px;padding:0 16px;border-radius:9px;font-size:.78rem;font-weight:850;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer}
+.ci-submit{border:0;background:#1d4ed8;color:#fff}
+.ci-submit:hover{background:#1e40af}
+.ci-cancel{border:1px solid #cbd5e1;background:#fff;color:#475569}
+@media(max-width:850px){.ci-layout{grid-template-columns:1fr}.ci-aside{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.ci-page{padding:5px 0 28px}.ci-title{font-size:1.45rem}.ci-form{padding:16px}.ci-card-head{padding:16px}.ci-grid,.ci-new-fields{grid-template-columns:1fr}.ci-field.full{grid-column:auto}.ci-aside{grid-template-columns:1fr}.ci-actions{flex-direction:column-reverse}.ci-submit,.ci-cancel{width:100%;box-sizing:border-box}}
+</style>
 
-<form method="post">
-{% csrf_token %}
-
-<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:700px;">
-
+<div class="ci-page">
+  <header class="ci-head">
     <div>
-        <label>First Name</label><br>
-        <input type="text" name="first_name" required>
+      <p class="ci-eyebrow">Frontdesk · Walk-in arrival</p>
+      <h1 class="ci-title">Check in guest</h1>
+      <p class="ci-subtitle">Register a new guest or select an existing guest profile for this room.</p>
     </div>
+    <a class="ci-back" href="{% url 'frontdesk_room_board' %}">← Back to room board</a>
+  </header>
 
-    <div>
-        <label>Last Name</label><br>
-        <input type="text" name="last_name" required>
-    </div>
+  <div class="ci-layout">
+    <section class="ci-card">
+      <div class="ci-card-head">
+        <h2>Guest and stay details</h2>
+        <p>Room check-in will create the guest folio and post the first room-night charge.</p>
+      </div>
 
-    <div>
-        <label>Phone</label><br>
-        <input type="text" name="phone">
-    </div>
+      <form method="post" class="ci-form" id="walkin-checkin-form">
+        {% csrf_token %}
+        <section class="ci-section">
+          <h3 class="ci-section-title"><span class="ci-step">1</span> Guest profile</h3>
+          <div class="ci-mode" role="group" aria-label="Guest type">
+            <button type="button" id="existing-mode" class="{% if selected_guest_id %}active{% endif %}">Existing guest</button>
+            <button type="button" id="new-mode" class="{% if not selected_guest_id %}active{% endif %}">New guest</button>
+          </div>
 
-    <div>
-        <label>Email</label><br>
-        <input type="email" name="email">
-    </div>
+          <div id="existing-guest-panel">
+            <div class="ci-field">
+              <label class="ci-label" for="guest-search">Find guest by name, phone, email or ID</label>
+              <div class="ci-picker">
+                <input id="guest-search" class="ci-search" type="search" autocomplete="off" placeholder="Start typing a guest's details">
+                <input type="hidden" name="guest_id" id="guest-id" value="{{ selected_guest_id|default:'' }}">
+                <div id="guest-results" class="ci-results" role="listbox"></div>
+              </div>
+              <div id="selected-guest" class="ci-selected" aria-live="polite">
+                {% if selected_guest %}<strong>{{ selected_guest.full_name }}</strong>{% if selected_guest.phone %} · {{ selected_guest.phone }}{% endif %}{% endif %}
+              </div>
+              <span class="ci-hint">Guest records are searched only within this hotel.</span>
+            </div>
+          </div>
 
-    <div>
-        <label>Nationality</label><br>
-        <input type="text" name="nationality">
-    </div>
+          <div id="new-guest-panel" style="display:none">
+            <div class="ci-new-fields">
+              <div class="ci-field"><label class="ci-label" for="first-name">First name *</label><input class="ci-control" id="first-name" name="first_name" value="{{ form_data.first_name|default:'' }}" autocomplete="given-name"></div>
+              <div class="ci-field"><label class="ci-label" for="last-name">Last name *</label><input class="ci-control" id="last-name" name="last_name" value="{{ form_data.last_name|default:'' }}" autocomplete="family-name"></div>
+              <div class="ci-field"><label class="ci-label" for="phone">Phone</label><input class="ci-control" id="phone" name="phone" value="{{ form_data.phone|default:'' }}" autocomplete="tel"></div>
+              <div class="ci-field"><label class="ci-label" for="email">Email</label><input class="ci-control" id="email" name="email" type="email" value="{{ form_data.email|default:'' }}" autocomplete="email"></div>
+              <div class="ci-field"><label class="ci-label" for="nationality">Nationality</label><input class="ci-control" id="nationality" name="nationality" value="{{ form_data.nationality|default:'' }}" autocomplete="country-name"></div>
+              <div class="ci-field"><label class="ci-label" for="id-number">ID / passport number</label><input class="ci-control" id="id-number" name="id_number" value="{{ form_data.id_number|default:'' }}"></div>
+            </div>
+          </div>
+        </section>
 
-    <div>
-        <label>ID / Passport Number</label><br>
-        <input type="text" name="id_number">
-    </div>
+        <div class="ci-divider"></div>
 
-    <div>
-        <label>Expected Checkout Date</label><br>
-        <input type="date" name="expected_checkout">
-    </div>
+        <section class="ci-section">
+          <h3 class="ci-section-title"><span class="ci-step">2</span> Stay details</h3>
+          <div class="ci-grid">
+            <div class="ci-field">
+              <label class="ci-label" for="expected-checkout">Expected checkout date</label>
+              <input class="ci-control" id="expected-checkout" type="date" name="expected_checkout" value="{{ form_data.expected_checkout|default:'' }}">
+              <span class="ci-hint">If left blank, the hotel's standard next-day checkout time applies.</span>
+            </div>
+            <div class="ci-field">
+              <label class="ci-label" for="room-discount">Room discount</label>
+              <select class="ci-control" id="room-discount" name="room_discount_percent">
+                <option value="0" {% if form_data.room_discount_percent == "0" or not form_data.room_discount_percent %}selected{% endif %}>No discount</option>
+                <option value="5" {% if form_data.room_discount_percent == "5" %}selected{% endif %}>5%</option>
+                <option value="10" {% if form_data.room_discount_percent == "10" %}selected{% endif %}>10%</option>
+                <option value="15" {% if form_data.room_discount_percent == "15" %}selected{% endif %}>15%</option>
+              </select>
+            </div>
+            <div class="ci-field full">
+              <label class="ci-label" for="discount-reason">Discount reason</label>
+              <input class="ci-control" id="discount-reason" name="room_discount_reason" maxlength="255" value="{{ form_data.room_discount_reason|default:'' }}" placeholder="Required when a discount is applied">
+            </div>
+          </div>
+        </section>
 
-    <div>
-        <label>Number of Guests</label><br>
-        <input type="number" name="guest_count" value="1" min="1">
-    </div>
+        <div class="ci-actions">
+          <a class="ci-cancel" href="{% url 'frontdesk_room_board' %}">Cancel</a>
+          <button class="ci-submit" type="submit">Confirm check-in →</button>
+        </div>
+      </form>
+    </section>
 
-    <div>
-        <label>Room Discount</label><br>
-        <select name="room_discount_percent">
-            <option value="0">No discount</option>
-            <option value="5">5%</option>
-            <option value="10">10%</option>
-            <option value="15">15%</option>
-        </select>
-    </div>
-    <div>
-        <label>Discount Reason (required when discounted)</label><br>
-        <input type="text" name="room_discount_reason" maxlength="255">
-    </div>
-
+    <aside class="ci-aside">
+      <section class="ci-side">
+        <h3>Selected room</h3>
+        <div class="ci-room-number">Room {{ room.room_number }}</div>
+        <div class="ci-room-category">{{ room.category.name }} · Available</div>
+        <div class="ci-rate">
+          {% if nightly_rate %}
+            <strong>₦{{ nightly_rate|floatformat:2 }}</strong>
+            <span>Standard rate per night</span>
+          {% else %}
+            <strong>Rate not configured</strong>
+            <span>Please verify the room category's rate before checking in.</span>
+          {% endif %}
+        </div>
+      </section>
+      <section class="ci-side">
+        <h3>What happens next?</h3>
+        <p class="ci-tip">The system creates a room folio, records the guest's stay, applies the first room-night charge using the configured room rate and updates the room status.</p>
+      </section>
+      <section class="ci-side">
+        <h3>Discount control</h3>
+        <p class="ci-tip">Available discounts are 0%, 5%, 10% and 15%. A reason is required whenever a discount is applied.</p>
+      </section>
+    </aside>
+  </div>
 </div>
 
-<br>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const existingButton = document.getElementById("existing-mode");
+  const newButton = document.getElementById("new-mode");
+  const existingPanel = document.getElementById("existing-guest-panel");
+  const newPanel = document.getElementById("new-guest-panel");
+  const guestId = document.getElementById("guest-id");
+  const search = document.getElementById("guest-search");
+  const results = document.getElementById("guest-results");
+  const selected = document.getElementById("selected-guest");
+  const form = document.getElementById("walkin-checkin-form");
+  const firstName = document.getElementById("first-name");
+  const lastName = document.getElementById("last-name");
+  let timer = null;
+  let mode = guestId.value ? "existing" : "new";
 
-<button type="submit">Check In</button>
-<a href="/frontdesk/">Cancel</a>
+  function setMode(next) {
+    mode = next;
+    existingPanel.style.display = next === "existing" ? "block" : "none";
+    newPanel.style.display = next === "new" ? "block" : "none";
+    existingButton.classList.toggle("active", next === "existing");
+    newButton.classList.toggle("active", next === "new");
+    if (next === "new") {
+      guestId.value = "";
+      selected.style.display = "none";
+      search.value = "";
+    }
+  }
+  existingButton.addEventListener("click", () => setMode("existing"));
+  newButton.addEventListener("click", () => setMode("new"));
+  if (guestId.value) {
+    selected.style.display = "block";
+    search.value = selected.textContent.trim();
+  }
 
-</form>
+  function showMessage(message) {
+    results.replaceChildren();
+    const row = document.createElement("div");
+    row.className = "ci-result";
+    row.textContent = message;
+    results.appendChild(row);
+    results.style.display = "block";
+  }
 
-<p style="margin-top:10px; color:#555;">
-Returning guests can be checked in using phone number only.
-</p>
+  search.addEventListener("input", function () {
+    guestId.value = "";
+    selected.style.display = "none";
+    clearTimeout(timer);
+    const query = this.value.trim();
+    if (query.length < 2) {
+      results.style.display = "none";
+      results.replaceChildren();
+      return;
+    }
+    timer = setTimeout(() => {
+      fetch("{% url 'frontdesk_guest_search_api' %}?q=" + encodeURIComponent(query))
+        .then(response => { if (!response.ok) throw new Error("Search failed"); return response.json(); })
+        .then(data => {
+          results.replaceChildren();
+          if (!data.results || !data.results.length) {
+            showMessage("No matching guests found. Choose New guest to register this person.");
+            return;
+          }
+          data.results.forEach(guest => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "ci-result";
+            const name = document.createElement("strong");
+            name.textContent = guest.name || "Guest";
+            button.appendChild(name);
+            const detail = document.createElement("small");
+            detail.textContent = [guest.phone, guest.email, guest.id_number].filter(Boolean).join(" · ");
+            button.appendChild(detail);
+            button.addEventListener("click", () => {
+              guestId.value = guest.id;
+              search.value = guest.name || "";
+              selected.replaceChildren();
+              const label = document.createElement("strong");
+              label.textContent = guest.name || "Guest selected";
+              selected.appendChild(label);
+              if (guest.phone) selected.appendChild(document.createTextNode(" · " + guest.phone));
+              selected.style.display = "block";
+              results.style.display = "none";
+              results.replaceChildren();
+            });
+            results.appendChild(button);
+          });
+          results.style.display = "block";
+        })
+        .catch(() => showMessage("Unable to search guests. Please try again."));
+    }, 250);
+  });
 
+  document.addEventListener("click", event => {
+    if (!event.target.closest(".ci-picker")) results.style.display = "none";
+  });
+
+  form.addEventListener("submit", event => {
+    if (mode === "existing" && !guestId.value) {
+      event.preventDefault();
+      alert("Please search for and select an existing guest, or choose New guest.");
+      return;
+    }
+    if (mode === "new" && (!firstName.value.trim() || !lastName.value.trim())) {
+      event.preventDefault();
+      alert("First name and last name are required for a new guest.");
+    }
+  });
+});
+</script>
 {% endblock %}
