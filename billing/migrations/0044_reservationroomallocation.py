@@ -45,7 +45,10 @@ def backfill_ordinary_reservation_allocations(apps, schema_editor):
                     first_room_id = assigned_folio.room_id
 
         if reservation.status == "CHECKED_IN":
-            first_status = (\n                "CHECKED_IN" if not assigned_folio or not assigned_folio.is_closed\n                else "CHECKED_OUT"\n            )
+            first_status = (
+                "CHECKED_IN" if not assigned_folio or not assigned_folio.is_closed
+                else "CHECKED_OUT"
+            )
         elif reservation.status == "CANCELLED":
             first_status = "CANCELLED"
         elif reservation.status == "NO_SHOW":
