@@ -140,7 +140,7 @@
 
         <div class="ci-actions">
           <a class="ci-cancel" href="{% url 'frontdesk_room_board' %}">Cancel</a>
-          <button class="ci-submit" type="submit">Confirm check-in →</button>
+          {% if nightly_rate %}<button class="ci-submit" type="submit">Confirm check-in →</button>{% else %}<button class="ci-submit" type="button" disabled style="opacity:.55;cursor:not-allowed">Rate required before check-in</button>{% endif %}
         </div>
       </form>
     </section>
