@@ -556,6 +556,7 @@ def cancel_reservation(
     if not reservation_deposit:
         reservation.status = "CANCELLED"
         reservation.save(update_fields=["status"])
+        reservation.room_allocations.filter(status="RESERVED").update(status="CANCELLED")
         return {
             "reservation": reservation,
             "reservation_deposit": None,
@@ -677,6 +678,7 @@ def cancel_reservation(
 
     reservation.status = "CANCELLED"
     reservation.save(update_fields=["status"])
+    reservation.room_allocations.filter(status="RESERVED").update(status="CANCELLED")
 
     # Newly available deposit funds can now guarantee another
     # pending reservation for this guest.

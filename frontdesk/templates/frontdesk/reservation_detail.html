@@ -551,7 +551,7 @@
         </a>
 
         <div class="rd-action-group">
-            {% if reservation.status == "RESERVED" %}
+            {% if reservation.status == "RESERVED" and not reservation.room_allocations.exists %}
                 <form method="post" action="{% url 'frontdesk_reservation_checkin' reservation.id %}" style="margin:0;">
                     {% csrf_token %}
                     <button type="submit" class="rd-btn rd-btn-primary"

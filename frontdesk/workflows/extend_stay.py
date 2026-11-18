@@ -164,4 +164,9 @@ def extend_guest_stay(
         new_checkout_datetime,
     )
 
+    ordinary_allocation = getattr(folio, "ordinary_reservation_allocation", None)
+    if ordinary_allocation is not None:
+        ordinary_allocation.check_out_date = new_checkout_date
+        ordinary_allocation.save(update_fields=["check_out_date"])
+
     return folio 

@@ -611,6 +611,7 @@ class Reservation(models.Model):
     STATUS_CHOICES = (
         ("RESERVED", "Reserved"),
         ("CHECKED_IN", "Checked In"),
+        ("CHECKED_OUT", "Checked Out"),
         ("CANCELLED", "Cancelled"),
         ("NO_SHOW", "No Show"),
     )

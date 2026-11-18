@@ -77,6 +77,15 @@ def checkout_guest(room, user):
     from billing.services.group_reservations import mark_group_allocation_checked_out
     mark_group_allocation_checked_out(folio)
 
+    ordinary_allocation = (
+        getattr(folio, "ordinary_reservation_allocation", None)
+    )
+    if ordinary_allocation is not None:
+        ordinary_allocation.status = "CHECKED_OUT"
+        ordinary_allocation.save(update_fields=["status"])
+        from frontdesk.workflows.reservation_allocations import sync_ordinary_reservation_status
+        sync_ordinary_reservation_status(ordinary_allocation.reservation)
+
     update_room_status(room)
 
     return folio

@@ -169,6 +169,11 @@ def change_guest_room(
         new_room,
     )
 
+    ordinary_allocation = getattr(folio, "ordinary_reservation_allocation", None)
+    if ordinary_allocation is not None:
+        ordinary_allocation.room = new_room
+        ordinary_allocation.save(update_fields=["room"])
+
     close_old_room_history(
         folio,
     )
