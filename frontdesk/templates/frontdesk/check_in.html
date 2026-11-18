@@ -76,7 +76,7 @@
         <p>Room check-in will create the guest folio and post the first room-night charge.</p>
       </div>
 
-      <form method="post" class="ci-form" id="walkin-checkin-form">
+      <form method="post" enctype="multipart/form-data" class="ci-form" id="walkin-checkin-form">
         {% csrf_token %}
         <section class="ci-section">
           <h3 class="ci-section-title"><span class="ci-step">1</span> Guest profile</h3>
@@ -108,6 +108,11 @@
               <div class="ci-field"><label class="ci-label" for="email">Email</label><input class="ci-control" id="email" name="email" type="email" value="{{ form_data.email|default:'' }}" autocomplete="email"></div>
               <div class="ci-field"><label class="ci-label" for="nationality">Nationality</label><input class="ci-control" id="nationality" name="nationality" value="{{ form_data.nationality|default:'' }}" autocomplete="country-name"></div>
               <div class="ci-field"><label class="ci-label" for="id-number">ID / passport number</label><input class="ci-control" id="id-number" name="id_number" value="{{ form_data.id_number|default:'' }}"></div>
+              <div class="ci-field">
+                <label class="ci-label" for="id-document">Upload ID / passport image</label>
+                <input class="ci-control" id="id-document" name="id_document" type="file" accept="image/*">
+                <span class="ci-hint">Optional. Upload a clear photo or scan of the guest's passport, national ID or driver's licence.</span>
+              </div>
             </div>
           </div>
         </section>
