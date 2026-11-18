@@ -155,6 +155,44 @@ def mark_room_allocation_no_show(allocation_id, hotel):
 
 
 @transaction.atomic
+def restore_room_allocation_from_no_show(allocation_id, hotel):
+    """Restore a manually marked No-Show allocation to RESERVED.
+
+    The room is re-reserved only if its previous assignment is still available.
+    No deposit or reservation guarantee is changed.
+    """
+    allocation = _locked_allocation(allocation_id, hotel.id)
+    reservation = Reservation.objects.select_for_update().get(
+        pk=allocation.reservation_id,
+        hotel=hotel,
+    )
+
+    if reservation.status in ("CANCELLED", "CHECKED_OUT"):
+        raise ValidationError("This reservation cannot be reopened.")
+    if allocation.status != "NO_SHOW":
+        raise ValidationError("Only a No-Show room allocation can be restored.")
+
+    if allocation.room_id:
+        available = get_available_rooms(
+            hotel,
+            reservation.room_category,
+            allocation.check_in_date,
+            allocation.check_out_date,
+            exclude_reservation_id=reservation.pk,
+        )
+        if not available.filter(pk=allocation.room_id).exists():
+            raise ValidationError(
+                "The previously assigned room is no longer available. "
+                "Resolve the room assignment before restoring this allocation."
+            )
+
+    allocation.status = "RESERVED"
+    allocation.save(update_fields=["status"])
+    sync_ordinary_reservation_status(reservation)
+    return allocation
+
+
+@transaction.atomic
 def check_in_room_allocation(allocation_id, hotel, user):
     allocation = _locked_allocation(allocation_id, hotel.id)
     reservation = Reservation.objects.select_for_update().get(
