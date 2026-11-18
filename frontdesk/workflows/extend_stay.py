@@ -3,7 +3,7 @@ from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from billing.models import Charge, Department
+from billing.models import Charge, Department, Folio
 from frontdesk.workflows.common import get_active_folio
 
 
@@ -112,7 +112,10 @@ def extend_guest_stay(
     new_checkout,
     charged_by=None,
 ):
-    folio = get_active_folio(room)
+    active_folio = get_active_folio(room)
+    # Lock the folio so an extension cannot race Night Audit or another
+    # extension and leave the room-night cursor out of sync.
+    folio = Folio.objects.select_for_update().get(pk=active_folio.pk)
 
     validate_extension(
         folio,
@@ -141,6 +144,14 @@ def extend_guest_stay(
         additional_nights=additional_nights,
         charged_by=charged_by,
     )
+
+    # Extension nights are charged immediately. Advance the cursor through
+    # the final night now charged so the next Night Audit cannot charge them
+    # a second time.
+    folio.last_room_charge_date = (
+        current_checkout_date + timedelta(days=additional_nights - 1)
+    )
+    folio.save(update_fields=["last_room_charge_date"])
 
     update_checkout_date(
         folio,
