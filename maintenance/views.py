@@ -1931,9 +1931,9 @@ def maintenance_work_orders(request):
         "",
     ).strip()
 
-    room = request.GET.get(
-        "room",
-        "",
+    target = request.GET.get(
+        "target",
+        request.GET.get("room", ""),
     ).strip()
 
     # --------------------------------------------------------
@@ -1981,13 +1981,13 @@ def maintenance_work_orders(request):
         )
 
     # --------------------------------------------------------
-    # Room filter
+    # Room or common-area location search
     # --------------------------------------------------------
 
-    if room:
-
+    if target:
         tickets = tickets.filter(
-            room__room_number__icontains=room,
+            Q(room__room_number__icontains=target)
+            | Q(location__name__icontains=target)
         )
 
     # --------------------------------------------------------
@@ -1998,6 +1998,8 @@ def maintenance_work_orders(request):
         tickets
         .select_related(
             "room",
+            "location",
+            "asset",
             "reported_by",
             "assigned_to",
         )
@@ -2016,7 +2018,7 @@ def maintenance_work_orders(request):
             "status_filter": status,
             "priority_filter": priority,
             "assigned_filter": assigned,
-            "room_filter": room,
+            "target_filter": target,
         },
     )
 
