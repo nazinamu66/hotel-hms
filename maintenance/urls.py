@@ -53,6 +53,7 @@ urlpatterns = [
         name="maintenance_create_ticket_room",
     ),
     path("locations/", maintenance_locations, name="maintenance_locations"),
+    path("locations/<int:location_id>/", maintenance_locations, name="maintenance_location_detail"),
     path("locations/<int:location_id>/edit/", maintenance_location_edit, name="maintenance_location_edit"),
     path("locations/<int:location_id>/toggle-status/", maintenance_location_toggle_status, name="maintenance_location_toggle_status"),
     path(
