@@ -1746,6 +1746,39 @@ class EventBooking(models.Model):
         if self.status in ("RELEASED", "COMPLETED") and not self.released_at:
             raise ValidationError({"released_at": "Released events must have a release timestamp."})
 
+    def mark_agreed(self):
+        """Lock the approved recipe snapshot used for this event's production."""
+        from django.db import transaction
+
+        with transaction.atomic():
+            event = self.__class__.objects.select_for_update().get(pk=self.pk)
+            if event.status != "DRAFT":
+                raise ValidationError("Only draft events can be marked agreed.")
+            if not event.agreement_notes.strip():
+                raise ValidationError("Record the agreed commercial terms before approval.")
+            lines = list(event.order_lines.select_for_update().select_related(
+                "recipe", "recipe__active_version"
+            ))
+            if not lines:
+                raise ValidationError("Add at least one event order line before agreement.")
+            for line in lines:
+                if line.line_type == "FOOD":
+                    recipe = line.recipe
+                    version = recipe.active_version if recipe else None
+                    if not recipe or not recipe.is_active or not version or version.status != "APPROVED" or not version.items.exists():
+                        raise ValidationError(
+                            f"{line.description}: select an active Kitchen recipe with an approved ingredient version."
+                        )
+                    line.recipe_version = version
+                    line.save(update_fields=["recipe_version"])
+                elif line.recipe_id:
+                    raise ValidationError("Only food event lines may use Kitchen recipes.")
+            event.status = "AGREED"
+            event.full_clean()
+            event.save(update_fields=["status", "updated_at"])
+            self.refresh_from_db()
+        return self
+
     def release_to_operations(self, user):
         """Release only an agreed event with a confirmed attendee list."""
         from django.db import transaction
@@ -1759,12 +1792,10 @@ class EventBooking(models.Model):
                 raise ValidationError("Add at least one food or beverage line before releasing the event.")
             if event.order_lines.filter(line_type="FOOD", recipe__isnull=True).exists():
                 raise ValidationError("Link every event food line to an approved Kitchen recipe before release.")
-            if event.order_lines.filter(line_type="FOOD").exclude(
-                recipe__is_active=True,
-                recipe__active_version__status="APPROVED",
-                recipe__active_version__items__isnull=False,
+            if event.order_lines.filter(line_type="FOOD").filter(
+                models.Q(recipe__isnull=True) | models.Q(recipe_version__isnull=True)
             ).exists():
-                raise ValidationError("Every event food line must use an active recipe with an approved ingredient version.")
+                raise ValidationError("Every event food line must have an approved recipe version snapshot. Re-agree the event or amend its food lines.")
             if not event.participants.exists():
                 raise ValidationError("Add or confirm the event participants before release.")
             if event.participants.filter(participant_type="IN_HOUSE").filter(
@@ -1854,6 +1885,14 @@ class EventOrderLine(models.Model):
         related_name="event_order_lines",
         help_text="Approved Kitchen recipe used to produce this event food line.",
     )
+    recipe_version = models.ForeignKey(
+        "kitchen.RecipeVersion",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="event_order_lines",
+        help_text="Approved immutable recipe snapshot agreed for this event.",
+    )
     description = models.CharField(max_length=200)
     quantity = models.DecimalField(max_digits=12, decimal_places=3)
     unit_price = models.DecimalField(max_digits=14, decimal_places=2)
@@ -1881,10 +1920,18 @@ class EventOrderLine(models.Model):
             version = self.recipe.active_version
             if not version or version.status != "APPROVED" or not version.items.exists():
                 raise ValidationError({"recipe": "The recipe must have an approved version with ingredients."})
-        elif self.line_type != "FOOD" and self.recipe_id:
+            if self.recipe_version_id and self.recipe_version.recipe_id != self.recipe_id:
+                raise ValidationError({"recipe_version": "The pinned version must belong to the selected recipe."})
+        elif self.line_type != "FOOD" and (self.recipe_id or self.recipe_version_id):
             raise ValidationError({"recipe": "Only FOOD event lines can be linked to a Kitchen recipe."})
         if self.event_id and self.event.status not in ("DRAFT", "AGREED"):
             raise ValidationError("Event order lines cannot be changed after release or cancellation.")
+        if self.event_id and self.event.status == "AGREED" and self.pk:
+            original = EventOrderLine.objects.filter(pk=self.pk).values(
+                "recipe_id", "recipe_version_id", "quantity", "line_type"
+            ).first()
+            if original and any(original[field] != getattr(self, field) for field in original):
+                raise ValidationError("Agreed event food lines are locked. Reopen/amend the event through an approved amendment workflow.")
 
     @property
     def total_price(self):
