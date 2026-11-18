@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
-from django.test import RequestFactory, SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase, TestCase
 
 from maintenance.views import start_ticket
 from maintenance.workflows.preventive import create_preventive_work_order
@@ -25,7 +25,7 @@ class StartTicketMethodTests(SimpleTestCase):
         self.assertEqual(response.status_code, 405)
 
 
-class PreventiveWorkOrderLocationTests(SimpleTestCase):
+class PreventiveWorkOrderLocationTests(TestCase):
     def setUp(self):
         self.user = SimpleNamespace(hotel_id=7)
         self.room = SimpleNamespace(room_number="101")
