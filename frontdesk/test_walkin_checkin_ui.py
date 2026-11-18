@@ -71,6 +71,8 @@ class WalkInCheckInUITests(TestCase):
         self.assertContains(response, "New guest")
         self.assertContains(response, "45000.00")
         self.assertContains(response, "guest_id")
+        self.assertContains(response, "Upload ID / passport image")
+        self.assertContains(response, 'enctype="multipart/form-data"')
 
     @patch("billing.models.Folio.apply_daily_room_charge")
     def test_walk_in_check_in_can_use_existing_guest(self, apply_charge):
