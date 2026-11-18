@@ -711,37 +711,61 @@ def room_board(request):
     expected_departures_today = set(
         Folio.objects.filter(
             hotel=hotel,
+            folio_type="ROOM",
             is_closed=False,
-            check_out_at__date=today
+            check_out_at__date=today,
         ).values_list("room_id", flat=True)
     )
 
-    # Today's arrivals: keep the actual reservation records for the dashboard list.
+    # Legacy one-room reservations and new room allocations are listed
+    # separately so partially checked-in multi-room bookings keep showing
+    # their remaining rooms even when the master reservation is CHECKED_IN.
     arrivals_today_qs = (
         Reservation.objects.filter(
             hotel=hotel,
             check_in_date=today,
             status="RESERVED",
         )
+        .exclude(room_allocations__isnull=False)
         .select_related("guest", "room_category", "room")
         .order_by("check_in_date", "guest__last_name", "guest__first_name")
     )
+    allocation_arrivals_today = (
+        ReservationRoomAllocation.objects.filter(
+            reservation__hotel=hotel,
+            check_in_date=today,
+            status="RESERVED",
+        )
+        .select_related("reservation", "guest", "room", "reservation__room_category")
+        .order_by("reservation_id", "allocation_number")
+    )
     reservations_today = set(
         arrivals_today_qs.values_list("room_id", flat=True)
+    )
+    reservations_today.update(
+        allocation_arrivals_today.exclude(room__isnull=True).values_list("room_id", flat=True)
     )
 
     arrivals_tomorrow = set(
         Reservation.objects.filter(
             hotel=hotel,
             check_in_date=tomorrow,
-            status="RESERVED"
-        ).values_list("room_id", flat=True)
+            status="RESERVED",
+        ).exclude(room_allocations__isnull=False).values_list("room_id", flat=True)
+    )
+    arrivals_tomorrow.update(
+        ReservationRoomAllocation.objects.filter(
+            reservation__hotel=hotel,
+            check_in_date=tomorrow,
+            status="RESERVED",
+        ).exclude(room__isnull=True).values_list("room_id", flat=True)
     )
 
     # Today's expected departures, including the current folio balance.
     departures_today_qs = (
         Folio.objects.filter(
             hotel=hotel,
+            folio_type="ROOM",
             is_closed=False,
             check_out_at__date=today,
         )
@@ -752,7 +776,8 @@ def room_board(request):
     # Active folios
     active_folios = Folio.objects.filter(
         hotel=hotel,
-        is_closed=False
+        folio_type="ROOM",
+        is_closed=False,
     ).select_related("guest", "room")
 
     folio_map = {f.room_id: f for f in active_folios}
@@ -773,7 +798,7 @@ def room_board(request):
         "dirty": rooms.filter(
             status__in=["VACANT_DIRTY", "OCCUPIED_DIRTY"]
         ).count(),
-        "arrivals": arrivals_today_qs.count(),
+        "arrivals": arrivals_today_qs.count() + allocation_arrivals_today.count(),
         "departures": departures_today_qs.count(),
         "occupancy_percent": round((occupied_rooms / total_rooms) * 100) if total_rooms else 0,
     }
@@ -790,6 +815,7 @@ def room_board(request):
             "categories": categories,
             "stats": stats,
             "arrivals_today": arrivals_today_qs,
+            "allocation_arrivals_today": allocation_arrivals_today,
             "departures_today": departures_today_qs,
             "folio_map": folio_map,
             "reservations_today": reservations_today,
