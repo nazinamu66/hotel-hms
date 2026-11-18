@@ -200,7 +200,7 @@ class StayExtensionRoomChargeTests(TestCase):
         )
         cls.frontdesk = Department.objects.create(
             hotel=cls.hotel,
-            code="SEC",
+            code="STAYEXT",
             name="Stay Extension Frontdesk",
             department_type="FRONTDESK",
         )
