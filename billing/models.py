@@ -2065,3 +2065,58 @@ class ReservationRoomAllocation(models.Model):
             f"Room {self.allocation_number}: {self.guest.full_name}"
         )
 
+
+
+class FolioCheckoutAuthorization(models.Model):
+    """Audit record for an authorised checkout with an occupant balance due."""
+
+    folio = models.ForeignKey(
+        Folio, on_delete=models.PROTECT, related_name="checkout_authorizations"
+    )
+    outstanding_balance = models.DecimalField(max_digits=12, decimal_places=2)
+    reason = models.TextField()
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="folio_checkout_authorizations",
+    )
+    approved_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["-approved_at", "-pk"]
+
+    def clean(self):
+        if self.outstanding_balance <= 0:
+            raise ValidationError("Checkout authorization requires an outstanding balance.")
+        if not self.reason.strip():
+            raise ValidationError("A reason is required for outstanding-balance checkout.")
+
+    def __str__(self):
+        return f"Checkout authorization for Folio #{self.folio_id}"
+
+
+class FolioBalanceWaiver(models.Model):
+    """Auditable partial or full write-off of an occupant-responsible folio balance."""
+
+    folio = models.ForeignKey(
+        Folio, on_delete=models.PROTECT, related_name="balance_waivers"
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    reason = models.TextField()
+    waived_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="folio_balance_waivers",
+    )
+    waived_at = models.DateTimeField(default=timezone.now)
+    journal_reference = models.CharField(max_length=100, unique=True)
+
+    class Meta:
+        ordering = ["-waived_at", "-pk"]
+
+    def clean(self):
+        if self.amount <= 0:
+            raise ValidationError("Waiver amount must be greater than zero.")
+        if not self.reason.strip():
+            raise ValidationError("A reason is required for a balance waiver.")
+
+    def __str__(self):
+        return f"₦{self.amount:,.2f} waiver for Folio #{self.folio_id}"
