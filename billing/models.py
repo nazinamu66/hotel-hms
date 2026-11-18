@@ -242,8 +242,15 @@ class Folio(models.Model):
         return legacy_total + tracked_total
 
     @property
+    def total_waivers(self):
+        return (
+            self.balance_waivers.aggregate(total=models.Sum("amount"))["total"]
+            or Decimal("0.00")
+        )
+
+    @property
     def balance(self):
-        return self.total_charges - self.total_payments
+        return self.total_charges - self.total_payments - self.total_waivers
 
     from datetime import date
 
