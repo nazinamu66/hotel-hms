@@ -12,15 +12,18 @@ def validate_checkout(folio):
         )
 
 
-def validate_balance(folio, user):
-
-    if (
-        folio.balance != 0
-        and user.role == "FRONTDESK"
-    ):
+def validate_balance(folio, user, reason=""):
+    if folio.balance == 0:
+        return False
+    if user.role not in {"MANAGER", "DIRECTOR", "ADMIN"}:
         raise ValidationError(
-            "Outstanding balance. Manager approval required."
+            "Outstanding balance. Manager, Director or Admin approval required."
         )
+    if not (reason or "").strip():
+        raise ValidationError(
+            "A reason is required to authorise checkout with an outstanding balance."
+        )
+    return True
 
 
 def close_folio(folio):
@@ -48,7 +51,7 @@ def update_room_status(room):
     )
 
 @transaction.atomic
-def checkout_guest(room, user):
+def checkout_guest(room, user, reason="")
     # Serialize checkout against another checkout or room-level operation.
     room = room.__class__.objects.select_for_update().get(pk=room.pk)
     folio = (
@@ -68,7 +71,17 @@ def checkout_guest(room, user):
 
     # Company-billed room nights are excluded from folio.balance; only the
     # occupant-responsible balance is subject to the normal checkout rule.
-    validate_balance(folio, user)
+    requires_authorization = validate_balance(folio, user, reason)
+    if requires_authorization:
+        from billing.models import FolioCheckoutAuthorization
+        authorization = FolioCheckoutAuthorization(
+            folio=folio,
+            outstanding_balance=folio.balance,
+            reason=reason.strip(),
+            approved_by=user,
+        )
+        authorization.full_clean()
+        authorization.save()
 
     close_folio(folio)
 
