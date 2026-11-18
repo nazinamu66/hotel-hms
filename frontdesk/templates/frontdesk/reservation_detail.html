@@ -548,6 +548,18 @@
                             </form>
                             {% endif %}
                         </div>
+                        {% if allocation.status == "RESERVED" or allocation.status == "CHECKED_IN" %}
+                        <div class="mt-3 p-3 rounded-3" style="background:#fbfcfe;border:1px solid #e7edf4">
+                            <div class="fw-semibold small mb-2">Request a complimentary night for this room only</div>
+                            <form method="post" action="{% url 'frontdesk_allocation_complimentary_room_night_request' reservation.id allocation.id %}" class="rd-complimentary-form">
+                                {% csrf_token %}
+                                <div class="rd-complimentary-field"><label for="allocation-complimentary-start-{{ allocation.id }}">First night</label><input id="allocation-complimentary-start-{{ allocation.id }}" type="date" name="start_date" min="{{ allocation.check_in_date|date:'Y-m-d' }}" max="{{ allocation.check_out_date|date:'Y-m-d' }}" required></div>
+                                <div class="rd-complimentary-field"><label for="allocation-complimentary-end-{{ allocation.id }}">Last night</label><input id="allocation-complimentary-end-{{ allocation.id }}" type="date" name="end_date" min="{{ allocation.check_in_date|date:'Y-m-d' }}" max="{{ allocation.check_out_date|date:'Y-m-d' }}" required></div>
+                                <div class="rd-complimentary-field rd-complimentary-reason"><label for="allocation-complimentary-reason-{{ allocation.id }}">Reason and authorisation details</label><textarea id="allocation-complimentary-reason-{{ allocation.id }}" name="reason" maxlength="2000" placeholder="Who authorised this room's complimentary night, and why?" required></textarea></div>
+                                <div class="rd-complimentary-actions"><button type="submit" class="rd-btn rd-btn-secondary">Submit room-only request</button><span class="rd-complimentary-hint">This request applies only to Room {{ allocation.allocation_number }} and requires management approval.</span></div>
+                            </form>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -589,8 +601,9 @@
 @media(max-width:650px){.rd-complimentary-form{grid-template-columns:1fr;padding:14px}.rd-complimentary-reason,.rd-complimentary-actions{grid-column:auto}}
 </style>
 <section class="rd-card rd-complimentary-card">
-<div class="rd-card-header"><span class="rd-icon" aria-hidden="true">&#127873;</span><div><h3>Complimentary room accommodation</h3><div class="rd-subtitle small">Request a complimentary room night for this guest. Each night requires approval by a different authorised manager.</div></div></div>
+<div class="rd-card-header"><span class="rd-icon" aria-hidden="true">&#127873;</span><div><h3>Complimentary room accommodation</h3><div class="rd-subtitle small">{% if reservation.room_allocations.exists %}Each request is attached to one room allocation only. Use the request form inside the intended room card.{% else %}Request a complimentary room night for this guest. Each night requires approval by a different authorised manager.{% endif %}</div></div></div>
 <div class="rd-card-body">
+{% if not reservation.room_allocations.exists %}
 {% if reservation.status == "RESERVED" or reservation.status == "CHECKED_IN" %}
 <div class="rd-complimentary-help"><strong>Before you submit:</strong> Choose one night or a continuous range, then explain who authorised the complimentary stay and why. The request is not active until management approves it. Frontdesk cannot approve its own request.</div>
 <form method="post" action="{% url 'frontdesk_complimentary_room_night_request' reservation.id %}" class="rd-complimentary-form">
@@ -601,8 +614,9 @@
 <div class="rd-complimentary-actions"><button class="rd-btn rd-btn-primary" type="submit">Submit for management approval</button><span class="rd-complimentary-hint">For one night, enter the same date in both fields. Submit separate requests for non-consecutive nights.</span></div>
 </form>
 {% elif reservation.status == "CANCELLED" or reservation.status == "NO_SHOW" %}<div class="rd-complimentary-help">This reservation is {{ reservation.get_status_display|lower }}. New complimentary room requests cannot be submitted.</div>{% endif %}
-<div class="table-responsive rd-complimentary-history-wrap"><table class="rd-complimentary-history"><thead><tr><th>Room night</th><th>Waived value</th><th>Approval status</th><th>Requested by</th><th>Authorised by</th></tr></thead><tbody>
-{% for waiver in reservation.complimentary_room_nights.all %}<tr><td><strong>{{ waiver.room_night_date|date:"d M Y" }}</strong></td><td><strong>₦{{ waiver.waived_amount|floatformat:2 }}</strong></td><td>{% if waiver.status == "PENDING" %}<span class="rd-waiver-status rd-waiver-pending">Pending approval</span>{% elif waiver.status == "APPROVED" %}<span class="rd-waiver-status rd-waiver-approved">Approved</span>{% elif waiver.status == "CONSUMED" %}<span class="rd-waiver-status rd-waiver-consumed">Consumed</span>{% elif waiver.status == "REJECTED" %}<span class="rd-waiver-status rd-waiver-rejected">Rejected</span>{% else %}<span class="rd-waiver-status">{{ waiver.get_status_display }}</span>{% endif %}{% if waiver.rejection_reason %}<small class="rd-muted d-block mt-1">{{ waiver.rejection_reason }}</small>{% endif %}</td><td>{{ waiver.requested_by }}</td><td>{{ waiver.approved_by|default:"Awaiting decision" }}{% if waiver.approved_at %}<small class="rd-muted d-block">{{ waiver.approved_at|date:"d M Y, H:i" }}</small>{% endif %}</td></tr>{% empty %}<tr><td colspan="5"><div class="rd-complimentary-empty">No complimentary nights have been requested for this reservation.</div></td></tr>{% endfor %}
+{% endif %}
+<div class="table-responsive rd-complimentary-history-wrap"><table class="rd-complimentary-history"><thead><tr><th>Room night</th><th>Room allocation</th><th>Waived value</th><th>Approval status</th><th>Requested by</th><th>Authorised by</th></tr></thead><tbody>
+{% for waiver in reservation.complimentary_room_nights.all %}<tr><td><strong>{{ waiver.room_night_date|date:"d M Y" }}</strong></td><td>{% if waiver.allocation %}Room {{ waiver.allocation.allocation_number }}{% if waiver.allocation.room %} · {{ waiver.allocation.room.room_number }}{% endif %}{% else %}Reservation-level{% endif %}</td><td><strong>₦{{ waiver.waived_amount|floatformat:2 }}</strong></td><td>{% if waiver.status == "PENDING" %}<span class="rd-waiver-status rd-waiver-pending">Pending approval</span>{% elif waiver.status == "APPROVED" %}<span class="rd-waiver-status rd-waiver-approved">Approved</span>{% elif waiver.status == "CONSUMED" %}<span class="rd-waiver-status rd-waiver-consumed">Consumed</span>{% elif waiver.status == "REJECTED" %}<span class="rd-waiver-status rd-waiver-rejected">Rejected</span>{% else %}<span class="rd-waiver-status">{{ waiver.get_status_display }}</span>{% endif %}{% if waiver.rejection_reason %}<small class="rd-muted d-block mt-1">{{ waiver.rejection_reason }}</small>{% endif %}</td><td>{{ waiver.requested_by }}</td><td>{{ waiver.approved_by|default:"Awaiting decision" }}{% if waiver.approved_at %}<small class="rd-muted d-block">{{ waiver.approved_at|date:"d M Y, H:i" }}</small>{% endif %}</td></tr>{% empty %}<tr><td colspan="6"><div class="rd-complimentary-empty">No complimentary nights have been requested for this reservation.</div></td></tr>{% endfor %}
 </tbody></table></div>
 {% if request.user.role == "MANAGER" or request.user.role == "GENERAL_MANAGER" or request.user.role == "DIRECTOR" or request.user.role == "ADMIN" %}<a href="{% url 'frontdesk_complimentary_room_night_queue' %}" class="rd-btn rd-btn-secondary">Open complimentary approval queue</a>{% endif %}
 </div></section></div>
