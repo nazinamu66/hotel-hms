@@ -40,7 +40,7 @@ def _has_room_charge(folio, night_date):
 
 
 @transaction.atomic
-def request_complimentary_nights(*, reservation, start_date, end_date, reason, user):
+def request_complimentary_nights(*, reservation, start_date, end_date, reason, user, allocation=None):
     if reservation.status not in ("RESERVED", "CHECKED_IN"):
         raise ValidationError("Only reserved or checked-in stays can request complimentary nights.")
     if not reason or not reason.strip():
@@ -50,9 +50,23 @@ def request_complimentary_nights(*, reservation, start_date, end_date, reason, u
     if end_date < start_date:
         raise ValidationError("End date must not be before start date.")
 
-    folio = reservation.folios.filter(folio_type="ROOM").first()
-    if reservation.status == "CHECKED_IN" and folio is None:
-        raise ValidationError("The active room folio could not be found.")
+    ordinary_allocations = reservation.room_allocations.all()
+    if ordinary_allocations.exists() and allocation is None:
+        raise ValidationError("Select the specific room allocation for this complimentary request.")
+    if allocation is not None:
+        if allocation.reservation_id != reservation.pk:
+            raise ValidationError("The selected room allocation does not belong to this reservation.")
+        if allocation.status not in ("RESERVED", "CHECKED_IN"):
+            raise ValidationError("Complimentary nights can only be requested for a reserved or checked-in room.")
+        if start_date < allocation.check_in_date or end_date >= allocation.check_out_date:
+            raise ValidationError("Requested nights must fall within the selected room allocation stay.")
+        folio = allocation.folio
+        if allocation.status == "CHECKED_IN" and folio is None:
+            raise ValidationError("The selected room's active folio could not be found.")
+    else:
+        folio = reservation.folios.filter(folio_type="ROOM").first()
+        if reservation.status == "CHECKED_IN" and folio is None:
+            raise ValidationError("The active room folio could not be found.")
 
     allocation = getattr(reservation, "group_allocation", None)
     original_rate, source = _reservation_rate(reservation)
@@ -75,12 +89,19 @@ def request_complimentary_nights(*, reservation, start_date, end_date, reason, u
                 f"{day:%d %b %Y} already has a posted room charge. "
                 "Use the authorised credit/refund workflow for retrospective adjustments."
             )
-        if ComplimentaryRoomNight.objects.filter(
-            reservation=reservation, room_night_date=day
-        ).exists():
-            raise ValidationError(f"A complimentary request already exists for {day:%d %b %Y}.")
+        duplicate_query = ComplimentaryRoomNight.objects.filter(
+            reservation=reservation,
+            room_night_date=day,
+        )
+        if allocation is not None:
+            duplicate_query = duplicate_query.filter(allocation=allocation)
+        else:
+            duplicate_query = duplicate_query.filter(allocation__isnull=True)
+        if duplicate_query.exists():
+            raise ValidationError(f"A complimentary request already exists for {day:%d %b %Y} for this room.")
         waiver = ComplimentaryRoomNight.objects.create(
             reservation=reservation,
+            allocation=allocation,
             folio=folio,
             room_night_date=day,
             waived_amount=waived_amount,
