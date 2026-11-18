@@ -106,6 +106,7 @@ urlpatterns = [
     path("reservations/<int:reservation_id>/allocations/<int:allocation_id>/update/", reservation_allocation_update, name="frontdesk_reservation_allocation_update"),
     path("reservations/<int:reservation_id>/allocations/<int:allocation_id>/checkin/", reservation_allocation_checkin, name="frontdesk_reservation_allocation_checkin"),
     path("reservations/<int:reservation_id>/complimentary-nights/request/", request_complimentary_room_nights, name="frontdesk_complimentary_room_night_request"),
+    path("reservations/<int:reservation_id>/allocations/<int:allocation_id>/complimentary-nights/request/", request_complimentary_room_nights, name="frontdesk_allocation_complimentary_room_night_request"),
     path("complimentary-room-nights/", complimentary_room_night_queue, name="frontdesk_complimentary_room_night_queue"),
     path("complimentary-room-nights/bulk-decide/", bulk_decide_complimentary_room_nights, name="frontdesk_complimentary_room_night_bulk_decide"),
     path("complimentary-register/", complimentary_register, name="frontdesk_complimentary_register"),
