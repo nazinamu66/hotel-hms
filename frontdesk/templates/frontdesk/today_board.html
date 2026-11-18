@@ -83,7 +83,7 @@
     <section class="tb-section tb-arrivals">
         <div class="tb-section-head">
             <div><h2 class="tb-section-title"><span class="tb-mark"></span>Arrivals today</h2><p class="tb-section-note">Reservations and individual room allocations scheduled to check in today</p></div>
-            <span class="tb-count">{{ arrivals|length }}</span>
+            <span class="tb-count">{{ arrival_count }}</span>
         </div>
         {% if arrivals or allocation_arrivals %}
             <div class="tb-table-wrap">
