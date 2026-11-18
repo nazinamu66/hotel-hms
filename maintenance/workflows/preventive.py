@@ -14,12 +14,9 @@ def create_preventive_work_order(
     maintenance schedule.
 
     A schedule may have only one active preventive
-    work order at a time.
+    work order at a time. Assets must be assigned to
+    either a room or a non-room maintenance location.
     """
-
-    # ---------------------------------------------------------
-    # Schedule validation
-    # ---------------------------------------------------------
 
     if not schedule.is_active:
         raise ValidationError(
@@ -33,19 +30,20 @@ def create_preventive_work_order(
             "The asset associated with this schedule is inactive."
         )
 
-    # ---------------------------------------------------------
-    # Preventive maintenance requires a room
-    # ---------------------------------------------------------
-
-    if not asset.room_id:
+    # A ticket must point to exactly one operational location.
+    # Unassigned assets need to be assigned before a work order
+    # can be raised.
+    if not asset.room_id and not asset.location_id:
         raise ValidationError(
-            "This asset is not assigned to a room. "
-            "A work order cannot be generated yet."
+            "This asset is not assigned to a room or maintenance location. "
+            "Assign it before generating a preventive work order."
         )
 
-    # ---------------------------------------------------------
-    # User / hotel security
-    # ---------------------------------------------------------
+    if asset.room_id and asset.location_id:
+        raise ValidationError(
+            "This asset has conflicting room and maintenance location assignments. "
+            "Correct the asset location before generating a work order."
+        )
 
     if not user.hotel_id:
         raise ValidationError(
@@ -57,10 +55,6 @@ def create_preventive_work_order(
             "You cannot create a work order "
             "for another hotel."
         )
-
-    # ---------------------------------------------------------
-    # Prevent duplicate active work orders
-    # ---------------------------------------------------------
 
     existing = (
         MaintenanceTicket.objects
@@ -77,12 +71,10 @@ def create_preventive_work_order(
     if existing:
         return existing
 
-    # ---------------------------------------------------------
-    # Create preventive work order
-    # ---------------------------------------------------------
-
     ticket = MaintenanceTicket.objects.create(
-        room=asset.room,
+        room=asset.room if asset.room_id else None,
+        location=asset.location if asset.location_id else None,
+        asset=asset,
         schedule=schedule,
         description=(
             f"Preventive maintenance: "
