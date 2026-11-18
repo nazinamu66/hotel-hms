@@ -968,6 +968,16 @@ def active_stay(request, room_id):
             "amount": -payment.amount,
         })
 
+    # Approved write-offs remain visible in the stay activity audit trail.
+    for waiver in folio.balance_waivers.select_related("waived_by"):
+        timeline.append({
+            "time": waiver.waived_at,
+            "type": "waiver",
+            "label": "Balance waiver",
+            "description": f"₦{waiver.amount:,.2f} waived by {waiver.waived_by.get_full_name() or waiver.waived_by.username}: {waiver.reason}",
+            "amount": -waiver.amount,
+        })
+
     # 🚪 Checkout (if closed)
     if folio.is_closed:
         timeline.append({
