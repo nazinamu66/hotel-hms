@@ -387,3 +387,83 @@ class OrdinaryMultiRoomReservationTests(TestCase):
             ).count(),
             2,
         )
+
+
+from datetime import timedelta
+from django.urls import reverse
+
+
+class TodayBoardAllocationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        organization = Organization.objects.create(name="Today Board Org")
+        cls.hotel = Hotel.objects.create(
+            organization=organization,
+            name="Today Board Hotel",
+        )
+        cls.department = Department.objects.create(
+            hotel=cls.hotel,
+            code="TBF",
+            name="Today Board Frontdesk",
+            department_type="FRONTDESK",
+        )
+        cls.user = User.objects.create_user(
+            username="today_board_frontdesk",
+            password="test-password",
+            role="FRONTDESK",
+            hotel=cls.hotel,
+            department=cls.department,
+        )
+        cls.primary_guest = Guest.objects.create(
+            hotel=cls.hotel,
+            first_name="Primary",
+            last_name="Occupant",
+        )
+        cls.second_guest = Guest.objects.create(
+            hotel=cls.hotel,
+            first_name="Second",
+            last_name="Occupant",
+        )
+        cls.category = RoomCategory.objects.create(name="Today Board Category")
+
+    def test_arrivals_board_lists_each_remaining_room_allocation(self):
+        today = timezone.localdate()
+        reservation = create_reservation(
+            hotel=self.hotel,
+            user=self.user,
+            guest_id=self.primary_guest.pk,
+            category_id=self.category.pk,
+            number_of_rooms=2,
+            check_in=today,
+            check_out=today + timedelta(days=2),
+        )
+        first, second = list(
+            reservation.room_allocations.order_by("allocation_number")
+        )
+        second.guest = self.second_guest
+        second.save(update_fields=["guest"])
+
+        # One room has already checked in; the sibling remains due today.
+        first.status = "CHECKED_IN"
+        first.save(update_fields=["status"])
+        reservation.status = "CHECKED_IN"
+        reservation.save(update_fields=["status"])
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("frontdesk_today_board"))
+
+        self.assertEqual(response.status_code, 200)
+        arrivals = list(response.context["arrivals"])
+        self.assertEqual([item.pk for item in arrivals], [second.pk])
+        self.assertContains(response, "Second Occupant")
+        self.assertContains(
+            response,
+            reverse(
+                "frontdesk_reservation_allocation_checkin",
+                kwargs={
+                    "reservation_id": reservation.pk,
+                    "allocation_id": second.pk,
+                },
+            ),
+        )
