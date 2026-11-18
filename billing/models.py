@@ -1926,12 +1926,6 @@ class EventOrderLine(models.Model):
             raise ValidationError({"recipe": "Only FOOD event lines can be linked to a Kitchen recipe."})
         if self.event_id and self.event.status != "DRAFT":
             raise ValidationError("Event order lines are locked once the commercial agreement is recorded.")
-        if self.event_id and self.event.status == "AGREED" and self.pk:
-            original = EventOrderLine.objects.filter(pk=self.pk).values(
-                "recipe_id", "recipe_version_id", "quantity", "line_type"
-            ).first()
-            if original and any(original[field] != getattr(self, field) for field in original):
-                raise ValidationError("Agreed event food lines are locked. Reopen/amend the event through an approved amendment workflow.")
 
     @property
     def total_price(self):
