@@ -1,0 +1,47 @@
+{% extends "base/base.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <a href="{% url 'frontdesk_event_detail' event.id %}" class="text-decoration-none">&larr; Event details</a>
+      <h2 class="mt-2 mb-1">Kitchen ingredient plan</h2>
+      <div class="text-muted">{{ event.reference }} · {{ event.name }} · {{ event.get_status_display }}</div>
+      <div class="small text-muted">Kitchen: {{ kitchen.name }} · {{ event.event_date }} {{ event.service_time|default:"" }}</div>
+    </div>
+    <span class="badge bg-info text-dark">Live stock calculation</span>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted small">Ingredients required</div><div class="fs-3 fw-semibold">{{ total_lines }}</div></div></div></div>
+    <div class="col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted small">Physical stock shortages</div><div class="fs-3 fw-semibold">{{ physical_shortage_count }}</div></div></div></div>
+    <div class="col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted small">FIFO cost-layer shortages</div><div class="fs-3 fw-semibold">{{ fifo_shortage_count }}</div></div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header bg-white"><strong>Ingredient requirements</strong><div class="small text-muted">Outstanding portions only. Quantities use each ingredient's inventory base unit.</div></div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Ingredient</th><th>Event food lines</th><th class="text-end">Required</th><th class="text-end">Physical stock</th><th class="text-end">FIFO covered</th><th class="text-end">Physical shortage</th><th class="text-end">FIFO shortage</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+          <tr>
+            <td><strong>{{ row.ingredient.name }}</strong><div class="small text-muted">{{ row.ingredient.base_unit }}</div></td>
+            <td>{% for line in row.event_lines %}<div>{{ line.description }} <span class="text-muted">({{ line.portions }} portions)</span></div>{% endfor %}</td>
+            <td class="text-end">{{ row.required_quantity|floatformat:3 }}</td>
+            <td class="text-end">{{ row.physical_available|floatformat:3 }}</td>
+            <td class="text-end">{{ row.fifo_available|floatformat:3 }}</td>
+            <td class="text-end">{% if row.physical_shortage > 0 %}<span class="text-danger fw-semibold">{{ row.physical_shortage|floatformat:3 }}</span>{% else %}<span class="text-success">0.000</span>{% endif %}</td>
+            <td class="text-end">{% if row.fifo_shortage > 0 %}<span class="text-warning fw-semibold">{{ row.fifo_shortage|floatformat:3 }}</span>{% else %}<span class="text-success">0.000</span>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No outstanding food ingredient requirements were found for this event.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="alert alert-light border mt-3 small mb-0">
+    This is a live planning view, not a stock reservation or purchase order. Physical stock and FIFO cost coverage are checked separately. Production continues to enforce both existing controls.
+  </div>
+</div>
+{% endblock %}
