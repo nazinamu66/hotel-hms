@@ -31,16 +31,16 @@ def build_event_ingredient_plan(event, kitchen):
 
     lines = (
         event.order_lines.filter(line_type="FOOD", recipe__isnull=False)
-        .select_related("recipe", "recipe__active_version")
+        .select_related("recipe", "recipe_version")
         .order_by("id")
     )
 
     for line in lines:
         recipe = line.recipe
-        version = recipe.active_version
-        if not recipe.is_active or not version or version.status != "APPROVED":
+        version = line.recipe_version
+        if not recipe.is_active or not version or version.recipe_id != recipe.pk:
             raise ValidationError(
-                f"{line.description}: an active approved recipe version is required."
+                f"{line.description}: the event's approved recipe version snapshot is missing or invalid."
             )
 
         produced = (
