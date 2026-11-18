@@ -853,66 +853,83 @@ def room_board(request):
     )
 
 
-@role_required("FRONTDESK")
+@role_required("FRONTDESK", "MANAGER", "DIRECTOR", "ADMIN")
 def check_in(request, room_id):
+    from accounts.services.access import get_accessible_hotels
 
     room = get_object_or_404(
-        Room,
+        Room.objects.select_related("hotel", "category"),
         id=room_id,
-        hotel=request.user.department.hotel,
+        hotel__in=get_accessible_hotels(request.user),
     )
 
     if request.method == "POST":
-
         data = {
-            "first_name": request.POST.get("first_name"),
-            "last_name": request.POST.get("last_name"),
-            "phone": request.POST.get("phone"),
-            "email": request.POST.get("email"),
-            "nationality": request.POST.get("nationality"),
-            "id_number": request.POST.get("id_number"),
-            "expected_checkout": request.POST.get(
-                "expected_checkout"
-            ),
+            "first_name": request.POST.get("first_name", "").strip(),
+            "last_name": request.POST.get("last_name", "").strip(),
+            "phone": request.POST.get("phone", "").strip(),
+            "email": request.POST.get("email", "").strip(),
+            "nationality": request.POST.get("nationality", "").strip(),
+            "id_number": request.POST.get("id_number", "").strip(),
+            "expected_checkout": request.POST.get("expected_checkout", "").strip(),
             "room_discount_percent": request.POST.get("room_discount_percent", "0"),
-            "room_discount_reason": request.POST.get("room_discount_reason", ""),
+            "room_discount_reason": request.POST.get("room_discount_reason", "").strip(),
         }
+        selected_guest_id = request.POST.get("guest_id", "").strip()
+        selected_guest = None
 
         try:
+            if selected_guest_id:
+                selected_guest = get_object_or_404(
+                    Guest,
+                    pk=selected_guest_id,
+                    hotel=room.hotel,
+                )
+            elif not data["first_name"] or not data["last_name"]:
+                raise ValidationError(
+                    "Select an existing guest or enter the first and last name of a new guest."
+                )
 
             folio = check_in_guest(
                 room=room,
                 user=request.user,
+                guest=selected_guest,
                 data=data,
             )
 
             messages.success(
                 request,
-                f"{folio.guest.full_name} checked into Room "
-                f"{room.room_number}"
+                f"{folio.guest.full_name} checked into Room {room.room_number}.",
             )
+            return redirect("frontdesk_active_stay", room.id)
 
-            return redirect("/frontdesk/")
+        except (ValidationError, ValueError) as exc:
+            messages.error(request, str(exc))
+        except Exception as exc:
+            messages.error(request, str(exc))
 
-        except ValidationError as e:
+        return render(
+            request,
+            "frontdesk/check_in.html",
+            {
+                "room": room,
+                "nightly_rate": room.category.nightly_rate,
+                "selected_guest_id": selected_guest_id,
+                "selected_guest": selected_guest,
+                "form_data": data,
+            },
+        )
 
-            messages.error(
-                request,
-                str(e),
-            )
-
-        except Exception as e:
-
-            messages.error(
-                request,
-                str(e),
-            )
+    if room.status != "AVAILABLE":
+        messages.error(request, "This room is no longer available for check-in.")
+        return redirect("frontdesk_room_board")
 
     return render(
         request,
         "frontdesk/check_in.html",
         {
             "room": room,
+            "nightly_rate": room.category.nightly_rate,
         },
     )
 
