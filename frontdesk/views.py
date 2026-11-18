@@ -2077,7 +2077,7 @@ def arrivals_departures_today(request):
 
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
-def request_complimentary_room_nights(request, reservation_id):
+def request_complimentary_room_nights(request, reservation_id, allocation_id=None):
     from datetime import datetime
     from billing.services.complimentary_rooms import request_complimentary_nights
 
@@ -2093,8 +2093,17 @@ def request_complimentary_room_nights(request, reservation_id):
     try:
         start_date = datetime.strptime(request.POST.get("start_date", ""), "%Y-%m-%d").date()
         end_date = datetime.strptime(request.POST.get("end_date", ""), "%Y-%m-%d").date()
+        allocation = None
+        if allocation_id is not None:
+            from billing.models import ReservationRoomAllocation
+            allocation = get_object_or_404(
+                ReservationRoomAllocation,
+                pk=allocation_id,
+                reservation=reservation,
+            )
         created = request_complimentary_nights(
             reservation=reservation,
+            allocation=allocation,
             start_date=start_date,
             end_date=end_date,
             reason=request.POST.get("reason", ""),
