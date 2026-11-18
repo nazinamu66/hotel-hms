@@ -890,12 +890,12 @@ def check_in(request, room_id):
         },
     )
 
-@role_required('FRONTDESK', 'MANAGER', 'ADMIN')
+@role_required("FRONTDESK", "MANAGER", "DIRECTOR", "ADMIN")
 def active_stay(request, room_id):
+    from accounts.services.access import get_accessible_hotels
     room = get_object_or_404(
-        Room,
+        Room.objects.filter(hotel__in=get_accessible_hotels(request.user)),
         id=room_id,
-        hotel=request.user.department.hotel
     )
 
     folio = (
@@ -1008,7 +1008,8 @@ def active_stay(request, room_id):
         "room_history": room_history,
         "payments": folio.payments.all(),
         "charges_by_department": charges_by_department,
-        "can_force_checkout": request.user.role in ["MANAGER", "ADMIN"],
+        "can_force_checkout": request.user.role in ["MANAGER", "DIRECTOR", "ADMIN"],
+        "can_waive_balance": request.user.role in ["DIRECTOR", "ADMIN"],
     }
 
     return render(
@@ -1383,26 +1384,22 @@ def take_folio_payment(request, folio_id):
     )
 
 
-@role_required("FRONTDESK", "MANAGER", "ADMIN")
+@role_required("FRONTDESK", "MANAGER", "DIRECTOR", "ADMIN")
 def checkout(request, room_id):
-
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
 
+    from accounts.services.access import get_accessible_hotels
     from frontdesk.workflows.checkout import checkout_guest
 
     room = get_object_or_404(
-        Room,
+        Room.objects.filter(hotel__in=get_accessible_hotels(request.user)),
         id=room_id,
-        hotel=request.user.department.hotel,
     )
+    reason = request.POST.get("reason", "").strip()
 
     try:
-
-        checkout_guest(
-            room=room,
-            user=request.user,
-        )
+        checkout_guest(room=room, user=request.user, reason=reason)
 
     except ValidationError as e:
 
