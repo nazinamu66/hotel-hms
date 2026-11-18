@@ -1940,7 +1940,7 @@ def po_receive(request, pk):
     items = list(po.items.select_related("product").all())
 
     from maintenance.models import MaintenanceLocation
-    from frontdesk.models import Room
+    from rooms.models import Room
     rooms = Room.objects.filter(hotel=po.department.hotel).order_by("room_number")
     locations = MaintenanceLocation.objects.filter(
         hotel=po.department.hotel, is_active=True, status="ACTIVE"
