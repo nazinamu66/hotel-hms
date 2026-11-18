@@ -1,212 +1,40 @@
 {% extends "base/base.html" %}
-
-{% block title %}
-Add Labour - Maintenance #{{ ticket.id }}
-{% endblock %}
-
+{% block title %}Add Labour · Work Order #{{ ticket.id }}{% endblock %}
 {% block content %}
-
-<h2>
-    Add Labour
-</h2>
-
-<p>
-    <strong>Work Order:</strong>
-    #{{ ticket.id }}
-</p>
-
-<p>
-    <strong>Room:</strong>
-    {{ ticket.room.room_number }}
-</p>
-
-<hr>
-
-<form method="post">
-
-    {% csrf_token %}
-
-    <p>
-        <label>
-            <strong>Labour Type</strong>
-        </label>
-        <br>
-
-        <select
-            name="labour_type"
-            id="labour_type"
-            required
-            onchange="toggleLabourFields()"
-        >
-
-            <option value="">
-                Select labour type
-            </option>
-
-            <option value="INTERNAL">
-                Internal
-            </option>
-
-            <option value="OUTSOURCED">
-                Outsourced
-            </option>
-
-        </select>
-    </p>
-
-
-    <div id="technician_field">
-
-        <label>
-            <strong>Technician</strong>
-        </label>
-
-        <br>
-
-        <select name="technician">
-
-            <option value="">
-                Select technician
-            </option>
-
-            {% for technician in technicians %}
-
-            <option value="{{ technician.id }}">
-                {{ technician.username }}
-            </option>
-
-            {% endfor %}
-
-        </select>
-
-    </div>
-
-
-    <div
-        id="supplier_field"
-        style="display:none;"
-    >
-
-        <label>
-            <strong>Supplier / Contractor</strong>
-        </label>
-
-        <br>
-
-        <select name="supplier">
-
-            <option value="">
-                Select supplier
-            </option>
-
-            {% for supplier in suppliers %}
-
-            <option value="{{ supplier.id }}">
-                {{ supplier.name }}
-            </option>
-
-            {% endfor %}
-
-        </select>
-
-    </div>
-
-
-    <br>
-
-    <p>
-
-        <label>
-            <strong>Description</strong>
-        </label>
-
-        <br>
-
-        <textarea
-            name="description"
-            required
-            style="width:500px;height:120px;"
-            placeholder="Describe the labour performed..."
-        ></textarea>
-
-    </p>
-
-
-    <p>
-
-        <label>
-            <strong>Amount</strong>
-        </label>
-
-        <br>
-
-        <input
-            type="number"
-            name="amount"
-            min="0"
-            step="0.01"
-            value="0"
-            required
-        >
-
-    </p>
-
-
-    <button type="submit">
-        Add Labour
-    </button>
-
-    <a
-        href="{% url 'maintenance_ticket_detail' ticket.id %}"
-    >
-        Cancel
-    </a>
-
-</form>
-
-
+<style>
+.ml-page{max-width:1040px;margin:0 auto;color:#172033}.ml-head{margin-bottom:20px}.ml-kicker{margin:0 0 5px;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.ml-head h2{margin:0;font-size:28px;letter-spacing:-.035em}.ml-sub{color:#667085;font-size:13px;line-height:1.6}
+.ml-card{border:1px solid #e2e8f0;border-radius:15px;background:#fff;box-shadow:0 7px 22px rgba(15,23,42,.05);overflow:hidden}.ml-card-head{padding:17px 20px;border-bottom:1px solid #edf0f5}.ml-card-head h3{margin:0;font-size:15px}.ml-body{padding:22px}.ml-context{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}.ml-chip{padding:9px 12px;border-radius:9px;background:#f8fafc;color:#475467;font-size:12px}.ml-chip strong{color:#172033}
+.ml-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}.ml-field{display:block;color:#475467;font-size:12px;font-weight:750}.ml-field input,.ml-field select,.ml-field textarea{display:block;width:100%;min-height:44px;margin-top:7px;padding:10px 12px;border:1px solid #d5dce7;border-radius:9px;background:#fff;color:#263449;font:inherit;font-size:13px}.ml-field textarea{min-height:115px;resize:vertical}.ml-wide{grid-column:1/-1}.ml-help{display:block;margin-top:6px;color:#98a2b3;font-size:11px;font-weight:500}.ml-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:20px}.ml-btn{display:inline-flex;align-items:center;justify-content:center;min-height:43px;padding:0 15px;border:1px solid #d5dce7;border-radius:9px;background:#fff;color:#344054;text-decoration:none;font-size:12px;font-weight:750}.ml-submit{background:#175cd3;border-color:#175cd3;color:#fff}
+@media(max-width:620px){.ml-body{padding:16px}.ml-grid{grid-template-columns:1fr}.ml-wide{grid-column:auto}.ml-actions{flex-direction:column-reverse}.ml-btn{width:100%}}
+</style>
+<div class="ml-page">
+<header class="ml-head"><p class="ml-kicker">Maintenance · Work order #{{ ticket.id }}</p><h2>Record labour</h2><p class="ml-sub">Record internal technician time or outsourced contractor work and its cost against this maintenance job.</p></header>
+<section class="ml-card">
+ <div class="ml-card-head"><h3>Work order context</h3></div>
+ <div class="ml-body">
+  <div class="ml-context"><span class="ml-chip"><strong>Location:</strong> {% if ticket.room_id %}Room {{ ticket.room.room_number }}{% elif ticket.location_id %}{{ ticket.location.name }}{% endif %}</span><span class="ml-chip"><strong>Status:</strong> {{ ticket.get_status_display }}</span><span class="ml-chip"><strong>Priority:</strong> {{ ticket.get_priority_display }}</span></div>
+  <form method="post">{% csrf_token %}
+   <div class="ml-grid">
+    <label class="ml-field ml-wide" for="labour_type">Labour type
+     <select name="labour_type" id="labour_type" required onchange="toggleLabourFields()"><option value="">Choose labour type</option><option value="INTERNAL">Internal technician</option><option value="OUTSOURCED">External contractor</option></select>
+    </label>
+    <div class="ml-field" id="technician_field"><label for="technician">Technician</label><select name="technician" id="technician"><option value="">Select technician</option>{% for technician in technicians %}<option value="{{ technician.id }}">{{ technician.username }}</option>{% endfor %}</select><span class="ml-help">Only active Maintenance staff from this hotel are listed.</span></div>
+    <div class="ml-field" id="supplier_field" style="display:none"><label for="supplier">Supplier / contractor</label><select name="supplier" id="supplier"><option value="">Select supplier</option>{% for supplier in suppliers %}<option value="{{ supplier.id }}">{{ supplier.name }}</option>{% endfor %}</select><span class="ml-help">Choose the contractor responsible for the work.</span></div>
+    <label class="ml-field ml-wide" for="description">Work description
+     <textarea name="description" id="description" required placeholder="Describe the labour performed, work scope or service provided..."></textarea>
+    </label>
+    <label class="ml-field" for="amount">Labour amount (₦)
+     <input type="number" name="amount" id="amount" min="0" step="0.01" value="0" required>
+     <span class="ml-help">Enter zero if this is internal work with no separately charged labour cost.</span>
+    </label>
+   </div>
+   <div class="ml-actions"><a class="ml-btn" href="{% url 'maintenance_ticket_detail' ticket.id %}">Cancel</a><button class="ml-btn ml-submit" type="submit">Save labour entry</button></div>
+  </form>
+ </div>
+</section>
+</div>
 <script>
-
-function toggleLabourFields() {
-
-    const type =
-        document.getElementById(
-            "labour_type"
-        ).value;
-
-    const technician =
-        document.getElementById(
-            "technician_field"
-        );
-
-    const supplier =
-        document.getElementById(
-            "supplier_field"
-        );
-
-    if (type === "INTERNAL") {
-
-        technician.style.display = "block";
-        supplier.style.display = "none";
-
-    }
-    else if (type === "OUTSOURCED") {
-
-        technician.style.display = "none";
-        supplier.style.display = "block";
-
-    }
-    else {
-
-        technician.style.display = "none";
-        supplier.style.display = "none";
-
-    }
-
-}
-
+function toggleLabourFields(){const type=document.getElementById("labour_type").value;const tech=document.getElementById("technician_field");const supplier=document.getElementById("supplier_field");tech.style.display=type==="INTERNAL"?"block":"none";supplier.style.display=type==="OUTSOURCED"?"block":"none";document.getElementById("technician").required=type==="INTERNAL";document.getElementById("supplier").required=type==="OUTSOURCED";}
 toggleLabourFields();
-
 </script>
-
 {% endblock %}
