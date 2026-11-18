@@ -3,6 +3,7 @@ from . import views
 from . import reconciliation_views
 from . import management_reconciliation_views
 from . import adjustment_views
+from . import event_views
 
 urlpatterns = [
     path("", views.kitchen_dashboard, name="kitchen_dashboard"),
@@ -42,6 +43,7 @@ urlpatterns = [
 
     # Production
     path("produce/quick/", views.kitchen_quick_production, name="kitchen_quick_production"),
+    path("events/<int:event_id>/ingredient-plan/", event_views.kitchen_event_ingredient_plan, name="kitchen_event_ingredient_plan"),
     path("recipe/<int:recipe_id>/ingredients/", views.recipe_ingredients_api),
 
     # Recipes
