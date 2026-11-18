@@ -209,6 +209,9 @@
         <div class="eyebrow">Kitchen Operations • Production Record</div>
         <h1>{{ batch.recipe.name }}</h1>
         <p>Production usage and variance record.</p>
+        {% if batch.event_order_line_id %}
+        <p><strong>Corporate event:</strong> {{ batch.event_order_line.event.reference }} — {{ batch.event_order_line.description }}</p>
+        {% endif %}
     </div>
 
     <div class="summary-grid">
