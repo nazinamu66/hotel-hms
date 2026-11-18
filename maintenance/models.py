@@ -40,6 +40,9 @@ class MaintenanceLocation(models.Model):
         related_name="maintenance_locations",
     )
     name = models.CharField(max_length=150)
+    building = models.CharField(max_length=120, blank=True)
+    floor = models.CharField(max_length=80, blank=True)
+    area_code = models.CharField(max_length=40, blank=True)
     location_type = models.CharField(max_length=30, choices=LOCATION_TYPES, default="OTHER")
     description = models.TextField(blank=True)
     responsible_departments = models.ManyToManyField(
