@@ -1541,6 +1541,7 @@ def reservation_detail(request, reservation_id):
         ).prefetch_related(
             "complimentary_room_nights__requested_by",
             "complimentary_room_nights__approved_by",
+            "complimentary_room_nights__allocation__room",
             "room_allocations__guest",
             "room_allocations__room",
             "room_allocations__folio",
