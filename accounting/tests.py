@@ -319,7 +319,7 @@ class EnsureDailyBusinessDaysCommandTests(TestCase):
         from accounting.models import BusinessDay
         from io import StringIO
 
-        target_date = date(2026, 11, 18)
+        target_date = date(2099, 11, 18)
         localdate.return_value = target_date
         output = StringIO()
 
@@ -336,7 +336,7 @@ class EnsureDailyBusinessDaysCommandTests(TestCase):
         from accounting.models import BusinessDay
         from io import StringIO
 
-        target_date = date(2026, 11, 18)
+        target_date = date(2099, 11, 18)
         localdate.return_value = target_date
         day = BusinessDay.objects.create(
             hotel=self.hotel,
