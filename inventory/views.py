@@ -1883,8 +1883,30 @@ def po_receive(request, pk):
             for item in po.items.all()
         }
         notes = request.POST.get("receipt_notes", "").strip()
+        asset_details = {}
+        for item in po.items.select_related("product"):
+            if item.product.product_type != "EQUIPMENT":
+                continue
+            try:
+                unit_count = int(quantities[str(item.pk)] or 0)
+            except (TypeError, ValueError):
+                unit_count = 0
+            asset_details[str(item.pk)] = [
+                {
+                    field: request.POST.get(
+                        f"asset_{item.pk}_{unit_index}_{field}", ""
+                    )
+                    for field in (
+                        "serial_number", "manufacturer", "model_number",
+                        "warranty_expiry", "condition", "room", "location",
+                    )
+                }
+                for unit_index in range(1, unit_count + 1)
+            ]
         try:
-            receipt = po.receive(request.user, quantities, notes=notes)
+            receipt = po.receive(
+                request.user, quantities, notes=notes, asset_details=asset_details
+            )
         except ValidationError as exc:
             messages.error(request, "Receipt was not recorded: " + "; ".join(exc.messages))
             return redirect("inventory:po_receive", pk=po.pk)
@@ -1917,12 +1939,21 @@ def po_receive(request, pk):
     # Keep these properties read-only; the template reads them directly.
     items = list(po.items.select_related("product").all())
 
+    from maintenance.models import MaintenanceLocation
+    from frontdesk.models import Room
+    rooms = Room.objects.filter(hotel=po.department.hotel).order_by("room_number")
+    locations = MaintenanceLocation.objects.filter(
+        hotel=po.department.hotel, is_active=True, status="ACTIVE"
+    ).order_by("name")
+
     return render(
         request,
         "inventory/po_receive.html",
         {
             "po": po,
             "items": items,
+            "rooms": rooms,
+            "locations": locations,
             "receipt_history": po.receipts.prefetch_related(
                 "items__purchase_item__product", "received_by"
             ),
