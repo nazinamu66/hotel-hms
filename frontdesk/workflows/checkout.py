@@ -51,7 +51,7 @@ def update_room_status(room):
     )
 
 @transaction.atomic
-def checkout_guest(room, user, reason="")
+def checkout_guest(room, user, reason=""):
     # Serialize checkout against another checkout or room-level operation.
     room = room.__class__.objects.select_for_update().get(pk=room.pk)
     folio = (
