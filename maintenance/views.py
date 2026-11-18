@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
@@ -155,26 +156,100 @@ def maintenance_locations(request):
         if not request.user.hotel_id:
             raise PermissionDenied
         hotels = hotels.filter(pk=request.user.hotel_id)
-    departments = Department.objects.filter(hotel__in=hotels, is_active=True).select_related("hotel").order_by("hotel__name", "name")
+
+    departments = Department.objects.filter(
+        hotel__in=hotels, is_active=True
+    ).select_related("hotel").order_by("hotel__name", "name")
+    locations = MaintenanceLocation.objects.filter(
+        hotel__in=hotels
+    ).select_related("hotel").prefetch_related("responsible_departments").order_by(
+        "hotel__name", "name"
+    )
+
+    search_query = request.GET.get("q", "").strip()
+    if search_query:
+        locations = locations.filter(
+            Q(name__icontains=search_query)
+            | Q(building__icontains=search_query)
+            | Q(floor__icontains=search_query)
+            | Q(area_code__icontains=search_query)
+            | Q(description__icontains=search_query)
+        )
+
+    edit_location = None
+    edit_id = request.GET.get("edit")
+    if edit_id:
+        edit_location = get_object_or_404(locations, pk=edit_id)
+
     if request.method == "POST":
         hotel = get_object_or_404(hotels, pk=request.POST.get("hotel"))
         name = request.POST.get("name", "").strip()
         location_type = request.POST.get("location_type", "OTHER").strip().upper()
+        building = request.POST.get("building", "").strip()
+        floor = request.POST.get("floor", "").strip()
+        area_code = request.POST.get("area_code", "").strip()
         description = request.POST.get("description", "").strip()
         valid_types = {choice[0] for choice in MaintenanceLocation.LOCATION_TYPES}
+        duplicate = MaintenanceLocation.objects.filter(
+            hotel=hotel, name__iexact=name
+        ).exists()
         if not name:
             messages.error(request, "Location name is required.")
         elif location_type not in valid_types:
             messages.error(request, "Select a valid location type.")
-        elif MaintenanceLocation.objects.filter(hotel=hotel, name__iexact=name).exists():
+        elif duplicate:
             messages.error(request, "A location with that name already exists for this hotel.")
         else:
-            location = MaintenanceLocation.objects.create(hotel=hotel, name=name, location_type=location_type, description=description)
-            location.responsible_departments.set(departments.filter(hotel=hotel, id__in=request.POST.getlist("departments")))
+            location = MaintenanceLocation.objects.create(
+                hotel=hotel, name=name, location_type=location_type,
+                building=building, floor=floor, area_code=area_code,
+                description=description,
+            )
+            location.responsible_departments.set(
+                departments.filter(hotel=hotel, id__in=request.POST.getlist("departments"))
+            )
             messages.success(request, f"Location '{location.name}' created.")
-            return redirect("maintenance_locations")
-    locations = MaintenanceLocation.objects.filter(hotel__in=hotels).select_related("hotel").prefetch_related("responsible_departments").order_by("hotel__name", "name")
-    return render(request, "maintenance/locations.html", {"hotels": hotels, "departments": departments, "locations": locations, "location_types": MaintenanceLocation.LOCATION_TYPES})
+            return redirect(f"{reverse('maintenance_locations')}?location={location.pk}")
+
+    selected_location = None
+    selected_id = request.GET.get("location")
+    if edit_location:
+        selected_location = edit_location
+    elif selected_id:
+        selected_location = get_object_or_404(locations, pk=selected_id)
+    else:
+        selected_location = locations.first()
+
+    location_assets = MaintenanceAsset.objects.none()
+    location_tickets = MaintenanceTicket.objects.none()
+    location_schedules = MaintenanceSchedule.objects.none()
+    open_ticket_count = 0
+    if selected_location:
+        location_assets = MaintenanceAsset.objects.filter(
+            location=selected_location
+        ).select_related("product").order_by("name")
+        location_tickets = MaintenanceTicket.objects.filter(
+            location=selected_location
+        ).select_related("room", "reported_by", "assigned_to", "asset").order_by("-created_at")
+        open_ticket_count = location_tickets.exclude(status="RESOLVED").count()
+        location_schedules = MaintenanceSchedule.objects.filter(
+            asset__location=selected_location, is_active=True, asset__is_active=True
+        ).select_related("asset").order_by("next_due_date", "name")
+
+    return render(request, "maintenance/locations.html", {
+        "hotels": hotels,
+        "departments": departments,
+        "locations": locations,
+        "location_types": MaintenanceLocation.LOCATION_TYPES,
+        "selected_location": selected_location,
+        "edit_location": edit_location,
+        "location_assets": location_assets,
+        "location_tickets": location_tickets[:12],
+        "location_schedules": location_schedules[:8],
+        "location_equipment_count": location_assets.count(),
+        "location_open_ticket_count": open_ticket_count,
+        "search_query": search_query,
+    })
 
 
 @role_required("MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR")
@@ -185,13 +260,13 @@ def maintenance_location_edit(request, location_id):
             raise PermissionDenied
         hotels = hotels.filter(pk=request.user.hotel_id)
     location = get_object_or_404(MaintenanceLocation, pk=location_id, hotel__in=hotels)
-    departments = Department.objects.filter(hotel=location.hotel, is_active=True).order_by("name")
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         location_type = request.POST.get("location_type", "OTHER").strip().upper()
-        description = request.POST.get("description", "").strip()
         valid_types = {choice[0] for choice in MaintenanceLocation.LOCATION_TYPES}
-        duplicate = MaintenanceLocation.objects.filter(hotel=location.hotel, name__iexact=name).exclude(pk=location.pk).exists()
+        duplicate = MaintenanceLocation.objects.filter(
+            hotel=location.hotel, name__iexact=name
+        ).exclude(pk=location.pk).exists()
         if not name:
             messages.error(request, "Location name is required.")
         elif location_type not in valid_types:
@@ -201,13 +276,21 @@ def maintenance_location_edit(request, location_id):
         else:
             location.name = name
             location.location_type = location_type
-            location.description = description
-            location.save(update_fields=["name", "location_type", "description"])
-            location.responsible_departments.set(departments.filter(id__in=request.POST.getlist("departments")))
+            location.building = request.POST.get("building", "").strip()
+            location.floor = request.POST.get("floor", "").strip()
+            location.area_code = request.POST.get("area_code", "").strip()
+            location.description = request.POST.get("description", "").strip()
+            location.save(update_fields=[
+                "name", "location_type", "building", "floor", "area_code", "description"
+            ])
+            departments = Department.objects.filter(
+                hotel=location.hotel, is_active=True,
+                id__in=request.POST.getlist("departments")
+            )
+            location.responsible_departments.set(departments)
             messages.success(request, f"Location '{location.name}' updated.")
-            return redirect("maintenance_locations")
-    locations = MaintenanceLocation.objects.filter(hotel__in=hotels).select_related("hotel").prefetch_related("responsible_departments").order_by("hotel__name", "name")
-    return render(request, "maintenance/locations.html", {"hotels": hotels, "departments": departments, "locations": locations, "location_types": MaintenanceLocation.LOCATION_TYPES, "edit_location": location})
+            return redirect(f"{reverse('maintenance_locations')}?location={location.pk}")
+    return redirect(f"{reverse('maintenance_locations')}?location={location.pk}&edit={location.pk}")
 
 
 @require_POST
