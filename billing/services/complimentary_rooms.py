@@ -68,10 +68,10 @@ def request_complimentary_nights(*, reservation, start_date, end_date, reason, u
         if reservation.status == "CHECKED_IN" and folio is None:
             raise ValidationError("The active room folio could not be found.")
 
-    allocation = getattr(reservation, "group_allocation", None)
+    group_allocation = getattr(reservation, "group_allocation", None)
     original_rate, source = _reservation_rate(reservation)
     discount = Decimal(reservation.room_discount_percent or 0)
-    if allocation and discount:
+    if group_allocation and discount:
         raise ValidationError("A group-negotiated rate cannot also have a receptionist discount.")
     waived_amount = (
         original_rate - (original_rate * discount / Decimal("100")).quantize(
