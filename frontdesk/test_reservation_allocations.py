@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from billing.models import Folio, Guest, Reservation, ReservationRoomAllocation
+from billing.services.complimentary_rooms import request_complimentary_nights
 from frontdesk.workflows.reservation import create_reservation
 from frontdesk.workflows.reservation_allocations import (
     check_in_room_allocation,
@@ -14,7 +15,7 @@ from frontdesk.workflows.reservation_allocations import (
 )
 from frontdesk.workflows.checkout import checkout_guest
 from inventory.models import Department, Hotel, Organization
-from rooms.models import Room, RoomCategory
+from rooms.models import Room, RoomCategory, RoomRate
 
 
 class OrdinaryMultiRoomReservationTests(TestCase):
@@ -120,6 +121,71 @@ class OrdinaryMultiRoomReservationTests(TestCase):
                 allocation_id=second.pk,
                 hotel=self.hotel,
                 guest_id=foreign_guest.pk,
+            )
+
+
+    @patch("billing.models.Folio.apply_daily_room_charge")
+    def test_complimentary_request_is_bound_to_one_allocation_and_its_folio(self, apply_charge):
+        RoomRate.objects.create(category=self.category, price_per_night="50000.00")
+        reservation = self.make_reservation()
+        first, second = list(reservation.room_allocations.order_by("allocation_number"))
+
+        waiver = request_complimentary_nights(
+            reservation=reservation,
+            allocation=second,
+            start_date=date(2027, 6, 1),
+            end_date=date(2027, 6, 1),
+            reason="Director approved this room only",
+            user=self.user,
+        )[0]
+
+        self.assertEqual(waiver.allocation_id, second.pk)
+        self.assertIsNone(waiver.folio_id)
+
+        first, first_room, first_folio = check_in_room_allocation(first.pk, self.hotel, self.user)
+        waiver.refresh_from_db()
+        self.assertIsNone(waiver.folio_id)
+
+        second, second_room, second_folio = check_in_room_allocation(second.pk, self.hotel, self.user)
+        waiver.refresh_from_db()
+        self.assertEqual(waiver.folio_id, second_folio.pk)
+        self.assertNotEqual(waiver.folio_id, first_folio.pk)
+
+    def test_same_night_can_be_requested_for_two_different_allocations(self):
+        RoomRate.objects.create(category=self.category, price_per_night="50000.00")
+        reservation = self.make_reservation()
+        first, second = list(reservation.room_allocations.order_by("allocation_number"))
+
+        first_waiver = request_complimentary_nights(
+            reservation=reservation, allocation=first,
+            start_date=date(2027, 6, 1), end_date=date(2027, 6, 1),
+            reason="Approved for first room", user=self.user,
+        )[0]
+        second_waiver = request_complimentary_nights(
+            reservation=reservation, allocation=second,
+            start_date=date(2027, 6, 1), end_date=date(2027, 6, 1),
+            reason="Approved for second room", user=self.user,
+        )[0]
+
+        self.assertNotEqual(first_waiver.pk, second_waiver.pk)
+        self.assertEqual(
+            ReservationRoomAllocation.objects.filter(
+                reservation=reservation,
+                complimentary_room_nights__room_night_date=date(2027, 6, 1),
+            ).count(),
+            2,
+        )
+
+    def test_ordinary_multi_room_complimentary_request_requires_allocation(self):
+        RoomRate.objects.create(category=self.category, price_per_night="50000.00")
+        reservation = self.make_reservation()
+        with self.assertRaises(ValidationError):
+            request_complimentary_nights(
+                reservation=reservation,
+                start_date=date(2027, 6, 1),
+                end_date=date(2027, 6, 1),
+                reason="Must select a room",
+                user=self.user,
             )
 
     @patch("billing.models.Folio.apply_daily_room_charge")
