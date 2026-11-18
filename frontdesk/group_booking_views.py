@@ -527,12 +527,12 @@ def event_detail(request, event_id):
         EventBooking.objects.select_related("company", "group_reservation").prefetch_related("order_lines", "participants__guest", "participants__reservation__room"),
         pk=event_id, hotel=hotel,
     )
-    line_form = EventOrderLineForm(prefix="line")
+    line_form = EventOrderLineForm(prefix="line", event=event)
     participant_form = EventParticipantForm(prefix="participant", event=event)
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "add_line":
-            line_form = EventOrderLineForm(request.POST, prefix="line")
+            line_form = EventOrderLineForm(request.POST, prefix="line", event=event)
             if event.status not in ("DRAFT", "AGREED"):
                 messages.error(request, "Order lines cannot be changed after release.")
             elif line_form.is_valid():
