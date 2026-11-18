@@ -174,6 +174,11 @@ def change_guest_room(
         ordinary_allocation.room = new_room
         ordinary_allocation.save(update_fields=["room"])
 
+        reservation = ordinary_allocation.reservation
+        if reservation.number_of_rooms == 1 or reservation.room_id == old_room.id:
+            reservation.room = new_room
+            reservation.save(update_fields=["room"])
+
     close_old_room_history(
         folio,
     )
