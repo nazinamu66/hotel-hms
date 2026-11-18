@@ -1891,4 +1891,4 @@ class EventOrderLine(models.Model):
         return (self.quantity * self.unit_price).quantize(Decimal("0.01"))
 
     def __str__(self):
-        return f"{self.description} × {self.quantity}"
+        return f"{self.event.reference} — {self.description} × {self.quantity}"
