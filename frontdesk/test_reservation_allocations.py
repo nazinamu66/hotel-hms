@@ -144,6 +144,7 @@ class OrdinaryMultiRoomReservationTests(TestCase):
 
         checkout_guest(first_room, self.user)
         reservation.refresh_from_db()
+        first.refresh_from_db()
         second.refresh_from_db()
         self.assertEqual(first.status, "CHECKED_OUT")
         self.assertEqual(second.status, "CHECKED_IN")
