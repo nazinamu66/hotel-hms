@@ -127,8 +127,10 @@
           </div>
           <div class="location-actions">
             <a class="location-btn" href="{% url 'maintenance_locations' %}?location={{ selected_location.id }}&edit={{ selected_location.id }}#location-create">Edit</a>
-            <a class="location-btn primary" href="{% url 'maintenance_asset_create' %}?hotel={{ selected_location.hotel_id }}&location={{ selected_location.id }}">＋ Register equipment</a>
-            <a class="location-btn" href="{% url 'maintenance_create_ticket_location' selected_location.id %}">Report issue</a>
+            {% if selected_location.is_active %}
+              <a class="location-btn primary" href="{% url 'maintenance_asset_create' %}?hotel={{ selected_location.hotel_id }}&location={{ selected_location.id }}">＋ Register equipment</a>
+              <a class="location-btn" href="{% url 'maintenance_create_ticket_location' selected_location.id %}">Report issue</a>
+            {% endif %}
             <form method="post" action="{% url 'maintenance_location_toggle_status' selected_location.id %}">{% csrf_token %}<button class="location-btn danger" type="submit">{% if selected_location.is_active %}Deactivate{% else %}Reactivate{% endif %}</button></form>
           </div>
         </div>
