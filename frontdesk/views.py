@@ -2130,13 +2130,15 @@ def arrivals_departures_today(request):
 
     departures = Folio.objects.filter(
         hotel=hotel,
+        folio_type="ROOM",
         check_out_at__date=today,
-        is_closed=False
+        is_closed=False,
     ).select_related("guest", "room")
 
     in_house = Folio.objects.filter(
         hotel=hotel,
-        is_closed=False
+        folio_type="ROOM",
+        is_closed=False,
     ).select_related("guest", "room")
 
     return render(
