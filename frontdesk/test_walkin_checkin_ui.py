@@ -2,6 +2,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 
@@ -116,6 +117,35 @@ class WalkInCheckInUITests(TestCase):
         folio = Folio.objects.get(room=self.room, is_closed=False)
         self.assertEqual(folio.guest, guest)
         self.assertEqual(guest.full_name, "New Arrival")
+        apply_charge.assert_called_once()
+
+    @patch("billing.models.Folio.apply_daily_room_charge")
+    def test_walk_in_check_in_saves_new_guest_id_document(self, apply_charge):
+        upload = SimpleUploadedFile(
+            "guest-passport.jpg",
+            b"fake-image-content",
+            content_type="image/jpeg",
+        )
+        response = self.client.post(
+            self.url,
+            {
+                "first_name": "Document",
+                "last_name": "Guest",
+                "phone": "08039998877",
+                "id_number": "P1234567",
+                "room_discount_percent": "0",
+                "id_document": upload,
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("frontdesk_active_stay", args=[self.room.pk]),
+        )
+        guest = Guest.objects.get(hotel=self.hotel, phone="08039998877")
+        self.assertTrue(guest.id_document)
+        self.assertTrue(guest.id_document.name.endswith("guest-passport.jpg"))
+        guest.id_document.delete(save=False)
         apply_charge.assert_called_once()
 
     def test_walk_in_check_in_rejects_guest_from_another_hotel(self):
