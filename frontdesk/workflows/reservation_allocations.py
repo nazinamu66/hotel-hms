@@ -131,6 +131,30 @@ def sync_ordinary_reservation_status(reservation):
 
 
 @transaction.atomic
+def mark_room_allocation_no_show(allocation_id, hotel):
+    """Mark one unoccupied ordinary room allocation as a No-Show.
+
+    This is an operational status change only: reservation guarantees and
+    guest deposits are deliberately not modified.
+    """
+    allocation = _locked_allocation(allocation_id, hotel.id)
+    reservation = Reservation.objects.select_for_update().get(
+        pk=allocation.reservation_id,
+        hotel=hotel,
+    )
+
+    if reservation.status in ("CANCELLED", "NO_SHOW", "CHECKED_OUT"):
+        raise ValidationError("This reservation is no longer eligible for a room No-Show.")
+    if allocation.status != "RESERVED":
+        raise ValidationError("Only a reserved room allocation can be marked No-Show.")
+
+    allocation.status = "NO_SHOW"
+    allocation.save(update_fields=["status"])
+    sync_ordinary_reservation_status(reservation)
+    return allocation
+
+
+@transaction.atomic
 def check_in_room_allocation(allocation_id, hotel, user):
     allocation = _locked_allocation(allocation_id, hotel.id)
     reservation = Reservation.objects.select_for_update().get(
