@@ -1,477 +1,272 @@
 {% extends "base/base.html" %}
 
-{% block title %}
-Maintenance Dashboard
-{% endblock %}
+{% block title %}Maintenance Control Centre{% endblock %}
 
 {% block content %}
+<style>
+    .maintenance-dashboard { color: var(--hms-ink, #172033); }
+    .maintenance-dashboard * { box-sizing: border-box; }
+    .maintenance-dashboard .md-header { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; flex-wrap:wrap; margin-bottom:24px; }
+    .maintenance-dashboard .md-eyebrow { color:var(--hms-muted,#64748b); font-size:12px; font-weight:750; letter-spacing:.1em; text-transform:uppercase; margin:0 0 7px; }
+    .maintenance-dashboard .md-header h2 { margin:0 0 6px; font-size:clamp(24px,3vw,30px); }
+    .maintenance-dashboard .md-subtitle { margin:0; color:var(--hms-muted,#64748b); font-size:14px; }
+    .maintenance-dashboard .md-actions { display:flex; gap:9px; flex-wrap:wrap; }
+    .maintenance-dashboard .md-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:40px; padding:9px 14px; border:1px solid var(--hms-border,#e2e8f0); border-radius:9px; background:#fff; color:#334155; text-decoration:none; font-size:13px; font-weight:700; }
+    .maintenance-dashboard .md-btn-primary { background:var(--hms-primary,#2563eb); border-color:var(--hms-primary,#2563eb); color:#fff; }
+    .maintenance-dashboard .md-btn:hover { text-decoration:none; box-shadow:0 4px 12px rgba(15,23,42,.09); }
+    .maintenance-dashboard .md-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:20px; }
+    .maintenance-dashboard .md-card { min-width:0; background:#fff; border:1px solid var(--hms-border,#e2e8f0); border-radius:14px; box-shadow:var(--hms-shadow,0 8px 24px rgba(15,23,42,.055)); }
+    .maintenance-dashboard .md-kpi { padding:17px 18px; position:relative; overflow:hidden; }
+    .maintenance-dashboard .md-kpi-label { color:var(--hms-muted,#64748b); font-size:13px; font-weight:650; }
+    .maintenance-dashboard .md-kpi-value { display:block; margin-top:8px; font-size:30px; line-height:1.1; font-weight:800; letter-spacing:-.04em; }
+    .maintenance-dashboard .md-kpi-note { margin-top:7px; color:#94a3b8; font-size:11px; }
+    .maintenance-dashboard .md-kpi-mark { position:absolute; right:17px; top:17px; width:9px; height:9px; border-radius:50%; background:#94a3b8; }
+    .maintenance-dashboard .md-kpi-mark.blue { background:#3b82f6; }
+    .maintenance-dashboard .md-kpi-mark.amber { background:#f59e0b; }
+    .maintenance-dashboard .md-kpi-mark.red { background:#ef4444; }
+    .maintenance-dashboard .md-kpi-mark.green { background:#10b981; }
+    .maintenance-dashboard .md-main-grid { display:grid; grid-template-columns:minmax(0,1.8fr) minmax(270px,.9fr); gap:16px; align-items:start; }
+    .maintenance-dashboard .md-panel { padding:19px; }
+    .maintenance-dashboard .md-panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:15px; }
+    .maintenance-dashboard .md-panel-head h3 { margin:0; font-size:16px; }
+    .maintenance-dashboard .md-panel-head p { margin:4px 0 0; color:var(--hms-muted,#64748b); font-size:12px; }
+    .maintenance-dashboard .md-text-link { color:var(--hms-primary,#2563eb); text-decoration:none; font-size:12px; font-weight:750; white-space:nowrap; }
+    .maintenance-dashboard .md-table-wrap { width:100%; overflow-x:auto; }
+    .maintenance-dashboard table { width:100%; border-collapse:collapse; min-width:610px; }
+    .maintenance-dashboard th { padding:10px 9px; color:#64748b; background:#f8fafc; font-size:10px; letter-spacing:.07em; text-align:left; text-transform:uppercase; white-space:nowrap; }
+    .maintenance-dashboard td { padding:12px 9px; border-bottom:1px solid #edf1f5; color:#334155; font-size:12px; vertical-align:middle; }
+    .maintenance-dashboard tbody tr:last-child td { border-bottom:0; }
+    .maintenance-dashboard .md-row-link { color:#1e40af; text-decoration:none; font-weight:750; }
+    .maintenance-dashboard .md-muted { color:#94a3b8; }
+    .maintenance-dashboard .md-pill { display:inline-flex; align-items:center; padding:4px 8px; border-radius:20px; font-size:10px; font-weight:750; white-space:nowrap; background:#f1f5f9; color:#475569; }
+    .maintenance-dashboard .md-pill-high { background:#fee2e2; color:#b91c1c; }
+    .maintenance-dashboard .md-pill-medium { background:#fef3c7; color:#92400e; }
+    .maintenance-dashboard .md-pill-low { background:#dcfce7; color:#166534; }
+    .maintenance-dashboard .md-pill-progress { background:#dbeafe; color:#1d4ed8; }
+    .maintenance-dashboard .md-cost-total { padding:16px; border-radius:11px; background:#f8fafc; margin-bottom:13px; }
+    .maintenance-dashboard .md-cost-total span { display:block; color:var(--hms-muted,#64748b); font-size:12px; }
+    .maintenance-dashboard .md-cost-total strong { display:block; margin-top:5px; font-size:25px; letter-spacing:-.03em; }
+    .maintenance-dashboard .md-cost-line { display:flex; justify-content:space-between; gap:10px; padding:11px 2px; border-bottom:1px solid #edf1f5; font-size:12px; }
+    .maintenance-dashboard .md-cost-line:last-child { border-bottom:0; }
+    .maintenance-dashboard .md-cost-line span { color:#64748b; }
+    .maintenance-dashboard .md-cost-line strong { color:#334155; }
+    .maintenance-dashboard .md-preventive { margin-top:17px; }
+    .maintenance-dashboard .md-preventive-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:15px; }
+    .maintenance-dashboard .md-mini-kpi { padding:14px 15px; }
+    .maintenance-dashboard .md-mini-kpi span { display:block; color:#64748b; font-size:11px; font-weight:650; }
+    .maintenance-dashboard .md-mini-kpi strong { display:block; margin-top:5px; font-size:23px; }
+    .maintenance-dashboard .md-empty { padding:26px 12px; text-align:center; color:#94a3b8; font-size:12px; }
+    .maintenance-dashboard .md-shortcuts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+    .maintenance-dashboard .md-shortcut { display:flex; align-items:center; gap:10px; min-width:0; padding:13px; border:1px solid var(--hms-border,#e2e8f0); border-radius:11px; background:#fff; color:#334155; text-decoration:none; font-size:12px; font-weight:700; }
+    .maintenance-dashboard .md-shortcut:hover { border-color:#93c5fd; background:#f8fbff; text-decoration:none; }
+    .maintenance-dashboard .md-shortcut-icon { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; border-radius:9px; background:#eff6ff; color:#2563eb; font-size:15px; }
+    .maintenance-dashboard .md-section { margin-top:20px; }
+    .maintenance-dashboard .md-section-title { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:0 0 12px; }
+    .maintenance-dashboard .md-section-title h3 { margin:0; font-size:16px; }
+    @media(max-width:1050px) {
+        .maintenance-dashboard .md-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .maintenance-dashboard .md-main-grid { grid-template-columns:1fr; }
+        .maintenance-dashboard .md-shortcuts { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    }
+    @media(max-width:600px) {
+        .maintenance-dashboard .md-header { display:block; }
+        .maintenance-dashboard .md-actions { margin-top:15px; }
+        .maintenance-dashboard .md-kpis { gap:9px; }
+        .maintenance-dashboard .md-kpi { padding:14px; }
+        .maintenance-dashboard .md-kpi-value { font-size:25px; }
+        .maintenance-dashboard .md-panel { padding:14px; }
+        .maintenance-dashboard .md-preventive-kpis { gap:8px; }
+        .maintenance-dashboard .md-mini-kpi { padding:11px; }
+        .maintenance-dashboard .md-mini-kpi strong { font-size:20px; }
+        .maintenance-dashboard .md-shortcuts { grid-template-columns:repeat(2,minmax(0,1fr)); }
+        .maintenance-dashboard .md-shortcut { padding:10px; font-size:11px; }
+    }
+</style>
 
-<h2>Maintenance Dashboard</h2>
-
-<p>
-    Maintenance operations overview.
-</p>
-
-<hr>
-
-<!-- ===================================================== -->
-<!-- KPI CARDS -->
-<!-- ===================================================== -->
-
-<div style="
-    display:grid;
-    grid-template-columns:repeat(4, 1fr);
-    gap:15px;
-    margin-bottom:25px;
-">
-
-    <div style="
-        border:1px solid #ddd;
-        padding:20px;
-        border-radius:6px;
-    ">
-        <div>Open Tickets</div>
-        <strong style="font-size:28px;">
-            {{ open_count }}
-        </strong>
-    </div>
-
-    <div style="
-        border:1px solid #ddd;
-        padding:20px;
-        border-radius:6px;
-    ">
-        <div>In Progress</div>
-        <strong style="font-size:28px;">
-            {{ in_progress_count }}
-        </strong>
-    </div>
-
-    <div style="
-        border:1px solid #ddd;
-        padding:20px;
-        border-radius:6px;
-    ">
-        <div>High Priority</div>
-        <strong style="font-size:28px;">
-            {{ high_priority_count }}
-        </strong>
-    </div>
-
-    <div style="
-        border:1px solid #ddd;
-        padding:20px;
-        border-radius:6px;
-    ">
-        <div>Completed This Month</div>
-        <strong style="font-size:28px;">
-            {{ completed_this_month }}
-        </strong>
-    </div>
-
-</div>
-
-
-<!-- ===================================================== -->
-<!-- MAIN CONTENT -->
-<!-- ===================================================== -->
-
-<div style="
-    display:grid;
-    grid-template-columns:2fr 1fr;
-    gap:25px;
-">
-
-    <!-- ACTIVE WORK ORDERS -->
-
-    <div>
-
-        <div style="
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-        ">
-
-            <h3>Active Work Orders</h3>
-
-            <div style="display:flex;gap:12px;flex-wrap:wrap">
-              <a href="{% url 'maintenance_create_ticket_room' %}">+ Report an Issue</a>
-              <a href="{% url 'maintenance_locations' %}">Manage Locations</a>
-            </div>
-
+<div class="maintenance-dashboard">
+    <header class="md-header">
+        <div>
+            <p class="md-eyebrow">Facilities &amp; engineering</p>
+            <h2>Maintenance Control Centre</h2>
+            <p class="md-subtitle">Monitor work orders, equipment care and maintenance spending.</p>
         </div>
-
-        <table style="
-            width:100%;
-            border-collapse:collapse;
-        ">
-
-            <thead style="background:#eee;">
-
-                <tr>
-                    <th style="padding:10px;">Location</th>
-                    <th>Problem</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Assigned To</th>
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                {% for ticket in active_tickets %}
-
-                <tr style="
-                    border-bottom:1px solid #ddd;
-                ">
-
-                    <td style="padding:10px;">
-
-                        <a href="{% url 'maintenance_ticket_detail' ticket.id %}">
-                            {% if ticket.room_id %}Room {{ ticket.room.room_number }}{% elif ticket.location_id %}{{ ticket.location.name }}{% else %}Location not set{% endif %}
-                        </a>
-
-                    </td>
-
-                    <td>
-                        {{ ticket.description|truncatechars:60 }}
-                    </td>
-
-                    <td>
-                        {{ ticket.get_priority_display }}
-                    </td>
-
-                    <td>
-                        {{ ticket.get_status_display }}
-                    </td>
-
-                    <td>
-
-                        {% if ticket.assigned_to %}
-                            {{ ticket.assigned_to }}
-                        {% else %}
-                            —
-                        {% endif %}
-
-                    </td>
-
-                </tr>
-
-                {% empty %}
-
-                <tr>
-
-                    <td
-                        colspan="5"
-                        style="
-                            padding:20px;
-                            text-align:center;
-                        "
-                    >
-                        No active maintenance work orders.
-                    </td>
-
-                </tr>
-
-                {% endfor %}
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-
-    <!-- COST SUMMARY -->
-
-    <div>
-
-        <h3>Maintenance Cost</h3>
-
-        <p>
-            <strong>This Month</strong>
-        </p>
-
-        <div style="
-            border:1px solid #ddd;
-            padding:20px;
-            border-radius:6px;
-        ">
-
-            <div>
-                Materials:
-                <strong>
-                    ₦{{ material_cost|floatformat:2 }}
-                </strong>
-            </div>
-
-            <br>
-
-            <div>
-                Labour:
-                <strong>
-                    ₦{{ labour_cost|floatformat:2 }}
-                </strong>
-            </div>
-
-            <br>
-
-            <div>
-                Outsourced:
-                <strong>
-                    ₦{{ outsourced_labour_cost|floatformat:2 }}
-                </strong>
-            </div>
-
-            <hr>
-
-            <div style="font-size:20px;">
-
-                Total:
-                <strong>
-                    ₦{{ total_maintenance_cost|floatformat:2 }}
-                </strong>
-
-            </div>
-
+        <div class="md-actions">
+            <a class="md-btn" href="{% url 'maintenance_work_orders' %}">View work orders</a>
+            <a class="md-btn md-btn-primary" href="{% url 'maintenance_create_ticket_room' %}">＋ Report an issue</a>
         </div>
+    </header>
 
+    <section class="md-kpis" aria-label="Maintenance performance">
+        <div class="md-card md-kpi">
+            <span class="md-kpi-mark blue"></span>
+            <div class="md-kpi-label">Open tickets</div>
+            <strong class="md-kpi-value">{{ open_count }}</strong>
+            <div class="md-kpi-note">Awaiting action</div>
+        </div>
+        <div class="md-card md-kpi">
+            <span class="md-kpi-mark amber"></span>
+            <div class="md-kpi-label">In progress</div>
+            <strong class="md-kpi-value">{{ in_progress_count }}</strong>
+            <div class="md-kpi-note">Currently being worked on</div>
+        </div>
+        <div class="md-card md-kpi">
+            <span class="md-kpi-mark red"></span>
+            <div class="md-kpi-label">High priority</div>
+            <strong class="md-kpi-value">{{ high_priority_count }}</strong>
+            <div class="md-kpi-note">Unresolved urgent issues</div>
+        </div>
+        <div class="md-card md-kpi">
+            <span class="md-kpi-mark green"></span>
+            <div class="md-kpi-label">Completed this month</div>
+            <strong class="md-kpi-value">{{ completed_this_month }}</strong>
+            <div class="md-kpi-note">Resolved maintenance tickets</div>
+        </div>
+    </section>
+
+    <div class="md-main-grid">
+        <section class="md-card md-panel">
+            <div class="md-panel-head">
+                <div>
+                    <h3>Active work orders</h3>
+                    <p>Open issues and jobs currently in progress</p>
+                </div>
+                <a class="md-text-link" href="{% url 'maintenance_work_orders' %}">All work orders →</a>
+            </div>
+            <div class="md-table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Location / asset</th>
+                            <th>Issue</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th>Assigned to</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in active_tickets %}
+                        <tr>
+                            <td>
+                                <a class="md-row-link" href="{% url 'maintenance_ticket_detail' ticket.id %}">
+                                    {% if ticket.room_id %}Room {{ ticket.room.room_number }}{% elif ticket.location_id %}{{ ticket.location.name }}{% else %}Location not set{% endif %}
+                                </a>
+                                {% if ticket.asset_id %}<div class="md-muted">{{ ticket.asset.asset_tag }} · {{ ticket.asset.name }}</div>{% endif %}
+                            </td>
+                            <td>{{ ticket.description|truncatechars:54 }}</td>
+                            <td>
+                                {% if ticket.priority == "HIGH" %}<span class="md-pill md-pill-high">{{ ticket.get_priority_display }}</span>
+                                {% elif ticket.priority == "MEDIUM" %}<span class="md-pill md-pill-medium">{{ ticket.get_priority_display }}</span>
+                                {% else %}<span class="md-pill md-pill-low">{{ ticket.get_priority_display }}</span>{% endif %}
+                            </td>
+                            <td>
+                                {% if ticket.status == "IN_PROGRESS" %}<span class="md-pill md-pill-progress">{{ ticket.get_status_display }}</span>
+                                {% else %}<span class="md-pill">{{ ticket.get_status_display }}</span>{% endif %}
+                            </td>
+                            <td>{% if ticket.assigned_to %}{{ ticket.assigned_to }}{% else %}<span class="md-muted">Unassigned</span>{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="md-empty">No active maintenance work orders. You're all caught up.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <aside class="md-card md-panel">
+            <div class="md-panel-head">
+                <div>
+                    <h3>Maintenance spending</h3>
+                    <p>Recorded costs this month</p>
+                </div>
+            </div>
+            <div class="md-cost-total">
+                <span>Total maintenance cost</span>
+                <strong>₦{{ total_maintenance_cost|floatformat:2 }}</strong>
+            </div>
+            <div class="md-cost-line"><span>Materials</span><strong>₦{{ material_cost|floatformat:2 }}</strong></div>
+            <div class="md-cost-line"><span>Labour</span><strong>₦{{ labour_cost|floatformat:2 }}</strong></div>
+            <div class="md-cost-line"><span>Outsourced labour</span><strong>₦{{ outsourced_labour_cost|floatformat:2 }}</strong></div>
+            <p class="md-muted" style="font-size:11px;line-height:1.5;margin:13px 0 0;">Costs are based on material and labour entries recorded during the current month.</p>
+        </aside>
     </div>
 
+    <section class="md-section">
+        <div class="md-section-title">
+            <h3>Preventive maintenance</h3>
+            <a class="md-text-link" href="{% url 'maintenance_schedules' %}">Manage schedules →</a>
+        </div>
+        <div class="md-preventive-kpis">
+            <div class="md-card md-mini-kpi">
+                <span>Overdue</span>
+                <strong>{{ preventive_overdue }}</strong>
+            </div>
+            <div class="md-card md-mini-kpi">
+                <span>Due today</span>
+                <strong>{{ preventive_due_today }}</strong>
+            </div>
+            <div class="md-card md-mini-kpi">
+                <span>Due in the next 7 days</span>
+                <strong>{{ preventive_upcoming }}</strong>
+            </div>
+        </div>
+        <div class="md-card md-panel">
+            <div class="md-table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Equipment / asset</th>
+                            <th>Assigned location</th>
+                            <th>Maintenance task</th>
+                            <th>Next due</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for schedule in preventive_schedules %}
+                        <tr>
+                            <td><strong>{{ schedule.asset.name }}</strong><div class="md-muted">{{ schedule.asset.asset_tag }}</div></td>
+                            <td>
+                                {% if schedule.asset.room_id %}Room {{ schedule.asset.room.room_number }}
+                                {% elif schedule.asset.location_id %}{{ schedule.asset.location.name }}
+                                {% else %}Hotel-wide / unassigned{% endif %}
+                            </td>
+                            <td>{{ schedule.name }}</td>
+                            <td>
+                                {% if schedule.next_due_date < today %}<span class="md-pill md-pill-high">{{ schedule.next_due_date|date:"d M Y" }} · Overdue</span>
+                                {% elif schedule.next_due_date == today %}<span class="md-pill md-pill-medium">Today</span>
+                                {% else %}{{ schedule.next_due_date|date:"d M Y" }}{% endif %}
+                            </td>
+                            <td>
+                                {% if schedule.next_due_date <= today %}
+                                <a class="md-btn md-btn-primary" href="{% url 'maintenance_schedule_work_order' schedule.id %}">Create work order</a>
+                                {% else %}<span class="md-muted">Upcoming</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="md-empty">No preventive maintenance due within the next 7 days.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="md-section">
+        <div class="md-section-title"><h3>Maintenance workspace</h3></div>
+        <div class="md-shortcuts">
+            <a class="md-shortcut" href="{% url 'maintenance_work_orders' %}"><span class="md-shortcut-icon">▤</span>Work orders</a>
+            <a class="md-shortcut" href="{% url 'maintenance_work_history' %}"><span class="md-shortcut-icon">◷</span>Work history</a>
+            <a class="md-shortcut" href="{% url 'maintenance_assets' %}"><span class="md-shortcut-icon">⚙</span>Equipment register</a>
+            <a class="md-shortcut" href="{% url 'maintenance_schedules' %}"><span class="md-shortcut-icon">▦</span>Maintenance schedules</a>
+            <a class="md-shortcut" href="{% url 'maintenance_stock' %}"><span class="md-shortcut-icon">▣</span>Maintenance stock</a>
+            <a class="md-shortcut" href="{% url 'maintenance_stock_movements' %}"><span class="md-shortcut-icon">⇄</span>Stock movements</a>
+            <a class="md-shortcut" href="{% url 'maintenance_request_stock' %}"><span class="md-shortcut-icon">＋</span>Request stock</a>
+            <a class="md-shortcut" href="{% url 'maintenance_stock_requests' %}"><span class="md-shortcut-icon">☷</span>My stock requests</a>
+            <a class="md-shortcut" href="{% url 'maintenance_products' %}"><span class="md-shortcut-icon">◫</span>Maintenance products</a>
+            <a class="md-shortcut" href="{% url 'maintenance_suppliers' %}"><span class="md-shortcut-icon">♧</span>Suppliers</a>
+            <a class="md-shortcut" href="{% url 'maintenance_locations' %}"><span class="md-shortcut-icon">⌖</span>Manage locations</a>
+            <a class="md-shortcut" href="{% url 'maintenance_create_ticket_room' %}"><span class="md-shortcut-icon">＋</span>Report an issue</a>
+        </div>
+    </section>
 </div>
-
-<!-- ===================================================== -->
-<!-- PREVENTIVE MAINTENANCE -->
-<!-- ===================================================== -->
-
-<hr style="margin-top:30px;">
-
-<div style="
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:15px;
-">
-
-    <h3 style="margin:0;">
-        Preventive Maintenance
-    </h3>
-
-    <a href="{% url 'maintenance_schedules' %}">
-        View All Schedules →
-    </a>
-
-</div>
-
-<div style="
-    display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:15px;
-    margin-bottom:20px;
-">
-
-    <div style="
-        border:1px solid #ddd;
-        padding:15px;
-        border-radius:6px;
-    ">
-        <div>Overdue</div>
-        <strong style="font-size:24px;">
-            {{ preventive_overdue }}
-        </strong>
-    </div>
-
-    <div style="
-        border:1px solid #ddd;
-        padding:15px;
-        border-radius:6px;
-    ">
-        <div>Due Today</div>
-        <strong style="font-size:24px;">
-            {{ preventive_due_today }}
-        </strong>
-    </div>
-
-    <div style="
-        border:1px solid #ddd;
-        padding:15px;
-        border-radius:6px;
-    ">
-        <div>Due Within 7 Days</div>
-        <strong style="font-size:24px;">
-            {{ preventive_upcoming }}
-        </strong>
-    </div>
-
-</div>
-
-<table style="
-    width:100%;
-    border-collapse:collapse;
-">
-
-    <thead style="background:#eee;">
-
-        <tr>
-            <th style="padding:10px;">Asset</th>
-            <th>Room</th>
-            <th>Maintenance</th>
-            <th>Due Date</th>
-            <th>Action</th>
-        </tr>
-
-    </thead>
-
-    <tbody>
-
-        {% for schedule in preventive_schedules %}
-
-        <tr style="
-            border-bottom:1px solid #ddd;
-        ">
-
-            <td style="padding:10px;">
-                {{ schedule.asset.name }}
-            </td>
-
-            <td>
-                {% if schedule.asset.room %}
-                    Room {{ schedule.asset.room.room_number }}
-                {% else %}
-                    —
-                {% endif %}
-            </td>
-
-            <td>
-                {{ schedule.name }}
-            </td>
-
-            <td>
-                {{ schedule.next_due_date }}
-            </td>
-
-            <td>
-
-                {% if schedule.next_due_date <= today %}
-
-                    <a href="{% url 'maintenance_schedule_work_order' schedule.id %}">
-                        <button type="button">
-                            Create Work Order
-                        </button>
-                    </a>
-
-                {% else %}
-
-                    —
-                    
-                {% endif %}
-
-            </td>
-
-        </tr>
-
-        {% empty %}
-
-        <tr>
-
-            <td
-                colspan="5"
-                style="
-                    padding:20px;
-                    text-align:center;
-                "
-            >
-                No preventive maintenance due within 7 days.
-            </td>
-
-        </tr>
-
-        {% endfor %}
-
-    </tbody>
-
-</table>
-
-
-<!-- ===================================================== -->
-<!-- QUICK ACTIONS -->
-<!-- ===================================================== -->
-
-<hr style="margin-top:30px;">
-
-<h3>Quick Actions</h3>
-
-<div style="
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-">
-
-    <a href="{% url 'maintenance_create_ticket_room' %}">
-        <button type="button">
-            + Create Ticket
-        </button>
-    </a>
-
-    <a href="{% url 'maintenance_work_orders' %}">
-        <button type="button">
-            Work Orders
-        </button>
-    </a>
-
-    <a href="{% url 'maintenance_work_history' %}">
-        <button type="button">
-            Work History
-        </button>
-    </a>
-
-    <a href="{% url 'maintenance_stock' %}">
-        <button type="button">
-            Maintenance Stock
-        </button>
-    </a>
-
-    <a href="{% url 'maintenance_stock_movements' %}">
-        <button type="button">
-            Stock Movements
-        </button>
-    </a>
-
-    <a href="{% url 'maintenance_request_stock' %}">
-        <button type="button">
-            Request Stock
-        </button>
-    </a>
-
-    <a href="{% url 'maintenance_stock_requests' %}">
-        <button type="button">
-            My Stock Requests
-        </button>
-    </a>
-    <a href="{% url 'maintenance_suppliers' %}">
-        <button type="button">
-            Maintenance Suppliers
-        </button>
-    </a>
-
-    <a href="{% url 'maintenance_assets' %}">
-        <button type="button">
-            Maintenance Assets
-        </button>
-    </a>
-    <a href="{% url 'maintenance_products' %}">
-        <button type="button">
-            Maintenance Products
-        </button>
-    </a>
-
-    <a href="{% url 'maintenance_schedules' %}">
-        <button type="button">
-            Preventive Maintenance
-        </button>
-    </a>
-
-</div>
-
 {% endblock %}
