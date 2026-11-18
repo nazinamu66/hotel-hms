@@ -2,6 +2,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.db.models import Sum
 
 from inventory.models import Stock, StockCostLayer
 from .models import ProductionBatch
@@ -46,7 +47,7 @@ def build_event_ingredient_plan(event, kitchen):
             ProductionBatch.objects.filter(
                 event_order_line=line,
                 is_executed=True,
-            ).aggregate(total=__import__("django.db.models", fromlist=["Sum"]).Sum("quantity_produced"))["total"]
+            ).aggregate(total=Sum("quantity_produced"))["total"]
             or 0
         )
         outstanding_portions = max(
