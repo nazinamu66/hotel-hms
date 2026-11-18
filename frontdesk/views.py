@@ -1469,7 +1469,7 @@ def checkout(request, room_id):
     reason = request.POST.get("reason", "").strip()
 
     try:
-        checkout_guest(room=room, user=request.user, reason=reason)
+        folio = checkout_guest(room=room, user=request.user, reason=reason)
 
     except ValidationError as e:
 
@@ -1500,7 +1500,7 @@ def checkout(request, room_id):
         f"Room {room.room_number} checked out successfully.",
     )
 
-    return redirect("/frontdesk/")
+    return redirect("frontdesk_invoice", folio.pk)
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR", "FRONTDESK")
 @transaction.atomic
