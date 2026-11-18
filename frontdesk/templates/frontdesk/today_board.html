@@ -68,7 +68,7 @@
     <section class="tb-stats" aria-label="Today's operational summary">
         <article class="tb-stat tb-stat-blue">
             <span class="tb-stat-icon">↓</span>
-            <div><span class="tb-stat-value">{{ arrivals|length }}</span><span class="tb-stat-label">Expected arrivals</span></div>
+            <div><span class="tb-stat-value">{{ arrival_count }}</span><span class="tb-stat-label">Expected arrivals</span></div>
         </article>
         <article class="tb-stat tb-stat-amber">
             <span class="tb-stat-icon">↑</span>
@@ -82,15 +82,30 @@
 
     <section class="tb-section tb-arrivals">
         <div class="tb-section-head">
-            <div><h2 class="tb-section-title"><span class="tb-mark"></span>Arrivals today</h2><p class="tb-section-note">Each room allocation scheduled to check in today</p></div>
+            <div><h2 class="tb-section-title"><span class="tb-mark"></span>Arrivals today</h2><p class="tb-section-note">Reservations and individual room allocations scheduled to check in today</p></div>
             <span class="tb-count">{{ arrivals|length }}</span>
         </div>
-        {% if arrivals %}
+        {% if arrivals or allocation_arrivals %}
             <div class="tb-table-wrap">
                 <table class="tb-table">
                     <thead><tr><th>Guest</th><th>Room category</th><th>Room assignment</th><th>Allocation</th><th>Action</th></tr></thead>
                     <tbody>
-                        {% for allocation in arrivals %}
+                        {% for r in arrivals %}
+                            <tr>
+                                <td><span class="tb-guest">{{ r.guest.full_name }}</span><span class="tb-sub">Reservation #{{ r.id }}</span></td>
+                                <td>{{ r.room_category.name }}</td>
+                                <td>{% if r.room %}Room {{ r.room.room_number }}{% else %}<span class="tb-status tb-status-amber">Assignment pending</span>{% endif %}</td>
+                                <td><span class="tb-status">Reservation</span></td>
+                                <td><div class="tb-actions">
+                                    <a class="tb-btn" href="{% url 'frontdesk_reservation_detail' r.id %}">Details</a>
+                                    <form method="post" action="{% url 'frontdesk_reservation_checkin' r.id %}" style="margin:0;">
+                                        {% csrf_token %}
+                                        <button class="tb-btn tb-btn-primary" type="submit" onclick="return confirm('Check in {{ r.guest.first_name }} {{ r.guest.last_name }} for reservation #{{ r.id }}?')">Check in →</button>
+                                    </form>
+                                </div></td>
+                            </tr>
+                        {% endfor %}
+                        {% for allocation in allocation_arrivals %}
                             <tr>
                                 <td><span class="tb-guest">{{ allocation.guest.full_name }}</span><span class="tb-sub">Reservation #{{ allocation.reservation_id }}</span></td>
                                 <td>{{ allocation.reservation.room_category.name }}</td>
@@ -109,7 +124,7 @@
                 </table>
             </div>
         {% else %}
-            <div class="tb-empty"><strong>No arrivals scheduled today</strong>There are no room allocations due to check in today.</div>
+            <div class="tb-empty"><strong>No arrivals scheduled today</strong>There are no reservations or room allocations due to check in today.</div>
         {% endif %}
     </section>
 
