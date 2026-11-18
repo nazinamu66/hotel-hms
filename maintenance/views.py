@@ -1314,6 +1314,7 @@ def maintenance_asset_create(request, asset_id=None):
         raise PermissionDenied
 
     selected_hotel_id = request.POST.get("hotel") if request.method == "POST" else request.GET.get("hotel")
+    selected_location_id = request.POST.get("location") if request.method == "POST" else request.GET.get("location")
     if selected_hotel_id:
         hotel = get_object_or_404(hotels, pk=selected_hotel_id)
     elif hotels.count() == 1:
@@ -1455,6 +1456,7 @@ def maintenance_asset_create(request, asset_id=None):
             "asset": asset,
             "is_edit": bool(asset),
             "condition_choices": MaintenanceAsset.CONDITION_CHOICES,
+            "selected_location_id": selected_location_id,
         },
     )
 
