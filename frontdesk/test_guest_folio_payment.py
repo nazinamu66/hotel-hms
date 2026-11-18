@@ -3,10 +3,11 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
-from billing.models import Charge, Folio, Guest, Reservation
+from billing.models import Charge, Folio, FolioBalanceWaiver, FolioCheckoutAuthorization, Guest, Reservation
 from rooms.models import Room, RoomCategory
 from inventory.models import Department, Hotel, Organization
 
@@ -254,6 +255,110 @@ class GuestFolioPaymentViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         checkout_guest.assert_called_once_with(room=room, user=self.user, reason="")
 
+
+    def test_frontdesk_cannot_checkout_with_an_outstanding_balance(self):
+        room, folio = self._create_active_stay_room(guest=self.guest)
+        Charge.objects.create(
+            folio=folio, description="Outstanding room charge",
+            department=self.frontdesk, amount=Decimal("2500.00"),
+            reference="GFP-CHECKOUT-BALANCE",
+        )
+
+        from frontdesk.workflows.checkout import checkout_guest
+        with self.assertRaises(ValidationError):
+            checkout_guest(room, self.user)
+
+        folio.refresh_from_db()
+        self.assertFalse(folio.is_closed)
+        self.assertEqual(folio.balance, Decimal("2500.00"))
+        self.assertEqual(FolioCheckoutAuthorization.objects.filter(folio=folio).count(), 0)
+
+    def test_manager_must_give_reason_and_checkout_keeps_guest_debt(self):
+        room, folio = self._create_active_stay_room(guest=self.guest)
+        Charge.objects.create(
+            folio=folio, description="Outstanding room charge",
+            department=self.frontdesk, amount=Decimal("2500.00"),
+            reference="GFP-MANAGER-CHECKOUT",
+        )
+        User = get_user_model()
+        manager = User.objects.create_user(
+            username="guest_folio_manager", password="test-password",
+            role="MANAGER", hotel=self.hotel, department=self.frontdesk,
+        )
+        from frontdesk.workflows.checkout import checkout_guest
+
+        with self.assertRaises(ValidationError):
+            checkout_guest(room, manager)
+
+        checkout_guest(room, manager, reason="Guest departure approved; debt remains collectible")
+        folio.refresh_from_db()
+        authorization = FolioCheckoutAuthorization.objects.get(folio=folio)
+        self.assertTrue(folio.is_closed)
+        self.assertEqual(folio.balance, Decimal("2500.00"))
+        self.assertEqual(authorization.approved_by, manager)
+        self.assertEqual(authorization.outstanding_balance, Decimal("2500.00"))
+        self.assertEqual(authorization.reason, "Guest departure approved; debt remains collectible")
+
+    def test_director_can_partially_and_fully_waive_balance_with_journals(self):
+        room, folio = self._create_active_stay_room(guest=self.guest)
+        Charge.objects.create(
+            folio=folio, description="Outstanding room charge",
+            department=self.frontdesk, amount=Decimal("2500.00"),
+            reference="GFP-DIRECTOR-WAIVER",
+        )
+        User = get_user_model()
+        director = User.objects.create_user(
+            username="guest_folio_director", password="test-password",
+            role="DIRECTOR", organization=self.hotel.organization,
+        )
+        from billing.services.folio_waiver import waive_folio_balance
+        from accounting.models import JournalEntry
+
+        partial = waive_folio_balance(
+            folio_id=folio.pk, amount="1000.00",
+            reason="Approved partial settlement", user=director,
+        )
+        self.assertEqual(partial.amount, Decimal("1000.00"))
+        folio.refresh_from_db()
+        self.assertEqual(folio.balance, Decimal("1500.00"))
+        self.assertTrue(
+            JournalEntry.objects.filter(
+                hotel=self.hotel, reference=partial.journal_reference,
+            ).exists()
+        )
+
+        full = waive_folio_balance(
+            folio_id=folio.pk, amount="1500.00",
+            reason="Final balance approved for write-off", user=director,
+        )
+        folio.refresh_from_db()
+        self.assertEqual(folio.balance, Decimal("0.00"))
+        self.assertEqual(FolioBalanceWaiver.objects.filter(folio=folio).count(), 2)
+        self.assertTrue(
+            JournalEntry.objects.filter(
+                hotel=self.hotel, reference=full.journal_reference,
+            ).exists()
+        )
+
+    def test_manager_cannot_waive_folio_balance(self):
+        room, folio = self._create_active_stay_room(guest=self.guest)
+        Charge.objects.create(
+            folio=folio, description="Outstanding room charge",
+            department=self.frontdesk, amount=Decimal("2500.00"),
+            reference="GFP-MANAGER-WAIVER",
+        )
+        User = get_user_model()
+        manager = User.objects.create_user(
+            username="guest_folio_manager_waiver", password="test-password",
+            role="MANAGER", hotel=self.hotel, department=self.frontdesk,
+        )
+        from billing.services.folio_waiver import waive_folio_balance
+
+        with self.assertRaises(ValidationError):
+            waive_folio_balance(
+                folio_id=folio.pk, amount="500.00",
+                reason="Not authorised", user=manager,
+            )
 
     def test_reservation_calendar_reuses_category_day_availability(self):
         category, _ = RoomCategory.objects.get_or_create(
