@@ -5,6 +5,7 @@ def get_active_folios(hotel):
 
     return (
         Folio.objects
+        .select_for_update()
         .filter(
             folio_type="ROOM",
             hotel=hotel,
