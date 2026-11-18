@@ -1,161 +1,38 @@
 {% extends "base/base.html" %}
-
-{% block title %}
-Add Material - Maintenance #{{ ticket.id }}
-{% endblock %}
-
+{% block title %}Add Material · Work Order #{{ ticket.id }}{% endblock %}
 {% block content %}
-
-<h2>
-    Add Maintenance Material
-</h2>
-
-<p>
-    <strong>Work Order:</strong>
-    #{{ ticket.id }}
-</p>
-
-<p>
-    <strong>Room:</strong>
-    {{ ticket.room.room_number }}
-</p>
-
-<hr>
-
-<form method="post">
-
-    {% csrf_token %}
-
-    <p>
-
-        <label for="product">
-            <strong>Material</strong>
-        </label>
-
-        <br>
-
-        <select
-            name="product"
-            id="product"
-            required
-            onchange="updateStock()"
-        >
-
-            <option value="">
-                Select material
-            </option>
-
-            {% for row in product_rows %}
-
-            <option
-                value="{{ row.product.id }}"
-                data-stock="{{ row.stock }}"
-                data-unit="{{ row.product.base_unit }}"
-            >
-                {{ row.product.name }}
-            </option>
-
-            {% endfor %}
-
-        </select>
-
-    </p>
-
-    <p>
-
-        <strong>Available:</strong>
-
-        <span id="available_stock">
-            —
-        </span>
-
-        <span id="available_unit">
-        </span>
-
-    </p>
-
-    <p>
-
-        <label for="quantity">
-            <strong>Quantity Used</strong>
-        </label>
-
-        <br>
-
-        <input
-            type="number"
-            name="quantity"
-            id="quantity"
-            min="0.01"
-            step="0.01"
-            required
-        >
-
-        <span id="unit"></span>
-
-    </p>
-
-    <p>
-
-        <label for="description">
-            <strong>Description</strong>
-        </label>
-
-        <br>
-
-        <textarea
-            name="description"
-            id="description"
-            style="width:500px;height:100px;"
-            placeholder="Describe how the material was used..."
-        ></textarea>
-
-    </p>
-
-    <button type="submit">
-        Consume Material
-    </button>
-
-    <a
-        href="{% url 'maintenance_ticket_detail' ticket.id %}"
-    >
-        Cancel
-    </a>
-
-</form>
-
+<style>
+.ma-page{max-width:1040px;margin:0 auto;color:#172033}.ma-head{margin-bottom:20px}.ma-kicker{margin:0 0 5px;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.ma-head h2{margin:0;font-size:28px;letter-spacing:-.035em}.ma-sub{color:#667085;font-size:13px;line-height:1.6}
+.ma-card{border:1px solid #e2e8f0;border-radius:15px;background:#fff;box-shadow:0 7px 22px rgba(15,23,42,.05);overflow:hidden}.ma-card-head{padding:17px 20px;border-bottom:1px solid #edf0f5}.ma-card-head h3{margin:0;font-size:15px}.ma-body{padding:22px}.ma-context{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}.ma-chip{padding:9px 12px;border-radius:9px;background:#f8fafc;color:#475467;font-size:12px}.ma-chip strong{color:#172033}
+.ma-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:17px}.ma-field{display:block;color:#475467;font-size:12px;font-weight:750}.ma-field input,.ma-field select,.ma-field textarea{display:block;width:100%;min-height:44px;margin-top:7px;padding:10px 12px;border:1px solid #d5dce7;border-radius:9px;background:#fff;color:#263449;font:inherit;font-size:13px}.ma-field textarea{min-height:105px;resize:vertical}.ma-wide{grid-column:1/-1}.ma-stock{display:flex;align-items:center;gap:8px;margin-top:10px;padding:11px 13px;border-radius:9px;background:#eff8ff;color:#175cd3;font-size:12px;font-weight:750}.ma-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:20px}.ma-btn{display:inline-flex;align-items:center;justify-content:center;min-height:43px;padding:0 15px;border:1px solid #d5dce7;border-radius:9px;background:#fff;color:#344054;text-decoration:none;font-size:12px;font-weight:750}.ma-submit{background:#175cd3;border-color:#175cd3;color:#fff}
+@media(max-width:620px){.ma-body{padding:16px}.ma-form-grid{grid-template-columns:1fr}.ma-wide{grid-column:auto}.ma-actions{flex-direction:column-reverse}.ma-btn{width:100%}}
+</style>
+<div class="ma-page">
+<header class="ma-head"><p class="ma-kicker">Maintenance · Work order #{{ ticket.id }}</p><h2>Record material usage</h2><p class="ma-sub">Select a maintenance-store item and record the quantity consumed for this job. Stock is deducted when the material is recorded.</p></header>
+<section class="ma-card">
+ <div class="ma-card-head"><h3>Work order context</h3></div>
+ <div class="ma-body">
+  <div class="ma-context"><span class="ma-chip"><strong>Location:</strong> {% if ticket.room_id %}Room {{ ticket.room.room_number }}{% elif ticket.location_id %}{{ ticket.location.name }}{% endif %}</span><span class="ma-chip"><strong>Status:</strong> {{ ticket.get_status_display }}</span><span class="ma-chip"><strong>Priority:</strong> {{ ticket.get_priority_display }}</span></div>
+  <form method="post">{% csrf_token %}
+   <div class="ma-form-grid">
+    <label class="ma-field ma-wide" for="product">Material
+     <select name="product" id="product" required onchange="updateStock()"><option value="">Choose a material</option>{% for row in product_rows %}<option value="{{ row.product.id }}" data-stock="{{ row.stock }}" data-unit="{{ row.product.base_unit }}">{{ row.product.name }}</option>{% endfor %}</select>
+     <span class="ma-stock"><span>Available:</span><strong id="available_stock">—</strong><span id="available_unit"></span></span>
+    </label>
+    <label class="ma-field" for="quantity">Quantity used
+     <input type="number" name="quantity" id="quantity" min="0.01" step="0.01" required placeholder="Enter quantity">
+     <span class="ma-sub">Unit: <strong id="unit">—</strong></span>
+    </label>
+    <label class="ma-field ma-wide" for="description">Usage note (optional)
+     <textarea name="description" id="description" placeholder="Where and how was this material used?"></textarea>
+    </label>
+   </div>
+   <div class="ma-actions"><a class="ma-btn" href="{% url 'maintenance_ticket_detail' ticket.id %}">Cancel</a><button class="ma-btn ma-submit" type="submit">Record material usage</button></div>
+  </form>
+ </div>
+</section>
+</div>
 <script>
-
-function updateStock() {
-
-    const select =
-        document.getElementById("product");
-
-    const option =
-        select.options[select.selectedIndex];
-
-    const stock =
-        option.dataset.stock;
-
-    const unit =
-        option.dataset.unit;
-
-    document.getElementById(
-        "available_stock"
-    ).textContent =
-        stock || "0";
-
-    document.getElementById(
-        "available_unit"
-    ).textContent =
-        unit || "";
-
-    document.getElementById(
-        "unit"
-    ).textContent =
-        unit || "";
-}
-
+function updateStock(){const select=document.getElementById("product");const option=select.options[select.selectedIndex];const stock=option.dataset.stock;const unit=option.dataset.unit;document.getElementById("available_stock").textContent=stock||"0";document.getElementById("available_unit").textContent=unit||"";document.getElementById("unit").textContent=unit||"—";}
 </script>
-
 {% endblock %}
