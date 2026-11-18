@@ -95,7 +95,7 @@ class FrontdeskCheckoutWorkflowTests(TestCase):
 
         with self.assertRaisesMessage(
             ValidationError,
-            "Outstanding balance. Manager approval required.",
+            "Outstanding balance. Manager, Director or Admin approval required.",
         ):
             checkout_guest(self.room, self.frontdesk_user)
 
@@ -109,7 +109,7 @@ class FrontdeskCheckoutWorkflowTests(TestCase):
     def test_manager_can_authorise_checkout_with_outstanding_balance(self):
         self.make_charge()
 
-        checkout_guest(self.room, self.manager)
+        checkout_guest(self.room, self.manager, reason="Approved guest departure; debt remains due.")
 
         self.folio.refresh_from_db()
         self.room.refresh_from_db()
