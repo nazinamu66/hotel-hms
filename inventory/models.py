@@ -722,7 +722,7 @@ class PurchaseOrder(models.Model):
     def receive(self, user, quantities, notes="", asset_details=None):
         """Record one partial or complete physical delivery against this PO."""
         from maintenance.models import MaintenanceAsset, MaintenanceLocation
-        from frontdesk.models import Room
+        from rooms.models import Room
         from accounting.services.postings.purchase import post_inventory_receipt
 
         asset_details = asset_details or {}
