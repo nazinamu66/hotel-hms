@@ -1,72 +1,183 @@
 {% extends "base/base.html" %}
-{% block title %}Maintenance Locations{% endblock %}
+{% block title %}Maintenance Locations | Hotel HMS{% endblock %}
 {% block content %}
 <style>
-.locations-page{max-width:1200px;margin:0 auto;padding-bottom:30px;color:#1e293b}
-.locations-head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:22px}
-.locations-title{font-size:clamp(1.6rem,2.5vw,2.1rem);font-weight:800;letter-spacing:-.035em;margin:0}
-.locations-sub{color:#64748b;margin:7px 0 0}
-.locations-grid{display:grid;grid-template-columns:minmax(280px,.85fr) minmax(0,1.5fr);gap:20px}
-.locations-card{background:white;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 4px 16px rgba(15,23,42,.04);overflow:hidden}
-.locations-card h3{font-size:1rem;margin:0;padding:17px 20px;border-bottom:1px solid #e2e8f0}
-.locations-form{padding:20px}
-.locations-label{display:block;font-weight:700;margin:14px 0 6px}
-.locations-control{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font:inherit}
-.locations-btn{border:0;border-radius:9px;padding:11px 15px;background:#2563eb;color:white;font-weight:750;cursor:pointer;margin-top:18px}
-.locations-table{width:100%;border-collapse:collapse}
-.locations-table th{text-align:left;padding:12px;background:#f8fafc;color:#64748b;font-size:.75rem;text-transform:uppercase}
-.locations-table td{padding:13px 12px;border-top:1px solid #f1f5f9;vertical-align:top}
-.locations-muted{color:#64748b;font-size:.85rem}
-@media(max-width:800px){.locations-grid{grid-template-columns:1fr}}
+.location-workspace{color:#172033;max-width:1600px;margin:0 auto}
+.location-top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.location-heading h2{font-size:1.8rem;font-weight:800;margin:0 0 5px}
+.location-heading p{color:#64748b;margin:0}
+.location-actions{display:flex;gap:9px;flex-wrap:wrap}
+.location-btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid #dbe2ea;border-radius:9px;padding:9px 13px;text-decoration:none;font-weight:700;color:#334155;background:#fff}
+.location-btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
+.location-btn.danger{color:#b91c1c}
+.location-search{display:flex;gap:8px;margin-bottom:14px}
+.location-search input{min-width:0;flex:1;border:1px solid #dbe2ea;border-radius:9px;padding:10px 12px;font:inherit}
+.location-layout{display:grid;grid-template-columns:minmax(270px,350px) minmax(0,1fr);border:1px solid #e2e8f0;border-radius:15px;background:#fff;overflow:hidden;min-height:720px;box-shadow:0 8px 28px rgba(15,23,42,.045)}
+.location-sidebar{border-right:1px solid #e2e8f0;background:#fff}
+.location-sidebar-head{padding:17px 18px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center}
+.location-sidebar-head strong{font-size:1rem}
+.location-count{color:#64748b;font-size:.82rem}
+.location-list{max-height:680px;overflow-y:auto}
+.location-item{display:block;padding:15px 18px;border-bottom:1px solid #eef2f6;color:inherit;text-decoration:none;border-left:4px solid transparent}
+.location-item:hover{background:#f8fafc}
+.location-item.selected{background:#f1f5f9;border-left-color:#2563eb}
+.location-item strong{display:block;font-size:.95rem}
+.location-item small{display:block;color:#64748b;margin-top:4px}
+.location-item-meta{display:flex;gap:7px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.location-pill{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:.72rem;font-weight:750;background:#f1f5f9;color:#475569}
+.location-pill.active{background:#dcfce7;color:#166534}
+.location-pill.inactive{background:#fee2e2;color:#991b1b}
+.location-detail{min-width:0;padding:24px 26px}
+.location-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid #e5e7eb}
+.location-detail-head h3{font-size:1.45rem;margin:0 0 5px;font-weight:800}
+.location-subtitle{color:#64748b;font-size:.88rem}
+.location-section{padding:20px 0;border-bottom:1px solid #e5e7eb}
+.location-section:last-child{border-bottom:0}
+.location-section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:13px}
+.location-section-head h4{font-size:.9rem;margin:0;text-transform:uppercase;letter-spacing:.04em;color:#64748b}
+.location-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.location-fact small{display:block;color:#94a3b8;font-size:.72rem;text-transform:uppercase;font-weight:750;margin-bottom:5px}
+.location-fact strong{font-size:.94rem;overflow-wrap:anywhere}
+.location-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.location-stat{padding:14px;border:1px solid #e5e7eb;border-radius:11px;background:#fafafa}
+.location-stat strong{display:block;font-size:1.35rem}
+.location-stat span{font-size:.78rem;color:#64748b}
+.location-table-wrap{overflow-x:auto}
+.location-table{width:100%;border-collapse:collapse;white-space:nowrap}
+.location-table th{text-align:left;color:#64748b;background:#f8fafc;font-size:.72rem;text-transform:uppercase;padding:11px}
+.location-table td{padding:12px 11px;border-top:1px solid #edf2f7;font-size:.88rem}
+.location-table a{color:#2563eb;text-decoration:none;font-weight:700}
+.location-empty{padding:28px;text-align:center;color:#64748b;background:#f8fafc;border-radius:10px}
+.location-edit-form{margin-top:14px;padding:18px;border:1px solid #dbe2ea;border-radius:12px;background:#f8fafc}
+.location-edit-form h4{margin:0 0 14px}
+.location-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.location-form-field label{display:block;font-size:.8rem;font-weight:750;margin-bottom:5px}
+.location-form-field input,.location-form-field select,.location-form-field textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:9px;background:#fff;font:inherit}
+.location-form-field.full{grid-column:1/-1}
+.location-form-actions{display:flex;gap:9px;align-items:center;margin-top:14px}
+.location-dept-select{min-height:95px}
+@media(max-width:900px){.location-layout{grid-template-columns:280px minmax(0,1fr)}.location-detail{padding:18px}}
+@media(max-width:680px){.location-layout{grid-template-columns:1fr}.location-sidebar{border-right:0;border-bottom:1px solid #e2e8f0}.location-list{max-height:260px}.location-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.location-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.location-detail{padding:16px}.location-form-grid{grid-template-columns:1fr}}
 </style>
-<div class="locations-page">
-  <div class="locations-head"><div><div class="locations-muted">ADMINISTRATION · ASSET CONFIGURATION</div><h2 class="locations-title">Hotel locations</h2><p class="locations-sub">Configure hotel areas used for equipment assignment and property-issue reporting. Maintenance and Manager users can manage their assigned hotel; Admin and Director users can manage accessible hotels.</p></div><a href="{% url 'maintenance_dashboard' %}">Back to dashboard</a></div>
-  <div class="locations-grid">
-    <section class="locations-card">
-      <h3>{% if edit_location %}Edit location{% else %}Add a location{% endif %}</h3>
-      <form class="locations-form" method="post" {% if edit_location %}action="{% url 'maintenance_location_edit' edit_location.id %}"{% endif %}>
-        {% csrf_token %}
-        {% if edit_location %}
-        <label class="locations-label">Hotel</label>
-        <input class="locations-control" value="{{ edit_location.hotel.name }}" disabled>
-        {% else %}
-        <label class="locations-label" for="location-hotel">Hotel</label>
-        <select class="locations-control" name="hotel" id="location-hotel" required>
-          {% for hotel in hotels %}<option value="{{ hotel.id }}">{{ hotel.name }}</option>{% endfor %}
-        </select>
-        {% endif %}
-        <label class="locations-label" for="location-name">Location name</label>
-        <input class="locations-control" id="location-name" name="name" required maxlength="150" value="{{ edit_location.name|default:'' }}" placeholder="e.g. Main Laundry">
-        <label class="locations-label" for="location-type">Location type</label>
-        <select class="locations-control" id="location-type" name="location_type" required>
-          {% for value,label in location_types %}<option value="{{ value }}" {% if edit_location and edit_location.location_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
-        </select>
-        <label class="locations-label" for="location-description">Description (optional)</label>
-        <textarea class="locations-control" id="location-description" name="description" rows="3" placeholder="Building, floor, or useful directions">{{ edit_location.description|default:'' }}</textarea>
-        <label class="locations-label" for="location-departments">Responsible departments (optional)</label>
-        <select class="locations-control" id="location-departments" name="departments" multiple size="5">
-          {% for department in departments %}<option value="{{ department.id }}" {% if edit_location and department in edit_location.responsible_departments.all %}selected{% endif %}>{{ department.hotel.name }} · {{ department.name }}</option>{% endfor %}
-        </select>
-        <p class="locations-muted">If you assign departments, reporting access is restricted to those departments. Leave blank to use the default role-to-area rules.</p>
-        <button class="locations-btn" type="submit">{% if edit_location %}Save changes{% else %}Create location{% endif %}</button>{% if edit_location %} <a href="{% url 'maintenance_locations' %}">Cancel</a>{% endif %}
+<div class="location-workspace">
+  <header class="location-top">
+    <div class="location-heading">
+      <h2>Maintenance Locations</h2>
+      <p>Explore hotel areas, assigned equipment and maintenance activity.</p>
+    </div>
+    <div class="location-actions">
+      <a class="location-btn" href="{% url 'maintenance_dashboard' %}">Back to dashboard</a>
+      <a class="location-btn primary" href="#location-create">＋ Add location</a>
+    </div>
+  </header>
+
+  <div class="location-layout">
+    <aside class="location-sidebar">
+      <div class="location-sidebar-head"><strong>All locations</strong><span class="location-count">{{ locations|length }} locations</span></div>
+      <form class="location-search" method="get" style="padding:12px 12px 0">
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Search locations...">
+        <button class="location-btn" type="submit">Search</button>
       </form>
-    </section>
-    <section class="locations-card">
-      <h3>Configured locations ({{ locations|length }})</h3>
-      <div style="overflow-x:auto"><table class="locations-table">
-        <thead><tr><th>Hotel / Location</th><th>Type</th><th>Responsible departments</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-          {% for location in locations %}
-          <tr>
-            <td><strong>{{ location.name }}</strong><div class="locations-muted">{{ location.hotel.name }}</div>{% if location.description %}<div class="locations-muted">{{ location.description }}</div>{% endif %}</td>
-            <td>{{ location.get_location_type_display }}</td>
-            <td>{% for department in location.responsible_departments.all %}{{ department.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="locations-muted">Role-based defaults</span>{% endfor %}</td>
-            <td>{{ location.get_status_display }}</td><td><a href="{% url 'maintenance_location_edit' location.id %}">Edit</a> · <form method="post" action="{% url 'maintenance_location_toggle_status' location.id %}" style="display:inline">{% csrf_token %}<button type="submit" style="border:0;background:none;color:#2563eb;cursor:pointer;font:inherit">{% if location.is_active %}Deactivate{% else %}Reactivate{% endif %}</button></form></td>
-          </tr>
-          {% empty %}<tr><td colspan="5" class="locations-muted" style="padding:24px">No locations have been configured yet.</td></tr>{% endfor %}
-        </tbody>
-      </table></div>
-    </section>
+      <div class="location-list">
+        {% for location in locations %}
+          <a class="location-item {% if selected_location and selected_location.id == location.id %}selected{% endif %}" href="{% url 'maintenance_locations' %}?location={{ location.id }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}">
+            <strong>{{ location.name }}</strong>
+            <small>{{ location.hotel.name }}{% if location.building %} · {{ location.building }}{% endif %}{% if location.floor %} · {{ location.floor }}{% endif %}</small>
+            <div class="location-item-meta">
+              <span class="location-pill {% if location.is_active %}active{% else %}inactive{% endif %}">{% if location.is_active %}Active{% else %}Inactive{% endif %}</span>
+              <span class="location-pill">{{ location.assets.count }} equipment</span>
+            </div>
+          </a>
+        {% empty %}
+          <div class="location-empty">No locations found. Add your first location below.</div>
+        {% endfor %}
+      </div>
+      <div id="location-create" class="location-edit-form" style="margin:14px">
+        <h4>{% if edit_location %}Edit location{% else %}Add a location{% endif %}</h4>
+        <form method="post" {% if edit_location %}action="{% url 'maintenance_location_edit' edit_location.id %}"{% endif %}>
+          {% csrf_token %}
+          <div class="location-form-grid">
+            {% if edit_location %}
+              <div class="location-form-field full"><label>Hotel</label><input value="{{ edit_location.hotel.name }}" disabled></div>
+            {% else %}
+              <div class="location-form-field full"><label for="loc-hotel">Hotel</label><select id="loc-hotel" name="hotel" required>{% for hotel in hotels %}<option value="{{ hotel.id }}">{{ hotel.name }}</option>{% endfor %}</select></div>
+            {% endif %}
+            <div class="location-form-field full"><label for="loc-name">Location name *</label><input id="loc-name" name="name" required maxlength="150" value="{{ edit_location.name|default:'' }}" placeholder="e.g. Generator Room"></div>
+            <div class="location-form-field"><label for="loc-type">Location type</label><select id="loc-type" name="location_type">{% for value,label in location_types %}<option value="{{ value }}" {% if edit_location and edit_location.location_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+            <div class="location-form-field"><label for="loc-code">Area code</label><input id="loc-code" name="area_code" value="{{ edit_location.area_code|default:'' }}" placeholder="e.g. PLT-GEN-01"></div>
+            <div class="location-form-field"><label for="loc-building">Building</label><input id="loc-building" name="building" value="{{ edit_location.building|default:'' }}" placeholder="e.g. Main Building"></div>
+            <div class="location-form-field"><label for="loc-floor">Floor</label><input id="loc-floor" name="floor" value="{{ edit_location.floor|default:'' }}" placeholder="e.g. Ground Floor"></div>
+            <div class="location-form-field full"><label for="loc-description">Description / directions</label><textarea id="loc-description" name="description" rows="2">{{ edit_location.description|default:'' }}</textarea></div>
+            <div class="location-form-field full"><label for="loc-departments">Responsible departments</label><select class="location-dept-select" id="loc-departments" name="departments" multiple>{% for department in departments %}<option value="{{ department.id }}" {% if edit_location and department in edit_location.responsible_departments.all %}selected{% endif %}>{{ department.hotel.name }} · {{ department.name }}</option>{% endfor %}</select></div>
+          </div>
+          <div class="location-form-actions">
+            <button class="location-btn primary" type="submit">{% if edit_location %}Save changes{% else %}Create location{% endif %}</button>
+            {% if edit_location %}<a class="location-btn" href="{% url 'maintenance_locations' %}?location={{ edit_location.id }}">Cancel</a>{% endif %}
+          </div>
+        </form>
+      </div>
+    </aside>
+
+    <main class="location-detail">
+      {% if selected_location %}
+        <div class="location-detail-head">
+          <div>
+            <h3>{{ selected_location.name }}</h3>
+            <div class="location-subtitle">{{ selected_location.hotel.name }} · {{ selected_location.get_location_type_display }}{% if selected_location.area_code %} · {{ selected_location.area_code }}{% endif %}</div>
+          </div>
+          <div class="location-actions">
+            <a class="location-btn" href="{% url 'maintenance_locations' %}?location={{ selected_location.id }}&edit={{ selected_location.id }}#location-create">Edit</a>
+            <a class="location-btn primary" href="{% url 'maintenance_asset_create' %}?hotel={{ selected_location.hotel_id }}&location={{ selected_location.id }}">＋ Register equipment</a>
+            <a class="location-btn" href="{% url 'maintenance_create_ticket_location' selected_location.id %}">Report issue</a>
+            <form method="post" action="{% url 'maintenance_location_toggle_status' selected_location.id %}">{% csrf_token %}<button class="location-btn danger" type="submit">{% if selected_location.is_active %}Deactivate{% else %}Reactivate{% endif %}</button></form>
+          </div>
+        </div>
+
+        <section class="location-section">
+          <div class="location-section-head"><h4>Location details</h4><span class="location-pill {% if selected_location.is_active %}active{% else %}inactive{% endif %}">{{ selected_location.get_status_display }}</span></div>
+          <div class="location-facts">
+            <div class="location-fact"><small>Building</small><strong>{{ selected_location.building|default:"Not specified" }}</strong></div>
+            <div class="location-fact"><small>Floor</small><strong>{{ selected_location.floor|default:"Not specified" }}</strong></div>
+            <div class="location-fact"><small>Area code</small><strong>{{ selected_location.area_code|default:"—" }}</strong></div>
+            <div class="location-fact"><small>Location type</small><strong>{{ selected_location.get_location_type_display }}</strong></div>
+            <div class="location-fact"><small>Responsible departments</small><strong>{% for department in selected_location.responsible_departments.all %}{{ department.name }}{% if not forloop.last %}, {% endif %}{% empty %}Role-based defaults{% endfor %}</strong></div>
+            <div class="location-fact"><small>Description</small><strong>{{ selected_location.description|default:"No description added" }}</strong></div>
+          </div>
+          <div class="location-stats">
+            <div class="location-stat"><strong>{{ location_equipment_count }}</strong><span>Equipment registered</span></div>
+            <div class="location-stat"><strong>{{ location_open_ticket_count }}</strong><span>Open work orders</span></div>
+            <div class="location-stat"><strong>{{ location_schedules|length }}</strong><span>Active schedules shown</span></div>
+          </div>
+        </section>
+
+        <section class="location-section">
+          <div class="location-section-head"><h4>Equipment assigned to this location</h4><a class="location-btn" href="{% url 'maintenance_assets' %}">All equipment</a></div>
+          {% if location_assets %}
+          <div class="location-table-wrap"><table class="location-table"><thead><tr><th>Asset tag</th><th>Equipment</th><th>Product</th><th>Condition</th><th>Status</th><th></th></tr></thead><tbody>
+            {% for asset in location_assets %}
+            <tr><td>{{ asset.asset_tag }}</td><td><strong>{{ asset.name }}</strong><br><small>{{ asset.asset_type }}</small></td><td>{{ asset.product.name|default:"Manual record" }}</td><td>{{ asset.get_condition_display }}</td><td>{% if asset.is_active %}Active{% else %}Inactive{% endif %}</td><td><a href="{% url 'maintenance_asset_edit' asset.id %}?hotel={{ asset.hotel_id }}">Edit</a></td></tr>
+            {% endfor %}
+          </tbody></table></div>
+          {% else %}<div class="location-empty">No equipment is assigned to this location yet.</div>{% endif %}
+        </section>
+
+        <section class="location-section">
+          <div class="location-section-head"><h4>Preventive maintenance schedules</h4><a class="location-btn" href="{% url 'maintenance_schedules' %}">All schedules</a></div>
+          {% if location_schedules %}
+          <div class="location-table-wrap"><table class="location-table"><thead><tr><th>Equipment</th><th>Schedule</th><th>Next due</th></tr></thead><tbody>{% for schedule in location_schedules %}<tr><td>{{ schedule.asset.name }}</td><td>{{ schedule.name }}</td><td>{{ schedule.next_due_date|date:"d M Y" }}</td></tr>{% endfor %}</tbody></table></div>
+          {% else %}<div class="location-empty">No active preventive schedules are linked to equipment here.</div>{% endif %}
+        </section>
+
+        <section class="location-section">
+          <div class="location-section-head"><h4>Inspection and maintenance history</h4><a class="location-btn" href="{% url 'maintenance_work_history' %}">View work history</a></div>
+          {% if location_tickets %}
+          <div class="location-table-wrap"><table class="location-table"><thead><tr><th>Work order</th><th>Issue</th><th>Reported</th><th>Assigned to</th><th>Status</th></tr></thead><tbody>{% for ticket in location_tickets %}<tr><td><a href="{% url 'maintenance_ticket_detail' ticket.id %}">#{{ ticket.id }}</a></td><td>{{ ticket.description|truncatechars:75 }}</td><td>{{ ticket.created_at|date:"d M Y" }}</td><td>{{ ticket.assigned_to|default:"Unassigned" }}</td><td>{{ ticket.get_status_display }}</td></tr>{% endfor %}</tbody></table></div>
+          {% else %}<div class="location-empty">No maintenance work orders have been recorded for this location.</div>{% endif %}
+        </section>
+      {% else %}
+        <div class="location-empty" style="margin-top:20px">Select a location from the list, or create your first location to get started.</div>
+      {% endif %}
+    </main>
   </div>
 </div>
 {% endblock %}
