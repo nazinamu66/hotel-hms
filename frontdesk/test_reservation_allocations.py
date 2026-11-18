@@ -280,6 +280,7 @@ class OrdinaryMultiRoomReservationTests(TestCase):
         restored = restore_room_allocation_from_no_show(first.pk, self.hotel)
         reservation.refresh_from_db()
         restored.refresh_from_db()
+        second.refresh_from_db()
         self.assertEqual(restored.status, "RESERVED")
         self.assertEqual(restored.room_id, self.room_one.pk)
         self.assertEqual(reservation.status, "RESERVED")
