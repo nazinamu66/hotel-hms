@@ -227,6 +227,15 @@ class ProductionBatch(models.Model):
         help_text="Immutable recipe snapshot pinned to this batch."
     )
 
+    event_order_line = models.ForeignKey(
+        "billing.EventOrderLine",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="production_batches",
+        help_text="Event food line fulfilled by this production batch.",
+    )
+
     quantity_produced = models.PositiveIntegerField(
         help_text="Number of units produced"
     )
@@ -391,6 +400,30 @@ class ProductionBatch(models.Model):
 
         if self.recipe_version.recipe_id != self.recipe_id:
             raise ValidationError("The pinned recipe version does not match this recipe.")
+
+        if self.event_order_line_id:
+            event_line = (
+                self.event_order_line.__class__.objects
+                .select_for_update()
+                .select_related("event", "recipe")
+                .get(pk=self.event_order_line_id)
+            )
+            if event_line.line_type != "FOOD" or event_line.recipe_id != self.recipe_id:
+                raise ValidationError("The production recipe must match the linked FOOD event line.")
+            if event_line.event.status != "RELEASED":
+                raise ValidationError("Event production is only allowed after the event is released to operations.")
+            if event_line.event.hotel_id != self.recipe.product.hotel_id:
+                raise ValidationError("The event and production recipe must belong to the same hotel.")
+            already_produced = (
+                self.__class__.objects
+                .filter(event_order_line=event_line, is_executed=True)
+                .exclude(pk=self.pk)
+                .aggregate(total=models.Sum("quantity_produced"))["total"] or 0
+            )
+            if already_produced + self.quantity_produced > event_line.quantity:
+                raise ValidationError(
+                    f"Production would exceed the event requirement of {event_line.quantity} portions."
+                )
 
         # Validate hotel and kitchen assignments against the pinned snapshot.
         self._validate_producer()
