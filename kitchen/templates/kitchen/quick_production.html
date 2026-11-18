@@ -469,6 +469,7 @@
 <script>
 const recipeSelect = document.getElementById("id_recipe");
 const portionsInput = document.getElementById("id_quantity_produced");
+const eventLineSelect = document.getElementById("id_event_order_line");
 const tableBody = document.getElementById("ingredients-body");
 const totalFormsInput = document.getElementById("id_ingredients-TOTAL_FORMS");
 
@@ -493,7 +494,10 @@ function loadIngredients() {
         return;
     }
 
-    fetch(`/kitchen/recipe/${recipeId}/ingredients/?qty=${portions}`)
+    const eventLineQuery = eventLineSelect && eventLineSelect.value
+        ? `&event_line=${encodeURIComponent(eventLineSelect.value)}`
+        : "";
+    fetch(`/kitchen/recipe/${recipeId}/ingredients/?qty=${portions}${eventLineQuery}`)
         .then(res => res.json())
         .then(data => {
 
@@ -609,6 +613,7 @@ function loadIngredients() {
 
 recipeSelect.addEventListener("change", loadIngredients);
 portionsInput.addEventListener("input", loadIngredients);
+if (eventLineSelect) eventLineSelect.addEventListener("change", loadIngredients);
 </script>
 
 {% endblock %}
