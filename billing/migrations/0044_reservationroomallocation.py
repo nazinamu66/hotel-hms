@@ -25,7 +25,7 @@ def backfill_ordinary_reservation_allocations(apps, schema_editor):
             Folio.objects.using(db_alias).filter(
                 reservation_id=reservation.pk,
                 folio_type="ROOM",
-            ).order_by("-is_closed", "-check_in_at", "-pk")
+            ).order_by("is_closed", "-check_in_at", "-pk")
         )
 
         # The legacy Reservation.room field represented the first/only room.
@@ -45,7 +45,7 @@ def backfill_ordinary_reservation_allocations(apps, schema_editor):
                     first_room_id = assigned_folio.room_id
 
         if reservation.status == "CHECKED_IN":
-            first_status = "CHECKED_IN" if assigned_folio and not assigned_folio.is_closed else "CHECKED_OUT"
+            first_status = (\n                "CHECKED_IN" if not assigned_folio or not assigned_folio.is_closed\n                else "CHECKED_OUT"\n            )
         elif reservation.status == "CANCELLED":
             first_status = "CANCELLED"
         elif reservation.status == "NO_SHOW":
