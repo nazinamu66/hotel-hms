@@ -618,9 +618,22 @@ def _invoice_pdf_response(context):
     ]))
     story.append(payment_table)
 
+    if context.get("balance_waivers"):
+        story.append(Paragraph("Approved balance waivers", styles["SectionHeading"]))
+        waiver_rows = [[p("Date","CellBold"), p("Reason / authorised by","CellBold"), p("Amount","CellBoldRight")]]
+        for waiver in context["balance_waivers"]:
+            approver = waiver.waived_by.get_full_name() or waiver.waived_by.username
+            waiver_rows.append([
+                p(waiver.waived_at.strftime("%d %b %Y, %H:%M")),
+                p(f"{waiver.reason} — {approver}"),
+                p(amount(waiver.amount), "CellRight"),
+            ])
+        story.append(Table(waiver_rows, colWidths=[42*mm, 94*mm, 42*mm], repeatRows=1))
+
     totals=[
         [p("Total charges","CellBold"),p(amount(context["total_charges"]),"CellBoldRight")],
         [p("Total payments","CellBold"),p(amount(context["total_payments"]),"CellBoldRight")],
+        [p("Total balance waivers","CellBold"),p(amount(context.get("total_waivers", 0)),"CellBoldRight")],
         [p("Outstanding balance","CellBold"),p(amount(context["balance"]),"CellBoldRight")],
     ]
     summary=Table(totals,colWidths=[65*mm,48*mm],hAlign="RIGHT")
