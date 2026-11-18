@@ -461,6 +461,12 @@ class TodayBoardAllocationTests(TestCase):
         second, second_room, second_folio = check_in_room_allocation(
             second.pk, self.hotel, self.user
         )
+        walkin_folio = Folio.objects.create(
+            folio_type="WALKIN",
+            hotel=self.hotel,
+            guest=self.primary_guest,
+            check_out_at=timezone.now() + timedelta(days=2),
+        )
 
         self.client.force_login(self.user)
         with patch("frontdesk.views.timezone.localdate", return_value=checkout_date):
@@ -474,6 +480,14 @@ class TodayBoardAllocationTests(TestCase):
         self.assertEqual(
             set(response.context["in_house"].values_list("pk", flat=True)),
             {first_folio.pk, second_folio.pk},
+        )
+        self.assertNotIn(
+            walkin_folio.pk,
+            response.context["departures"].values_list("pk", flat=True),
+        )
+        self.assertNotIn(
+            walkin_folio.pk,
+            response.context["in_house"].values_list("pk", flat=True),
         )
 
         # Checking out one room must not remove its sibling from the board.
