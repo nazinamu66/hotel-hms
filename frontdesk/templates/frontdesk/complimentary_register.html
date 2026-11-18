@@ -103,7 +103,7 @@
     <div class="cr-section-head"><h2 class="cr-section-title">Complimentary Rooms</h2><span class="cr-section-count">{{ room_count }} records</span></div>
     <div class="cr-table-wrap">
       <table class="cr-table">
-        <thead><tr><th>Room night</th><th>Hotel / room</th><th>Guest</th><th>Waived value</th><th>Reason</th><th>Requested by</th><th>Approved by</th><th>Status</th></tr></thead>
+        <thead><tr><th>Room night</th><th>Hotel / room</th><th>Allocation</th><th>Guest</th><th>Waived value</th><th>Reason</th><th>Requested by</th><th>Approved by</th><th>Status</th></tr></thead>
         <tbody>
         {% for item in room_records %}
           <tr>
@@ -116,7 +116,7 @@
             <td>{{ item.approved_by|default:"—" }}</td>
             <td><span class="cr-status {{ item.status|lower }}">{{ item.get_status_display }}</span></td>
           </tr>
-        {% empty %}<tr><td colspan="8"><div class="cr-empty"><strong>No complimentary room records</strong>No room-night requests match the selected filters.</div></td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="9"><div class="cr-empty"><strong>No complimentary room records</strong>No room-night requests match the selected filters.</div></td></tr>{% endfor %}
         </tbody>
       </table>
     </div>
