@@ -2101,10 +2101,16 @@ def arrivals_departures_today(request):
     hotel = request.user.department.hotel
     today = timezone.localdate()
 
-    # Arrivals are tracked per room allocation, not by the legacy master
-    # reservation. This keeps remaining rooms visible after a sibling room
-    # has already checked in.
+    # Keep the legacy Reservation queryset for existing screens and callers.
+    # New ordinary multi-room bookings are shown separately, one row per
+    # still-reserved room allocation (including siblings after partial check-in).
     arrivals = (
+        Reservation.objects
+        .filter(hotel=hotel, check_in_date=today, status="RESERVED")
+        .exclude(room_allocations__isnull=False)
+        .select_related("guest", "room_category", "room")
+    )
+    allocation_arrivals = (
         ReservationRoomAllocation.objects
         .filter(
             reservation__hotel=hotel,
@@ -2120,6 +2126,7 @@ def arrivals_departures_today(request):
         )
         .order_by("reservation_id", "allocation_number")
     )
+    arrival_count = arrivals.count() + allocation_arrivals.count()
 
     departures = Folio.objects.filter(
         hotel=hotel,
@@ -2137,6 +2144,8 @@ def arrivals_departures_today(request):
         "frontdesk/today_board.html",
         {
             "arrivals": arrivals,
+            "allocation_arrivals": allocation_arrivals,
+            "arrival_count": arrival_count,
             "departures": departures,
             "in_house": in_house
         }
