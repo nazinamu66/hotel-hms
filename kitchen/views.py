@@ -707,15 +707,26 @@ def recipe_ingredients_api(request, recipe_id):
 
 @role_required("KITCHEN")
 def kitchen_quick_production(request):
+    from billing.models import EventOrderLine
+
     IngredientFormSet = formset_factory(IngredientUsageForm, extra=0)
+    kitchen = _current_kitchen(request.user)
+    event_lines = EventOrderLine.objects.filter(
+        event__hotel_id=kitchen.hotel_id,
+        event__status="RELEASED",
+        line_type="FOOD",
+        recipe__isnull=False,
+    ).select_related("event", "recipe").order_by("event__event_date", "event__service_time", "id")
 
     if request.method == "POST":
         batch_form = ProductionBatchForm(request.POST)
+        batch_form.fields["event_order_line"].queryset = event_lines
         formset = IngredientFormSet(request.POST, prefix="ingredients")
 
         if batch_form.is_valid() and formset.is_valid():
             recipe = batch_form.cleaned_data["recipe"]
             qty = batch_form.cleaned_data["quantity_produced"]
+            event_order_line = batch_form.cleaned_data.get("event_order_line")
             version = recipe.active_version
 
             if not version or version.status != "APPROVED" or not version.items.exists():
@@ -754,6 +765,7 @@ def kitchen_quick_production(request):
                 recipe_version=version,
                 quantity_produced=qty,
                 produced_by=request.user,
+                event_order_line=event_order_line,
             )
             try:
                 batch.execute(actual_quantities=actual_quantities)
@@ -790,6 +802,7 @@ def kitchen_quick_production(request):
         messages.error(request, "Invalid production data.")
     else:
         batch_form = ProductionBatchForm()
+        batch_form.fields["event_order_line"].queryset = event_lines
         formset = IngredientFormSet(prefix="ingredients")
 
     return render(request, "kitchen/quick_production.html", {
