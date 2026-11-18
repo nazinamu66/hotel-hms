@@ -115,7 +115,13 @@ def extend_guest_stay(
     active_folio = get_active_folio(room)
     # Lock the folio so an extension cannot race Night Audit or another
     # extension and leave the room-night cursor out of sync.
-    folio = Folio.objects.select_for_update().get(pk=active_folio.pk)
+    try:
+        folio = Folio.objects.select_for_update().get(
+            pk=active_folio.pk,
+            is_closed=False,
+        )
+    except Folio.DoesNotExist:
+        raise ValidationError("No active stay found.")
 
     validate_extension(
         folio,
