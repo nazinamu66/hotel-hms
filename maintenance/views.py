@@ -1684,6 +1684,7 @@ def maintenance_schedule_work_order(
         .select_related(
             "asset",
             "asset__room",
+            "asset__location",
         ),
         id=schedule_id,
     )
