@@ -2,64 +2,7 @@
 
 {% block title %}
 Receive Purchase Order #{{ po.id }}
-<script>
-(function () {
-    const detailCard = document.getElementById("equipment-details-card");
-    const detailHost = document.getElementById("equipment-details");
-    if (!detailCard || !detailHost) return;
-    const rooms = [{% for room in rooms %}{id:"{{ room.pk }}",label:"Room {{ room.room_number|escapejs }}"},{% endfor %}];
-    const locations = [{% for location in locations %}{id:"{{ location.pk }}",label:"{{ location.name|escapejs }} · {{ location.get_location_type_display|escapejs }}"},{% endfor %}];
-    const items = [
-        {% for item in items %}
-        {% if item.product.product_type == "EQUIPMENT" %}
-        {id:"{{ item.pk }}",name:"{{ item.product.name|escapejs }}",outstanding:{{ item.outstanding_quantity }}},
-        {% endif %}
-        {% endfor %}
-    ];
-    function selectOptions(options, emptyLabel) {
-        return '<option value="">'+emptyLabel+'</option>' + options.map(o =>
-            '<option value="'+o.id+'">'+o.label+'</option>'
-        ).join('');
-    }
-    function render() {
-        detailHost.innerHTML = "";
-        let hasEquipment = false;
-        items.forEach(item => {
-            const quantityInput = document.querySelector('[name="received_'+item.id+'"]');
-            const quantity = Math.max(0, Math.min(item.outstanding, parseInt(quantityInput?.value || "0", 10) || 0));
-            if (!quantity) return;
-            hasEquipment = true;
-            const group = document.createElement("section");
-            group.style.cssText = "padding:16px 0;border-bottom:1px solid #eaecf0";
-            group.innerHTML = '<h4 style="margin:0 0 12px">'+item.name+' · '+quantity+' unit(s)</h4>';
-            for (let i=1;i<=quantity;i++) {
-                const prefix = 'asset_'+item.id+'_'+i+'_';
-                const unit = document.createElement("div");
-                unit.style.cssText = "padding:14px;margin:10px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px";
-                unit.innerHTML = '<strong>Unit '+i+'</strong><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:12px">'+
-                    field(prefix+'serial_number','Serial number','text')+
-                    field(prefix+'manufacturer','Manufacturer','text')+
-                    field(prefix+'model_number','Model number','text')+
-                    field(prefix+'warranty_expiry','Warranty expiry','date')+
-                    '<label>Condition<select name="'+prefix+'condition" style="display:block;width:100%;padding:9px"><option value="NEW">New</option><option value="GOOD">Good</option><option value="FAIR">Fair</option><option value="POOR">Poor</option><option value="DAMAGED">Damaged</option></select></label>'+
-                    '<label>Room (optional)<select name="'+prefix+'room" style="display:block;width:100%;padding:9px">'+selectOptions(rooms,'Unassigned')+'</select></label>'+
-                    '<label>Non-room location (optional)<select name="'+prefix+'location" style="display:block;width:100%;padding:9px">'+selectOptions(locations,'Unassigned')+'</select></label></div>';
-                group.appendChild(unit);
-            }
-            detailHost.appendChild(group);
-        });
-        detailCard.style.display = hasEquipment ? "block" : "none";
-    }
-    function field(name,label,type) {
-        return '<label>'+label+'<input type="'+type+'" name="'+name+'" style="display:block;width:100%;box-sizing:border-box;padding:9px;border:1px solid #d0d5dd;border-radius:7px"></label>';
-    }
-    items.forEach(item => {
-        const input = document.querySelector('[name="received_'+item.id+'"]');
-        if (input) input.addEventListener("input", render);
-    });
-    render();
-})();
-</script>
+
 
 {% endblock %}
 
@@ -788,5 +731,64 @@ Receive Purchase Order #{{ po.id }}
     </form>
 
 </div>
+
+<script>
+(function () {
+    const detailCard = document.getElementById("equipment-details-card");
+    const detailHost = document.getElementById("equipment-details");
+    if (!detailCard || !detailHost) return;
+    const rooms = [{% for room in rooms %}{id:"{{ room.pk }}",label:"Room {{ room.room_number|escapejs }}"},{% endfor %}];
+    const locations = [{% for location in locations %}{id:"{{ location.pk }}",label:"{{ location.name|escapejs }} · {{ location.get_location_type_display|escapejs }}"},{% endfor %}];
+    const items = [
+        {% for item in items %}
+        {% if item.product.product_type == "EQUIPMENT" %}
+        {id:"{{ item.pk }}",name:"{{ item.product.name|escapejs }}",outstanding:{{ item.outstanding_quantity }}},
+        {% endif %}
+        {% endfor %}
+    ];
+    function selectOptions(options, emptyLabel) {
+        return '<option value="">'+emptyLabel+'</option>' + options.map(o =>
+            '<option value="'+o.id+'">'+o.label+'</option>'
+        ).join('');
+    }
+    function render() {
+        detailHost.innerHTML = "";
+        let hasEquipment = false;
+        items.forEach(item => {
+            const quantityInput = document.querySelector('[name="received_'+item.id+'"]');
+            const quantity = Math.max(0, Math.min(item.outstanding, parseInt(quantityInput?.value || "0", 10) || 0));
+            if (!quantity) return;
+            hasEquipment = true;
+            const group = document.createElement("section");
+            group.style.cssText = "padding:16px 0;border-bottom:1px solid #eaecf0";
+            group.innerHTML = '<h4 style="margin:0 0 12px">'+item.name+' · '+quantity+' unit(s)</h4>';
+            for (let i=1;i<=quantity;i++) {
+                const prefix = 'asset_'+item.id+'_'+i+'_';
+                const unit = document.createElement("div");
+                unit.style.cssText = "padding:14px;margin:10px 0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px";
+                unit.innerHTML = '<strong>Unit '+i+'</strong><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:12px">'+
+                    field(prefix+'serial_number','Serial number','text')+
+                    field(prefix+'manufacturer','Manufacturer','text')+
+                    field(prefix+'model_number','Model number','text')+
+                    field(prefix+'warranty_expiry','Warranty expiry','date')+
+                    '<label>Condition<select name="'+prefix+'condition" style="display:block;width:100%;padding:9px"><option value="NEW">New</option><option value="GOOD">Good</option><option value="FAIR">Fair</option><option value="POOR">Poor</option><option value="DAMAGED">Damaged</option></select></label>'+
+                    '<label>Room (optional)<select name="'+prefix+'room" style="display:block;width:100%;padding:9px">'+selectOptions(rooms,'Unassigned')+'</select></label>'+
+                    '<label>Non-room location (optional)<select name="'+prefix+'location" style="display:block;width:100%;padding:9px">'+selectOptions(locations,'Unassigned')+'</select></label></div>';
+                group.appendChild(unit);
+            }
+            detailHost.appendChild(group);
+        });
+        detailCard.style.display = hasEquipment ? "block" : "none";
+    }
+    function field(name,label,type) {
+        return '<label>'+label+'<input type="'+type+'" name="'+name+'" style="display:block;width:100%;box-sizing:border-box;padding:9px;border:1px solid #d0d5dd;border-radius:7px"></label>';
+    }
+    items.forEach(item => {
+        const input = document.querySelector('[name="received_'+item.id+'"]');
+        if (input) input.addEventListener("input", render);
+    });
+    render();
+})();
+</script>
 
 {% endblock %}
