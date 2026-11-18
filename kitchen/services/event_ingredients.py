@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Sum
 
 from inventory.models import Stock, StockCostLayer
-from .models import ProductionBatch
+from kitchen.models import ProductionBatch
 
 
 ZERO = Decimal("0.000")
