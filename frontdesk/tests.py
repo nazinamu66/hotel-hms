@@ -107,3 +107,29 @@ class CompanyStatementMetricsTests(SimpleTestCase):
         self.assertEqual(metrics["outstanding_total"], Decimal("0.00"))
         self.assertEqual(metrics["unbilled_total"], Decimal("0.00"))
         self.assertEqual(metrics["deposit_balance"], Decimal("0.00"))
+
+
+
+from django.core.exceptions import ValidationError
+from frontdesk.workflows.check_in import check_in_guest
+
+
+class CheckInRoomReadinessTests(SimpleTestCase):
+    def test_only_available_rooms_can_be_checked_in(self):
+        for status in (
+            "OCCUPIED",
+            "OCCUPIED_DIRTY",
+            "VACANT_DIRTY",
+            "OUT_OF_ORDER",
+            "UNRECOGNIZED_STATUS",
+        ):
+            with self.subTest(status=status):
+                room = SimpleNamespace(status=status)
+                with self.assertRaises(ValidationError):
+                    check_in_guest(room=room, user=None, data={})
+
+    def test_available_room_passes_the_shared_readiness_guard(self):
+        from frontdesk.workflows.check_in import validate_check_in
+
+        room = SimpleNamespace(status="AVAILABLE")
+        self.assertIsNone(validate_check_in(room))
