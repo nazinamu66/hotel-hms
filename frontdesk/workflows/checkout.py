@@ -52,6 +52,10 @@ def update_room_status(room):
 
 @transaction.atomic
 def checkout_guest(room, user, reason=""):
+    from accounts.services.access import user_can_access_hotel
+    if not user_can_access_hotel(user, room.hotel):
+        raise ValidationError("You do not have access to this hotel's checkout workflow.")
+
     # Serialize checkout against another checkout or room-level operation.
     room = room.__class__.objects.select_for_update().get(pk=room.pk)
     folio = (
