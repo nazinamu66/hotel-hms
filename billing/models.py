@@ -1838,6 +1838,14 @@ class EventOrderLine(models.Model):
 
     event = models.ForeignKey(EventBooking, on_delete=models.CASCADE, related_name="order_lines")
     line_type = models.CharField(max_length=10, choices=LINE_TYPES)
+    recipe = models.ForeignKey(
+        "kitchen.Recipe",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="event_order_lines",
+        help_text="Approved Kitchen recipe used to produce this event food line.",
+    )
     description = models.CharField(max_length=200)
     quantity = models.DecimalField(max_digits=12, decimal_places=3)
     unit_price = models.DecimalField(max_digits=14, decimal_places=2)
@@ -1855,6 +1863,13 @@ class EventOrderLine(models.Model):
             raise ValidationError({"quantity": "Quantity must be greater than zero."})
         if self.unit_price is not None and self.unit_price < 0:
             raise ValidationError({"unit_price": "Unit price cannot be negative."})
+        if self.line_type == "FOOD" and self.recipe_id:
+            if self.recipe.product.hotel_id != self.event.hotel_id:
+                raise ValidationError({"recipe": "The recipe must belong to the event hotel."})
+            if not self.recipe.is_active:
+                raise ValidationError({"recipe": "Select an active Kitchen recipe."})
+        elif self.line_type != "FOOD" and self.recipe_id:
+            raise ValidationError({"recipe": "Only FOOD event lines can be linked to a Kitchen recipe."})
         if self.event_id and self.event.status not in ("DRAFT", "AGREED"):
             raise ValidationError("Event order lines cannot be changed after release or cancellation.")
 
