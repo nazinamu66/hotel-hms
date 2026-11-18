@@ -385,6 +385,21 @@
                 </div>
 
                 <div class="field-group">
+                    <label for="{{ batch_form.event_order_line.id_for_label }}">
+                        Corporate Event (optional)
+                    </label>
+                    {{ batch_form.event_order_line }}
+                    {% if batch_form.event_order_line.errors %}
+                        <div class="form-errors" style="margin: 0;">
+                            {{ batch_form.event_order_line.errors }}
+                        </div>
+                    {% endif %}
+                    <div class="field-help">
+                        Select a released event food line to allocate this batch to its required portions.
+                    </div>
+                </div>
+
+                <div class="field-group">
                     <label for="{{ batch_form.quantity_produced.id_for_label }}">
                         Portions Produced
                     </label>
