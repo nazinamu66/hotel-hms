@@ -22,6 +22,7 @@ from frontdesk.workflows.reservation import create_reservation
 from frontdesk.workflows.reservation_allocations import (
     check_in_room_allocation,
     mark_room_allocation_no_show,
+    restore_room_allocation_from_no_show,
     update_room_allocation,
 )
 from frontdesk.workflows.checkout import checkout_guest
@@ -264,6 +265,45 @@ class OrdinaryMultiRoomReservationTests(TestCase):
         self.assertEqual(first.status, "NO_SHOW")
         self.assertEqual(second.status, "CHECKED_IN")
         self.assertEqual(reservation.status, "CHECKED_IN")
+
+    def test_frontdesk_can_restore_room_allocation_from_no_show(self):
+        reservation = self.make_reservation()
+        first, second = list(reservation.room_allocations.order_by("allocation_number"))
+        first.room = self.room_one
+        first.save(update_fields=["room"])
+
+        mark_room_allocation_no_show(first.pk, self.hotel)
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.status, "RESERVED")
+
+        restored = restore_room_allocation_from_no_show(first.pk, self.hotel)
+        reservation.refresh_from_db()
+        restored.refresh_from_db()
+        self.assertEqual(restored.status, "RESERVED")
+        self.assertEqual(restored.room_id, self.room_one.pk)
+        self.assertEqual(reservation.status, "RESERVED")
+
+    def test_cannot_restore_no_show_if_assigned_room_is_now_occupied(self):
+        reservation = self.make_reservation()
+        first = reservation.room_allocations.first()
+        first.room = self.room_one
+        first.save(update_fields=["room"])
+        mark_room_allocation_no_show(first.pk, self.hotel)
+
+        conflicting = create_reservation(
+            hotel=self.hotel,
+            user=self.user,
+            guest_id=self.other_guest.pk,
+            category_id=self.category.pk,
+            number_of_rooms=1,
+            check_in=date(2027, 6, 1),
+            check_out=date(2027, 6, 4),
+        )
+        conflicting.room = self.room_one
+        conflicting.save(update_fields=["room"])
+
+        with self.assertRaises(ValidationError):
+            restore_room_allocation_from_no_show(first.pk, self.hotel)
 
     def test_all_allocations_no_show_sets_master_reservation_no_show(self):
         reservation = self.make_reservation()
