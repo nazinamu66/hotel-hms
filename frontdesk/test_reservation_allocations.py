@@ -11,6 +11,7 @@ from billing.services.complimentary_rooms import request_complimentary_nights
 from frontdesk.workflows.reservation import create_reservation
 from frontdesk.workflows.reservation_allocations import (
     check_in_room_allocation,
+    mark_room_allocation_no_show,
     update_room_allocation,
 )
 from frontdesk.workflows.checkout import checkout_guest
@@ -187,6 +188,64 @@ class OrdinaryMultiRoomReservationTests(TestCase):
                 reason="Must select a room",
                 user=self.user,
             )
+
+    def test_no_show_releases_only_selected_room_and_keeps_reservation_active(self):
+        reservation = self.make_reservation()
+        first, second = list(reservation.room_allocations.order_by("allocation_number"))
+        first.room = self.room_one
+        first.save(update_fields=["room"])
+
+        marked = mark_room_allocation_no_show(first.pk, self.hotel)
+        reservation.refresh_from_db()
+        first.refresh_from_db()
+        second.refresh_from_db()
+
+        self.assertEqual(marked.status, "NO_SHOW")
+        self.assertEqual(first.status, "NO_SHOW")
+        self.assertEqual(second.status, "RESERVED")
+        self.assertEqual(reservation.status, "RESERVED")
+        self.assertEqual(first.room_id, self.room_one.pk)
+
+        from frontdesk.services import get_available_rooms
+        available = get_available_rooms(
+            self.hotel, self.category, date(2027, 6, 1), date(2027, 6, 4),
+        )
+        self.assertTrue(available.filter(pk=self.room_one.pk).exists())
+
+    def test_allocation_no_show_does_not_prevent_sibling_check_in(self):
+        reservation = self.make_reservation()
+        first, second = list(reservation.room_allocations.order_by("allocation_number"))
+
+        mark_room_allocation_no_show(first.pk, self.hotel)
+        second, room, folio = check_in_room_allocation(second.pk, self.hotel, self.user)
+
+        reservation.refresh_from_db()
+        first.refresh_from_db()
+        self.assertEqual(first.status, "NO_SHOW")
+        self.assertEqual(second.status, "CHECKED_IN")
+        self.assertEqual(reservation.status, "CHECKED_IN")
+
+    def test_all_allocations_no_show_sets_master_reservation_no_show(self):
+        reservation = self.make_reservation()
+        allocations = list(reservation.room_allocations.order_by("allocation_number"))
+
+        mark_room_allocation_no_show(allocations[0].pk, self.hotel)
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.status, "RESERVED")
+
+        mark_room_allocation_no_show(allocations[1].pk, self.hotel)
+        reservation.refresh_from_db()
+        self.assertEqual(reservation.status, "NO_SHOW")
+
+    def test_checked_in_allocation_cannot_be_marked_no_show(self):
+        reservation = self.make_reservation()
+        allocation = reservation.room_allocations.first()
+        allocation, room, folio = check_in_room_allocation(
+            allocation.pk, self.hotel, self.user
+        )
+
+        with self.assertRaises(ValidationError):
+            mark_room_allocation_no_show(allocation.pk, self.hotel)
 
     @patch("billing.models.Folio.apply_daily_room_charge")
     def test_rooms_can_check_in_and_check_out_independently(self, apply_charge):
