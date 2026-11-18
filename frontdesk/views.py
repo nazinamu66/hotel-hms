@@ -853,7 +853,7 @@ def room_board(request):
     )
 
 
-@role_required("FRONTDESK", "MANAGER", "DIRECTOR", "ADMIN")
+@role_required("FRONTDESK")
 def check_in(request, room_id):
     from accounts.services.access import get_accessible_hotels
 
@@ -879,6 +879,8 @@ def check_in(request, room_id):
         selected_guest = None
 
         try:
+            if not room.category.nightly_rate:
+                raise ValidationError("No active rate for this room category. Please ask a manager to configure the rate before check-in.")
             if selected_guest_id:
                 selected_guest = Guest.objects.filter(
                     pk=selected_guest_id,
