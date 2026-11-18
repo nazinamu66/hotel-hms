@@ -152,7 +152,7 @@
         <div class="ci-room-category">{{ room.category.name }} · Available</div>
         <div class="ci-rate">
           {% if nightly_rate %}
-            <strong>₦{{ nightly_rate|floatformat:2 }}</strong>
+            <strong>{{ room.category.rate.currency }} {{ nightly_rate|floatformat:2 }}</strong>
             <span>Standard rate per night</span>
           {% else %}
             <strong>Rate not configured</strong>
