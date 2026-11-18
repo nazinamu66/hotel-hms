@@ -1,4 +1,5 @@
 from decimal import Decimal, InvalidOperation
+from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -37,12 +38,10 @@ def waive_folio_balance(*, folio_id, amount, reason, user):
 
     waiver = FolioBalanceWaiver(
         folio=folio, amount=amount, reason=reason, waived_by=user,
-        journal_reference="PENDING",
+        journal_reference=f"FOLIO-WAIVER-{uuid4().hex}",
     )
     waiver.full_clean()
     waiver.save()
-    waiver.journal_reference = f"FOLIO-WAIVER-{waiver.pk}"
-    waiver.save(update_fields=["journal_reference"])
 
     from accounting.constants import ACCOUNTS_RECEIVABLE, GUEST_BALANCE_WAIVER_EXPENSE
     from accounting.services.journal import record_transaction
