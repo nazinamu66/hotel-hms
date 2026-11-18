@@ -64,6 +64,23 @@ thead th{border-top:1px solid #e1e8f0;border-bottom:1px solid #dce4ee;background
 <section class="section"><h3>Payments received</h3><table><thead><tr><th>Payment method</th><th>Date received</th><th class="amount">Amount</th></tr></thead><tbody>
 {% for p in payments %}<tr><td>{{ p.method }}</td><td>{{ p.collected_at|date:"d M Y, H:i" }}</td><td class="amount">₦{{ p.amount|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="3" class="empty">No payments recorded.</td></tr>{% endfor %}
 </tbody></table></section>
+{% if balance_waivers %}
+<section class="section"><h3>Approved balance waivers</h3>
+<table><thead><tr><th>Date</th><th>Reason / authorised by</th><th class="amount">Amount</th></tr></thead><tbody>
+{% for waiver in balance_waivers %}<tr><td>{{ waiver.waived_at|date:"d M Y, H:i" }}</td><td>{{ waiver.reason }}<br><span class="note">Authorised by {{ waiver.waived_by.get_full_name|default:waiver.waived_by.username }}</span></td><td class="amount">₦{{ waiver.amount|floatformat:2 }}</td></tr>{% endfor %}
+</tbody></table></section>
+{% endif %}
+{% if can_waive_balance and balance > 0 %}
+<section class="section no-print"><h3>Director / Admin balance waiver</h3>
+<form method="post" action="{% url 'frontdesk_folio_waive_balance' folio.id %}" onsubmit="return confirm('Post this write-off to the accounting ledger?')">
+{% csrf_token %}
+<label class="label" for="invoice-waiver-amount">Amount to waive (maximum ₦{{ balance|floatformat:2 }})</label>
+<input id="invoice-waiver-amount" name="amount" type="number" min="0.01" max="{{ balance }}" step="0.01" required>
+<label class="label" for="invoice-waiver-reason">Reason</label>
+<textarea id="invoice-waiver-reason" name="reason" rows="3" required minlength="3"></textarea>
+<button class="btn btn-primary" type="submit">Record balance waiver</button>
+</form></section>
+{% endif %}
 <table class="summary"><tr><td>Total charges</td><td class="amount">₦{{ total_charges|floatformat:2 }}</td></tr><tr><td>Total payments</td><td class="amount">₦{{ total_payments|floatformat:2 }}</td></tr><tr><td>Outstanding balance</td><td class="amount">₦{{ balance|floatformat:2 }}</td></tr></table>
 <footer class="footer"><span>{{ business.name|default:"Hotel Management System" }} · Invoice #{{ folio.id }}</span><span>Generated {{ folio.created_at|date:"d M Y" }}</span></footer>
 </main>
