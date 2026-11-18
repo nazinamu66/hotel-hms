@@ -680,12 +680,28 @@ def recipe_ingredients_api(request, recipe_id):
     if not qty.is_finite() or qty <= 0 or qty > Decimal("10000"):
         return JsonResponse({"error": "Quantity must be positive and within the allowed range."}, status=400)
 
-    # Production must be based on the approved immutable version, not
-    # the editable working recipe. This keeps the form and the batch aligned.
-    version = recipe.active_version
-    if not version or version.status != "APPROVED":
+    # Event production must load the exact recipe snapshot agreed for
+    # that event, even if a newer version has since become active.
+    event_line_id = request.GET.get("event_line", "").strip()
+    if event_line_id:
+        from billing.models import EventOrderLine
+        event_line = get_object_or_404(
+            EventOrderLine.objects.select_related("event", "recipe_version"),
+            pk=event_line_id,
+            event__hotel__in=hotels,
+            event__status="RELEASED",
+            line_type="FOOD",
+            recipe=recipe,
+        )
+        version = event_line.recipe_version
+        if not version or version.recipe_id != recipe.pk:
+            return JsonResponse({"error": "This event has no valid agreed recipe snapshot."}, status=409)
+    else:
+        version = recipe.active_version
+
+    if not version or version.status not in ("APPROVED", "SUPERSEDED"):
         return JsonResponse(
-            {"error": "This food has no approved recipe version. Ask the Kitchen Head to approve one."},
+            {"error": "This food has no valid approved recipe version. Ask the Kitchen Head to approve one."},
             status=409,
         )
 
