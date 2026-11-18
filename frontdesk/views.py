@@ -880,11 +880,12 @@ def check_in(request, room_id):
 
         try:
             if selected_guest_id:
-                selected_guest = get_object_or_404(
-                    Guest,
+                selected_guest = Guest.objects.filter(
                     pk=selected_guest_id,
                     hotel=room.hotel,
-                )
+                ).first()
+                if selected_guest is None:
+                    raise ValidationError("The selected guest could not be found in this hotel.")
             elif not data["first_name"] or not data["last_name"]:
                 raise ValidationError(
                     "Select an existing guest or enter the first and last name of a new guest."
