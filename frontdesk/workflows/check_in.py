@@ -133,7 +133,8 @@ def validate_active_folio(room):
 
 def create_folio(
     room, guest, expected_checkout, user=None, group_allocation=None,
-    reservation=None, discount_percent=None, discount_reason="",
+    reservation=None, reservation_room_allocation=None,
+    discount_percent=None, discount_reason="",
 ):
     if reservation is not None:
         discount_percent = reservation.room_discount_percent
@@ -206,14 +207,23 @@ def create_folio(
         ]
     )
 
-    # Attach approved reservation-night waivers before the first charge is posted.
+    # Attach only the waivers belonging to this room allocation before its
+    # first charge is posted. Reservation-level waivers remain for corporate
+    # bookings and legacy single-room records; they are never fanned out to
+    # every room in an ordinary multi-room reservation.
     if reservation is not None:
         from billing.models import ComplimentaryRoomNight
-        ComplimentaryRoomNight.objects.filter(
+        waiver_query = ComplimentaryRoomNight.objects.filter(
             reservation=reservation,
             status__in=["PENDING", "APPROVED"],
             folio__isnull=True,
-        ).update(folio=folio)
+        )
+        if reservation_room_allocation is not None:
+            waiver_query.filter(allocation=reservation_room_allocation).update(folio=folio)
+            if reservation.number_of_rooms == 1:
+                waiver_query.filter(allocation__isnull=True).update(folio=folio)
+        elif not reservation.room_allocations.exists():
+            waiver_query.filter(allocation__isnull=True).update(folio=folio)
 
     # Link corporate allocation before posting the first room-night charge.
     if group_allocation is not None:
@@ -252,6 +262,7 @@ def check_in_guest(
     expected_checkout=None,
     group_allocation=None,
     reservation=None,
+    reservation_room_allocation=None,
     discount_percent=None,
     discount_reason="",
 ):
@@ -291,6 +302,7 @@ def check_in_guest(
         user=user,
         group_allocation=group_allocation,
         reservation=reservation,
+        reservation_room_allocation=reservation_room_allocation,
         discount_percent=discount_percent,
         discount_reason=discount_reason,
     )
