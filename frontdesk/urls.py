@@ -91,6 +91,7 @@ urlpatterns = [
     path('stay/<int:room_id>/pay/', take_payment, name='frontdesk_take_payment'),
     path('folios/<int:folio_id>/pay/', take_folio_payment, name='frontdesk_folio_take_payment'),
     path('checkout/<int:room_id>/', checkout, name='frontdesk_checkout'),
+    path("folios/<int:folio_id>/waive-balance/", waive_folio_balance_view, name="frontdesk_folio_waive_balance"),
     path('invoice/<int:folio_id>/', invoice_view, name='frontdesk_invoice'),
     path("invoice/<int:folio_id>/pdf/",invoice_pdf_view, name="frontdesk_invoice_pdf"),
     path("night-audit/", night_audit, name="frontdesk_night_audit"),
