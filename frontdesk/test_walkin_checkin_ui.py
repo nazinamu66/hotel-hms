@@ -142,6 +142,32 @@ class WalkInCheckInUITests(TestCase):
         self.assertContains(response, "selected guest could not be found")
         self.assertFalse(Folio.objects.filter(room=self.room, is_closed=False).exists())
 
+    def test_walk_in_check_in_is_blocked_when_room_category_has_no_active_rate(self):
+        unpriced_category = RoomCategory.objects.create(name="Unpriced Walk-in Category")
+        unpriced_room = Room.objects.create(
+            hotel=self.hotel,
+            room_number="WCI-02",
+            category=unpriced_category,
+            status="AVAILABLE",
+        )
+        url = reverse("frontdesk_check_in", args=[unpriced_room.pk])
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Rate required before check-in")
+
+        response = self.client.post(
+            url,
+            {
+                "first_name": "Rate",
+                "last_name": "Missing",
+                "room_discount_percent": "0",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No active rate for this room category")
+        self.assertFalse(Folio.objects.filter(room=unpriced_room, is_closed=False).exists())
+
     def test_walk_in_check_in_requires_guest_selection_or_new_guest_name(self):
         response = self.client.post(
             self.url,
