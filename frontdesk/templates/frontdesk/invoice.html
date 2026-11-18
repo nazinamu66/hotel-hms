@@ -64,6 +64,12 @@ thead th{border-top:1px solid #e1e8f0;border-bottom:1px solid #dce4ee;background
 <section class="section"><h3>Payments received</h3><table><thead><tr><th>Payment method</th><th>Date received</th><th class="amount">Amount</th></tr></thead><tbody>
 {% for p in payments %}<tr><td>{{ p.method }}</td><td>{{ p.collected_at|date:"d M Y, H:i" }}</td><td class="amount">₦{{ p.amount|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="3" class="empty">No payments recorded.</td></tr>{% endfor %}
 </tbody></table></section>
+{% if checkout_authorizations %}
+<section class="section"><h3>Outstanding-balance checkout approvals</h3>
+<table><thead><tr><th>Date</th><th>Reason / authorised by</th><th class="amount">Balance at checkout</th></tr></thead><tbody>
+{% for approval in checkout_authorizations %}<tr><td>{{ approval.approved_at|date:"d M Y, H:i" }}</td><td>{{ approval.reason }}<br><span class="note">Authorised by {{ approval.approved_by.get_full_name|default:approval.approved_by.username }}</span></td><td class="amount">₦{{ approval.outstanding_balance|floatformat:2 }}</td></tr>{% endfor %}
+</tbody></table></section>
+{% endif %}
 {% if balance_waivers %}
 <section class="section"><h3>Approved balance waivers</h3>
 <table><thead><tr><th>Date</th><th>Reason / authorised by</th><th class="amount">Amount</th></tr></thead><tbody>
