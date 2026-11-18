@@ -1207,6 +1207,14 @@ class ComplimentaryRoomNight(models.Model):
         blank=True,
         related_name="complimentary_room_nights",
     )
+    allocation = models.ForeignKey(
+        "billing.ReservationRoomAllocation",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="complimentary_room_nights",
+        help_text="The specific ordinary room allocation covered by this waiver. Null is retained for legacy and corporate reservation-level waivers.",
+    )
     room_night_date = models.DateField()
     waived_amount = models.DecimalField(max_digits=12, decimal_places=2)
     rate_source = models.CharField(max_length=12, blank=True)
@@ -1230,7 +1238,13 @@ class ComplimentaryRoomNight(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["reservation", "room_night_date"],
+                condition=models.Q(allocation__isnull=True),
                 name="unique_complimentary_reservation_night",
+            ),
+            models.UniqueConstraint(
+                fields=["allocation", "room_night_date"],
+                condition=models.Q(allocation__isnull=False),
+                name="unique_complimentary_allocation_night",
             ),
         ]
 
@@ -1240,6 +1254,13 @@ class ComplimentaryRoomNight(models.Model):
                 raise ValidationError("Complimentary date must fall within the reservation stay.")
             if self.folio_id and self.folio.reservation_id != self.reservation_id:
                 raise ValidationError("Complimentary night folio must belong to the same reservation.")
+        if self.allocation_id:
+            if self.allocation.reservation_id != self.reservation_id:
+                raise ValidationError("Complimentary room allocation must belong to the reservation.")
+            if self.room_night_date < self.allocation.check_in_date or self.room_night_date >= self.allocation.check_out_date:
+                raise ValidationError("Complimentary date must fall within the room allocation stay.")
+            if self.folio_id and self.allocation.folio_id != self.folio_id:
+                raise ValidationError("Complimentary night folio must belong to the selected room allocation.")
         if self.waived_amount is not None and self.waived_amount < 0:
             raise ValidationError("Waived amount cannot be negative.")
 
