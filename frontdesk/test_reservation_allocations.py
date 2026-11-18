@@ -427,6 +427,74 @@ class TodayBoardAllocationTests(TestCase):
         )
         cls.category = RoomCategory.objects.create(name="Today Board Category")
 
+    @patch("billing.models.Folio.apply_daily_room_charge")
+    def test_departures_and_in_house_track_each_room_allocation_independently(self, apply_charge):
+        today = timezone.localdate()
+        checkout_date = today + timedelta(days=2)
+        Room.objects.create(
+            hotel=self.hotel,
+            room_number="TB-DEP-01",
+            category=self.category,
+            status="AVAILABLE",
+        )
+        Room.objects.create(
+            hotel=self.hotel,
+            room_number="TB-DEP-02",
+            category=self.category,
+            status="AVAILABLE",
+        )
+        reservation = create_reservation(
+            hotel=self.hotel,
+            user=self.user,
+            guest_id=self.primary_guest.pk,
+            category_id=self.category.pk,
+            number_of_rooms=2,
+            check_in=today + timedelta(days=1),
+            check_out=checkout_date,
+        )
+        first, second = list(
+            reservation.room_allocations.order_by("allocation_number")
+        )
+        first, first_room, first_folio = check_in_room_allocation(
+            first.pk, self.hotel, self.user
+        )
+        second, second_room, second_folio = check_in_room_allocation(
+            second.pk, self.hotel, self.user
+        )
+
+        self.client.force_login(self.user)
+        with patch("frontdesk.views.timezone.localdate", return_value=checkout_date):
+            response = self.client.get(reverse("frontdesk_today_board"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            set(response.context["departures"].values_list("pk", flat=True)),
+            {first_folio.pk, second_folio.pk},
+        )
+        self.assertEqual(
+            set(response.context["in_house"].values_list("pk", flat=True)),
+            {first_folio.pk, second_folio.pk},
+        )
+
+        # Checking out one room must not remove its sibling from the board.
+        checkout_guest(first_room, self.user)
+        with patch("frontdesk.views.timezone.localdate", return_value=checkout_date):
+            response = self.client.get(reverse("frontdesk_today_board"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(response.context["departures"].values_list("pk", flat=True)),
+            [second_folio.pk],
+        )
+        self.assertEqual(
+            list(response.context["in_house"].values_list("pk", flat=True)),
+            [second_folio.pk],
+        )
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertEqual(first.status, "CHECKED_OUT")
+        self.assertEqual(second.status, "CHECKED_IN")
+
     def test_arrivals_board_lists_each_remaining_room_allocation(self):
         today = timezone.localdate()
         Room.objects.create(
