@@ -162,7 +162,7 @@ def create_reservation_record(
     if discount_percent and not (discount_reason or "").strip():
         raise ValidationError("A reason is required when applying a room discount.")
 
-    return Reservation.objects.create(
+    reservation = Reservation.objects.create(
         guest=guest,
         hotel=hotel,
         room=room,
@@ -175,6 +175,10 @@ def create_reservation_record(
         room_discount_reason=(discount_reason or "").strip(),
         room_discount_applied_by=user if discount_percent else None,
     )
+
+    from frontdesk.workflows.reservation_allocations import ensure_ordinary_allocations
+    ensure_ordinary_allocations(reservation)
+    return reservation
 
 
 def create_reservation(

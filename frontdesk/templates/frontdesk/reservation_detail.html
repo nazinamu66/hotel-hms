@@ -490,6 +490,69 @@
             </section>
         </div>
 
+        {% if reservation.room_allocations.exists %}
+        <div class="col-12">
+            <section class="rd-card">
+                <div class="rd-card-header">
+                    <span class="rd-icon" aria-hidden="true">&#128716;</span>
+                    <div>
+                        <h3>Room allocations</h3>
+                        <div class="rd-subtitle small">Manage each room occupant, room assignment and check-in independently.</div>
+                    </div>
+                </div>
+                <div class="rd-card-body">
+                    {% for allocation in reservation.room_allocations.all %}
+                    <div class="border rounded-3 p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                            <div>
+                                <strong>Room {{ allocation.allocation_number }}</strong>
+                                <span class="text-muted small ms-2">{{ allocation.get_status_display }}</span>
+                            </div>
+                            {% if allocation.folio_id %}
+                                <a class="rd-btn rd-btn-secondary" href="{% url 'frontdesk_active_stay' allocation.room_id %}">Open stay</a>
+                            {% endif %}
+                        </div>
+                        <form method="post" action="{% url 'frontdesk_reservation_allocation_update' reservation.id allocation.id %}" class="row g-3 align-items-end">
+                            {% csrf_token %}
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold" for="allocation-guest-{{ allocation.id }}">Occupant</label>
+                                <select class="form-select" id="allocation-guest-{{ allocation.id }}" name="guest_id" {% if allocation.status != "RESERVED" %}disabled{% endif %}>
+                                    {% for guest in allocation_guests %}
+                                    <option value="{{ guest.id }}" {% if guest.id == allocation.guest_id %}selected{% endif %}>{{ guest.full_name }}{% if guest.phone %} · {{ guest.phone }}{% endif %}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold" for="allocation-room-{{ allocation.id }}">Assigned room</label>
+                                <select class="form-select" id="allocation-room-{{ allocation.id }}" name="room_id" {% if allocation.status != "RESERVED" %}disabled{% endif %}>
+                                    <option value="">Assign at check-in</option>
+                                    {% for room in allocation_rooms %}
+                                    <option value="{{ room.id }}" {% if room.id == allocation.room_id %}selected{% endif %}>Room {{ room.room_number }} · {{ room.get_status_display }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                {% if allocation.status == "RESERVED" %}
+                                <button type="submit" class="rd-btn rd-btn-secondary w-100">Save</button>
+                                {% endif %}
+                            </div>
+                        </form>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+                            <div class="small text-muted">{{ allocation.check_in_date|date:"d M Y" }} – {{ allocation.check_out_date|date:"d M Y" }}{% if allocation.folio_id %} · Folio #{{ allocation.folio_id }}{% endif %}</div>
+                            {% if allocation.status == "RESERVED" and reservation.status != "CANCELLED" and reservation.status != "NO_SHOW" %}
+                            <form method="post" action="{% url 'frontdesk_reservation_allocation_checkin' reservation.id allocation.id %}" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="rd-btn rd-btn-primary" onclick="return confirm('Check in {{ allocation.guest|escapejs }} for Room {{ allocation.allocation_number }}?');">Check in this room →</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+        {% endif %}
+
         <div class="col-12">
 <style>
 .rd-complimentary-card{border-color:#dce8e6}
@@ -551,7 +614,7 @@
         </a>
 
         <div class="rd-action-group">
-            {% if reservation.status == "RESERVED" and not reservation.room_allocations.exists %}
+            {% if reservation.status == "RESERVED" %}
                 <form method="post" action="{% url 'frontdesk_reservation_checkin' reservation.id %}" style="margin:0;">
                     {% csrf_token %}
                     <button type="submit" class="rd-btn rd-btn-primary"

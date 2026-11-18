@@ -69,6 +69,23 @@ def check_in_reservation(
         reservation,
     )
 
+    # Ordinary reservations now check in one room allocation at a time.
+    # Corporate occupant reservations keep the established group path below.
+    if not hasattr(reservation, "group_allocation"):
+        allocations = reservation.room_allocations.all()
+        if allocations.exists():
+            if allocations.count() != 1:
+                raise ValidationError(
+                    "This reservation contains multiple rooms. Check in each room from its allocation card."
+                )
+            from frontdesk.workflows.reservation_allocations import check_in_room_allocation
+            allocation, room, folio = check_in_room_allocation(
+                allocations.first().pk,
+                reservation.hotel,
+                user,
+            )
+            return room, folio
+
     room = find_available_room(
         reservation,
     )

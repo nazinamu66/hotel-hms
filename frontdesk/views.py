@@ -32,6 +32,7 @@ from billing.models import (
     Reservation,
     GuestDeposit,
     GuestDepositTransaction,
+    ReservationRoomAllocation,
 )
 
 
@@ -1540,15 +1541,34 @@ def reservation_detail(request, reservation_id):
         ).prefetch_related(
             "complimentary_room_nights__requested_by",
             "complimentary_room_nights__approved_by",
+            "room_allocations__guest",
+            "room_allocations__room",
+            "room_allocations__folio",
         ),
         id=reservation_id,
         hotel__in=get_accessible_hotels(request.user),
     )
 
+    # Legacy ordinary reservations are backfilled by migration 0044. This
+    # also safely initializes any newly-created ordinary booking if needed.
+    if not hasattr(reservation, "group_allocation"):
+        from frontdesk.workflows.reservation_allocations import ensure_ordinary_allocations
+        ensure_ordinary_allocations(reservation)
+
+    guests = Guest.objects.filter(hotel=reservation.hotel).order_by("first_name", "last_name")
+    rooms = Room.objects.filter(
+        hotel=reservation.hotel,
+        category=reservation.room_category,
+    ).order_by("room_number")
+
     return render(
         request,
         "frontdesk/reservation_detail.html",
-        {"reservation": reservation},
+        {
+            "reservation": reservation,
+            "allocation_guests": guests,
+            "allocation_rooms": rooms,
+        },
     )
 
 
@@ -1685,6 +1705,57 @@ def reservation_checkin(request, reservation_id):
         "frontdesk_active_stay",
         room.id,
     )
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def reservation_allocation_update(request, reservation_id, allocation_id):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    reservation = get_object_or_404(
+        Reservation,
+        pk=reservation_id,
+        hotel=request.user.department.hotel,
+    )
+    from frontdesk.workflows.reservation_allocations import update_room_allocation
+    try:
+        update_room_allocation(
+            allocation_id=allocation_id,
+            hotel=reservation.hotel,
+            guest_id=request.POST.get("guest_id"),
+            room_id=request.POST.get("room_id"),
+        )
+        messages.success(request, "Room allocation updated.")
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+    return redirect("frontdesk_reservation_detail", reservation_id=reservation_id)
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def reservation_allocation_checkin(request, reservation_id, allocation_id):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    reservation = get_object_or_404(
+        Reservation,
+        pk=reservation_id,
+        hotel=request.user.department.hotel,
+    )
+    from frontdesk.workflows.reservation_allocations import check_in_room_allocation
+    try:
+        allocation, room, folio = check_in_room_allocation(
+            allocation_id=allocation_id,
+            hotel=reservation.hotel,
+            user=request.user,
+        )
+        messages.success(
+            request,
+            f"{allocation.guest.full_name} checked into Room {room.room_number}.",
+        )
+        return redirect("frontdesk_active_stay", room_id=room.id)
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+        return redirect("frontdesk_reservation_detail", reservation_id=reservation_id)
+
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
 def reservation_cancel(request, reservation_id):

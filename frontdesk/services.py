@@ -1,5 +1,5 @@
 
-from billing.models import Reservation, Folio
+from billing.models import Reservation, Folio, ReservationRoomAllocation
 from rooms.models import Room
 from django.db.models import Q
 
@@ -38,11 +38,22 @@ def get_available_rooms(
             pk=exclude_reservation_id
         )
 
-    # Rooms already assigned to overlapping reservations.
+    # Prefer per-room allocation assignments for ordinary multi-room
+    # reservations. Corporate reservations retain their GroupReservationRoom
+    # model and legacy Reservation.room pointer.
+    overlapping_ids = list(overlapping_reservations.values_list("id", flat=True))
+    ordinary_allocations = ReservationRoomAllocation.objects.filter(
+        reservation_id__in=overlapping_ids
+    ).exclude(status__in=["CANCELLED", "NO_SHOW", "CHECKED_OUT"])
+    allocated_parent_ids = set(
+        ordinary_allocations.values_list("reservation_id", flat=True)
+    )
     reserved_room_ids = list(
-        overlapping_reservations
-        .exclude(room_id__isnull=True)
-        .values_list("room_id", flat=True)
+        ordinary_allocations.exclude(room_id__isnull=True).values_list("room_id", flat=True)
+    )
+    reserved_room_ids += list(
+        overlapping_reservations.exclude(id__in=allocated_parent_ids)
+        .exclude(room_id__isnull=True).values_list("room_id", flat=True)
     )
 
     # Exclude active stays whose dates overlap the requested stay.
@@ -68,11 +79,15 @@ def get_available_rooms(
 
     # Unassigned guaranteed reservations still consume
     # capacity in their category.
-    category_reserved_count = sum(
-        reservation.number_of_rooms
-        for reservation in overlapping_reservations
-        if reservation.room_id is None
-    )
+    category_reserved_count = 0
+    for reservation in overlapping_reservations:
+        if reservation.pk in allocated_parent_ids:
+            category_reserved_count += ordinary_allocations.filter(
+                reservation_id=reservation.pk,
+                room__isnull=True,
+            ).count()
+        elif reservation.room_id is None:
+            category_reserved_count += reservation.number_of_rooms
 
     if category_reserved_count:
         available_room_ids = list(
