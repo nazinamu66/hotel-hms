@@ -273,8 +273,9 @@ class OrdinaryMultiRoomReservationTests(TestCase):
         first.save(update_fields=["room"])
 
         mark_room_allocation_no_show(first.pk, self.hotel)
+        mark_room_allocation_no_show(second.pk, self.hotel)
         reservation.refresh_from_db()
-        self.assertEqual(reservation.status, "RESERVED")
+        self.assertEqual(reservation.status, "NO_SHOW")
 
         restored = restore_room_allocation_from_no_show(first.pk, self.hotel)
         reservation.refresh_from_db()
@@ -282,6 +283,7 @@ class OrdinaryMultiRoomReservationTests(TestCase):
         self.assertEqual(restored.status, "RESERVED")
         self.assertEqual(restored.room_id, self.room_one.pk)
         self.assertEqual(reservation.status, "RESERVED")
+        self.assertEqual(second.status, "NO_SHOW")
 
     def test_cannot_restore_no_show_if_assigned_room_is_now_occupied(self):
         reservation = self.make_reservation()
@@ -299,8 +301,26 @@ class OrdinaryMultiRoomReservationTests(TestCase):
             check_in=date(2027, 6, 1),
             check_out=date(2027, 6, 4),
         )
-        conflicting.room = self.room_one
-        conflicting.save(update_fields=["room"])
+        conflicting_allocation = conflicting.room_allocations.first()
+        conflicting_allocation.room = self.room_one
+        conflicting_allocation.save(update_fields=["room"])
+        conflicting_deposit = GuestDeposit.objects.create(
+            hotel=self.hotel,
+            guest=self.other_guest,
+            balance=Decimal("1000.00"),
+        )
+        ReservationDeposit.objects.create(
+            reservation=conflicting,
+            guest_deposit=conflicting_deposit,
+            nightly_rate=Decimal("50000.00"),
+            number_of_rooms=1,
+            number_of_nights=3,
+            reservation_value=Decimal("150000.00"),
+            required_amount=Decimal("30000.00"),
+            allocated_amount=Decimal("30000.00"),
+            cancellation_deadline=timezone.now(),
+            status="GUARANTEED",
+        )
 
         with self.assertRaises(ValidationError):
             restore_room_allocation_from_no_show(first.pk, self.hotel)
