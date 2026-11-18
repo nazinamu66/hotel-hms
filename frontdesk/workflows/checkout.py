@@ -13,7 +13,7 @@ def validate_checkout(folio):
 
 
 def validate_balance(folio, user, reason=""):
-    if folio.balance == 0:
+    if folio.balance <= 0:
         return False
     if user.role not in {"MANAGER", "DIRECTOR", "ADMIN"}:
         raise ValidationError(
