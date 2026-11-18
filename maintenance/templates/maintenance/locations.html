@@ -2,182 +2,227 @@
 {% block title %}Maintenance Locations | Hotel HMS{% endblock %}
 {% block content %}
 <style>
-.location-workspace{color:#172033;max-width:1600px;margin:0 auto}
-.location-top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px}
-.location-heading h2{font-size:1.8rem;font-weight:800;margin:0 0 5px}
-.location-heading p{color:#64748b;margin:0}
-.location-actions{display:flex;gap:9px;flex-wrap:wrap}
-.location-btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid #dbe2ea;border-radius:9px;padding:9px 13px;text-decoration:none;font-weight:700;color:#334155;background:#fff}
-.location-btn.primary{background:#2563eb;border-color:#2563eb;color:#fff}
-.location-btn.danger{color:#b91c1c}
-.location-search{display:flex;gap:8px;margin-bottom:14px}
-.location-search input{min-width:0;flex:1;border:1px solid #dbe2ea;border-radius:9px;padding:10px 12px;font:inherit}
-.location-layout{display:grid;grid-template-columns:minmax(270px,350px) minmax(0,1fr);border:1px solid #e2e8f0;border-radius:15px;background:#fff;overflow:hidden;min-height:720px;box-shadow:0 8px 28px rgba(15,23,42,.045)}
-.location-sidebar{border-right:1px solid #e2e8f0;background:#fff}
-.location-sidebar-head{padding:17px 18px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center}
-.location-sidebar-head strong{font-size:1rem}
-.location-count{color:#64748b;font-size:.82rem}
-.location-list{max-height:680px;overflow-y:auto}
-.location-item{display:block;padding:15px 18px;border-bottom:1px solid #eef2f6;color:inherit;text-decoration:none;border-left:4px solid transparent}
-.location-item:hover{background:#f8fafc}
-.location-item.selected{background:#f1f5f9;border-left-color:#2563eb}
-.location-item strong{display:block;font-size:.95rem}
-.location-item small{display:block;color:#64748b;margin-top:4px}
-.location-item-meta{display:flex;gap:7px;align-items:center;margin-top:8px;flex-wrap:wrap}
-.location-pill{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:.72rem;font-weight:750;background:#f1f5f9;color:#475569}
-.location-pill.active{background:#dcfce7;color:#166534}
-.location-pill.inactive{background:#fee2e2;color:#991b1b}
-.location-detail{min-width:0;padding:24px 26px}
-.location-detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid #e5e7eb}
-.location-detail-head h3{font-size:1.45rem;margin:0 0 5px;font-weight:800}
-.location-subtitle{color:#64748b;font-size:.88rem}
-.location-section{padding:20px 0;border-bottom:1px solid #e5e7eb}
-.location-section:last-child{border-bottom:0}
-.location-section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:13px}
-.location-section-head h4{font-size:.9rem;margin:0;text-transform:uppercase;letter-spacing:.04em;color:#64748b}
-.location-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-.location-fact small{display:block;color:#94a3b8;font-size:.72rem;text-transform:uppercase;font-weight:750;margin-bottom:5px}
-.location-fact strong{font-size:.94rem;overflow-wrap:anywhere}
-.location-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
-.location-stat{padding:14px;border:1px solid #e5e7eb;border-radius:11px;background:#fafafa}
-.location-stat strong{display:block;font-size:1.35rem}
-.location-stat span{font-size:.78rem;color:#64748b}
-.location-table-wrap{overflow-x:auto}
-.location-table{width:100%;border-collapse:collapse;white-space:nowrap}
-.location-table th{text-align:left;color:#64748b;background:#f8fafc;font-size:.72rem;text-transform:uppercase;padding:11px}
-.location-table td{padding:12px 11px;border-top:1px solid #edf2f7;font-size:.88rem}
-.location-table a{color:#2563eb;text-decoration:none;font-weight:700}
-.location-empty{padding:28px;text-align:center;color:#64748b;background:#f8fafc;border-radius:10px}
-.location-edit-form{margin-top:14px;padding:18px;border:1px solid #dbe2ea;border-radius:12px;background:#f8fafc}
-.location-edit-form h4{margin:0 0 14px}
-.location-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.location-form-field label{display:block;font-size:.8rem;font-weight:750;margin-bottom:5px}
-.location-form-field input,.location-form-field select,.location-form-field textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:9px;background:#fff;font:inherit}
-.location-form-field.full{grid-column:1/-1}
-.location-form-actions{display:flex;gap:9px;align-items:center;margin-top:14px}
-.location-dept-select{min-height:95px}
-@media(max-width:900px){.location-layout{grid-template-columns:280px minmax(0,1fr)}.location-detail{padding:18px}}
-@media(max-width:680px){.location-layout{grid-template-columns:1fr}.location-sidebar{border-right:0;border-bottom:1px solid #e2e8f0}.location-list{max-height:260px}.location-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.location-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.location-detail{padding:16px}.location-form-grid{grid-template-columns:1fr}}
+.mlw{--mlw-ink:#172033;--mlw-muted:#64748b;--mlw-line:#e7edf5;--mlw-blue:#2563eb;max-width:1680px;margin:0 auto;color:var(--mlw-ink)}
+.mlw *{box-sizing:border-box}
+.mlw-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;margin:0 0 20px}
+.mlw-kicker{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#64748b;margin-bottom:7px}
+.mlw-title{font-size:clamp(1.65rem,2.5vw,2.15rem);line-height:1.1;letter-spacing:-.045em;font-weight:850;margin:0}
+.mlw-intro{color:var(--mlw-muted);margin:8px 0 0;font-size:.92rem}
+.mlw-head-actions{display:flex;gap:9px;flex-wrap:wrap}
+.mlw-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:9px 14px;border:1px solid #dbe3ed;border-radius:10px;background:#fff;color:#334155;text-decoration:none;font:inherit;font-size:.86rem;font-weight:750;cursor:pointer;white-space:nowrap;transition:.16s ease}
+.mlw-btn:hover{border-color:#b9c9dc;background:#f8fafc;transform:translateY(-1px)}
+.mlw-btn.primary{background:var(--mlw-blue);border-color:var(--mlw-blue);color:#fff;box-shadow:0 5px 12px rgba(37,99,235,.16)}
+.mlw-btn.primary:hover{background:#1d4ed8}
+.mlw-btn.danger{color:#b91c1c}
+.mlw-create{margin:0 0 16px;border:1px solid var(--mlw-line);border-radius:14px;background:#fff;box-shadow:0 5px 18px rgba(15,23,42,.035);overflow:hidden}
+.mlw-create summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 17px;font-weight:800}
+.mlw-create summary::-webkit-details-marker{display:none}
+.mlw-create summary span:last-child{color:#64748b;font-size:.8rem;font-weight:650}
+.mlw-form-body{padding:17px;border-top:1px solid var(--mlw-line);background:#fbfcfe}
+.mlw-form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+.mlw-field label{display:block;font-size:.76rem;font-weight:800;color:#475569;margin:0 0 6px}
+.mlw-field input,.mlw-field select,.mlw-field textarea{width:100%;min-height:42px;border:1px solid #d5deea;border-radius:9px;padding:9px 11px;background:#fff;font:inherit;font-size:.88rem}
+.mlw-field textarea{min-height:76px;resize:vertical}
+.mlw-field.full{grid-column:1/-1}
+.mlw-field.span2{grid-column:span 2}
+.mlw-form-foot{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+.mlw-layout{display:grid;grid-template-columns:minmax(260px,310px) minmax(0,1fr);gap:16px;align-items:start}
+.mlw-panel{background:#fff;border:1px solid var(--mlw-line);border-radius:15px;box-shadow:0 6px 22px rgba(15,23,42,.035);overflow:hidden;min-width:0}
+.mlw-side-head{padding:17px 17px 13px;border-bottom:1px solid var(--mlw-line)}
+.mlw-side-title{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:850}
+.mlw-count{font-size:.75rem;color:#64748b;font-weight:700}
+.mlw-search{display:flex;gap:7px;margin-top:12px}
+.mlw-search input{width:100%;min-width:0;border:1px solid #dbe3ed;border-radius:9px;padding:9px 10px;font:inherit;font-size:.85rem}
+.mlw-search button{min-height:38px}
+.mlw-list{max-height:720px;overflow-y:auto}
+.mlw-item{display:flex;gap:11px;align-items:flex-start;padding:14px 15px;border-bottom:1px solid #f0f3f7;border-left:3px solid transparent;color:inherit;text-decoration:none;transition:background .14s ease}
+.mlw-item:hover{background:#f8faff}
+.mlw-item.selected{background:#f1f6ff;border-left-color:var(--mlw-blue)}
+.mlw-item-icon{width:37px;height:37px;flex:0 0 37px;border-radius:11px;display:grid;place-items:center;background:#eef4ff;color:#2563eb;font-size:1rem}
+.mlw-item-copy{min-width:0;flex:1}
+.mlw-item-name{display:block;font-size:.9rem;font-weight:850;line-height:1.3}
+.mlw-item-sub{display:block;color:#718096;font-size:.76rem;margin-top:4px;overflow-wrap:anywhere}
+.mlw-item-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:8px}
+.mlw-pill{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:.68rem;font-weight:800;background:#f1f5f9;color:#526174}
+.mlw-pill.active{background:#e7f8ef;color:#167344}
+.mlw-pill.inactive{background:#fff0f0;color:#b42318}
+.mlw-detail{padding:22px 24px}
+.mlw-hero{position:relative;overflow:hidden;border:1px solid #e1eaf7;border-radius:13px;background:linear-gradient(115deg,#f4f8ff 0%,#fff 68%);padding:20px;margin-bottom:17px}
+.mlw-hero:after{content:"";position:absolute;width:190px;height:190px;right:-65px;top:-105px;border-radius:50%;background:rgba(59,130,246,.07)}
+.mlw-hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;position:relative;z-index:1}
+.mlw-hero h2{font-size:clamp(1.35rem,2vw,1.8rem);font-weight:900;letter-spacing:-.04em;margin:0 0 7px}
+.mlw-subtitle{font-size:.86rem;color:#64748b}
+.mlw-hero-actions{display:flex;gap:8px;flex-wrap:wrap}
+.mlw-hero-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;position:relative;z-index:1}
+.mlw-meta-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid #e4eaf2;border-radius:8px;background:rgba(255,255,255,.8);font-size:.75rem;color:#526174;font-weight:700}
+.mlw-section{margin-top:17px}
+.mlw-section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:11px}
+.mlw-section-head h3{font-size:.86rem;letter-spacing:.055em;text-transform:uppercase;color:#64748b;font-weight:850;margin:0}
+.mlw-section-note{font-size:.75rem;color:#94a3b8}
+.mlw-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.mlw-stat{border:1px solid var(--mlw-line);border-radius:12px;padding:14px;background:#fff;min-width:0}
+.mlw-stat-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#64748b;font-size:.73rem;font-weight:750}
+.mlw-stat-icon{width:29px;height:29px;display:grid;place-items:center;border-radius:9px;background:#f0f5ff;color:#2563eb}
+.mlw-stat strong{display:block;font-size:1.55rem;letter-spacing:-.04em;margin-top:8px;line-height:1.1}
+.mlw-stat small{display:block;color:#94a3b8;font-size:.72rem;margin-top:5px}
+.mlw-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:15px;border:1px solid var(--mlw-line);border-radius:12px;background:#fff}
+.mlw-fact small{display:block;color:#94a3b8;font-size:.67rem;letter-spacing:.06em;text-transform:uppercase;font-weight:850;margin-bottom:5px}
+.mlw-fact strong{font-size:.84rem;line-height:1.45;overflow-wrap:anywhere}
+.mlw-table-wrap{overflow-x:auto;border:1px solid var(--mlw-line);border-radius:11px}
+.mlw-table{width:100%;border-collapse:collapse;white-space:nowrap}
+.mlw-table th{text-align:left;padding:11px 12px;background:#f8fafc;color:#64748b;font-size:.68rem;text-transform:uppercase;letter-spacing:.045em}
+.mlw-table td{padding:12px;border-top:1px solid #edf1f6;font-size:.82rem;color:#334155}
+.mlw-table td strong{font-weight:800}
+.mlw-table a{color:#2563eb;text-decoration:none;font-weight:800}
+.mlw-table a:hover{text-decoration:underline}
+.mlw-empty{padding:23px;text-align:center;border:1px dashed #d8e1ec;border-radius:11px;background:#fafcff;color:#748196;font-size:.84rem}
+.mlw-empty strong{display:block;color:#475569;margin-bottom:4px}
+.mlw-bottom{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:15px;padding-top:13px;border-top:1px solid var(--mlw-line);color:#94a3b8;font-size:.72rem}
+@media(max-width:1050px){.mlw-layout{grid-template-columns:260px minmax(0,1fr)}.mlw-detail{padding:17px}.mlw-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.mlw-layout{grid-template-columns:1fr}.mlw-list{max-height:280px}.mlw-detail{padding:14px}.mlw-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.mlw-stats{gap:7px}.mlw-stat{padding:11px}.mlw-stat strong{font-size:1.3rem}.mlw-hero{padding:15px}}
+@media(max-width:480px){.mlw-form-grid{grid-template-columns:1fr}.mlw-field.span2{grid-column:auto}.mlw-facts{grid-template-columns:1fr 1fr}.mlw-hero-actions{width:100%}.mlw-hero-actions .mlw-btn{flex:1}.mlw-head-actions{width:100%}.mlw-head-actions .mlw-btn{flex:1}}
 </style>
-<div class="location-workspace">
-  <header class="location-top">
-    <div class="location-heading">
-      <h2>Maintenance Locations</h2>
-      <p>Explore hotel areas, assigned equipment and maintenance activity.</p>
+
+<div class="mlw">
+  <header class="mlw-head">
+    <div>
+      <div class="mlw-kicker">Facilities · Asset management</div>
+      <h1 class="mlw-title">Maintenance locations</h1>
+      <p class="mlw-intro">A central view of every hotel area, its equipment and maintenance activity.</p>
     </div>
-    <div class="location-actions">
-      <a class="location-btn" href="{% url 'maintenance_dashboard' %}">Back to dashboard</a>
-      <a class="location-btn primary" href="#location-create">＋ Add location</a>
+    <div class="mlw-head-actions">
+      <a class="mlw-btn" href="{% url 'maintenance_dashboard' %}">← Dashboard</a>
+      <a class="mlw-btn primary" href="#mlw-create">＋ Add location</a>
     </div>
   </header>
 
-  <div class="location-layout">
-    <aside class="location-sidebar">
-      <div class="location-sidebar-head"><strong>All locations</strong><span class="location-count">{{ locations|length }} locations</span></div>
-      <form class="location-search" method="get" style="padding:12px 12px 0">
-        <input type="search" name="q" value="{{ search_query }}" placeholder="Search locations...">
-        <button class="location-btn" type="submit">Search</button>
+  <details class="mlw-create" id="mlw-create" {% if edit_location %}open{% endif %}>
+    <summary><span>{% if edit_location %}✎ Edit location · {{ edit_location.name }}{% else %}＋ Create a new location{% endif %}</span><span>Location setup&nbsp;⌄</span></summary>
+    <div class="mlw-form-body">
+      <form method="post" {% if edit_location %}action="{% url 'maintenance_location_edit' edit_location.id %}"{% endif %}>
+        {% csrf_token %}
+        <div class="mlw-form-grid">
+          {% if edit_location %}
+            <div class="mlw-field span2"><label>Hotel</label><input value="{{ edit_location.hotel.name }}" disabled></div>
+          {% else %}
+            <div class="mlw-field span2"><label for="loc-hotel">Hotel *</label><select id="loc-hotel" name="hotel" required>{% for hotel in hotels %}<option value="{{ hotel.id }}">{{ hotel.name }}</option>{% endfor %}</select></div>
+          {% endif %}
+          <div class="mlw-field span2"><label for="loc-name">Location name *</label><input id="loc-name" name="name" required maxlength="150" value="{{ edit_location.name|default:'' }}" placeholder="e.g. Generator Room"></div>
+          <div class="mlw-field"><label for="loc-type">Location type</label><select id="loc-type" name="location_type">{% for value,label in location_types %}<option value="{{ value }}" {% if edit_location and edit_location.location_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+          <div class="mlw-field"><label for="loc-code">Area code</label><input id="loc-code" name="area_code" value="{{ edit_location.area_code|default:'' }}" placeholder="PLT-GEN-01"></div>
+          <div class="mlw-field"><label for="loc-building">Building</label><input id="loc-building" name="building" value="{{ edit_location.building|default:'' }}" placeholder="Main Building"></div>
+          <div class="mlw-field"><label for="loc-floor">Floor</label><input id="loc-floor" name="floor" value="{{ edit_location.floor|default:'' }}" placeholder="Ground Floor"></div>
+          <div class="mlw-field span2"><label for="loc-description">Description / directions</label><textarea id="loc-description" name="description" rows="2" placeholder="Access instructions, landmarks or additional details">{{ edit_location.description|default:'' }}</textarea></div>
+          <div class="mlw-field span2"><label for="loc-departments">Responsible departments</label><select id="loc-departments" name="departments" multiple size="3">{% for department in departments %}<option value="{{ department.id }}" {% if edit_location and department in edit_location.responsible_departments.all %}selected{% endif %}>{{ department.hotel.name }} · {{ department.name }}</option>{% endfor %}</select></div>
+        </div>
+        <div class="mlw-form-foot">
+          <button class="mlw-btn primary" type="submit">{% if edit_location %}Save location changes{% else %}Create location{% endif %}</button>
+          {% if edit_location %}<a class="mlw-btn" href="{% url 'maintenance_locations' %}?location={{ edit_location.id }}">Cancel</a>{% endif %}
+          <span class="mlw-section-note">Hotel ownership cannot be changed after creation.</span>
+        </div>
       </form>
-      <div class="location-list">
-        {% for location in locations %}
-          <a class="location-item {% if selected_location and selected_location.id == location.id %}selected{% endif %}" href="{% url 'maintenance_locations' %}?location={{ location.id }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}">
-            <strong>{{ location.name }}</strong>
-            <small>{{ location.hotel.name }}{% if location.building %} · {{ location.building }}{% endif %}{% if location.floor %} · {{ location.floor }}{% endif %}</small>
-            <div class="location-item-meta">
-              <span class="location-pill {% if location.is_active %}active{% else %}inactive{% endif %}">{% if location.is_active %}Active{% else %}Inactive{% endif %}</span>
-              <span class="location-pill">{{ location.assets.count }} equipment</span>
-            </div>
-          </a>
-        {% empty %}
-          <div class="location-empty">No locations found. Add your first location below.</div>
-        {% endfor %}
-      </div>
-      <div id="location-create" class="location-edit-form" style="margin:14px">
-        <h4>{% if edit_location %}Edit location{% else %}Add a location{% endif %}</h4>
-        <form method="post" {% if edit_location %}action="{% url 'maintenance_location_edit' edit_location.id %}"{% endif %}>
-          {% csrf_token %}
-          <div class="location-form-grid">
-            {% if edit_location %}
-              <div class="location-form-field full"><label>Hotel</label><input value="{{ edit_location.hotel.name }}" disabled></div>
-            {% else %}
-              <div class="location-form-field full"><label for="loc-hotel">Hotel</label><select id="loc-hotel" name="hotel" required>{% for hotel in hotels %}<option value="{{ hotel.id }}">{{ hotel.name }}</option>{% endfor %}</select></div>
-            {% endif %}
-            <div class="location-form-field full"><label for="loc-name">Location name *</label><input id="loc-name" name="name" required maxlength="150" value="{{ edit_location.name|default:'' }}" placeholder="e.g. Generator Room"></div>
-            <div class="location-form-field"><label for="loc-type">Location type</label><select id="loc-type" name="location_type">{% for value,label in location_types %}<option value="{{ value }}" {% if edit_location and edit_location.location_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-            <div class="location-form-field"><label for="loc-code">Area code</label><input id="loc-code" name="area_code" value="{{ edit_location.area_code|default:'' }}" placeholder="e.g. PLT-GEN-01"></div>
-            <div class="location-form-field"><label for="loc-building">Building</label><input id="loc-building" name="building" value="{{ edit_location.building|default:'' }}" placeholder="e.g. Main Building"></div>
-            <div class="location-form-field"><label for="loc-floor">Floor</label><input id="loc-floor" name="floor" value="{{ edit_location.floor|default:'' }}" placeholder="e.g. Ground Floor"></div>
-            <div class="location-form-field full"><label for="loc-description">Description / directions</label><textarea id="loc-description" name="description" rows="2">{{ edit_location.description|default:'' }}</textarea></div>
-            <div class="location-form-field full"><label for="loc-departments">Responsible departments</label><select class="location-dept-select" id="loc-departments" name="departments" multiple>{% for department in departments %}<option value="{{ department.id }}" {% if edit_location and department in edit_location.responsible_departments.all %}selected{% endif %}>{{ department.hotel.name }} · {{ department.name }}</option>{% endfor %}</select></div>
-          </div>
-          <div class="location-form-actions">
-            <button class="location-btn primary" type="submit">{% if edit_location %}Save changes{% else %}Create location{% endif %}</button>
-            {% if edit_location %}<a class="location-btn" href="{% url 'maintenance_locations' %}?location={{ edit_location.id }}">Cancel</a>{% endif %}
-          </div>
+    </div>
+  </details>
+
+  <div class="mlw-layout">
+    <aside class="mlw-panel">
+      <div class="mlw-side-head">
+        <div class="mlw-side-title"><span>Hotel locations</span><span class="mlw-count">{{ locations|length }} total</span></div>
+        <form class="mlw-search" method="get">
+          <input type="search" name="q" value="{{ search_query }}" placeholder="Find a location...">
+          <button class="mlw-btn" type="submit">Search</button>
         </form>
       </div>
+      <nav class="mlw-list" aria-label="Hotel locations">
+        {% for location in locations %}
+          <a class="mlw-item {% if selected_location and selected_location.id == location.id %}selected{% endif %}" href="{% url 'maintenance_locations' %}?location={{ location.id }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" {% if selected_location and selected_location.id == location.id %}aria-current="page"{% endif %}>
+            <span class="mlw-item-icon">⌂</span>
+            <span class="mlw-item-copy">
+              <span class="mlw-item-name">{{ location.name }}</span>
+              <span class="mlw-item-sub">{{ location.hotel.name }}{% if location.building %} · {{ location.building }}{% endif %}{% if location.floor %} · {{ location.floor }}{% endif %}</span>
+              <span class="mlw-item-meta">
+                <span class="mlw-pill {% if location.is_active %}active{% else %}inactive{% endif %}">{% if location.is_active %}Active{% else %}Inactive{% endif %}</span>
+                <span class="mlw-pill">{{ location.assets.count }} assets</span>
+              </span>
+            </span>
+          </a>
+        {% empty %}
+          <div class="mlw-empty" style="margin:14px">No locations match your search.</div>
+        {% endfor %}
+      </nav>
     </aside>
 
-    <main class="location-detail">
+    <main class="mlw-panel mlw-detail">
       {% if selected_location %}
-        <div class="location-detail-head">
-          <div>
-            <h3>{{ selected_location.name }}</h3>
-            <div class="location-subtitle">{{ selected_location.hotel.name }} · {{ selected_location.get_location_type_display }}{% if selected_location.area_code %} · {{ selected_location.area_code }}{% endif %}</div>
+        <section class="mlw-hero">
+          <div class="mlw-hero-top">
+            <div>
+              <div class="mlw-kicker">{{ selected_location.get_location_type_display }} · Location profile</div>
+              <h2>{{ selected_location.name }}</h2>
+              <div class="mlw-subtitle">{{ selected_location.hotel.name }}</div>
+            </div>
+            <div class="mlw-hero-actions">
+              <a class="mlw-btn" href="{% url 'maintenance_locations' %}?location={{ selected_location.id }}&edit={{ selected_location.id }}#mlw-create">✎ Edit</a>
+              {% if selected_location.is_active %}
+                <a class="mlw-btn primary" href="{% url 'maintenance_asset_create' %}?hotel={{ selected_location.hotel_id }}&location={{ selected_location.id }}">＋ Equipment</a>
+                <a class="mlw-btn" href="{% url 'maintenance_create_ticket_location' selected_location.id %}">＋ Report issue</a>
+              {% endif %}
+              <form method="post" action="{% url 'maintenance_location_toggle_status' selected_location.id %}">{% csrf_token %}<button class="mlw-btn danger" type="submit">{% if selected_location.is_active %}Deactivate{% else %}Reactivate{% endif %}</button></form>
+            </div>
           </div>
-          <div class="location-actions">
-            <a class="location-btn" href="{% url 'maintenance_locations' %}?location={{ selected_location.id }}&edit={{ selected_location.id }}#location-create">Edit</a>
-            {% if selected_location.is_active %}
-              <a class="location-btn primary" href="{% url 'maintenance_asset_create' %}?hotel={{ selected_location.hotel_id }}&location={{ selected_location.id }}">＋ Register equipment</a>
-              <a class="location-btn" href="{% url 'maintenance_create_ticket_location' selected_location.id %}">Report issue</a>
-            {% endif %}
-            <form method="post" action="{% url 'maintenance_location_toggle_status' selected_location.id %}">{% csrf_token %}<button class="location-btn danger" type="submit">{% if selected_location.is_active %}Deactivate{% else %}Reactivate{% endif %}</button></form>
-          </div>
-        </div>
-
-        <section class="location-section">
-          <div class="location-section-head"><h4>Location details</h4><span class="location-pill {% if selected_location.is_active %}active{% else %}inactive{% endif %}">{{ selected_location.get_status_display }}</span></div>
-          <div class="location-facts">
-            <div class="location-fact"><small>Building</small><strong>{{ selected_location.building|default:"Not specified" }}</strong></div>
-            <div class="location-fact"><small>Floor</small><strong>{{ selected_location.floor|default:"Not specified" }}</strong></div>
-            <div class="location-fact"><small>Area code</small><strong>{{ selected_location.area_code|default:"—" }}</strong></div>
-            <div class="location-fact"><small>Location type</small><strong>{{ selected_location.get_location_type_display }}</strong></div>
-            <div class="location-fact"><small>Responsible departments</small><strong>{% for department in selected_location.responsible_departments.all %}{{ department.name }}{% if not forloop.last %}, {% endif %}{% empty %}Role-based defaults{% endfor %}</strong></div>
-            <div class="location-fact"><small>Description</small><strong>{{ selected_location.description|default:"No description added" }}</strong></div>
-          </div>
-          <div class="location-stats">
-            <div class="location-stat"><strong>{{ location_equipment_count }}</strong><span>Equipment registered</span></div>
-            <div class="location-stat"><strong>{{ location_open_ticket_count }}</strong><span>Open work orders</span></div>
-            <div class="location-stat"><strong>{{ location_schedules|length }}</strong><span>Active schedules shown</span></div>
+          <div class="mlw-hero-meta">
+            <span class="mlw-meta-chip">● {{ selected_location.get_status_display }}</span>
+            {% if selected_location.building %}<span class="mlw-meta-chip">▦ {{ selected_location.building }}</span>{% endif %}
+            {% if selected_location.floor %}<span class="mlw-meta-chip">⌑ {{ selected_location.floor }}</span>{% endif %}
+            {% if selected_location.area_code %}<span class="mlw-meta-chip">⌗ {{ selected_location.area_code }}</span>{% endif %}
           </div>
         </section>
 
-        <section class="location-section">
-          <div class="location-section-head"><h4>Equipment assigned to this location</h4><a class="location-btn" href="{% url 'maintenance_assets' %}">All equipment</a></div>
+        <section class="mlw-stats">
+          <div class="mlw-stat"><div class="mlw-stat-top"><span>Registered equipment</span><span class="mlw-stat-icon">▣</span></div><strong>{{ location_equipment_count }}</strong><small>Assets assigned to this area</small></div>
+          <div class="mlw-stat"><div class="mlw-stat-top"><span>Open work orders</span><span class="mlw-stat-icon">⚒</span></div><strong>{{ location_open_ticket_count }}</strong><small>Issues not yet resolved</small></div>
+          <div class="mlw-stat"><div class="mlw-stat-top"><span>Active schedules</span><span class="mlw-stat-icon">◷</span></div><strong>{{ location_schedules|length }}</strong><small>Schedules displayed below</small></div>
+        </section>
+
+        <section class="mlw-section">
+          <div class="mlw-section-head"><h3>Location information</h3><span class="mlw-section-note">Physical placement &amp; responsibility</span></div>
+          <div class="mlw-facts">
+            <div class="mlw-fact"><small>Building</small><strong>{{ selected_location.building|default:"Not specified" }}</strong></div>
+            <div class="mlw-fact"><small>Floor</small><strong>{{ selected_location.floor|default:"Not specified" }}</strong></div>
+            <div class="mlw-fact"><small>Area code</small><strong>{{ selected_location.area_code|default:"—" }}</strong></div>
+            <div class="mlw-fact"><small>Location type</small><strong>{{ selected_location.get_location_type_display }}</strong></div>
+            <div class="mlw-fact"><small>Responsible departments</small><strong>{% for department in selected_location.responsible_departments.all %}{{ department.name }}{% if not forloop.last %}, {% endif %}{% empty %}Role-based defaults{% endfor %}</strong></div>
+            <div class="mlw-fact"><small>Description</small><strong>{{ selected_location.description|default:"No description added" }}</strong></div>
+          </div>
+        </section>
+
+        <section class="mlw-section">
+          <div class="mlw-section-head"><h3>Equipment at this location</h3><a class="mlw-btn" href="{% url 'maintenance_assets' %}">View register →</a></div>
           {% if location_assets %}
-          <div class="location-table-wrap"><table class="location-table"><thead><tr><th>Asset tag</th><th>Equipment</th><th>Product</th><th>Condition</th><th>Status</th><th></th></tr></thead><tbody>
+            <div class="mlw-table-wrap"><table class="mlw-table"><thead><tr><th>Asset tag</th><th>Equipment</th><th>Product link</th><th>Condition</th><th>Status</th><th></th></tr></thead><tbody>
             {% for asset in location_assets %}
-            <tr><td>{{ asset.asset_tag }}</td><td><strong>{{ asset.name }}</strong><br><small>{{ asset.asset_type }}</small></td><td>{{ asset.product.name|default:"Manual record" }}</td><td>{{ asset.get_condition_display }}</td><td>{% if asset.is_active %}Active{% else %}Inactive{% endif %}</td><td><a href="{% url 'maintenance_asset_edit' asset.id %}?hotel={{ asset.hotel_id }}">Edit</a></td></tr>
+              <tr><td><strong>{{ asset.asset_tag }}</strong></td><td>{{ asset.name }}<br><span class="mlw-section-note">{{ asset.asset_type }}</span></td><td>{{ asset.product.name|default:"Manual record" }}</td><td>{{ asset.get_condition_display }}</td><td>{% if asset.is_active %}<span class="mlw-pill active">Active</span>{% else %}<span class="mlw-pill inactive">Inactive</span>{% endif %}</td><td><a href="{% url 'maintenance_asset_edit' asset.id %}?hotel={{ asset.hotel_id }}">Edit</a></td></tr>
             {% endfor %}
-          </tbody></table></div>
-          {% else %}<div class="location-empty">No equipment is assigned to this location yet.</div>{% endif %}
+            </tbody></table></div>
+          {% else %}<div class="mlw-empty"><strong>No equipment assigned yet</strong>Register equipment directly from this location to build its asset register.</div>{% endif %}
         </section>
 
-        <section class="location-section">
-          <div class="location-section-head"><h4>Preventive maintenance schedules</h4><a class="location-btn" href="{% url 'maintenance_schedules' %}">All schedules</a></div>
+        <section class="mlw-section">
+          <div class="mlw-section-head"><h3>Preventive maintenance</h3><a class="mlw-btn" href="{% url 'maintenance_schedules' %}">All schedules →</a></div>
           {% if location_schedules %}
-          <div class="location-table-wrap"><table class="location-table"><thead><tr><th>Equipment</th><th>Schedule</th><th>Next due</th></tr></thead><tbody>{% for schedule in location_schedules %}<tr><td>{{ schedule.asset.name }}</td><td>{{ schedule.name }}</td><td>{{ schedule.next_due_date|date:"d M Y" }}</td></tr>{% endfor %}</tbody></table></div>
-          {% else %}<div class="location-empty">No active preventive schedules are linked to equipment here.</div>{% endif %}
+            <div class="mlw-table-wrap"><table class="mlw-table"><thead><tr><th>Equipment</th><th>Schedule</th><th>Next due</th></tr></thead><tbody>{% for schedule in location_schedules %}<tr><td>{{ schedule.asset.name }}</td><td>{{ schedule.name }}</td><td>{{ schedule.next_due_date|date:"d M Y" }}</td></tr>{% endfor %}</tbody></table></div>
+          {% else %}<div class="mlw-empty"><strong>No preventive schedules yet</strong>Schedules linked to equipment in this location will appear here.</div>{% endif %}
         </section>
 
-        <section class="location-section">
-          <div class="location-section-head"><h4>Inspection and maintenance history</h4><a class="location-btn" href="{% url 'maintenance_work_history' %}">View work history</a></div>
+        <section class="mlw-section">
+          <div class="mlw-section-head"><h3>Maintenance activity</h3><a class="mlw-btn" href="{% url 'maintenance_work_history' %}">Full work history →</a></div>
           {% if location_tickets %}
-          <div class="location-table-wrap"><table class="location-table"><thead><tr><th>Work order</th><th>Issue</th><th>Reported</th><th>Assigned to</th><th>Status</th></tr></thead><tbody>{% for ticket in location_tickets %}<tr><td><a href="{% url 'maintenance_ticket_detail' ticket.id %}">#{{ ticket.id }}</a></td><td>{{ ticket.description|truncatechars:75 }}</td><td>{{ ticket.created_at|date:"d M Y" }}</td><td>{{ ticket.assigned_to|default:"Unassigned" }}</td><td>{{ ticket.get_status_display }}</td></tr>{% endfor %}</tbody></table></div>
-          {% else %}<div class="location-empty">No maintenance work orders have been recorded for this location.</div>{% endif %}
+            <div class="mlw-table-wrap"><table class="mlw-table"><thead><tr><th>Work order</th><th>Issue</th><th>Reported</th><th>Assigned to</th><th>Status</th></tr></thead><tbody>{% for ticket in location_tickets %}<tr><td><a href="{% url 'maintenance_ticket_detail' ticket.id %}">#{{ ticket.id }}</a></td><td>{{ ticket.description|truncatechars:75 }}</td><td>{{ ticket.created_at|date:"d M Y" }}</td><td>{{ ticket.assigned_to|default:"Unassigned" }}</td><td>{{ ticket.get_status_display }}</td></tr>{% endfor %}</tbody></table></div>
+          {% else %}<div class="mlw-empty"><strong>No maintenance activity recorded</strong>Reported issues and completed work orders will be listed here.</div>{% endif %}
         </section>
+        <div class="mlw-bottom"><span>Location record #{{ selected_location.id }}</span><span>City Center Hotels · Maintenance</span></div>
       {% else %}
-        <div class="location-empty" style="margin-top:20px">Select a location from the list, or create your first location to get started.</div>
+        <div class="mlw-empty" style="margin-top:20px"><strong>No location selected</strong>Create a location or choose one from the list to view its details.</div>
       {% endif %}
     </main>
   </div>
