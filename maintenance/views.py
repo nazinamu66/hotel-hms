@@ -858,159 +858,84 @@ def resolve_ticket(request, ticket_id):
 def add_labour(request, ticket_id):
 
     ticket = get_object_or_404(
-        MaintenanceTicket,
+        MaintenanceTicket.objects.select_related("room", "location"),
         id=ticket_id,
     )
 
-    # --------------------------------------------------------
-    # Hotel security
-    # --------------------------------------------------------
+    # Resolve the ticket's hotel from either supported target.
+    ticket_hotel_id = (
+        ticket.room.hotel_id if ticket.room_id
+        else ticket.location.hotel_id if ticket.location_id
+        else None
+    )
+    if ticket_hotel_id is None:
+        raise PermissionDenied
 
-    if request.user.role in (
-        "MAINTENANCE",
-        "MANAGER",
-    ):
-
-        if not request.user.hotel_id:
+    # Preserve hotel scoping for operational roles.
+    if request.user.role in ("MAINTENANCE", "MANAGER"):
+        if not request.user.hotel_id or ticket_hotel_id != request.user.hotel_id:
             raise PermissionDenied
-
-        ticket_hotel_id = ticket.room.hotel_id if ticket.room_id else ticket.location.hotel_id
-        if ticket_hotel_id != request.user.hotel_id:
-            raise PermissionDenied
-
-    # --------------------------------------------------------
-    # Only active work orders may receive labour
-    # --------------------------------------------------------
 
     if ticket.status != "IN_PROGRESS":
-
         messages.warning(
             request,
             "Labour can only be added to an in-progress work order.",
         )
+        return redirect("maintenance_ticket_detail", ticket_id=ticket.id)
 
-        return redirect(
-            "maintenance_ticket_detail",
-            ticket_id=ticket.id,
-        )
+    technicians = User.objects.filter(
+        role="MAINTENANCE",
+        hotel_id=ticket_hotel_id,
+        is_active=True,
+    ).order_by("username")
+
+    suppliers = Supplier.objects.filter(
+        hotel_id=ticket_hotel_id,
+    ).order_by("name")
 
     if request.method == "POST":
+        labour_type = request.POST.get("labour_type", "").strip()
+        description = request.POST.get("description", "").strip()
+        amount_value = request.POST.get("amount", "0").strip()
+        technician_id = request.POST.get("technician")
+        supplier_id = request.POST.get("supplier")
 
-        labour_type = request.POST.get(
-            "labour_type",
-            "",
-        ).strip()
-
-        description = request.POST.get(
-            "description",
-            "",
-        ).strip()
-
-        amount = request.POST.get(
-            "amount",
-            "0",
-        ).strip()
-
-        technician_id = request.POST.get(
-            "technician",
-        )
-
-        supplier_id = request.POST.get(
-            "supplier",
-        )
-
-        # ----------------------------------------------------
-        # Basic validation
-        # ----------------------------------------------------
-
-        if labour_type not in (
-            "INTERNAL",
-            "OUTSOURCED",
-        ):
-
-            messages.error(
-                request,
-                "Invalid labour type.",
-            )
-
+        if labour_type not in ("INTERNAL", "OUTSOURCED"):
+            messages.error(request, "Select a valid labour type.")
             return redirect(request.path)
 
         if not description:
-
-            messages.error(
-                request,
-                "A description of the labour is required.",
-            )
-
+            messages.error(request, "A description of the labour is required.")
             return redirect(request.path)
 
         try:
-            amount = Decimal(amount)
-
+            amount = Decimal(amount_value)
             if amount < 0:
                 raise InvalidOperation
-
-        except (InvalidOperation, TypeError):
-
-            messages.error(
-                request,
-                "Please enter a valid labour amount.",
-            )
-
+        except (InvalidOperation, TypeError, ValueError):
+            messages.error(request, "Please enter a valid non-negative labour amount.")
             return redirect(request.path)
-
-
-        # ----------------------------------------------------
-        # Internal labour
-        # ----------------------------------------------------
 
         technician = None
         supplier = None
 
         if labour_type == "INTERNAL":
-
             if not technician_id:
-
-                messages.error(
-                    request,
-                    "Please select the technician.",
-                )
-
+                messages.error(request, "Please select the technician.")
                 return redirect(request.path)
-
             technician = get_object_or_404(
-                User,
-                id=technician_id,
-                role="MAINTENANCE",
+                technicians,
+                pk=technician_id,
             )
 
-            if technician.hotel_id != ticket.room.hotel_id:
-                raise PermissionDenied
-
-        # ----------------------------------------------------
-        # Outsourced labour
-        # ----------------------------------------------------
-
-        elif labour_type == "OUTSOURCED":
-
+        else:
             if not supplier_id:
-
-                messages.error(
-                    request,
-                    "Please select a supplier.",
-                )
-
+                messages.error(request, "Please select the supplier or contractor.")
                 return redirect(request.path)
-
             supplier = get_object_or_404(
-                Supplier,
-                id=supplier_id,
-                hotel=ticket.room.hotel,
+                suppliers,
+                pk=supplier_id,
             )
-
-        # ----------------------------------------------------
-        # Create labour record
-        # ----------------------------------------------------
 
         labour = MaintenanceLabour.objects.create(
             ticket=ticket,
@@ -1028,33 +953,8 @@ def add_labour(request, ticket_id):
                 user=request.user,
             )
 
-        messages.success(
-            request,
-            "Maintenance labour added successfully.",
-        )
-
-        return redirect(
-            "maintenance_ticket_detail",
-            ticket_id=ticket.id,
-        )
-
-    # --------------------------------------------------------
-    # Form data
-    # --------------------------------------------------------
-
-    technicians = User.objects.filter(
-        role="MAINTENANCE",
-        hotel_id=ticket.room.hotel_id,
-        is_active=True,
-    ).order_by(
-        "username",
-    )
-
-    suppliers = Supplier.objects.filter(
-        hotel=ticket.room.hotel,
-    ).order_by(
-        "name",
-    )
+        messages.success(request, "Maintenance labour added successfully.")
+        return redirect("maintenance_ticket_detail", ticket_id=ticket.id)
 
     return render(
         request,
