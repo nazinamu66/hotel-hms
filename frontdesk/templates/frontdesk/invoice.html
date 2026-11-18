@@ -87,7 +87,7 @@ thead th{border-top:1px solid #e1e8f0;border-bottom:1px solid #dce4ee;background
 <button class="btn btn-primary" type="submit">Record balance waiver</button>
 </form></section>
 {% endif %}
-<table class="summary"><tr><td>Total charges</td><td class="amount">₦{{ total_charges|floatformat:2 }}</td></tr><tr><td>Total payments</td><td class="amount">₦{{ total_payments|floatformat:2 }}</td></tr><tr><td>Outstanding balance</td><td class="amount">₦{{ balance|floatformat:2 }}</td></tr></table>
+<table class="summary"><tr><td>Total charges</td><td class="amount">₦{{ total_charges|floatformat:2 }}</td></tr><tr><td>Total payments</td><td class="amount">₦{{ total_payments|floatformat:2 }}</td></tr><tr><td>Total balance waivers</td><td class="amount">₦{{ total_waivers|floatformat:2 }}</td></tr><tr><td>Outstanding balance</td><td class="amount">₦{{ balance|floatformat:2 }}</td></tr></table>
 <footer class="footer"><span>{{ business.name|default:"Hotel Management System" }} · Invoice #{{ folio.id }}</span><span>Generated {{ folio.created_at|date:"d M Y" }}</span></footer>
 </main>
 </div>
