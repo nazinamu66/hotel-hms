@@ -493,6 +493,7 @@ def build_invoice_context(folio):
         "balance": folio.balance,
         "total_waivers": folio.total_waivers,
         "balance_waivers": folio.balance_waivers.select_related("waived_by").all(),
+        "checkout_authorizations": folio.checkout_authorizations.select_related("approved_by").all(),
     }
 
 
@@ -650,9 +651,13 @@ def _invoice_pdf_response(context):
     return response
 
 
-@role_required("FRONTDESK", "MANAGER", "ADMIN")
+@role_required("FRONTDESK", "MANAGER", "DIRECTOR", "ADMIN")
 def invoice_pdf_view(request, folio_id):
-    folio=get_object_or_404(Folio,id=folio_id,hotel=request.user.department.hotel)
+    from accounts.services.access import get_accessible_hotels
+    folio = get_object_or_404(
+        Folio.objects.filter(hotel__in=get_accessible_hotels(request.user)),
+        pk=folio_id,
+    )
     return _invoice_pdf_response(build_invoice_context(folio))
 
 
