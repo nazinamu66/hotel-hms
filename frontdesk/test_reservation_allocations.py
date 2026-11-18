@@ -1,12 +1,22 @@
 from datetime import date
+from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from billing.models import Folio, Guest, Reservation, ReservationRoomAllocation
+from billing.models import (
+    Folio,
+    Guest,
+    GuestDeposit,
+    GuestDepositTransaction,
+    Reservation,
+    ReservationDeposit,
+    ReservationRoomAllocation,
+)
 from billing.services.complimentary_rooms import request_complimentary_nights
 from frontdesk.workflows.reservation import create_reservation
 from frontdesk.workflows.reservation_allocations import (
@@ -194,6 +204,26 @@ class OrdinaryMultiRoomReservationTests(TestCase):
         first, second = list(reservation.room_allocations.order_by("allocation_number"))
         first.room = self.room_one
         first.save(update_fields=["room"])
+        second.room = self.room_two
+        second.save(update_fields=["room"])
+
+        guest_deposit = GuestDeposit.objects.create(
+            hotel=self.hotel,
+            guest=self.primary_guest,
+            balance=Decimal("1000.00"),
+        )
+        guarantee = ReservationDeposit.objects.create(
+            reservation=reservation,
+            guest_deposit=guest_deposit,
+            nightly_rate=Decimal("50000.00"),
+            number_of_rooms=2,
+            number_of_nights=3,
+            reservation_value=Decimal("300000.00"),
+            required_amount=Decimal("60000.00"),
+            allocated_amount=Decimal("60000.00"),
+            cancellation_deadline=timezone.now(),
+            status="GUARANTEED",
+        )
 
         marked = mark_room_allocation_no_show(first.pk, self.hotel)
         reservation.refresh_from_db()
@@ -205,6 +235,15 @@ class OrdinaryMultiRoomReservationTests(TestCase):
         self.assertEqual(second.status, "RESERVED")
         self.assertEqual(reservation.status, "RESERVED")
         self.assertEqual(first.room_id, self.room_one.pk)
+        guarantee.refresh_from_db()
+        guest_deposit.refresh_from_db()
+        self.assertEqual(guarantee.status, "GUARANTEED")
+        self.assertEqual(guarantee.allocated_amount, Decimal("60000.00"))
+        self.assertEqual(guest_deposit.balance, Decimal("1000.00"))
+        self.assertEqual(
+            GuestDepositTransaction.objects.filter(deposit=guest_deposit).count(),
+            0,
+        )
 
         from frontdesk.services import get_available_rooms
         available = get_available_rooms(
