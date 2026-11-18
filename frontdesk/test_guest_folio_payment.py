@@ -252,7 +252,7 @@ class GuestFolioPaymentViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        checkout_guest.assert_called_once_with(room=room, user=self.user)
+        checkout_guest.assert_called_once_with(room=room, user=self.user, reason="")
 
 
     def test_reservation_calendar_reuses_category_day_availability(self):
