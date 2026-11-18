@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date, datetime
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -157,12 +157,7 @@ class DailyRoomChargeCheckoutBoundaryTests(TestCase):
         with patch("billing.models.timezone.now", return_value=audit_time), patch(
             "billing.models.timezone.localdate",
             side_effect=lambda value=None: (
-                date(2026, 11, 20)
-                if value is None
-                else timezone.datetime.fromtimestamp(
-                    value.timestamp(),
-                    tz=timezone.get_current_timezone(),
-                ).date()
+                date(2026, 11, 20) if value is None else value.date()
             ),
         ):
             self.folio.apply_daily_room_charge()
