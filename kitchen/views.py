@@ -716,7 +716,7 @@ def kitchen_quick_production(request):
         event__status="RELEASED",
         line_type="FOOD",
         recipe__isnull=False,
-    ).select_related("event", "recipe").order_by("event__event_date", "event__service_time", "id")
+    ).select_related("event", "recipe", "recipe_version").order_by("event__event_date", "event__service_time", "id")
 
     if request.method == "POST":
         batch_form = ProductionBatchForm(request.POST)
@@ -727,9 +727,12 @@ def kitchen_quick_production(request):
             recipe = batch_form.cleaned_data["recipe"]
             qty = batch_form.cleaned_data["quantity_produced"]
             event_order_line = batch_form.cleaned_data.get("event_order_line")
-            version = recipe.active_version
+            version = (
+                event_order_line.recipe_version
+                if event_order_line else recipe.active_version
+            )
 
-            if not version or version.status != "APPROVED" or not version.items.exists():
+            if not version or version.recipe_id != recipe.pk or not version.items.exists():
                 messages.error(request, f"{recipe.name} needs an approved recipe version with ingredients.")
                 return redirect("kitchen_quick_production")
 
