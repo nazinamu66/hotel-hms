@@ -35,7 +35,7 @@
       <h2 class="asset-title">Equipment Register</h2>
       <p class="asset-subtitle">A single register of hotel equipment, its assigned location, condition, warranty and maintenance status.</p>
     </div>
-    {% if user.role == "ADMIN" or user.role == "DIRECTOR" %}
+    {% if user.role == "ADMIN" or user.role == "DIRECTOR" or user.role == "MAINTENANCE" or user.role == "MANAGER" %}
       <a class="asset-primary" href="{% url 'maintenance_asset_create' %}"><span aria-hidden="true">＋</span> Register Equipment</a>
     {% endif %}
   </header>
@@ -59,7 +59,7 @@
             <td>{{ asset.purchase_cost|floatformat:2 }}</td>
             <td>{% if asset.warranty_expiry %}{{ asset.warranty_expiry|date:"d M Y" }}{% else %}—{% endif %}</td>
             <td><span class="asset-pill {% if asset.is_active %}good{% else %}bad{% endif %}">{% if asset.is_active %}Active{% else %}Inactive{% endif %}</span></td>
-            <td>{% if user.role == "ADMIN" or user.role == "DIRECTOR" %}<a class="asset-action" href="{% url 'maintenance_asset_edit' asset.id %}?hotel={{ asset.hotel_id }}">Edit</a>{% else %}<span class="asset-secondary">View only</span>{% endif %}</td>
+            <td>{% if user.role == "ADMIN" or user.role == "DIRECTOR" or user.role == "MAINTENANCE" or user.role == "MANAGER" %}<a class="asset-action" href="{% url 'maintenance_asset_edit' asset.id %}?hotel={{ asset.hotel_id }}">Edit</a>{% else %}<span class="asset-secondary">View only</span>{% endif %}</td>
           </tr>
         {% empty %}
           <tr><td colspan="10"><div class="asset-empty"><strong>No equipment registered yet</strong>Equipment received through purchase orders or registered manually will appear here.</div></td></tr>
@@ -68,6 +68,6 @@
       </table>
     </div>
   </section>
-  <p style="color:#64748b;font-size:.85rem;margin-top:14px;">Equipment records are managed by Admin and Director users. Maintenance staff can use this register to identify equipment and its location.</p>
+  <p style="color:#64748b;font-size:.85rem;margin-top:14px;">Equipment records can be managed by Maintenance, Manager, Admin and Director users within their permitted hotel access.</p>
 </div>
 {% endblock %}
