@@ -2123,7 +2123,7 @@ def complimentary_room_night_queue(request):
     accessible_hotels = get_accessible_hotels(request.user)
     requests_qs = ComplimentaryRoomNight.objects.select_related(
         "reservation", "reservation__guest", "reservation__hotel",
-        "requested_by", "folio", "folio__room",
+        "requested_by", "folio", "folio__room", "allocation", "allocation__room",
     ).filter(status="PENDING").order_by("requested_at")
     requests_qs = requests_qs.filter(reservation__hotel__in=accessible_hotels)
     return render(
@@ -2250,7 +2250,7 @@ def complimentary_register(request):
     room_records = ComplimentaryRoomNight.objects.select_related(
         "reservation", "reservation__guest", "reservation__hotel",
         "reservation__room", "folio", "folio__room",
-        "requested_by", "approved_by",
+        "requested_by", "approved_by", "allocation", "allocation__room",
     ).filter(reservation__hotel__in=hotels)
     food_records = ComplimentaryBreakfastRedemption.objects.select_related(
         "folio", "folio__guest", "folio__hotel", "room",
