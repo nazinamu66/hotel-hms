@@ -30,6 +30,7 @@ from .views import (
     check_in,
     active_stay,
     checkout,
+    waive_folio_balance_view,
     take_payment,
     take_folio_payment,
     invoice_view,
