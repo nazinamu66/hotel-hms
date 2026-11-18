@@ -1937,3 +1937,109 @@ class EventOrderLine(models.Model):
 
     def __str__(self):
         return f"{self.event.reference} — {self.description} × {self.quantity}"
+
+class ReservationRoomAllocation(models.Model):
+    """
+    One ordinary guest-room allocation within a master Reservation.
+
+    Corporate group bookings continue to use GroupReservationRoom.
+    The parent Reservation remains the booking/guarantee record, while this
+    model tracks each room occupant and the room's individual Folio.
+    """
+
+    STATUS_CHOICES = (
+        ("RESERVED", "Reserved"),
+        ("CHECKED_IN", "Checked In"),
+        ("CHECKED_OUT", "Checked Out"),
+        ("CANCELLED", "Cancelled"),
+        ("NO_SHOW", "No Show"),
+    )
+
+    reservation = models.ForeignKey(
+        "billing.Reservation",
+        on_delete=models.PROTECT,
+        related_name="room_allocations",
+    )
+    allocation_number = models.PositiveSmallIntegerField()
+    guest = models.ForeignKey(
+        "billing.Guest",
+        on_delete=models.PROTECT,
+        related_name="reservation_room_allocations",
+    )
+    room = models.ForeignKey(
+        "rooms.Room",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="reservation_room_allocations",
+    )
+    folio = models.OneToOneField(
+        "billing.Folio",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="ordinary_reservation_allocation",
+    )
+    check_in_date = models.DateField()
+    check_out_date = models.DateField()
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="RESERVED",
+        db_index=True,
+    )
+    occupant_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["allocation_number", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["reservation", "allocation_number"],
+                name="unique_reservation_room_allocation_number",
+            ),
+        ]
+
+    def clean(self):
+        if self.reservation_id and self.guest_id:
+            if self.reservation.hotel_id != self.guest.hotel_id:
+                raise ValidationError(
+                    "Room occupant must belong to the reservation's hotel."
+                )
+        if self.room_id and self.reservation_id:
+            if self.room.hotel_id != self.reservation.hotel_id:
+                raise ValidationError(
+                    "Assigned room must belong to the reservation's hotel."
+                )
+            if self.room.category_id != self.reservation.room_category_id:
+                raise ValidationError(
+                    "Assigned room must match the reservation's room category."
+                )
+        if self.folio_id and self.reservation_id:
+            if self.folio.hotel_id != self.reservation.hotel_id:
+                raise ValidationError(
+                    "Room folio must belong to the reservation's hotel."
+                )
+            if self.folio.reservation_id != self.reservation_id:
+                raise ValidationError(
+                    "Room folio must belong to this reservation."
+                )
+            if self.folio.guest_id != self.guest_id:
+                raise ValidationError(
+                    "Room folio guest must match the allocated occupant."
+                )
+        if (
+            self.check_in_date
+            and self.check_out_date
+            and self.check_out_date <= self.check_in_date
+        ):
+            raise ValidationError(
+                "Room allocation check-out must be after check-in."
+            )
+
+    def __str__(self):
+        return (
+            f"Reservation #{self.reservation_id} – "
+            f"Room {self.allocation_number}: {self.guest.full_name}"
+        )
+
