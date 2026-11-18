@@ -247,12 +247,14 @@ class GuestFolioPaymentViewTests(TestCase):
     @patch("frontdesk.workflows.checkout.checkout_guest")
     def test_checkout_runs_only_after_post(self, checkout_guest):
         room, folio = self._create_active_stay_room(guest=self.guest)
+        checkout_guest.return_value = folio
 
         response = self.client.post(
             reverse("frontdesk_checkout", args=[room.pk])
         )
 
         self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("frontdesk_invoice", args=[folio.pk]))
         checkout_guest.assert_called_once_with(room=room, user=self.user, reason="")
 
 
