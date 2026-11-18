@@ -148,7 +148,7 @@ def create_ticket_location(request, location_id):
     return render(request, "maintenance/create_ticket_location.html", {"location": location, "assets": assets})
 
 
-@role_required("ADMIN", "DIRECTOR")
+@role_required("MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR")
 def maintenance_locations(request):
     hotels = get_accessible_hotels(request.user)
     if request.user.role in {"MAINTENANCE", "MANAGER"}:
