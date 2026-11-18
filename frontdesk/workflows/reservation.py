@@ -181,6 +181,7 @@ def create_reservation_record(
     return reservation
 
 
+@transaction.atomic
 def create_reservation(
     hotel,
     user,

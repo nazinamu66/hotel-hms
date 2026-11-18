@@ -1554,6 +1554,7 @@ def reservation_detail(request, reservation_id):
     if not hasattr(reservation, "group_allocation"):
         from frontdesk.workflows.reservation_allocations import ensure_ordinary_allocations
         ensure_ordinary_allocations(reservation)
+        reservation._prefetched_objects_cache.pop("room_allocations", None)
 
     guests = Guest.objects.filter(hotel=reservation.hotel).order_by("first_name", "last_name")
     rooms = Room.objects.filter(

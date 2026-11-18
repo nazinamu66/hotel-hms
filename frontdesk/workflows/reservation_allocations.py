@@ -133,6 +133,8 @@ def check_in_room_allocation(allocation_id, hotel, user):
         hotel=hotel,
     )
 
+    if reservation.status in ("CANCELLED", "NO_SHOW", "CHECKED_OUT"):
+        raise ValidationError("This reservation is no longer eligible for check-in.")
     if allocation.status != "RESERVED":
         raise ValidationError("This room allocation is not awaiting check-in.")
 
