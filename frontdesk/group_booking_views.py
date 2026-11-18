@@ -533,8 +533,8 @@ def event_detail(request, event_id):
         action = request.POST.get("action")
         if action == "add_line":
             line_form = EventOrderLineForm(request.POST, prefix="line", event=event)
-            if event.status not in ("DRAFT", "AGREED"):
-                messages.error(request, "Order lines cannot be changed after release.")
+            if event.status != "DRAFT":
+                messages.error(request, "Order lines are locked after the commercial agreement is recorded.")
             elif line_form.is_valid():
                 line = line_form.save(commit=False)
                 line.event = event
