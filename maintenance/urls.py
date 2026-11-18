@@ -8,6 +8,8 @@ from .views import (
     create_ticket_room,
     create_ticket_location,
     maintenance_locations,
+    maintenance_location_edit,
+    maintenance_location_toggle_status,
     add_labour,
     add_material,
     maintenance_work_orders,
@@ -51,6 +53,8 @@ urlpatterns = [
         name="maintenance_create_ticket_room",
     ),
     path("locations/", maintenance_locations, name="maintenance_locations"),
+    path("locations/<int:location_id>/edit/", maintenance_location_edit, name="maintenance_location_edit"),
+    path("locations/<int:location_id>/toggle-status/", maintenance_location_toggle_status, name="maintenance_location_toggle_status"),
     path(
         "create/location/<int:location_id>/",
         create_ticket_location,
