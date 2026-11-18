@@ -111,11 +111,11 @@ class CompanyStatementMetricsTests(SimpleTestCase):
 
 
 from django.core.exceptions import ValidationError
-from frontdesk.workflows.check_in import check_in_guest
+from frontdesk.workflows.check_in import validate_check_in
 
 
 class CheckInRoomReadinessTests(SimpleTestCase):
-    def test_only_available_rooms_can_be_checked_in(self):
+    def test_only_available_rooms_pass_the_shared_readiness_guard(self):
         for status in (
             "OCCUPIED",
             "OCCUPIED_DIRTY",
@@ -126,10 +126,8 @@ class CheckInRoomReadinessTests(SimpleTestCase):
             with self.subTest(status=status):
                 room = SimpleNamespace(status=status)
                 with self.assertRaises(ValidationError):
-                    check_in_guest(room=room, user=None, data={})
+                    validate_check_in(room)
 
     def test_available_room_passes_the_shared_readiness_guard(self):
-        from frontdesk.workflows.check_in import validate_check_in
-
         room = SimpleNamespace(status="AVAILABLE")
         self.assertIsNone(validate_check_in(room))
