@@ -252,6 +252,7 @@ class OrdinaryMultiRoomReservationTests(TestCase):
         self.assertTrue(available.filter(pk=self.room_one.pk).exists())
 
     def test_allocation_no_show_does_not_prevent_sibling_check_in(self):
+        RoomRate.objects.create(category=self.category, price_per_night="50000.00")
         reservation = self.make_reservation()
         first, second = list(reservation.room_allocations.order_by("allocation_number"))
 
@@ -277,6 +278,7 @@ class OrdinaryMultiRoomReservationTests(TestCase):
         self.assertEqual(reservation.status, "NO_SHOW")
 
     def test_checked_in_allocation_cannot_be_marked_no_show(self):
+        RoomRate.objects.create(category=self.category, price_per_night="50000.00")
         reservation = self.make_reservation()
         allocation = reservation.room_allocations.first()
         allocation, room, folio = check_in_room_allocation(
