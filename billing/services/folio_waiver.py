@@ -1,4 +1,4 @@
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from uuid import uuid4
 
 from django.core.exceptions import ValidationError
@@ -23,6 +23,8 @@ def waive_folio_balance(*, folio_id, amount, reason, user):
         raise ValidationError("Enter a valid waiver amount.")
     if not amount.is_finite() or amount <= 0:
         raise ValidationError("Waiver amount must be greater than zero.")
+    if amount != amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP):
+        raise ValidationError("Waiver amount cannot have more than two decimal places.")
 
     folio = Folio.objects.select_for_update().select_related("hotel").get(pk=folio_id)
     if user.role != "ADMIN":
@@ -43,8 +45,35 @@ def waive_folio_balance(*, folio_id, amount, reason, user):
     waiver.full_clean()
     waiver.save()
 
-    from accounting.constants import ACCOUNTS_RECEIVABLE, GUEST_BALANCE_WAIVER_EXPENSE
+    from accounting.constants import (
+        ACCOUNTS_RECEIVABLE, GUEST_BALANCE_WAIVER_EXPENSE, DEFAULT_ACCOUNTS,
+    )
+    from accounting.models import Account
     from accounting.services.journal import record_transaction
+
+    # Ensure these two posting accounts exist for older hotels as well as new ones.
+    for system_key in (ACCOUNTS_RECEIVABLE, GUEST_BALANCE_WAIVER_EXPENSE):
+        definition = next(
+            item for item in DEFAULT_ACCOUNTS
+            if item.get("system_key") == system_key
+        )
+        account, _ = Account.objects.get_or_create(
+            hotel=folio.hotel,
+            code=definition["code"],
+            defaults={
+                "name": definition["name"],
+                "account_type": definition["type"],
+                "system_key": system_key,
+                "is_system": True,
+                "allow_posting": definition.get("allow_posting", True),
+                "allow_manual_entries": definition.get("allow_manual_entries", True),
+            },
+        )
+        if account.system_key != system_key or not account.is_system:
+            raise ValidationError(
+                f"Chart of Accounts code {definition['code']} is already in use. "
+                "Please resolve the account setup before recording this waiver."
+            )
     record_transaction(
         debit_system_key=GUEST_BALANCE_WAIVER_EXPENSE,
         credit_system_key=ACCOUNTS_RECEIVABLE,
