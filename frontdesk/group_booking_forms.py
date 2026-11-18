@@ -159,7 +159,9 @@ class EventOrderLineForm(forms.ModelForm):
             Recipe.objects.filter(
                 is_active=True,
                 product__hotel_id=event.hotel_id,
-            ).select_related("product").order_by("name")
+                active_version__status="APPROVED",
+                active_version__items__isnull=False,
+            ).select_related("product", "active_version").distinct().order_by("name")
             if event else Recipe.objects.none()
         )
         self.fields["recipe"].required = False
