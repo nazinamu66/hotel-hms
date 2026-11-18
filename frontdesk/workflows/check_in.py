@@ -72,6 +72,7 @@ def get_or_create_guest(room, data):
     email = data.get("email")
     nationality = data.get("nationality")
     id_number = data.get("id_number")
+    id_document = data.get("id_document")
 
     if not first_name or not last_name:
         raise ValidationError(
@@ -96,6 +97,7 @@ def get_or_create_guest(room, data):
             email=email,
             nationality=nationality,
             id_number=id_number,
+            id_document=id_document,
         )
 
     else:
@@ -107,16 +109,19 @@ def get_or_create_guest(room, data):
         guest.nationality = nationality
         guest.id_number = id_number
 
-        guest.save(
-            update_fields=[
-                "first_name",
-                "last_name",
-                "phone",
-                "email",
-                "nationality",
-                "id_number",
-            ]
-        )
+        update_fields = [
+            "first_name",
+            "last_name",
+            "phone",
+            "email",
+            "nationality",
+            "id_number",
+        ]
+        if id_document:
+            guest.id_document = id_document
+            update_fields.append("id_document")
+
+        guest.save(update_fields=update_fields)
 
     return guest
 
