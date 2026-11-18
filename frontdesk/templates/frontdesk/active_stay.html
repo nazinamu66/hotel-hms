@@ -109,7 +109,7 @@
         <a class="as-btn" href="{% url 'frontdesk_invoice' folio.id %}" target="_blank" rel="noopener">View / Print Invoice ↗</a>
         <a class="as-btn as-btn-blue" href="{% url 'frontdesk_extend_stay' room.id %}">Extend Stay</a>
         <a class="as-btn as-btn-purple" href="{% url 'frontdesk_change_room' room.id %}">Change Room</a>
-        {% if folio.balance == 0 %}
+        {% if folio.balance <= 0 %}
             <form method="post" action="{% url 'frontdesk_checkout' room.id %}" style="display:inline;" onsubmit="return confirm('Check out the guest in Room {{ room.room_number }}?')">
                 {% csrf_token %}
                 <button class="as-btn as-btn-green" type="submit">Checkout</button>
