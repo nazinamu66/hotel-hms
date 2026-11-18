@@ -1384,6 +1384,40 @@ def take_folio_payment(request, folio_id):
     )
 
 
+@role_required("DIRECTOR", "ADMIN")
+def waive_folio_balance_view(request, folio_id):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    from accounts.services.access import get_accessible_hotels
+    from billing.services.folio_waiver import waive_folio_balance
+
+    folio = get_object_or_404(
+        Folio.objects.filter(hotel__in=get_accessible_hotels(request.user)),
+        pk=folio_id,
+    )
+    try:
+        waiver = waive_folio_balance(
+            folio_id=folio.pk,
+            amount=request.POST.get("amount", ""),
+            reason=request.POST.get("reason", ""),
+            user=request.user,
+        )
+    except (ValidationError, ValueError) as exc:
+        messages.error(request, str(exc))
+    except Exception as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request,
+            f"Balance waiver of ₦{waiver.amount:,.2f} recorded successfully.",
+        )
+
+    if folio.room_id and not folio.is_closed:
+        return redirect("frontdesk_active_stay", folio.room_id)
+    return redirect("frontdesk_invoice", folio.pk)
+
+
 @role_required("FRONTDESK", "MANAGER", "DIRECTOR", "ADMIN")
 def checkout(request, room_id):
     if request.method != "POST":
