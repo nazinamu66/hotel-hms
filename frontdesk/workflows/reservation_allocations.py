@@ -111,7 +111,12 @@ def sync_ordinary_reservation_status(reservation):
     elif all(status == "NO_SHOW" for status in statuses):
         new_status = "NO_SHOW"
     elif all(status in ("CHECKED_OUT", "CANCELLED", "NO_SHOW") for status in statuses):
-        new_status = "CHECKED_OUT" if "CHECKED_OUT" in statuses else reservation.status
+        if "CHECKED_OUT" in statuses:
+            new_status = "CHECKED_OUT"
+        elif all(status == "NO_SHOW" for status in statuses):
+            new_status = "NO_SHOW"
+        else:
+            new_status = "CANCELLED"
     elif any(status in ("CHECKED_IN", "CHECKED_OUT") for status in statuses):
         # CHECKED_OUT remains a non-cancellable in-progress master until all
         # allocations have reached a terminal state.

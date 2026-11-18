@@ -24,7 +24,7 @@ def get_available_rooms(
     overlapping_reservations = Reservation.objects.filter(
         hotel=hotel,
         room_category=category,
-        status="RESERVED",
+        status__in=["RESERVED", "CHECKED_IN"],
         reservation_deposit__status="GUARANTEED",
     ).filter(
         Q(check_in_date__lt=check_out)

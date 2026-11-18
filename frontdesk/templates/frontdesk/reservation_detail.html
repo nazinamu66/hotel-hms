@@ -508,8 +508,10 @@
                                 <strong>Room {{ allocation.allocation_number }}</strong>
                                 <span class="text-muted small ms-2">{{ allocation.get_status_display }}</span>
                             </div>
-                            {% if allocation.folio_id %}
+                            {% if allocation.folio_id and allocation.status == "CHECKED_IN" %}
                                 <a class="rd-btn rd-btn-secondary" href="{% url 'frontdesk_active_stay' allocation.room_id %}">Open stay</a>
+                            {% elif allocation.folio_id %}
+                                <a class="rd-btn rd-btn-secondary" href="{% url 'frontdesk_invoice' allocation.folio_id %}">View folio</a>
                             {% endif %}
                         </div>
                         <form method="post" action="{% url 'frontdesk_reservation_allocation_update' reservation.id allocation.id %}" class="row g-3 align-items-end">
