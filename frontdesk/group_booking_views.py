@@ -569,15 +569,12 @@ def event_detail(request, event_id):
                     messages.success(request, "Event participant added.")
                     return redirect("frontdesk_event_detail", event_id=event.pk)
         elif action == "mark_agreed":
-            if event.status != "DRAFT":
-                messages.error(request, "Only draft events can be marked agreed.")
-            elif not event.agreement_notes.strip():
-                messages.error(request, "Record the agreed commercial terms before approval.")
+            try:
+                event.mark_agreed()
+            except ValidationError as exc:
+                messages.error(request, "; ".join(exc.messages))
             else:
-                event.status = "AGREED"
-                event.full_clean()
-                event.save(update_fields=["status", "updated_at"])
-                messages.success(request, "Commercial agreement recorded. The event is not yet visible to operations.")
+                messages.success(request, "Commercial agreement recorded and approved recipe versions locked. The event is not yet visible to operations.")
                 return redirect("frontdesk_event_detail", event_id=event.pk)
         elif action == "release":
             try:
