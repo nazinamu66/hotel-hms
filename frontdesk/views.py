@@ -2101,11 +2101,25 @@ def arrivals_departures_today(request):
     hotel = request.user.department.hotel
     today = timezone.localdate()
 
-    arrivals = Reservation.objects.filter(
-        hotel=hotel,
-        check_in_date=today,
-        status="RESERVED"
-    ).select_related("guest", "room_category")
+    # Arrivals are tracked per room allocation, not by the legacy master
+    # reservation. This keeps remaining rooms visible after a sibling room
+    # has already checked in.
+    arrivals = (
+        ReservationRoomAllocation.objects
+        .filter(
+            reservation__hotel=hotel,
+            check_in_date=today,
+            status="RESERVED",
+        )
+        .select_related(
+            "reservation",
+            "reservation__guest",
+            "reservation__room_category",
+            "guest",
+            "room",
+        )
+        .order_by("reservation_id", "allocation_number")
+    )
 
     departures = Folio.objects.filter(
         hotel=hotel,
