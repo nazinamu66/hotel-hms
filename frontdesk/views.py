@@ -871,6 +871,7 @@ def check_in(request, room_id):
             "email": request.POST.get("email", "").strip(),
             "nationality": request.POST.get("nationality", "").strip(),
             "id_number": request.POST.get("id_number", "").strip(),
+            "id_document": request.FILES.get("id_document"),
             "expected_checkout": request.POST.get("expected_checkout", "").strip(),
             "room_discount_percent": request.POST.get("room_discount_percent", "0"),
             "room_discount_reason": request.POST.get("room_discount_reason", "").strip(),
