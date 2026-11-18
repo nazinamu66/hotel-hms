@@ -166,6 +166,28 @@ class DailyRoomChargeCheckoutBoundaryTests(TestCase):
         self.folio.refresh_from_db()
         self.assertEqual(self.folio.last_room_charge_date, date(2026, 11, 19))
 
+    @patch("billing.services.room_pricing.create_room_night_charge")
+    def test_night_audit_charges_the_night_before_checkout(self, create_charge):
+        self.folio.last_room_charge_date = date(2026, 11, 18)
+        self.folio.save(update_fields=["last_room_charge_date"])
+        audit_time = timezone.make_aware(datetime(2026, 11, 19, 2, 0))
+
+        with patch("billing.models.timezone.now", return_value=audit_time), patch(
+            "billing.models.timezone.localdate",
+            side_effect=lambda value=None: (
+                date(2026, 11, 19) if value is None else value.date()
+            ),
+        ):
+            self.folio.apply_daily_room_charge()
+
+        create_charge.assert_called_once()
+        self.assertEqual(
+            create_charge.call_args.kwargs["charge_date"],
+            date(2026, 11, 19),
+        )
+        self.folio.refresh_from_db()
+        self.assertEqual(self.folio.last_room_charge_date, date(2026, 11, 19))
+
 
 class StayExtensionRoomChargeTests(TestCase):
     @classmethod
@@ -232,3 +254,15 @@ class StayExtensionRoomChargeTests(TestCase):
             timezone.localdate(self.folio.check_out_at),
             date(2026, 11, 22),
         )
+
+        # The immediate extension charges must not be repeated by the next
+        # Night Audit run while the stay remains in progress.
+        audit_time = timezone.make_aware(datetime(2026, 11, 20, 2, 0))
+        with patch("billing.models.timezone.now", return_value=audit_time), patch(
+            "billing.models.timezone.localdate",
+            side_effect=lambda value=None: (
+                date(2026, 11, 20) if value is None else value.date()
+            ),
+        ):
+            self.folio.apply_daily_room_charge()
+        self.assertEqual(create_charge.call_count, 2)
