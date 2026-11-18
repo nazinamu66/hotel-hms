@@ -1760,6 +1760,32 @@ def reservation_allocation_checkin(request, reservation_id, allocation_id):
 
 
 @role_required("FRONTDESK", "MANAGER", "ADMIN")
+def reservation_allocation_no_show(request, reservation_id, allocation_id):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    reservation = get_object_or_404(
+        Reservation,
+        pk=reservation_id,
+        hotel=request.user.department.hotel,
+    )
+    from frontdesk.workflows.reservation_allocations import mark_room_allocation_no_show
+    try:
+        allocation = mark_room_allocation_no_show(
+            allocation_id=allocation_id,
+            hotel=reservation.hotel,
+        )
+        messages.success(
+            request,
+            f"Room allocation {allocation.allocation_number} marked No-Show. "
+            "The room has been released; the reservation guarantee was not changed.",
+        )
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+    return redirect("frontdesk_reservation_detail", reservation_id=reservation_id)
+
+
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
 def reservation_cancel(request, reservation_id):
 
     from billing.services.reservation_deposit import (
