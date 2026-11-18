@@ -109,6 +109,7 @@
           <tr>
             <td class="cr-primary">{{ item.room_night_date|date:"d M Y" }}</td>
             <td><span class="cr-primary">{{ item.reservation.hotel.name }}</span><span class="cr-secondary">{% if item.folio and item.folio.room %}Room {{ item.folio.room.room_number }}{% elif item.reservation.room %}Room {{ item.reservation.room.room_number }}{% else %}Room not assigned{% endif %}</span></td>
+            <td>{% if item.allocation %}Allocation {{ item.allocation.allocation_number }}{% else %}Reservation-level{% endif %}</td>
             <td class="cr-primary">{{ item.reservation.guest }}</td>
             <td class="cr-amount">₦{{ item.waived_amount|floatformat:2 }}</td>
             <td>{{ item.reason|default:"—" }}</td>
