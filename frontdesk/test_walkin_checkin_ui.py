@@ -138,7 +138,8 @@ class WalkInCheckInUITests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "selected guest could not be found")
         self.assertFalse(Folio.objects.filter(room=self.room, is_closed=False).exists())
 
     def test_walk_in_check_in_requires_guest_selection_or_new_guest_name(self):
