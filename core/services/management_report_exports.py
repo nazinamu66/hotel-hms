@@ -74,7 +74,7 @@ def management_report_pdf_response(report, *, date_from, date_to, hotel_name):
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import mm
     from reportlab.platypus import (
-        Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
+        KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
     )
 
     buffer = BytesIO()
@@ -141,9 +141,10 @@ def management_report_pdf_response(report, *, date_from, date_to, hotel_name):
     ]
 
     for metric in report.get("metrics", []):
+        metric_story = []
         label = metric.get("label", "Metric")
         unit = metric.get("unit", "")
-        story.append(Paragraph(escape(str(label)), styles["MetricHeading"]))
+        metric_story.append(Paragraph(escape(str(label)), styles["MetricHeading"]))
         summary = Table(
             [[paragraph("TOTAL"), paragraph(display_value(metric.get("value"), unit), "ReportCellRight")]],
             colWidths=[110 * mm, 65 * mm],
@@ -157,11 +158,11 @@ def management_report_pdf_response(report, *, date_from, date_to, hotel_name):
             ("TOPPADDING", (0, 0), (-1, -1), 6),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ]))
-        story.append(summary)
+        metric_story.append(summary)
 
         for breakdown, rows in metric.get("breakdown_rows", {}).items():
-            story.append(Spacer(1, 2 * mm))
-            story.append(paragraph(f"Breakdown: {breakdown.replace('_', ' ').title()}"))
+            metric_story.append(Spacer(1, 2 * mm))
+            metric_story.append(paragraph(f"Breakdown: {breakdown.replace('_', ' ').title()}"))
             data = [[paragraph("Group"), paragraph("Value", "ReportCellRight")]]
             for row in rows:
                 data.append([
@@ -181,10 +182,11 @@ def management_report_pdf_response(report, *, date_from, date_to, hotel_name):
                 ("TOPPADDING", (0, 0), (-1, -1), 4),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
             ]))
-            story.append(table)
+            metric_story.append(table)
 
         if metric.get("notes"):
-            story.append(Paragraph(escape(str(metric["notes"])), styles["ReportNote"]))
+            metric_story.append(Paragraph(escape(str(metric["notes"])), styles["ReportNote"]))
+        story.append(KeepTogether(metric_story))
 
     def add_page_number(canvas, doc):
         canvas.saveState()
