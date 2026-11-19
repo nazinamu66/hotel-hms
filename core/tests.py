@@ -511,3 +511,89 @@ class ManagementOverviewViewTests(TestCase):
 
         response = self.client.get("/management/overview/")
         self.assertEqual(response.status_code, 403)
+
+
+class ManagementHotelPerformanceViewTests(TestCase):
+    def setUp(self):
+        self.organization = Organization.objects.create(name="Hotel Performance Org")
+        self.hotel_one = Hotel.objects.create(
+            organization=self.organization,
+            name="Performance Hotel One",
+        )
+        self.hotel_two = Hotel.objects.create(
+            organization=self.organization,
+            name="Performance Hotel Two",
+        )
+        self.outside_hotel = Hotel.objects.create(name="Outside Performance Hotel")
+
+    def test_director_can_view_ranked_hotels_in_organization(self):
+        director = User.objects.create_user(
+            username="performance-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+
+        response = self.client.get("/management/hotels/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {row["hotel"].pk for row in response.context["hotel_rows"]},
+            {self.hotel_one.pk, self.hotel_two.pk},
+        )
+        self.assertEqual(
+            [row["performance_rank"] for row in response.context["hotel_rows"]],
+            [1, 2],
+        )
+
+    def test_general_manager_sees_only_assigned_hotels(self):
+        general_manager = User.objects.create_user(
+            username="performance-general-manager",
+            password="test-password",
+            role="GENERAL_MANAGER",
+            organization=self.organization,
+        )
+        general_manager.assigned_hotels.add(self.hotel_two)
+        self.client.force_login(general_manager)
+
+        response = self.client.get("/management/hotels/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [row["hotel"].pk for row in response.context["hotel_rows"]],
+            [self.hotel_two.pk],
+        )
+
+    def test_operational_user_cannot_view_hotel_performance(self):
+        frontdesk_user = User.objects.create_user(
+            username="performance-frontdesk",
+            password="test-password",
+            role="FRONTDESK",
+            hotel=self.hotel_one,
+        )
+        self.client.force_login(frontdesk_user)
+
+        response = self.client.get("/management/hotels/")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_selected_hotel_filter_cannot_expose_outside_hotel(self):
+        director = User.objects.create_user(
+            username="performance-isolation-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+
+        response = self.client.get(
+            "/management/hotels/",
+            {"hotel": str(self.outside_hotel.pk)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {row["hotel"].pk for row in response.context["hotel_rows"]},
+            {self.hotel_one.pk, self.hotel_two.pk},
+        )
