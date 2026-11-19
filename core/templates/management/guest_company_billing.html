@@ -1,0 +1,206 @@
+{% extends "base/base.html" %}
+
+{% block title %}Guest &amp; Company Billing | Hotel HMS{% endblock %}
+
+{% block content %}
+<style>
+.billing-report { color:#172033; }
+.billing-report .heading { margin-bottom:18px; }
+.billing-report .heading h2 { margin:0 0 6px; font-size:1.65rem; }
+.billing-report .muted, .billing-report .subtitle { color:#64748b; }
+.billing-report .filters { display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; padding:18px; margin-bottom:18px; }
+.billing-report .field { display:flex; flex-direction:column; gap:6px; min-width:160px; }
+.billing-report .field label { color:#64748b; font-size:.75rem; font-weight:700; }
+.billing-report .field input, .billing-report .field select { min-width:160px; }
+.billing-report .actions { display:flex; align-items:center; gap:12px; }
+.billing-report .actions button { border:0; border-radius:7px; padding:10px 16px; background:#2563eb; color:#fff; cursor:pointer; }
+.billing-report .actions a { color:#475569; font-weight:600; }
+.billing-report .kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.billing-report .kpi { padding:18px; min-width:0; }
+.billing-report .kpi span { color:#64748b; font-size:.78rem; font-weight:650; }
+.billing-report .kpi strong { display:block; margin-top:9px; font-size:1.35rem; overflow-wrap:anywhere; }
+.billing-report .kpi small { display:block; margin-top:5px; color:#94a3b8; font-size:.72rem; }
+.billing-report .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:18px; }
+.billing-report .panel { padding:20px; min-width:0; margin-top:18px; }
+.billing-report .grid .panel { margin-top:0; }
+.billing-report .panel h3 { margin:0 0 5px; font-size:1rem; }
+.billing-report .subtitle { margin:0 0 15px; font-size:.78rem; }
+.billing-report .table-wrap { overflow-x:auto; }
+.billing-report table { width:100%; border-collapse:collapse; min-width:520px; }
+.billing-report td, .billing-report th { padding:10px 8px; border-bottom:1px solid #e8edf5; text-align:left; }
+.billing-report th { color:#64748b; font-size:.72rem; text-transform:uppercase; }
+.billing-report td.numeric, .billing-report th.numeric { text-align:right; white-space:nowrap; }
+.billing-report .note { color:#64748b; font-size:.78rem; line-height:1.5; margin-top:14px; }
+.billing-report .empty { color:#94a3b8; padding:14px 8px; text-align:center; }
+.billing-report .reconciliation { border-left:4px solid #d97706; }
+@media(max-width:900px) { .billing-report .grid { grid-template-columns:1fr; } }
+@media(max-width:700px) { .billing-report .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:540px) { .billing-report .field, .billing-report .field input, .billing-report .field select { width:100%; } .billing-report .actions { width:100%; justify-content:space-between; } }
+</style>
+
+<div class="billing-report">
+    <header class="heading">
+        <h2>Guest &amp; Company Billing</h2>
+        <p class="muted">{% if is_general_manager %}Receivables and deposits across your assigned hotels{% else %}Group-wide receivables, collections and deposit position{% endif %}</p>
+    </header>
+
+    <form method="get" class="card filters">
+        <div class="field">
+            <label for="gb-hotel">HOTEL</label>
+            <select id="gb-hotel" name="hotel">
+                <option value="">All accessible hotels</option>
+                {% for hotel in hotels %}
+                <option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="gb-from">COLLECTIONS FROM</label>
+            <input id="gb-from" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">
+        </div>
+        <div class="field">
+            <label for="gb-to">COLLECTIONS TO</label>
+            <input id="gb-to" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">
+        </div>
+        <div class="actions">
+            <button type="submit">Apply filters</button>
+            <a href="{% url 'management_guest_company_billing' %}">Reset</a>
+        </div>
+    </form>
+
+    <section class="kpis" aria-label="Receivables summary">
+        <article class="card kpi"><span>Guest Receivables</span><strong>₦{{ guest_receivables|floatformat:2 }}</strong><small>Positive individual folio balances</small></article>
+        <article class="card kpi"><span>Company Receivables</span><strong>₦{{ company_receivables|floatformat:2 }}</strong><small>Issued invoice balances + uninvoiced charges</small></article>
+        <article class="card kpi"><span>Total Operational Receivables</span><strong>₦{{ total_operational_receivables|floatformat:2 }}</strong><small>As of {{ receivables_as_of|date:"M j, Y" }}</small></article>
+        <article class="card kpi"><span>Ledger Accounts Receivable</span><strong>₦{{ ledger_accounts_receivable|floatformat:2 }}</strong><small>Posted GL control account balance</small></article>
+        <article class="card kpi"><span>Overdue Company Invoices</span><strong>₦{{ overdue_company_outstanding|floatformat:2 }}</strong><small>Issued invoices past due date</small></article>
+        <article class="card kpi"><span>Guest Deposits Held</span><strong>₦{{ guest_deposits_held|floatformat:2 }}</strong><small>Liability balance; includes unapplied credits</small></article>
+        <article class="card kpi"><span>Company Deposits Held</span><strong>₦{{ company_deposits_held|floatformat:2 }}</strong><small>Corporate deposit liability balance</small></article>
+        <article class="card kpi"><span>Guest Deposit Available</span><strong>₦{{ guest_deposits_available|floatformat:2 }}</strong><small>After ₦{{ guest_guarantees_earmarked|floatformat:2 }} in active guarantees</small></article>
+    </section>
+
+    <section class="card panel reconciliation">
+        <h3>Accounts Receivable Reconciliation</h3>
+        <p class="subtitle">Current ledger control balance compared with operational guest and company balances</p>
+        <div class="table-wrap">
+            <table>
+                <tbody>
+                    <tr><th>Guest folio receivables</th><td class="numeric">₦{{ guest_receivables|floatformat:2 }}</td></tr>
+                    <tr><th>Company receivables</th><td class="numeric">₦{{ company_receivables|floatformat:2 }}</td></tr>
+                    <tr><th>Total operational receivables</th><td class="numeric">₦{{ total_operational_receivables|floatformat:2 }}</td></tr>
+                    <tr><th>GL Accounts Receivable</th><td class="numeric">₦{{ ledger_accounts_receivable|floatformat:2 }}</td></tr>
+                    <tr><th>Difference (GL less operational)</th><td class="numeric"><strong>₦{{ receivables_reconciliation_difference|floatformat:2 }}</strong></td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="note">A difference is an investigation flag, not an instruction to post an adjustment. Legacy payment allocation, manual journals and other receivable activity may contribute. This report does not automatically correct ledger or subledger balances.</p>
+    </section>
+
+    <div class="grid">
+        <section class="card panel">
+            <h3>Guest Folio Receivables</h3>
+            <p class="subtitle">Positive individual balances only; closed folios remain collectible</p>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Guest</th><th>Hotel</th><th>Folio</th><th>Status</th><th class="numeric">Balance</th></tr></thead>
+                    <tbody>
+                        {% for row in guest_folio_rows %}
+                        <tr>
+                            <td>{% if row.guest %}{{ row.guest.full_name }}{% else %}Unassigned guest{% endif %}</td>
+                            <td>{{ row.hotel.name }}</td>
+                            <td>#{{ row.folio.id }}</td>
+                            <td>{% if row.is_closed %}Closed{% else %}Open{% endif %}</td>
+                            <td class="numeric">₦{{ row.balance|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="empty">No positive guest folio balances.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="note">Negative folio balances are reported separately as guest credit balances: ₦{{ guest_credit_balances|floatformat:2 }}. They are not netted against other guests' debts.</p>
+        </section>
+
+        <section class="card panel">
+            <h3>Issued Company Invoices</h3>
+            <p class="subtitle">Current unpaid balances, aged from due date (or issue date if no due date)</p>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Invoice</th><th>Company</th><th>Due date</th><th class="numeric">Age</th><th class="numeric">Balance</th></tr></thead>
+                    <tbody>
+                        {% for row in company_invoice_rows %}
+                        <tr>
+                            <td>{{ row.invoice.invoice_number }}</td>
+                            <td>{{ row.company.name }}</td>
+                            <td>{% if row.invoice.due_date %}{{ row.invoice.due_date|date:"M j, Y" }}{% else %}—{% endif %}</td>
+                            <td class="numeric">{{ row.age_days }} days</td>
+                            <td class="numeric">₦{{ row.balance|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="empty">No outstanding issued company invoices.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="grid">
+        <section class="card panel">
+            <h3>Uninvoiced Company Charges</h3>
+            <p class="subtitle">Source charges not covered by an issued invoice; draft invoices remain here</p>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Company</th><th>Hotel</th><th>Charge</th><th>Age</th><th class="numeric">Amount</th></tr></thead>
+                    <tbody>
+                        {% for row in unbilled_company_rows %}
+                        <tr>
+                            <td>{% if row.company %}{{ row.company.name }}{% else %}Company not linked{% endif %}</td>
+                            <td>{{ row.hotel.name }}</td>
+                            <td>{{ row.charge.description }}</td>
+                            <td>{{ row.age_days }} days</td>
+                            <td class="numeric">₦{{ row.amount|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="empty">No uninvoiced company charges.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card panel">
+            <h3>Receivables Ageing</h3>
+            <p class="subtitle">Company balances grouped by age; uninvoiced charges use charge creation date</p>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Age bucket</th><th class="numeric">Issued invoices</th><th class="numeric">Uninvoiced charges</th></tr></thead>
+                    <tbody>
+                        <tr><td>0–30 days</td><td class="numeric">₦{{ company_invoice_ageing.current|floatformat:2 }}</td><td class="numeric">₦{{ unbilled_company_ageing.current|floatformat:2 }}</td></tr>
+                        <tr><td>31–60 days</td><td class="numeric">₦{{ company_invoice_ageing.days_31_60|floatformat:2 }}</td><td class="numeric">₦{{ unbilled_company_ageing.days_31_60|floatformat:2 }}</td></tr>
+                        <tr><td>61–90 days</td><td class="numeric">₦{{ company_invoice_ageing.days_61_90|floatformat:2 }}</td><td class="numeric">₦{{ unbilled_company_ageing.days_61_90|floatformat:2 }}</td></tr>
+                        <tr><td>Over 90 days</td><td class="numeric">₦{{ company_invoice_ageing.over_90|floatformat:2 }}</td><td class="numeric">₦{{ unbilled_company_ageing.over_90|floatformat:2 }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <section class="card panel">
+        <h3>Collection Activity</h3>
+        <p class="subtitle">Cash/bank receipts and new deposit receipts from {{ collection_from|date:"M j, Y" }} to {{ collection_to|date:"M j, Y" }}</p>
+        <div class="table-wrap">
+            <table>
+                <tbody>
+                    <tr><th>Guest cash / POS / transfer receipts</th><td class="numeric">₦{{ collections.guest_cash_bank|floatformat:2 }}</td></tr>
+                    <tr><th>Guest deposits received</th><td class="numeric">₦{{ collections.guest_deposit_received|floatformat:2 }}</td></tr>
+                    <tr><th>Company invoice payments</th><td class="numeric">₦{{ collections.company_invoice_payments|floatformat:2 }}</td></tr>
+                    <tr><th>Company deposits received</th><td class="numeric">₦{{ collections.company_deposit_received|floatformat:2 }}</td></tr>
+                    <tr><th>Total receipts</th><td class="numeric"><strong>₦{{ collection_total|floatformat:2 }}</strong></td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="note">Deposit applications are internal transfers from a deposit liability to receivables, not new cash receipts. DEPOSIT-method folio payments are excluded from cash collections to avoid counting the original deposit receipt twice. The date filter applies to collection activity; receivable and deposit balances are current snapshots as of the report date.</p>
+    </section>
+</div>
+{% endblock %}
