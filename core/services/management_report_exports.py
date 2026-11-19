@@ -214,6 +214,15 @@ def _excel_text(value):
     return text
 
 
+def _excel_number(value):
+    if value is None or isinstance(value, (int, float, Decimal)):
+        return value
+    try:
+        return Decimal(str(value))
+    except (TypeError, ValueError):
+        return value
+
+
 def management_report_xlsx_response(report, *, date_from, date_to, hotel_name):
     """Return a formatted workbook with summary, breakdown and methodology sheets."""
     from io import BytesIO
@@ -278,8 +287,10 @@ def management_report_xlsx_response(report, *, date_from, date_to, hotel_name):
         label = _excel_text(metric.get("label", ""))
         unit = _excel_text(metric.get("unit", ""))
         value = metric.get("value")
+        numeric_unit = unit in ("currency", "currency_per_night", "percent", "nights", "days", "count")
+        excel_value = _excel_number(value) if numeric_unit else value
         summary.append([
-            category, label, unit, value, "TOTAL", "", "",
+            category, label, unit, excel_value, "TOTAL", "", "",
         ])
         if isinstance(value, (int, float, Decimal)):
             summary.cell(summary_row, 4).number_format = (
@@ -294,8 +305,9 @@ def management_report_xlsx_response(report, *, date_from, date_to, hotel_name):
             for row in rows:
                 group = row.get("label")
                 row_value = row.get("value")
+                excel_row_value = _excel_number(row_value) if numeric_unit else row_value
                 summary.append([
-                    category, label, unit, row_value, "BREAKDOWN",
+                    category, label, unit, excel_row_value, "BREAKDOWN",
                     _excel_text(breakdown.replace("_", " ").title()),
                     _excel_text(group),
                 ])
@@ -310,7 +322,7 @@ def management_report_xlsx_response(report, *, date_from, date_to, hotel_name):
                 details.append([
                     category, label, unit,
                     _excel_text(breakdown.replace("_", " ").title()),
-                    _excel_text(group), row_value,
+                    _excel_text(group), excel_row_value,
                 ])
                 if isinstance(row_value, (int, float, Decimal)):
                     details.cell(detail_row, 6).number_format = (
