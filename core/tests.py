@@ -143,6 +143,9 @@ class DirectorDashboardTests(TestCase):
         self.assertEqual(dashboard["cogs"], Decimal("250.00"))
         self.assertEqual(dashboard["expenses"], Decimal("100.00"))
         self.assertEqual(dashboard["operating_result"], Decimal("650.00"))
+        self.assertFalse(dashboard["trend_empty"])
+        self.assertIn("<polyline", dashboard["trend_svg"])
+        self.assertEqual(dashboard["hotel_chart_rows"][0]["revenue_bar_width"], 100.0)
 
     def test_selected_hotel_limits_group_metrics(self):
         dashboard = get_director_dashboard(
