@@ -443,8 +443,8 @@ METRIC_CATALOGUE = (
                 "source_key": "company_deposits_held",
                 "date_basis": "current_snapshot",
                 "aggregation": "sum",
-                "breakdowns": ("hotel", "company"),
-                "notes": "Current company deposit liability balance; not revenue.",
+                "breakdowns": ("hotel",),
+                "notes": "Current aggregate company deposit liability balance; company-level subtotals are not exposed by the source service. Not revenue.",
             },
             {
                 "id": "overdue_company_receivables",
