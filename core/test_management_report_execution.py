@@ -96,21 +96,27 @@ class ManagementReportExecutionTests(SimpleTestCase):
             "core.services.management_report_execution._source_payloads",
             return_value=payloads,
         ):
-            result = execute_management_custom_report(
+            guest_result = execute_management_custom_report(
                 hotels=None,
                 date_from=date(2026, 11, 1),
                 date_to=date(2026, 11, 19),
-                metric_ids=["guest_receivables", "collections_total"],
-                breakdowns=["guest", "collection_type"],
+                metric_ids=["guest_receivables"],
+                breakdowns=["guest"],
+            )
+            collection_result = execute_management_custom_report(
+                hotels=None,
+                date_from=date(2026, 11, 1),
+                date_to=date(2026, 11, 19),
+                metric_ids=["collections_total"],
+                breakdowns=["collection_type"],
             )
 
-        by_id = {item["id"]: item for item in result["metrics"]}
         self.assertEqual(
-            by_id["guest_receivables"]["breakdown_rows"]["guest"],
+            guest_result["metrics"][0]["breakdown_rows"]["guest"],
             [{"label": "Amina Yusuf", "value": Decimal("5000.00")}],
         )
         self.assertEqual(
-            len(by_id["collections_total"]["breakdown_rows"]["collection_type"]),
+            len(collection_result["metrics"][0]["breakdown_rows"]["collection_type"]),
             4,
         )
 
