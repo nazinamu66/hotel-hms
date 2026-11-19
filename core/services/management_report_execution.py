@@ -87,7 +87,7 @@ def _breakdown_rows(metric_id, breakdown, payloads):
         ]
 
     if breakdown == "company":
-        corporate = payloads["corporate"]
+        corporate = payloads.get("corporate", {})
         billing = payloads.get("guest_company_billing", {})
         if metric_id in ("corporate_revenue", "corporate_room_nights"):
             key = "revenue" if metric_id == "corporate_revenue" else "room_nights"
