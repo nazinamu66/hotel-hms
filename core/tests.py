@@ -597,3 +597,77 @@ class ManagementHotelPerformanceViewTests(TestCase):
             {row["hotel"].pk for row in response.context["hotel_rows"]},
             {self.hotel_one.pk, self.hotel_two.pk},
         )
+
+
+class ManagementFrontDeskAnalyticsViewTests(TestCase):
+    def setUp(self):
+        self.organization = Organization.objects.create(name="Front Desk Analytics Org")
+        self.hotel_one = Hotel.objects.create(
+            organization=self.organization,
+            name="Analytics Hotel One",
+        )
+        self.hotel_two = Hotel.objects.create(
+            organization=self.organization,
+            name="Analytics Hotel Two",
+        )
+        self.outside_hotel = Hotel.objects.create(name="Outside Analytics Hotel")
+
+    def test_director_can_view_organization_front_desk_analytics(self):
+        director = User.objects.create_user(
+            username="frontdesk-analytics-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+        response = self.client.get("/management/front-desk/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {hotel.pk for hotel in response.context["hotels"]},
+            {self.hotel_one.pk, self.hotel_two.pk},
+        )
+
+    def test_general_manager_is_limited_to_assigned_hotels(self):
+        general_manager = User.objects.create_user(
+            username="frontdesk-analytics-gm",
+            password="test-password",
+            role="GENERAL_MANAGER",
+            organization=self.organization,
+        )
+        general_manager.assigned_hotels.add(self.hotel_two)
+        self.client.force_login(general_manager)
+        response = self.client.get("/management/front-desk/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [hotel.pk for hotel in response.context["hotels"]],
+            [self.hotel_two.pk],
+        )
+
+    def test_operational_frontdesk_user_cannot_open_management_analytics(self):
+        frontdesk_user = User.objects.create_user(
+            username="frontdesk-analytics-operational",
+            password="test-password",
+            role="FRONTDESK",
+            hotel=self.hotel_one,
+        )
+        self.client.force_login(frontdesk_user)
+        response = self.client.get("/management/front-desk/")
+        self.assertEqual(response.status_code, 403)
+
+    def test_inaccessible_hotel_filter_does_not_expand_scope(self):
+        director = User.objects.create_user(
+            username="frontdesk-analytics-isolation",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+        response = self.client.get(
+            "/management/front-desk/",
+            {"hotel": str(self.outside_hotel.pk)},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {hotel.pk for hotel in response.context["hotels"]},
+            {self.hotel_one.pk, self.hotel_two.pk},
+        )
