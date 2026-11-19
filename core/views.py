@@ -73,6 +73,28 @@ def hotel_dashboard(request):
 
 
 @role_required("DIRECTOR", "GENERAL_MANAGER")
+def management_custom_reports(request):
+    """Management-only custom report configuration; execution is a later stage."""
+    from core.services.management_report_configuration import (
+        build_management_report_configuration,
+    )
+
+    reporting_context = build_management_reporting_context(request.user, request.GET)
+    configuration = build_management_report_configuration(request.GET)
+    return render(
+        request,
+        "management/custom_reports.html",
+        {
+            **reporting_context,
+            **configuration,
+            "is_management_overview": True,
+            "is_director": True,
+            "is_general_manager": request.user.role == "GENERAL_MANAGER",
+        },
+    )
+
+
+@role_required("DIRECTOR", "GENERAL_MANAGER")
 def management_overview(request):
     """
     Management landing page for Directors and General Managers.
