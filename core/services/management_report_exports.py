@@ -337,7 +337,10 @@ def management_report_xlsx_response(report, *, date_from, date_to, hotel_name):
         note_row += 1
 
     for sheet in (summary, details, notes):
-        sheet.auto_filter.ref = sheet.dimensions if sheet.max_row > 1 else "A1:A1"
+        if sheet is summary:
+            sheet.auto_filter.ref = "A{}:G{}".format(header_row, summary.max_row)
+        else:
+            sheet.auto_filter.ref = sheet.dimensions if sheet.max_row > 1 else "A1:A1"
         for row in sheet.iter_rows():
             for cell in row:
                 cell.alignment = Alignment(
