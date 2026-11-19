@@ -95,19 +95,19 @@ class DirectorDashboardTests(TestCase):
         )
         self.income = Account.objects.create(
             hotel=self.hotel,
-            code="4000",
+            code="TST-4000",
             name="Room Revenue",
             account_type="income",
         )
         self.cogs = Account.objects.create(
             hotel=self.hotel,
-            code="5000",
+            code="TST-5000",
             name="Cost of Goods Sold",
             account_type="cogs",
         )
         self.expense = Account.objects.create(
             hotel=self.hotel,
-            code="6000",
+            code="TST-6000",
             name="Operating Expense",
             account_type="expense",
         )
