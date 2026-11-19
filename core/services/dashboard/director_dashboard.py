@@ -16,7 +16,7 @@ def _financial_totals(hotels, date_from, date_to):
     lines = JournalLine.objects.filter(
         journal__hotel__in=hotels,
         journal__date__range=(date_from, date_to),
-    )
+    ).exclude(journal__entry_type__in=("CLOSING", "OPENING"))
     totals = lines.aggregate(
         revenue=Coalesce(Sum(Case(
             When(account__account_type__in=("income", "other_income"),
