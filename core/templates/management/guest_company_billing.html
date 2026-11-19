@@ -25,17 +25,31 @@
 .billing-report .grid .panel { margin-top:0; }
 .billing-report .panel h3 { margin:0 0 5px; font-size:1rem; }
 .billing-report .subtitle { margin:0 0 15px; font-size:.78rem; }
-.billing-report .table-wrap { overflow-x:auto; }
-.billing-report table { width:100%; border-collapse:collapse; min-width:520px; }
-.billing-report td, .billing-report th { padding:10px 8px; border-bottom:1px solid #e8edf5; text-align:left; }
+.billing-report .table-wrap { width:100%; max-width:100%; min-width:0; overflow-x:auto; overscroll-behavior-x:contain; }
+.billing-report table { width:100%; max-width:100%; min-width:0; table-layout:fixed; border-collapse:collapse; }
+.billing-report td, .billing-report th { padding:10px 8px; border-bottom:1px solid #e8edf5; text-align:left; vertical-align:top; overflow-wrap:anywhere; }
 .billing-report th { color:#64748b; font-size:.72rem; text-transform:uppercase; }
-.billing-report td.numeric, .billing-report th.numeric { text-align:right; white-space:nowrap; }
+.billing-report td.numeric, .billing-report th.numeric { text-align:right; white-space:nowrap; overflow-wrap:normal; }
+.billing-report .grid > .panel { min-width:0; }
+.billing-report .grid table th, .billing-report .grid table td { font-size:.82rem; }
+.billing-report .grid table th.numeric, .billing-report .grid table td.numeric { font-size:.78rem; }
+.billing-report .grid > .panel:nth-child(1) table th:nth-child(1) { width:24%; }
+.billing-report .grid > .panel:nth-child(1) table th:nth-child(2) { width:23%; }
+.billing-report .grid > .panel:nth-child(1) table th:nth-child(3) { width:10%; }
+.billing-report .grid > .panel:nth-child(1) table th:nth-child(4) { width:13%; }
+.billing-report .grid > .panel:nth-child(1) table th:nth-child(5) { width:30%; }
+.billing-report .grid > .panel:nth-child(2) table th:nth-child(1) { width:18%; }
+.billing-report .grid > .panel:nth-child(2) table th:nth-child(2) { width:24%; }
+.billing-report .grid > .panel:nth-child(2) table th:nth-child(3) { width:20%; }
+.billing-report .grid > .panel:nth-child(2) table th:nth-child(4) { width:12%; }
+.billing-report .grid > .panel:nth-child(2) table th:nth-child(5) { width:26%; }
 .billing-report .note { color:#64748b; font-size:.78rem; line-height:1.5; margin-top:14px; }
 .billing-report .empty { color:#94a3b8; padding:14px 8px; text-align:center; }
 .billing-report .reconciliation { border-left:4px solid #d97706; }
 @media(max-width:900px) { .billing-report .grid { grid-template-columns:1fr; } }
 @media(max-width:700px) { .billing-report .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media(max-width:540px) { .billing-report .field, .billing-report .field input, .billing-report .field select { width:100%; } .billing-report .actions { width:100%; justify-content:space-between; } }
+@media(max-width:540px) { .billing-report .field, .billing-report .field input, .billing-report .field select { width:100%; } .billing-report .actions { width:100%; justify-content:space-between; } .billing-report .table-wrap { padding-bottom:4px; } .billing-report table { min-width:620px; } }
+@media(max-width:380px) { .billing-report .kpis { grid-template-columns:minmax(0,1fr); } }
 </style>
 
 <div class="billing-report">
