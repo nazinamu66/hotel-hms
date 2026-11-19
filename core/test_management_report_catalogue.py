@@ -77,7 +77,7 @@ class ManagementReportCatalogueTests(SimpleTestCase):
         for metric_id, expected in expected_breakdowns.items():
             with self.subTest(metric=metric_id):
                 self.assertEqual(
-                    get_management_report_metric(metric_id)["breakdowns"],
+                    list(get_management_report_metric(metric_id)["breakdowns"]),
                     expected,
                 )
 
