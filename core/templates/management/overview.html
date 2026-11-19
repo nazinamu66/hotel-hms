@@ -1,0 +1,152 @@
+{% extends "base/base.html" %}
+
+{% block title %}Management Overview | Hotel HMS{% endblock %}
+
+{% block content %}
+<style>
+.management-overview { color:#172033; }
+.management-overview .page-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:20px; }
+.management-overview .page-heading h2 { margin:0 0 6px; font-size:1.65rem; }
+.management-overview .muted { color:#64748b; }
+.management-overview .filter-panel { display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; padding:18px; margin-bottom:20px; }
+.management-overview .filter-field { display:flex; flex-direction:column; gap:6px; min-width:160px; }
+.management-overview .filter-field label { color:#64748b; font-size:.75rem; font-weight:700; }
+.management-overview .filter-field input, .management-overview .filter-field select { min-width:160px; }
+.management-overview .filter-actions { display:flex; align-items:center; gap:12px; }
+.management-overview .filter-actions button { border:0; border-radius:7px; padding:10px 16px; background:#2563eb; color:#fff; cursor:pointer; }
+.management-overview .filter-actions a { color:#475569; font-weight:600; }
+.management-overview .kpi-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.management-overview .kpi-card { min-width:0; padding:18px; }
+.management-overview .kpi-label { color:#64748b; font-size:.8rem; font-weight:650; }
+.management-overview .kpi-value { margin:9px 0 4px; font-size:clamp(1.15rem,1.8vw,1.65rem); overflow-wrap:anywhere; }
+.management-overview .kpi-note { color:#94a3b8; font-size:.74rem; }
+.management-overview .section-grid { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr); gap:16px; margin-top:18px; }
+.management-overview .panel { min-width:0; padding:20px; }
+.management-overview .panel h3 { margin:0 0 5px; font-size:1rem; }
+.management-overview .panel-subtitle { margin:0 0 16px; color:#94a3b8; font-size:.78rem; }
+.management-overview .trend-chart svg { display:block; width:100%; height:auto; }
+.management-overview .chart-legend { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; color:#64748b; font-size:.78rem; }
+.management-overview .legend-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+.management-overview .empty-state { padding:28px 12px; text-align:center; color:#94a3b8; background:#f8fafc; border-radius:9px; }
+.management-overview .hotel-row { margin:16px 0; }
+.management-overview .hotel-row-head { display:flex; justify-content:space-between; gap:12px; margin-bottom:7px; font-size:.82rem; }
+.management-overview .bar-track { height:9px; overflow:hidden; border-radius:20px; background:#eef2f7; }
+.management-overview .bar-fill { height:100%; border-radius:20px; background:linear-gradient(90deg,#2563eb,#60a5fa); }
+.management-overview .position-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin-top:14px; }
+.management-overview .position-item { min-width:0; }
+.management-overview .position-item span { display:block; color:#64748b; font-size:.76rem; }
+.management-overview .position-item strong { display:block; margin-top:5px; font-size:1.1rem; overflow-wrap:anywhere; }
+@media(max-width:900px) { .management-overview .section-grid { grid-template-columns:1fr; } }
+@media(max-width:700px) { .management-overview .kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .management-overview .position-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:520px) { .management-overview .filter-field, .management-overview .filter-field input, .management-overview .filter-field select { width:100%; } .management-overview .filter-actions { width:100%; justify-content:space-between; } .management-overview .page-heading { align-items:flex-start; } }
+</style>
+
+<div class="management-overview">
+    <header class="page-heading">
+        <div>
+            <h2>Executive Overview</h2>
+            <p class="muted">
+                {% if is_general_manager %}Performance across your assigned hotels{% else %}Organization-wide performance across active hotels{% endif %}
+            </p>
+        </div>
+    </header>
+
+    <form method="get" class="card filter-panel">
+        <div class="filter-field">
+            <label for="management-hotel">HOTEL</label>
+            <select id="management-hotel" name="hotel">
+                <option value="">All accessible hotels</option>
+                {% for hotel in hotels %}
+                    <option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="management-from">FROM</label>
+            <input id="management-from" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">
+        </div>
+        <div class="filter-field">
+            <label for="management-to">TO</label>
+            <input id="management-to" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">
+        </div>
+        <div class="filter-actions">
+            <button type="submit">Apply filters</button>
+            <a href="{% url 'management_overview' %}">Reset</a>
+        </div>
+    </form>
+
+    <section class="kpi-grid" aria-label="Financial performance">
+        <article class="card kpi-card">
+            <div class="kpi-label">Total Revenue</div>
+            <h3 class="kpi-value">₦{{ revenue|floatformat:2 }}</h3>
+            <div class="kpi-note">Posted income and other income</div>
+        </article>
+        <article class="card kpi-card">
+            <div class="kpi-label">Operating Expenses</div>
+            <h3 class="kpi-value">₦{{ expenses|floatformat:2 }}</h3>
+            <div class="kpi-note">Posted expense accounts</div>
+        </article>
+        <article class="card kpi-card">
+            <div class="kpi-label">Cost of Goods Sold</div>
+            <h3 class="kpi-value">₦{{ cogs|floatformat:2 }}</h3>
+            <div class="kpi-note">Posted COGS entries</div>
+        </article>
+        <article class="card kpi-card">
+            <div class="kpi-label">Operating Profit</div>
+            <h3 class="kpi-value">₦{{ operating_result|floatformat:2 }}</h3>
+            <div class="kpi-note">Revenue less COGS and expenses</div>
+        </article>
+    </section>
+
+    <section class="card panel" style="margin-top:18px;">
+        <h3>Current Financial Position</h3>
+        <p class="panel-subtitle">Current balances for the selected hotel scope. These are snapshots and are not limited by the P&amp;L date range.</p>
+        <div class="position-grid">
+            <div class="position-item"><span>Cash on Hand</span><strong>₦{{ cash_balance|floatformat:2 }}</strong></div>
+            <div class="position-item"><span>Bank Balances</span><strong>₦{{ bank_balance|floatformat:2 }}</strong></div>
+            <div class="position-item"><span>Accounts Receivable</span><strong>₦{{ accounts_receivable|floatformat:2 }}</strong></div>
+            <div class="position-item"><span>Accounts Payable</span><strong>₦{{ accounts_payable|floatformat:2 }}</strong></div>
+            <div class="position-item"><span>Corporate Deposits Held</span><strong>₦{{ corporate_deposits_held|floatformat:2 }}</strong></div>
+            <div class="position-item"><span>Guest Deposits Held</span><strong>₦{{ guest_deposits_held|floatformat:2 }}</strong></div>
+        </div>
+        <p class="panel-subtitle" style="margin-top:14px;">Deposits held are liabilities, not revenue. Payments and deposits are not added again to posted revenue.</p>
+    </section>
+
+    <div class="section-grid">
+        <section class="card panel">
+            <h3>Revenue &amp; Cost Trends</h3>
+            <p class="panel-subtitle">Posted ledger activity · {{ date_from|date:"M j, Y" }} – {{ date_to|date:"M j, Y" }}</p>
+            {% if trend_empty %}
+                <div class="empty-state">No posted financial activity for this period.</div>
+            {% else %}
+                <div class="trend-chart">{{ trend_svg|safe }}</div>
+                <div class="chart-legend">
+                    <span><i class="legend-dot" style="background:#2563eb"></i>Revenue</span>
+                    <span><i class="legend-dot" style="background:#f59e0b"></i>COGS</span>
+                    <span><i class="legend-dot" style="background:#8b5cf6"></i>Expenses</span>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="card panel">
+            <h3>Revenue by Hotel</h3>
+            <p class="panel-subtitle">Posted revenue in the selected period</p>
+            {% for row in hotel_chart_rows %}
+                <div class="hotel-row">
+                    <div class="hotel-row-head">
+                        <strong>{{ row.hotel.name }}</strong>
+                        <span>₦{{ row.revenue|floatformat:2 }}</span>
+                    </div>
+                    <div class="bar-track"><div class="bar-fill" style="width:{{ row.revenue_bar_width }}%"></div></div>
+                </div>
+            {% empty %}
+                <div class="empty-state">No active hotels are available in your reporting scope.</div>
+            {% endfor %}
+        </section>
+    </div>
+
+    <p class="muted" style="font-size:.78rem; margin-top:16px;">
+        Occupancy, ADR and RevPAR are intentionally not shown yet. Historical room-night and sellable-room calculations must be validated before these metrics are published.
+    </p>
+</div>
+{% endblock %}
