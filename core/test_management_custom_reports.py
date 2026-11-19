@@ -269,6 +269,70 @@ class ManagementCustomReportsViewTests(TestCase):
         )
 
     @patch("core.services.management_report_execution.execute_management_custom_report")
+    def test_xlsx_export_contains_formatted_report_and_respects_hotel_scope(self, execute_report):
+        from io import BytesIO
+        from openpyxl import load_workbook
+
+        execute_report.return_value = {
+            "has_metrics": True,
+            "metrics": [{
+                "category_label": "Financial Performance",
+                "label": "Total Revenue",
+                "unit": "currency",
+                "value": "125000.00",
+                "notes": "Posted revenue.",
+                "breakdown_rows": {
+                    "hotel": [{"label": self.hotel_two.name, "value": "125000.00"}],
+                },
+            }],
+        }
+        user = User.objects.create_user(
+            username="custom-reports-xlsx",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(
+            "/management/custom-reports/",
+            {
+                "hotel": str(self.hotel_two.pk),
+                "from": "2026-11-01",
+                "to": "2026-11-19",
+                "metric": "revenue",
+                "breakdown": "hotel",
+                "export": "xlsx",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Content-Type"],
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        self.assertIn(".xlsx", response["Content-Disposition"])
+        workbook = load_workbook(BytesIO(response.content), data_only=True)
+        self.assertEqual(
+            workbook.sheetnames,
+            ["Report Summary", "Breakdown Detail", "Calculation Notes"],
+        )
+        summary = workbook["Report Summary"]
+        self.assertEqual(summary["B3"].value, self.hotel_two.name)
+        self.assertEqual(summary["B4"].value, "01 Nov 2026 to 19 Nov 2026")
+        self.assertEqual(summary["B7"].value, "Total Revenue")
+        self.assertEqual(summary["D7"].value, 125000)
+        self.assertEqual(summary["E7"].value, "TOTAL")
+        self.assertIn("NGN", summary["D7"].number_format)
+        self.assertEqual(workbook["Breakdown Detail"]["E2"].value, self.hotel_two.name)
+        self.assertEqual(workbook["Calculation Notes"]["C2"].value, "Posted revenue.")
+        kwargs = execute_report.call_args.kwargs
+        self.assertEqual(
+            list(kwargs["hotels"].values_list("pk", flat=True)),
+            [self.hotel_two.pk],
+        )
+
+    @patch("core.services.management_report_execution.execute_management_custom_report")
     def test_custom_report_page_does_not_execute_without_selected_metrics(self, execute_report):
         user = User.objects.create_user(
             username="custom-reports-config-only",
