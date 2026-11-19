@@ -245,3 +245,92 @@ class GuestCompanyBillingServiceTests(TestCase):
         self.assertEqual(report["guest_receivables"], Decimal("0.00"))
         self.assertEqual(report["company_receivables"], Decimal("0.00"))
         self.assertEqual(report["ledger_accounts_receivable"], Decimal("0.00"))
+
+
+class GuestCompanyBillingViewTests(TestCase):
+    def setUp(self):
+        self.organization = Organization.objects.create(name="Billing Report View Org")
+        self.hotel_one = Hotel.objects.create(
+            organization=self.organization, name="Billing View Hotel One"
+        )
+        self.hotel_two = Hotel.objects.create(
+            organization=self.organization, name="Billing View Hotel Two"
+        )
+        self.outside_hotel = Hotel.objects.create(name="Outside Billing View Hotel")
+
+    def test_director_can_view_organization_billing_report(self):
+        from django.contrib.auth import get_user_model
+
+        user = get_user_model().objects.create_user(
+            username="billing-report-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get("/management/guest-company-billing/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Guest &amp; Company Billing")
+        self.assertEqual(
+            {hotel.pk for hotel in response.context["hotels"]},
+            {self.hotel_one.pk, self.hotel_two.pk},
+        )
+
+    def test_general_manager_sees_only_assigned_hotel_data(self):
+        from django.contrib.auth import get_user_model
+
+        user = get_user_model().objects.create_user(
+            username="billing-report-gm",
+            password="test-password",
+            role="GENERAL_MANAGER",
+            organization=self.organization,
+        )
+        user.assigned_hotels.add(self.hotel_two)
+        self.client.force_login(user)
+
+        response = self.client.get("/management/guest-company-billing/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [hotel.pk for hotel in response.context["hotels"]],
+            [self.hotel_two.pk],
+        )
+
+    def test_operational_user_cannot_open_management_billing_report(self):
+        from django.contrib.auth import get_user_model
+
+        user = get_user_model().objects.create_user(
+            username="billing-report-frontdesk",
+            password="test-password",
+            role="FRONTDESK",
+            hotel=self.hotel_one,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get("/management/guest-company-billing/")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_inaccessible_hotel_filter_does_not_expand_reporting_scope(self):
+        from django.contrib.auth import get_user_model
+
+        user = get_user_model().objects.create_user(
+            username="billing-report-scope",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(
+            "/management/guest-company-billing/",
+            {"hotel": str(self.outside_hotel.pk)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {hotel.pk for hotel in response.context["hotels"]},
+            {self.hotel_one.pk, self.hotel_two.pk},
+        )
