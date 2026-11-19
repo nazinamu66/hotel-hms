@@ -1056,5 +1056,5 @@ class RoomOccupancyAnalyticsTests(TestCase):
             row for row in result["daily_rows"]
             if row["basis"] == "FORECAST"
         ]
-        self.assertEqual([row["occupied_room_count"] for row in forecast_days], [3, 3, 0])
-        self.assertEqual([row["occupancy_percent"] for row in forecast_days], [150.0, 150.0, 0.0])
+        self.assertEqual([row["occupied_room_count"] for row in forecast_days], [0, 3, 3])
+        self.assertEqual([row["occupancy_percent"] for row in forecast_days], [0.0, 150.0, 150.0])
