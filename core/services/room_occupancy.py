@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import timedelta
 
-from django.db.models import Q
+from django.db.models import Count
 from django.utils import timezone
 
 from billing.models import (
@@ -71,12 +71,12 @@ def build_room_occupancy_analytics(*, hotels, date_from, date_to, today=None):
     hotel_names = {row["id"]: row["name"] for row in hotel_rows}
 
     room_counts = defaultdict(int)
-    for hotel_id, count in (
+    for item in (
         Room.objects.filter(hotel_id__in=hotel_ids)
-        .values_list("hotel_id")
-        .order_by()
+        .values("hotel_id")
+        .annotate(room_count=Count("id"))
     ):
-        room_counts[hotel_id] += 1
+        room_counts[item["hotel_id"]] = item["room_count"]
 
     # A room-night is counted once per folio and date, whether paid or waived.
     actual_nights = set(
