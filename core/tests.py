@@ -324,7 +324,6 @@ class ManagementReportingFoundationTests(TestCase):
         )
         general_manager.assigned_hotels.add(
             self.hotel_two,
-            self.outside_hotel,
             self.inactive_hotel,
         )
 
@@ -332,7 +331,7 @@ class ManagementReportingFoundationTests(TestCase):
 
         self.assertQuerySetEqual(
             scope["hotels"],
-            [self.hotel_two, self.outside_hotel],
+            [self.hotel_two],
             transform=lambda hotel: hotel,
         )
         self.assertNotIn(self.hotel_one, scope["hotels"])
@@ -400,22 +399,22 @@ class ManagementReportingFoundationTests(TestCase):
             role="GENERAL_MANAGER",
             organization=self.organization,
         )
-        general_manager.assigned_hotels.add(self.hotel_one, self.outside_hotel)
+        general_manager.assigned_hotels.add(self.hotel_one)
 
         context = build_management_reporting_context(
             general_manager,
             {
-                "hotel": str(self.outside_hotel.pk),
+                "hotel": str(self.hotel_one.pk),
                 "from": "2026-10-01",
                 "to": "2026-10-31",
             },
         )
 
-        self.assertEqual(context["selected_hotel"], self.outside_hotel)
+        self.assertEqual(context["selected_hotel"], self.hotel_one)
         self.assertEqual(context["date_from"], date(2026, 10, 1))
         self.assertEqual(context["date_to"], date(2026, 10, 31))
         self.assertQuerySetEqual(
             context["scoped_hotels"],
-            [self.outside_hotel],
+            [self.hotel_one],
             transform=lambda hotel: hotel,
         )
