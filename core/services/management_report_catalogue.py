@@ -5,7 +5,7 @@ Custom report generation must resolve metrics through their source services and
 must honour each metric's date basis, aggregation and supported breakdowns.
 """
 
-CATALOGUE_VERSION = 1
+CATALOGUE_VERSION = 2
 
 # Date bases:
 # - posting_date: accounting journal date
@@ -176,8 +176,8 @@ METRIC_CATALOGUE = (
                 "source_key": "arrival_count",
                 "date_basis": "arrival_date",
                 "aggregation": "count",
-                "breakdowns": ("hotel", "booking_kind", "booking_status"),
-                "notes": "Counts room-level booking rows, including corporate group occupants.",
+                "breakdowns": ("hotel",),
+                "notes": "Counts room-level booking rows, including corporate group occupants. Booking type/status subtotals are not exposed by the current source service.",
             },
             {
                 "id": "booked_room_nights",
@@ -232,7 +232,7 @@ METRIC_CATALOGUE = (
                 "date_basis": "room_night_date",
                 "aggregation": "sum",
                 "breakdowns": ("hotel", "date"),
-                "notes": "Posted room-night charges plus consumed complimentary nights, deduplicated by folio and date; historical dates only.",
+                "notes": "Recorded room-night charges plus consumed complimentary nights, deduplicated by folio and date; historical dates only. The source does not independently verify journal posting status.",
             },
             {
                 "id": "forecast_room_nights",
@@ -315,8 +315,8 @@ METRIC_CATALOGUE = (
                 "source_key": "average_negotiated_rate",
                 "date_basis": "room_night_date",
                 "aggregation": "weighted_average",
-                "breakdowns": ("hotel", "company"),
-                "notes": "Average charge amount across room nights whose rate source is GROUP or OVERRIDE.",
+                "breakdowns": ("hotel",),
+                "notes": "Overall weighted average charge amount across room nights whose rate source is GROUP or OVERRIDE; company-level averages are not exposed by the source service.",
             },
             {
                 "id": "issued_invoice_outstanding",
@@ -348,8 +348,8 @@ METRIC_CATALOGUE = (
                 "source_key": "unbilled_company_charges",
                 "date_basis": "charge_room_night_or_created_date",
                 "aggregation": "sum",
-                "breakdowns": ("hotel", "company"),
-                "notes": "Positive company-billed group charges without an invoice link in the selected period.",
+                "breakdowns": ("hotel",),
+                "notes": "Positive company-billed group charges without an invoice link in the selected period; company-level subtotals are not exposed by the source service.",
             },
             {
                 "id": "corporate_deposits_held",
@@ -359,8 +359,8 @@ METRIC_CATALOGUE = (
                 "source_key": "deposits_held",
                 "date_basis": "current_snapshot",
                 "aggregation": "sum",
-                "breakdowns": ("hotel", "company"),
-                "notes": "Current deposit liability balance; not revenue.",
+                "breakdowns": ("hotel",),
+                "notes": "Current aggregate deposit liability balance; company-level balances are not exposed by the source service. Not revenue.",
             },
         ),
     },
@@ -388,8 +388,8 @@ METRIC_CATALOGUE = (
                 "source_key": "company_receivables",
                 "date_basis": "current_snapshot",
                 "aggregation": "sum",
-                "breakdowns": ("hotel", "company"),
-                "notes": "Issued invoice balances plus company charges not covered by an issued invoice; draft invoices do not remove charges.",
+                "breakdowns": ("hotel",),
+                "notes": "Issued invoice balances plus company charges not covered by an issued invoice; draft invoices do not remove charges. Combined company-level subtotals are not exposed by the source service.",
             },
             {
                 "id": "ledger_accounts_receivable",
@@ -432,8 +432,8 @@ METRIC_CATALOGUE = (
                 "source_key": "guest_deposits_held",
                 "date_basis": "current_snapshot",
                 "aggregation": "sum",
-                "breakdowns": ("hotel", "guest"),
-                "notes": "Current guest deposit liability balance; guaranteed reservation allocations are shown as earmarked, not deducted from held balance.",
+                "breakdowns": ("hotel",),
+                "notes": "Current aggregate guest deposit liability balance; guaranteed reservation allocations are shown as earmarked, not deducted from held balance. Guest-level deposit subtotals are not exposed by the source service.",
             },
             {
                 "id": "company_deposits_held",
@@ -466,10 +466,8 @@ ALLOWED_BREAKDOWNS = (
     "date",
     "company",
     "guest",
-    "department",
     "booking_kind",
     "booking_source",
-    "booking_status",
     "reservation_status",
     "collection_type",
 )
