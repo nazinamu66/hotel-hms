@@ -1,170 +1,49 @@
 {% extends "base/base.html" %}
-
 {% block title %}{{ page_title }}{% endblock %}
-
 {% block content %}
 <style>
-    .mw-page { max-width: 1440px; margin: 0 auto; color:var(--hms-ink,#172033); }
-    .mw-page * { box-sizing:border-box; }
-    .mw-header { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; flex-wrap:wrap; margin-bottom:22px; }
-    .mw-eyebrow { margin:0 0 6px; color:#64748b; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
-    .mw-header h2 { margin:0 0 6px; font-size:clamp(24px,3vw,30px); letter-spacing:-.035em; }
-    .mw-subtitle { margin:0; color:#64748b; font-size:14px; }
-    .mw-primary { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:0 15px; border-radius:10px; background:#175cd3; color:#fff; text-decoration:none; font-size:13px; font-weight:750; }
-    .mw-primary:hover { background:#1849a9; text-decoration:none; }
-    .mw-panel { margin-bottom:18px; padding:18px; border:1px solid var(--hms-border,#e2e8f0); border-radius:15px; background:#fff; box-shadow:var(--hms-shadow,0 7px 22px rgba(15,23,42,.05)); }
-    .mw-filters { display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)) auto; gap:12px; align-items:end; }
-    .mw-field { min-width:0; }
-    .mw-field label { display:block; margin-bottom:6px; color:#475467; font-size:12px; font-weight:700; }
-    .mw-field input,.mw-field select { width:100%; min-height:42px; padding:9px 11px; border:1px solid #d5dce7; border-radius:9px; background:#fff; color:#263449; font:inherit; font-size:13px; }
-    .mw-filter-actions { display:flex; gap:8px; align-items:center; }
-    .mw-filter-btn,.mw-clear { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:0 13px; border:1px solid #d5dce7; border-radius:9px; background:#fff; color:#344054; text-decoration:none; font-size:12px; font-weight:750; cursor:pointer; }
-    .mw-filter-btn { background:#263449; border-color:#263449; color:#fff; }
-    .mw-clear:hover,.mw-filter-btn:hover { text-decoration:none; opacity:.9; }
-    .mw-table-panel { padding:0; overflow:hidden; }
-    .mw-table-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:17px 20px; border-bottom:1px solid #edf0f5; }
-    .mw-table-head h3 { margin:0; font-size:15px; }
-    .mw-count { padding:5px 9px; border-radius:999px; background:#f1f5f9; color:#475467; font-size:11px; font-weight:750; }
-    .mw-table-wrap { width:100%; overflow-x:auto; }
-    .mw-table { width:100%; min-width:920px; border-collapse:collapse; }
-    .mw-table th { padding:12px 14px; background:#f8fafc; color:#667085; font-size:10px; font-weight:800; letter-spacing:.07em; text-align:left; text-transform:uppercase; white-space:nowrap; }
-    .mw-table td { padding:14px; border-bottom:1px solid #edf0f5; color:#344054; font-size:12px; vertical-align:middle; }
-    .mw-table tbody tr:hover { background:#fbfcff; }
-    .mw-table tbody tr:last-child td { border-bottom:0; }
-    .mw-target { color:#1d4ed8; font-weight:800; text-decoration:none; }
-    .mw-target:hover { text-decoration:underline; }
-    .mw-sub { display:block; margin-top:4px; color:#98a2b3; font-size:11px; }
-    .mw-priority,.mw-status { display:inline-flex; align-items:center; padding:5px 8px; border-radius:999px; font-size:10px; font-weight:800; white-space:nowrap; }
-    .mw-priority-high { background:#fef3f2; color:#b42318; }
-    .mw-priority-medium { background:#fffaeb; color:#b54708; }
-    .mw-priority-low { background:#ecfdf3; color:#027a48; }
-    .mw-status-open { background:#f2f4f7; color:#475467; }
-    .mw-status-progress { background:#eff8ff; color:#175cd3; }
-    .mw-action { display:inline-flex; align-items:center; justify-content:center; min-height:34px; padding:0 11px; border:0; border-radius:8px; background:#263449; color:#fff; font-size:11px; font-weight:750; cursor:pointer; text-decoration:none; }
-    .mw-action:hover { background:#344054; text-decoration:none; }
-    .mw-empty { padding:42px 18px !important; text-align:center; color:#98a2b3 !important; }
-    .mw-empty strong { display:block; margin-bottom:5px; color:#344054; font-size:14px; }
-    .mw-footer { margin-top:16px; }
-    .mw-footer a { color:#175cd3; font-size:12px; font-weight:750; text-decoration:none; }
-    @media(max-width:1000px) { .mw-filters { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    @media(max-width:600px) {
-        .mw-header { display:block; }
-        .mw-header .mw-primary { margin-top:14px; }
-        .mw-panel { padding:13px; }
-        .mw-filters { grid-template-columns:1fr; }
-        .mw-filter-actions { justify-content:flex-start; }
-    }
+.wo-page{max-width:1480px;margin:0 auto;color:#172033}.wo-page *{box-sizing:border-box}.wo-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}.wo-kicker{margin:0 0 6px;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}.wo-head h2{margin:0 0 7px;font-size:clamp(25px,3vw,32px);letter-spacing:-.04em}.wo-sub{margin:0;color:#667085;font-size:13px;line-height:1.6}.wo-actions{display:flex;gap:9px;flex-wrap:wrap}.wo-btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 15px;border:1px solid #d5dce7;border-radius:10px;background:#fff;color:#344054;text-decoration:none;font-size:12px;font-weight:800}.wo-btn:hover{text-decoration:none;opacity:.9}.wo-primary{background:#175cd3;border-color:#175cd3;color:#fff}.wo-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:20px}.wo-stat{position:relative;overflow:hidden;padding:17px 18px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;box-shadow:0 7px 22px rgba(15,23,42,.04)}.wo-stat:after{position:absolute;top:0;left:0;width:4px;height:100%;background:#98a2b3;content:""}.wo-stat.open:after{background:#f79009}.wo-stat.progress:after{background:#2e90fa}.wo-stat.unassigned:after{background:#d92d20}.wo-stat-label{color:#667085;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.wo-stat-value{display:block;margin-top:8px;color:#172033;font-size:27px;font-weight:850;letter-spacing:-.04em;font-variant-numeric:tabular-nums}.wo-stat-note{display:block;margin-top:3px;color:#98a2b3;font-size:10px}.wo-panel{margin-bottom:17px;border:1px solid #e2e8f0;border-radius:15px;background:#fff;box-shadow:0 7px 22px rgba(15,23,42,.045)}.wo-filter-panel{padding:17px}.wo-filter-title{margin:0 0 13px;font-size:13px;font-weight:850}.wo-filters{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr)) auto;gap:11px;align-items:end}.wo-field{min-width:0}.wo-field label{display:block;margin-bottom:6px;color:#475467;font-size:11px;font-weight:800}.wo-field input,.wo-field select{width:100%;min-height:42px;padding:9px 11px;border:1px solid #d5dce7;border-radius:9px;background:#fff;color:#263449;font:inherit;font-size:12px}.wo-filter-actions{display:flex;gap:8px}.wo-filter-actions button{cursor:pointer}.wo-apply{background:#263449;border-color:#263449;color:#fff}.wo-table-panel{overflow:hidden}.wo-table-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 19px;border-bottom:1px solid #edf0f5}.wo-table-head h3{margin:0;font-size:15px}.wo-count{padding:5px 9px;border-radius:999px;background:#f1f5f9;color:#475467;font-size:10px;font-weight:850}.wo-table-wrap{width:100%;overflow-x:auto}.wo-table{width:100%;min-width:1080px;border-collapse:collapse}.wo-table th{padding:12px 13px;background:#f8fafc;color:#667085;font-size:10px;font-weight:850;letter-spacing:.07em;text-align:left;text-transform:uppercase;white-space:nowrap}.wo-table td{padding:14px 13px;border-bottom:1px solid #edf0f5;color:#344054;font-size:11px;vertical-align:middle}.wo-table tbody tr:hover{background:#fbfcff}.wo-table tbody tr:last-child td{border-bottom:0}.wo-location{color:#175cd3;font-size:12px;font-weight:850;text-decoration:none}.wo-location:hover{text-decoration:underline}.wo-meta{display:block;margin-top:4px;color:#98a2b3;font-size:10px;line-height:1.5}.wo-issue{max-width:260px;color:#344054;line-height:1.5}.wo-pill{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:850;white-space:nowrap}.wo-high{background:#fef3f2;color:#b42318}.wo-medium{background:#fffaeb;color:#b54708}.wo-low{background:#ecfdf3;color:#027a48}.wo-open{background:#f2f4f7;color:#475467}.wo-progress{background:#eff8ff;color:#175cd3}.wo-action{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 11px;border:0;border-radius:8px;background:#263449;color:#fff;font-size:10px;font-weight:850;text-decoration:none;white-space:nowrap;cursor:pointer}.wo-action:hover{background:#344054;color:#fff;text-decoration:none}.wo-empty{padding:48px 20px!important;text-align:center!important;color:#98a2b3!important}.wo-empty strong{display:block;margin-bottom:6px;color:#344054;font-size:14px}.wo-footer{margin-top:15px}.wo-footer a{color:#175cd3;font-size:12px;font-weight:800;text-decoration:none}
+@media(max-width:1050px){.wo-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.wo-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.wo-head{display:block}.wo-actions{margin-top:14px}.wo-actions .wo-btn{flex:1}.wo-summary{gap:9px}.wo-stat{padding:14px}.wo-stat-value{font-size:23px}.wo-filter-panel{padding:13px}.wo-filters{grid-template-columns:1fr}.wo-filter-actions .wo-btn{flex:1}}
 </style>
-
-<div class="mw-page">
-    <header class="mw-header">
-        <div>
-            <p class="mw-eyebrow">Facilities &amp; engineering</p>
-            <h2>{{ page_title }}</h2>
-            <p class="mw-subtitle">Track reported issues, assignments and maintenance activity across rooms and hotel locations.</p>
-        </div>
-        {% if not my_work_orders %}
-        <a class="mw-primary" href="{% url 'maintenance_create_ticket_room' %}">＋ Create maintenance ticket</a>
-        {% endif %}
-    </header>
-
-    {% if not my_work_orders %}
-    <section class="mw-panel">
-        <form method="get" class="mw-filters">
-            <div class="mw-field">
-                <label for="mw-status">Status</label>
-                <select id="mw-status" name="status">
-                    <option value="">All active statuses</option>
-                    <option value="OPEN" {% if status_filter == "OPEN" %}selected{% endif %}>Open</option>
-                    <option value="IN_PROGRESS" {% if status_filter == "IN_PROGRESS" %}selected{% endif %}>In progress</option>
-                </select>
-            </div>
-            <div class="mw-field">
-                <label for="mw-priority">Priority</label>
-                <select id="mw-priority" name="priority">
-                    <option value="">All priorities</option>
-                    <option value="HIGH" {% if priority_filter == "HIGH" %}selected{% endif %}>High</option>
-                    <option value="MEDIUM" {% if priority_filter == "MEDIUM" %}selected{% endif %}>Medium</option>
-                    <option value="LOW" {% if priority_filter == "LOW" %}selected{% endif %}>Low</option>
-                </select>
-            </div>
-            <div class="mw-field">
-                <label for="mw-assigned">Assignment</label>
-                <select id="mw-assigned" name="assigned">
-                    <option value="">Everyone</option>
-                    {% if user.role == "MAINTENANCE" %}
-                    <option value="ME" {% if assigned_filter == "ME" %}selected{% endif %}>My work orders</option>
-                    {% endif %}
-                    <option value="UNASSIGNED" {% if assigned_filter == "UNASSIGNED" %}selected{% endif %}>Unassigned</option>
-                </select>
-            </div>
-            <div class="mw-field">
-                <label for="mw-target">Room or location</label>
-                <input id="mw-target" type="text" name="target" value="{{ target_filter }}" placeholder="e.g. 101 or Generator Room">
-            </div>
-            <div class="mw-filter-actions">
-                <button class="mw-filter-btn" type="submit">Apply filters</button>
-                <a class="mw-clear" href="{% url 'maintenance_work_orders' %}">Clear</a>
-            </div>
-        </form>
-    </section>
-    {% endif %}
-
-    <section class="mw-panel mw-table-panel">
-        <div class="mw-table-head">
-            <h3>Active work orders</h3>
-            <span class="mw-count">{{ tickets|length }} shown</span>
-        </div>
-        <div class="mw-table-wrap">
-            <table class="mw-table">
-                <thead>
-                    <tr>
-                        <th>Room / location</th>
-                        <th>Issue / work required</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Reported by</th>
-                        <th>Assigned to</th>
-                        <th>Reported</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for ticket in tickets %}
-                    <tr>
-                        <td>
-                            <a class="mw-target" href="{% url 'maintenance_ticket_detail' ticket.id %}">
-                                {% if ticket.room_id %}Room {{ ticket.room.room_number }}{% elif ticket.location_id %}{{ ticket.location.name }}{% else %}Unspecified{% endif %}
-                            </a>
-                            {% if ticket.asset_id %}
-                            <span class="mw-sub">{{ ticket.asset.asset_tag }} · {{ ticket.asset.name }}</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ ticket.description|truncatechars:100 }}</td>
-                        <td><span class="mw-priority mw-priority-{{ ticket.priority|lower }}">{{ ticket.get_priority_display }}</span></td>
-                        <td><span class="mw-status {% if ticket.status == 'IN_PROGRESS' %}mw-status-progress{% else %}mw-status-open{% endif %}">{{ ticket.get_status_display }}</span></td>
-                        <td>{{ ticket.reported_by|default:"—" }}</td>
-                        <td>{{ ticket.assigned_to|default:"Unassigned" }}</td>
-                        <td>{{ ticket.created_at|date:"d M Y, H:i" }}</td>
-                        <td>
-                            {% if ticket.status == "OPEN" %}
-                            <form method="post" action="{% url 'maintenance_start_ticket' ticket.id %}">
-                                {% csrf_token %}
-                                <button class="mw-action" type="submit">Start work</button>
-                            </form>
-                            {% else %}
-                            <a class="mw-action" href="{% url 'maintenance_ticket_detail' ticket.id %}">View order</a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td class="mw-empty" colspan="8"><strong>No active work orders found</strong>New maintenance issues will appear here when reported.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </section>
-
-    <div class="mw-footer"><a href="{% url 'maintenance_dashboard' %}">← Back to Maintenance Control Centre</a></div>
+<div class="wo-page">
+<header class="wo-head">
+ <div><p class="wo-kicker">Facilities &amp; engineering · Operations</p><h2>{{ page_title }}</h2><p class="wo-sub">{% if my_work_orders %}Your assigned maintenance jobs, ready to action and update.{% else %}Monitor reported issues, priorities, assignments and maintenance activity across rooms and hotel locations.{% endif %}</p></div>
+ <div class="wo-actions">{% if not my_work_orders %}<a class="wo-btn wo-primary" href="{% url 'maintenance_create_ticket_room' %}">＋ Create maintenance ticket</a>{% else %}<a class="wo-btn" href="{% url 'maintenance_work_orders' %}">All work orders</a>{% endif %}</div>
+</header>
+{% if not my_work_orders %}
+<section class="wo-summary">
+ <div class="wo-stat"><span class="wo-stat-label">Active work orders</span><strong class="wo-stat-value">{{ work_order_summary.total }}</strong><span class="wo-stat-note">All unresolved tickets</span></div>
+ <div class="wo-stat open"><span class="wo-stat-label">Open</span><strong class="wo-stat-value">{{ work_order_summary.open }}</strong><span class="wo-stat-note">Awaiting work to begin</span></div>
+ <div class="wo-stat progress"><span class="wo-stat-label">In progress</span><strong class="wo-stat-value">{{ work_order_summary.in_progress }}</strong><span class="wo-stat-note">Currently being handled</span></div>
+ <div class="wo-stat unassigned"><span class="wo-stat-label">Unassigned</span><strong class="wo-stat-value">{{ work_order_summary.unassigned }}</strong><span class="wo-stat-note">Need a technician</span></div>
+</section>
+<section class="wo-panel wo-filter-panel">
+ <h3 class="wo-filter-title">Find a work order</h3>
+ <form method="get" class="wo-filters">
+  <div class="wo-field"><label for="mw-status">Status</label><select id="mw-status" name="status"><option value="">All active statuses</option><option value="OPEN" {% if status_filter == "OPEN" %}selected{% endif %}>Open</option><option value="IN_PROGRESS" {% if status_filter == "IN_PROGRESS" %}selected{% endif %}>In progress</option></select></div>
+  <div class="wo-field"><label for="mw-priority">Priority</label><select id="mw-priority" name="priority"><option value="">All priorities</option><option value="HIGH" {% if priority_filter == "HIGH" %}selected{% endif %}>High</option><option value="MEDIUM" {% if priority_filter == "MEDIUM" %}selected{% endif %}>Medium</option><option value="LOW" {% if priority_filter == "LOW" %}selected{% endif %}>Low</option></select></div>
+  <div class="wo-field"><label for="mw-assigned">Assignment</label><select id="mw-assigned" name="assigned"><option value="">Everyone</option>{% if user.role == "MAINTENANCE" %}<option value="ME" {% if assigned_filter == "ME" %}selected{% endif %}>My work orders</option>{% endif %}<option value="UNASSIGNED" {% if assigned_filter == "UNASSIGNED" %}selected{% endif %}>Unassigned</option></select></div>
+  <div class="wo-field"><label for="mw-target">Room or location</label><input id="mw-target" type="text" name="target" value="{{ target_filter }}" placeholder="e.g. 101 or Generator Room"></div>
+  <div class="wo-filter-actions"><button class="wo-btn wo-apply" type="submit">Apply filters</button><a class="wo-btn" href="{% url 'maintenance_work_orders' %}">Clear</a></div>
+ </form>
+</section>
+{% endif %}
+<section class="wo-panel wo-table-panel">
+ <header class="wo-table-head"><h3>{% if my_work_orders %}Work assigned to me{% else %}Active work order register{% endif %}</h3><span class="wo-count">{{ tickets|length }} shown</span></header>
+ <div class="wo-table-wrap"><table class="wo-table"><thead><tr><th>Room / location</th><th>Issue / work required</th><th>Priority</th><th>Status</th><th>Reported by</th><th>Assigned to</th><th>Reported</th><th>Action</th></tr></thead><tbody>
+ {% for ticket in tickets %}
+ <tr>
+  <td><a class="wo-location" href="{% url 'maintenance_ticket_detail' ticket.id %}">{% if ticket.room_id %}Room {{ ticket.room.room_number }}{% elif ticket.location_id %}{{ ticket.location.name }}{% else %}Unspecified{% endif %}</a>{% if ticket.asset_id %}<span class="wo-meta">{{ ticket.asset.asset_tag }} · {{ ticket.asset.name }}</span>{% endif %}</td>
+  <td><div class="wo-issue">{{ ticket.description|truncatechars:110 }}</div><span class="wo-meta">Work order #{{ ticket.id }}</span></td>
+  <td><span class="wo-pill wo-{{ ticket.priority|lower }}">{{ ticket.get_priority_display }}</span></td>
+  <td><span class="wo-pill {% if ticket.status == 'IN_PROGRESS' %}wo-progress{% else %}wo-open{% endif %}">{{ ticket.get_status_display }}</span></td>
+  <td>{{ ticket.reported_by|default:"—" }}</td><td>{{ ticket.assigned_to|default:"Unassigned" }}</td>
+  <td>{{ ticket.created_at|date:"d M Y" }}<span class="wo-meta">{{ ticket.created_at|date:"H:i" }}</span></td>
+  <td>{% if ticket.status == "OPEN" %}<form method="post" action="{% url 'maintenance_start_ticket' ticket.id %}">{% csrf_token %}<button class="wo-action" type="submit">Start work</button></form>{% else %}<a class="wo-action" href="{% url 'maintenance_ticket_detail' ticket.id %}">View order</a>{% endif %}</td>
+ </tr>
+ {% empty %}<tr><td class="wo-empty" colspan="8"><strong>{% if my_work_orders %}No work orders assigned to you{% else %}No active work orders found{% endif %}</strong>{% if my_work_orders %}New assignments will appear here.{% else %}New maintenance issues will appear here when reported.{% endif %}</td></tr>{% endfor %}
+ </tbody></table></div>
+</section>
+<div class="wo-footer"><a href="{% url 'maintenance_dashboard' %}">← Back to Maintenance Control Centre</a></div>
 </div>
 {% endblock %}
