@@ -30,6 +30,15 @@
 .custom-reports .selection-count { font-size:1.1rem; font-weight:750; }
 .custom-reports .notice { padding:13px 15px; border-radius:8px; background:#f1f5f9; color:#475569; font-size:.84rem; line-height:1.5; }
 .custom-reports .empty { padding:18px; border:1px dashed #cbd5e1; border-radius:8px; color:#64748b; }
+.custom-reports .results-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:18px; }
+.custom-reports .result-card { min-width:0; border:1px solid #e2e8f0; border-radius:10px; padding:17px; background:#fff; }
+.custom-reports .result-card h4 { margin:5px 0 8px; font-size:1rem; }
+.custom-reports .result-value { font-size:1.65rem; font-weight:800; color:#0f172a; overflow-wrap:anywhere; }
+.custom-reports .result-card .note { font-size:.76rem; line-height:1.45; margin:8px 0 0; }
+.custom-reports .breakdown-result { margin-top:16px; padding-top:12px; border-top:1px solid #edf0f5; }
+.custom-reports .breakdown-result h5 { margin:0 0 8px; font-size:.84rem; }
+.custom-reports .breakdown-result table { margin-bottom:0; font-size:.82rem; }
+@media(max-width:760px) { .custom-reports .category-grid, .custom-reports .results-grid { grid-template-columns:1fr; } }
 @media(max-width:760px) { .custom-reports .category-grid { grid-template-columns:1fr; } }
 @media(max-width:540px) { .custom-reports .field, .custom-reports .field input, .custom-reports .field select { width:100%; } .custom-reports .actions { width:100%; justify-content:space-between; } }
 </style>
@@ -111,7 +120,7 @@
 
         <section class="card panel">
             <div class="actions">
-                <button type="submit">Review configuration</button>
+                <button type="submit">Generate report</button>
                 <a class="reset" href="{% url 'management_custom_reports' %}">Reset</a>
             </div>
         </section>
@@ -121,8 +130,96 @@
     <p class="notice">One or more unsupported metric selections were ignored. Please choose from the available catalogue.</p>
     {% endif %}
 
+    {% if report_generated %}
+    <section class="card panel results-panel" style="margin-top:20px;">
+        <div class="selection-summary">
+            <div>
+                <div class="eyebrow">GENERATED REPORT</div>
+                <h3 style="margin:4px 0;">Report results</h3>
+                <p class="muted" style="margin:0;font-size:.82rem;">
+                    {{ date_from|date:"d M Y" }} – {{ date_to|date:"d M Y" }}
+                    {% if selected_hotel %} · {{ selected_hotel.name }}{% else %} · All accessible hotels{% endif %}
+                </p>
+            </div>
+            <span class="muted">{{ report.metrics|length }} metric{{ report.metrics|length|pluralize }}</span>
+        </div>
+
+        {% if report.has_metrics %}
+        <div class="results-grid">
+            {% for metric in report.metrics %}
+            <article class="result-card">
+                <div class="eyebrow">{{ metric.category_label }}</div>
+                <h4>{{ metric.label }}</h4>
+                <div class="result-value">
+                    {% if metric.value == None %}Not available
+                    {% elif metric.unit == "currency" or metric.unit == "currency_per_night" %}
+                        ₦{{ metric.value|floatformat:2 }}
+                    {% elif metric.unit == "percent" %}
+                        {{ metric.value|floatformat:2 }}%
+                    {% elif metric.unit == "nights" %}
+                        {{ metric.value|floatformat:2 }} nights
+                    {% elif metric.unit == "days" %}
+                        {{ metric.value|floatformat:2 }} days
+                    {% elif metric.unit == "count" %}
+                        {{ metric.value|floatformat:0 }}
+                    {% else %}
+                        {{ metric.value }}
+                    {% endif %}
+                </div>
+                <p class="note">{{ metric.notes }}</p>
+
+                {% for breakdown, rows in metric.breakdown_rows.items %}
+                <div class="breakdown-result">
+                    <h5>
+                        {% if breakdown == "hotel" %}By hotel
+                        {% elif breakdown == "date" %}By date
+                        {% elif breakdown == "company" %}By company
+                        {% elif breakdown == "guest" %}By guest
+                        {% elif breakdown == "collection_type" %}By collection type
+                        {% elif breakdown == "booking_kind" %}By booking type
+                        {% elif breakdown == "booking_source" %}By booking source
+                        {% elif breakdown == "reservation_status" %}By reservation status
+                        {% else %}{{ breakdown|title }}
+                        {% endif %}
+                    </h5>
+                    {% if rows %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead><tr><th>Group</th><th class="text-end">Value</th></tr></thead>
+                            <tbody>
+                                {% for row in rows %}
+                                <tr>
+                                    <td>{% if breakdown == "date" %}{{ row.label|date:"d M Y" }}{% else %}{{ row.label }}{% endif %}</td>
+                                    <td class="text-end">
+                                        {% if row.value == None %}—
+                                        {% elif metric.unit == "currency" or metric.unit == "currency_per_night" %}₦{{ row.value|floatformat:2 }}
+                                        {% elif metric.unit == "percent" %}{{ row.value|floatformat:2 }}%
+                                        {% elif metric.unit == "nights" %}{{ row.value|floatformat:2 }}
+                                        {% elif metric.unit == "days" %}{{ row.value|floatformat:2 }}
+                                        {% elif metric.unit == "count" %}{{ row.value|floatformat:0 }}
+                                        {% else %}{{ row.value }}{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="note">No detail rows are available for this breakdown.</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty">No valid metrics were selected. Choose metrics above and generate the report again.</p>
+        {% endif %}
+    </section>
+    {% endif %}
+
     <section class="notice">
-        <strong>How this works:</strong> Choose your hotel scope, date range and metrics. Compatible breakdowns update as you select metrics. Review configuration to validate and save your selections in the URL; report calculations, charts and exports are the next stage.
+        <strong>How this works:</strong> Choose your hotel scope, date range and metrics. Compatible breakdowns update as you select metrics. Generate the report to calculate results using the existing management reporting services.
     </section>
 <script>
 (function () {
