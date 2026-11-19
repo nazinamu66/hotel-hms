@@ -70,7 +70,7 @@
                     <h3 style="margin:4px 0;">Choose report metrics</h3>
                     <p class="muted" style="margin:0;font-size:.82rem;">Select one or more measures. Each metric includes its source and calculation notes.</p>
                 </div>
-                <div class="selection-count">{{ selected_metric_count }} selected</div>
+                <div class="selection-count" id="selected-metric-count" aria-live="polite">{{ selected_metric_count }} selected</div>
             </div>
         </section>
 
@@ -81,7 +81,7 @@
                 <p class="category-description">{{ category.description }}</p>
                 {% for metric in category.metrics %}
                 <div class="metric">
-                    <input type="checkbox" id="metric-{{ metric.id }}" name="metric" value="{{ metric.id }}" {% if metric.selected %}checked{% endif %}>
+                    <input type="checkbox" id="metric-{{ metric.id }}" name="metric" value="{{ metric.id }}" data-breakdowns="{{ metric.breakdowns|join:',' }}" {% if metric.selected %}checked{% endif %}>
                     <div>
                         <label for="metric-{{ metric.id }}">{{ metric.label }} <span style="color:#94a3b8;font-weight:400;">· {{ metric.unit }}</span></label>
                         <small>{{ metric.notes }}</small>
@@ -95,21 +95,18 @@
         <section class="card panel" style="margin-top:18px;">
             <div class="eyebrow">STEP 2</div>
             <h3 style="margin:4px 0;">Break down the results</h3>
-            {% if has_metric_selection %}
-                <p class="muted" style="font-size:.82rem;">Only breakdowns supported by every selected metric are offered.</p>
-                <div class="breakdowns">
-                    {% for option in breakdown_options %}
-                    <label>
-                        <input type="checkbox" name="breakdown" value="{{ option.id }}" {% if option.id in selected_breakdowns %}checked{% endif %}>
-                        {{ option.label }}
-                    </label>
-                    {% empty %}
-                    <span class="muted">The selected metrics can only be shown as totals.</span>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="empty">Select at least one metric above. Compatible breakdowns will appear here after you review your selections.</div>
-            {% endif %}
+            <p class="muted" id="breakdown-help" style="font-size:.82rem;">Select metrics to see the breakdowns they can support.</p>
+            <div class="breakdowns" id="breakdown-options"
+                 data-selected-breakdowns="{{ selected_breakdowns|join:',' }}"
+                 aria-live="polite">
+                {% for option in breakdown_options %}
+                <label>
+                    <input type="checkbox" name="breakdown" value="{{ option.id }}" {% if option.id in selected_breakdowns %}checked{% endif %}>
+                    {{ option.label }}
+                </label>
+                {% endfor %}
+            </div>
+            <div class="empty" id="breakdown-empty" {% if has_metric_selection %}hidden{% endif %}>Select at least one metric above. Compatible breakdowns will appear here automatically.</div>
         </section>
 
         <section class="card panel">
@@ -124,16 +121,92 @@
     <p class="notice">One or more unsupported metric selections were ignored. Please choose from the available catalogue.</p>
     {% endif %}
 
-    {% if has_metric_selection %}
     <section class="notice">
-        <strong>Configuration validated.</strong>
-        {{ selected_metric_count }} supported metric{{ selected_metric_count|pluralize }} selected.
-        This stage saves the configuration in the URL only; report calculations, charts and exports will be added in the execution stage.
+        <strong>How this works:</strong> Choose your hotel scope, date range and metrics. Compatible breakdowns update as you select metrics. Review configuration to validate and save your selections in the URL; report calculations, charts and exports are the next stage.
     </section>
-    {% else %}
-    <section class="notice">
-        <strong>How this works:</strong> Choose your hotel scope, date range and metrics, then review the compatible breakdowns. The next stage will connect validated selections to their source services and generate the report.
-    </section>
-    {% endif %}
+<script>
+(function () {
+    const root = document.querySelector(".custom-reports");
+    if (!root) return;
+
+    const metricInputs = Array.from(root.querySelectorAll('input[name="metric"]'));
+    const count = root.querySelector("#selected-metric-count");
+    const breakdownBox = root.querySelector("#breakdown-options");
+    const breakdownEmpty = root.querySelector("#breakdown-empty");
+    const breakdownHelp = root.querySelector("#breakdown-help");
+    if (!metricInputs.length || !breakdownBox || !count) return;
+
+    const labels = {
+        hotel: "Hotel",
+        date: "Date",
+        company: "Company",
+        guest: "Guest",
+        department: "Department",
+        booking_kind: "Booking Type",
+        booking_source: "Booking Source",
+        booking_status: "Booking Status",
+        reservation_status: "Reservation Status",
+        collection_type: "Collection Type"
+    };
+
+    const initialBreakdowns = new Set(
+        (breakdownBox.dataset.selectedBreakdowns || "")
+            .split(",").filter(Boolean)
+    );
+
+    function refreshSelection() {
+        const selected = metricInputs.filter(input => input.checked);
+        count.textContent = selected.length + (selected.length === 1 ? " selected" : " selected");
+
+        if (!selected.length) {
+            breakdownBox.replaceChildren();
+            breakdownBox.hidden = true;
+            breakdownEmpty.hidden = false;
+            breakdownHelp.textContent = "Select metrics to see the breakdowns they can support.";
+            return;
+        }
+
+        const supported = selected.map(input =>
+            new Set((input.dataset.breakdowns || "").split(",").filter(Boolean))
+        ).reduce((common, current) => {
+            for (const item of Array.from(common)) {
+                if (!current.has(item)) common.delete(item);
+            }
+            return common;
+        });
+
+        const order = Object.keys(labels);
+        const previous = new Set(
+            Array.from(breakdownBox.querySelectorAll('input[name="breakdown"]:checked'))
+                .map(input => input.value)
+        );
+        const keep = previous.size ? previous : initialBreakdowns;
+        const fragment = document.createDocumentFragment();
+
+        order.filter(id => supported.has(id)).forEach(id => {
+            const label = document.createElement("label");
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.name = "breakdown";
+            input.value = id;
+            input.checked = keep.has(id);
+            label.append(input, document.createTextNode(" " + labels[id]));
+            fragment.append(label);
+        });
+
+        breakdownBox.replaceChildren(fragment);
+        breakdownBox.hidden = false;
+        breakdownEmpty.hidden = true;
+        breakdownHelp.textContent = "Only breakdowns supported by every selected metric are offered.";
+
+        if (!supported.size) {
+            breakdownHelp.textContent = "These metrics can only be shown as totals; no shared breakdown is available.";
+        }
+    }
+
+    metricInputs.forEach(input => input.addEventListener("change", refreshSelection));
+    refreshSelection();
+})();
+</script>
 </div>
 {% endblock %}
