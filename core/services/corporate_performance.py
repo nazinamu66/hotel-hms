@@ -68,6 +68,7 @@ def build_corporate_performance(*, hotels, date_from, date_to, today=None):
         "room_nights": 0,
         "group_bookings": set(),
     })
+    seen_room_nights = set()
 
     for charge in corporate_charges:
         allocation = charge.group_room_allocation
@@ -82,6 +83,10 @@ def build_corporate_performance(*, hotels, date_from, date_to, today=None):
         row["group_bookings"].add(group.pk)
 
         if charge.room_night_date is not None:
+            night_key = (charge.folio_id, charge.room_night_date)
+            if night_key in seen_room_nights:
+                continue
+            seen_room_nights.add(night_key)
             room_night_count += 1
             row["room_nights"] += 1
             if charge.room_rate_source in ("GROUP", "OVERRIDE"):
