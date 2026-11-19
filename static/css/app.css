@@ -274,6 +274,29 @@ body { background: var(--hms-page); color: var(--hms-ink); }
 }
 .sidebar h4:hover, .sidebar h4.active-menu { background: rgba(148, 163, 184, .13); color: #f8fafc; }
 .sidebar a { padding: 9px 12px; border-radius: 8px; line-height: 1.35; }
+.sidebar .menu-subtoggle {
+    cursor: pointer;
+    margin: 7px 0 4px 8px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .025em;
+}
+.sidebar .menu-subtoggle:hover {
+    background: rgba(148, 163, 184, .10);
+    color: #f8fafc;
+}
+.sidebar .menu-section .menu-section {
+    margin-left: 13px;
+    padding-left: 7px;
+    border-left: 1px solid rgba(148, 163, 184, .18);
+}
+.sidebar .menu-section .menu-section a {
+    padding: 6px 8px;
+    font-size: 13px;
+}
 .sidebar a:hover { background: rgba(96, 165, 250, .12); color: #bfdbfe; }
 .menu-section { margin: 3px 0 8px 7px; padding-left: 8px; border-left: 1px solid rgba(148,163,184,.2); }
 .topbar { min-height: 52px; padding: 12px 24px; border-bottom-color: var(--hms-border); }
