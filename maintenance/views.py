@@ -2143,6 +2143,14 @@ def maintenance_stock(request):
 
             stock.stock_status = "OK"
 
+    total_stock_value = sum(
+        (stock.stock_value for stock in stock_items),
+        Decimal("0.00"),
+    )
+    hotels_with_stock = len({
+        stock.department.hotel_id for stock in stock_items
+    })
+
     return render(
         request,
         "maintenance/stock.html",
@@ -2150,6 +2158,8 @@ def maintenance_stock(request):
             "maintenance_departments": maintenance_departments,
             "stock_items": stock_items,
             "accessible_hotels": accessible_hotels,
+            "total_stock_value": total_stock_value,
+            "hotels_with_stock": hotels_with_stock,
         },
     )
 
