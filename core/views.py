@@ -74,19 +74,36 @@ def hotel_dashboard(request):
 
 @role_required("DIRECTOR", "GENERAL_MANAGER")
 def management_custom_reports(request):
-    """Management-only custom report configuration; execution is a later stage."""
+    """Management-only custom report builder and results page."""
     from core.services.management_report_configuration import (
         build_management_report_configuration,
+    )
+    from core.services.management_report_execution import (
+        execute_management_custom_report,
     )
 
     reporting_context = build_management_reporting_context(request.user, request.GET)
     configuration = build_management_report_configuration(request.GET)
+    report = None
+    report_generated = bool(configuration["selected_metric_ids"])
+
+    if report_generated:
+        report = execute_management_custom_report(
+            hotels=reporting_context["scoped_hotels"],
+            date_from=reporting_context["date_from"],
+            date_to=reporting_context["date_to"],
+            metric_ids=request.GET.getlist("metric"),
+            breakdowns=request.GET.getlist("breakdown"),
+        )
+
     return render(
         request,
         "management/custom_reports.html",
         {
             **reporting_context,
             **configuration,
+            "report": report,
+            "report_generated": report_generated,
             "is_management_overview": True,
             "is_director": True,
             "is_general_manager": request.user.role == "GENERAL_MANAGER",
