@@ -4,6 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from decimal import Decimal
 from datetime import date
+from django.http import HttpResponse
 
 from accounts.decorators import role_required
 from core.models import CashHandover
@@ -94,6 +95,22 @@ def management_custom_reports(request):
             date_to=reporting_context["date_to"],
             metric_ids=request.GET.getlist("metric"),
             breakdowns=request.GET.getlist("breakdown"),
+        )
+
+    if request.GET.get("export") == "csv" and report and report.get("has_metrics"):
+        from core.services.management_report_exports import (
+            management_report_csv_response,
+        )
+        hotel_name = (
+            reporting_context["selected_hotel"].name
+            if reporting_context["selected_hotel"]
+            else "All accessible hotels"
+        )
+        return management_report_csv_response(
+            report,
+            date_from=reporting_context["date_from"],
+            date_to=reporting_context["date_to"],
+            hotel_name=hotel_name,
         )
 
     return render(
