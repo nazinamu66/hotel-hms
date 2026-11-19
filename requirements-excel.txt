@@ -1,0 +1,2 @@
+# Optional dependency for management custom report Excel exports
+openpyxl>=3.1,<4.0
