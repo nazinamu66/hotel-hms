@@ -10,6 +10,7 @@ from billing.models import (
 
 TERMINAL_EXCLUDED_STATUSES = {"CANCELLED", "NO_SHOW"}
 
+
 def _nights_in_period(check_in, check_out, date_from, date_to):
     """Count booked calendar nights intersecting an inclusive report window."""
     if not check_in or not check_out or check_out <= check_in:
@@ -72,7 +73,7 @@ def build_reservations_occupancy_analytics(*, hotels, date_from, date_to):
             "check_in": allocation.check_in_date,
             "check_out": allocation.check_out_date,
             "status": allocation.status,
-            "created_at": reservation.created_at,
+            "created_at": allocation.created_at,
             "source": reservation.source.strip() or "Not recorded",
             "kind": "Individual",
         })
@@ -85,7 +86,7 @@ def build_reservations_occupancy_analytics(*, hotels, date_from, date_to):
             "check_in": allocation.check_in_date,
             "check_out": allocation.check_out_date,
             "status": allocation.status,
-            "created_at": group.created_at,
+            "created_at": allocation.created_at,
             "source": "Corporate group",
             "kind": "Corporate",
         })
