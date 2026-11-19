@@ -109,6 +109,7 @@
         <div id="management_menu" class="menu-section {% if request.resolver_match.url_name == 'management_overview' %}open{% endif %}">
             <a href="{% url 'management_overview' %}">Executive Overview</a>
             <a href="{% url 'management_hotel_performance' %}">Hotel Performance</a>
+            <a href="{% url 'management_front_desk_analytics' %}">Front Desk Analytics</a>
         </div>
         {% endif %}
 
