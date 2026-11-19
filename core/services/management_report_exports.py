@@ -347,9 +347,10 @@ def management_report_xlsx_response(report, *, date_from, date_to, hotel_name):
                     vertical="top",
                     wrap_text=(sheet.title == "Calculation Notes" and cell.column == 3),
                 )
-                if cell.row > 1 and cell.row % 2 == 0:
+                first_data_row = header_row + 1 if sheet is summary else 2
+                if cell.row >= first_data_row and cell.row % 2 == 0:
                     cell.fill = PatternFill("solid", fgColor=light_grey)
-                if cell.row > 1:
+                if cell.row >= first_data_row:
                     cell.border = Border(bottom=thin_grey)
         for column_cells in sheet.columns:
             letter = get_column_letter(column_cells[0].column)
