@@ -46,16 +46,14 @@ def _financial_totals(hotels, date_from, date_to):
 
 
 def _trend_chart(hotels, date_from, date_to):
-    """Return SVG line-chart markup and labels from posted ledger activity."""
-    date_field = TruncDate("journal__date") if (date_to - date_from).days <= 62 else TruncMonth("journal__date")
-    lines = (
+    """Build trend series in Python to keep SQLite DateField handling portable."""
+    daily_rows = (
         JournalLine.objects.filter(
             journal__hotel__in=hotels,
             journal__date__range=(date_from, date_to),
         )
         .exclude(journal__entry_type__in=("CLOSING", "OPENING"))
-        .annotate(period=date_field)
-        .values("period")
+        .values("journal__date")
         .annotate(
             revenue=Coalesce(Sum(Case(
                 When(account__account_type__in=("income", "other_income"),
@@ -70,12 +68,27 @@ def _trend_chart(hotels, date_from, date_to):
             expenses=Coalesce(Sum(Case(
                 When(account__account_type__in=("expense", "other_expense"),
                      then=F("debit") - F("credit")),
-                default=Value(ZERO), output_field=MONEY,
+                default=Value(ZERO), output_field=MONEY),
             )), ZERO, output_field=MONEY),
         )
-        .order_by("period")
+        .order_by("journal__date")
     )
-    rows = list(lines)
+
+    monthly = (date_to - date_from).days > 62
+    grouped = {}
+    for row in daily_rows:
+        day = row["journal__date"]
+        period = day.replace(day=1) if monthly else day
+        bucket = grouped.setdefault(period, {
+            "period": period,
+            "revenue": ZERO,
+            "cogs": ZERO,
+            "expenses": ZERO,
+        })
+        for key in ("revenue", "cogs", "expenses"):
+            bucket[key] += row[key] or ZERO
+
+    rows = list(grouped.values())
     if not rows:
         return {"trend_svg": "", "trend_labels": [], "trend_empty": True}
 
@@ -83,7 +96,8 @@ def _trend_chart(hotels, date_from, date_to):
     left, right, top, bottom = 48, 18, 18, 38
     plot_width, plot_height = width - left - right, height - top - bottom
     maximum = max(
-        [float(row[key] or ZERO) for row in rows for key in ("revenue", "cogs", "expenses")] + [1.0]
+        [float(row[key] or ZERO) for row in rows
+         for key in ("revenue", "cogs", "expenses")] + [1.0]
     )
     x_step = plot_width / max(len(rows) - 1, 1)
 
@@ -123,11 +137,14 @@ def _trend_chart(hotels, date_from, date_to):
         f'{grid}{"".join(series)}</svg>'
     )
     labels = [
-        row["period"].strftime("%d %b" if (date_to - date_from).days <= 62 else "%b %Y")
+        row["period"].strftime("%d %b" if not monthly else "%b %Y")
         for row in rows
     ]
     if len(labels) > 7:
-        indexes = sorted(set([0, len(labels)//4, len(labels)//2, (3*len(labels))//4, len(labels)-1]))
+        indexes = sorted(set([
+            0, len(labels) // 4, len(labels) // 2,
+            (3 * len(labels)) // 4, len(labels) - 1,
+        ]))
         labels = [labels[index] if index in indexes else "" for index in range(len(labels))]
     return {"trend_svg": svg, "trend_labels": labels, "trend_empty": False}
 
