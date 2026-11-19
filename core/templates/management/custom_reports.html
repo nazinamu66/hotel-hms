@@ -145,6 +145,18 @@
         </div>
 
         {% if report.has_metrics %}
+        <form method="get" class="export-actions" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;">
+            {% if selected_hotel %}<input type="hidden" name="hotel" value="{{ selected_hotel.id }}">{% endif %}
+            <input type="hidden" name="from" value="{{ date_from|date:'Y-m-d' }}">
+            <input type="hidden" name="to" value="{{ date_to|date:'Y-m-d' }}">
+            {% for metric_id in selected_metric_ids %}
+            <input type="hidden" name="metric" value="{{ metric_id }}">
+            {% endfor %}
+            {% for breakdown in selected_breakdowns %}
+            <input type="hidden" name="breakdown" value="{{ breakdown }}">
+            {% endfor %}
+            <button type="submit" name="export" value="csv">Export CSV</button>
+        </form>
         <div class="results-grid">
             {% for metric in report.metrics %}
             <article class="result-card">
