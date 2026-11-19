@@ -97,10 +97,11 @@ def management_custom_reports(request):
         )
 
     export_format = request.GET.get("export")
-    if export_format in ("csv", "pdf") and report and report.get("has_metrics"):
+    if export_format in ("csv", "pdf", "xlsx") and report and report.get("has_metrics"):
         from core.services.management_report_exports import (
             management_report_csv_response,
             management_report_pdf_response,
+            management_report_xlsx_response,
         )
         hotel_name = (
             reporting_context["selected_hotel"].name
@@ -114,6 +115,8 @@ def management_custom_reports(request):
         }
         if export_format == "csv":
             return management_report_csv_response(report, **export_kwargs)
+        if export_format == "xlsx":
+            return management_report_xlsx_response(report, **export_kwargs)
         return management_report_pdf_response(report, **export_kwargs)
 
     return render(
