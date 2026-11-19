@@ -187,3 +187,94 @@ class CorporatePerformanceServiceTests(TestCase):
         self.assertEqual(report["corporate_revenue"], Decimal("0.00"))
         self.assertEqual(report["active_company_count"], 1)
         self.assertEqual(report["company_ranking_rows"], [])
+
+
+class CorporatePerformanceViewTests(TestCase):
+    def setUp(self):
+        self.organization = Organization.objects.create(name="Corporate View Org")
+        self.hotel_one = Hotel.objects.create(
+            organization=self.organization,
+            name="Corporate View Hotel One",
+        )
+        self.hotel_two = Hotel.objects.create(
+            organization=self.organization,
+            name="Corporate View Hotel Two",
+        )
+        self.outside_hotel = Hotel.objects.create(name="Outside Corporate View Hotel")
+
+    def test_director_can_view_organization_corporate_performance(self):
+        from django.contrib.auth import get_user_model
+
+        user = get_user_model().objects.create_user(
+            username="corporate-view-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get("/management/corporate/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {hotel.pk for hotel in response.context["hotels"]},
+            {self.hotel_one.pk, self.hotel_two.pk},
+        )
+        self.assertContains(response, "Corporate Performance")
+
+    def test_general_manager_sees_only_assigned_hotels(self):
+        from django.contrib.auth import get_user_model
+
+        user = get_user_model().objects.create_user(
+            username="corporate-view-gm",
+            password="test-password",
+            role="GENERAL_MANAGER",
+            organization=self.organization,
+        )
+        user.assigned_hotels.add(self.hotel_two)
+        self.client.force_login(user)
+
+        response = self.client.get("/management/corporate/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [hotel.pk for hotel in response.context["hotels"]],
+            [self.hotel_two.pk],
+        )
+
+    def test_operational_user_cannot_open_corporate_management_report(self):
+        from django.contrib.auth import get_user_model
+
+        user = get_user_model().objects.create_user(
+            username="corporate-view-frontdesk",
+            password="test-password",
+            role="FRONTDESK",
+            hotel=self.hotel_one,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get("/management/corporate/")
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_inaccessible_hotel_filter_does_not_expand_reporting_scope(self):
+        from django.contrib.auth import get_user_model
+
+        user = get_user_model().objects.create_user(
+            username="corporate-view-isolation",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(
+            "/management/corporate/",
+            {"hotel": str(self.outside_hotel.pk)},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {hotel.pk for hotel in response.context["hotels"]},
+            {self.hotel_one.pk, self.hotel_two.pk},
+        )
