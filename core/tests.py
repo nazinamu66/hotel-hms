@@ -671,3 +671,187 @@ class ManagementFrontDeskAnalyticsViewTests(TestCase):
             {hotel.pk for hotel in response.context["hotels"]},
             {self.hotel_one.pk, self.hotel_two.pk},
         )
+
+
+class ReservationsOccupancyCalculationTests(TestCase):
+    def setUp(self):
+        from billing.models import (
+            Company,
+            GroupReservation,
+            GroupReservationRoom,
+            Guest,
+            Reservation,
+            ReservationRoomAllocation,
+        )
+        from rooms.models import RoomCategory
+
+        self.organization = Organization.objects.create(
+            name="Reservations Analytics Org"
+        )
+        self.hotel = Hotel.objects.create(
+            organization=self.organization,
+            name="Reservations Analytics Hotel",
+        )
+        self.other_hotel = Hotel.objects.create(
+            name="Outside Reservations Analytics Hotel"
+        )
+        self.category = RoomCategory.objects.create(
+            name="Reservations Analytics Category"
+        )
+        self.guest = Guest.objects.create(
+            hotel=self.hotel,
+            first_name="Analytics",
+            last_name="Guest",
+        )
+        self.company = Company.objects.create(
+            hotel=self.hotel,
+            name="Reservations Analytics Company",
+        )
+        self.Reservation = Reservation
+        self.ReservationRoomAllocation = ReservationRoomAllocation
+        self.GroupReservation = GroupReservation
+        self.GroupReservationRoom = GroupReservationRoom
+
+    def test_counts_legacy_ordinary_and_corporate_room_bookings_once(self):
+        from billing.models import Guest
+        from core.services.reservations_occupancy import (
+            build_reservations_occupancy_analytics,
+        )
+
+        legacy = self.Reservation.objects.create(
+            hotel=self.hotel,
+            guest=self.guest,
+            room_category=self.category,
+            check_in_date=date(2026, 11, 25),
+            check_out_date=date(2026, 11, 27),
+            source="Website",
+            status="RESERVED",
+        )
+        ordinary_parent = self.Reservation.objects.create(
+            hotel=self.hotel,
+            guest=self.guest,
+            room_category=self.category,
+            check_in_date=date(2026, 11, 26),
+            check_out_date=date(2026, 11, 28),
+            number_of_rooms=1,
+            source="Phone",
+            status="CHECKED_OUT",
+        )
+        self.ReservationRoomAllocation.objects.create(
+            reservation=ordinary_parent,
+            allocation_number=1,
+            guest=self.guest,
+            check_in_date=date(2026, 11, 26),
+            check_out_date=date(2026, 11, 28),
+            status="CHECKED_OUT",
+        )
+        group = self.GroupReservation.objects.create(
+            hotel=self.hotel,
+            company=self.company,
+            reference="GRP-ANALYTICS-1",
+            check_in_date=date(2026, 11, 27),
+            check_out_date=date(2026, 11, 30),
+            status="COMPLETED",
+        )
+        self.GroupReservationRoom.objects.create(
+            group_reservation=group,
+            guest=self.guest,
+            room_category=self.category,
+            check_in_date=date(2026, 11, 27),
+            check_out_date=date(2026, 11, 30),
+            status="CHECKED_OUT",
+        )
+
+        cancelled = self.Reservation.objects.create(
+            hotel=self.hotel,
+            guest=self.guest,
+            room_category=self.category,
+            check_in_date=date(2026, 11, 28),
+            check_out_date=date(2026, 11, 29),
+            status="CANCELLED",
+        )
+        no_show = self.Reservation.objects.create(
+            hotel=self.hotel,
+            guest=self.guest,
+            room_category=self.category,
+            check_in_date=date(2026, 11, 29),
+            check_out_date=date(2026, 11, 30),
+            status="NO_SHOW",
+        )
+
+        result = build_reservations_occupancy_analytics(
+            hotels=Hotel.objects.filter(pk=self.hotel.pk),
+            date_from=date(2026, 11, 1),
+            date_to=date(2026, 11, 30),
+        )
+
+        # The ordinary parent and its allocation are one room booking;
+        # corporate occupants are counted from their group allocation.
+        self.assertEqual(result["reservation_count"], 5)
+        self.assertEqual(result["arrival_count"], 5)
+        self.assertEqual(result["booked_room_nights"], 7)
+        self.assertEqual(result["cancelled_count"], 1)
+        self.assertEqual(result["no_show_count"], 1)
+        self.assertEqual(result["cancellation_rate"], 20.0)
+        self.assertEqual(result["no_show_rate"], 20.0)
+        self.assertEqual(result["individual_room_bookings"], 4)
+        self.assertEqual(result["corporate_room_bookings"], 1)
+        self.assertEqual(
+            {row["source"] for row in result["booking_source_rows"]},
+            {"Website", "Phone", "Not recorded", "Corporate group"},
+        )
+
+    def test_room_nights_are_clipped_to_the_selected_reporting_period(self):
+        from core.services.reservations_occupancy import (
+            build_reservations_occupancy_analytics,
+        )
+
+        self.Reservation.objects.create(
+            hotel=self.hotel,
+            guest=self.guest,
+            room_category=self.category,
+            check_in_date=date(2026, 10, 30),
+            check_out_date=date(2026, 11, 4),
+            status="CHECKED_OUT",
+        )
+
+        result = build_reservations_occupancy_analytics(
+            hotels=Hotel.objects.filter(pk=self.hotel.pk),
+            date_from=date(2026, 11, 1),
+            date_to=date(2026, 11, 2),
+        )
+
+        self.assertEqual(result["booked_room_nights"], 2)
+
+    def test_hotel_scope_excludes_other_hotels(self):
+        from billing.models import Guest, Reservation
+        from rooms.models import RoomCategory
+        from core.services.reservations_occupancy import (
+            build_reservations_occupancy_analytics,
+        )
+
+        other_category = RoomCategory.objects.create(
+            name="Outside Reservations Category"
+        )
+        other_guest = Guest.objects.create(
+            hotel=self.other_hotel,
+            first_name="Outside",
+            last_name="Guest",
+        )
+        Reservation.objects.create(
+            hotel=self.other_hotel,
+            guest=other_guest,
+            room_category=other_category,
+            check_in_date=date(2026, 11, 25),
+            check_out_date=date(2026, 11, 27),
+            status="RESERVED",
+        )
+
+        result = build_reservations_occupancy_analytics(
+            hotels=Hotel.objects.filter(pk=self.hotel.pk),
+            date_from=date(2026, 11, 1),
+            date_to=date(2026, 11, 30),
+        )
+
+        self.assertEqual(result["reservation_count"], 0)
+        self.assertEqual(result["booked_room_nights"], 0)
