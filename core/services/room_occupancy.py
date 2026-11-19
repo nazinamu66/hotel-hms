@@ -37,7 +37,9 @@ def _booking_intervals(hotel_ids, date_from, date_to):
         reservation__hotel_id__in=hotel_ids,
         check_in_date__lte=date_to,
         check_out_date__gt=date_from,
-    ).exclude(status__in=TERMINAL_BOOKING_STATUSES)
+    ).exclude(status__in=TERMINAL_BOOKING_STATUSES).exclude(
+        reservation__status__in=TERMINAL_BOOKING_STATUSES
+    )
     rows.extend(
         (item.reservation.hotel_id, item.check_in_date, item.check_out_date)
         for item in ordinary.select_related("reservation")
@@ -47,7 +49,9 @@ def _booking_intervals(hotel_ids, date_from, date_to):
         group_reservation__hotel_id__in=hotel_ids,
         check_in_date__lte=date_to,
         check_out_date__gt=date_from,
-    ).exclude(status__in=TERMINAL_BOOKING_STATUSES)
+    ).exclude(status__in=TERMINAL_BOOKING_STATUSES).exclude(
+        group_reservation__status="CANCELLED"
+    )
     rows.extend(
         (item.group_reservation.hotel_id, item.check_in_date, item.check_out_date)
         for item in corporate.select_related("group_reservation")
