@@ -1,5 +1,6 @@
 """Export helpers for management custom reports."""
 import csv
+from decimal import Decimal
 from datetime import date
 from io import StringIO
 
