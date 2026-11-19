@@ -3,8 +3,6 @@
 The engine deliberately delegates every calculation to the existing management
 reporting services. It does not create parallel accounting or operational logic.
 """
-from decimal import Decimal
-
 from core.services.management_report_catalogue import (
     get_management_report_metric,
 )
@@ -58,8 +56,17 @@ def _breakdown_rows(metric_id, breakdown, payloads):
     """Return rows only where the source service exposes genuine subtotals."""
     if breakdown == "hotel":
         rows = []
+        source_key = {
+            "revenue": "revenue",
+            "cogs": "cogs",
+            "operating_expenses": "expenses",
+            "operating_result": "operating_result",
+        }.get(metric_id)
         for row in payloads["financial_performance"].get("hotel_rows", []):
-            rows.append({"label": row["hotel"].name, "value": row.get(metric_id)})
+            rows.append({
+                "label": row["hotel"].name,
+                "value": row.get(source_key) if source_key else None,
+            })
         return rows
 
     if breakdown == "date" and metric_id == "actual_room_nights":
