@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from decimal import Decimal
+from datetime import date
 
 from accounts.decorators import role_required
 from core.models import CashHandover
@@ -25,7 +26,34 @@ def hotel_dashboard(request):
     hotels = get_user_hotels(user)  # queryset
 
     if user.role == "DIRECTOR":
-        context = get_director_dashboard(hotels)
+        accessible_hotels = hotels.filter(is_active=True).order_by("name")
+        selected_hotel = None
+        hotel_id = request.GET.get("hotel", "").strip()
+        if hotel_id:
+            selected_hotel = get_object_or_404(
+                accessible_hotels,
+                pk=hotel_id,
+            )
+
+        today = date.today()
+        default_from = today.replace(day=1)
+        try:
+            date_from = date.fromisoformat(request.GET.get("from", ""))
+        except (TypeError, ValueError):
+            date_from = default_from
+        try:
+            date_to = date.fromisoformat(request.GET.get("to", ""))
+        except (TypeError, ValueError):
+            date_to = today
+        if date_from > date_to:
+            date_from, date_to = default_from, today
+
+        context = get_director_dashboard(
+            accessible_hotels,
+            selected_hotel=selected_hotel,
+            date_from=date_from,
+            date_to=date_to,
+        )
 
     elif user.role == "MANAGER":
         context = get_manager_dashboard(hotels)
