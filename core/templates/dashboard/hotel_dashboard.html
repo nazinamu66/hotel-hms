@@ -114,6 +114,37 @@
         </div>
     </div>
 
+    <section class="card performance-card" style="margin-bottom:18px;">
+        <h3 class="chart-title">Financial Position · Current Balances</h3>
+        <p class="chart-subtitle">Live ledger and deposit balances for the selected hotel scope · independent of the profit-and-loss date filter</p>
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-label">Cash on Hand</div>
+                <h3 class="kpi-value">₦{{ cash_balance|floatformat:2 }}</h3>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Bank Balances</div>
+                <h3 class="kpi-value">₦{{ bank_balance|floatformat:2 }}</h3>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Accounts Receivable</div>
+                <h3 class="kpi-value">₦{{ accounts_receivable|floatformat:2 }}</h3>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Accounts Payable</div>
+                <h3 class="kpi-value">₦{{ accounts_payable|floatformat:2 }}</h3>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Corporate Deposits Held</div>
+                <h3 class="kpi-value">₦{{ corporate_deposits_held|floatformat:2 }}</h3>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Guest Deposits Held</div>
+                <h3 class="kpi-value">₦{{ guest_deposits_held|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </section>
+
     <div class="chart-grid">
         <section class="card chart-card">
             <h3 class="chart-title">Financial Performance Trend</h3>
