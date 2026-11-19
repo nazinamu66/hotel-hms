@@ -26,7 +26,7 @@ def _booking_intervals(hotel_ids, date_from, date_to):
         .exclude(room_allocations__isnull=False)
         .exclude(group_allocation__isnull=False)
         .filter(check_in_date__lte=date_to, check_out_date__gt=date_from)
-        .exclude(status__in=TERMINAL_BOOKING_STATUSES)
+        .filter(status__in=("RESERVED", "CHECKED_IN"))
     )
     rows.extend(
         (item.hotel_id, item.check_in_date, item.check_out_date)
@@ -37,8 +37,8 @@ def _booking_intervals(hotel_ids, date_from, date_to):
         reservation__hotel_id__in=hotel_ids,
         check_in_date__lte=date_to,
         check_out_date__gt=date_from,
-    ).exclude(status__in=TERMINAL_BOOKING_STATUSES).exclude(
-        reservation__status__in=TERMINAL_BOOKING_STATUSES
+    ).filter(status__in=("RESERVED", "CHECKED_IN")).filter(
+        reservation__status__in=("RESERVED", "CHECKED_IN")
     )
     rows.extend(
         (item.reservation.hotel_id, item.check_in_date, item.check_out_date)
@@ -49,7 +49,7 @@ def _booking_intervals(hotel_ids, date_from, date_to):
         group_reservation__hotel_id__in=hotel_ids,
         check_in_date__lte=date_to,
         check_out_date__gt=date_from,
-    ).exclude(status__in=TERMINAL_BOOKING_STATUSES).filter(
+    ).filter(status__in=("RESERVED", "CHECKED_IN")).filter(
         group_reservation__status__in=("CONFIRMED", "IN_HOUSE")
     )
     rows.extend(
