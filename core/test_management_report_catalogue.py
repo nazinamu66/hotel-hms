@@ -60,6 +60,35 @@ class ManagementReportCatalogueTests(SimpleTestCase):
     def test_unknown_metric_is_not_supported(self):
         self.assertIsNone(get_management_report_metric("made_up_metric"))
 
+
+    def test_breakdowns_match_the_existing_source_service_outputs(self):
+        expected_breakdowns = {
+            "scheduled_arrivals": ["hotel"],
+            "average_negotiated_rate": ["hotel"],
+            "corporate_deposits_held": ["hotel"],
+            "unbilled_company_charges": ["hotel"],
+            "company_receivables": ["hotel"],
+            "guest_deposits_held": ["hotel"],
+            "guest_receivables": ["hotel", "guest"],
+            "collections_total": ["hotel", "collection_type"],
+            "actual_room_nights": ["hotel", "date"],
+        }
+        for metric_id, expected in expected_breakdowns.items():
+            with self.subTest(metric=metric_id):
+                self.assertEqual(
+                    get_management_report_metric(metric_id)["breakdowns"],
+                    expected,
+                )
+
+    def test_unsupported_global_breakdowns_are_not_offered(self):
+        from core.services.management_report_catalogue import ALLOWED_BREAKDOWNS
+
+        self.assertNotIn("department", ALLOWED_BREAKDOWNS)
+        self.assertNotIn("booking_status", ALLOWED_BREAKDOWNS)
+
+    def test_catalogue_version_was_incremented_for_contract_correction(self):
+        self.assertEqual(CATALOGUE_VERSION, 2)
+
     def test_returned_catalogue_is_safe_to_customize(self):
         first = get_management_report_catalogue()
         first["categories"][0]["metrics"][0]["label"] = "Changed locally"
