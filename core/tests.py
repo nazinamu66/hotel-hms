@@ -855,3 +855,206 @@ class ReservationsOccupancyCalculationTests(TestCase):
 
         self.assertEqual(result["reservation_count"], 0)
         self.assertEqual(result["booked_room_nights"], 0)
+
+
+
+class RoomOccupancyAnalyticsTests(TestCase):
+    def setUp(self):
+        from rooms.models import Room, RoomCategory
+
+        self.organization = Organization.objects.create(
+            name="Room Occupancy Analytics Org"
+        )
+        self.hotel = Hotel.objects.create(
+            organization=self.organization,
+            name="Room Occupancy Analytics Hotel",
+        )
+        self.outside_hotel = Hotel.objects.create(
+            name="Outside Room Occupancy Hotel"
+        )
+        self.category = RoomCategory.objects.create(
+            name="Room Occupancy Category"
+        )
+        self.guest = __import__("billing.models", fromlist=["Guest"]).Guest.objects.create(
+            hotel=self.hotel,
+            first_name="Occupancy",
+            last_name="Guest",
+        )
+        self.Room = Room
+
+    def _room(self, hotel, number):
+        return self.Room.objects.create(
+            hotel=hotel,
+            room_number=number,
+            category=self.category,
+        )
+
+    def test_actual_room_nights_are_deduplicated_and_hotel_scoped(self):
+        from billing.models import Charge, Folio, Reservation
+        from inventory.models import Department
+        from core.services.room_occupancy import build_room_occupancy_analytics
+        from datetime import timedelta
+        from django.utils import timezone
+
+        today = timezone.localdate()
+        yesterday = today - timedelta(days=1)
+        room = self._room(self.hotel, "101")
+        outside_room = self._room(self.outside_hotel, "201")
+        reservation = Reservation.objects.create(
+            hotel=self.hotel,
+            guest=self.guest,
+            room_category=self.category,
+            room=room,
+            check_in_date=yesterday,
+            check_out_date=today,
+            status="CHECKED_OUT",
+        )
+        folio = Folio.objects.create(
+            folio_type="ROOM",
+            hotel=self.hotel,
+            room=room,
+            guest=self.guest,
+            reservation=reservation,
+            check_in_at=timezone.now() - timedelta(days=1),
+            check_out_at=timezone.now(),
+            is_closed=True,
+        )
+        department = Department.objects.create(
+            hotel=self.hotel,
+            code="FD-OCC",
+            name="Occupancy Front Desk",
+            department_type="FRONTDESK",
+        )
+        for reference in ("ROOM-ORIGINAL", "ROOM-CHANGE"):
+            Charge.objects.create(
+                folio=folio,
+                description="Room night",
+                department=department,
+                amount="100.00",
+                reference=reference,
+                room_night_date=yesterday,
+                room_rate="100.00",
+            )
+
+        outside_guest = __import__("billing.models", fromlist=["Guest"]).Guest.objects.create(
+            hotel=self.outside_hotel,
+            first_name="Outside",
+            last_name="Guest",
+        )
+        outside_reservation = Reservation.objects.create(
+            hotel=self.outside_hotel,
+            guest=outside_guest,
+            room_category=self.category,
+            room=outside_room,
+            check_in_date=yesterday,
+            check_out_date=today,
+            status="CHECKED_OUT",
+        )
+        outside_folio = Folio.objects.create(
+            folio_type="ROOM",
+            hotel=self.outside_hotel,
+            room=outside_room,
+            guest=outside_guest,
+            reservation=outside_reservation,
+            check_in_at=timezone.now() - timedelta(days=1),
+            check_out_at=timezone.now(),
+            is_closed=True,
+        )
+        outside_department = Department.objects.create(
+            hotel=self.outside_hotel,
+            code="FD-OCC",
+            name="Outside Front Desk",
+            department_type="FRONTDESK",
+        )
+        Charge.objects.create(
+            folio=outside_folio,
+            description="Room night",
+            department=outside_department,
+            amount="100.00",
+            room_night_date=yesterday,
+            room_rate="100.00",
+        )
+
+        result = build_room_occupancy_analytics(
+            hotels=Hotel.objects.filter(pk=self.hotel.pk),
+            date_from=yesterday,
+            date_to=today,
+            today=today,
+        )
+
+        self.assertEqual(result["actual_room_nights"], 1)
+        self.assertEqual(result["forecast_room_nights"], 0)
+        self.assertEqual(result["gross_room_inventory"], 1)
+        self.assertEqual(result["actual_occupancy_percent"], 100.0)
+        self.assertEqual(len(result["daily_rows"]), 2)
+
+    def test_forecast_counts_room_allocations_once_and_uses_gross_inventory(self):
+        from billing.models import GroupReservation, GroupReservationRoom, Reservation, ReservationRoomAllocation
+        from core.services.room_occupancy import build_room_occupancy_analytics
+        from datetime import timedelta
+        from django.utils import timezone
+
+        today = timezone.localdate()
+        tomorrow = today + timedelta(days=1)
+        self._room(self.hotel, "101")
+        self._room(self.hotel, "102")
+        legacy = Reservation.objects.create(
+            hotel=self.hotel,
+            guest=self.guest,
+            room_category=self.category,
+            check_in_date=tomorrow,
+            check_out_date=tomorrow + timedelta(days=2),
+            status="RESERVED",
+        )
+        parent = Reservation.objects.create(
+            hotel=self.hotel,
+            guest=self.guest,
+            room_category=self.category,
+            check_in_date=tomorrow,
+            check_out_date=tomorrow + timedelta(days=2),
+            status="RESERVED",
+        )
+        ReservationRoomAllocation.objects.create(
+            reservation=parent,
+            allocation_number=1,
+            guest=self.guest,
+            check_in_date=tomorrow,
+            check_out_date=tomorrow + timedelta(days=2),
+            status="RESERVED",
+        )
+        company = __import__("billing.models", fromlist=["Company"]).Company.objects.create(
+            hotel=self.hotel,
+            name="Occupancy Analytics Company",
+        )
+        group = GroupReservation.objects.create(
+            hotel=self.hotel,
+            company=company,
+            reference="GRP-OCC-1",
+            check_in_date=tomorrow,
+            check_out_date=tomorrow + timedelta(days=2),
+            status="CONFIRMED",
+        )
+        GroupReservationRoom.objects.create(
+            group_reservation=group,
+            guest=self.guest,
+            room_category=self.category,
+            check_in_date=tomorrow,
+            check_out_date=tomorrow + timedelta(days=2),
+            status="RESERVED",
+        )
+
+        result = build_room_occupancy_analytics(
+            hotels=Hotel.objects.filter(pk=self.hotel.pk),
+            date_from=today,
+            date_to=tomorrow + timedelta(days=1),
+            today=today,
+        )
+
+        self.assertEqual(result["gross_room_inventory"], 2)
+        self.assertEqual(result["forecast_room_nights"], 6)
+        forecast_days = [
+            row for row in result["daily_rows"]
+            if row["basis"] == "FORECAST"
+        ]
+        self.assertEqual([row["occupied_room_count"] for row in forecast_days], [3, 3, 0])
+        self.assertEqual([row["occupancy_percent"] for row in forecast_days], [150.0, 150.0, 0.0])
