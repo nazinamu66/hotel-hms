@@ -1,0 +1,123 @@
+{% extends "base/base.html" %}
+
+{% block title %}Front Desk Analytics | Hotel HMS{% endblock %}
+
+{% block content %}
+<style>
+.frontdesk-analytics { color:#172033; }
+.frontdesk-analytics .heading { margin-bottom:18px; }
+.frontdesk-analytics .heading h2 { margin:0 0 6px; font-size:1.65rem; }
+.frontdesk-analytics .muted, .frontdesk-analytics .subtitle { color:#64748b; }
+.frontdesk-analytics .filters { display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; padding:18px; margin-bottom:18px; }
+.frontdesk-analytics .field { display:flex; flex-direction:column; gap:6px; min-width:160px; }
+.frontdesk-analytics .field label { color:#64748b; font-size:.75rem; font-weight:700; }
+.frontdesk-analytics .field input, .frontdesk-analytics .field select { min-width:160px; }
+.frontdesk-analytics .actions { display:flex; align-items:center; gap:12px; }
+.frontdesk-analytics .actions button { border:0; border-radius:7px; padding:10px 16px; background:#2563eb; color:#fff; cursor:pointer; }
+.frontdesk-analytics .actions a { color:#475569; font-weight:600; }
+.frontdesk-analytics .kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.frontdesk-analytics .kpi { padding:18px; min-width:0; }
+.frontdesk-analytics .kpi span { color:#64748b; font-size:.78rem; font-weight:650; }
+.frontdesk-analytics .kpi strong { display:block; margin-top:9px; font-size:1.6rem; overflow-wrap:anywhere; }
+.frontdesk-analytics .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:18px; }
+.frontdesk-analytics .panel { padding:20px; min-width:0; }
+.frontdesk-analytics .panel h3 { margin:0 0 5px; font-size:1rem; }
+.frontdesk-analytics .subtitle { margin:0 0 15px; font-size:.78rem; }
+.frontdesk-analytics table { width:100%; border-collapse:collapse; }
+.frontdesk-analytics td, .frontdesk-analytics th { padding:10px 8px; border-bottom:1px solid #e8edf5; text-align:left; }
+.frontdesk-analytics th { color:#64748b; font-size:.72rem; text-transform:uppercase; }
+.frontdesk-analytics .metric-list { display:grid; grid-template-columns:1fr auto; gap:12px; }
+.frontdesk-analytics .metric-list span { color:#64748b; }
+.frontdesk-analytics .metric-list strong { text-align:right; }
+.frontdesk-analytics .note { color:#64748b; font-size:.78rem; line-height:1.5; margin-top:14px; }
+.frontdesk-analytics .empty { color:#94a3b8; padding:14px 8px; text-align:center; }
+@media(max-width:900px) { .frontdesk-analytics .grid { grid-template-columns:1fr; } }
+@media(max-width:700px) { .frontdesk-analytics .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:540px) { .frontdesk-analytics .field, .frontdesk-analytics .field input, .frontdesk-analytics .field select { width:100%; } .frontdesk-analytics .actions { width:100%; justify-content:space-between; } }
+</style>
+
+<div class="frontdesk-analytics">
+    <header class="heading">
+        <h2>Front Desk Analytics</h2>
+        <p class="muted">{% if is_general_manager %}Guest and reservation activity across your assigned hotels{% else %}Guest and reservation activity across your organization{% endif %}</p>
+    </header>
+
+    <form method="get" class="card filters">
+        <div class="field">
+            <label for="fd-hotel">HOTEL</label>
+            <select id="fd-hotel" name="hotel">
+                <option value="">All accessible hotels</option>
+                {% for hotel in hotels %}
+                <option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="fd-from">FROM</label>
+            <input id="fd-from" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">
+        </div>
+        <div class="field">
+            <label for="fd-to">TO</label>
+            <input id="fd-to" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">
+        </div>
+        <div class="actions">
+            <button type="submit">Apply filters</button>
+            <a href="{% url 'management_front_desk_analytics' %}">Reset</a>
+        </div>
+    </form>
+
+    <section class="kpis">
+        <article class="card kpi"><span>Actual Check-ins</span><strong>{{ actual_check_ins }}</strong></article>
+        <article class="card kpi"><span>Actual Checkouts</span><strong>{{ actual_checkouts }}</strong></article>
+        <article class="card kpi"><span>Guests Currently In-House</span><strong>{{ in_house_guests }}</strong></article>
+        <article class="card kpi"><span>Repeat Guests Checked In</span><strong>{{ repeat_guests }}</strong></article>
+    </section>
+
+    <div class="grid">
+        <section class="card panel">
+            <h3>Reservation Status</h3>
+            <p class="subtitle">Reservations with an arrival date in the selected period</p>
+            <div class="metric-list">
+                <span>Total scheduled reservations</span><strong>{{ reservation_arrivals }}</strong>
+                {% for status, count in reservation_statuses.items %}
+                <span>{{ status|title }}</span><strong>{{ count }}</strong>
+                {% endfor %}
+            </div>
+            <p class="note">Reservation counts represent master reservations. Multi-room ordinary bookings and corporate group occupants are shown separately below to avoid treating one booking as multiple reservations.</p>
+        </section>
+
+        <section class="card panel">
+            <h3>Room Allocation Activity</h3>
+            <p class="subtitle">Room allocations with arrival dates in the selected period</p>
+            <div class="metric-list">
+                <span>Ordinary room allocations</span><strong>{{ ordinary_room_allocations }}</strong>
+                <span>Corporate group occupants</span><strong>{{ group_room_allocations }}</strong>
+                <span>Consumed complimentary room nights</span><strong>{{ complimentary_room_nights }}</strong>
+                <span>Room changes recorded</span><strong>{{ room_changes }}</strong>
+                <span>Average completed stay</span><strong>{% if average_stay_nights != None %}{{ average_stay_nights }} nights{% else %}—{% endif %}</strong>
+            </div>
+        </section>
+
+        <section class="card panel">
+            <h3>Guest Nationality</h3>
+            <p class="subtitle">Distinct guests checked in during the selected period</p>
+            <table>
+                <thead><tr><th>Nationality</th><th>Guests</th></tr></thead>
+                <tbody>
+                    {% for row in nationality_rows %}
+                    <tr><td>{{ row.guest__nationality }}</td><td>{{ row.guest_count }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="2" class="empty">No nationality data recorded for these check-ins.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <section class="card panel">
+            <h3>How to Read This Report</h3>
+            <p class="note">Actual check-ins use folio creation/check-in timestamps. Actual checkouts include only closed folios, because open folios may carry an expected checkout timestamp. Repeat guests are guests with an earlier room folio before the selected period.</p>
+            <p class="note">This first release does not estimate check-in duration, checkout duration, enquiry conversion or complaints. Those require reliable event timestamps or dedicated records.</p>
+        </section>
+    </div>
+</div>
+{% endblock %}
