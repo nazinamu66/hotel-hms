@@ -1058,3 +1058,81 @@ class RoomOccupancyAnalyticsTests(TestCase):
         ]
         self.assertEqual([row["occupied_room_count"] for row in forecast_days], [0, 3, 3])
         self.assertEqual([row["occupancy_percent"] for row in forecast_days], [0.0, 150.0, 150.0])
+
+
+class ManagementReservationsOccupancyViewTests(TestCase):
+    def setUp(self):
+        self.organization = Organization.objects.create(name="Reservations Occupancy View Org")
+        self.hotel_one = Hotel.objects.create(
+            organization=self.organization,
+            name="Reservations Occupancy Hotel One",
+        )
+        self.hotel_two = Hotel.objects.create(
+            organization=self.organization,
+            name="Reservations Occupancy Hotel Two",
+        )
+        self.outside_hotel = Hotel.objects.create(
+            name="Outside Reservations Occupancy Hotel"
+        )
+
+    def test_director_can_view_organization_reservations_occupancy(self):
+        director = User.objects.create_user(
+            username="reservations-occupancy-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+        response = self.client.get("/management/reservations-occupancy/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {hotel.pk for hotel in response.context["hotels"]},
+            {self.hotel_one.pk, self.hotel_two.pk},
+        )
+        self.assertTemplateUsed(response, "management/reservations_occupancy.html")
+
+    def test_general_manager_is_limited_to_assigned_hotels(self):
+        general_manager = User.objects.create_user(
+            username="reservations-occupancy-gm",
+            password="test-password",
+            role="GENERAL_MANAGER",
+            organization=self.organization,
+        )
+        general_manager.assigned_hotels.add(self.hotel_two)
+        self.client.force_login(general_manager)
+        response = self.client.get("/management/reservations-occupancy/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [hotel.pk for hotel in response.context["hotels"]],
+            [self.hotel_two.pk],
+        )
+        self.assertEqual(response.context["gross_room_inventory"], 0)
+
+    def test_operational_frontdesk_user_cannot_open_management_report(self):
+        frontdesk_user = User.objects.create_user(
+            username="reservations-occupancy-frontdesk",
+            password="test-password",
+            role="FRONTDESK",
+            hotel=self.hotel_one,
+        )
+        self.client.force_login(frontdesk_user)
+        response = self.client.get("/management/reservations-occupancy/")
+        self.assertEqual(response.status_code, 403)
+
+    def test_inaccessible_hotel_filter_does_not_expand_scope(self):
+        director = User.objects.create_user(
+            username="reservations-occupancy-isolation",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+        response = self.client.get(
+            "/management/reservations-occupancy/",
+            {"hotel": str(self.outside_hotel.pk)},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {hotel.pk for hotel in response.context["hotels"]},
+            {self.hotel_one.pk, self.hotel_two.pk},
+        )
