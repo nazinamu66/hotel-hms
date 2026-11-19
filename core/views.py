@@ -4,7 +4,6 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from decimal import Decimal
 from datetime import date
-from django.http import HttpResponse
 
 from accounts.decorators import role_required
 from core.models import CashHandover
