@@ -204,3 +204,162 @@ def management_report_pdf_response(report, *, date_from, date_to, hotel_name):
         f'{date_from.isoformat()}-to-{date_to.isoformat()}.pdf"'
     )
     return response
+
+
+def _excel_text(value):
+    """Keep externally supplied labels as text, never as spreadsheet formulas."""
+    text = "" if value is None else str(value)
+    if text.startswith(("=", "+", "-", "@")):
+        return "'" + text
+    return text
+
+
+def management_report_xlsx_response(report, *, date_from, date_to, hotel_name):
+    """Return a formatted workbook with summary, breakdown and methodology sheets."""
+    from io import BytesIO
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+
+    workbook = Workbook()
+    summary = workbook.active
+    summary.title = "Report Summary"
+    details = workbook.create_sheet("Breakdown Detail")
+    notes = workbook.create_sheet("Calculation Notes")
+
+    navy = "17365D"
+    pale_blue = "EAF0F7"
+    light_grey = "F1F5F9"
+    white = "FFFFFF"
+    thin_grey = Side(style="thin", color="D8E0E8")
+    header_font = Font(bold=True, color=white)
+    title_font = Font(bold=True, size=16, color=navy)
+    section_font = Font(bold=True, color=navy)
+
+    summary["A1"] = "HOTEL MANAGEMENT SYSTEM — CUSTOM REPORT"
+    summary["A1"].font = title_font
+    summary.merge_cells("A1:F1")
+    summary["A3"] = "Hotel scope"
+    summary["B3"] = _excel_text(hotel_name)
+    summary["A4"] = "Reporting period"
+    summary["B4"] = f"{date_from:%d %b %Y} to {date_to:%d %b %Y}"
+    summary["A3"].font = summary["A4"].font = section_font
+    summary.append([])
+    headers = ["Category", "Metric", "Unit", "Value", "Row type", "Breakdown", "Group"]
+    header_row = 6
+    for col, value in enumerate(headers, start=1):
+        cell = summary.cell(header_row, col, value)
+        cell.font = header_font
+        cell.fill = PatternFill("solid", fgColor=navy)
+        cell.alignment = Alignment(vertical="center")
+    summary.row_dimensions[header_row].height = 22
+
+    detail_headers = ["Category", "Metric", "Unit", "Breakdown", "Group", "Value"]
+    for col, value in enumerate(detail_headers, start=1):
+        cell = details.cell(1, col, value)
+        cell.font = header_font
+        cell.fill = PatternFill("solid", fgColor=navy)
+    details.freeze_panes = "A2"
+    summary.freeze_panes = f"A{header_row + 1}"
+
+    note_headers = ["Category", "Metric", "Calculation notes"]
+    for col, value in enumerate(note_headers, start=1):
+        cell = notes.cell(1, col, value)
+        cell.font = header_font
+        cell.fill = PatternFill("solid", fgColor=navy)
+    notes.freeze_panes = "A2"
+
+    summary_row = header_row + 1
+    detail_row = 2
+    note_row = 2
+    for metric in report.get("metrics", []):
+        category = _excel_text(metric.get("category_label", ""))
+        label = _excel_text(metric.get("label", ""))
+        unit = _excel_text(metric.get("unit", ""))
+        value = metric.get("value")
+        summary.append([
+            category, label, unit, value, "TOTAL", "", "",
+        ])
+        if isinstance(value, (int, float, Decimal)):
+            summary.cell(summary_row, 4).number_format = (
+                '"NGN "#,##0.00;[Red]-"NGN "#,##0.00'
+                if unit in ("currency", "currency_per_night")
+                else '#,##0.00' if unit in ("percent", "nights", "days")
+                else '#,##0' if unit == "count" else 'General'
+            )
+        summary_row += 1
+
+        for breakdown, rows in metric.get("breakdown_rows", {}).items():
+            for row in rows:
+                group = row.get("label")
+                row_value = row.get("value")
+                summary.append([
+                    category, label, unit, row_value, "BREAKDOWN",
+                    _excel_text(breakdown.replace("_", " ").title()),
+                    _excel_text(group),
+                ])
+                if isinstance(row_value, (int, float, Decimal)):
+                    summary.cell(summary_row, 4).number_format = (
+                        '"NGN "#,##0.00;[Red]-"NGN "#,##0.00'
+                        if unit in ("currency", "currency_per_night")
+                        else '#,##0.00' if unit in ("percent", "nights", "days")
+                        else '#,##0' if unit == "count" else 'General'
+                    )
+                summary_row += 1
+                details.append([
+                    category, label, unit,
+                    _excel_text(breakdown.replace("_", " ").title()),
+                    _excel_text(group), row_value,
+                ])
+                if isinstance(row_value, (int, float, Decimal)):
+                    details.cell(detail_row, 6).number_format = (
+                        '"NGN "#,##0.00;[Red]-"NGN "#,##0.00'
+                        if unit in ("currency", "currency_per_night")
+                        else '#,##0.00' if unit in ("percent", "nights", "days")
+                        else '#,##0' if unit == "count" else 'General'
+                    )
+                detail_row += 1
+
+        notes.append([category, label, _excel_text(metric.get("notes", ""))])
+        note_row += 1
+
+    for sheet in (summary, details, notes):
+        sheet.auto_filter.ref = sheet.dimensions if sheet.max_row > 1 else "A1:A1"
+        for row in sheet.iter_rows():
+            for cell in row:
+                cell.alignment = Alignment(
+                    vertical="top",
+                    wrap_text=(sheet.title == "Calculation Notes" and cell.column == 3),
+                )
+                if cell.row > 1 and cell.row % 2 == 0:
+                    cell.fill = PatternFill("solid", fgColor=light_grey)
+                if cell.row > 1:
+                    cell.border = Border(bottom=thin_grey)
+        for column_cells in sheet.columns:
+            letter = get_column_letter(column_cells[0].column)
+            max_length = max(
+                (len(str(cell.value or "")) for cell in column_cells),
+                default=10,
+            )
+            sheet.column_dimensions[letter].width = min(max(max_length + 3, 13), 48)
+
+    summary.column_dimensions["A"].width = 27
+    summary.column_dimensions["B"].width = 32
+    summary.column_dimensions["G"].width = 34
+    notes.column_dimensions["C"].width = 90
+    notes.sheet_view.showGridLines = False
+    summary.sheet_view.showGridLines = False
+    details.sheet_view.showGridLines = False
+
+    buffer = BytesIO()
+    workbook.save(buffer)
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = (
+        f'attachment; filename="management-custom-report-'
+        f'{date_from.isoformat()}-to-{date_to.isoformat()}.xlsx"'
+    )
+    return response
