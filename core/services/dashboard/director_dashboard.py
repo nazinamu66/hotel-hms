@@ -68,7 +68,7 @@ def _trend_chart(hotels, date_from, date_to):
             expenses=Coalesce(Sum(Case(
                 When(account__account_type__in=("expense", "other_expense"),
                      then=F("debit") - F("credit")),
-                default=Value(ZERO), output_field=MONEY),
+                default=Value(ZERO), output_field=MONEY,
             )), ZERO, output_field=MONEY),
         )
         .order_by("journal__date")
