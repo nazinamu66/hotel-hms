@@ -1,8 +1,6 @@
 from collections import Counter
 from datetime import timedelta
 
-from django.db.models import Q
-
 from billing.models import (
     GroupReservationRoom,
     Reservation,
@@ -11,8 +9,6 @@ from billing.models import (
 
 
 TERMINAL_EXCLUDED_STATUSES = {"CANCELLED", "NO_SHOW"}
-ACTIVE_BOOKING_STATUSES = {"RESERVED", "CHECKED_IN", "CHECKED_OUT"}
-
 
 def _nights_in_period(check_in, check_out, date_from, date_to):
     """Count booked calendar nights intersecting an inclusive report window."""
@@ -29,7 +25,7 @@ def _lead_days(created_at, check_in):
     return max((check_in - created_at.date()).days, 0)
 
 
-def build_reservations_occupancy_analytics(*, hotels, date_from, date_to, today=None):
+def build_reservations_occupancy_analytics(*, hotels, date_from, date_to):
     """
     Build reservation and room-night metrics from the three supported booking
     shapes: legacy single reservations, ordinary room allocations, and
