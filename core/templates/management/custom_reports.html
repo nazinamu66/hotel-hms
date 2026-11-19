@@ -149,6 +149,7 @@
         collection_type: "Collection Type"
     };
 
+    let hasRefreshed = false;
     const initialBreakdowns = new Set(
         (breakdownBox.dataset.selectedBreakdowns || "")
             .split(",").filter(Boolean)
@@ -159,6 +160,7 @@
         count.textContent = selected.length + (selected.length === 1 ? " selected" : " selected");
 
         if (!selected.length) {
+            hasRefreshed = true;
             breakdownBox.replaceChildren();
             breakdownBox.hidden = true;
             breakdownEmpty.hidden = false;
@@ -180,7 +182,8 @@
             Array.from(breakdownBox.querySelectorAll('input[name="breakdown"]:checked'))
                 .map(input => input.value)
         );
-        const keep = previous.size ? previous : initialBreakdowns;
+        const keep = hasRefreshed ? previous : initialBreakdowns;
+        hasRefreshed = true;
         const fragment = document.createDocumentFragment();
 
         order.filter(id => supported.has(id)).forEach(id => {
