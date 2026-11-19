@@ -352,7 +352,7 @@ METRIC_CATALOGUE = (
                 "notes": "Positive company-billed group charges without an invoice link in the selected period.",
             },
             {
-                "id": "company_deposits_held",
+                "id": "corporate_deposits_held",
                 "label": "Company Deposits Held",
                 "unit": "currency",
                 "source_service": "core.services.corporate_performance.build_corporate_performance",
