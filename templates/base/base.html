@@ -102,15 +102,16 @@
         <!-- ========================= -->
 
         {% if user|has_role:"DIRECTOR,GENERAL_MANAGER" %}
-        <h4 class="menu-toggle {% if request.resolver_match.url_name in 'management_overview,management_hotel_performance,management_front_desk_analytics,management_reservations_occupancy' %}active-menu{% endif %}"
+        <h4 class="menu-toggle {% if request.resolver_match.url_name in 'management_overview,management_hotel_performance,management_front_desk_analytics,management_reservations_occupancy,management_corporate_performance' %}active-menu{% endif %}"
             onclick="toggleMenu('management_menu', this)">
             <span class="arrow">▸</span> <span aria-hidden="true">📊</span> Management
         </h4>
-        <div id="management_menu" class="menu-section {% if request.resolver_match.url_name in 'management_overview,management_hotel_performance,management_front_desk_analytics,management_reservations_occupancy' %}open{% endif %}">
+        <div id="management_menu" class="menu-section {% if request.resolver_match.url_name in 'management_overview,management_hotel_performance,management_front_desk_analytics,management_reservations_occupancy,management_corporate_performance' %}open{% endif %}">
             <a href="{% url 'management_overview' %}">Executive Overview</a>
             <a href="{% url 'management_hotel_performance' %}">Hotel Performance</a>
             <a href="{% url 'management_front_desk_analytics' %}">Front Desk Analytics</a>
             <a href="{% url 'management_reservations_occupancy' %}">Reservations &amp; Occupancy</a>
+            <a href="{% url 'management_corporate_performance' %}">Corporate Performance</a>
         </div>
         {% endif %}
 
