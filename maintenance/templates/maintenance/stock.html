@@ -8,12 +8,12 @@
 </style>
 <div class="ms-page">
 <header class="ms-head"><div><p class="ms-kicker">Facilities &amp; engineering · Inventory</p><h2>Maintenance Stock</h2><p class="ms-sub">Current consumable stock held by Maintenance departments across your accessible hotels.</p></div><div class="ms-actions"><a class="ms-btn ms-primary" href="{% url 'maintenance_request_stock' %}">＋ Request stock</a><a class="ms-btn" href="{% url 'maintenance_stock_movements' %}">View stock movements</a></div></header>
+{% regroup stock_items by department.hotel as hotel_groups %}
 <div class="ms-stats">
  <div class="ms-stat"><span class="ms-stat-label">Stock lines</span><strong class="ms-stat-value">{{ stock_items|length }}</strong></div>
- <div class="ms-stat"><span class="ms-stat-label">Hotels with Maintenance stock</span><strong class="ms-stat-value">{{ hotel_groups|length }}</strong></div>
+ <div class="ms-stat"><span class="ms-stat-label">Hotels with Maintenance stock</span><strong class="ms-stat-value">{{ hotels_with_stock }}</strong></div>
  <div class="ms-stat"><span class="ms-stat-label">Total stock value</span><strong class="ms-stat-value">₦{{ total_stock_value|floatformat:2 }}</strong></div>
 </div>
-{% regroup stock_items by department.hotel as hotel_groups %}
 {% for hotel_group in hotel_groups %}
 <section class="ms-hotel">
  <header class="ms-hotel-head"><h3>{{ hotel_group.grouper.name }}</h3><span class="ms-dept">MAINTENANCE · MNT</span></header>
