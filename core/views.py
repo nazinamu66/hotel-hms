@@ -132,6 +132,30 @@ def management_hotel_performance(request):
     )
 
 
+@role_required("DIRECTOR", "GENERAL_MANAGER")
+def management_front_desk_analytics(request):
+    """Read-only front desk analytics for management roles."""
+    reporting_context = build_management_reporting_context(request.user, request.GET)
+    from core.services.front_desk_analytics import build_front_desk_analytics
+
+    analytics = build_front_desk_analytics(
+        hotels=reporting_context["scoped_hotels"],
+        date_from=reporting_context["date_from"],
+        date_to=reporting_context["date_to"],
+    )
+    return render(
+        request,
+        "management/front_desk_analytics.html",
+        {
+            **reporting_context,
+            **analytics,
+            "is_management_overview": True,
+            "is_director": True,
+            "is_general_manager": request.user.role == "GENERAL_MANAGER",
+        },
+    )
+
+
 @role_required("RESTAURANT", "MANAGER", "ACCOUNTANT")
 def cash_handover_list(request):
     """
