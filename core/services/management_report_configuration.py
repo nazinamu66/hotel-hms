@@ -10,10 +10,8 @@ BREAKDOWN_LABELS = {
     "date": "Date",
     "company": "Company",
     "guest": "Guest",
-    "department": "Department",
     "booking_kind": "Booking Type",
     "booking_source": "Booking Source",
-    "booking_status": "Booking Status",
     "reservation_status": "Reservation Status",
     "collection_type": "Collection Type",
 }
