@@ -88,7 +88,7 @@ def _breakdown_rows(metric_id, breakdown, payloads):
 
     if breakdown == "company":
         corporate = payloads["corporate"]
-        billing = payloads["guest_company_billing"]
+        billing = payloads.get("guest_company_billing", {})
         if metric_id in ("corporate_revenue", "corporate_room_nights"):
             key = "revenue" if metric_id == "corporate_revenue" else "room_nights"
             return [
@@ -202,25 +202,24 @@ def execute_management_custom_report(
             "breakdown_rows": {},
         }
         for breakdown in selected_breakdowns:
-            rows = _breakdown_rows(metric_id, breakdown, aggregate_payloads)
-            if breakdown == "hotel":
-                # Hotel subtotals are calculated by the source services themselves
-                # where available. The director dashboard exposes the financial
-                # hotel rows; for other metrics, call that source once per hotel.
-                if metric["source_service"].endswith("get_director_dashboard"):
-                    pass
-                else:
-                    rows = []
-                    for hotel in hotels:
-                        hotel_payloads = _source_payloads(
-                            hotels=hotels.filter(pk=hotel.pk),
-                            date_from=date_from,
-                            date_to=date_to,
-                            groups=needed_groups,
-                            today=today,
-                        )
-                        value = _metric_value(metric, hotel_payloads)
-                        rows.append({"label": hotel.name, "value": value})
+            if breakdown == "hotel" and not metric["source_service"].endswith(
+                "get_director_dashboard"
+            ):
+                # Non-financial source services expose aggregate totals, so
+                # calculate each hotel subtotal using the same service.
+                rows = []
+                for hotel in hotels:
+                    hotel_payloads = _source_payloads(
+                        hotels=hotels.filter(pk=hotel.pk),
+                        date_from=date_from,
+                        date_to=date_to,
+                        groups=needed_groups,
+                        today=today,
+                    )
+                    value = _metric_value(metric, hotel_payloads)
+                    rows.append({"label": hotel.name, "value": value})
+            else:
+                rows = _breakdown_rows(metric_id, breakdown, aggregate_payloads)
             item["breakdown_rows"][breakdown] = rows
         results.append(item)
 
