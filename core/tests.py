@@ -268,3 +268,154 @@ class DirectorDashboardTests(TestCase):
         )
 
         self.assertEqual(dashboard["cash_balance"], Decimal("0.00"))
+
+
+from core.services.management_reporting import (
+    build_management_reporting_context,
+    get_management_reporting_scope,
+    parse_management_date_range,
+)
+
+
+class ManagementReportingFoundationTests(TestCase):
+    def setUp(self):
+        self.organization = Organization.objects.create(name="Management Reporting Org")
+        self.hotel_one = Hotel.objects.create(
+            organization=self.organization,
+            name="Management Hotel One",
+        )
+        self.hotel_two = Hotel.objects.create(
+            organization=self.organization,
+            name="Management Hotel Two",
+        )
+        self.outside_hotel = Hotel.objects.create(
+            name="Outside Management Hotel",
+        )
+        self.inactive_hotel = Hotel.objects.create(
+            organization=self.organization,
+            name="Inactive Management Hotel",
+            is_active=False,
+        )
+
+    def test_director_scope_contains_only_active_organization_hotels(self):
+        director = User.objects.create_user(
+            username="reporting-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+
+        scope = get_management_reporting_scope(director)
+
+        self.assertQuerySetEqual(
+            scope["hotels"],
+            [self.hotel_one, self.hotel_two],
+            transform=lambda hotel: hotel,
+        )
+        self.assertNotIn(self.outside_hotel, scope["hotels"])
+        self.assertNotIn(self.inactive_hotel, scope["hotels"])
+
+    def test_general_manager_scope_contains_only_assigned_active_hotels(self):
+        general_manager = User.objects.create_user(
+            username="reporting-general-manager",
+            password="test-password",
+            role="GENERAL_MANAGER",
+            organization=self.organization,
+        )
+        general_manager.assigned_hotels.add(
+            self.hotel_two,
+            self.outside_hotel,
+            self.inactive_hotel,
+        )
+
+        scope = get_management_reporting_scope(general_manager)
+
+        self.assertQuerySetEqual(
+            scope["hotels"],
+            [self.hotel_two, self.outside_hotel],
+            transform=lambda hotel: hotel,
+        )
+        self.assertNotIn(self.hotel_one, scope["hotels"])
+        self.assertNotIn(self.inactive_hotel, scope["hotels"])
+
+    def test_selected_hotel_must_belong_to_accessible_scope(self):
+        director = User.objects.create_user(
+            username="reporting-selection-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+
+        allowed = get_management_reporting_scope(
+            director,
+            hotel_id=str(self.hotel_two.pk),
+        )
+        denied = get_management_reporting_scope(
+            director,
+            hotel_id=str(self.outside_hotel.pk),
+        )
+
+        self.assertEqual(allowed["selected_hotel"], self.hotel_two)
+        self.assertQuerySetEqual(
+            allowed["scoped_hotels"],
+            [self.hotel_two],
+            transform=lambda hotel: hotel,
+        )
+        self.assertIsNone(denied["selected_hotel"])
+        self.assertQuerySetEqual(
+            denied["scoped_hotels"],
+            [self.hotel_one, self.hotel_two],
+            transform=lambda hotel: hotel,
+        )
+
+    def test_date_range_defaults_to_current_month(self):
+        date_from, date_to = parse_management_date_range(
+            {},
+            today=date(2026, 11, 19),
+        )
+        self.assertEqual(date_from, date(2026, 11, 1))
+        self.assertEqual(date_to, date(2026, 11, 19))
+
+    def test_invalid_or_reversed_dates_fall_back_to_current_month(self):
+        expected = (date(2026, 11, 1), date(2026, 11, 19))
+        self.assertEqual(
+            parse_management_date_range(
+                {"from": "not-a-date", "to": "2026-11-19"},
+                today=date(2026, 11, 19),
+            ),
+            expected,
+        )
+        self.assertEqual(
+            parse_management_date_range(
+                {"from": "2026-11-20", "to": "2026-11-19"},
+                today=date(2026, 11, 19),
+            ),
+            expected,
+        )
+
+    def test_context_combines_scope_and_date_filters(self):
+        general_manager = User.objects.create_user(
+            username="reporting-context-gm",
+            password="test-password",
+            role="GENERAL_MANAGER",
+            organization=self.organization,
+        )
+        general_manager.assigned_hotels.add(self.hotel_one, self.outside_hotel)
+
+        context = build_management_reporting_context(
+            general_manager,
+            {
+                "hotel": str(self.outside_hotel.pk),
+                "from": "2026-10-01",
+                "to": "2026-10-31",
+            },
+        )
+
+        self.assertEqual(context["selected_hotel"], self.outside_hotel)
+        self.assertEqual(context["date_from"], date(2026, 10, 1))
+        self.assertEqual(context["date_to"], date(2026, 10, 31))
+        self.assertQuerySetEqual(
+            context["scoped_hotels"],
+            [self.outside_hotel],
+            transform=lambda hotel: hotel,
+        )
