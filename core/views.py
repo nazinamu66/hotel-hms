@@ -141,7 +141,6 @@ def management_guest_company_billing(request):
     reporting_context = build_management_reporting_context(request.user, request.GET)
     analytics = build_guest_company_billing(
         hotels=reporting_context["scoped_hotels"],
-        today=reporting_context["date_to"],
         collection_from=reporting_context["date_from"],
         collection_to=reporting_context["date_to"],
     )
