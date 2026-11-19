@@ -735,7 +735,7 @@
         <!-- APPROVALS -->
         <!-- ========================= -->
 
-        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT" %}
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
 
         <h4 class="menu-toggle {% if request.resolver_match.url_name in 'kitchen_handover_reconciliation_queue manager_stock_requests manager_ingredient_requests restaurant_spoilage refund_list cash_custody_dashboard frontdesk_complimentary_room_night_queue production_override_queue urgent_purchase_review' %}active-menu{% endif %}"
             onclick="toggleMenu('approval_menu', this)">
@@ -791,9 +791,11 @@
             <a href="{% url 'restaurant_spoilage' %}">
                 🗑️ Restaurant Spoilage
             </a>
+            {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
             <a href="{% url 'urgent_purchase_review' %}">
                 ⚡ Urgent Purchase Review
             </a>
+            {% endif %}
             {% endif %}
 
             {% if user|has_role:"MANAGER,ACCOUNTANT,DIRECTOR,ADMIN" %}
