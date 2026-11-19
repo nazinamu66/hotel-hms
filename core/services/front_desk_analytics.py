@@ -23,7 +23,8 @@ def build_front_desk_analytics(*, hotels, date_from, date_to, now=None):
     checkout counts because open folios can contain an expected checkout time.
     """
     now = now or timezone.now()
-    start_at = timezone.make_aware(datetime.combine(date_from, time.min)) if timezone.is_naive(now) else timezone.make_aware(datetime.combine(date_from, time.min), timezone.get_current_timezone())
+    current_tz = timezone.get_current_timezone()
+    start_at = timezone.make_aware(datetime.combine(date_from, time.min), current_tz)
     end_at = timezone.make_aware(datetime.combine(date_to + timedelta(days=1), time.min), timezone.get_current_timezone())
 
     hotel_ids = hotels.values_list("pk", flat=True)
@@ -98,7 +99,7 @@ def build_front_desk_analytics(*, hotels, date_from, date_to, now=None):
         )
     )
     stay_nights = [
-        max((checkout - checkin).total_seconds() / 86400, 0)
+        max((checkout.date() - checkin.date()).days, 0)
         for checkin, checkout in completed_stays
         if checkout and checkin and checkout >= checkin
     ]
