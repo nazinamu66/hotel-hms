@@ -97,6 +97,41 @@ def management_overview(request):
     }
     return render(request, "management/overview.html", context)
 
+@role_required("DIRECTOR", "GENERAL_MANAGER")
+def management_hotel_performance(request):
+    """Compare hotel-level posted financial performance within the user's scope."""
+    reporting_context = build_management_reporting_context(
+        request.user,
+        request.GET,
+    )
+    dashboard_context = get_director_dashboard(
+        reporting_context["hotels"],
+        selected_hotel=reporting_context["selected_hotel"],
+        date_from=reporting_context["date_from"],
+        date_to=reporting_context["date_to"],
+    )
+    ranked_rows = sorted(
+        dashboard_context["hotel_rows"],
+        key=lambda row: (row["operating_result"], row["revenue"]),
+        reverse=True,
+    )
+    for rank, row in enumerate(ranked_rows, start=1):
+        row["performance_rank"] = rank
+
+    return render(
+        request,
+        "management/hotel_performance.html",
+        {
+            **reporting_context,
+            **dashboard_context,
+            "hotel_rows": ranked_rows,
+            "is_management_overview": True,
+            "is_director": True,
+            "is_general_manager": request.user.role == "GENERAL_MANAGER",
+        },
+    )
+
+
 @role_required("RESTAURANT", "MANAGER", "ACCOUNTANT")
 def cash_handover_list(request):
     """
