@@ -292,7 +292,7 @@ def management_report_xlsx_response(report, *, date_from, date_to, hotel_name):
         summary.append([
             category, label, unit, excel_value, "TOTAL", "", "",
         ])
-        if isinstance(value, (int, float, Decimal)):
+        if isinstance(excel_value, (int, float, Decimal)):
             summary.cell(summary_row, 4).number_format = (
                 '"NGN "#,##0.00;[Red]-"NGN "#,##0.00'
                 if unit in ("currency", "currency_per_night")
@@ -311,7 +311,7 @@ def management_report_xlsx_response(report, *, date_from, date_to, hotel_name):
                     _excel_text(breakdown.replace("_", " ").title()),
                     _excel_text(group),
                 ])
-                if isinstance(row_value, (int, float, Decimal)):
+                if isinstance(excel_row_value, (int, float, Decimal)):
                     summary.cell(summary_row, 4).number_format = (
                         '"NGN "#,##0.00;[Red]-"NGN "#,##0.00'
                         if unit in ("currency", "currency_per_night")
@@ -324,7 +324,7 @@ def management_report_xlsx_response(report, *, date_from, date_to, hotel_name):
                     _excel_text(breakdown.replace("_", " ").title()),
                     _excel_text(group), excel_row_value,
                 ])
-                if isinstance(row_value, (int, float, Decimal)):
+                if isinstance(excel_row_value, (int, float, Decimal)):
                     details.cell(detail_row, 6).number_format = (
                         '"NGN "#,##0.00;[Red]-"NGN "#,##0.00'
                         if unit in ("currency", "currency_per_night")
