@@ -96,21 +96,25 @@ def management_custom_reports(request):
             breakdowns=request.GET.getlist("breakdown"),
         )
 
-    if request.GET.get("export") == "csv" and report and report.get("has_metrics"):
+    export_format = request.GET.get("export")
+    if export_format in ("csv", "pdf") and report and report.get("has_metrics"):
         from core.services.management_report_exports import (
             management_report_csv_response,
+            management_report_pdf_response,
         )
         hotel_name = (
             reporting_context["selected_hotel"].name
             if reporting_context["selected_hotel"]
             else "All accessible hotels"
         )
-        return management_report_csv_response(
-            report,
-            date_from=reporting_context["date_from"],
-            date_to=reporting_context["date_to"],
-            hotel_name=hotel_name,
-        )
+        export_kwargs = {
+            "date_from": reporting_context["date_from"],
+            "date_to": reporting_context["date_to"],
+            "hotel_name": hotel_name,
+        }
+        if export_format == "csv":
+            return management_report_csv_response(report, **export_kwargs)
+        return management_report_pdf_response(report, **export_kwargs)
 
     return render(
         request,
