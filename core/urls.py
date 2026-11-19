@@ -4,6 +4,7 @@ from .views import (
     hotel_dashboard,
     management_overview,
     management_hotel_performance,
+    management_front_desk_analytics,
     cash_handover_list,
     cash_handover_accept,
     cash_custody_dashboard,
@@ -22,6 +23,11 @@ urlpatterns = [
         "management/hotels/",
         management_hotel_performance,
         name="management_hotel_performance",
+    ),
+    path(
+        "management/front-desk/",
+        management_front_desk_analytics,
+        name="management_front_desk_analytics",
     ),
 
     path(
