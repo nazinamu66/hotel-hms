@@ -97,56 +97,103 @@
         </div>
         {% endif %}
 
-        {% if user|has_role:"ADMIN,DIRECTOR" and user.organization_id %}
-        <h4 class="menu-toggle {% if request.resolver_match.url_name == 'organization_profile' %}active-menu{% endif %}"
-            onclick="toggleMenu('organization_menu', this)">
-            <span class="arrow">▸</span>
-            Organization
-        </h4>
-        <div id="organization_menu" class="menu-section {% if request.resolver_match.url_name == 'organization_profile' %}open{% endif %}">
-            <a href="{% url 'organization_profile' %}">Organization Profile</a>
-        </div>
-        {% endif %}
-
         <!-- ========================= -->
         <!-- EXECUTIVE -->
         <!-- ========================= -->
 
         {% if user.role == "DIRECTOR" %}
-
-        <h4 class="menu-toggle"
-            onclick="toggleMenu('exec_menu', this)">
-            <span class="arrow">▸</span>
-            Executive
+        <h4 class="menu-toggle" onclick="toggleMenu('exec_menu', this)">
+            <span class="arrow">▸</span> <span aria-hidden="true">📊</span> Executive
         </h4>
-
         <div id="exec_menu" class="menu-section">
-
-            <a href="{% url 'hotel_dashboard' %}">
-                🏨 Hotel Dashboard
-            </a>
-
-            <a href="{% url 'inventory:hotel_feature_setup' %}">
-                ⚙ Hotel Features
-            </a>
-
+            <a href="{% url 'hotel_dashboard' %}">Management Dashboard</a>
         </div>
-
         {% endif %}
 
         <!-- ========================= -->
-        <!-- ASSET MANAGEMENT -->
-        <!-- Controlled by Admin / Director -->
+        <!-- SETUP -->
         <!-- ========================= -->
-        {% if user|has_role:"ADMIN,DIRECTOR" %}
-        <h4 class="menu-toggle" onclick="toggleMenu('asset_management_menu', this)">
-            <span class="arrow">▸</span>
-            Asset Management
+
+        {% if user|has_role:"ADMIN,DIRECTOR,MANAGER,MAINTENANCE" %}
+        <h4 class="menu-toggle" onclick="toggleMenu('setup_menu', this)">
+            <span class="arrow">▸</span> <span aria-hidden="true">⚙️</span> Setup
         </h4>
-        <div id="asset_management_menu" class="menu-section">
-            <a href="{% url 'maintenance_assets' %}">Equipment Register</a>
-            <a href="{% url 'maintenance_asset_create' %}">Register Equipment</a>
-            <a href="{% url 'maintenance_locations' %}">Hotel Locations</a>
+        <div id="setup_menu" class="menu-section">
+
+            {% if user|has_role:"ADMIN,DIRECTOR" %}
+            <h5 class="menu-subtoggle" onclick="toggleMenu('setup_hotels_menu', this)">
+                <span class="arrow">▸</span> 🏨 Hotels &amp; Organization
+            </h5>
+            <div id="setup_hotels_menu" class="menu-section">
+                <a href="{% url 'inventory:hotel_list' %}">Hotel Register</a>
+                <a href="{% url 'inventory:hotel_feature_setup' %}">Hotel Features</a>
+                {% if user.organization_id %}
+                <a href="{% url 'organization_profile' %}">Organization Profile</a>
+                {% endif %}
+            </div>
+
+            <h5 class="menu-subtoggle" onclick="toggleMenu('setup_structure_menu', this)">
+                <span class="arrow">▸</span> 🏢 Structure
+            </h5>
+            <div id="setup_structure_menu" class="menu-section">
+                <a href="{% url 'inventory:department_list' %}">Departments</a>
+            </div>
+            {% endif %}
+
+            {% if user|has_role:"ADMIN,DIRECTOR,MANAGER" %}
+            <h5 class="menu-subtoggle" onclick="toggleMenu('setup_rooms_menu', this)">
+                <span class="arrow">▸</span> 🛏️ Rooms
+            </h5>
+            <div id="setup_rooms_menu" class="menu-section">
+                <a href="{% url 'category_list' %}">Room Categories</a>
+                <a href="{% url 'room_list' %}">Room Register</a>
+                <a href="{% url 'amenity_list' %}">Amenities</a>
+                <a href="{% url 'building_list' %}">Buildings</a>
+                <a href="{% url 'floor_list' %}">Floors</a>
+            </div>
+            {% endif %}
+
+            {% if user|has_role:"ADMIN,DIRECTOR,MANAGER" %}
+            <h5 class="menu-subtoggle" onclick="toggleMenu('setup_products_menu', this)">
+                <span class="arrow">▸</span> 📦 Products
+            </h5>
+            <div id="setup_products_menu" class="menu-section">
+                <a href="{% url 'inventory:product_list' %}">Product Master</a>
+                {% if user|has_role:"ADMIN,DIRECTOR" %}
+                <a href="{% url 'inventory:supplier_list' %}">Suppliers</a>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if user|has_role:"ADMIN,DIRECTOR,MANAGER,MAINTENANCE" %}
+            <h5 class="menu-subtoggle" onclick="toggleMenu('setup_assets_menu', this)">
+                <span class="arrow">▸</span> 🛠️ Assets &amp; Locations
+            </h5>
+            <div id="setup_assets_menu" class="menu-section">
+                <a href="{% url 'maintenance_assets' %}">Equipment Register</a>
+                <a href="{% url 'maintenance_asset_create' %}">Register Equipment</a>
+                <a href="{% url 'maintenance_locations' %}">Manage Locations</a>
+            </div>
+            {% endif %}
+
+            {% if user|has_role:"ADMIN,DIRECTOR" %}
+            <h5 class="menu-subtoggle" onclick="toggleMenu('setup_people_menu', this)">
+                <span class="arrow">▸</span> 👥 Staff &amp; Access
+            </h5>
+            <div id="setup_people_menu" class="menu-section">
+                <a href="{% url 'accounts_users' %}">Staff Users</a>
+            </div>
+            {% endif %}
+
+            {% if user.role == "ADMIN" %}
+            <h5 class="menu-subtoggle" onclick="toggleMenu('setup_system_menu', this)">
+                <span class="arrow">▸</span> 🔐 System
+            </h5>
+            <div id="setup_system_menu" class="menu-section">
+                <a href="/admin/">Admin Panel</a>
+            </div>
+            {% endif %}
+
         </div>
         {% endif %}
 
@@ -850,124 +897,6 @@
         {% endif %}
 
 
-        <!-- ========================= -->
-        <!-- MANAGEMENT -->
-        <!-- ========================= -->
-
-        {% if user|has_role:"DIRECTOR,ADMIN" %}
-
-        <h4 class="menu-toggle"
-            onclick="toggleMenu('management_menu', this)">
-            <span class="arrow">▸</span>
-            Management
-        </h4>
-
-        <div id="management_menu" class="menu-section">
-
-            <a href="/accounts/users/">
-                User Management
-            </a>
-
-            <a href="{% url 'inventory:department_list' %}">
-                Departments
-            </a>
-
-        </div>
-
-        {% endif %}
-
-
-        <!-- ========================= -->
-        <!-- SYSTEM -->
-        <!-- ========================= -->
-
-        {% if user|has_role:"ADMIN,DIRECTOR" %}
-
-        <h4 class="menu-toggle"
-            onclick="toggleMenu('system_menu', this)">
-            <span class="arrow">▸</span>
-            System
-        </h4>
-
-        <div id="system_menu" class="menu-section">
-
-            {% if user.role == "ADMIN" %}
-
-            <a href="/admin/">
-                Admin Panel
-            </a>
-
-            <hr>
-
-            {% endif %}
-
-
-            <strong>Business Setup</strong>
-
-            <a href="{% url 'inventory:hotel_list' %}">
-                Hotels
-            </a>
-
-            <a href="{% url 'inventory:hotel_feature_setup' %}">
-                Hotel Features
-            </a>
-
-            <a href="{% url 'inventory:department_list' %}">
-                Departments
-            </a>
-
-            <hr>
-
-
-            <strong>Kitchen Setup</strong>
-
-
-            <strong>Rooms</strong>
-
-            <a href="{% url 'room_list' %}">
-                Rooms
-            </a>
-            <a href="{% url 'amenity_list' %}">
-                Amenities
-            </a>
-
-            <a href="/manage/categories/">
-                Room Categories
-            </a>
-
-            <a href="/manage/buildings/">
-                Buildings
-            </a>
-
-            
-
-            <a href="{% url 'floor_list' %}">
-                Floors
-            </a>
-
-            <hr>
-
-
-
-            <strong>Inventory</strong>
-
-            <a href="{% url 'inventory:product_list' %}">
-                Products
-            </a>
-<hr>
-
-
-
-            <strong>Users</strong>
-
-            <a href="/accounts/users/">
-                Staff Users
-            </a>
-
-        </div>
-
-        {% endif %}
-
         {% endif %}
 
     </aside>
@@ -1186,19 +1115,43 @@ document.addEventListener("DOMContentLoaded", function () {
             "/reports/restaurant/"
         ],
 
-        management_menu: [
-            "/accounts/users/",
-            "/inventory/departments/"
-        ],
-
-        system_menu: [
-            "/admin/",
+        setup_menu: [
+            "/inventory/hotels/",
+            "/inventory/departments/",
+            "/accounts/organization/profile/",
+            "/manager/rooms/",
             "/manage/",
             "/inventory/products/",
             "/inventory/suppliers/",
+            "/maintenance/assets/",
+            "/maintenance/locations/",
+            "/accounts/users/"
+        ],
+        setup_hotels_menu: [
             "/inventory/hotels/",
             "/inventory/features/",
-            "/rooms/"
+            "/accounts/organization/profile/"
+        ],
+        setup_structure_menu: [
+            "/inventory/departments/"
+        ],
+        setup_rooms_menu: [
+            "/manager/rooms/",
+            "/manage/"
+        ],
+        setup_products_menu: [
+            "/inventory/products/",
+            "/inventory/suppliers/"
+        ],
+        setup_assets_menu: [
+            "/maintenance/assets/",
+            "/maintenance/locations/"
+        ],
+        setup_people_menu: [
+            "/accounts/users/"
+        ],
+        setup_system_menu: [
+            "/admin/"
         ]
 
     };
