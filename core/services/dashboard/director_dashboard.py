@@ -4,7 +4,8 @@ from django.db.models import Case, DecimalField, F, Sum, Value, When
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from accounting.models import JournalLine
+from accounting.models import Account, JournalLine
+from billing.models import CompanyDeposit, GuestDeposit
 from rooms.models import Room
 
 
@@ -42,6 +43,70 @@ def _financial_totals(hotels, date_from, date_to):
         "cogs": cogs,
         "expenses": expenses,
         "operating_result": revenue - cogs - expenses,
+    }
+
+
+def _account_balances(hotels):
+    """Return current ledger balances for selected account groups."""
+    accounts = (
+        Account.objects.filter(
+            hotel__in=hotels,
+            is_active=True,
+            account_type__in=("cash", "bank", "current_asset", "current_liability"),
+        )
+        .annotate(
+            posted_debits=Coalesce(Sum("journalline__debit"), ZERO, output_field=MONEY),
+            posted_credits=Coalesce(Sum("journalline__credit"), ZERO, output_field=MONEY),
+        )
+        .select_related("hotel")
+    )
+
+    totals = {
+        "cash_balance": ZERO,
+        "bank_balance": ZERO,
+        "accounts_receivable": ZERO,
+        "accounts_payable": ZERO,
+    }
+    for account in accounts:
+        if account.account_type in ("cash", "bank", "current_asset"):
+            balance = (
+                account.opening_balance
+                + account.posted_debits
+                - account.posted_credits
+            )
+        else:
+            balance = (
+                account.opening_balance
+                + account.posted_credits
+                - account.posted_debits
+            )
+
+        if account.system_key == "cash":
+            totals["cash_balance"] += balance
+        elif account.account_type == "bank" and account.allow_posting:
+            totals["bank_balance"] += balance
+        elif account.system_key == "accounts_receivable":
+            totals["accounts_receivable"] += balance
+        elif account.system_key == "accounts_payable":
+            totals["accounts_payable"] += balance
+
+    return totals
+
+
+def _financial_position(hotels):
+    """Snapshot current balances; independent of the P&L date filter."""
+    return {
+        **_account_balances(hotels),
+        "corporate_deposits_held": (
+            CompanyDeposit.objects.filter(hotel__in=hotels)
+            .aggregate(total=Coalesce(Sum("balance"), ZERO, output_field=MONEY))["total"]
+            or ZERO
+        ),
+        "guest_deposits_held": (
+            GuestDeposit.objects.filter(hotel__in=hotels)
+            .aggregate(total=Coalesce(Sum("balance"), ZERO, output_field=MONEY))["total"]
+            or ZERO
+        ),
     }
 
 
@@ -161,6 +226,7 @@ def get_director_dashboard(hotels, *, selected_hotel=None, date_from=None, date_
         scoped_hotels = scoped_hotels.filter(pk=selected_hotel.pk)
 
     financials = _financial_totals(scoped_hotels, date_from, date_to)
+    financial_position = _financial_position(scoped_hotels)
     hotel_rows = []
     for hotel in scoped_hotels:
         rooms = Room.objects.filter(hotel=hotel)
@@ -193,6 +259,7 @@ def get_director_dashboard(hotels, *, selected_hotel=None, date_from=None, date_
 
     return {
         **financials,
+        **financial_position,
         **_trend_chart(scoped_hotels, date_from, date_to),
         "hotel_rows": hotel_rows,
         "hotel_chart_rows": hotel_chart_rows,
