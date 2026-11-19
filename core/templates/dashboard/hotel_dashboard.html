@@ -2,79 +2,115 @@
 
 {% block content %}
 
-<h2>Dashboard</h2>
+{% if is_director %}
+<section class="dashboard-header">
+    <div>
+        <h2>Management Overview</h2>
+        <p>Organization performance across your active hotels</p>
+    </div>
+</section>
 
-{% if user.role == "MANAGER" %}
+<form method="get" class="card" style="display:flex;gap:1rem;align-items:end;flex-wrap:wrap;margin-bottom:1.25rem;">
+    <div>
+        <label for="hotel-filter">Hotel</label>
+        <select id="hotel-filter" name="hotel">
+            <option value="">All hotels · Group view</option>
+            {% for hotel in hotels %}
+                <option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label for="date-from">From</label>
+        <input id="date-from" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">
+    </div>
+    <div>
+        <label for="date-to">To</label>
+        <input id="date-to" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">
+    </div>
+    <button type="submit">Apply filters</button>
+    <a href="{% url 'hotel_dashboard' %}">Reset</a>
+</form>
 
 <div class="grid">
-
-<div class="card">
-Rooms Available
-{{ rooms_available }}
+    <div class="card">
+        <span>Posted Revenue</span>
+        <h3>₦{{ revenue|floatformat:2 }}</h3>
+        <small>Income and other income accounts</small>
+    </div>
+    <div class="card">
+        <span>Cost of Goods Sold</span>
+        <h3>₦{{ cogs|floatformat:2 }}</h3>
+        <small>Posted COGS entries</small>
+    </div>
+    <div class="card">
+        <span>Operating Expenses</span>
+        <h3>₦{{ expenses|floatformat:2 }}</h3>
+        <small>Expense and other expense accounts</small>
+    </div>
+    <div class="card">
+        <span>Operating Result</span>
+        <h3>₦{{ operating_result|floatformat:2 }}</h3>
+        <small>Revenue less COGS and expenses</small>
+    </div>
+    <div class="card">
+        <span>Occupied Rooms</span>
+        <h3>{{ occupied_rooms }} / {{ room_count }}</h3>
+        <small>{{ occupancy_percent }}% occupancy</small>
+    </div>
 </div>
 
-<div class="card">
-Rooms Occupied
-{{ rooms_occupied }}
-</div>
-
-<div class="card">
-Dirty Rooms
-{{ rooms_dirty }}
-</div>
-
-<div class="card">
-Maintenance
-{{ maintenance_open }}
-</div>
-
-<div class="card">
-Kitchen Tickets
-{{ kitchen_tickets }}
-</div>
-
-<div class="card">
-Arrivals Today
-{{ arrivals_today }}
-</div>
-
-<div class="card">
-Departures Today
-{{ departures_today }}
-</div>
-
-</div>
-
+<section class="card" style="margin-top:1.5rem;">
+    <h3>Hotel Performance</h3>
+    <p>{{ date_from|date:"M j, Y" }} – {{ date_to|date:"M j, Y" }}</p>
+    <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Hotel</th>
+                    <th>Occupancy</th>
+                    <th>Posted Revenue</th>
+                    <th>COGS</th>
+                    <th>Expenses</th>
+                    <th>Operating Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in hotel_rows %}
+                <tr>
+                    <td>{{ row.hotel.name }}</td>
+                    <td>{{ row.occupied_rooms }}/{{ row.room_count }} ({{ row.occupancy_percent }}%)</td>
+                    <td>₦{{ row.revenue|floatformat:2 }}</td>
+                    <td>₦{{ row.cogs|floatformat:2 }}</td>
+                    <td>₦{{ row.expenses|floatformat:2 }}</td>
+                    <td>₦{{ row.operating_result|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6">No active hotels are available in this view.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
 {% endif %}
 
-
-{% if user.role == "DIRECTOR" %}
-
-<div class="card">
-Restaurant Sales Today
-₦{{ restaurant_sales_today }}
+{% if user.role == "MANAGER" %}
+<div class="grid">
+    <div class="card">Rooms Available {{ rooms_available }}</div>
+    <div class="card">Rooms Occupied {{ rooms_occupied }}</div>
+    <div class="card">Dirty Rooms {{ rooms_dirty }}</div>
+    <div class="card">Maintenance {{ maintenance_open }}</div>
+    <div class="card">Kitchen Tickets {{ kitchen_tickets }}</div>
+    <div class="card">Arrivals Today {{ arrivals_today }}</div>
+    <div class="card">Departures Today {{ departures_today }}</div>
 </div>
-
-<div class="card">
-Payments Today
-₦{{ payments_today }}
-</div>
-
 {% endif %}
-
 
 {% if user.role == "ACCOUNTANT" %}
-
-<div class="card">
-Payments Today
-₦{{ payments_today_total }}
+<div class="grid">
+    <div class="card">Payments Today ₦{{ payments_today_total }}</div>
+    <div class="card">Open Folios {{ open_folios }}</div>
 </div>
-
-<div class="card">
-Open Folios
-{{ open_folios }}
-</div>
-
 {% endif %}
 
 {% endblock %}
