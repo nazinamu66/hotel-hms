@@ -70,10 +70,15 @@ def _breakdown_rows(metric_id, breakdown, payloads):
         return rows
 
     if breakdown == "date" and metric_id == "actual_room_nights":
+        totals = {}
+        for row in payloads["room_occupancy"].get("daily_rows", []):
+            if row["basis"] != "ACTUAL":
+                continue
+            day = row["date"]
+            totals[day] = totals.get(day, 0) + row["occupied_room_count"]
         return [
-            {"label": row["date"], "value": row["occupied_room_count"]}
-            for row in payloads["room_occupancy"].get("daily_rows", [])
-            if row["basis"] == "ACTUAL"
+            {"label": day, "value": totals[day]}
+            for day in sorted(totals)
         ]
 
     if breakdown == "company":
@@ -86,23 +91,40 @@ def _breakdown_rows(metric_id, breakdown, payloads):
                 for row in corporate.get("company_ranking_rows", [])
             ]
         if metric_id in ("issued_invoice_outstanding", "overdue_invoice_outstanding"):
-            return [
-                {"label": row["company"].name, "value": row["balance"]}
-                for row in corporate.get("invoice_rows", [])
+            invoice_rows = corporate.get("invoice_rows", [])
+            selected_rows = [
+                row for row in invoice_rows
                 if metric_id == "issued_invoice_outstanding" or row["is_overdue"]
             ]
+            totals = {}
+            for row in selected_rows:
+                company = row["company"]
+                key = company.pk
+                if key not in totals:
+                    totals[key] = {"label": company.name, "value": 0}
+                totals[key]["value"] += row["balance"]
+            return list(totals.values())
         if metric_id == "overdue_company_receivables":
-            return [
-                {"label": row["company"].name, "value": row["balance"]}
-                for row in billing.get("company_invoice_rows", [])
-                if row["is_overdue"]
-            ]
+            totals = {}
+            for row in billing.get("company_invoice_rows", []):
+                if not row["is_overdue"]:
+                    continue
+                company = row["company"]
+                key = company.pk
+                if key not in totals:
+                    totals[key] = {"label": company.name, "value": 0}
+                totals[key]["value"] += row["balance"]
+            return list(totals.values())
 
     if breakdown == "guest" and metric_id == "guest_receivables":
-        return [
-            {"label": str(row["guest"]), "value": row["balance"]}
-            for row in payloads["guest_company_billing"].get("guest_folio_rows", [])
-        ]
+        totals = {}
+        for row in payloads["guest_company_billing"].get("guest_folio_rows", []):
+            guest = row["guest"]
+            key = guest.pk
+            if key not in totals:
+                totals[key] = {"label": str(guest), "value": 0}
+            totals[key]["value"] += row["balance"]
+        return list(totals.values())
 
     if breakdown == "collection_type" and metric_id == "collections_total":
         labels = {
