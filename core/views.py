@@ -134,6 +134,30 @@ def management_hotel_performance(request):
 
 
 @role_required("DIRECTOR", "GENERAL_MANAGER")
+def management_corporate_performance(request):
+    """Read-only corporate portfolio, revenue and receivables reporting."""
+    from core.services.corporate_performance import build_corporate_performance
+
+    reporting_context = build_management_reporting_context(request.user, request.GET)
+    analytics = build_corporate_performance(
+        hotels=reporting_context["scoped_hotels"],
+        date_from=reporting_context["date_from"],
+        date_to=reporting_context["date_to"],
+    )
+    return render(
+        request,
+        "management/corporate_performance.html",
+        {
+            **reporting_context,
+            **analytics,
+            "is_management_overview": True,
+            "is_director": True,
+            "is_general_manager": request.user.role == "GENERAL_MANAGER",
+        },
+    )
+
+
+@role_required("DIRECTOR", "GENERAL_MANAGER")
 def management_reservations_occupancy(request):
     """Read-only reservations, actual occupancy and forecast reporting."""
     from core.services.reservations_occupancy import build_reservations_occupancy_analytics
