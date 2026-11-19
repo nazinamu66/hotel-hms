@@ -170,35 +170,22 @@ class DirectorDashboardTests(TestCase):
     def test_financial_position_uses_ledger_and_deposit_subledgers(self):
         from billing.models import Company, CompanyDeposit, Guest, GuestDeposit
 
-        cash = Account.objects.create(
+        # Hotel setup creates these system accounts automatically.
+        # Reuse them so the test respects the per-hotel unique slug constraint.
+        cash = Account.objects.get(hotel=self.hotel, system_key="cash")
+        receivable = Account.objects.get(
             hotel=self.hotel,
-            code="TST-1000",
-            name="Cash",
-            account_type="cash",
-            system_key="cash",
-            is_system=True,
+            system_key="accounts_receivable",
+        )
+        payable = Account.objects.get(
+            hotel=self.hotel,
+            system_key="accounts_payable",
         )
         bank = Account.objects.create(
             hotel=self.hotel,
             code="TST-1011",
             name="Main Bank",
             account_type="bank",
-        )
-        receivable = Account.objects.create(
-            hotel=self.hotel,
-            code="TST-1100",
-            name="Accounts Receivable",
-            account_type="current_asset",
-            system_key="accounts_receivable",
-            is_system=True,
-        )
-        payable = Account.objects.create(
-            hotel=self.hotel,
-            code="TST-2000",
-            name="Accounts Payable",
-            account_type="current_liability",
-            system_key="accounts_payable",
-            is_system=True,
         )
         position_entry = JournalEntry.objects.create(
             hotel=self.hotel,
