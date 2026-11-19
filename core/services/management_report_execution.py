@@ -8,36 +8,41 @@ from core.services.management_report_catalogue import (
 )
 
 
-def _source_payloads(*, hotels, date_from, date_to, today=None):
-    from core.services.dashboard.director_dashboard import get_director_dashboard
-    from core.services.front_desk_analytics import build_front_desk_analytics
-    from core.services.reservations_occupancy import build_reservations_occupancy_analytics
-    from core.services.room_occupancy import build_room_occupancy_analytics
-    from core.services.corporate_performance import build_corporate_performance
-    from core.services.guest_company_billing import build_guest_company_billing
-
-    return {
-        "financial_performance": get_director_dashboard(
+def _source_payloads(*, hotels, date_from, date_to, groups, today=None):
+    """Run only the existing source services required by selected metrics."""
+    payloads = {}
+    if "financial_performance" in groups:
+        from core.services.dashboard.director_dashboard import get_director_dashboard
+        payloads["financial_performance"] = get_director_dashboard(
             hotels, date_from=date_from, date_to=date_to
-        ),
-        "front_desk": build_front_desk_analytics(
+        )
+    if "front_desk" in groups:
+        from core.services.front_desk_analytics import build_front_desk_analytics
+        payloads["front_desk"] = build_front_desk_analytics(
             hotels=hotels, date_from=date_from, date_to=date_to
-        ),
-        "reservations_occupancy": build_reservations_occupancy_analytics(
+        )
+    if "reservations_occupancy" in groups:
+        from core.services.reservations_occupancy import build_reservations_occupancy_analytics
+        payloads["reservations_occupancy"] = build_reservations_occupancy_analytics(
             hotels=hotels, date_from=date_from, date_to=date_to
-        ),
-        "room_occupancy": build_room_occupancy_analytics(
+        )
+    if "room_occupancy" in groups:
+        from core.services.room_occupancy import build_room_occupancy_analytics
+        payloads["room_occupancy"] = build_room_occupancy_analytics(
             hotels=hotels, date_from=date_from, date_to=date_to, today=today
-        ),
-        "corporate": build_corporate_performance(
+        )
+    if "corporate" in groups:
+        from core.services.corporate_performance import build_corporate_performance
+        payloads["corporate"] = build_corporate_performance(
             hotels=hotels, date_from=date_from, date_to=date_to, today=today
-        ),
-        "guest_company_billing": build_guest_company_billing(
+        )
+    if "guest_company_billing" in groups:
+        from core.services.guest_company_billing import build_guest_company_billing
+        payloads["guest_company_billing"] = build_guest_company_billing(
             hotels=hotels, today=today,
             collection_from=date_from, collection_to=date_to,
-        ),
-    }
-
+        )
+    return payloads
 
 def _metric_value(metric, payloads):
     source = metric["source_service"].rsplit(".", 1)[-1]
@@ -170,8 +175,22 @@ def execute_management_custom_report(
             "ignored_metric_ids": sorted(set(requested)),
         }
 
+    source_groups = {
+        "get_director_dashboard": "financial_performance",
+        "build_front_desk_analytics": "front_desk",
+        "build_reservations_occupancy_analytics": "reservations_occupancy",
+        "build_room_occupancy_analytics": "room_occupancy",
+        "build_corporate_performance": "corporate",
+        "build_guest_company_billing": "guest_company_billing",
+    }
+    needed_groups = {
+        source_groups[metric["source_service"].rsplit(".", 1)[-1]]
+        for metric_id in selected_ids
+        for metric in [get_management_report_metric(metric_id)]
+    }
     aggregate_payloads = _source_payloads(
-        hotels=hotels, date_from=date_from, date_to=date_to, today=today
+        hotels=hotels, date_from=date_from, date_to=date_to,
+        groups=needed_groups, today=today
     )
     selected_breakdowns = configuration["selected_breakdowns"]
     results = []
@@ -197,6 +216,7 @@ def execute_management_custom_report(
                             hotels=hotels.filter(pk=hotel.pk),
                             date_from=date_from,
                             date_to=date_to,
+                            groups=needed_groups,
                             today=today,
                         )
                         value = _metric_value(metric, hotel_payloads)
