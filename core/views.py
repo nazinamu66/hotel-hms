@@ -132,6 +132,39 @@ def management_hotel_performance(request):
     )
 
 
+
+@role_required("DIRECTOR", "GENERAL_MANAGER")
+def management_reservations_occupancy(request):
+    """Read-only reservations, actual occupancy and forecast reporting."""
+    from core.services.reservations_occupancy import build_reservations_occupancy_analytics
+    from core.services.room_occupancy import build_room_occupancy_analytics
+
+    reporting_context = build_management_reporting_context(request.user, request.GET)
+    hotels = reporting_context["scoped_hotels"]
+    reservations = build_reservations_occupancy_analytics(
+        hotels=hotels,
+        date_from=reporting_context["date_from"],
+        date_to=reporting_context["date_to"],
+    )
+    occupancy = build_room_occupancy_analytics(
+        hotels=hotels,
+        date_from=reporting_context["date_from"],
+        date_to=reporting_context["date_to"],
+    )
+    return render(
+        request,
+        "management/reservations_occupancy.html",
+        {
+            **reporting_context,
+            **reservations,
+            **occupancy,
+            "is_management_overview": True,
+            "is_director": True,
+            "is_general_manager": request.user.role == "GENERAL_MANAGER",
+        },
+    )
+
+
 @role_required("DIRECTOR", "GENERAL_MANAGER")
 def management_front_desk_analytics(request):
     """Read-only front desk analytics for management roles."""
