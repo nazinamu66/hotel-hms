@@ -1,0 +1,127 @@
+{% extends "base/base.html" %}
+
+{% block title %}Hotel Performance | Hotel HMS{% endblock %}
+
+{% block content %}
+<style>
+.hotel-performance { color:#172033; }
+.hotel-performance .page-heading { margin-bottom:18px; }
+.hotel-performance .page-heading h2 { margin:0 0 6px; font-size:1.65rem; }
+.hotel-performance .muted, .hotel-performance .subtitle { color:#64748b; }
+.hotel-performance .filter-panel { display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; padding:18px; margin-bottom:18px; }
+.hotel-performance .filter-field { display:flex; flex-direction:column; gap:6px; min-width:160px; }
+.hotel-performance .filter-field label { color:#64748b; font-size:.75rem; font-weight:700; }
+.hotel-performance .filter-field input, .hotel-performance .filter-field select { min-width:160px; }
+.hotel-performance .filter-actions { display:flex; gap:12px; align-items:center; }
+.hotel-performance .filter-actions button { border:0; border-radius:7px; padding:10px 16px; background:#2563eb; color:#fff; cursor:pointer; }
+.hotel-performance .filter-actions a { color:#475569; font-weight:600; }
+.hotel-performance .panel { padding:20px; }
+.hotel-performance .table-wrap { overflow-x:auto; }
+.hotel-performance table { width:100%; border-collapse:collapse; min-width:850px; }
+.hotel-performance th, .hotel-performance td { padding:13px 12px; border-bottom:1px solid #e8edf5; text-align:right; white-space:nowrap; }
+.hotel-performance th { color:#64748b; font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; }
+.hotel-performance th:first-child, .hotel-performance td:first-child,
+.hotel-performance th:nth-child(2), .hotel-performance td:nth-child(2) { text-align:left; }
+.hotel-performance tbody tr:last-child td { border-bottom:0; }
+.hotel-performance .rank { color:#64748b; width:42px; }
+.hotel-performance .profit { font-weight:750; }
+.hotel-performance .negative { color:#b91c1c; }
+.hotel-performance .positive { color:#047857; }
+.hotel-performance .empty-state { padding:28px 12px; text-align:center; color:#94a3b8; }
+.hotel-performance .note { margin-top:14px; font-size:.78rem; color:#64748b; line-height:1.5; }
+@media(max-width:600px) {
+ .hotel-performance .filter-field, .hotel-performance .filter-field input, .hotel-performance .filter-field select { width:100%; }
+ .hotel-performance .filter-actions { width:100%; justify-content:space-between; }
+}
+</style>
+
+<div class="hotel-performance">
+    <header class="page-heading">
+        <h2>Hotel Performance</h2>
+        <p class="muted">
+            {% if is_general_manager %}Compare the hotels assigned to you{% else %}Compare financial performance across your organization{% endif %}
+        </p>
+    </header>
+
+    <form method="get" class="card filter-panel">
+        <div class="filter-field">
+            <label for="performance-hotel">HOTEL</label>
+            <select id="performance-hotel" name="hotel">
+                <option value="">All accessible hotels</option>
+                {% for hotel in hotels %}
+                    <option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="performance-from">FROM</label>
+            <input id="performance-from" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">
+        </div>
+        <div class="filter-field">
+            <label for="performance-to">TO</label>
+            <input id="performance-to" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">
+        </div>
+        <div class="filter-actions">
+            <button type="submit">Apply filters</button>
+            <a href="{% url 'management_hotel_performance' %}">Reset</a>
+        </div>
+    </form>
+
+    <section class="card panel">
+        <h3>Financial Performance by Hotel</h3>
+        <p class="subtitle">Posted ledger activity · {{ date_from|date:"M j, Y" }} – {{ date_to|date:"M j, Y" }} · Ranked by operating result, then revenue</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Hotel</th>
+                        <th>Revenue</th>
+                        <th>COGS</th>
+                        <th>Expenses</th>
+                        <th>Operating Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in hotel_rows %}
+                    <tr>
+                        <td class="rank">{{ row.performance_rank }}</td>
+                        <td><strong>{{ row.hotel.name }}</strong></td>
+                        <td>₦{{ row.revenue|floatformat:2 }}</td>
+                        <td>₦{{ row.cogs|floatformat:2 }}</td>
+                        <td>₦{{ row.expenses|floatformat:2 }}</td>
+                        <td class="profit {% if row.operating_result < 0 %}negative{% else %}positive{% endif %}">₦{{ row.operating_result|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="empty-state">No active hotels are available in your reporting scope.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="note">Operating result is calculated as posted revenue less posted cost of goods sold and posted operating expenses. It is a management comparison, not a substitute for the formal Profit &amp; Loss statement.</p>
+    </section>
+
+    <section class="card panel" style="margin-top:18px;">
+        <h3>Current Room Status Snapshot</h3>
+        <p class="subtitle">Live room status at the time this report is viewed; not historical occupancy for the selected financial period.</p>
+        <div class="table-wrap">
+            <table style="min-width:520px;">
+                <thead><tr><th>Hotel</th><th>Configured Rooms</th><th>Currently Occupied</th><th>Gross Current Occupancy</th></tr></thead>
+                <tbody>
+                    {% for row in hotel_rows %}
+                    <tr>
+                        <td><strong>{{ row.hotel.name }}</strong></td>
+                        <td>{{ row.room_count }}</td>
+                        <td>{{ row.occupied_rooms }}</td>
+                        <td>{{ row.occupancy_percent|floatformat:1 }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="empty-state">No room data is available in this scope.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="note">This snapshot uses occupied and occupied-dirty room statuses divided by all configured rooms. It does not yet exclude out-of-order rooms from the denominator. ADR, RevPAR, guest counts and historical occupancy are withheld until their source calculations are validated.</p>
+    </section>
+</div>
+{% endblock %}
