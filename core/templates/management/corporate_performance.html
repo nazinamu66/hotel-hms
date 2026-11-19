@@ -1,0 +1,185 @@
+{% extends "base/base.html" %}
+
+{% block title %}Corporate Performance | Hotel HMS{% endblock %}
+
+{% block content %}
+<style>
+.corporate-performance { color:#172033; }
+.corporate-performance .heading { margin-bottom:18px; }
+.corporate-performance .heading h2 { margin:0 0 6px; font-size:1.65rem; }
+.corporate-performance .muted, .corporate-performance .subtitle { color:#64748b; }
+.corporate-performance .filters { display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; padding:18px; margin-bottom:18px; }
+.corporate-performance .field { display:flex; flex-direction:column; gap:6px; min-width:160px; }
+.corporate-performance .field label { color:#64748b; font-size:.75rem; font-weight:700; }
+.corporate-performance .field input, .corporate-performance .field select { min-width:160px; }
+.corporate-performance .actions { display:flex; align-items:center; gap:12px; }
+.corporate-performance .actions button { border:0; border-radius:7px; padding:10px 16px; background:#2563eb; color:#fff; cursor:pointer; }
+.corporate-performance .actions a { color:#475569; font-weight:600; }
+.corporate-performance .kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.corporate-performance .kpi { padding:18px; min-width:0; }
+.corporate-performance .kpi span { color:#64748b; font-size:.78rem; font-weight:650; }
+.corporate-performance .kpi strong { display:block; margin-top:9px; font-size:1.45rem; overflow-wrap:anywhere; }
+.corporate-performance .kpi small { display:block; margin-top:5px; color:#94a3b8; font-size:.72rem; }
+.corporate-performance .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:18px; }
+.corporate-performance .panel { padding:20px; min-width:0; }
+.corporate-performance .panel h3 { margin:0 0 5px; font-size:1rem; }
+.corporate-performance .subtitle { margin:0 0 15px; font-size:.78rem; }
+.corporate-performance .table-wrap { overflow-x:auto; }
+.corporate-performance table { width:100%; border-collapse:collapse; min-width:520px; }
+.corporate-performance td, .corporate-performance th { padding:10px 8px; border-bottom:1px solid #e8edf5; text-align:left; white-space:nowrap; }
+.corporate-performance th { color:#64748b; font-size:.72rem; text-transform:uppercase; }
+.corporate-performance td.numeric, .corporate-performance th.numeric { text-align:right; }
+.corporate-performance .note { color:#64748b; font-size:.78rem; line-height:1.5; margin-top:14px; }
+.corporate-performance .empty { color:#94a3b8; padding:14px 8px; text-align:center; }
+.corporate-performance .section-gap { margin-top:18px; }
+@media(max-width:900px) { .corporate-performance .grid { grid-template-columns:1fr; } }
+@media(max-width:700px) { .corporate-performance .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:540px) { .corporate-performance .field, .corporate-performance .field input, .corporate-performance .field select { width:100%; } .corporate-performance .actions { width:100%; justify-content:space-between; } }
+</style>
+
+<div class="corporate-performance">
+    <header class="heading">
+        <h2>Corporate Performance</h2>
+        <p class="muted">{% if is_general_manager %}Corporate business across your assigned hotels{% else %}Corporate portfolio and commercial performance across your organization{% endif %}</p>
+    </header>
+
+    <form method="get" class="card filters">
+        <div class="field">
+            <label for="cp-hotel">HOTEL</label>
+            <select id="cp-hotel" name="hotel">
+                <option value="">All accessible hotels</option>
+                {% for hotel in hotels %}
+                <option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field">
+            <label for="cp-from">FROM</label>
+            <input id="cp-from" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">
+        </div>
+        <div class="field">
+            <label for="cp-to">TO</label>
+            <input id="cp-to" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">
+        </div>
+        <div class="actions">
+            <button type="submit">Apply filters</button>
+            <a href="{% url 'management_corporate_performance' %}">Reset</a>
+        </div>
+    </form>
+
+    <section class="kpis" aria-label="Corporate portfolio summary">
+        <article class="card kpi"><span>Active Corporate Clients</span><strong>{{ active_company_count }}</strong><small>Registered active companies</small></article>
+        <article class="card kpi"><span>Companies with Business</span><strong>{{ companies_with_business }}</strong><small>With company-billed charges in period</small></article>
+        <article class="card kpi"><span>Group Bookings Created</span><strong>{{ group_bookings_created }}</strong><small>Master corporate bookings in period</small></article>
+        <article class="card kpi"><span>Room Allocations Created</span><strong>{{ room_allocations_created }}</strong><small>Individual rooms within group bookings</small></article>
+        <article class="card kpi"><span>Corporate Revenue</span><strong>₦{{ corporate_revenue|floatformat:2 }}</strong><small>Positive company-billed source charges</small></article>
+        <article class="card kpi"><span>Corporate Room Nights</span><strong>{{ corporate_room_nights }}</strong><small>Deduplicated folio room-night dates</small></article>
+        <article class="card kpi"><span>Invoice Outstanding</span><strong>₦{{ invoice_outstanding|floatformat:2 }}</strong><small>Issued invoices · as of {{ receivables_as_of|date:"M j, Y" }}</small></article>
+        <article class="card kpi"><span>Overdue Balance</span><strong>₦{{ overdue_invoice_outstanding|floatformat:2 }}</strong><small>Issued invoices past due date</small></article>
+    </section>
+
+    <div class="grid">
+        <section class="card panel">
+            <h3>Corporate Revenue Ranking</h3>
+            <p class="subtitle">Ranked by positive company-billed charges in the selected period</p>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Company</th><th class="numeric">Revenue</th><th class="numeric">Room nights</th><th class="numeric">Group bookings</th></tr></thead>
+                    <tbody>
+                        {% for row in company_ranking_rows %}
+                        <tr>
+                            <td><strong>{{ row.company.name }}</strong></td>
+                            <td class="numeric">₦{{ row.revenue|floatformat:2 }}</td>
+                            <td class="numeric">{{ row.room_nights }}</td>
+                            <td class="numeric">{{ row.group_booking_count }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="empty">No company-billed revenue in this period.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card panel">
+            <h3>Negotiated Rate Performance</h3>
+            <p class="subtitle">Based on room-night charges with a recorded rate source</p>
+            <div class="table-wrap">
+                <table>
+                    <tbody>
+                        <tr><th>Average negotiated nightly rate</th><td class="numeric">{% if average_negotiated_rate != None %}₦{{ average_negotiated_rate|floatformat:2 }}{% else %}—{% endif %}</td></tr>
+                        <tr><th>Negotiated / override room nights</th><td class="numeric">{{ negotiated_room_nights }}</td></tr>
+                        <tr><th>Average standard nightly rate</th><td class="numeric">{% if average_standard_rate != None %}₦{{ average_standard_rate|floatformat:2 }}{% else %}—{% endif %}</td></tr>
+                        <tr><th>Standard-rate room nights</th><td class="numeric">{{ standard_room_nights }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="note">Rates are calculated from immutable room-rate snapshots on source charges. Only room nights with a recognized STANDARD, GROUP or OVERRIDE rate source are included.</p>
+        </section>
+    </div>
+
+    <div class="grid">
+        <section class="card panel">
+            <h3>Corporate Receivables</h3>
+            <p class="subtitle">Issued invoice balances are shown separately from revenue recognition</p>
+            <div class="table-wrap">
+                <table>
+                    <tbody>
+                        <tr><th>Issued invoice value</th><td class="numeric">₦{{ issued_invoice_total|floatformat:2 }}</td></tr>
+                        <tr><th>Settled against issued invoices</th><td class="numeric">₦{{ invoice_settled_total|floatformat:2 }}</td></tr>
+                        <tr><th>Outstanding invoice balance</th><td class="numeric">₦{{ invoice_outstanding|floatformat:2 }}</td></tr>
+                        <tr><th>Overdue invoice balance</th><td class="numeric">₦{{ overdue_invoice_outstanding|floatformat:2 }}</td></tr>
+                        <tr><th>Unbilled company charges in period</th><td class="numeric">₦{{ unbilled_company_charges|floatformat:2 }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="note">Invoice balances are a current snapshot as of {{ receivables_as_of|date:"M j, Y" }}. Unbilled charges are selected-period source charges not yet linked to an invoice.</p>
+        </section>
+
+        <section class="card panel">
+            <h3>Corporate Deposits</h3>
+            <p class="subtitle">Deposits remain liabilities until applied or refunded</p>
+            <div class="table-wrap">
+                <table>
+                    <tbody>
+                        <tr><th>Deposits currently held</th><td class="numeric">₦{{ deposits_held|floatformat:2 }}</td></tr>
+                        <tr><th>Received in period</th><td class="numeric">₦{{ deposit_activity.received|floatformat:2 }}</td></tr>
+                        <tr><th>Applied to invoices</th><td class="numeric">₦{{ deposit_activity.applied|floatformat:2 }}</td></tr>
+                        <tr><th>Refunded in period</th><td class="numeric">₦{{ deposit_activity.refunded|floatformat:2 }}</td></tr>
+                        <tr><th>Adjustments in period</th><td class="numeric">₦{{ deposit_activity.adjustments|floatformat:2 }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="note">The held balance is the current deposit subledger balance. Transaction activity follows the selected reporting dates.</p>
+        </section>
+    </div>
+
+    <section class="card panel section-gap">
+        <h3>Issued Company Invoices</h3>
+        <p class="subtitle">Current settlement position of issued invoices across the selected hotel scope</p>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Invoice</th><th>Company</th><th>Hotel</th><th>Due date</th><th>Status</th><th class="numeric">Invoice total</th><th class="numeric">Settled</th><th class="numeric">Balance</th></tr></thead>
+                <tbody>
+                    {% for row in invoice_rows %}
+                    <tr>
+                        <td>{{ row.invoice.invoice_number }}</td>
+                        <td>{{ row.company.name }}</td>
+                        <td>{{ row.hotel.name }}</td>
+                        <td>{% if row.invoice.due_date %}{{ row.invoice.due_date|date:"M j, Y" }}{% else %}—{% endif %}</td>
+                        <td>{% if row.is_overdue %}Overdue{% elif row.balance == 0 %}Settled{% else %}Outstanding{% endif %}</td>
+                        <td class="numeric">₦{{ row.total|floatformat:2 }}</td>
+                        <td class="numeric">₦{{ row.settled|floatformat:2 }}</td>
+                        <td class="numeric">₦{{ row.balance|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="empty">No issued company invoices in this reporting scope.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <p class="note">Corporate revenue is based on source charges, not invoice totals or payment receipts. This avoids counting the same room or service revenue again when an invoice is issued or settled. This first release attributes revenue to group-room allocations; corporate event and catering revenue is not included unless it is linked to those allocations.</p>
+</div>
+{% endblock %}
