@@ -7,7 +7,6 @@ from billing.models import (
     Charge,
     Company,
     CompanyDeposit,
-    Department,
     Folio,
     GroupReservation,
     GroupReservationRoom,
@@ -15,7 +14,7 @@ from billing.models import (
 )
 from billing.services.company_invoices import create_company_invoice, issue_company_invoice
 from core.services.corporate_performance import build_corporate_performance
-from inventory.models import Hotel, Organization
+from inventory.models import Department, Hotel, Organization
 from rooms.models import RoomCategory
 
 
