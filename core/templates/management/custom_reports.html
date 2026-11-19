@@ -153,13 +153,13 @@
                 <div class="result-value">
                     {% if metric.value == None %}Not available
                     {% elif metric.unit == "currency" or metric.unit == "currency_per_night" %}
-                        ₦{{ metric.value|floatformat:2 }}
+                        ₦{{ metric.value|floatformat:"2g" }}
                     {% elif metric.unit == "percent" %}
-                        {{ metric.value|floatformat:2 }}%
+                        {{ metric.value|floatformat:"2g" }}%
                     {% elif metric.unit == "nights" %}
-                        {{ metric.value|floatformat:2 }} nights
+                        {{ metric.value|floatformat:"2g" }} nights
                     {% elif metric.unit == "days" %}
-                        {{ metric.value|floatformat:2 }} days
+                        {{ metric.value|floatformat:"2g" }} days
                     {% elif metric.unit == "count" %}
                         {{ metric.value|floatformat:0 }}
                     {% else %}
@@ -192,10 +192,10 @@
                                     <td>{% if breakdown == "date" %}{{ row.label|date:"d M Y" }}{% else %}{{ row.label }}{% endif %}</td>
                                     <td class="text-end">
                                         {% if row.value == None %}—
-                                        {% elif metric.unit == "currency" or metric.unit == "currency_per_night" %}₦{{ row.value|floatformat:2 }}
-                                        {% elif metric.unit == "percent" %}{{ row.value|floatformat:2 }}%
-                                        {% elif metric.unit == "nights" %}{{ row.value|floatformat:2 }}
-                                        {% elif metric.unit == "days" %}{{ row.value|floatformat:2 }}
+                                        {% elif metric.unit == "currency" or metric.unit == "currency_per_night" %}₦{{ row.value|floatformat:"2g" }}
+                                        {% elif metric.unit == "percent" %}{{ row.value|floatformat:"2g" }}%
+                                        {% elif metric.unit == "nights" %}{{ row.value|floatformat:"2g" }}
+                                        {% elif metric.unit == "days" %}{{ row.value|floatformat:"2g" }}
                                         {% elif metric.unit == "count" %}{{ row.value|floatformat:0 }}
                                         {% else %}{{ row.value }}{% endif %}
                                     </td>
