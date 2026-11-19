@@ -13,6 +13,7 @@ from accounts.services.access import get_accessible_hotels
 from core.services.dashboard.manager_dashboard import get_manager_dashboard
 from core.services.dashboard.director_dashboard import get_director_dashboard
 from core.services.dashboard.accountant_dashboard import get_accountant_dashboard
+from core.services.management_reporting import build_management_reporting_context
 from core.services.cash.handover import (
     accept_handover_and_transition,
     resolve_cash_variance,
@@ -69,6 +70,32 @@ def hotel_dashboard(request):
         "dashboard/hotel_dashboard.html",
         context
     )
+
+
+@role_required("DIRECTOR", "GENERAL_MANAGER")
+def management_overview(request):
+    """
+    Management landing page for Directors and General Managers.
+    All hotel data is resolved through the shared reporting access scope.
+    """
+    reporting_context = build_management_reporting_context(
+        request.user,
+        request.GET,
+    )
+    dashboard_context = get_director_dashboard(
+        reporting_context["hotels"],
+        selected_hotel=reporting_context["selected_hotel"],
+        date_from=reporting_context["date_from"],
+        date_to=reporting_context["date_to"],
+    )
+    context = {
+        **reporting_context,
+        **dashboard_context,
+        "is_management_overview": True,
+        "is_director": True,
+        "is_general_manager": request.user.role == "GENERAL_MANAGER",
+    }
+    return render(request, "management/overview.html", context)
 
 @role_required("RESTAURANT", "MANAGER", "ACCOUNTANT")
 def cash_handover_list(request):
