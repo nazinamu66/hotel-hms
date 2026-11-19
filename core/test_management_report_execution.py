@@ -64,7 +64,7 @@ class ManagementReportExecutionTests(SimpleTestCase):
         )
 
     def test_guest_and_collection_breakdowns_use_source_detail_rows(self):
-        guest = SimpleNamespace(first_name="Amina", last_name="Yusuf")
+        guest = SimpleNamespace(pk=7, first_name="Amina", last_name="Yusuf")
         payloads = {
             "financial_performance": {},
             "front_desk": {},
