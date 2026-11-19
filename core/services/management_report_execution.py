@@ -1,0 +1,185 @@
+"""Execution engine for validated management custom reports.
+
+The engine deliberately delegates every calculation to the existing management
+reporting services. It does not create parallel accounting or operational logic.
+"""
+from decimal import Decimal
+
+from core.services.management_report_catalogue import (
+    get_management_report_metric,
+)
+
+
+def _source_payloads(*, hotels, date_from, date_to, today=None):
+    from core.services.dashboard.director_dashboard import get_director_dashboard
+    from core.services.front_desk_analytics import build_front_desk_analytics
+    from core.services.reservations_occupancy import build_reservations_occupancy_analytics
+    from core.services.room_occupancy import build_room_occupancy_analytics
+    from core.services.corporate_performance import build_corporate_performance
+    from core.services.guest_company_billing import build_guest_company_billing
+
+    return {
+        "financial_performance": get_director_dashboard(
+            hotels, date_from=date_from, date_to=date_to
+        ),
+        "front_desk": build_front_desk_analytics(
+            hotels=hotels, date_from=date_from, date_to=date_to
+        ),
+        "reservations_occupancy": build_reservations_occupancy_analytics(
+            hotels=hotels, date_from=date_from, date_to=date_to
+        ),
+        "room_occupancy": build_room_occupancy_analytics(
+            hotels=hotels, date_from=date_from, date_to=date_to, today=today
+        ),
+        "corporate": build_corporate_performance(
+            hotels=hotels, date_from=date_from, date_to=date_to, today=today
+        ),
+        "guest_company_billing": build_guest_company_billing(
+            hotels=hotels, today=today,
+            collection_from=date_from, collection_to=date_to,
+        ),
+    }
+
+
+def _metric_value(metric, payloads):
+    source = metric["source_service"].rsplit(".", 1)[-1]
+    source_group = {
+        "get_director_dashboard": "financial_performance",
+        "build_front_desk_analytics": "front_desk",
+        "build_reservations_occupancy_analytics": "reservations_occupancy",
+        "build_room_occupancy_analytics": "room_occupancy",
+        "build_corporate_performance": "corporate",
+        "build_guest_company_billing": "guest_company_billing",
+    }[source]
+    return payloads[source_group].get(metric["source_key"])
+
+
+def _breakdown_rows(metric_id, breakdown, payloads):
+    """Return rows only where the source service exposes genuine subtotals."""
+    if breakdown == "hotel":
+        rows = []
+        for row in payloads["financial_performance"].get("hotel_rows", []):
+            rows.append({"label": row["hotel"].name, "value": row.get(metric_id)})
+        return rows
+
+    if breakdown == "date" and metric_id == "actual_room_nights":
+        return [
+            {"label": row["date"], "value": row["occupied_room_count"]}
+            for row in payloads["room_occupancy"].get("daily_rows", [])
+            if row["basis"] == "ACTUAL"
+        ]
+
+    if breakdown == "company":
+        corporate = payloads["corporate"]
+        billing = payloads["guest_company_billing"]
+        if metric_id in ("corporate_revenue", "corporate_room_nights"):
+            key = "revenue" if metric_id == "corporate_revenue" else "room_nights"
+            return [
+                {"label": row["company"].name, "value": row[key]}
+                for row in corporate.get("company_ranking_rows", [])
+            ]
+        if metric_id in ("issued_invoice_outstanding", "overdue_invoice_outstanding"):
+            return [
+                {"label": row["company"].name, "value": row["balance"]}
+                for row in corporate.get("invoice_rows", [])
+                if metric_id == "issued_invoice_outstanding" or row["is_overdue"]
+            ]
+        if metric_id == "overdue_company_receivables":
+            return [
+                {"label": row["company"].name, "value": row["balance"]}
+                for row in billing.get("company_invoice_rows", [])
+                if row["is_overdue"]
+            ]
+
+    if breakdown == "guest" and metric_id == "guest_receivables":
+        return [
+            {"label": str(row["guest"]), "value": row["balance"]}
+            for row in payloads["guest_company_billing"].get("guest_folio_rows", [])
+        ]
+
+    if breakdown == "collection_type" and metric_id == "collections_total":
+        labels = {
+            "guest_cash_bank": "Guest cash and bank payments",
+            "guest_deposit_received": "Guest deposits received",
+            "company_invoice_payments": "Company invoice payments",
+            "company_deposit_received": "Company deposits received",
+        }
+        return [
+            {"label": labels[key], "value": value}
+            for key, value in payloads["guest_company_billing"]["collections"].items()
+        ]
+
+    return []
+
+
+def execute_management_custom_report(
+    *, hotels, date_from, date_to, metric_ids, breakdowns=None, today=None
+):
+    """Execute a validated selection within the already-authorized hotel scope."""
+    from core.services.management_report_configuration import (
+        build_management_report_configuration,
+    )
+
+    requested = list(dict.fromkeys(metric_ids or []))
+    # Reuse catalogue validation so unknown metric IDs and unsupported groupings
+    # can never be used to access arbitrary source fields.
+    from django.http import QueryDict
+
+    params = QueryDict("", mutable=True)
+    for metric_id in requested:
+        params.appendlist("metric", metric_id)
+    for breakdown in (breakdowns or []):
+        params.appendlist("breakdown", breakdown)
+    configuration = build_management_report_configuration(params)
+
+    selected_ids = configuration["selected_metric_ids"]
+    if not selected_ids:
+        return {
+            "metrics": [],
+            "selected_breakdowns": [],
+            "has_metrics": False,
+            "ignored_metric_ids": sorted(set(requested)),
+        }
+
+    aggregate_payloads = _source_payloads(
+        hotels=hotels, date_from=date_from, date_to=date_to, today=today
+    )
+    selected_breakdowns = configuration["selected_breakdowns"]
+    results = []
+    for metric_id in selected_ids:
+        metric = get_management_report_metric(metric_id)
+        item = {
+            **metric,
+            "value": _metric_value(metric, aggregate_payloads),
+            "breakdown_rows": {},
+        }
+        for breakdown in selected_breakdowns:
+            rows = _breakdown_rows(metric_id, breakdown, aggregate_payloads)
+            if breakdown == "hotel":
+                # Hotel subtotals are calculated by the source services themselves
+                # where available. The director dashboard exposes the financial
+                # hotel rows; for other metrics, call that source once per hotel.
+                if metric["source_service"].endswith("get_director_dashboard"):
+                    pass
+                else:
+                    rows = []
+                    for hotel in hotels:
+                        hotel_payloads = _source_payloads(
+                            hotels=hotels.filter(pk=hotel.pk),
+                            date_from=date_from,
+                            date_to=date_to,
+                            today=today,
+                        )
+                        value = _metric_value(metric, hotel_payloads)
+                        rows.append({"label": hotel.name, "value": value})
+            item["breakdown_rows"][breakdown] = rows
+        results.append(item)
+
+    return {
+        "metrics": results,
+        "selected_breakdowns": selected_breakdowns,
+        "has_metrics": True,
+        "ignored_metric_ids": sorted(set(requested) - set(selected_ids)),
+        "date_from": date_from,
+        "date_to": date_to,
+    }
