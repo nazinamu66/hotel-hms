@@ -134,6 +134,31 @@ def management_hotel_performance(request):
 
 
 @role_required("DIRECTOR", "GENERAL_MANAGER")
+def management_guest_company_billing(request):
+    """Read-only guest and company receivables, deposits and reconciliation."""
+    from core.services.guest_company_billing import build_guest_company_billing
+
+    reporting_context = build_management_reporting_context(request.user, request.GET)
+    analytics = build_guest_company_billing(
+        hotels=reporting_context["scoped_hotels"],
+        today=reporting_context["date_to"],
+        collection_from=reporting_context["date_from"],
+        collection_to=reporting_context["date_to"],
+    )
+    return render(
+        request,
+        "management/guest_company_billing.html",
+        {
+            **reporting_context,
+            **analytics,
+            "is_management_overview": True,
+            "is_director": True,
+            "is_general_manager": request.user.role == "GENERAL_MANAGER",
+        },
+    )
+
+
+@role_required("DIRECTOR", "GENERAL_MANAGER")
 def management_corporate_performance(request):
     """Read-only corporate portfolio, revenue and receivables reporting."""
     from core.services.corporate_performance import build_corporate_performance
