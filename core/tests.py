@@ -418,3 +418,96 @@ class ManagementReportingFoundationTests(TestCase):
             [self.hotel_one],
             transform=lambda hotel: hotel,
         )
+
+
+class ManagementOverviewViewTests(TestCase):
+    def setUp(self):
+        self.organization = Organization.objects.create(name="Management Overview Org")
+        self.hotel_one = Hotel.objects.create(
+            organization=self.organization,
+            name="Overview Hotel One",
+        )
+        self.hotel_two = Hotel.objects.create(
+            organization=self.organization,
+            name="Overview Hotel Two",
+        )
+        self.outside_hotel = Hotel.objects.create(
+            name="Outside Overview Hotel",
+        )
+
+    def test_director_can_view_group_and_select_an_accessible_hotel(self):
+        director = User.objects.create_user(
+            username="overview-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+
+        response = self.client.get("/management/overview/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {row["hotel"].pk for row in response.context["hotel_rows"]},
+            {self.hotel_one.pk, self.hotel_two.pk},
+        )
+
+        response = self.client.get(
+            "/management/overview/",
+            {"hotel": str(self.hotel_two.pk)},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [row["hotel"].pk for row in response.context["hotel_rows"]],
+            [self.hotel_two.pk],
+        )
+
+    def test_general_manager_is_limited_to_assigned_active_hotels(self):
+        general_manager = User.objects.create_user(
+            username="overview-general-manager",
+            password="test-password",
+            role="GENERAL_MANAGER",
+            organization=self.organization,
+        )
+        general_manager.assigned_hotels.add(self.hotel_two)
+        self.client.force_login(general_manager)
+
+        response = self.client.get("/management/overview/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {row["hotel"].pk for row in response.context["hotel_rows"]},
+            {self.hotel_two.pk},
+        )
+        self.assertEqual(
+            [hotel.pk for hotel in response.context["hotels"]],
+            [self.hotel_two.pk],
+        )
+
+    def test_inaccessible_hotel_filter_never_exposes_outside_data(self):
+        director = User.objects.create_user(
+            username="overview-isolation-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+
+        response = self.client.get(
+            "/management/overview/",
+            {"hotel": str(self.outside_hotel.pk)},
+        )
+        self.assertEqual(response.status_code, 200)
+        hotel_ids = {row["hotel"].pk for row in response.context["hotel_rows"]}
+        self.assertNotIn(self.outside_hotel.pk, hotel_ids)
+        self.assertEqual(hotel_ids, {self.hotel_one.pk, self.hotel_two.pk})
+
+    def test_operational_user_cannot_open_management_overview(self):
+        frontdesk_user = User.objects.create_user(
+            username="overview-frontdesk",
+            password="test-password",
+            role="FRONTDESK",
+            hotel=self.hotel_one,
+        )
+        self.client.force_login(frontdesk_user)
+
+        response = self.client.get("/management/overview/")
+        self.assertEqual(response.status_code, 403)
