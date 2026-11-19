@@ -224,6 +224,51 @@ class ManagementCustomReportsViewTests(TestCase):
         )
 
     @patch("core.services.management_report_execution.execute_management_custom_report")
+    def test_pdf_export_preserves_report_scope_and_content(self, execute_report):
+        execute_report.return_value = {
+            "has_metrics": True,
+            "metrics": [{
+                "category_label": "Financial Performance",
+                "label": "Total Revenue",
+                "unit": "currency",
+                "value": "125000.00",
+                "notes": "Posted revenue.",
+                "breakdown_rows": {
+                    "hotel": [{"label": self.hotel_two.name, "value": "125000.00"}],
+                },
+            }],
+        }
+        user = User.objects.create_user(
+            username="custom-reports-pdf",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(
+            "/management/custom-reports/",
+            {
+                "hotel": str(self.hotel_two.pk),
+                "from": "2026-11-01",
+                "to": "2026-11-19",
+                "metric": "revenue",
+                "breakdown": "hotel",
+                "export": "pdf",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn("attachment;", response["Content-Disposition"])
+        self.assertTrue(response.content.startswith(b"%PDF"))
+        kwargs = execute_report.call_args.kwargs
+        self.assertEqual(
+            list(kwargs["hotels"].values_list("pk", flat=True)),
+            [self.hotel_two.pk],
+        )
+
+    @patch("core.services.management_report_execution.execute_management_custom_report")
     def test_custom_report_page_does_not_execute_without_selected_metrics(self, execute_report):
         user = User.objects.create_user(
             username="custom-reports-config-only",
