@@ -222,51 +222,55 @@
 
 
         <!-- ========================= -->
+        <!-- ========================= -->
         <!-- FRONT DESK -->
         <!-- ========================= -->
 
         {% if user|has_role:"FRONTDESK,MANAGER,ADMIN,DIRECTOR" %}
 
-        <h4 class="menu-toggle"
-            onclick="toggleMenu('frontdesk_menu', this)">
-            <span class="arrow">▸</span>
-            Front Desk
+        <h4 class="menu-toggle" onclick="toggleMenu('frontdesk_menu', this)">
+            <span class="arrow">▸</span> <span aria-hidden="true">🛎️</span> Front Desk
         </h4>
 
         <div id="frontdesk_menu" class="menu-section">
 
-            <a href="{% url 'frontdesk_room_board' %}">
-                Dashboard
-            </a>
+            <h5 class="menu-subtoggle" onclick="toggleMenu('frontdesk_dashboard_menu', this)">
+                <span class="arrow">▸</span> 🖥️ Dashboard
+            </h5>
+            <div id="frontdesk_dashboard_menu" class="menu-section">
+                <a href="{% url 'frontdesk_room_board' %}">Front Desk Dashboard</a>
+            </div>
 
-            <a href="{% url 'frontdesk_guest_search' %}">
-                Guest Search
-            </a>
+            <h5 class="menu-subtoggle" onclick="toggleMenu('frontdesk_guests_menu', this)">
+                <span class="arrow">▸</span> 👤 Guests
+            </h5>
+            <div id="frontdesk_guests_menu" class="menu-section">
+                <a href="{% url 'frontdesk_guest_search' %}">Guest Search</a>
+            </div>
 
-            <a href="{% url 'frontdesk_reservations' %}">
-                Reservations
-            </a>
+            <h5 class="menu-subtoggle" onclick="toggleMenu('frontdesk_reservations_menu', this)">
+                <span class="arrow">▸</span> 📅 Reservations
+            </h5>
+            <div id="frontdesk_reservations_menu" class="menu-section">
+                <a href="{% url 'frontdesk_reservations' %}">Reservations</a>
+                <a href="{% url 'frontdesk_reservation_calendar' %}">Reservation Calendar</a>
+            </div>
 
-            <a href="{% url 'frontdesk_group_reservations' %}">
-                Corporate / Group Bookings
-            </a>
+            <h5 class="menu-subtoggle" onclick="toggleMenu('frontdesk_corporate_menu', this)">
+                <span class="arrow">▸</span> 🏢 Corporate
+            </h5>
+            <div id="frontdesk_corporate_menu" class="menu-section">
+                <a href="{% url 'frontdesk_group_reservations' %}">Group Bookings</a>
+                <a href="{% url 'frontdesk_company_list' %}">Corporate Clients</a>
+                <a href="{% url 'frontdesk_event_dashboard' %}">Events &amp; Catering</a>
+            </div>
 
-            <a href="{% url 'frontdesk_event_dashboard' %}">
-                Corporate Events & Catering
-            </a>
-
-            <a href="{% url 'frontdesk_company_list' %}">
-                Corporate Clients
-            </a>
-
-            <a href="{% url 'frontdesk_reservation_calendar' %}">
-                Reservation Calendar
-            </a>
-
-            <a href="{% url 'frontdesk_today_board' %}">
-                Today's Arrivals / Departures
-            </a>
-
+            <h5 class="menu-subtoggle" onclick="toggleMenu('frontdesk_daily_menu', this)">
+                <span class="arrow">▸</span> 📋 Daily Operations
+            </h5>
+            <div id="frontdesk_daily_menu" class="menu-section">
+                <a href="{% url 'frontdesk_today_board' %}">Arrivals &amp; Departures</a>
+            </div>
 
         </div>
 
@@ -1055,6 +1059,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
         frontdesk_menu: [
             "/frontdesk/"
+        ],
+        frontdesk_dashboard_menu: [
+            "/frontdesk/"
+        ],
+        frontdesk_guests_menu: [
+            "/frontdesk/guests/"
+        ],
+        frontdesk_reservations_menu: [
+            "/frontdesk/reservations/",
+            "/frontdesk/calendar/"
+        ],
+        frontdesk_corporate_menu: [
+            "/frontdesk/corporate/"
+        ],
+        frontdesk_daily_menu: [
+            "/frontdesk/today/"
         ],
 
         restaurant_menu: [
