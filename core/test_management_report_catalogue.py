@@ -69,6 +69,7 @@ class ManagementReportCatalogueTests(SimpleTestCase):
             "unbilled_company_charges": ["hotel"],
             "company_receivables": ["hotel"],
             "guest_deposits_held": ["hotel"],
+            "company_deposits_held": ["hotel"],
             "guest_receivables": ["hotel", "guest"],
             "collections_total": ["hotel", "collection_type"],
             "actual_room_nights": ["hotel", "date"],
