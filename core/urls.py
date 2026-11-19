@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     hotel_dashboard,
+    management_overview,
     cash_handover_list,
     cash_handover_accept,
     cash_custody_dashboard,
@@ -11,6 +12,12 @@ from .views import (
 
 
 urlpatterns = [
+    path(
+        "management/overview/",
+        management_overview,
+        name="management_overview",
+    ),
+
     path(
         "dashboard/",
         hotel_dashboard,
