@@ -220,11 +220,6 @@
                 Today's Arrivals / Departures
             </a>
 
-            {% if user|has_role:"MANAGER,DIRECTOR,ADMIN" %}
-            <a href="{% url 'frontdesk_complimentary_room_night_queue' %}">
-                Complimentary Room Approvals
-            </a>
-            {% endif %}
 
         </div>
 
@@ -368,21 +363,11 @@
                         </a>
                     {% endif %}
 
-                    {% if user|has_role:"MANAGER,ADMIN" %}
-                        <a href="{% url 'manager_ingredient_requests' %}">
-                            🧂 Ingredient Request Approvals
-                        </a>
-                    {% endif %}
                 </div>
             {% endif %}
 
             {% endif %}
 
-            {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
-            <a href="{% url 'production_override_queue' %}">
-                ⚖️ Production Variance Approvals
-            </a>
-            {% endif %}
 
             {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
             <hr>
@@ -729,9 +714,6 @@
                  because management approval happens there -->
 
             {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
-            <a href="{% url 'urgent_purchase_review' %}">
-                ⚡ Urgent Purchase Reconciliation
-            </a>
             <a href="{% url 'direct_purchase_list' %}">
                 🧾 Direct Purchases
 
@@ -753,80 +735,72 @@
         <!-- APPROVALS -->
         <!-- ========================= -->
 
-        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT" %}
 
-        <h4 class="menu-toggle"
+        <h4 class="menu-toggle {% if request.resolver_match.url_name in 'kitchen_handover_reconciliation_queue manager_stock_requests manager_ingredient_requests restaurant_spoilage refund_list cash_custody_dashboard frontdesk_complimentary_room_night_queue production_override_queue urgent_purchase_review' %}active-menu{% endif %}"
             onclick="toggleMenu('approval_menu', this)">
             <span class="arrow">▸</span>
-            Approvals
+            <span aria-hidden="true">✓</span> Approvals
         </h4>
 
-        <div id="approval_menu" class="menu-section">
-
-            <!-- Management stock approval -->
+        <div id="approval_menu" class="menu-section {% if request.resolver_match.url_name in 'kitchen_handover_reconciliation_queue manager_stock_requests manager_ingredient_requests restaurant_spoilage refund_list cash_custody_dashboard frontdesk_complimentary_room_night_queue production_override_queue urgent_purchase_review' %}open{% endif %}">
 
             {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
-
-            <a href="{% url 'kitchen_handover_reconciliation_queue' %}">
-                Kitchen Handover History
+            <a href="{% url 'frontdesk_complimentary_room_night_queue' %}">
+                🛏️ Room Waivers
             </a>
+            {% endif %}
 
+            {% if user|has_role:"MANAGER,DIRECTOR,ADMIN" %}
             <a href="{% url 'inventory:manager_stock_requests' %}">
-                Pending Stock Requests
-
+                📦 Stock Requests
                 {% for action in pending_actions %}
                     {% if action.type == "STOCK_REQUESTS" %}
-                        <span class="notification-badge">
-                            {{ action.count }}
-                        </span>
+                        <span class="notification-badge">{{ action.count }}</span>
                     {% endif %}
                 {% endfor %}
             </a>
 
             <a href="{% url 'manager_ingredient_requests' %}">
-                Ingredient Requests
-
+                🥕 Ingredient Requests
                 {% for action in pending_actions %}
                     {% if action.type == "KITCHEN_REQUESTS" %}
-                        <span class="notification-badge">
-                            {{ action.count }}
-                        </span>
+                        <span class="notification-badge">{{ action.count }}</span>
                     {% endif %}
                 {% endfor %}
             </a>
 
-            <a href="{% url 'restaurant_spoilage' %}">
-                Restaurant Spoilage Approvals
+            <a href="{% url 'kitchen_handover_reconciliation_queue' %}">
+                🍳 Kitchen Handover Reviews
             </a>
 
             <a href="{% url 'refund_list' %}">
-                Refunds
-
+                ↩️ Refunds
                 {% for action in pending_actions %}
                     {% if action.type == "REFUNDS" %}
-                        <span class="notification-badge">
-                            {{ action.count }}
-                        </span>
+                        <span class="notification-badge">{{ action.count }}</span>
                     {% endif %}
                 {% endfor %}
             </a>
-
             {% endif %}
 
-            <!-- Accountant/Director/Manager can reach
-                 their relevant procurement screens.
-                 Actual action permissions remain in views. -->
-                 {% if user|has_role:"MANAGER,ACCOUNTANT,DIRECTOR,ADMIN" %}
+            {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
+            <a href="{% url 'production_override_queue' %}">
+                ⚖️ Production Variances
+            </a>
+            <a href="{% url 'restaurant_spoilage' %}">
+                🗑️ Restaurant Spoilage
+            </a>
+            <a href="{% url 'urgent_purchase_review' %}">
+                ⚡ Urgent Purchase Review
+            </a>
+            {% endif %}
 
-                <a href="{% url 'cash_handover_list' %}">
-                    Cash Handovers
-                </a>
-
-                <a href="{% url 'cash_custody_dashboard' %}">
-                    Cash Custody
-                </a>
-
-                {% endif %}
+            {% if user|has_role:"MANAGER,ACCOUNTANT,DIRECTOR,ADMIN" %}
+            <a href="{% url 'cash_custody_dashboard' %}">
+                💵 Cash Custody
+            </a>
+            {% endif %}
 
         </div>
 
