@@ -102,7 +102,7 @@
         <!-- ========================= -->
 
         {% if user|has_role:"DIRECTOR,GENERAL_MANAGER" %}
-        <h4 class="menu-toggle {% if request.resolver_match.url_name in 'management_overview,management_hotel_performance,management_front_desk_analytics,management_reservations_occupancy,management_corporate_performance' %}active-menu{% endif %}"
+        <h4 class="menu-toggle {% if request.resolver_match.url_name in 'management_overview,management_hotel_performance,management_front_desk_analytics,management_reservations_occupancy,management_corporate_performance,management_guest_company_billing' %}active-menu{% endif %}"
             onclick="toggleMenu('management_menu', this)">
             <span class="arrow">▸</span> <span aria-hidden="true">📊</span> Management
         </h4>
@@ -112,6 +112,7 @@
             <a href="{% url 'management_front_desk_analytics' %}">Front Desk Analytics</a>
             <a href="{% url 'management_reservations_occupancy' %}">Reservations &amp; Occupancy</a>
             <a href="{% url 'management_corporate_performance' %}">Corporate Performance</a>
+            <a href="{% url 'management_guest_company_billing' %}">Guest &amp; Company Billing</a>
         </div>
         {% endif %}
 
