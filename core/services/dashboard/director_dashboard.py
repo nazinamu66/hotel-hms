@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.db.models import Case, DecimalField, F, Sum, Value, When
-from django.db.models.functions import Coalesce, TruncDate, TruncMonth
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from accounting.models import JournalLine
