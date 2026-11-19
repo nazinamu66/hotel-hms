@@ -3,95 +3,210 @@
 {% block content %}
 
 {% if is_director %}
-<section class="dashboard-header">
-    <div>
-        <h2>Management Overview</h2>
-        <p>Organization performance across your active hotels</p>
-    </div>
-</section>
+<style>
+.director-dashboard { color: #172033; }
+.director-dashboard .dashboard-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:22px; }
+.director-dashboard .dashboard-heading h2 { margin:0 0 7px; font-size:1.65rem; }
+.director-dashboard .dashboard-heading p { margin:0; color:#64748b; }
+.director-dashboard .filter-panel { display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; padding:18px 20px; margin-bottom:20px; }
+.director-dashboard .filter-field { display:flex; flex-direction:column; gap:6px; min-width:150px; }
+.director-dashboard .filter-field label { font-size:.78rem; color:#64748b; font-weight:700; }
+.director-dashboard .filter-field select, .director-dashboard .filter-field input { min-width:155px; }
+.director-dashboard .filter-actions { display:flex; align-items:center; gap:14px; }
+.director-dashboard .filter-actions button { background:#2563eb; color:white; border:0; padding:10px 17px; }
+.director-dashboard .filter-actions a { color:#475569; font-weight:650; }
+.director-dashboard .kpi-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:14px; }
+.director-dashboard .kpi-card { padding:18px; min-width:0; }
+.director-dashboard .kpi-label { color:#64748b; font-size:.82rem; font-weight:650; }
+.director-dashboard .kpi-value { margin:9px 0 5px; font-size:clamp(1.1rem,1.55vw,1.55rem); line-height:1.2; overflow-wrap:anywhere; }
+.director-dashboard .kpi-note { color:#94a3b8; font-size:.75rem; }
+.director-dashboard .chart-grid { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(280px,1fr); gap:18px; margin-top:20px; }
+.director-dashboard .chart-card { padding:20px; min-width:0; }
+.director-dashboard .chart-title { margin:0 0 5px; font-size:1rem; }
+.director-dashboard .chart-subtitle { color:#94a3b8; font-size:.78rem; margin:0 0 18px; }
+.director-dashboard .trend-chart { width:100%; overflow:hidden; }
+.director-dashboard .trend-chart svg { display:block; width:100%; height:auto; }
+.director-dashboard .chart-legend { display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; color:#64748b; font-size:.78rem; }
+.director-dashboard .legend-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+.director-dashboard .axis-labels { display:flex; justify-content:space-between; gap:8px; color:#94a3b8; font-size:.68rem; margin:5px 4% 0 7%; }
+.director-dashboard .bar-list { display:flex; flex-direction:column; gap:16px; }
+.director-dashboard .bar-heading { display:flex; justify-content:space-between; gap:10px; font-size:.8rem; margin-bottom:7px; }
+.director-dashboard .bar-heading strong { font-weight:700; }
+.director-dashboard .bar-track { height:9px; border-radius:20px; background:#eef2f7; overflow:hidden; }
+.director-dashboard .bar-fill { height:100%; border-radius:20px; background:linear-gradient(90deg,#2563eb,#60a5fa); }
+.director-dashboard .occupancy-fill { background:linear-gradient(90deg,#0f9f83,#5bd0b1); }
+.director-dashboard .empty-chart { padding:32px 12px; text-align:center; color:#94a3b8; background:#f8fafc; border-radius:10px; font-size:.85rem; }
+.director-dashboard .performance-card { margin-top:20px; padding:20px; }
+.director-dashboard .table-wrap { overflow-x:auto; }
+.director-dashboard table { width:100%; border-collapse:collapse; min-width:680px; }
+.director-dashboard th { color:#64748b; text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; }
+.director-dashboard th, .director-dashboard td { padding:12px 10px; border-bottom:1px solid #edf1f6; }
+.director-dashboard td { font-size:.85rem; }
+@media(max-width:1150px) { .director-dashboard .kpi-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media(max-width:850px) { .director-dashboard .chart-grid { grid-template-columns:1fr; } }
+@media(max-width:600px) {
+ .director-dashboard .kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+ .director-dashboard .kpi-card { padding:14px; }
+ .director-dashboard .filter-panel { align-items:stretch; }
+ .director-dashboard .filter-field, .director-dashboard .filter-field select, .director-dashboard .filter-field input { width:100%; }
+ .director-dashboard .filter-actions { width:100%; justify-content:space-between; }
+ .director-dashboard .dashboard-heading { align-items:flex-start; }
+}
+</style>
 
-<form method="get" class="card" style="display:flex;gap:1rem;align-items:end;flex-wrap:wrap;margin-bottom:1.25rem;">
-    <div>
-        <label for="hotel-filter">Hotel</label>
-        <select id="hotel-filter" name="hotel">
-            <option value="">All hotels · Group view</option>
-            {% for hotel in hotels %}
-                <option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <div>
-        <label for="date-from">From</label>
-        <input id="date-from" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">
-    </div>
-    <div>
-        <label for="date-to">To</label>
-        <input id="date-to" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">
-    </div>
-    <button type="submit">Apply filters</button>
-    <a href="{% url 'hotel_dashboard' %}">Reset</a>
-</form>
+<div class="director-dashboard">
+    <section class="dashboard-heading">
+        <div>
+            <h2>Management Overview</h2>
+            <p>Organization performance across your active hotels</p>
+        </div>
+    </section>
 
-<div class="grid">
-    <div class="card">
-        <span>Posted Revenue</span>
-        <h3>₦{{ revenue|floatformat:2 }}</h3>
-        <small>Income and other income accounts</small>
-    </div>
-    <div class="card">
-        <span>Cost of Goods Sold</span>
-        <h3>₦{{ cogs|floatformat:2 }}</h3>
-        <small>Posted COGS entries</small>
-    </div>
-    <div class="card">
-        <span>Operating Expenses</span>
-        <h3>₦{{ expenses|floatformat:2 }}</h3>
-        <small>Expense and other expense accounts</small>
-    </div>
-    <div class="card">
-        <span>Operating Result</span>
-        <h3>₦{{ operating_result|floatformat:2 }}</h3>
-        <small>Revenue less COGS and expenses</small>
-    </div>
-    <div class="card">
-        <span>Occupied Rooms</span>
-        <h3>{{ occupied_rooms }} / {{ room_count }}</h3>
-        <small>{{ occupancy_percent }}% occupancy</small>
-    </div>
-</div>
-
-<section class="card" style="margin-top:1.5rem;">
-    <h3>Hotel Performance</h3>
-    <p>{{ date_from|date:"M j, Y" }} – {{ date_to|date:"M j, Y" }}</p>
-    <div style="overflow-x:auto;">
-        <table>
-            <thead>
-                <tr>
-                    <th>Hotel</th>
-                    <th>Occupancy</th>
-                    <th>Posted Revenue</th>
-                    <th>COGS</th>
-                    <th>Expenses</th>
-                    <th>Operating Result</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for row in hotel_rows %}
-                <tr>
-                    <td>{{ row.hotel.name }}</td>
-                    <td>{{ row.occupied_rooms }}/{{ row.room_count }} ({{ row.occupancy_percent }}%)</td>
-                    <td>₦{{ row.revenue|floatformat:2 }}</td>
-                    <td>₦{{ row.cogs|floatformat:2 }}</td>
-                    <td>₦{{ row.expenses|floatformat:2 }}</td>
-                    <td>₦{{ row.operating_result|floatformat:2 }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="6">No active hotels are available in this view.</td></tr>
+    <form method="get" class="card filter-panel">
+        <div class="filter-field">
+            <label for="hotel-filter">HOTEL</label>
+            <select id="hotel-filter" name="hotel">
+                <option value="">All hotels · Group view</option>
+                {% for hotel in hotels %}
+                    <option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>
                 {% endfor %}
-            </tbody>
-        </table>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="date-from">FROM</label>
+            <input id="date-from" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">
+        </div>
+        <div class="filter-field">
+            <label for="date-to">TO</label>
+            <input id="date-to" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">
+        </div>
+        <div class="filter-actions">
+            <button type="submit">Apply filters</button>
+            <a href="{% url 'hotel_dashboard' %}">Reset</a>
+        </div>
+    </form>
+
+    <div class="kpi-grid">
+        <div class="card kpi-card">
+            <div class="kpi-label">Posted Revenue</div>
+            <h3 class="kpi-value">₦{{ revenue|floatformat:2 }}</h3>
+            <div class="kpi-note">Income and other income</div>
+        </div>
+        <div class="card kpi-card">
+            <div class="kpi-label">Cost of Goods Sold</div>
+            <h3 class="kpi-value">₦{{ cogs|floatformat:2 }}</h3>
+            <div class="kpi-note">Posted COGS entries</div>
+        </div>
+        <div class="card kpi-card">
+            <div class="kpi-label">Operating Expenses</div>
+            <h3 class="kpi-value">₦{{ expenses|floatformat:2 }}</h3>
+            <div class="kpi-note">Posted expense accounts</div>
+        </div>
+        <div class="card kpi-card">
+            <div class="kpi-label">Operating Result</div>
+            <h3 class="kpi-value">₦{{ operating_result|floatformat:2 }}</h3>
+            <div class="kpi-note">Revenue less COGS and expenses</div>
+        </div>
+        <div class="card kpi-card">
+            <div class="kpi-label">Room Occupancy</div>
+            <h3 class="kpi-value">{{ occupancy_percent }}%</h3>
+            <div class="kpi-note">{{ occupied_rooms }} occupied of {{ room_count }} rooms</div>
+        </div>
     </div>
-</section>
+
+    <div class="chart-grid">
+        <section class="card chart-card">
+            <h3 class="chart-title">Financial Performance Trend</h3>
+            <p class="chart-subtitle">Posted ledger activity · {{ date_from|date:"M j, Y" }} – {{ date_to|date:"M j, Y" }}</p>
+            {% if trend_empty %}
+                <div class="empty-chart">No posted financial activity for this period.</div>
+            {% else %}
+                <div class="trend-chart">{{ trend_svg|safe }}</div>
+                <div class="axis-labels">
+                    {% for label in trend_labels %}<span>{{ label }}</span>{% endfor %}
+                </div>
+                <div class="chart-legend">
+                    <span><i class="legend-dot" style="background:#2563eb"></i>Revenue</span>
+                    <span><i class="legend-dot" style="background:#f59e0b"></i>COGS</span>
+                    <span><i class="legend-dot" style="background:#8b5cf6"></i>Expenses</span>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="card chart-card">
+            <h3 class="chart-title">Revenue by Hotel</h3>
+            <p class="chart-subtitle">Compare posted revenue contribution</p>
+            {% if hotel_chart_rows %}
+                <div class="bar-list">
+                    {% for row in hotel_chart_rows %}
+                    <div>
+                        <div class="bar-heading">
+                            <strong>{{ row.hotel.name }}</strong>
+                            <span>₦{{ row.revenue|floatformat:0 }}</span>
+                        </div>
+                        <div class="bar-track"><div class="bar-fill" style="width:{{ row.revenue_bar_width }}%"></div></div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-chart">No hotel revenue data available.</div>
+            {% endif %}
+        </section>
+
+        <section class="card chart-card">
+            <h3 class="chart-title">Occupancy by Hotel</h3>
+            <p class="chart-subtitle">Current occupied rooms against total room inventory</p>
+            {% if hotel_chart_rows %}
+                <div class="bar-list">
+                    {% for row in hotel_chart_rows %}
+                    <div>
+                        <div class="bar-heading">
+                            <strong>{{ row.hotel.name }}</strong>
+                            <span>{{ row.occupancy_percent }}% · {{ row.occupied_rooms }}/{{ row.room_count }}</span>
+                        </div>
+                        <div class="bar-track"><div class="bar-fill occupancy-fill" style="width:{{ row.occupancy_percent }}%"></div></div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-chart">No room inventory available.</div>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="card performance-card">
+        <h3 class="chart-title">Hotel Performance</h3>
+        <p class="chart-subtitle">{{ date_from|date:"M j, Y" }} – {{ date_to|date:"M j, Y" }}</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Hotel</th>
+                        <th>Occupancy</th>
+                        <th>Posted Revenue</th>
+                        <th>COGS</th>
+                        <th>Expenses</th>
+                        <th>Operating Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in hotel_rows %}
+                    <tr>
+                        <td>{{ row.hotel.name }}</td>
+                        <td>{{ row.occupied_rooms }}/{{ row.room_count }} ({{ row.occupancy_percent }}%)</td>
+                        <td>₦{{ row.revenue|floatformat:2 }}</td>
+                        <td>₦{{ row.cogs|floatformat:2 }}</td>
+                        <td>₦{{ row.expenses|floatformat:2 }}</td>
+                        <td>₦{{ row.operating_result|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6">No active hotels are available in this view.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
 {% endif %}
 
 {% if user.role == "MANAGER" %}
