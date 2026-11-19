@@ -1813,6 +1813,17 @@ def maintenance_work_orders(request):
     )
 
     # --------------------------------------------------------
+    # Summary metrics (before applying the selected filters)
+    # --------------------------------------------------------
+
+    work_order_summary = {
+        "total": tickets.count(),
+        "open": tickets.filter(status="OPEN").count(),
+        "in_progress": tickets.filter(status="IN_PROGRESS").count(),
+        "unassigned": tickets.filter(assigned_to__isnull=True).count(),
+    }
+
+    # --------------------------------------------------------
     # Filters
     # --------------------------------------------------------
 
@@ -1919,6 +1930,7 @@ def maintenance_work_orders(request):
             "priority_filter": priority,
             "assigned_filter": assigned,
             "target_filter": target,
+            "work_order_summary": work_order_summary,
         },
     )
 
