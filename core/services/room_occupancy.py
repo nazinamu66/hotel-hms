@@ -49,8 +49,8 @@ def _booking_intervals(hotel_ids, date_from, date_to):
         group_reservation__hotel_id__in=hotel_ids,
         check_in_date__lte=date_to,
         check_out_date__gt=date_from,
-    ).exclude(status__in=TERMINAL_BOOKING_STATUSES).exclude(
-        group_reservation__status="CANCELLED"
+    ).exclude(status__in=TERMINAL_BOOKING_STATUSES).filter(
+        group_reservation__status__in=("CONFIRMED", "IN_HOUSE")
     )
     rows.extend(
         (item.group_reservation.hotel_id, item.check_in_date, item.check_out_date)
