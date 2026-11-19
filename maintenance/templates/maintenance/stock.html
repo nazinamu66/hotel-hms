@@ -1,196 +1,40 @@
 {% extends "base/base.html" %}
-
-{% block title %}
-Maintenance Stores
-{% endblock %}
-
+{% block title %}Maintenance Stock{% endblock %}
 {% block content %}
-
-<h2>Maintenance Stores</h2>
-
-<p>
-    Current stock held by Maintenance departments.
-</p>
-
-<hr>
-
-{% regroup stock_items by department.hotel as hotel_groups %}
-
-{% for hotel_group in hotel_groups %}
-
-    <h3 style="margin-top:25px;">
-        {{ hotel_group.grouper.name }}
-    </h3>
-
-    <p>
-        <strong>Department:</strong>
-        Maintenance (MNT)
-    </p>
-
-    <table style="
-        width:100%;
-        border-collapse:collapse;
-        margin-bottom:25px;
-    ">
-
-    <thead style="background:#eee;">
-
-    <tr>
-
-        <th style="padding:10px;">
-            Product
-        </th>
-
-        <th>
-            SKU
-        </th>
-
-        <th>
-            Current Stock
-        </th>
-
-        <th>
-            Unit
-        </th>
-
-        <th>
-            Reorder Level
-        </th>
-
-        <th>
-            Unit Cost
-        </th>
-
-        <th>
-            Stock Value
-        </th>
-
-        <th>
-            Status
-        </th>
-
-    </tr>
-
-    </thead>
-
-    <tbody>
-
-    {% for stock in hotel_group.list %}
-
-    <tr style="border-bottom:1px solid #ddd;">
-
-        <td style="padding:10px;">
-            <strong>
-                {{ stock.product.name }}
-            </strong>
-        </td>
-
-        <td>
-            {{ stock.product.sku }}
-        </td>
-
-        <td>
-            {{ stock.quantity|floatformat:2 }}
-        </td>
-
-        <td>
-            {{ stock.product.base_unit }}
-        </td>
-
-        <td>
-            {{ stock.product.reorder_level }}
-        </td>
-
-        <td>
-            ₦{{ stock.product.cost_price|floatformat:2 }}
-        </td>
-
-        <td>
-            ₦{{ stock.stock_value|floatformat:2 }}
-        </td>
-
-        <td>
-
-            {% if stock.stock_status == "OUT OF STOCK" %}
-
-                <strong>
-                    OUT OF STOCK
-                </strong>
-
-            {% elif stock.stock_status == "LOW STOCK" %}
-
-                <strong>
-                    LOW STOCK
-                </strong>
-
-            {% else %}
-
-                OK
-
-            {% endif %}
-
-        </td>
-
-    </tr>
-
-    {% empty %}
-
-    <tr>
-
-        <td
-            colspan="8"
-            style="
-                padding:20px;
-                text-align:center;
-            "
-        >
-            No stock is currently held by Maintenance.
-        </td>
-
-    </tr>
-
-    {% endfor %}
-
-    </tbody>
-
-    </table>
-
-{% empty %}
-
-    <p>
-        No Maintenance Store has been configured for the
-        accessible hotels.
-    </p>
-
-{% endfor %}
-
-<hr>
-
-<div style="
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    margin-top:20px;
-">
-
-    <a href="{% url 'maintenance_request_stock' %}">
-        <button type="button">
-            Request Stock
-        </button>
-    </a>
-
-    <a href="{% url 'maintenance_stock_movements' %}">
-        <button type="button">
-            Stock Movements
-        </button>
-    </a>
-
-    <a href="{% url 'maintenance_dashboard' %}">
-        <button type="button">
-            ← Maintenance Dashboard
-        </button>
-    </a>
-
+<style>
+.ms-page{max-width:1400px;margin:0 auto;color:#172033}.ms-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}.ms-kicker{margin:0 0 6px;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}.ms-head h2{margin:0 0 6px;font-size:clamp(24px,3vw,30px);letter-spacing:-.035em}.ms-sub{margin:0;color:#667085;font-size:13px;line-height:1.6}.ms-actions{display:flex;gap:9px;flex-wrap:wrap}.ms-btn{display:inline-flex;align-items:center;justify-content:center;min-height:41px;padding:0 14px;border:1px solid #d5dce7;border-radius:9px;background:#fff;color:#344054;text-decoration:none;font-size:12px;font-weight:750}.ms-primary{background:#175cd3;border-color:#175cd3;color:#fff}.ms-btn:hover{text-decoration:none;opacity:.9}
+.ms-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:22px}.ms-stat{padding:17px;border:1px solid #e2e8f0;border-radius:13px;background:#fff;box-shadow:0 6px 18px rgba(15,23,42,.04)}.ms-stat-label{color:#667085;font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.06em}.ms-stat-value{display:block;margin-top:7px;font-size:23px;font-weight:850;letter-spacing:-.03em}.ms-hotel{margin:0 0 20px;border:1px solid #e2e8f0;border-radius:15px;background:#fff;box-shadow:0 7px 22px rgba(15,23,42,.045);overflow:hidden}.ms-hotel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 20px;border-bottom:1px solid #edf0f5}.ms-hotel-head h3{margin:0;font-size:16px}.ms-dept{color:#667085;font-size:11px;font-weight:750}.ms-table-wrap{overflow-x:auto}.ms-table{width:100%;min-width:800px;border-collapse:collapse}.ms-table th{padding:12px 14px;background:#f8fafc;color:#667085;font-size:10px;font-weight:800;letter-spacing:.07em;text-align:left;text-transform:uppercase;white-space:nowrap}.ms-table td{padding:14px;border-bottom:1px solid #edf0f5;color:#344054;font-size:12px}.ms-table tbody tr:last-child td{border-bottom:0}.ms-table tbody tr:hover{background:#fbfcff}.ms-product{font-weight:800;color:#263449}.ms-muted{display:block;margin-top:3px;color:#98a2b3;font-size:10px}.ms-qty{font-size:14px;font-weight:850;font-variant-numeric:tabular-nums}.ms-status{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:800;white-space:nowrap}.ms-ok{background:#ecfdf3;color:#027a48}.ms-low{background:#fffaeb;color:#b54708}.ms-out{background:#fef3f2;color:#b42318}.ms-empty{padding:30px!important;text-align:center!important;color:#98a2b3!important}
+@media(max-width:700px){.ms-stats{grid-template-columns:1fr}.ms-hotel-head{align-items:flex-start;flex-direction:column}.ms-actions{width:100%}.ms-actions .ms-btn{flex:1}}
+</style>
+<div class="ms-page">
+<header class="ms-head"><div><p class="ms-kicker">Facilities &amp; engineering · Inventory</p><h2>Maintenance Stock</h2><p class="ms-sub">Current consumable stock held by Maintenance departments across your accessible hotels.</p></div><div class="ms-actions"><a class="ms-btn ms-primary" href="{% url 'maintenance_request_stock' %}">＋ Request stock</a><a class="ms-btn" href="{% url 'maintenance_stock_movements' %}">View stock movements</a></div></header>
+<div class="ms-stats">
+ <div class="ms-stat"><span class="ms-stat-label">Stock lines</span><strong class="ms-stat-value">{{ stock_items|length }}</strong></div>
+ <div class="ms-stat"><span class="ms-stat-label">Hotels with Maintenance stock</span><strong class="ms-stat-value">{{ hotel_groups|length }}</strong></div>
+ <div class="ms-stat"><span class="ms-stat-label">Total stock value</span><strong class="ms-stat-value">₦{{ total_stock_value|floatformat:2 }}</strong></div>
 </div>
-
+{% regroup stock_items by department.hotel as hotel_groups %}
+{% for hotel_group in hotel_groups %}
+<section class="ms-hotel">
+ <header class="ms-hotel-head"><h3>{{ hotel_group.grouper.name }}</h3><span class="ms-dept">MAINTENANCE · MNT</span></header>
+ <div class="ms-table-wrap"><table class="ms-table"><thead><tr><th>Product</th><th>SKU</th><th>Available</th><th>Unit</th><th>Reorder level</th><th>Unit cost</th><th>Stock value</th><th>Status</th></tr></thead><tbody>
+ {% for stock in hotel_group.list %}
+ <tr>
+  <td><span class="ms-product">{{ stock.product.name }}</span></td>
+  <td>{{ stock.product.sku|default:"—" }}</td>
+  <td><span class="ms-qty">{{ stock.quantity|floatformat:2 }}</span></td>
+  <td>{{ stock.product.base_unit }}</td>
+  <td>{{ stock.product.reorder_level|floatformat:2 }}</td>
+  <td>₦{{ stock.product.cost_price|floatformat:2 }}</td>
+  <td><strong>₦{{ stock.stock_value|floatformat:2 }}</strong></td>
+  <td>{% if stock.stock_status == "OUT OF STOCK" %}<span class="ms-status ms-out">Out of stock</span>{% elif stock.stock_status == "LOW STOCK" %}<span class="ms-status ms-low">Low stock</span>{% else %}<span class="ms-status ms-ok">Healthy</span>{% endif %}</td>
+ </tr>
+ {% empty %}<tr><td colspan="8" class="ms-empty">No stock is currently held by this Maintenance department.</td></tr>{% endfor %}
+ </tbody></table></div>
+</section>
+{% empty %}
+<section class="ms-hotel"><div class="ms-empty">No Maintenance Store has been configured for the accessible hotels.</div></section>
+{% endfor %}
+<div class="ms-actions"><a class="ms-btn" href="{% url 'maintenance_dashboard' %}">← Maintenance Dashboard</a></div>
+</div>
 {% endblock %}
