@@ -88,7 +88,7 @@
                     <tbody>
                         {% for row in company_ranking_rows %}
                         <tr>
-                            <td><strong>{{ row.company.name }}</strong></td>
+                            <td><strong><a href="{% url 'management_company_detail' row.company.id %}?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}">{{ row.company.name }}</a></strong></td>
                             <td class="numeric">₦{{ row.revenue|floatformat:"2g" }}</td>
                             <td class="numeric">{{ row.room_nights }}</td>
                             <td class="numeric">{{ row.group_booking_count }}</td>
@@ -164,7 +164,7 @@
                     {% for row in invoice_rows %}
                     <tr>
                         <td>{{ row.invoice.invoice_number }}</td>
-                        <td>{{ row.company.name }}</td>
+                        <td><a href="{% url 'management_company_detail' row.company.id %}?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}">{{ row.company.name }}</a></td>
                         <td>{{ row.hotel.name }}</td>
                         <td>{% if row.invoice.due_date %}{{ row.invoice.due_date|date:"M j, Y" }}{% else %}—{% endif %}</td>
                         <td>{% if row.is_overdue %}Overdue{% elif row.balance == 0 %}Settled{% else %}Outstanding{% endif %}</td>
