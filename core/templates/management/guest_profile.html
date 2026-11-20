@@ -1,0 +1,46 @@
+{% extends "base/base.html" %}
+{% block title %}Guest Profile | Hotel HMS{% endblock %}
+{% block content %}
+<div class="management-frontdesk management-guest-profile">
+    <header class="fd-command-heading"><div><p class="fd-eyebrow">Hotel HMS · Guest 360°</p><h1>{{ guest.full_name }}</h1><p>{{ guest.hotel.name }} · {{ guest.nationality|default:"Nationality not recorded" }}</p></div><a class="fd-back-link" href="{% url 'management_guest_search' %}">← Guest Search</a></header>
+    <section class="fd-guest-summary">
+        <div><span>Phone</span><strong>{{ guest.phone|default:"—" }}</strong></div><div><span>Email</span><strong>{{ guest.email|default:"—" }}</strong></div><div><span>ID Number</span><strong>{{ guest.id_number|default:"—" }}</strong></div><div><span>Guest Since</span><strong>{{ guest.created_at|date:"M j, Y" }}</strong></div>
+    </section>
+    <section class="fd-panel">
+        <div class="fd-panel-heading"><div><h2>Active Stay</h2><p>Current open room folios for this guest</p></div><span class="fd-count">{{ active_folios|length }} active</span></div>
+        <div class="fd-table-wrap"><table class="fd-table"><thead><tr><th>Hotel</th><th>Room</th><th>Check-in</th><th>Expected Checkout</th><th>Folio Balance</th></tr></thead><tbody>
+        {% for folio in active_folios %}<tr><td>{{ folio.hotel.name }}</td><td>{% if folio.room %}{{ folio.room.room_number }}{% else %}—{% endif %}</td><td>{{ folio.check_in_at|date:"M j, Y H:i" }}</td><td>{{ folio.check_out_at|date:"M j, Y H:i"|default:"Not recorded" }}</td><td>₦{{ folio.balance|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="5" class="fd-empty">No active stay found.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+    <section class="fd-panel">
+        <div class="fd-panel-heading"><div><h2>Guest Deposits</h2><p>Available balance excludes amounts earmarked as reservation guarantees</p></div></div>
+        {% for row in deposit_rows %}
+        <div class="fd-deposit-card">
+            <div class="fd-deposit-totals"><div><span>Deposit Balance</span><strong>₦{{ row.deposit.balance|floatformat:2 }}</strong></div><div><span>Guaranteed</span><strong>₦{{ row.guaranteed|floatformat:2 }}</strong></div><div><span>Available</span><strong class="is-positive">₦{{ row.available|floatformat:2 }}</strong></div></div>
+            <div class="fd-table-wrap"><table class="fd-table"><thead><tr><th>Date</th><th>Transaction</th><th>Amount</th><th>Reference</th><th>Folio</th><th>Recorded By</th></tr></thead><tbody>
+            {% for txn in row.transactions %}<tr><td>{{ txn.created_at|date:"M j, Y H:i" }}</td><td>{{ txn.get_transaction_type_display }}</td><td>₦{{ txn.amount|floatformat:2 }}</td><td>{{ txn.reference|default:"—" }}</td><td>{% if txn.folio_id %}#{{ txn.folio_id }}{% else %}—{% endif %}</td><td>{{ txn.created_by|default:"System" }}</td></tr>{% empty %}<tr><td colspan="6" class="fd-empty">No deposit transactions recorded.</td></tr>{% endfor %}
+            </tbody></table></div>
+        </div>
+        {% empty %}<p class="fd-empty">No guest deposit account exists for this guest at this hotel.</p>{% endfor %}
+    </section>
+    <section class="fd-panel">
+        <div class="fd-panel-heading"><div><h2>Receive Guest Deposit</h2><p>Uses the existing deposit service and accounting posting workflow</p></div></div>
+        <form method="post" class="fd-deposit-form">{% csrf_token %}
+            <div class="fd-field"><label for="deposit-amount">AMOUNT (₦)</label><input id="deposit-amount" type="number" name="amount" min="0.01" step="0.01" required></div>
+            <div class="fd-field"><label for="deposit-method">PAYMENT METHOD</label><select id="deposit-method" name="method" required><option value="CASH">Cash</option><option value="POS">POS</option><option value="TRANSFER">Bank Transfer</option></select></div>
+            <div class="fd-field"><label for="deposit-bank">BANK ACCOUNT (POS / TRANSFER)</label><select id="deposit-bank" name="bank_account"><option value="">Select bank account</option>{% for bank in bank_accounts %}<option value="{{ bank.id }}">{{ bank.bank_name }} · {{ bank.account_name }} · {{ bank.account_number }}</option>{% endfor %}</select></div>
+            <div class="fd-field"><label for="deposit-reference">REFERENCE</label><input id="deposit-reference" name="reference" maxlength="100" placeholder="Required for POS or transfer"></div>
+            <div class="fd-field fd-note-field"><label for="deposit-note">NOTE</label><input id="deposit-note" name="note" placeholder="Optional note"></div>
+            <div class="fd-deposit-actions"><button type="submit">Receive deposit</button><span>Deposit receipts are posted to the hotel's cash or selected bank account against Guest Deposits liability.</span></div>
+        </form>
+    </section>
+    <section class="fd-panel">
+        <div class="fd-panel-heading"><div><h2>Stay & Reservation History</h2><p>Most recent reservation and folio records for this guest</p></div></div>
+        <div class="fd-table-wrap"><table class="fd-table"><thead><tr><th>Record</th><th>Hotel</th><th>Room</th><th>Arrival / Check-in</th><th>Departure / Checkout</th><th>Status</th><th>Balance</th></tr></thead><tbody>
+        {% for reservation in reservations %}<tr><td>Reservation #{{ reservation.id }}</td><td>{{ reservation.hotel.name }}</td><td>{% if reservation.room %}{{ reservation.room.room_number }}{% else %}—{% endif %}</td><td>{{ reservation.check_in_date|date:"M j, Y" }}</td><td>{{ reservation.check_out_date|date:"M j, Y" }}</td><td>{{ reservation.get_status_display }}</td><td>—</td></tr>{% endfor %}
+        {% for folio in folios %}<tr><td>Folio #{{ folio.id }}</td><td>{{ folio.hotel.name }}</td><td>{% if folio.room %}{{ folio.room.room_number }}{% else %}Walk-in{% endif %}</td><td>{{ folio.check_in_at|date:"M j, Y" }}</td><td>{{ folio.check_out_at|date:"M j, Y"|default:"—" }}</td><td>{% if folio.is_closed %}Closed{% else %}Open{% endif %}</td><td>₦{{ folio.balance|floatformat:2 }}</td></tr>
+        {% empty %}{% if not reservations %}<tr><td colspan="7" class="fd-empty">No previous stays or reservations recorded.</td></tr>{% endif %}{% endfor %}
+        </tbody></table></div>
+    </section>
+</div>
+{% endblock %}
