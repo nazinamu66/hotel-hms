@@ -1,0 +1,68 @@
+{% extends "base/base.html" %}
+{% load accounting_extras %}
+{% block title %}Restaurant Sales Performance | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.restaurant-sales{box-sizing:border-box;max-width:none;min-height:100%;margin:calc(-1 * clamp(18px,2.5vw,34px));padding:clamp(18px,2.5vw,34px);background:radial-gradient(ellipse at 85% 0%,rgba(37,99,235,.16),transparent 34%),#0d1728;color:#e8eef8}
+.restaurant-sales *{box-sizing:border-box}
+.rs-head{margin-bottom:22px}.rs-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#91a4bf}
+.rs-head h1{font-size:28px;line-height:1.2;margin:5px 0 7px;color:#f8fafc}.rs-muted{color:#9aabc1;font-size:13px;line-height:1.5}
+.rs-panel,.rs-kpi{background:#172b43;border:1px solid #29415e;border-radius:14px;box-shadow:0 8px 24px rgba(3,12,25,.16)}
+.rs-panel{padding:18px;margin-bottom:18px}.rs-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
+.rs-field{min-width:160px;flex:1}.rs-field label{display:block;font-size:12px;font-weight:750;color:#b8c7da;margin-bottom:6px}
+.rs-field input,.rs-field select{width:100%;min-height:40px;padding:8px 10px;border:1px solid #3b5573;border-radius:8px;background:#102239;color:#f8fafc}
+.rs-btn{min-height:40px;padding:9px 15px;border-radius:8px;background:#2563eb;color:white;border:0;font-weight:750;cursor:pointer}
+.rs-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.rs-kpi{padding:17px;min-width:0}.rs-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#9aabc1}
+.rs-value{display:block;font-size:23px;font-weight:850;color:#f8fafc;margin-top:8px;overflow-wrap:anywhere}.rs-note{font-size:12px;color:#91a4bf;margin-top:5px}
+.rs-section{font-size:17px;color:#f8fafc;margin:0 0 12px}.rs-table-wrap{overflow-x:auto}
+.rs-table{width:100%;min-width:760px;border-collapse:collapse}.rs-table th{background:#102239;color:#aebfd4;text-transform:uppercase;font-size:10px;letter-spacing:.06em;text-align:left;padding:12px;white-space:nowrap}
+.rs-table td{padding:12px;border-bottom:1px solid #29415e;color:#dce6f2;font-size:13px;white-space:nowrap}.rs-table tbody tr:hover{background:#1c3552}
+.rs-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.rs-bar{height:7px;border-radius:20px;background:#29415e;overflow:hidden;margin-top:7px}.rs-bar span{display:block;height:100%;background:#3b82f6}
+.rs-alert{padding:13px 15px;margin-bottom:18px;border:1px solid #8b5a24;border-radius:11px;background:#3a2b1a;color:#fde68a;font-size:13px}
+@media(max-width:950px){.rs-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rs-split{grid-template-columns:1fr}}
+@media(max-width:560px){.rs-grid{grid-template-columns:1fr}.rs-head h1{font-size:23px}}
+</style>
+<div class="restaurant-sales">
+  <header class="rs-head"><div class="rs-eyebrow">Restaurant · Management reporting</div><h1>Sales Performance</h1><p class="rs-muted">Revenue, menu mix, cashier performance, collections and refunds for the selected period.</p></header>
+  <section class="rs-panel"><form method="get" class="rs-filters">
+    <div class="rs-field"><label for="rs-from">From date</label><input id="rs-from" type="date" name="from" value="{{ date_from }}"></div>
+    <div class="rs-field"><label for="rs-to">To date</label><input id="rs-to" type="date" name="to" value="{{ date_to }}"></div>
+    {% if hotels|length > 1 %}<div class="rs-field"><label for="rs-hotel">Hotel</label><select id="rs-hotel" name="hotel"><option value="">All accessible hotels</option>{% for hotel in hotels %}<option value="{{ hotel.pk }}" {% if selected_hotel == hotel.pk|stringformat:"s" %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}</select></div>{% elif hotels|length == 1 %}{% for hotel in hotels %}<div class="rs-field"><label>Hotel scope</label><div>{{ hotel.name }}</div></div>{% endfor %}{% endif %}
+    <button class="rs-btn" type="submit">Apply filters</button>
+  </form></section>
+  <section class="rs-grid">
+    <article class="rs-kpi"><div class="rs-label">Gross sales</div><strong class="rs-value">{{ gross_sales|money }}</strong><div class="rs-note">{{ settled_count }} settled or refunded orders, excluding complimentary breakfast</div></article>
+    <article class="rs-kpi"><div class="rs-label">Refunds</div><strong class="rs-value">{{ refunds|money }}</strong><div class="rs-note">{{ refunded_order_count }} refunded orders in the selected order period</div></article>
+    <article class="rs-kpi"><div class="rs-label">Net sales</div><strong class="rs-value">{{ net_sales|money }}</strong><div class="rs-note">Gross sales less refunds recorded in this period</div></article>
+    <article class="rs-kpi"><div class="rs-label">Gross profit</div><strong class="rs-value">{{ gross_profit|money }}</strong><div class="rs-note">Gross sales less recorded sale-time FIFO cost, before refunds</div></article>
+    <article class="rs-kpi"><div class="rs-label">Cost of goods sold</div><strong class="rs-value">{{ total_cogs|money }}</strong><div class="rs-note">Based on POS item cost_at_sale</div></article>
+    <article class="rs-kpi"><div class="rs-label">Collections</div><strong class="rs-value">{{ total_collections|money }}</strong><div class="rs-note">Positive POS payments recorded against Restaurant shifts</div></article>
+    <article class="rs-kpi"><div class="rs-label">Walk-in sales</div><strong class="rs-value">{{ walkin_sales|money }}</strong><div class="rs-note">Sales assigned to walk-in folios</div></article>
+    <article class="rs-kpi"><div class="rs-label">Room charges</div><strong class="rs-value">{{ room_sales|money }}</strong><div class="rs-note">Sales posted to guest room folios</div></article>
+  </section>
+  {% if uncosted_quantity %}<div class="rs-alert"><strong>Costing attention:</strong> {{ uncosted_quantity }} sold units have no recorded sale-time unit cost. Gross profit may therefore be overstated until those costs are reconciled.</div>{% endif %}
+  <section class="rs-panel"><h2 class="rs-section">Collections by payment method</h2><div class="rs-grid" style="margin:0">
+    <div><div class="rs-label">Cash</div><strong class="rs-value">{{ collections.CASH|money }}</strong></div>
+    <div><div class="rs-label">POS</div><strong class="rs-value">{{ collections.POS|money }}</strong></div>
+    <div><div class="rs-label">Transfer</div><strong class="rs-value">{{ collections.TRANSFER|money }}</strong></div>
+    <div><div class="rs-label">Guest deposit</div><strong class="rs-value">{{ collections.DEPOSIT|money }}</strong></div>
+  </div><p class="rs-muted" style="margin:13px 0 0">Collections are actual positive Payment receipts linked to Restaurant shifts. Room charges are revenue posted to guest folios and are not counted as cash collected here.</p></section>
+  <div class="rs-split">
+    <section class="rs-panel"><h2 class="rs-section">Sales by category</h2><div class="rs-table-wrap"><table class="rs-table"><thead><tr><th>Category</th><th>Units</th><th>Revenue</th><th>Recorded cost</th><th>Gross profit</th></tr></thead><tbody>
+      {% for row in category_rows %}<tr><td>{{ row.name }}</td><td>{{ row.quantity }}</td><td>{{ row.revenue|money }}</td><td>{{ row.cost|money }}</td><td>{{ row.profit|money }}</td></tr>{% endfor %}
+    </tbody></table></div></section>
+    <section class="rs-panel"><h2 class="rs-section">Cashier performance</h2><div class="rs-table-wrap"><table class="rs-table"><thead><tr><th>Cashier</th><th>Orders</th><th>Sales</th></tr></thead><tbody>
+      {% for row in cashier_rows %}<tr><td>{{ row.name }}</td><td>{{ row.orders }}</td><td>{{ row.sales|money }}</td></tr>{% empty %}<tr><td colspan="3">No sales recorded for this period.</td></tr>{% endfor %}
+    </tbody></table></div></section>
+  </div>
+  <section class="rs-panel"><h2 class="rs-section">Top-selling menu items</h2><div class="rs-table-wrap"><table class="rs-table"><thead><tr><th>Menu item</th><th>Category</th><th>Quantity sold</th><th>Revenue</th><th>Recorded cost</th><th>Gross profit</th></tr></thead><tbody>
+    {% for row in top_items %}<tr><td><strong>{{ row.name }}</strong></td><td>{{ row.category }}</td><td>{{ row.quantity }}</td><td>{{ row.revenue|money }}</td><td>{{ row.cost|money }}</td><td>{{ row.revenue|add:row.cost|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="6" style="text-align:center;padding:28px;color:#9aabc1">No Restaurant menu sales found for this period.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+  <section class="rs-panel"><h2 class="rs-section">Daily sales</h2><div class="rs-table-wrap"><table class="rs-table"><thead><tr><th>Date</th><th>Gross sales</th></tr></thead><tbody>
+    {% for row in daily_rows %}<tr><td>{{ row.day|date:"d M Y" }}</td><td>{{ row.sales|money }}</td></tr>{% empty %}<tr><td colspan="2" style="text-align:center;padding:28px;color:#9aabc1">No sales in this date range.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+  <p class="rs-muted">Method: sales are grouped by POS order creation date; refunds are grouped by refund posting date. Complimentary breakfast redemptions are excluded from revenue. Item cost and gross profit use recorded POSOrderItem.cost_at_sale; missing costs are not estimated. This report separates revenue from payments collected.</p>
+</div>
+{% endblock %}
