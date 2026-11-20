@@ -51,10 +51,10 @@
             <div><span>Guest</span><strong><a class="mr-drill-link" href="{% url 'management_guest_profile' guest.pk %}">{{ guest.full_name }}</a></strong></div>
             <div><span>Hotel</span><strong>{{ hotel.name }}</strong></div>
             <div><span>Room</span><strong>{% if record.room %}{{ record.room.room_number }}{% else %}Unassigned{% endif %}</strong></div>
-            <div><span>Room category</span><strong>{{ record.room_category.name|default:"—" }}</strong></div>
+            <div><span>Room category</span><strong>{% if parent_reservation %}{{ parent_reservation.room_category.name }}{% else %}{{ record.room_category.name|default:"—" }}{% endif %}</strong></div>
             <div><span>Arrival</span><strong>{{ record.check_in_date|date:"M j, Y" }}</strong></div>
             <div><span>Departure</span><strong>{{ record.check_out_date|date:"M j, Y" }}</strong></div>
-            <div><span>Booking source</span><strong>{{ record.source|default:"Not recorded" }}</strong></div>
+            <div><span>Booking source</span><strong>{% if parent_reservation %}{{ parent_reservation.source|default:"Not recorded" }}{% else %}{{ record.source|default:"Not recorded" }}{% endif %}</strong></div>
             <div><span>Created</span><strong>{{ record.created_at|date:"M j, Y H:i" }}</strong></div>
         </div>
         {% if record.note %}<p class="mr-detail-notes">{{ record.note|linebreaksbr }}</p>{% endif %}
