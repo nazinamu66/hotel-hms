@@ -1,0 +1,48 @@
+{% extends "base/base.html" %}
+{% block title %}{{ metric_title }} | Front Desk Analytics{% endblock %}
+{% block content %}
+<div class="management-frontdesk fd-drilldown">
+    <header class="fd-command-heading">
+        <div><p class="fd-eyebrow">Hotel HMS · Management workspace · Front Desk</p><h1>{{ metric_title }}</h1><p>{{ description }}</p></div>
+        <span class="fd-count">{{ record_count }} records</span>
+    </header>
+    <div class="fd-drill-toolbar">
+        <span>{{ date_from|date:"M j, Y" }} – {{ date_to|date:"M j, Y" }}{% if selected_hotel %} · {{ selected_hotel.name }}{% else %} · All accessible hotels{% endif %}</span>
+        <a href="{% url 'management_front_desk_analytics' %}?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}">← Back to Front Desk Analytics</a>
+    </div>
+    <section class="fd-panel fd-detail-panel">
+        <div class="fd-panel-heading"><div><h2>{{ metric_title }} Register</h2><p>Read-only detail from the underlying room-folio and guest records</p></div></div>
+        <div class="fd-table-wrap">
+            <table class="fd-table">
+                <thead>
+                    {% if record_type == "folios" %}
+                    <tr><th>Guest</th><th>Hotel</th><th>Room</th><th>Check-in</th><th>Checkout</th><th>Status</th></tr>
+                    {% else %}
+                    <tr><th>Guest</th><th>Hotel</th><th>Phone</th><th>Nationality</th>{% if metric == "in-house" %}<th>Current Room</th><th>Current Check-in</th>{% else %}<th>Latest Check-in</th>{% endif %}</tr>
+                    {% endif %}
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    {% if record_type == "folios" %}
+                    <tr>
+                        <td><a href="{% url 'management_guest_profile' record.guest_id %}">{{ record.guest.full_name }}</a></td>
+                        <td>{{ record.hotel.name }}</td><td>{% if record.room %}{{ record.room.room_number }}{% else %}—{% endif %}</td>
+                        <td>{{ record.check_in_at|date:"M j, Y H:i" }}</td><td>{% if record.check_out_at %}{{ record.check_out_at|date:"M j, Y H:i" }}{% else %}—{% endif %}</td>
+                        <td>{% if record.is_closed %}Closed{% else %}In house{% endif %}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td><a href="{% url 'management_guest_profile' record.pk %}">{{ record.full_name }}</a></td><td>{{ record.hotel.name }}</td><td>{{ record.phone|default:"—" }}</td><td>{{ record.nationality|default:"—" }}</td>
+                        {% if metric == "in-house" %}<td>{{ record.current_room|default:"—" }}</td><td>{{ record.current_checkin|date:"M j, Y H:i" }}</td>{% else %}<td>{{ record.latest_period_checkin|date:"M j, Y H:i" }}</td>{% endif %}
+                    </tr>
+                    {% endif %}
+                    {% empty %}
+                    <tr><td colspan="6" class="fd-empty">No records match this report and reporting scope.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="fd-note">Guest names open the management Guest 360 profile. This report does not permit check-in, checkout, cancellation, room changes or payment posting.</p>
+    </section>
+</div>
+{% endblock %}
