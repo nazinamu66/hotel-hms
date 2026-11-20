@@ -189,7 +189,6 @@ def restaurant_end_of_shift(request):
     # Payments
     # -----------------------------
     payments = Payment.objects.filter(
-        reference__startswith="POS-",
         collected_at__date=report_date,
         folio__hotel=hotel
     )
@@ -713,7 +712,6 @@ def restaurant_sales_performance(request):
         shift__department_id__in=department_ids,
         shift__isnull=False,
         collected_at__date__range=(date_from, date_to),
-        reference__startswith="POS-",
         amount__gt=0,
     )
     if request.user.role == "RESTAURANT":
@@ -799,7 +797,7 @@ def restaurant_sales_performance(request):
         "orders": order_rows.count(),
         "payments": payment_rows_detail.count(),
         "refunds": len(refund_rows),
-        "costs": cost_rows.count(),
+        "costs": len(cost_rows),
         "complimentary": complimentary_orders.count(),
     }
 
