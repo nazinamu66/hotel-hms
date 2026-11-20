@@ -21,6 +21,13 @@
 .rs-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
 .rs-bar{height:7px;border-radius:20px;background:#29415e;overflow:hidden;margin-top:7px}.rs-bar span{display:block;height:100%;background:#3b82f6}
 .rs-alert{padding:13px 15px;margin-bottom:18px;border:1px solid #8b5a24;border-radius:11px;background:#3a2b1a;color:#fde68a;font-size:13px}
+.rs-status{display:inline-block;padding:4px 8px;border-radius:20px;font-size:10px;font-weight:850;letter-spacing:.04em}
+.rs-status-RECONCILED{background:#123d35;color:#86efac}.rs-status-NOT_REQUIRED{background:#26384d;color:#b8c7da}
+.rs-status-MISSING,.rs-status-DUPLICATE,.rs-status-AMOUNT_MISMATCH,.rs-status-DATE_MISMATCH{background:#512b2b;color:#fca5a5}
+.rs-recon-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+.rs-recon-kpi{padding:12px;border:1px solid #29415e;border-radius:10px;background:#102239}
+.rs-recon-kpi strong{display:block;font-size:20px;color:#f8fafc;margin-top:5px}
+@media(max-width:700px){.rs-recon-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:950px){.rs-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rs-split{grid-template-columns:1fr}}
 @media(max-width:560px){.rs-grid{grid-template-columns:1fr}.rs-head h1{font-size:23px}}
 </style>
@@ -42,6 +49,40 @@
     <a class="rs-kpi" style="display:block;text-decoration:none;color:inherit" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=orders"><div class="rs-label">Walk-in sales</div><strong class="rs-value">{{ walkin_sales|money }}</strong><div class="rs-note">Sales assigned to walk-in folios</div></a>
     <a class="rs-kpi" style="display:block;text-decoration:none;color:inherit" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=orders"><div class="rs-label">Room charges</div><strong class="rs-value">{{ room_sales|money }}</strong><div class="rs-note">Sales posted to guest room folios</div></a>
     <a class="rs-kpi" style="display:block;text-decoration:none;color:inherit" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=complimentary"><div class="rs-label">Complimentary breakfasts</div><strong class="rs-value">{{ complimentary_count }}</strong><div class="rs-note">Redemptions tracked separately from revenue</div></a>
+  </section>
+  <section class="rs-panel">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+      <div><h2 class="rs-section" style="margin-bottom:5px">Accounting reconciliation</h2><p class="rs-muted">Operational POS, refund, cost and collection records matched against existing journal entries. This check is read-only and does not repair postings.</p></div>
+      {% if accounting_reconciliation.discrepancy_count %}<span class="rs-status rs-status-AMOUNT_MISMATCH">{{ accounting_reconciliation.discrepancy_count }} discrepancies</span>{% else %}<span class="rs-status rs-status-RECONCILED">No discrepancies found</span>{% endif %}
+    </div>
+    <div class="rs-recon-kpis">
+      <div class="rs-recon-kpi"><div class="rs-label">Records checked</div><strong>{{ accounting_reconciliation.count }}</strong></div>
+      <div class="rs-recon-kpi"><div class="rs-label">Reconciled</div><strong>{{ accounting_reconciliation.reconciled_count }}</strong></div>
+      <div class="rs-recon-kpi"><div class="rs-label">Missing postings</div><strong>{{ accounting_reconciliation.missing_count }}</strong></div>
+      <div class="rs-recon-kpi"><div class="rs-label">Net difference</div><strong>{{ accounting_reconciliation.difference_total|money }}</strong></div>
+    </div>
+    <div class="rs-table-wrap">
+      <table class="rs-table">
+        <thead><tr><th>Area</th><th>Operational record</th><th>Reference</th><th>Expected</th><th>Journal amount</th><th>Difference</th><th>Status</th><th>Record</th></tr></thead>
+        <tbody>
+          {% for row in accounting_reconciliation.rows %}
+          <tr>
+            <td>{{ row.group }}</td>
+            <td>{{ row.label }}{% if row.note %}<div class="rs-note">{{ row.note }}</div>{% endif %}</td>
+            <td>{{ row.reference }}</td>
+            <td>{{ row.expected|money }}</td>
+            <td>{{ row.actual|money }}</td>
+            <td>{{ row.difference|money }}</td>
+            <td><span class="rs-status rs-status-{{ row.status }}">{{ row.status|cut:"_"|default:"—" }}</span></td>
+            <td>{% if row.order_id %}<a href="{% url 'restaurant_order_detail' row.order_id %}" target="_blank" rel="noopener">Open order →</a>{% else %}—{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8">No Restaurant accounting activity was found for this period.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="rs-muted" style="margin:12px 0 0">A missing or mismatched record is an investigation flag, not an automatic correction. Sales posting dates are checked against the POS order's business day; collection and refund records retain their own posting references.</p>
   </section>
   <section class="rs-panel">
     <h2 class="rs-section">Audit drill-down</h2>
