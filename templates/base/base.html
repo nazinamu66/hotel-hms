@@ -574,9 +574,12 @@
             <span class="arrow">{% if request.resolver_match.url_name == 'maintenance_management_overview' %}▾{% else %}▸{% endif %}</span>
             Maintenance
         </h4>
-        <div id="maintenance_management_menu" class="menu-section {% if request.resolver_match.url_name == 'maintenance_management_overview' %}open{% endif %}">
-            <a href="{% url 'maintenance_management_overview' %}">Management Reporting</a>
+        {% with maintenance_report_pages="maintenance_management_overview,maintenance_work_order_analysis" %}
+        <div id="maintenance_management_menu" class="menu-section {% if request.resolver_match.url_name in maintenance_report_pages %}open{% endif %}">
+            <a href="{% url 'maintenance_management_overview' %}">Management Overview</a>
+            <a href="{% url 'maintenance_work_order_analysis' %}">Work Order Analysis</a>
         </div>
+        {% endwith %}
         {% endif %}
 
         <!-- ========================= -->
@@ -909,7 +912,7 @@
 
         <!-- TOP BAR -->
 
-        <div class="topbar{% if request.resolver_match.url_name == 'management_overview' or request.resolver_match.url_name == 'management_hotel_performance' or request.resolver_match.url_name == 'management_front_desk_analytics' or request.resolver_match.url_name == 'management_guest_search' or request.resolver_match.url_name == 'management_guest_profile' or request.resolver_match.url_name == 'management_reservations_occupancy' or request.resolver_match.url_name == 'management_reservation_detail' or request.resolver_match.url_name == 'management_front_desk_drilldown' or request.resolver_match.url_name == 'management_company_detail' or request.resolver_match.url_name == 'management_corporate_performance' or request.resolver_match.url_name == 'management_guest_company_billing' or request.resolver_match.url_name == 'management_custom_reports' or request.resolver_match.url_name == 'restaurant_management_overview' or request.resolver_match.url_name == 'restaurant_inventory_status' or request.resolver_match.url_name == 'restaurant_sales_performance' or request.resolver_match.url_name == 'restaurant_spoilage_analysis' or request.resolver_match.url_name == 'restaurant_spoilage_records' or request.resolver_match.url_name == 'restaurant_spoilage_record_detail' or request.resolver_match.url_name == 'restaurant_menu_management' or request.resolver_match.url_name == 'kitchen_management_report' or request.resolver_match.url_name == 'maintenance_management_overview' %} topbar-executive{% endif %}">
+        <div class="topbar{% if request.resolver_match.url_name == 'management_overview' or request.resolver_match.url_name == 'management_hotel_performance' or request.resolver_match.url_name == 'management_front_desk_analytics' or request.resolver_match.url_name == 'management_guest_search' or request.resolver_match.url_name == 'management_guest_profile' or request.resolver_match.url_name == 'management_reservations_occupancy' or request.resolver_match.url_name == 'management_reservation_detail' or request.resolver_match.url_name == 'management_front_desk_drilldown' or request.resolver_match.url_name == 'management_company_detail' or request.resolver_match.url_name == 'management_corporate_performance' or request.resolver_match.url_name == 'management_guest_company_billing' or request.resolver_match.url_name == 'management_custom_reports' or request.resolver_match.url_name == 'restaurant_management_overview' or request.resolver_match.url_name == 'restaurant_inventory_status' or request.resolver_match.url_name == 'restaurant_sales_performance' or request.resolver_match.url_name == 'restaurant_spoilage_analysis' or request.resolver_match.url_name == 'restaurant_spoilage_records' or request.resolver_match.url_name == 'restaurant_spoilage_record_detail' or request.resolver_match.url_name == 'restaurant_menu_management' or request.resolver_match.url_name == 'kitchen_management_report' or request.resolver_match.url_name == 'maintenance_management_overview' or request.resolver_match.url_name == 'maintenance_work_order_analysis' %} topbar-executive{% endif %}">
             <button type="button" class="mobile-nav-toggle" onclick="toggleMobileSidebar()" aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation">☰ <span>Menu</span></button>
 
             <div class="system-name">
