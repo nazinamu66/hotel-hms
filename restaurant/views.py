@@ -1408,7 +1408,7 @@ def restaurant_select_table(request, table_id):
     return redirect("restaurant_pos")
 
 
-@role_required("RESTAURANT", "MANAGER", "DIRECTOR", "ADMIN")
+@role_required("RESTAURANT", "MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT", "ADMIN")
 def shift_list(request):
     user = request.user
 
@@ -1530,7 +1530,7 @@ def shift_list(request):
         },
     )
 
-@role_required("RESTAURANT", "MANAGER", "DIRECTOR", "ADMIN")
+@role_required("RESTAURANT", "MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT", "ADMIN")
 def shift_detail(request, shift_id):
     user = request.user
 
