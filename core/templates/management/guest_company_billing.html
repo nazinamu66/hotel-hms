@@ -74,17 +74,17 @@
     </form>
 
     <section class="kpis" aria-label="Receivables summary">
-        <article class="card kpi"><span>Guest Receivables</span><strong>₦{{ guest_receivables|floatformat:"2g" }}</strong><small>Positive individual folio balances</small></article>
-        <article class="card kpi"><span>Company Receivables</span><strong>₦{{ company_receivables|floatformat:"2g" }}</strong><small>Issued invoice balances + uninvoiced charges</small></article>
+        <a class="kpi-link" href="#guest-folio-receivables"><article class="card kpi"><span>Guest Receivables</span><strong>₦{{ guest_receivables|floatformat:"2g" }}</strong><small>Positive individual folio balances · View detail</small></article></a>
+        <a class="kpi-link" href="#company-receivables"><article class="card kpi"><span>Company Receivables</span><strong>₦{{ company_receivables|floatformat:"2g" }}</strong><small>Issued invoice balances + uninvoiced charges · View detail</small></article></a>
         <article class="card kpi"><span>Total Operational Receivables</span><strong>₦{{ total_operational_receivables|floatformat:"2g" }}</strong><small>As of {{ receivables_as_of|date:"M j, Y" }}</small></article>
         <article class="card kpi"><span>Ledger Accounts Receivable</span><strong>₦{{ ledger_accounts_receivable|floatformat:"2g" }}</strong><small>Posted GL control account balance</small></article>
-        <article class="card kpi"><span>Overdue Company Invoices</span><strong>₦{{ overdue_company_outstanding|floatformat:"2g" }}</strong><small>Issued invoices past due date</small></article>
-        <article class="card kpi"><span>Guest Deposits Held</span><strong>₦{{ guest_deposits_held|floatformat:"2g" }}</strong><small>Liability balance; includes unapplied credits</small></article>
-        <article class="card kpi"><span>Company Deposits Held</span><strong>₦{{ company_deposits_held|floatformat:"2g" }}</strong><small>Corporate deposit liability balance</small></article>
+        <a class="kpi-link" href="#company-receivables"><article class="card kpi"><span>Overdue Company Invoices</span><strong>₦{{ overdue_company_outstanding|floatformat:"2g" }}</strong><small>Issued invoices past due date · View detail</small></article></a>
+        <a class="kpi-link" href="#collection-activity"><article class="card kpi"><span>Guest Deposits Held</span><strong>₦{{ guest_deposits_held|floatformat:"2g" }}</strong><small>Liability balance; includes unapplied credits · View activity</small></article></a>
+        <a class="kpi-link" href="#collection-activity"><article class="card kpi"><span>Company Deposits Held</span><strong>₦{{ company_deposits_held|floatformat:"2g" }}</strong><small>Corporate deposit liability balance · View activity</small></article></a>
         <article class="card kpi"><span>Guest Deposit Available</span><strong>₦{{ guest_deposits_available|floatformat:"2g" }}</strong><small>After ₦{{ guest_guarantees_earmarked|floatformat:"2g" }} in active guarantees</small></article>
     </section>
 
-    <section class="card panel reconciliation">
+    <section id="receivables-reconciliation" class="card panel reconciliation section-anchor">
         <h3>Accounts Receivable Reconciliation</h3>
         <p class="subtitle">Current ledger control balance compared with operational guest and company balances</p>
         <div class="table-wrap">
@@ -102,7 +102,7 @@
     </section>
 
     <div class="grid">
-        <section class="card panel">
+        <section id="guest-folio-receivables" class="card panel section-anchor">
             <h3>Guest Folio Receivables</h3>
             <p class="subtitle">Positive individual balances only; closed folios remain collectible</p>
             <div class="table-wrap">
@@ -111,7 +111,7 @@
                     <tbody>
                         {% for row in guest_folio_rows %}
                         <tr>
-                            <td>{% if row.guest %}{{ row.guest.full_name }}{% else %}Unassigned guest{% endif %}</td>
+                            <td>{% if row.guest %}<a href="{% url 'management_guest_profile' row.guest.id %}">{{ row.guest.full_name }}</a>{% else %}Unassigned guest{% endif %}</td>
                             <td>{{ row.hotel.name }}</td>
                             <td>#{{ row.folio.id }}</td>
                             <td>{% if row.is_closed %}Closed{% else %}Open{% endif %}</td>
@@ -126,7 +126,7 @@
             <p class="note">Negative folio balances are reported separately as guest credit balances: ₦{{ guest_credit_balances|floatformat:"2g" }}. They are not netted against other guests' debts.</p>
         </section>
 
-        <section class="card panel">
+        <section id="company-receivables" class="card panel section-anchor">
             <h3>Issued Company Invoices</h3>
             <p class="subtitle">Current unpaid balances, aged from due date (or issue date if no due date)</p>
             <div class="table-wrap">
@@ -136,7 +136,7 @@
                         {% for row in company_invoice_rows %}
                         <tr>
                             <td>{{ row.invoice.invoice_number }}</td>
-                            <td>{{ row.company.name }}</td>
+                            <td><a href="{% url 'management_company_detail' row.company.id %}?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}">{{ row.company.name }}</a></td>
                             <td>{% if row.invoice.due_date %}{{ row.invoice.due_date|date:"M j, Y" }}{% else %}—{% endif %}</td>
                             <td class="numeric">{{ row.age_days }} days</td>
                             <td class="numeric">₦{{ row.balance|floatformat:"2g" }}</td>
@@ -160,7 +160,7 @@
                     <tbody>
                         {% for row in unbilled_company_rows %}
                         <tr>
-                            <td>{% if row.company %}{{ row.company.name }}{% else %}Company not linked{% endif %}</td>
+                            <td>{% if row.company %}<a href="{% url 'management_company_detail' row.company.id %}?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}">{{ row.company.name }}</a>{% else %}Company not linked{% endif %}</td>
                             <td>{{ row.hotel.name }}</td>
                             <td>{{ row.charge.description }}</td>
                             <td>{{ row.age_days }} days</td>
@@ -191,7 +191,7 @@
         </section>
     </div>
 
-    <section class="card panel">
+    <section id="collection-activity" class="card panel section-anchor">
         <h3>Collection Activity</h3>
         <p class="subtitle">Cash/bank receipts and new deposit receipts from {{ collection_from|date:"M j, Y" }} to {{ collection_to|date:"M j, Y" }}</p>
         <div class="table-wrap">
