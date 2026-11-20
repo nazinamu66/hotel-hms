@@ -7,6 +7,17 @@ from accounting.models import SupplierLedger
 from accounting.services.journal import record_transaction
 
 
+def _get_maintenance_ticket_hotel(ticket):
+    """Resolve the hotel for either a room-based or location-based ticket."""
+    if ticket.room_id:
+        return ticket.room.hotel
+    if ticket.location_id:
+        return ticket.location.hotel
+    raise ValidationError(
+        "Maintenance ticket must belong to a room or maintenance location."
+    )
+
+
 def post_maintenance_material_consumption(
     material,
     user,
@@ -25,13 +36,9 @@ def post_maintenance_material_consumption(
             "posted as inventory consumption."
         )
 
-    hotel = material.ticket.room.hotel
+    hotel = _get_maintenance_ticket_hotel(material.ticket)
 
-    amount = (
-        material.quantity * material.unit_cost
-    )
-
-    amount = Decimal(amount)
+    amount = Decimal(material.quantity * material.unit_cost)
 
     if amount <= 0:
         return None
@@ -95,7 +102,7 @@ def post_maintenance_labour(
             "must be greater than zero."
         )
 
-    hotel = labour.ticket.room.hotel
+    hotel = _get_maintenance_ticket_hotel(labour.ticket)
 
     # Defensive hotel validation.
     if labour.supplier.hotel_id != hotel.id:
