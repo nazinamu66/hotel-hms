@@ -69,6 +69,13 @@
 .kpr-pill.warn{background:#49351e !important;color:#ffd28a !important}
 .kpr-pill.good{background:#123c36 !important;color:#72e0bd !important}
 .kpr-btn.secondary{background:#203650 !important;border:1px solid #344b68;color:#e7eefb}
+
+.kpr-card-link{display:block;color:inherit;text-decoration:none;border-radius:14px}
+.kpr-card-link .kpr-card{height:100%;transition:border-color .16s ease,transform .16s ease,box-shadow .16s ease}
+.kpr-card-link:hover .kpr-card,.kpr-card-link:focus-visible .kpr-card{border-color:#5795ff !important;transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,0,0,.2) !important}
+.kpr-card-hint{font-size:.7rem;color:#82b7ff;margin-top:9px;font-weight:750}
+.kpr-drill{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 16px;margin:4px 0 18px;border:1px solid #36577d;border-radius:12px;background:#1b304b;color:#e7eefb}
+.kpr-drill a{color:#8fc2ff;font-weight:800;text-decoration:none}
 </style>
 <div class="kpr">
   <header class="kpr-head">
@@ -84,20 +91,23 @@
   </form>
 
   <div class="kpr-grid">
-    <article class="kpr-card"><div class="kpr-label">Ingredient requests</div><div class="kpr-value">{{ request_count }}</div></article>
-    <article class="kpr-card"><div class="kpr-label">Requested quantity</div><div class="kpr-value">{{ request_quantity|floatformat:3 }}</div></article>
-    <article class="kpr-card"><div class="kpr-label">Store quantity issued</div><div class="kpr-value">{{ store_issued|floatformat:3 }}</div></article>
-    <article class="kpr-card"><div class="kpr-label">Store quantity outstanding</div><div class="kpr-value">{{ store_outstanding|floatformat:3 }}</div></article>
-    <article class="kpr-card"><div class="kpr-label">Direct purchases</div><div class="kpr-value">{{ purchase_count }}</div></article>
-    <article class="kpr-card"><div class="kpr-label">Ordered value</div><div class="kpr-value">{{ ordered_value|floatformat:2 }}</div></article>
-    <article class="kpr-card"><div class="kpr-label">Received goods value</div><div class="kpr-value">{{ received_value|floatformat:2 }}</div></article>
-    <article class="kpr-card"><div class="kpr-label">Outstanding delivery value</div><div class="kpr-value">{{ outstanding_delivery_value|floatformat:2 }}</div></article>
-    <article class="kpr-card"><div class="kpr-label">Supplier payments recorded</div><div class="kpr-value">{{ paid_value|floatformat:2 }}</div></article>
-    <article class="kpr-card"><div class="kpr-label">Received value less payments</div><div class="kpr-value">{{ supplier_balance|floatformat:2 }}</div></article>
-    <article class="kpr-card"><div class="kpr-label">Awaiting reconciliation</div><div class="kpr-value">{{ pending_reconciliation_count }}</div></article>
-    <article class="kpr-card"><div class="kpr-label">Pending staff reimbursement</div><div class="kpr-value">{{ reimbursement_pending|floatformat:2 }}</div></article>
+    <a class="kpr-card-link" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&drill=requests#drill-results" aria-label="View Requests"><article class="kpr-card"><div class="kpr-label">Ingredient requests</div><div class="kpr-value">{{ request_count }}</div><div class="kpr-card-hint">View records →</div></article></a>
+    <a class="kpr-card-link" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&drill=requested_qty#drill-results" aria-label="View Requested quantity"><article class="kpr-card"><div class="kpr-label">Requested quantity</div><div class="kpr-value">{{ request_quantity|floatformat:3 }}</div><div class="kpr-card-hint">View records →</div></article></a>
+    <a class="kpr-card-link" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&drill=store_issued#drill-results" aria-label="View Store quantity issued"><article class="kpr-card"><div class="kpr-label">Store quantity issued</div><div class="kpr-value">{{ store_issued|floatformat:3 }}</div><div class="kpr-card-hint">View records →</div></article></a>
+    <a class="kpr-card-link" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&drill=store_outstanding#drill-results" aria-label="View Outstanding Store quantity"><article class="kpr-card"><div class="kpr-label">Store quantity outstanding</div><div class="kpr-value">{{ store_outstanding|floatformat:3 }}</div><div class="kpr-card-hint">View records →</div></article></a>
+    <a class="kpr-card-link" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&drill=purchases#drill-results" aria-label="View Direct purchases"><article class="kpr-card"><div class="kpr-label">Direct purchases</div><div class="kpr-value">{{ purchase_count }}</div><div class="kpr-card-hint">View records →</div></article></a>
+    <a class="kpr-card-link" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&drill=ordered#drill-results" aria-label="View Ordered value"><article class="kpr-card"><div class="kpr-label">Ordered value</div><div class="kpr-value">{{ ordered_value|floatformat:2 }}</div><div class="kpr-card-hint">View records →</div></article></a>
+    <a class="kpr-card-link" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&drill=received#drill-results" aria-label="View Received goods"><article class="kpr-card"><div class="kpr-label">Received goods value</div><div class="kpr-value">{{ received_value|floatformat:2 }}</div><div class="kpr-card-hint">View records →</div></article></a>
+    <a class="kpr-card-link" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&drill=delivery#drill-results" aria-label="View Outstanding deliveries"><article class="kpr-card"><div class="kpr-label">Outstanding delivery value</div><div class="kpr-value">{{ outstanding_delivery_value|floatformat:2 }}</div><div class="kpr-card-hint">View records →</div></article></a>
+    <a class="kpr-card-link" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&drill=payments#drill-results" aria-label="View Supplier payments"><article class="kpr-card"><div class="kpr-label">Supplier payments recorded</div><div class="kpr-value">{{ paid_value|floatformat:2 }}</div><div class="kpr-card-hint">View records →</div></article></a>
+    <a class="kpr-card-link" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&drill=balance#drill-results" aria-label="View Settlement differences"><article class="kpr-card"><div class="kpr-label">Received value less payments</div><div class="kpr-value">{{ supplier_balance|floatformat:2 }}</div><div class="kpr-card-hint">View records →</div></article></a>
+    <a class="kpr-card-link" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&drill=reconciliation#drill-results" aria-label="View Awaiting reconciliation"><article class="kpr-card"><div class="kpr-label">Awaiting reconciliation</div><div class="kpr-value">{{ pending_reconciliation_count }}</div><div class="kpr-card-hint">View records →</div></article></a>
+    <a class="kpr-card-link" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&drill=reimbursement#drill-results" aria-label="View Pending reimbursement"><article class="kpr-card"><div class="kpr-label">Pending staff reimbursement</div><div class="kpr-value">{{ reimbursement_pending|floatformat:2 }}</div><div class="kpr-card-hint">View records →</div></article></a>
   </div>
 
+  {% if drill %}<div class="kpr-drill" id="drill-results"><div><strong>{{ drill_label }}</strong><div class="kpr-muted">Filtered records for the selected KPI. Dashboard totals above remain unchanged.</div></div><a href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}">Clear drill-down ×</a></div>{% endif %}
+
+  {% if not drill or drill in "requests requested_qty store_issued store_outstanding" %}
   <h2 class="kpr-section">1. Ingredient request register</h2>
   <section class="kpr-panel"><div class="kpr-panel-head"><h2>Requests and Store fulfilment</h2><p>Only executed transfers count as issued. Direct-purchase lines are shown as a separate source.</p></div><div class="kpr-scroll"><table>
     <thead><tr><th>Request</th><th>Date</th><th>Hotel / Requester</th><th>Status</th><th>Ingredient</th><th>Source</th><th>Requested</th><th>Issued from Store</th><th>Outstanding Store qty</th><th>Approved by</th></tr></thead>
@@ -111,6 +121,8 @@
     </tr>{% empty %}<tr><td colspan="10">No ingredient requests in this period.</td></tr>{% endfor %}{% empty %}<tr><td colspan="10">No ingredient requests in this period.</td></tr>{% endfor %}</tbody>
   </table></div></section>
 
+  {% endif %}
+  {% if not drill or drill in "purchases ordered received delivery payments balance reconciliation reimbursement" %}
   <h2 class="kpr-section">2. Direct purchase and delivery register</h2>
   <section class="kpr-panel"><div class="kpr-panel-head"><h2>Supplier orders, receipts and balances</h2><p>Ordered value is based on purchase lines. Received value uses cumulative quantities received. Supplier payment values come from Accounting payment records.</p></div><div class="kpr-scroll"><table>
     <thead><tr><th>Purchase</th><th>Date</th><th>Supplier</th><th>Route</th><th>Status</th><th>Product</th><th>Ordered qty</th><th>Received qty</th><th>Outstanding qty</th><th>Line value</th><th>Paid</th><th>Received less paid</th><th>Reimbursement</th></tr></thead>
@@ -126,12 +138,15 @@
     </tr>{% empty %}<tr><td colspan="13">No direct purchase lines in this period.</td></tr>{% endfor %}{% empty %}<tr><td colspan="13">No direct purchases in this period.</td></tr>{% endfor %}</tbody>
   </table></div></section>
 
+  {% endif %}
+  {% if not drill or drill == "payments" or drill == "balance" %}
   <h2 class="kpr-section">3. Supplier payment audit</h2>
   <section class="kpr-panel"><div class="kpr-panel-head"><h2>Payment records by purchase</h2><p>Payments are linked by Accounting source type and purchase ID. A zero balance here does not mean a purchase is fully settled if it has not yet been received.</p></div><div class="kpr-scroll"><table>
     <thead><tr><th>Purchase</th><th>Supplier</th><th>Payment date</th><th>Amount</th><th>Reference</th><th>Payment account</th><th>Recorded by</th></tr></thead>
     <tbody>{% for row in purchase_rows %}{% for payment in row.payments %}<tr><td>#{{ row.purchase.pk }}</td><td>{{ row.purchase.supplier.name }}</td><td>{{ payment.payment_date|date:"d M Y" }}</td><td>{{ payment.amount|floatformat:2 }}</td><td>{{ payment.reference|default:"—" }}</td><td>{{ payment.payment_account.name }}</td><td>{{ payment.created_by|default:"System" }}</td></tr>{% empty %}{% endfor %}{% empty %}<tr><td colspan="7">No supplier payments recorded against direct purchases in this period.</td></tr>{% endfor %}</tbody>
   </table></div></section>
 
+  {% endif %}
   <p class="kpr-note">Reporting notes: Store fulfilment counts only StockTransfer records with a matching executed TRANSFER StockMovement. Direct purchase ordered value is calculated from item quantity × unit cost. Received value is calculated from cumulative received quantity × unit cost. Supplier payments are actual Accounting SupplierPayment entries. The received-value-less-payments figure is an operational comparison, not a substitute for the supplier ledger balance. A negative figure indicates payments exceed goods received (a supplier advance or credit), rather than being silently reduced to zero. Staff-funded reimbursements are shown separately and are not included in supplier payments.</p>
 </div>
 {% endblock %}
