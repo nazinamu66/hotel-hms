@@ -1,0 +1,73 @@
+{% extends "base/base.html" %}
+{% block title %}{{ page_heading }} | Reservation Details{% endblock %}
+{% block content %}
+<div class="management-reservations mr-detail-page">
+    <header class="mr-heading">
+        <div>
+            <p class="mr-eyebrow">Hotel HMS · Management Workspace · {{ record_kind }}</p>
+            <h1>{{ page_heading }}</h1>
+            <p>Read-only reservation details · {{ hotel.name }}</p>
+        </div>
+        <a class="mr-back-link" href="{% url 'management_reservations_occupancy' %}?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}&amp;register=1">← Reservation Register</a>
+    </header>
+
+    {% if record_type == "group" %}
+    <section class="mr-panel">
+        <div class="mr-panel-heading"><div><h2>Corporate Agreement</h2><p>Commercial booking information recorded for this group</p></div><span class="mr-status">{{ record.get_status_display }}</span></div>
+        <div class="mr-detail-grid">
+            <div><span>Company</span><strong>{{ record.company.name }}</strong></div>
+            <div><span>Hotel</span><strong>{{ hotel.name }}</strong></div>
+            <div><span>Group / Event</span><strong>{{ record.name|default:"—" }}</strong></div>
+            <div><span>Reference</span><strong>{{ record.reference }}</strong></div>
+            <div><span>Arrival</span><strong>{{ record.check_in_date|date:"M j, Y" }}</strong></div>
+            <div><span>Departure</span><strong>{{ record.check_out_date|date:"M j, Y" }}</strong></div>
+            <div><span>Room billing party</span><strong>{{ record.get_room_billing_party_display }}</strong></div>
+            <div><span>Created</span><strong>{{ record.created_at|date:"M j, Y H:i" }}</strong></div>
+        </div>
+        {% if record.agreement_notes %}<p class="mr-detail-notes">{{ record.agreement_notes|linebreaksbr }}</p>{% endif %}
+    </section>
+    <section class="mr-panel">
+        <div class="mr-panel-heading"><div><h2>Negotiated Room Rates</h2><p>Agreed nightly rates by room category</p></div></div>
+        <div class="mr-table-wrap"><table class="mr-table"><thead><tr><th>Room category</th><th>Nightly rate</th></tr></thead><tbody>
+        {% for rate in room_rates %}<tr><td>{{ rate.room_category.name }}</td><td>₦{{ rate.nightly_rate|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="2" class="mr-empty">No category rates recorded.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+    <section class="mr-panel">
+        <div class="mr-panel-heading"><div><h2>Service Coverage</h2><p>Services covered by the company agreement</p></div></div>
+        <div class="mr-table-wrap"><table class="mr-table"><thead><tr><th>Service</th><th>Coverage</th><th>Amount limit / occupant</th><th>Quantity limit / occupant</th></tr></thead><tbody>
+        {% for policy in service_policies %}<tr><td>{{ policy.service_name }}</td><td>{{ policy.get_coverage_display }}</td><td>{% if policy.amount_limit_per_occupant != None %}₦{{ policy.amount_limit_per_occupant|floatformat:2 }}{% else %}No limit recorded{% endif %}</td><td>{{ policy.quantity_limit_per_occupant|default:"No limit recorded" }}</td></tr>{% empty %}<tr><td colspan="4" class="mr-empty">No service policies recorded.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+    <section class="mr-panel">
+        <div class="mr-panel-heading"><div><h2>Occupants & Room Allocations</h2><p>Individual guests attached to this group reservation</p></div><span class="mr-count">{{ group_allocations|length }} occupants</span></div>
+        <div class="mr-table-wrap"><table class="mr-table"><thead><tr><th>Guest</th><th>Room</th><th>Category</th><th>Arrival</th><th>Departure</th><th>Rate</th><th>Status</th></tr></thead><tbody>
+        {% for allocation in group_allocations %}<tr><td><a class="mr-drill-link" href="{% url 'management_guest_profile' allocation.guest_id %}">{{ allocation.guest.full_name }}</a></td><td>{% if allocation.room %}{{ allocation.room.room_number }}{% else %}Unassigned{% endif %}</td><td>{{ allocation.room_category.name }}</td><td>{{ allocation.check_in_date|date:"M j, Y" }}</td><td>{{ allocation.check_out_date|date:"M j, Y" }}</td><td>{% if allocation.negotiated_nightly_rate %}₦{{ allocation.negotiated_nightly_rate|floatformat:2 }}{% else %}Category agreement{% endif %}</td><td>{{ allocation.get_status_display }}</td></tr>{% empty %}<tr><td colspan="7" class="mr-empty">No room occupants recorded.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+    {% else %}
+    <section class="mr-panel">
+        <div class="mr-panel-heading"><div><h2>Reservation Summary</h2><p>Booking and stay information</p></div><span class="mr-status">{{ record.get_status_display }}</span></div>
+        <div class="mr-detail-grid">
+            <div><span>Guest</span><strong><a class="mr-drill-link" href="{% url 'management_guest_profile' guest.pk %}">{{ guest.full_name }}</a></strong></div>
+            <div><span>Hotel</span><strong>{{ hotel.name }}</strong></div>
+            <div><span>Room</span><strong>{% if record.room %}{{ record.room.room_number }}{% else %}Unassigned{% endif %}</strong></div>
+            <div><span>Room category</span><strong>{{ record.room_category.name|default:"—" }}</strong></div>
+            <div><span>Arrival</span><strong>{{ record.check_in_date|date:"M j, Y" }}</strong></div>
+            <div><span>Departure</span><strong>{{ record.check_out_date|date:"M j, Y" }}</strong></div>
+            <div><span>Booking source</span><strong>{{ record.source|default:"Not recorded" }}</strong></div>
+            <div><span>Created</span><strong>{{ record.created_at|date:"M j, Y H:i" }}</strong></div>
+        </div>
+        {% if record.note %}<p class="mr-detail-notes">{{ record.note|linebreaksbr }}</p>{% endif %}
+        {% if parent_reservation %}
+        <p class="mr-note">Parent reservation #{{ parent_reservation.pk }} · {{ parent_reservation.get_status_display }} · {{ parent_reservation.number_of_rooms }} room(s) requested</p>
+        {% endif %}
+        {% if room_allocations %}
+        <div class="mr-table-wrap"><table class="mr-table"><thead><tr><th>Occupant</th><th>Room</th><th>Arrival</th><th>Departure</th><th>Status</th></tr></thead><tbody>
+        {% for allocation in room_allocations %}<tr><td><a class="mr-drill-link" href="{% url 'management_guest_profile' allocation.guest_id %}">{{ allocation.guest.full_name }}</a></td><td>{% if allocation.room %}{{ allocation.room.room_number }}{% else %}Unassigned{% endif %}</td><td>{{ allocation.check_in_date|date:"M j, Y" }}</td><td>{{ allocation.check_out_date|date:"M j, Y" }}</td><td>{{ allocation.get_status_display }}</td></tr>{% endfor %}
+        </tbody></table></div>
+        {% endif %}
+    </section>
+    {% endif %}
+    <p class="mr-note">Management view only. This page does not permit reservation edits, check-in, checkout, cancellation or payment posting.</p>
+</div>
+{% endblock %}
