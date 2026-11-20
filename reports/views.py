@@ -6,7 +6,7 @@ from accounts.decorators import role_required
 from billing.models import Charge, Payment
 from restaurant.models import POSOrder
 from django.db.models import F
-from django.utils.timezone import localdate
+from django.utils.timezone import localdate, localtime
 from accounts.models import User
 from django.utils.timezone import now
 from inventory.models import StockMovement, StockCostLayer
@@ -1810,7 +1810,7 @@ def maintenance_preventive_compliance(request):
             "schedule_name": cycle.schedule.name,
             "status": status,
             "days_variance": (
-                (cycle.completed_at.date() - cycle.due_date).days
+                (localtime(cycle.completed_at).date() - cycle.due_date).days
                 if cycle.completed_at else None
             ),
         })
