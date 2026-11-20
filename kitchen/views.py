@@ -1868,6 +1868,10 @@ def kitchen_inventory_product_detail(request, product_id, department_id):
         (layer.quantity_remaining * layer.unit_cost for layer in remaining_layers),
         Decimal("0.00"),
     )
+    layer_rows = [{
+        "layer": layer,
+        "remaining_value": layer.quantity_remaining * layer.unit_cost,
+    } for layer in layers]
     difference = physical_quantity - layer_quantity
 
     today = timezone.localdate()
@@ -1919,7 +1923,7 @@ def kitchen_inventory_product_detail(request, product_id, department_id):
             "MISSING_LAYERS" if difference > 0 else
             "LAYERS_EXCEED_STOCK"
         ),
-        "layers": layers,
+        "layer_rows": layer_rows,
         "movement_rows": movement_rows,
         "date_from": date_from.isoformat(),
         "date_to": date_to.isoformat(),
