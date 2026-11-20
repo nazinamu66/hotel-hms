@@ -219,6 +219,78 @@ def management_guest_company_billing(request):
     )
 
 
+
+
+@role_required("DIRECTOR", "GENERAL_MANAGER")
+def management_company_detail(request, company_id):
+    """Read-only company 360 view, restricted to the user's accessible hotels."""
+    from django.db.models import Q
+    from billing.models import (
+        Charge, Company, CompanyDeposit, CompanyDepositTransaction,
+        CompanyInvoice, GroupReservation, GroupReservationRoom,
+    )
+
+    reporting_context = build_management_reporting_context(request.user, request.GET)
+    hotels = reporting_context["scoped_hotels"]
+    company = get_object_or_404(
+        Company.objects.select_related("hotel"),
+        pk=company_id,
+        hotel__in=hotels,
+    )
+    date_from = reporting_context["date_from"]
+    date_to = reporting_context["date_to"]
+
+    groups = GroupReservation.objects.filter(
+        company=company,
+        created_at__date__range=(date_from, date_to),
+    ).prefetch_related("room_allocations__guest", "room_allocations__room")
+    allocations = GroupReservationRoom.objects.filter(
+        group_reservation__company=company,
+        created_at__date__range=(date_from, date_to),
+    ).select_related("group_reservation", "guest", "room", "room_category")
+
+    charges = Charge.objects.filter(
+        group_room_allocation__group_reservation__company=company,
+        billing_party="COMPANY",
+        amount__gt=0,
+    ).filter(
+        Q(room_night_date__range=(date_from, date_to))
+        | Q(room_night_date__isnull=True, created_at__date__range=(date_from, date_to))
+    ).select_related(
+        "folio", "folio__guest", "folio__room",
+        "group_room_allocation__group_reservation",
+    ).order_by("-room_night_date", "-created_at")
+
+    invoices = CompanyInvoice.objects.filter(
+        company=company,
+    ).select_related("group_reservation", "hotel").prefetch_related(
+        "payments", "deposit_applications"
+    ).order_by("-issue_date", "-created_at")
+
+    deposit = CompanyDeposit.objects.filter(company=company).first()
+    deposit_transactions = CompanyDepositTransaction.objects.none()
+    if deposit:
+        deposit_transactions = deposit.transactions.filter(
+            created_at__date__range=(date_from, date_to)
+        ).select_related("company_invoice", "created_by").order_by("-created_at")
+
+    return render(
+        request,
+        "management/company_detail.html",
+        {
+            **reporting_context,
+            "company": company,
+            "group_bookings": groups,
+            "room_allocations": allocations,
+            "corporate_charges": charges,
+            "company_invoices": invoices,
+            "company_deposit": deposit,
+            "deposit_transactions": deposit_transactions,
+            "is_general_manager": request.user.role == "GENERAL_MANAGER",
+        },
+    )
+
+
 @role_required("DIRECTOR", "GENERAL_MANAGER")
 def management_corporate_performance(request):
     """Read-only corporate portfolio, revenue and receivables reporting."""
