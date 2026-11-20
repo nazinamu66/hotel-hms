@@ -318,32 +318,23 @@ def maintenance_location_toggle_status(request, location_id):
 def maintenance_dashboard(request):
 
     # --------------------------------------------------------
-    # Determine hotel scope
+    # Determine hotel scope for every role.
+    # Managers and Maintenance staff see their assigned hotel;
+    # Directors see their organization; Admins see all hotels.
     # --------------------------------------------------------
 
-    if request.user.role in (
-        "MAINTENANCE",
-        "MANAGER",
-    ):
-
-        if not request.user.hotel_id:
-            raise PermissionDenied
-
-        hotel_filter = Q(room__hotel_id=request.user.hotel_id) | Q(location__hotel_id=request.user.hotel_id)
-
-    else:
-
-        hotel_filter = {}
+    accessible_hotels = get_accessible_hotels(request.user)
+    if not accessible_hotels.exists():
+        raise PermissionDenied
 
     # --------------------------------------------------------
     # Base ticket queryset
     # --------------------------------------------------------
 
-    tickets = MaintenanceTicket.objects.all()
-    if isinstance(hotel_filter, Q):
-        tickets = tickets.filter(hotel_filter)
-    elif hotel_filter:
-        tickets = tickets.filter(**hotel_filter)
+    tickets = MaintenanceTicket.objects.filter(
+        Q(room__hotel__in=accessible_hotels)
+        | Q(location__hotel__in=accessible_hotels)
+    )
 
     # --------------------------------------------------------
     # Ticket KPIs
