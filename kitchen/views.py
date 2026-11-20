@@ -1579,10 +1579,65 @@ def kitchen_purchasing_report(request):
         purchase_count += 1
 
     pending_reconciliation_count = purchases.filter(status="RECONCILIATION_PENDING").count()
+
+    # Optional read-only drill-down: retain the exact date and hotel scope,
+    # and narrow the registers to the records contributing to the selected KPI.
+    drill = request.GET.get("drill", "").strip()
+    drill_labels = {
+        "requests": "Ingredient request register",
+        "requested_qty": "Ingredient lines contributing to requested quantity",
+        "store_issued": "Requests with executed Store issues",
+        "store_outstanding": "Requests with outstanding Store quantities",
+        "purchases": "Direct purchase register",
+        "ordered": "Purchases contributing to ordered value",
+        "received": "Purchases with received goods",
+        "delivery": "Purchases with outstanding deliveries",
+        "payments": "Purchases with supplier payments",
+        "balance": "Purchases with received-value / payment differences",
+        "reconciliation": "Purchases awaiting reconciliation",
+        "reimbursement": "Purchases with pending staff reimbursement",
+    }
+    valid_drills = set(drill_labels)
+    if drill not in valid_drills:
+        drill = ""
+
+    if drill in {"requests", "requested_qty", "store_issued", "store_outstanding"}:
+        narrowed_requests = []
+        for row in request_rows:
+            if drill == "store_issued":
+                row_items = [line for line in row["items"] if line["item"].source == "STORE" and line["issued"] > 0]
+            elif drill == "store_outstanding":
+                row_items = [line for line in row["items"] if line["item"].source == "STORE" and line["outstanding"] > 0]
+            else:
+                row_items = list(row["items"])
+            if row_items:
+                narrowed_requests.append({**row, "items": row_items})
+        request_rows = narrowed_requests
+
+    if drill in {"purchases", "ordered", "received", "delivery", "payments", "balance", "reconciliation", "reimbursement"}:
+        narrowed_purchases = []
+        for row in purchase_rows:
+            purchase = row["purchase"]
+            include = (
+                drill == "purchases"
+                or (drill == "ordered" and purchase.status != "REJECTED" and row["ordered_value"] > 0)
+                or (drill == "received" and purchase.status != "REJECTED" and row["received_value"] > 0)
+                or (drill == "delivery" and row["outstanding_value"] > 0)
+                or (drill == "payments" and row["paid_value"] > 0)
+                or (drill == "balance" and row["supplier_balance"] != 0)
+                or (drill == "reconciliation" and purchase.status == "RECONCILIATION_PENDING")
+                or (drill == "reimbursement" and row["reimbursement"] and row["reimbursement"].status == "PENDING")
+            )
+            if include:
+                narrowed_purchases.append(row)
+        purchase_rows = narrowed_purchases
+
     partial_delivery_count = purchases.filter(status="PARTIALLY_RECEIVED").count()
     unpaid_or_balance_count = sum(1 for row in purchase_rows if row["supplier_balance"] > 0)
 
     return render(request, "kitchen/reports/purchasing_report.html", {
+        "drill": drill,
+        "drill_label": drill_labels.get(drill, ""),
         "hotels": hotels,
         "selected_hotel": selected_hotel,
         "date_from": date_from.isoformat(),
