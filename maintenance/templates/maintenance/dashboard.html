@@ -260,8 +260,10 @@
             <a class="md-shortcut" href="{% url 'maintenance_schedules' %}"><span class="md-shortcut-icon">▦</span>Maintenance schedules</a>
             <a class="md-shortcut" href="{% url 'maintenance_stock' %}"><span class="md-shortcut-icon">▣</span>Maintenance stock</a>
             <a class="md-shortcut" href="{% url 'maintenance_stock_movements' %}"><span class="md-shortcut-icon">⇄</span>Stock movements</a>
+            {% if request.user.role == "MAINTENANCE" %}
             <a class="md-shortcut" href="{% url 'maintenance_request_stock' %}"><span class="md-shortcut-icon">＋</span>Request stock</a>
             <a class="md-shortcut" href="{% url 'maintenance_stock_requests' %}"><span class="md-shortcut-icon">☷</span>My stock requests</a>
+            {% endif %}
             <a class="md-shortcut" href="{% url 'maintenance_products' %}"><span class="md-shortcut-icon">◫</span>Maintenance products</a>
             <a class="md-shortcut" href="{% url 'maintenance_suppliers' %}"><span class="md-shortcut-icon">♧</span>Suppliers</a>
             <a class="md-shortcut" href="{% url 'maintenance_locations' %}"><span class="md-shortcut-icon">⌖</span>Manage locations</a>
