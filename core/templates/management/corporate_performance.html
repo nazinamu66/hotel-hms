@@ -72,10 +72,10 @@
         <article class="card kpi"><span>Companies with Business</span><strong>{{ companies_with_business }}</strong><small>With company-billed charges in period</small></article>
         <article class="card kpi"><span>Group Bookings Created</span><strong>{{ group_bookings_created }}</strong><small>Master corporate bookings in period</small></article>
         <article class="card kpi"><span>Room Allocations Created</span><strong>{{ room_allocations_created }}</strong><small>Individual rooms within group bookings</small></article>
-        <article class="card kpi"><span>Corporate Revenue</span><strong>₦{{ corporate_revenue|floatformat:2 }}</strong><small>Positive company-billed source charges</small></article>
+        <article class="card kpi"><span>Corporate Revenue</span><strong>₦{{ corporate_revenue|floatformat:"2g" }}</strong><small>Positive company-billed source charges</small></article>
         <article class="card kpi"><span>Corporate Room Nights</span><strong>{{ corporate_room_nights }}</strong><small>Deduplicated folio room-night dates</small></article>
-        <article class="card kpi"><span>Invoice Outstanding</span><strong>₦{{ invoice_outstanding|floatformat:2 }}</strong><small>Issued invoices · as of {{ receivables_as_of|date:"M j, Y" }}</small></article>
-        <article class="card kpi"><span>Overdue Balance</span><strong>₦{{ overdue_invoice_outstanding|floatformat:2 }}</strong><small>Issued invoices past due date</small></article>
+        <article class="card kpi"><span>Invoice Outstanding</span><strong>₦{{ invoice_outstanding|floatformat:"2g" }}</strong><small>Issued invoices · as of {{ receivables_as_of|date:"M j, Y" }}</small></article>
+        <article class="card kpi"><span>Overdue Balance</span><strong>₦{{ overdue_invoice_outstanding|floatformat:"2g" }}</strong><small>Issued invoices past due date</small></article>
     </section>
 
     <div class="grid">
@@ -89,7 +89,7 @@
                         {% for row in company_ranking_rows %}
                         <tr>
                             <td><strong>{{ row.company.name }}</strong></td>
-                            <td class="numeric">₦{{ row.revenue|floatformat:2 }}</td>
+                            <td class="numeric">₦{{ row.revenue|floatformat:"2g" }}</td>
                             <td class="numeric">{{ row.room_nights }}</td>
                             <td class="numeric">{{ row.group_booking_count }}</td>
                         </tr>
@@ -107,9 +107,9 @@
             <div class="table-wrap">
                 <table>
                     <tbody>
-                        <tr><th>Average negotiated nightly rate</th><td class="numeric">{% if average_negotiated_rate != None %}₦{{ average_negotiated_rate|floatformat:2 }}{% else %}—{% endif %}</td></tr>
+                        <tr><th>Average negotiated nightly rate</th><td class="numeric">{% if average_negotiated_rate != None %}₦{{ average_negotiated_rate|floatformat:"2g" }}{% else %}—{% endif %}</td></tr>
                         <tr><th>Negotiated / override room nights</th><td class="numeric">{{ negotiated_room_nights }}</td></tr>
-                        <tr><th>Average standard nightly rate</th><td class="numeric">{% if average_standard_rate != None %}₦{{ average_standard_rate|floatformat:2 }}{% else %}—{% endif %}</td></tr>
+                        <tr><th>Average standard nightly rate</th><td class="numeric">{% if average_standard_rate != None %}₦{{ average_standard_rate|floatformat:"2g" }}{% else %}—{% endif %}</td></tr>
                         <tr><th>Standard-rate room nights</th><td class="numeric">{{ standard_room_nights }}</td></tr>
                     </tbody>
                 </table>
@@ -125,11 +125,11 @@
             <div class="table-wrap">
                 <table>
                     <tbody>
-                        <tr><th>Issued invoice value</th><td class="numeric">₦{{ issued_invoice_total|floatformat:2 }}</td></tr>
-                        <tr><th>Settled against issued invoices</th><td class="numeric">₦{{ invoice_settled_total|floatformat:2 }}</td></tr>
-                        <tr><th>Outstanding invoice balance</th><td class="numeric">₦{{ invoice_outstanding|floatformat:2 }}</td></tr>
-                        <tr><th>Overdue invoice balance</th><td class="numeric">₦{{ overdue_invoice_outstanding|floatformat:2 }}</td></tr>
-                        <tr><th>Unbilled company charges in period</th><td class="numeric">₦{{ unbilled_company_charges|floatformat:2 }}</td></tr>
+                        <tr><th>Issued invoice value</th><td class="numeric">₦{{ issued_invoice_total|floatformat:"2g" }}</td></tr>
+                        <tr><th>Settled against issued invoices</th><td class="numeric">₦{{ invoice_settled_total|floatformat:"2g" }}</td></tr>
+                        <tr><th>Outstanding invoice balance</th><td class="numeric">₦{{ invoice_outstanding|floatformat:"2g" }}</td></tr>
+                        <tr><th>Overdue invoice balance</th><td class="numeric">₦{{ overdue_invoice_outstanding|floatformat:"2g" }}</td></tr>
+                        <tr><th>Unbilled company charges in period</th><td class="numeric">₦{{ unbilled_company_charges|floatformat:"2g" }}</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -142,11 +142,11 @@
             <div class="table-wrap">
                 <table>
                     <tbody>
-                        <tr><th>Deposits currently held</th><td class="numeric">₦{{ deposits_held|floatformat:2 }}</td></tr>
-                        <tr><th>Received in period</th><td class="numeric">₦{{ deposit_activity.received|floatformat:2 }}</td></tr>
-                        <tr><th>Applied to invoices</th><td class="numeric">₦{{ deposit_activity.applied|floatformat:2 }}</td></tr>
-                        <tr><th>Refunded in period</th><td class="numeric">₦{{ deposit_activity.refunded|floatformat:2 }}</td></tr>
-                        <tr><th>Adjustments in period</th><td class="numeric">₦{{ deposit_activity.adjustments|floatformat:2 }}</td></tr>
+                        <tr><th>Deposits currently held</th><td class="numeric">₦{{ deposits_held|floatformat:"2g" }}</td></tr>
+                        <tr><th>Received in period</th><td class="numeric">₦{{ deposit_activity.received|floatformat:"2g" }}</td></tr>
+                        <tr><th>Applied to invoices</th><td class="numeric">₦{{ deposit_activity.applied|floatformat:"2g" }}</td></tr>
+                        <tr><th>Refunded in period</th><td class="numeric">₦{{ deposit_activity.refunded|floatformat:"2g" }}</td></tr>
+                        <tr><th>Adjustments in period</th><td class="numeric">₦{{ deposit_activity.adjustments|floatformat:"2g" }}</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -168,9 +168,9 @@
                         <td>{{ row.hotel.name }}</td>
                         <td>{% if row.invoice.due_date %}{{ row.invoice.due_date|date:"M j, Y" }}{% else %}—{% endif %}</td>
                         <td>{% if row.is_overdue %}Overdue{% elif row.balance == 0 %}Settled{% else %}Outstanding{% endif %}</td>
-                        <td class="numeric">₦{{ row.total|floatformat:2 }}</td>
-                        <td class="numeric">₦{{ row.settled|floatformat:2 }}</td>
-                        <td class="numeric">₦{{ row.balance|floatformat:2 }}</td>
+                        <td class="numeric">₦{{ row.total|floatformat:"2g" }}</td>
+                        <td class="numeric">₦{{ row.settled|floatformat:"2g" }}</td>
+                        <td class="numeric">₦{{ row.balance|floatformat:"2g" }}</td>
                     </tr>
                     {% empty %}
                     <tr><td colspan="8" class="empty">No issued company invoices in this reporting scope.</td></tr>
