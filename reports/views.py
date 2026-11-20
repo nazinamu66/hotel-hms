@@ -1649,27 +1649,26 @@ def maintenance_asset_performance(request):
         "material_entries", "labour_entries"
     )
     period_tickets = ticket_scope.filter(created_at__date__range=(date_from, date_to))
-    period_costs = defaultdict(lambda: Decimal("0.00"))
     asset_activity = defaultdict(lambda: {
         "tickets": 0, "corrective": 0, "preventive": 0,
         "materials": Decimal("0.00"), "labour": Decimal("0.00"),
     })
-    for ticket in period_tickets:
+    for ticket in ticket_scope:
         if not ticket.asset_id:
             continue
         activity = asset_activity[ticket.asset_id]
-        activity["tickets"] += 1
-        if ticket.schedule_id:
-            activity["preventive"] += 1
-        else:
-            activity["corrective"] += 1
+        if date_from <= ticket.created_at.date() <= date_to:
+            activity["tickets"] += 1
+            if ticket.schedule_id:
+                activity["preventive"] += 1
+            else:
+                activity["corrective"] += 1
         for item in ticket.material_entries.all():
             if date_from <= item.created_at.date() <= date_to:
                 activity["materials"] += item.total_cost
         for item in ticket.labour_entries.all():
             if date_from <= item.created_at.date() <= date_to:
                 activity["labour"] += item.amount
-        period_costs[ticket.asset_id] += activity["materials"] + activity["labour"]
 
     condition_counts = Counter()
     for asset in assets:
