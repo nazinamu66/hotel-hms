@@ -701,13 +701,14 @@
         <!-- ========================= -->
 
         {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
-        <h4 class="menu-toggle {% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_menu_management' %}active-menu{% endif %}"
+        <h4 class="menu-toggle {% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_inventory_status,restaurant_menu_management' %}active-menu{% endif %}"
             onclick="toggleMenu('restaurant_management_menu', this)">
             <span class="arrow">{% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_menu_management' %}▾{% else %}▸{% endif %}</span>
             Restaurant
         </h4>
         <div id="restaurant_management_menu" class="menu-section {% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_menu_management' %}open{% endif %}">
             <a href="{% url 'restaurant_management_overview' %}">Shift Performance</a>
+            <a href="{% url 'restaurant_inventory_status' %}">Inventory Status</a>
             <a href="{% url 'restaurant_menu_management' %}">Menu Management</a>
         </div>
         {% endif %}
@@ -1067,6 +1068,7 @@ document.addEventListener("DOMContentLoaded", function () {
         ],
         restaurant_management_menu: [
             "/reports/restaurant/management/",
+            "/reports/restaurant/management/inventory/",
             "/restaurant/menu-management/"
         ],
         frontdesk_menu: [
