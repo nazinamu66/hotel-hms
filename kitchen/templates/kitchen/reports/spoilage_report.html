@@ -16,6 +16,23 @@
 .spr-status{display:inline-block;padding:4px 8px;border-radius:99px;font-size:.72rem;font-weight:800;background:#fff7ed;color:#9a3412}.spr-status.reviewed{background:#dcfce7;color:#166534}
 @media(max-width:1000px){.spr-filter{grid-template-columns:repeat(2,minmax(0,1fr))}.spr-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.spr-filter,.spr-stats{grid-template-columns:1fr}}
+
+.spr-comparison-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 20px}
+.spr-comparison{padding:18px;min-width:0}
+.spr-chart-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid #edf0f4;margin-bottom:8px}
+.spr-chart-head h2{font-size:1rem;margin:0 0 5px;color:#172033}
+.spr-chart-unit{font-size:.68rem;font-weight:800;letter-spacing:.08em;color:#64748b;background:#f1f5f9;border-radius:7px;padding:5px 8px}
+.spr-period-row{padding:11px 0;border-bottom:1px solid #f1f5f9}
+.spr-period-row:last-child{border-bottom:0}
+.spr-period-meta{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:7px;font-size:.78rem}
+.spr-period-meta strong{color:#334155}.spr-period-meta span{color:#64748b;text-align:right;font-variant-numeric:tabular-nums}
+.spr-track{height:10px;border-radius:99px;background:#e8eef6;overflow:hidden}
+.spr-track i{display:block;height:100%;border-radius:99px;min-width:0}
+.spr-month-bar{background:linear-gradient(90deg,#2563eb,#60a5fa)}
+.spr-week-bar{background:linear-gradient(90deg,#0f9f83,#34d399)}
+.spr-chart-empty{padding:20px 0}
+@media(max-width:900px){.spr-comparison-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.spr-period-meta{align-items:flex-start;flex-direction:column;gap:3px}.spr-period-meta span{text-align:left}}
 </style>
 <div class="spr-page">
   <header class="spr-head">
@@ -44,6 +61,33 @@
     <div class="spr-card spr-stat"><div class="spr-label">Quantity written off</div><div class="spr-value">{{ total_quantity|floatformat:3 }}</div><div class="spr-muted">Mixed product units; use the register for each item's base unit.</div></div>
     <div class="spr-card spr-stat"><div class="spr-label">Pending reviews</div><div class="spr-value">{{ pending_count }}</div></div>
   </div>
+
+  <section class="spr-comparison-grid">
+    <article class="spr-card spr-comparison">
+      <div class="spr-chart-head">
+        <div><h2>Month-to-month spoilage cost</h2><p class="spr-muted">Recorded FIFO write-off cost by calendar month</p></div>
+        <span class="spr-chart-unit">NGN</span>
+      </div>
+      {% for row in monthly_spoilage_rows %}
+      <div class="spr-period-row">
+        <div class="spr-period-meta"><strong>{{ row.label }}</strong><span>₦{{ row.cost|floatformat:2 }} · {{ row.record_count }} record{{ row.record_count|pluralize }}</span></div>
+        <div class="spr-track"><i class="spr-month-bar" style="width:{{ row.bar_width }}%"></i></div>
+      </div>
+      {% empty %}<p class="spr-muted spr-chart-empty">No monthly spoilage data for the selected filters.</p>{% endfor %}
+    </article>
+    <article class="spr-card spr-comparison">
+      <div class="spr-chart-head">
+        <div><h2>Week-to-week spoilage cost</h2><p class="spr-muted">Recorded FIFO write-off cost by week (Monday–Sunday)</p></div>
+        <span class="spr-chart-unit">NGN</span>
+      </div>
+      {% for row in weekly_spoilage_rows %}
+      <div class="spr-period-row">
+        <div class="spr-period-meta"><strong>{{ row.label }}</strong><span>₦{{ row.cost|floatformat:2 }} · {{ row.record_count }} record{{ row.record_count|pluralize }}</span></div>
+        <div class="spr-track"><i class="spr-week-bar" style="width:{{ row.bar_width }}%"></i></div>
+      </div>
+      {% empty %}<p class="spr-muted spr-chart-empty">No weekly spoilage data for the selected filters.</p>{% endfor %}
+    </article>
+  </section>
 
   <section class="spr-card">
     <div style="padding:17px 20px;border-bottom:1px solid #edf0f4;font-weight:800">Spoilage register</div>
