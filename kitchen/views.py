@@ -1652,10 +1652,33 @@ def kitchen_batch_profitability_report(request):
         "remaining": sum((row["remaining_quantity"] for row in rows), Decimal("0.000")),
         "remaining_value": sum((row["remaining_value"] for row in rows), Decimal("0.00")),
     }
+    # Presentation-only chart widths are derived from the same FIFO-attributed rows
+    # shown in the register; no second financial calculation is introduced.
+    max_batch_revenue = max((row["sales_revenue"] for row in rows), default=Decimal("0.00"))
+    max_batch_quantity = max((Decimal(row["quantity_produced"]) for row in rows), default=Decimal("0.000"))
+    profitability_chart_rows = []
+    quantity_flow_rows = []
+    for row in rows:
+        profitability_chart_rows.append({
+            **row,
+            "revenue_width": float(row["sales_revenue"] / max_batch_revenue * 100) if max_batch_revenue else 0,
+            "cogs_width": float(row["sales_cogs"] / max_batch_revenue * 100) if max_batch_revenue else 0,
+            "profit_width": float(row["gross_profit"] / max_batch_revenue * 100) if max_batch_revenue else 0,
+        })
+        produced = Decimal(row["quantity_produced"])
+        quantity_flow_rows.append({
+            **row,
+            "sold_width": float(row["quantity_sold"] / max_batch_quantity * 100) if max_batch_quantity else 0,
+            "complimentary_width": float(row["quantity_complimentary"] / max_batch_quantity * 100) if max_batch_quantity else 0,
+            "spoiled_width": float(row["quantity_spoiled"] / max_batch_quantity * 100) if max_batch_quantity else 0,
+            "remaining_width": float(row["remaining_quantity"] / max_batch_quantity * 100) if max_batch_quantity else 0,
+        })
     return render(request, "kitchen/reports/batch_profitability_report.html", {
         "hotels": hotels.order_by("name"), "selected_hotel": selected_hotel,
         "date_from": date_from.isoformat(), "date_to": date_to.isoformat(),
         "batch_rows": rows, "totals": totals, "batch_count": len(rows),
+        "profitability_chart_rows": profitability_chart_rows,
+        "quantity_flow_rows": quantity_flow_rows,
     })
 
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
