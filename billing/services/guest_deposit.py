@@ -196,6 +196,7 @@ def receive_guest_deposit(
         GuestDepositTransaction.objects.create(
             deposit=deposit,
             transaction_type="RECEIVED",
+            payment_method=method,
             amount=amount,
             reference=reference,
             note=note,
