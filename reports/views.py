@@ -687,7 +687,6 @@ def restaurant_sales_performance(request):
         (Q(status__in=("CHARGED", "PAID")) | Q(is_refunded=True)),
         is_complimentary_breakfast=False,
     )
-    )
     gross_sales = revenue_orders.aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00")
 
     refund_charges = Charge.objects.filter(
