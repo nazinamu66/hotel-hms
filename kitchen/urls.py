@@ -21,6 +21,7 @@ urlpatterns = [
     path("management-reports/", views.kitchen_management_report, name="kitchen_management_report"),
     path("management-reports/spoilage/", views.kitchen_spoilage_report, name="kitchen_spoilage_report"),
     path("management-reports/inventory/", views.kitchen_inventory_report, name="kitchen_inventory_report"),
+    path("management-reports/inventory/<int:product_id>/<int:department_id>/", views.kitchen_inventory_product_detail, name="kitchen_inventory_product_detail"),
     path("management-reports/batch-profitability/", views.kitchen_batch_profitability_report, name="kitchen_batch_profitability_report"),
     path("management-reports/purchasing/", views.kitchen_purchasing_report, name="kitchen_purchasing_report"),
 
