@@ -92,6 +92,36 @@ class RestaurantAccountingReconciliationTests(SimpleTestCase):
         self.assertEqual(result["reconciled_count"], 3)
         self.assertTrue(all(row["status"] == "RECONCILED" for row in result["rows"]))
 
+    def test_collection_row_links_to_its_restaurant_shift(self):
+        hotel = SimpleNamespace(pk=7)
+        payment = SimpleNamespace(
+            pk=9,
+            reference="BANK-REF-9",
+            folio=SimpleNamespace(hotel_id=7, folio_type="ROOM"),
+            shift_id=3,
+            shift=SimpleNamespace(pk=3),
+            amount=Decimal("25.00"),
+            get_method_display=lambda: "Cash",
+        )
+        entry = _journal(
+            "PAY-9",
+            [_line("cash", debit="25.00")],
+        )
+        with patch(
+            "reports.restaurant_reconciliation.JournalEntry.objects.filter",
+            return_value=_Rows([entry]),
+        ):
+            result = build_restaurant_accounting_reconciliation(
+                revenue_orders=_Rows(),
+                refund_charges=[],
+                payments=_Rows([payment]),
+                complimentary_orders=_Rows(),
+            )
+
+        collection = next(row for row in result["rows"] if row["group"] == "Collections")
+        self.assertEqual(collection["status"], "RECONCILED")
+        self.assertEqual(collection["shift_id"], 3)
+
     def test_missing_sale_journal_is_flagged_without_creating_a_posting(self):
         order = _order()
         entries = [
