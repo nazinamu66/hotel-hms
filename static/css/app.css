@@ -262,7 +262,7 @@ body { background: var(--hms-page); color: var(--hms-ink); }
     box-sizing: border-box;
     width: 260px;
     flex: 0 0 260px;
-    background: #17232e;
+    background: #0d1728;
     padding: 22px 16px;
 }
 .sidebar h4 {
@@ -1751,8 +1751,3 @@ input, select, textarea { font-size: 16px; }
     border-bottom:1px solid rgba(148,163,184,.17) !important;
 }
 
-
-/* Match the Kitchen management workspace navigation to its executive canvas. */
-.layout:has(.kitchen-management-report) > .sidebar {
-    background:#0d1728;
-}
