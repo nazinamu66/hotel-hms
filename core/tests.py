@@ -578,6 +578,43 @@ class ManagementHotelPerformanceViewTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_hotel_row_drilldown_preserves_dates_and_limits_to_selected_hotel(self):
+        director = User.objects.create_user(
+            username="performance-drilldown-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+
+        response = self.client.get(
+            "/management/hotels/",
+            {"from": "2026-11-01", "to": "2026-11-20"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            f"/management/hotels/?hotel={self.hotel_one.pk}&amp;from=2026-11-01&amp;to=2026-11-20",
+        )
+
+        detail = self.client.get(
+            "/management/hotels/",
+            {
+                "hotel": str(self.hotel_one.pk),
+                "from": "2026-11-01",
+                "to": "2026-11-20",
+            },
+        )
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(
+            [row["hotel"].pk for row in detail.context["hotel_rows"]],
+            [self.hotel_one.pk],
+        )
+        self.assertEqual(detail.context["date_from"].isoformat(), "2026-11-01")
+        self.assertEqual(detail.context["date_to"].isoformat(), "2026-11-20")
+        self.assertContains(detail, "All accessible hotels")
+
     def test_selected_hotel_filter_cannot_expose_outside_hotel(self):
         director = User.objects.create_user(
             username="performance-isolation-director",
