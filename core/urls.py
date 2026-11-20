@@ -6,6 +6,7 @@ from .views import (
     management_custom_reports,
     management_hotel_performance,
     management_front_desk_analytics,
+    management_front_desk_drilldown,
     management_guest_search,
     management_guest_profile,
     management_reservation_detail,
@@ -50,6 +51,11 @@ urlpatterns = [
         "management/reservations/<str:record_type>/<int:record_id>/",
         management_reservation_detail,
         name="management_reservation_detail",
+    ),
+    path(
+        "management/front-desk/<str:metric>/",
+        management_front_desk_drilldown,
+        name="management_front_desk_drilldown",
     ),
     path(
         "management/front-desk/",
