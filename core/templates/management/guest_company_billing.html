@@ -4,55 +4,46 @@
 
 {% block content %}
 <style>
-.billing-report { color:#172033; }
-.billing-report .heading { margin-bottom:18px; }
-.billing-report .heading h2 { margin:0 0 6px; font-size:1.65rem; }
-.billing-report .muted, .billing-report .subtitle { color:#64748b; }
-.billing-report .filters { display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; padding:18px; margin-bottom:18px; }
-.billing-report .field { display:flex; flex-direction:column; gap:6px; min-width:160px; }
-.billing-report .field label { color:#64748b; font-size:.75rem; font-weight:700; }
-.billing-report .field input, .billing-report .field select { min-width:160px; }
-.billing-report .actions { display:flex; align-items:center; gap:12px; }
-.billing-report .actions button { border:0; border-radius:7px; padding:10px 16px; background:#2563eb; color:#fff; cursor:pointer; }
-.billing-report .actions a { color:#475569; font-weight:600; }
-.billing-report .kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
-.billing-report .kpi { padding:18px; min-width:0; }
-.billing-report .kpi span { color:#64748b; font-size:.78rem; font-weight:650; }
-.billing-report .kpi strong { display:block; margin-top:9px; font-size:1.35rem; overflow-wrap:anywhere; }
-.billing-report .kpi small { display:block; margin-top:5px; color:#94a3b8; font-size:.72rem; }
-.billing-report .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:18px; }
-.billing-report .panel { padding:20px; min-width:0; margin-top:18px; }
-.billing-report .grid .panel { margin-top:0; }
-.billing-report .panel h3 { margin:0 0 5px; font-size:1rem; }
-.billing-report .subtitle { margin:0 0 15px; font-size:.78rem; }
-.billing-report .table-wrap { width:100%; max-width:100%; min-width:0; overflow-x:auto; overscroll-behavior-x:contain; }
-.billing-report table { width:100%; max-width:100%; min-width:0; table-layout:fixed; border-collapse:collapse; }
-.billing-report td, .billing-report th { padding:10px 8px; border-bottom:1px solid #e8edf5; text-align:left; vertical-align:top; overflow-wrap:anywhere; }
-.billing-report th { color:#64748b; font-size:.72rem; text-transform:uppercase; }
-.billing-report td.numeric, .billing-report th.numeric { text-align:right; white-space:nowrap; overflow-wrap:normal; }
-.billing-report .grid > .panel { min-width:0; }
-.billing-report .grid table th, .billing-report .grid table td { font-size:.82rem; }
-.billing-report .grid table th.numeric, .billing-report .grid table td.numeric { font-size:.78rem; }
-.billing-report .grid > .panel:nth-child(1) table th:nth-child(1) { width:24%; }
-.billing-report .grid > .panel:nth-child(1) table th:nth-child(2) { width:23%; }
-.billing-report .grid > .panel:nth-child(1) table th:nth-child(3) { width:10%; }
-.billing-report .grid > .panel:nth-child(1) table th:nth-child(4) { width:13%; }
-.billing-report .grid > .panel:nth-child(1) table th:nth-child(5) { width:30%; }
-.billing-report .grid > .panel:nth-child(2) table th:nth-child(1) { width:18%; }
-.billing-report .grid > .panel:nth-child(2) table th:nth-child(2) { width:24%; }
-.billing-report .grid > .panel:nth-child(2) table th:nth-child(3) { width:20%; }
-.billing-report .grid > .panel:nth-child(2) table th:nth-child(4) { width:12%; }
-.billing-report .grid > .panel:nth-child(2) table th:nth-child(5) { width:26%; }
-.billing-report .note { color:#64748b; font-size:.78rem; line-height:1.5; margin-top:14px; }
-.billing-report .empty { color:#94a3b8; padding:14px 8px; text-align:center; }
-.billing-report .reconciliation { border-left:4px solid #d97706; }
-@media(max-width:900px) { .billing-report .grid { grid-template-columns:1fr; } }
-@media(max-width:700px) { .billing-report .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media(max-width:540px) { .billing-report .field, .billing-report .field input, .billing-report .field select { width:100%; } .billing-report .actions { width:100%; justify-content:space-between; } .billing-report .table-wrap { padding-bottom:4px; } .billing-report table { min-width:620px; } }
-@media(max-width:380px) { .billing-report .kpis { grid-template-columns:minmax(0,1fr); } }
+.management-frontdesk.billing-report{--bill-panel:#15243a;--bill-raised:#1b2d46;--bill-border:rgba(148,163,184,.17);--bill-text:#f1f5f9;--bill-muted:#9aabc1;color:var(--bill-text)}
+.billing-report .heading{margin-bottom:20px}
+.billing-report .heading h2{margin:0;color:#f8fafc;font-size:clamp(1.55rem,2.4vw,2.1rem);letter-spacing:-.04em}
+.billing-report .muted,.billing-report .subtitle{color:var(--bill-muted)}
+.billing-report .filters,.billing-report .panel{padding:18px;border:1px solid var(--bill-border);border-radius:13px;background:rgba(21,36,58,.96);box-shadow:none}
+.billing-report .filters{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;margin:0 0 18px}
+.billing-report .field{display:flex;flex:1 1 160px;flex-direction:column;gap:6px;min-width:0}
+.billing-report .field label{color:var(--bill-muted);font-size:.7rem;font-weight:800;letter-spacing:.08em}
+.billing-report .field input,.billing-report .field select{width:100%;min-width:0;min-height:40px;padding:8px 10px;border:1px solid #344861;border-radius:8px;background:#0e1b2d;color:#f1f5f9;color-scheme:dark}
+.billing-report .actions{display:flex;align-items:center;gap:12px}
+.billing-report .actions button{min-height:40px;border:0;border-radius:8px;padding:9px 16px;background:#2563eb;color:#fff;font-weight:750;cursor:pointer}
+.billing-report .actions a,.billing-report a{color:#93c5fd;font-weight:750;text-decoration:none}
+.billing-report a:hover{color:#fff;text-decoration:underline}
+.billing-report .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+.billing-report .kpi{display:flex;min-width:0;flex-direction:column;padding:17px 18px;border:1px solid var(--bill-border);border-radius:13px;background:linear-gradient(145deg,#1b2d46,#132236);box-shadow:none}
+.billing-report .kpi span{color:var(--bill-muted);font-size:.73rem;font-weight:750}
+.billing-report .kpi strong{display:block;margin-top:9px;color:#f8fafc;font-size:clamp(1.2rem,1.8vw,1.5rem);overflow-wrap:anywhere}
+.billing-report .kpi small{display:block;margin-top:5px;color:#91a2b8;font-size:.7rem}
+.billing-report .kpi-link{display:block;color:inherit;text-decoration:none}
+.billing-report .kpi-link:hover .kpi{border-color:#60a5fa;background:linear-gradient(145deg,#203a5b,#172b45)}
+.billing-report .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:16px}
+.billing-report .panel{min-width:0;margin-top:16px}
+.billing-report .grid .panel{margin-top:0}
+.billing-report .panel h3{margin:0 0 5px;color:#f1f5f9;font-size:.98rem}
+.billing-report .subtitle{margin:0 0 15px;font-size:.75rem;line-height:1.5}
+.billing-report .table-wrap{width:100%;max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;border:1px solid rgba(148,163,184,.17);border-radius:9px}
+.billing-report table{width:100%;min-width:620px;border-collapse:collapse;table-layout:auto}
+.billing-report td,.billing-report th{padding:11px 9px;border-bottom:1px solid rgba(148,163,184,.12);color:#dbe5f2;text-align:left;vertical-align:top;font-size:.75rem}
+.billing-report th{background:rgba(9,20,35,.52);color:var(--bill-muted);font-size:.65rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.billing-report td.numeric,.billing-report th.numeric{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.billing-report .note{margin:13px 2px 0;color:#91a2b8;font-size:.72rem;line-height:1.55}
+.billing-report .empty{padding:18px 10px;color:var(--bill-muted);text-align:center}
+.billing-report .reconciliation{border-left:4px solid #f59e0b}
+.billing-report .section-anchor{scroll-margin-top:90px}
+@media(max-width:1050px){.billing-report .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.billing-report .grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.billing-report .kpis{grid-template-columns:minmax(0,1fr)}.billing-report .actions{width:100%;justify-content:space-between}.billing-report .panel{padding:14px}}
 </style>
 
-<div class="billing-report">
+<div class="management-frontdesk billing-report">
     <header class="heading">
         <h2>Guest &amp; Company Billing</h2>
         <p class="muted">{% if is_general_manager %}Receivables and deposits across your assigned hotels{% else %}Group-wide receivables, collections and deposit position{% endif %}</p>
