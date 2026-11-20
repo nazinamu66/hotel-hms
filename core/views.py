@@ -290,6 +290,7 @@ def management_reservations_occupancy(request):
             register_rows.append({
                 "guest_name": item.guest.full_name,
                 "guest_id": item.guest_id,
+                "hotel_id": item.hotel_id,
                 "hotel_name": item.hotel.name,
                 "room_number": item.room.room_number if item.room_id else "Unassigned",
                 "check_in": item.check_in_date,
@@ -319,6 +320,7 @@ def management_reservations_occupancy(request):
             register_rows.append({
                 "guest_name": item.guest.full_name,
                 "guest_id": item.guest_id,
+                "hotel_id": item.reservation.hotel_id,
                 "hotel_name": item.reservation.hotel.name,
                 "room_number": item.room.room_number if item.room_id else "Unassigned",
                 "check_in": item.check_in_date,
@@ -348,6 +350,7 @@ def management_reservations_occupancy(request):
             register_rows.append({
                 "guest_name": item.guest.full_name,
                 "guest_id": item.guest_id,
+                "hotel_id": item.group_reservation.hotel_id,
                 "hotel_name": item.group_reservation.hotel.name,
                 "room_number": item.room.room_number if item.room_id else "Unassigned",
                 "check_in": item.check_in_date,
@@ -361,7 +364,7 @@ def management_reservations_occupancy(request):
 
         selected_hotel = reporting_context.get("selected_hotel")
         if selected_hotel:
-            register_rows = [row for row in register_rows if row["hotel_name"] == selected_hotel.name]
+            register_rows = [row for row in register_rows if row["hotel_id"] == selected_hotel.pk]
         register_rows.sort(key=lambda row: (row["created_at"], row["guest_name"]), reverse=True)
 
     return render(
@@ -376,6 +379,13 @@ def management_reservations_occupancy(request):
             "show_register": show_register,
             "register_rows": register_rows,
             "register_count": len(register_rows),
+            "status_choices": [
+                ("RESERVED", "Reserved"),
+                ("CHECKED_IN", "Checked In"),
+                ("CHECKED_OUT", "Checked Out"),
+                ("CANCELLED", "Cancelled"),
+                ("NO_SHOW", "No Show"),
+            ],
             "is_management_overview": True,
             "is_director": True,
             "is_general_manager": request.user.role == "GENERAL_MANAGER",
