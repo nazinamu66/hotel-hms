@@ -41,22 +41,22 @@
     <section class="perf-kpi-grid" aria-label="Financial summary">
         <article class="perf-kpi" style="--perf-accent:#60a5fa">
             <span>Total Revenue</span>
-            <strong>₦{{ revenue|floatformat:2 }}</strong>
+            <strong>₦{{ revenue|floatformat:"2g" }}</strong>
             <small>Posted income and other income</small>
         </article>
         <article class="perf-kpi" style="--perf-accent:#fbbf24">
             <span>Cost of Goods Sold</span>
-            <strong>₦{{ cogs|floatformat:2 }}</strong>
+            <strong>₦{{ cogs|floatformat:"2g" }}</strong>
             <small>Posted COGS ledger entries</small>
         </article>
         <article class="perf-kpi" style="--perf-accent:#c4b5fd">
             <span>Operating Expenses</span>
-            <strong>₦{{ expenses|floatformat:2 }}</strong>
+            <strong>₦{{ expenses|floatformat:"2g" }}</strong>
             <small>Posted expense account activity</small>
         </article>
         <article class="perf-kpi" style="--perf-accent:#34d399">
             <span>Operating Result</span>
-            <strong>₦{{ operating_result|floatformat:2 }}</strong>
+            <strong>₦{{ operating_result|floatformat:"2g" }}</strong>
             <small>Revenue less COGS and expenses</small>
         </article>
     </section>
@@ -84,10 +84,10 @@
                     <tr>
                         <td><span class="perf-rank">{{ row.performance_rank }}</span></td>
                         <td class="perf-hotel-name">{{ row.hotel.name }}</td>
-                        <td>₦{{ row.revenue|floatformat:2 }}</td>
-                        <td>₦{{ row.cogs|floatformat:2 }}</td>
-                        <td>₦{{ row.expenses|floatformat:2 }}</td>
-                        <td class="perf-result {% if row.operating_result < 0 %}is-negative{% else %}is-positive{% endif %}">₦{{ row.operating_result|floatformat:2 }}</td>
+                        <td>₦{{ row.revenue|floatformat:"2g" }}</td>
+                        <td>₦{{ row.cogs|floatformat:"2g" }}</td>
+                        <td>₦{{ row.expenses|floatformat:"2g" }}</td>
+                        <td class="perf-result {% if row.operating_result < 0 %}is-negative{% else %}is-positive{% endif %}">₦{{ row.operating_result|floatformat:"2g" }}</td>
                         <td><a class="perf-drill-link" href="{% url 'management_hotel_performance' %}?hotel={{ row.hotel.id }}&amp;from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}">View hotel →</a></td>
                     </tr>
                     {% empty %}
