@@ -4,40 +4,42 @@
 
 {% block content %}
 <style>
-.corporate-performance { color:#172033; }
-.corporate-performance .heading { margin-bottom:18px; }
-.corporate-performance .heading h2 { margin:0 0 6px; font-size:1.65rem; }
-.corporate-performance .muted, .corporate-performance .subtitle { color:#64748b; }
-.corporate-performance .filters { display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; padding:18px; margin-bottom:18px; }
-.corporate-performance .field { display:flex; flex-direction:column; gap:6px; min-width:160px; }
-.corporate-performance .field label { color:#64748b; font-size:.75rem; font-weight:700; }
-.corporate-performance .field input, .corporate-performance .field select { min-width:160px; }
-.corporate-performance .actions { display:flex; align-items:center; gap:12px; }
-.corporate-performance .actions button { border:0; border-radius:7px; padding:10px 16px; background:#2563eb; color:#fff; cursor:pointer; }
-.corporate-performance .actions a { color:#475569; font-weight:600; }
-.corporate-performance .kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
-.corporate-performance .kpi { padding:18px; min-width:0; }
-.corporate-performance .kpi span { color:#64748b; font-size:.78rem; font-weight:650; }
-.corporate-performance .kpi strong { display:block; margin-top:9px; font-size:1.45rem; overflow-wrap:anywhere; }
-.corporate-performance .kpi small { display:block; margin-top:5px; color:#94a3b8; font-size:.72rem; }
-.corporate-performance .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:18px; }
-.corporate-performance .panel { padding:20px; min-width:0; }
-.corporate-performance .panel h3 { margin:0 0 5px; font-size:1rem; }
-.corporate-performance .subtitle { margin:0 0 15px; font-size:.78rem; }
-.corporate-performance .table-wrap { overflow-x:auto; }
-.corporate-performance table { width:100%; border-collapse:collapse; min-width:520px; }
-.corporate-performance td, .corporate-performance th { padding:10px 8px; border-bottom:1px solid #e8edf5; text-align:left; white-space:nowrap; }
-.corporate-performance th { color:#64748b; font-size:.72rem; text-transform:uppercase; }
-.corporate-performance td.numeric, .corporate-performance th.numeric { text-align:right; }
-.corporate-performance .note { color:#64748b; font-size:.78rem; line-height:1.5; margin-top:14px; }
-.corporate-performance .empty { color:#94a3b8; padding:14px 8px; text-align:center; }
-.corporate-performance .section-gap { margin-top:18px; }
-@media(max-width:900px) { .corporate-performance .grid { grid-template-columns:1fr; } }
-@media(max-width:700px) { .corporate-performance .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media(max-width:540px) { .corporate-performance .field, .corporate-performance .field input, .corporate-performance .field select { width:100%; } .corporate-performance .actions { width:100%; justify-content:space-between; } }
+.corporate-performance{color:#f1f5f9}
+.corporate-performance .heading{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:22px}
+.corporate-performance .heading h2{margin:0;color:#f8fafc;font-size:clamp(1.55rem,2.4vw,2.1rem);letter-spacing:-.04em}
+.corporate-performance .muted,.corporate-performance .subtitle{color:#9aabc1}
+.corporate-performance .filters{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;padding:16px;margin:0 0 18px;border:1px solid #2a3c55;border-radius:13px;background:#15243a;box-shadow:none}
+.corporate-performance .field{display:flex;flex:1 1 160px;flex-direction:column;gap:6px;min-width:0}
+.corporate-performance .field label{color:#9aabc1;font-size:.7rem;font-weight:800;letter-spacing:.08em}
+.corporate-performance .field input,.corporate-performance .field select{width:100%;min-width:0;min-height:40px;padding:8px 10px;border:1px solid #344861;border-radius:8px;background:#0e1b2d;color:#f1f5f9;color-scheme:dark}
+.corporate-performance .actions{display:flex;align-items:center;gap:12px}
+.corporate-performance .actions button{min-height:40px;border:0;border-radius:8px;padding:9px 16px;background:#2563eb;color:#fff;font-weight:750;cursor:pointer}
+.corporate-performance .actions a{color:#bfdbfe;font-weight:700}
+.corporate-performance .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+.corporate-performance .kpi{display:flex;min-width:0;flex-direction:column;padding:17px 18px;border:1px solid #2a3c55;border-radius:13px;background:linear-gradient(145deg,#1b2d46,#132236);box-shadow:none}
+.corporate-performance .kpi span{color:#9aabc1;font-size:.73rem;font-weight:750}
+.corporate-performance .kpi strong{display:block;margin-top:9px;color:#f8fafc;font-size:clamp(1.25rem,2vw,1.55rem);overflow-wrap:anywhere}
+.corporate-performance .kpi small{display:block;margin-top:5px;color:#91a2b8;font-size:.7rem}
+.corporate-performance .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:16px}
+.corporate-performance .panel{min-width:0;padding:19px;border:1px solid #2a3c55;border-radius:13px;background:rgba(21,36,58,.94);box-shadow:none}
+.corporate-performance .panel h3{margin:0 0 5px;color:#f1f5f9;font-size:.98rem}
+.corporate-performance .subtitle{margin:0 0 15px;font-size:.75rem;line-height:1.5}
+.corporate-performance .table-wrap{width:100%;min-width:0;overflow-x:auto;border:1px solid rgba(148,163,184,.17);border-radius:9px}
+.corporate-performance table{width:100%;min-width:560px;border-collapse:collapse;table-layout:auto}
+.corporate-performance td,.corporate-performance th{padding:11px 9px;border-bottom:1px solid rgba(148,163,184,.12);color:#dbe5f2;text-align:left;white-space:nowrap;font-size:.75rem}
+.corporate-performance th{background:rgba(9,20,35,.52);color:#9aabc1;font-size:.65rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.corporate-performance td.numeric,.corporate-performance th.numeric{text-align:right;font-variant-numeric:tabular-nums}
+.corporate-performance a{color:#93c5fd;font-weight:750;text-decoration:none}
+.corporate-performance a:hover{color:#fff;text-decoration:underline}
+.corporate-performance .note{margin:13px 2px 0;color:#91a2b8;font-size:.72rem;line-height:1.55}
+.corporate-performance .empty{padding:22px 12px;color:#9aabc1;text-align:center}
+.corporate-performance .section-gap{margin-top:16px}
+@media(max-width:1050px){.corporate-performance .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.corporate-performance .grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:560px){.corporate-performance .kpis{grid-template-columns:minmax(0,1fr)}.corporate-performance .actions{width:100%;justify-content:space-between}.corporate-performance .panel{padding:14px}}
 </style>
 
-<div class="corporate-performance">
+<div class="management-frontdesk corporate-performance">
     <header class="heading">
         <h2>Corporate Performance</h2>
         <p class="muted">{% if is_general_manager %}Corporate business across your assigned hotels{% else %}Corporate portfolio and commercial performance across your organization{% endif %}</p>
