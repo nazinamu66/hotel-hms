@@ -1178,7 +1178,7 @@ class ManagementGuest360AccessTests(TestCase):
             organization=self.organization,
         )
         self.client.force_login(director)
-        response = self.client.get("/management/guests/", {"q": "Guest"})
+        response = self.client.get("/management/guests/", {"q": "0800000000"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             {guest.pk for guest in response.context["guest_results"]},
