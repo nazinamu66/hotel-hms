@@ -903,3 +903,88 @@ def cash_custody_resolve(request, handover_id):
         "cash_custody_detail",
         handover_id=handover.id,
     )
+
+@role_required("DIRECTOR", "GENERAL_MANAGER")
+def management_reservation_detail(request, record_type, record_id):
+    """Read-only reservation detail across legacy, room-allocation and group records."""
+    from django.shortcuts import get_object_or_404
+    from billing.models import Reservation, ReservationRoomAllocation, GroupReservation
+
+    reporting_context = build_management_reporting_context(request.user, request.GET)
+    hotels = reporting_context["scoped_hotels"]
+
+    context = {
+        **reporting_context,
+        "record_type": record_type,
+        "is_management_overview": True,
+        "is_director": True,
+        "is_general_manager": request.user.role == "GENERAL_MANAGER",
+    }
+
+    if record_type == "reservation":
+        record = get_object_or_404(
+            Reservation.objects.select_related(
+                "hotel", "guest", "room", "room_category", "created_by"
+            ).prefetch_related("room_allocations__guest", "room_allocations__room"),
+            pk=record_id,
+            hotel__in=hotels,
+        )
+        if hasattr(record, "group_allocation"):
+            return redirect(
+                "management_reservation_detail",
+                record_type="group",
+                record_id=record.group_allocation.group_reservation_id,
+            )
+        context.update({
+            "record": record,
+            "guest": record.guest,
+            "hotel": record.hotel,
+            "room_allocations": record.room_allocations.all(),
+            "page_heading": f"Reservation #{record.pk}",
+            "record_kind": "Legacy reservation",
+        })
+    elif record_type == "allocation":
+        record = get_object_or_404(
+            ReservationRoomAllocation.objects.select_related(
+                "reservation__hotel", "reservation__guest",
+                "reservation__room_category", "guest", "room", "folio",
+            ),
+            pk=record_id,
+            reservation__hotel__in=hotels,
+        )
+        context.update({
+            "record": record,
+            "guest": record.guest,
+            "hotel": record.reservation.hotel,
+            "parent_reservation": record.reservation,
+            "page_heading": f"Reservation #{record.reservation_id} · Room {record.allocation_number}",
+            "record_kind": "Individual room allocation",
+        })
+    elif record_type == "group":
+        record = get_object_or_404(
+            GroupReservation.objects.select_related(
+                "hotel", "company", "created_by"
+            ).prefetch_related(
+                "room_allocations__guest",
+                "room_allocations__room",
+                "room_allocations__room_category",
+                "room_rates__room_category",
+                "service_policies",
+            ),
+            pk=record_id,
+            hotel__in=hotels,
+        )
+        context.update({
+            "record": record,
+            "hotel": record.hotel,
+            "group_allocations": record.room_allocations.all(),
+            "room_rates": record.room_rates.all(),
+            "service_policies": record.service_policies.all(),
+            "page_heading": record.reference,
+            "record_kind": "Corporate group reservation",
+        })
+    else:
+        from django.http import Http404
+        raise Http404("Unknown reservation record type.")
+
+    return render(request, "management/reservation_detail.html", context)
