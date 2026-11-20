@@ -9,7 +9,7 @@ from django.db.models import F
 from django.utils.timezone import localdate
 from accounts.models import User
 from django.utils.timezone import now
-from inventory.models import StockMovement
+from inventory.models import StockMovement, StockCostLayer
 from django.db.models import Sum
 from django.db.models import Q
 from inventory.models import Hotel
@@ -489,3 +489,160 @@ def restaurant_management_overview(request):
         "order_count": order_count, "open_count": open_count, "closed_count": closed_count,
         "handover_pending": handover_pending,
     })
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def restaurant_inventory_status(request):
+    """Current Restaurant resale stock, FIFO valuation and dated movement register."""
+    from accounts.services.access import get_accessible_hotels
+
+    accessible_hotels = get_accessible_hotels(request.user)
+    restaurant_departments = Department.objects.filter(
+        hotel__in=accessible_hotels,
+        department_type="RESTAURANT",
+        is_active=True,
+    ).select_related("hotel").order_by("hotel__name", "name")
+    restaurant_hotel_ids = restaurant_departments.values_list("hotel_id", flat=True).distinct()
+    hotels = accessible_hotels.filter(pk__in=restaurant_hotel_ids).order_by("name")
+
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not hotels.filter(pk=int(selected_hotel)).exists():
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have access to that Restaurant hotel.")
+        scoped_hotels = hotels.filter(pk=int(selected_hotel))
+    else:
+        scoped_hotels = hotels
+
+    today = localdate()
+    try:
+        date_from = date.fromisoformat(request.GET.get("from", "").strip()) if request.GET.get("from") else today.replace(day=1)
+    except ValueError:
+        date_from = today.replace(day=1)
+    try:
+        date_to = date.fromisoformat(request.GET.get("to", "").strip()) if request.GET.get("to") else today
+    except ValueError:
+        date_to = today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    departments = restaurant_departments.filter(hotel__in=scoped_hotels)
+    department_ids = list(departments.values_list("pk", flat=True))
+    product_scope = {
+        "product__hotel__in": scoped_hotels,
+        "product__usage_type": "RESALE",
+        "product__product_type__in": ("DRINK", "SNACK"),
+    }
+
+    rows_by_key = {}
+    stock_records = Stock.objects.filter(
+        department_id__in=department_ids, **product_scope
+    ).select_related("product", "department", "department__hotel")
+    for stock in stock_records:
+        rows_by_key[(stock.product_id, stock.department_id)] = {
+            "product": stock.product,
+            "department": stock.department,
+            "physical_quantity": stock.quantity,
+            "reorder_level": stock.reorder_level,
+            "layer_quantity": Decimal("0.000"),
+            "fifo_value": Decimal("0.00"),
+        }
+
+    layers = StockCostLayer.objects.filter(
+        department_id__in=department_ids,
+        quantity_remaining__gt=0,
+        **product_scope,
+    ).select_related("product", "department", "department__hotel")
+    for layer in layers:
+        key = (layer.product_id, layer.department_id)
+        if key not in rows_by_key:
+            rows_by_key[key] = {
+                "product": layer.product,
+                "department": layer.department,
+                "physical_quantity": Decimal("0.000"),
+                "reorder_level": layer.product.reorder_level,
+                "layer_quantity": Decimal("0.000"),
+                "fifo_value": Decimal("0.00"),
+            }
+        rows_by_key[key]["layer_quantity"] += layer.quantity_remaining
+        rows_by_key[key]["fifo_value"] += layer.quantity_remaining * layer.unit_cost
+
+    inventory_rows = []
+    total_physical_quantity = Decimal("0.000")
+    total_layer_quantity = Decimal("0.000")
+    total_fifo_value = Decimal("0.00")
+    low_stock_count = 0
+    discrepancy_count = 0
+    unvalued_quantity = Decimal("0.000")
+    for row in rows_by_key.values():
+        physical = row["physical_quantity"]
+        layer_qty = row["layer_quantity"]
+        difference = physical - layer_qty
+        status = "MATCH" if difference == 0 else "MISSING_LAYERS" if difference > 0 else "LAYERS_EXCEED_STOCK"
+        row.update({
+            "difference": difference,
+            "unvalued_quantity": max(difference, Decimal("0.000")),
+            "reconciliation_status": status,
+            "is_low_stock": physical <= row["reorder_level"],
+        })
+        low_stock_count += int(row["is_low_stock"])
+        discrepancy_count += int(status != "MATCH")
+        total_physical_quantity += physical
+        total_layer_quantity += layer_qty
+        total_fifo_value += row["fifo_value"]
+        unvalued_quantity += row["unvalued_quantity"]
+        inventory_rows.append(row)
+
+    inventory_rows.sort(key=lambda item: (
+        item["department"].hotel.name, item["department"].name, item["product"].name
+    ))
+
+    movement_records = StockMovement.objects.filter(
+        Q(from_department_id__in=department_ids) | Q(to_department_id__in=department_ids),
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+        **{
+            "product__hotel__in": scoped_hotels,
+            "product__usage_type": "RESALE",
+            "product__product_type__in": ("DRINK", "SNACK"),
+        },
+    ).select_related(
+        "product", "from_department", "to_department",
+        "from_department__hotel", "to_department__hotel", "created_by",
+    ).prefetch_related("cost_allocations").order_by("-created_at", "-pk")
+
+    movement_rows = []
+    for movement in movement_records:
+        from_is_restaurant = movement.from_department_id in department_ids
+        if movement.movement_type == "TRANSFER":
+            direction = "TRANSFER OUT" if from_is_restaurant else "TRANSFER IN"
+        elif movement.movement_type == "IN":
+            direction = "RECEIPT"
+        else:
+            direction = "ISSUE / CONSUMPTION"
+        movement_cost = sum(
+            (allocation.total_cost for allocation in movement.cost_allocations.all()),
+            Decimal("0.00"),
+        )
+        movement_rows.append({
+            "movement": movement,
+            "direction": direction,
+            "fifo_cost": movement_cost,
+        })
+
+    return render(request, "reports/restaurant_inventory_status.html", {
+        "hotels": hotels,
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "inventory_rows": inventory_rows,
+        "movement_rows": movement_rows,
+        "total_products": len(inventory_rows),
+        "total_physical_quantity": total_physical_quantity,
+        "total_layer_quantity": total_layer_quantity,
+        "total_fifo_value": total_fifo_value,
+        "low_stock_count": low_stock_count,
+        "discrepancy_count": discrepancy_count,
+        "unvalued_quantity": unvalued_quantity,
+        "movement_count": len(movement_rows),
+    })
+
