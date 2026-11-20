@@ -1750,3 +1750,9 @@ input, select, textarea { font-size: 16px; }
     color:#f1f5f9 !important;
     border-bottom:1px solid rgba(148,163,184,.17) !important;
 }
+
+
+/* Match the Kitchen management workspace navigation to its executive canvas. */
+.layout:has(.kitchen-management-report) > .sidebar {
+    background:#0d1728;
+}
