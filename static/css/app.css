@@ -1491,3 +1491,13 @@ input, select, textarea { font-size: 16px; }
     min-height: 0;
     background: #0d1728;
 }
+
+/* Front Desk KPI drill-down affordances and detail register. */
+.management-frontdesk .fd-kpi-link{display:flex;flex-direction:column;gap:7px;color:inherit;text-decoration:none;transition:transform .16s ease,border-color .16s ease}
+.management-frontdesk .fd-kpi-link:hover{transform:translateY(-2px);border-color:var(--fd-accent);text-decoration:none}
+.management-frontdesk .fd-kpi-link em{margin-top:auto;color:#93c5fd;font-size:.72rem;font-style:normal;font-weight:800}
+.management-frontdesk .fd-drill-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px;padding:13px 16px;border:1px solid var(--fd-border);border-radius:12px;background:var(--fd-panel);color:var(--fd-muted);font-size:.8rem}
+.management-frontdesk .fd-drill-toolbar a{color:#93c5fd;font-weight:800;text-decoration:none}
+.management-frontdesk .fd-table a{color:#93c5fd;font-weight:750;text-decoration:none}
+.management-frontdesk .fd-table a:hover{text-decoration:underline}
+@media(max-width:640px){.management-frontdesk .fd-drill-toolbar{align-items:flex-start;flex-direction:column}}
