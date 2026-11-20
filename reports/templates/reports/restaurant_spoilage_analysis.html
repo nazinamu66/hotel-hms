@@ -1,0 +1,79 @@
+{% extends "base/base.html" %}
+{% load accounting_extras %}
+{% block title %}Restaurant Spoilage & Loss Analysis | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.restaurant-spoilage{box-sizing:border-box;max-width:none;min-height:100%;margin:calc(-1 * clamp(18px,2.5vw,34px));padding:clamp(18px,2.5vw,34px);background:radial-gradient(ellipse at 85% 0%,rgba(37,99,235,.16),transparent 34%),#0d1728;color:#e8eef8}
+.restaurant-spoilage *{box-sizing:border-box}
+.rsa-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:22px}
+.rsa-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#91a4bf}
+.rsa-head h1{font-size:28px;line-height:1.2;margin:5px 0 7px;color:#f8fafc}
+.rsa-muted{color:#9aabc1;font-size:13px;line-height:1.5}
+.rsa-panel,.rsa-kpi{background:#172b43;border:1px solid #29415e;border-radius:14px;box-shadow:0 8px 24px rgba(3,12,25,.16)}
+.rsa-panel{padding:18px;margin-bottom:18px}
+.rsa-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
+.rsa-field{min-width:160px;flex:1}.rsa-field label{display:block;font-size:12px;font-weight:750;color:#b8c7da;margin-bottom:6px}
+.rsa-field input,.rsa-field select{width:100%;min-height:40px;padding:8px 10px;border:1px solid #3b5573;border-radius:8px;background:#102239;color:#f8fafc}
+.rsa-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 15px;border-radius:8px;background:#2563eb;color:white;text-decoration:none;border:0;font-weight:750;cursor:pointer}
+.rsa-link{color:#93c5fd;text-decoration:none;font-weight:750}
+.rsa-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.rsa-kpi{padding:17px;min-width:0}.rsa-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#9aabc1}
+.rsa-value{display:block;font-size:23px;font-weight:850;color:#f8fafc;margin-top:8px;overflow-wrap:anywhere}.rsa-note{font-size:12px;color:#91a4bf;margin-top:5px}
+.rsa-section{font-size:17px;color:#f8fafc;margin:0 0 12px}.rsa-table-wrap{overflow-x:auto}
+.rsa-table{width:100%;min-width:760px;border-collapse:collapse}
+.rsa-table th{background:#102239;color:#aebfd4;text-transform:uppercase;font-size:10px;letter-spacing:.06em;text-align:left;padding:12px;white-space:nowrap}
+.rsa-table td{padding:12px;border-bottom:1px solid #29415e;color:#dce6f2;font-size:13px;vertical-align:top}
+.rsa-table tbody tr:hover{background:#1c3552}
+.rsa-pill{display:inline-block;padding:4px 8px;border-radius:99px;font-size:10px;font-weight:850}
+.rsa-PENDING{background:#713f12;color:#fde68a}.rsa-APPROVED{background:#164e3a;color:#bbf7d0}.rsa-REJECTED{background:#512b2b;color:#fecaca}
+.rsa-bar{height:7px;border-radius:20px;background:#29415e;overflow:hidden;margin-top:7px}.rsa-bar span{display:block;height:100%;background:#3b82f6}
+.rsa-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.rsa-empty{text-align:center;padding:26px;color:#9aabc1}
+@media(max-width:950px){.rsa-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rsa-split{grid-template-columns:1fr}}
+@media(max-width:560px){.rsa-grid{grid-template-columns:1fr}.rsa-head h1{font-size:23px}}
+</style>
+<div class="restaurant-spoilage">
+  <header class="rsa-head"><div><div class="rsa-eyebrow">Restaurant · Management reporting</div><h1>Spoilage &amp; Loss Analysis</h1><p class="rsa-muted">Approved stock write-offs, reasons, products, accountability and unresolved reports.</p></div><a class="rsa-btn" href="{% url 'restaurant_spoilage' %}">Open spoilage register</a></header>
+  <section class="rsa-panel"><form method="get" class="rsa-filters">
+    <div class="rsa-field"><label for="rsa-from">Reports from</label><input id="rsa-from" type="date" name="from" value="{{ date_from }}"></div>
+    <div class="rsa-field"><label for="rsa-to">Reports to</label><input id="rsa-to" type="date" name="to" value="{{ date_to }}"></div>
+    {% if hotels|length > 1 %}<div class="rsa-field"><label for="rsa-hotel">Hotel</label><select id="rsa-hotel" name="hotel"><option value="">All accessible hotels</option>{% for hotel in hotels %}<option value="{{ hotel.pk }}" {% if selected_hotel == hotel.pk|stringformat:"s" %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}</select></div>{% elif hotels|length == 1 %}{% for hotel in hotels %}<div class="rsa-field"><label>Hotel scope</label><div>{{ hotel.name }}</div></div>{% endfor %}{% endif %}
+    <button class="rsa-btn" type="submit">Apply filters</button>
+  </form><p class="rsa-muted" style="margin:12px 0 0">Date range filters by the date the spoilage was reported. Loss totals use the recorded cost of approved reports only; the monthly trend groups those approved reports by approval month.</p></section>
+  <section class="rsa-grid">
+    <article class="rsa-kpi"><div class="rsa-label">Approved loss value</div><strong class="rsa-value">{{ approved_loss|money }}</strong><div class="rsa-note">{{ approved_count }} approved write-offs</div></article>
+    <article class="rsa-kpi"><div class="rsa-label">Approved quantity</div><strong class="rsa-value">{{ approved_quantity|quantity }}</strong><div class="rsa-note">Recorded product base units</div></article>
+    <article class="rsa-kpi"><div class="rsa-label">Pending reports</div><strong class="rsa-value">{{ pending_count }}</strong><div class="rsa-note">{{ pending_quantity|quantity }} units awaiting decision · not included in actual loss</div></article>
+    <article class="rsa-kpi"><div class="rsa-label">Rejected reports</div><strong class="rsa-value">{{ rejected_count }}</strong><div class="rsa-note">No stock deduction or spoilage expense</div></article>
+  </section>
+  <section class="rsa-split">
+    <div class="rsa-panel"><h2 class="rsa-section">Approved loss by product</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Product</th><th>Quantity</th><th>Reports</th><th>Loss value</th></tr></thead><tbody>
+      {% for row in product_rows %}<tr><td><strong>{{ row.name }}</strong><br><span class="rsa-muted">{{ row.unit }}</span></td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}</td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved write-offs in this period.</td></tr>{% endfor %}
+    </tbody></table></div></div>
+    <div class="rsa-panel"><h2 class="rsa-section">Approved loss by reason</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Reason</th><th>Quantity</th><th>Reports</th><th>Loss value</th></tr></thead><tbody>
+      {% for row in reason_rows %}<tr><td>{{ row.reason }}</td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}</td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved write-offs in this period.</td></tr>{% endfor %}
+    </tbody></table></div></div>
+  </section>
+  <section class="rsa-panel"><h2 class="rsa-section">Monthly approved loss trend</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Approval month</th><th>Approved quantity</th><th>Reports</th><th>Loss value · relative volume</th></tr></thead><tbody>
+    {% for row in monthly_rows %}<tr><td>{{ row.month|date:"M Y" }}</td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}<div class="rsa-bar"><span style="width:{{ row.share }}%"></span></div></td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved losses to chart.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+  <section class="rsa-split">
+    <div class="rsa-panel"><h2 class="rsa-section">Loss by hotel</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Hotel</th><th>Quantity</th><th>Reports</th><th>Loss</th></tr></thead><tbody>{% for row in hotel_rows %}<tr><td>{{ row.name }}</td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}</td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved losses.</td></tr>{% endfor %}</tbody></table></div></div>
+    <div class="rsa-panel"><h2 class="rsa-section">Reported by</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Staff member</th><th>Quantity</th><th>Reports</th><th>Approved loss</th></tr></thead><tbody>{% for row in reporter_rows %}<tr><td>{{ row.name }}</td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}</td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved losses.</td></tr>{% endfor %}</tbody></table></div></div>
+  </section>
+  <section class="rsa-panel"><h2 class="rsa-section">Approved by</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Approver</th><th>Quantity approved</th><th>Records</th><th>Approved loss value</th></tr></thead><tbody>{% for row in approver_rows %}<tr><td>{{ row.name }}</td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}</td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved losses.</td></tr>{% endfor %}</tbody></table></div></section>
+  <section class="rsa-panel"><h2 class="rsa-section">Spoilage audit register · {{ record_count }} records</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Reported</th><th>Hotel / Department</th><th>Product / Reason</th><th>Quantity</th><th>Reported by</th><th>Status / Cost</th><th>Reviewed by</th><th>Source records</th></tr></thead><tbody>
+    {% for record in recent_records %}<tr>
+      <td>{{ record.reported_at|date:"d M Y H:i" }}<br><span class="rsa-muted">RS-{{ record.pk }}</span></td>
+      <td>{{ record.department.hotel.name }}<br>{{ record.department.name }}</td>
+      <td><strong>{{ record.product.name }}</strong><br><span class="rsa-muted">{{ record.get_reason_code_display }}</span></td>
+      <td>{{ record.quantity|quantity }} {{ record.product.base_unit }}</td>
+      <td>{{ record.reported_by|default:"Unknown" }}</td>
+      <td><span class="rsa-pill rsa-{{ record.status }}">{{ record.get_status_display }}</span><br><strong>{{ record.cost_amount|money }}</strong></td>
+      <td>{% if record.status == "APPROVED" %}{{ record.approved_by|default:"—" }}<br><span class="rsa-muted">{{ record.approved_at|date:"d M Y H:i" }}</span>{% elif record.status == "REJECTED" %}{{ record.rejected_by|default:"—" }}<br><span class="rsa-muted">{{ record.rejected_at|date:"d M Y H:i" }}</span>{% else %}Awaiting decision{% endif %}</td>
+      <td>{% if record.stock_movement_id %}Stock movement #{{ record.stock_movement_id }}{% endif %}{% if record.journal_entry_id %}<br>Journal #{{ record.journal_entry_id }}{% endif %}{% if not record.stock_movement_id and not record.journal_entry_id %}—{% endif %}</td>
+    </tr>{% empty %}<tr><td colspan="8" class="rsa-empty">No spoilage records match this period.</td></tr>{% endfor %}
+  </tbody></table></div>{% if record_count > 150 %}<p class="rsa-muted">Showing the latest 150 records. Open the spoilage register for searchable operational records and management review.</p>{% endif %}</section>
+  <p class="rsa-muted">Accounting treatment: approved record cost_amount is the recognized loss amount. Pending reports have no approved FIFO write-off value yet and are shown by quantity only. Rejected reports are excluded from approved loss analysis. This report is read-only and does not create stock movements or journals.</p>
+</div>
+{% endblock %}
