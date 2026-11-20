@@ -1511,7 +1511,7 @@ def shift_list(request):
     if user.role == "RESTAURANT":
         shifts = shifts.filter(user=user)
 
-    elif user.role in {"MANAGER", "DIRECTOR", "ADMIN"}:
+    elif user.role in {"MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT", "ADMIN"}:
         hotels = get_accessible_hotels(user)
         shifts = shifts.filter(
             department__hotel__in=hotels
@@ -1547,7 +1547,7 @@ def shift_detail(request, shift_id):
         if shift.user_id != user.id:
             raise PermissionDenied("You cannot access this shift.")
 
-    elif user.role in {"MANAGER", "DIRECTOR", "ADMIN"}:
+    elif user.role in {"MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT", "ADMIN"}:
         hotels = get_accessible_hotels(user)
 
         if not hotels.filter(id=shift.department.hotel_id).exists():
