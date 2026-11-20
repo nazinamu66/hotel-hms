@@ -41,6 +41,7 @@
     <article class="rs-kpi"><div class="rs-label">Collections</div><strong class="rs-value">{{ total_collections|money }}</strong><div class="rs-note">Positive POS payments recorded against Restaurant shifts</div></article>
     <article class="rs-kpi"><div class="rs-label">Walk-in sales</div><strong class="rs-value">{{ walkin_sales|money }}</strong><div class="rs-note">Sales assigned to walk-in folios</div></article>
     <article class="rs-kpi"><div class="rs-label">Room charges</div><strong class="rs-value">{{ room_sales|money }}</strong><div class="rs-note">Sales posted to guest room folios</div></article>
+    <article class="rs-kpi"><div class="rs-label">Complimentary breakfasts</div><strong class="rs-value">{{ complimentary_count }}</strong><div class="rs-note">Redemptions tracked separately from revenue</div></article>
   </section>
   {% if uncosted_quantity %}<div class="rs-alert"><strong>Costing attention:</strong> {{ uncosted_quantity }} sold units have no recorded sale-time unit cost. Gross profit may therefore be overstated until those costs are reconciled.</div>{% endif %}
   <section class="rs-panel"><h2 class="rs-section">Collections by payment method</h2><div class="rs-grid" style="margin:0">
