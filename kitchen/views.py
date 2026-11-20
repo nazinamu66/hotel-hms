@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.forms import formset_factory
 from decimal import Decimal, InvalidOperation
-from datetime import date
+from datetime import date, timedelta
 from accounts.services.access import (
     get_accessible_hotels,)
 
@@ -2035,7 +2035,7 @@ def kitchen_spoilage_report(request):
             if truncator == TruncMonth:
                 label = period.strftime("%b %Y")
             else:
-                week_end = (period + timezone.timedelta(days=6)).date()
+                week_end = (period + timedelta(days=6)).date()
                 label = f"{period:%d %b} – {week_end:%d %b %Y}"
             rows.append({
                 "label": label,
