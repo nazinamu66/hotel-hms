@@ -8,7 +8,7 @@ from accounts.decorators import role_required
 from rooms.models import Room
 from .models import MaintenanceTicket
 from django.core.exceptions import PermissionDenied, ValidationError
-from .models import MaintenanceTicket, MaintenanceLabour, MaintenanceMaterial, MaintenanceAsset, MaintenanceSchedule, MaintenanceLocation
+from .models import MaintenanceTicket, MaintenanceLabour, MaintenanceMaterial, MaintenanceAsset, MaintenanceSchedule, MaintenanceScheduleCycle, MaintenanceLocation
 
 from datetime import timedelta, date
 from accounts.models import User
@@ -1526,11 +1526,15 @@ def maintenance_schedule_create(request):
             is_active=True,
         )
 
-        MaintenanceSchedule.objects.create(
+        schedule = MaintenanceSchedule.objects.create(
             asset=asset,
             name=name,
             interval_days=interval_days,
             next_due_date=next_due_date,
+        )
+        MaintenanceScheduleCycle.objects.get_or_create(
+            schedule=schedule,
+            due_date=schedule.next_due_date,
         )
 
         messages.success(
