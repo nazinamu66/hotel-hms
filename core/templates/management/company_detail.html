@@ -22,7 +22,7 @@
         <div class="fd-panel-heading"><div><h2>Company Profile</h2><p>Registered corporate account details</p></div></div>
         <p><strong>Billing address:</strong> {{ company.billing_address|default:"Not recorded" }}</p>
         {% if company.notes %}<p>{{ company.notes|linebreaksbr }}</p>{% endif %}
-        <p class="fd-muted">Reporting activity: {{ date_from|date:"M j, Y" }} – {{ date_to|date:"M j, Y" }}</p>
+        <p class="fd-note">Reporting activity: {{ date_from|date:"M j, Y" }} – {{ date_to|date:"M j, Y" }}</p>
     </section>
 
     <section class="fd-panel">
@@ -64,7 +64,7 @@
     <section class="fd-panel">
         <div class="fd-panel-heading"><div><h2>Company Deposit Ledger</h2><p>Current deposit balance and transactions within the selected period</p></div></div>
         {% if company_deposit %}
-        <div class="fd-deposit-totals"><div><span>Current Balance</span><strong>₦{{ company_deposit.balance|floatformat:"2g" }}</strong></div></div>
+        <div class="fd-deposit-totals" style="grid-template-columns:minmax(0,1fr)"><div><span>Current Balance</span><strong>₦{{ company_deposit.balance|floatformat:"2g" }}</strong></div></div>
         <div class="fd-table-wrap"><table class="fd-table"><thead><tr><th>Date</th><th>Transaction</th><th>Method</th><th>Amount</th><th>Invoice</th><th>Reference</th><th>Recorded By</th></tr></thead><tbody>
         {% for transaction in deposit_transactions %}
         <tr><td>{{ transaction.created_at|date:"M j, Y H:i" }}</td><td>{{ transaction.get_transaction_type_display }}</td><td>{{ transaction.get_payment_method_display|default:"—" }}</td><td>₦{{ transaction.amount|floatformat:"2g" }}</td><td>{{ transaction.company_invoice.invoice_number|default:"—" }}</td><td>{{ transaction.reference|default:"—" }}</td><td>{{ transaction.created_by|default:"—" }}</td></tr>
