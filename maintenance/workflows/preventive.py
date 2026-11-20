@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from maintenance.models import MaintenanceSchedule, MaintenanceTicket
+from maintenance.models import MaintenanceSchedule, MaintenanceScheduleCycle, MaintenanceTicket
 
 
 @transaction.atomic
@@ -69,7 +69,19 @@ def create_preventive_work_order(
     )
 
     if existing:
+        cycle, _ = MaintenanceScheduleCycle.objects.get_or_create(
+            schedule=schedule,
+            due_date=schedule.next_due_date,
+        )
+        if cycle.work_order_id is None:
+            cycle.work_order = existing
+            cycle.save(update_fields=["work_order"])
         return existing
+
+    cycle, _ = MaintenanceScheduleCycle.objects.get_or_create(
+        schedule=schedule,
+        due_date=schedule.next_due_date,
+    )
 
     ticket = MaintenanceTicket.objects.create(
         room=asset.room if asset.room_id else None,
@@ -84,5 +96,8 @@ def create_preventive_work_order(
         priority="MEDIUM",
         reported_by=user,
     )
+
+    cycle.work_order = ticket
+    cycle.save(update_fields=["work_order"])
 
     return ticket
