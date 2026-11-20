@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -2581,6 +2582,47 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertContains(response, "1250.00")
         self.assertNotContains(response, "Other Hotel Spoilage Product")
         self.assertEqual(list(response.context["records"]), [own_record])
+
+    def test_spoilage_report_builds_monthly_and_weekly_cost_comparisons(self):
+        product = Product.objects.create(
+            hotel=self.hotel,
+            name="Comparison Test Rice",
+            sku="SPOIL-COMP-RICE",
+            base_unit="kg",
+            product_type="RAW",
+        )
+        for recorded, cost in (
+            (datetime(2026, 10, 5, 10, 0), "100.00"),
+            (datetime(2026, 10, 12, 10, 0), "50.00"),
+            (datetime(2026, 11, 3, 10, 0), "200.00"),
+        ):
+            KitchenSpoilageRecord.objects.create(
+                product=product,
+                department=self.kitchen,
+                quantity=Decimal("1.000"),
+                reason_code="SPOILED",
+                cost_amount=Decimal(cost),
+                recorded_at=timezone.make_aware(recorded),
+            )
+
+        self.client.force_login(self.director)
+        response = self.client.get(
+            reverse("kitchen_spoilage_report"),
+            {"from": "2026-10-01", "to": "2026-11-30"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        monthly = response.context["monthly_spoilage_rows"]
+        weekly = response.context["weekly_spoilage_rows"]
+        self.assertEqual([row["cost"] for row in monthly], [
+            Decimal("150.00"), Decimal("200.00")
+        ])
+        self.assertEqual([row["record_count"] for row in monthly], [2, 1])
+        self.assertEqual([row["cost"] for row in weekly], [
+            Decimal("100.00"), Decimal("50.00"), Decimal("200.00")
+        ])
+        self.assertContains(response, "Month-to-month spoilage cost")
+        self.assertContains(response, "Week-to-week spoilage cost")
 
     def test_spoilage_report_rejects_hotel_outside_director_scope(self):
         self.client.force_login(self.director)
