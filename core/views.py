@@ -299,6 +299,8 @@ def management_reservations_occupancy(request):
                 "source": source,
                 "booking_type": "Individual",
                 "reference": f"Reservation #{item.pk}",
+                "record_type": "reservation",
+                "record_id": item.pk,
                 "created_at": item.created_at,
             })
 
@@ -329,6 +331,8 @@ def management_reservations_occupancy(request):
                 "source": source,
                 "booking_type": "Individual",
                 "reference": f"Reservation #{item.reservation_id} · Room {item.allocation_number}",
+                "record_type": "allocation",
+                "record_id": item.pk,
                 "created_at": item.created_at,
             })
 
@@ -359,6 +363,8 @@ def management_reservations_occupancy(request):
                 "source": source,
                 "booking_type": "Corporate",
                 "reference": item.group_reservation.reference,
+                "record_type": "group",
+                "record_id": item.group_reservation_id,
                 "created_at": item.created_at,
             })
 
