@@ -197,3 +197,63 @@ class FirstRunBootstrapTests(TestCase):
             reverse("role_redirect"),
             fetch_redirect_response=False,
         )
+
+
+class RoleDashboardRoutingTests(TestCase):
+    def setUp(self):
+        self.organization = Organization.objects.create(
+            name="Dashboard Routing Organization",
+        )
+        self.hotel = Hotel.objects.create(
+            organization=self.organization,
+            name="Dashboard Routing Hotel",
+        )
+
+    def login_as(self, role):
+        user = User.objects.create_user(
+            username=f"routing-{role.lower()}",
+            password="test-password",
+            role=role,
+            organization=self.organization if role == "DIRECTOR" else None,
+            hotel=self.hotel if role in {"MANAGER", "ACCOUNTANT"} else None,
+        )
+        if role == "GENERAL_MANAGER":
+            user.assigned_hotels.add(self.hotel)
+        self.client.force_login(user)
+        return user
+
+    def test_director_is_routed_to_executive_overview(self):
+        self.login_as("DIRECTOR")
+        response = self.client.get(reverse("role_redirect"))
+        self.assertRedirects(
+            response,
+            reverse("management_overview"),
+            fetch_redirect_response=False,
+        )
+
+    def test_general_manager_is_routed_to_executive_overview(self):
+        self.login_as("GENERAL_MANAGER")
+        response = self.client.get(reverse("role_redirect"))
+        self.assertRedirects(
+            response,
+            reverse("management_overview"),
+            fetch_redirect_response=False,
+        )
+
+    def test_manager_remains_on_hotel_dashboard(self):
+        self.login_as("MANAGER")
+        response = self.client.get(reverse("role_redirect"))
+        self.assertRedirects(
+            response,
+            reverse("hotel_dashboard"),
+            fetch_redirect_response=False,
+        )
+
+    def test_accountant_remains_on_hotel_dashboard(self):
+        self.login_as("ACCOUNTANT")
+        response = self.client.get(reverse("role_redirect"))
+        self.assertRedirects(
+            response,
+            reverse("hotel_dashboard"),
+            fetch_redirect_response=False,
+        )
