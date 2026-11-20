@@ -255,6 +255,7 @@ def management_reservations_occupancy(request):
         hotels=hotels,
         date_from=reporting_context["date_from"],
         date_to=reporting_context["date_to"],
+        source=(request.GET.get("source") or "").strip(),
     )
     occupancy = build_room_occupancy_analytics(
         hotels=hotels,
@@ -268,6 +269,7 @@ def management_reservations_occupancy(request):
             **reporting_context,
             **reservations,
             **occupancy,
+            "selected_source": (request.GET.get("source") or "").strip(),
             "is_management_overview": True,
             "is_director": True,
             "is_general_manager": request.user.role == "GENERAL_MANAGER",
