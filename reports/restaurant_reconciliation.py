@@ -13,6 +13,12 @@ def _money(value):
     return Decimal(value or 0).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
+def _select_related_if_supported(rows, *fields):
+    """Keep QuerySet eager-loading while also accepting ordinary iterables."""
+    select_related = getattr(rows, "select_related", None)
+    return select_related(*fields) if callable(select_related) else rows
+
+
 def _entry_account_movement(entries, system_key, *, debit_normal=True):
     """Return the signed movement on one system account across journal entries."""
     total = Decimal("0.00")
@@ -61,10 +67,10 @@ def build_restaurant_accounting_reconciliation(
     checked against each order's BusinessDay, not assumed to equal created_at.
     No journal entries or operational records are created or modified here.
     """
-    revenue_orders = list(revenue_orders.select_related("business_day", "department__hotel"))
-    complimentary_orders = list(complimentary_orders.select_related("business_day", "department__hotel"))
+    revenue_orders = list(_select_related_if_supported(revenue_orders, "business_day", "department__hotel"))
+    complimentary_orders = list(_select_related_if_supported(complimentary_orders, "business_day", "department__hotel"))
     refund_charges = list(refund_charges)
-    payments = list(payments.select_related("folio"))
+    payments = list(_select_related_if_supported(payments, "folio"))
 
     hotel_ids = {
         order.department.hotel_id for order in revenue_orders + complimentary_orders
