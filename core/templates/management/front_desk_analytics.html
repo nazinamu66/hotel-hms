@@ -14,10 +14,10 @@
     </form>
     <h2 class="fd-section-label">Guest activity</h2>
     <section class="fd-kpis">
-        <article class="fd-kpi" style="--fd-accent:#60a5fa"><span>Actual Check-ins</span><strong>{{ actual_check_ins }}</strong><small>Room folios checked in during period</small></article>
-        <article class="fd-kpi" style="--fd-accent:#f472b6"><span>Actual Checkouts</span><strong>{{ actual_checkouts }}</strong><small>Closed room folios during period</small></article>
-        <article class="fd-kpi" style="--fd-accent:#34d399"><span>In-house Guests</span><strong>{{ in_house_guests }}</strong><small>Distinct guests with an open stay</small></article>
-        <article class="fd-kpi" style="--fd-accent:#fbbf24"><span>Repeat Guests</span><strong>{{ repeat_guests }}</strong><small>Previously stayed guests checked in during period</small></article>
+        <a href="{% url 'management_front_desk_drilldown' 'check-ins' %}?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}" class="fd-kpi fd-kpi-link" style="--fd-accent:#60a5fa"><span>Actual Check-ins</span><strong>{{ actual_check_ins }}</strong><small>Room folios checked in during period</small><em>View records →</em></a>
+        <a href="{% url 'management_front_desk_drilldown' 'checkouts' %}?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}" class="fd-kpi fd-kpi-link" style="--fd-accent:#f472b6"><span>Actual Checkouts</span><strong>{{ actual_checkouts }}</strong><small>Closed room folios during period</small><em>View records →</em></a>
+        <a href="{% url 'management_front_desk_drilldown' 'in-house' %}?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}" class="fd-kpi fd-kpi-link" style="--fd-accent:#34d399"><span>In-house Guests</span><strong>{{ in_house_guests }}</strong><small>Distinct guests with an open stay</small><em>View records →</em></a>
+        <a href="{% url 'management_front_desk_drilldown' 'repeat-guests' %}?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}" class="fd-kpi fd-kpi-link" style="--fd-accent:#fbbf24"><span>Repeat Guests</span><strong>{{ repeat_guests }}</strong><small>Previously stayed guests checked in during period</small><em>View records →</em></a>
     </section>
     <div class="fd-dashboard-grid">
         <section class="fd-panel fd-watch"><div class="fd-panel-heading"><div><h2>Operating Watch</h2><p>Reservation and guest activity for the selected period</p></div><span class="fd-panel-icon">◉</span></div>
