@@ -349,7 +349,6 @@ def management_guest_profile(request, guest_id):
     from accounting.models import BankAccount
     from billing.models import (
         Guest, Folio, Reservation, GuestDeposit,
-        GuestDepositTransaction, ReservationDeposit,
     )
     from billing.services.guest_deposit import receive_guest_deposit
 
@@ -387,9 +386,6 @@ def management_guest_profile(request, guest_id):
             return redirect("management_guest_profile", guest_id=guest.pk)
         except (InvalidOperation, ValueError, ValidationError) as exc:
             messages.error(request, str(exc) or "Please enter a valid deposit.")
-        except Exception as exc:
-            # The service is atomic; surface expected validation messages only.
-            messages.error(request, str(exc))
 
     folios = (
         Folio.objects.filter(guest=guest, hotel__in=reporting_context["scoped_hotels"])
