@@ -767,7 +767,10 @@ def role_redirect(request):
 
         return redirect("hotel_dashboard")
 
-    if role in ["DIRECTOR", "MANAGER", "ACCOUNTANT"]:
+    if role in ["DIRECTOR", "GENERAL_MANAGER"]:
+        return redirect("management_overview")
+
+    if role in ["MANAGER", "ACCOUNTANT"]:
         return redirect("hotel_dashboard")
 
     if role == "FRONTDESK":
