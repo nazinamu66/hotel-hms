@@ -917,7 +917,7 @@
 
         <!-- TOP BAR -->
 
-        <div class="topbar">
+        <div class="topbar{% if request.resolver_match.url_name == 'management_overview' %} topbar-executive{% endif %}">
             <button type="button" class="mobile-nav-toggle" onclick="toggleMobileSidebar()" aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation">☰ <span>Menu</span></button>
 
             <div class="system-name">
