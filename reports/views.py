@@ -724,6 +724,65 @@ def restaurant_sales_performance(request):
         collections[row["method"]] = row["total"] or Decimal("0.00")
     total_collections = sum(collections.values(), Decimal("0.00"))
 
+    # Auditable detail panels. These reuse the operational POS, Payment and
+    # Charge records; they do not create a second sales ledger.
+    detail_section = request.GET.get("detail", "").strip().lower()
+    if detail_section not in {"orders", "payments", "refunds", "costs", "complimentary"}:
+        detail_section = ""
+
+    order_rows = revenue_orders.select_related(
+        "department__hotel", "created_by", "folio__room", "folio__guest", "shift"
+    ).order_by("-created_at", "-id")
+    payment_rows_detail = Payment.objects.filter(
+        shift__department_id__in=department_ids,
+        shift__isnull=False,
+        collected_at__date__range=(date_from, date_to),
+        amount__gt=0,
+    ).select_related("shift__user", "folio", "collected_by", "account").order_by("-collected_at")
+    if request.user.role == "RESTAURANT":
+        payment_rows_detail = payment_rows_detail.filter(shift__user=request.user)
+
+    refund_order_rows = orders.filter(is_refunded=True).select_related(
+        "department__hotel", "created_by", "refunded_by", "folio"
+    ).order_by("-refunded_at", "-id")
+    refund_rows = []
+    for refunded_order in refund_order_rows:
+        refund_charge = Charge.objects.filter(
+            department_id__in=department_ids,
+            reference=f"POS-REFUND-{refunded_order.pk}",
+            amount__lt=0,
+            created_at__date__range=(date_from, date_to),
+        ).order_by("-created_at").first()
+        refund_payment = Payment.objects.filter(
+            reference=f"POS-REFUND-{refunded_order.pk}",
+            amount__lt=0,
+        ).order_by("-collected_at").first()
+        if refund_charge or refund_payment:
+            refund_rows.append({
+                "order": refunded_order,
+                "charge": refund_charge,
+                "payment": refund_payment,
+                "amount": abs(refund_charge.amount if refund_charge else (refund_payment.amount if refund_payment else Decimal("0.00"))),
+                "date": refund_charge.created_at if refund_charge else refund_payment.collected_at,
+            })
+
+    cost_rows = POSOrderItem.objects.filter(
+        order__in=revenue_orders
+    ).select_related("order", "menu_item", "menu_item__product").order_by("-order__created_at")
+    complimentary_orders = orders.filter(
+        is_complimentary_breakfast=True,
+        status__in=("CHARGED", "PAID", "CANCELLED"),
+    ).select_related("created_by", "folio", "shift").order_by("-created_at")
+
+    detail_totals = {
+        "orders": order_rows.count(),
+        "payments": payment_rows_detail.count(),
+        "refunds": len(refund_rows),
+        "costs": cost_rows.count(),
+        "complimentary": complimentary_orders.count(),
+    }
+
+
     items = POSOrderItem.objects.filter(
         order__in=revenue_orders,
     ).select_related("menu_item", "menu_item__product", "order")
@@ -807,5 +866,12 @@ def restaurant_sales_performance(request):
         "category_rows": category_rows,
         "cashier_rows": cashier_rows,
         "daily_rows": daily_rows,
+        "detail_section": detail_section,
+        "detail_totals": detail_totals,
+        "order_rows": order_rows,
+        "payment_rows_detail": payment_rows_detail,
+        "refund_rows": refund_rows,
+        "cost_rows": cost_rows,
+        "complimentary_orders": complimentary_orders,
     })
 
