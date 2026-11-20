@@ -47,9 +47,10 @@ class PreventiveWorkOrderLocationTests(TestCase):
             name="Quarterly Generator Service",
         )
 
+    @patch("maintenance.workflows.preventive.MaintenanceScheduleCycle.objects.get_or_create")
     @patch("maintenance.workflows.preventive.MaintenanceTicket.objects.create")
     @patch("maintenance.workflows.preventive.MaintenanceTicket.objects.filter")
-    def test_room_asset_creates_room_work_order(self, filter_tickets, create_ticket):
+    def test_room_asset_creates_room_work_order(self, filter_tickets, create_ticket, get_cycle):
         filter_tickets.return_value.first.return_value = None
         schedule = self.make_schedule(room=self.room)
         create_ticket.return_value = SimpleNamespace(pk=10)
@@ -64,9 +65,10 @@ class PreventiveWorkOrderLocationTests(TestCase):
         self.assertIs(kwargs["asset"], schedule.asset)
         self.assertIs(kwargs["schedule"], schedule)
 
+    @patch("maintenance.workflows.preventive.MaintenanceScheduleCycle.objects.get_or_create")
     @patch("maintenance.workflows.preventive.MaintenanceTicket.objects.create")
     @patch("maintenance.workflows.preventive.MaintenanceTicket.objects.filter")
-    def test_non_room_asset_creates_location_work_order(self, filter_tickets, create_ticket):
+    def test_non_room_asset_creates_location_work_order(self, filter_tickets, create_ticket, get_cycle):
         filter_tickets.return_value.first.return_value = None
         schedule = self.make_schedule(location=self.location)
         create_ticket.return_value = SimpleNamespace(pk=11)
@@ -81,7 +83,8 @@ class PreventiveWorkOrderLocationTests(TestCase):
         self.assertIs(kwargs["asset"], schedule.asset)
         self.assertIs(kwargs["schedule"], schedule)
 
-    def test_unassigned_asset_cannot_create_work_order(self):
+    @patch("maintenance.workflows.preventive.MaintenanceScheduleCycle.objects.get_or_create")
+    def test_unassigned_asset_cannot_create_work_order(self, get_cycle):
         schedule = self.make_schedule()
 
         with self.assertRaisesMessage(
