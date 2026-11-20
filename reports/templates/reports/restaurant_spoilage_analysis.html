@@ -69,7 +69,7 @@
       <td><strong>{{ record.product.name }}</strong><br><span class="rsa-muted">{{ record.get_reason_code_display }}</span></td>
       <td>{{ record.quantity|quantity }} {{ record.product.base_unit }}</td>
       <td>{{ record.reported_by|default:"Unknown" }}</td>
-      <td><span class="rsa-pill rsa-{{ record.status }}">{{ record.get_status_display }}</span><br><strong>{{ record.cost_amount|money }}</strong></td>
+      <td><span class="rsa-pill rsa-{{ record.status }}">{{ record.get_status_display }}</span><br>{% if record.status == "APPROVED" %}<strong>{{ record.cost_amount|money }}</strong>{% else %}<span class="rsa-muted">Not recognized as loss</span>{% endif %}</td>
       <td>{% if record.status == "APPROVED" %}{{ record.approved_by|default:"—" }}<br><span class="rsa-muted">{{ record.approved_at|date:"d M Y H:i" }}</span>{% elif record.status == "REJECTED" %}{{ record.rejected_by|default:"—" }}<br><span class="rsa-muted">{{ record.rejected_at|date:"d M Y H:i" }}</span>{% else %}Awaiting decision{% endif %}</td>
       <td>{% if record.stock_movement_id %}Stock movement #{{ record.stock_movement_id }}{% endif %}{% if record.journal_entry_id %}<br>Journal #{{ record.journal_entry_id }}{% endif %}{% if not record.stock_movement_id and not record.journal_entry_id %}—{% endif %}</td>
     </tr>{% empty %}<tr><td colspan="8" class="rsa-empty">No spoilage records match this period.</td></tr>{% endfor %}
