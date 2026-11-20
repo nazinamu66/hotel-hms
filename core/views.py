@@ -262,6 +262,108 @@ def management_reservations_occupancy(request):
         date_from=reporting_context["date_from"],
         date_to=reporting_context["date_to"],
     )
+    selected_source = (request.GET.get("source") or "").strip()
+    selected_status = (request.GET.get("status") or "").strip().upper()
+    show_register = request.GET.get("register") == "1"
+    register_rows = []
+
+    if show_register:
+        from billing.models import Reservation, ReservationRoomAllocation, GroupReservationRoom
+
+        hotel_ids = hotels.values_list("pk", flat=True)
+        legacy = (
+            Reservation.objects.filter(
+                hotel_id__in=hotel_ids,
+                created_at__date__gte=reporting_context["date_from"],
+                created_at__date__lte=reporting_context["date_to"],
+            )
+            .exclude(room_allocations__isnull=False)
+            .exclude(group_allocation__isnull=False)
+            .select_related("hotel", "guest", "room")
+        )
+        for item in legacy:
+            source = item.source.strip() or "Not recorded"
+            if selected_source and source != selected_source:
+                continue
+            if selected_status and item.status != selected_status:
+                continue
+            register_rows.append({
+                "guest_name": item.guest.full_name,
+                "guest_id": item.guest_id,
+                "hotel_name": item.hotel.name,
+                "room_number": item.room.room_number if item.room_id else "Unassigned",
+                "check_in": item.check_in_date,
+                "check_out": item.check_out_date,
+                "status": item.status,
+                "source": source,
+                "booking_type": "Individual",
+                "reference": f"Reservation #{item.pk}",
+                "created_at": item.created_at,
+            })
+
+        ordinary = (
+            ReservationRoomAllocation.objects.filter(
+                reservation__hotel_id__in=hotel_ids,
+                created_at__date__gte=reporting_context["date_from"],
+                created_at__date__lte=reporting_context["date_to"],
+            )
+            .select_related("reservation__hotel", "reservation__guest", "reservation__room",
+                            "guest", "room")
+        )
+        for item in ordinary:
+            source = item.reservation.source.strip() or "Not recorded"
+            if selected_source and source != selected_source:
+                continue
+            if selected_status and item.status != selected_status:
+                continue
+            register_rows.append({
+                "guest_name": item.guest.full_name,
+                "guest_id": item.guest_id,
+                "hotel_name": item.reservation.hotel.name,
+                "room_number": item.room.room_number if item.room_id else "Unassigned",
+                "check_in": item.check_in_date,
+                "check_out": item.check_out_date,
+                "status": item.status,
+                "source": source,
+                "booking_type": "Individual",
+                "reference": f"Reservation #{item.reservation_id} · Room {item.allocation_number}",
+                "created_at": item.created_at,
+            })
+
+        groups = (
+            GroupReservationRoom.objects.filter(
+                group_reservation__hotel_id__in=hotel_ids,
+                created_at__date__gte=reporting_context["date_from"],
+                created_at__date__lte=reporting_context["date_to"],
+            )
+            .select_related("group_reservation__hotel", "group_reservation__company",
+                            "guest", "room")
+        )
+        for item in groups:
+            source = "Corporate group"
+            if selected_source and source != selected_source:
+                continue
+            if selected_status and item.status != selected_status:
+                continue
+            register_rows.append({
+                "guest_name": item.guest.full_name,
+                "guest_id": item.guest_id,
+                "hotel_name": item.group_reservation.hotel.name,
+                "room_number": item.room.room_number if item.room_id else "Unassigned",
+                "check_in": item.check_in_date,
+                "check_out": item.check_out_date,
+                "status": item.status,
+                "source": source,
+                "booking_type": "Corporate",
+                "reference": item.group_reservation.reference,
+                "created_at": item.created_at,
+            })
+
+        selected_hotel = reporting_context.get("selected_hotel")
+        if selected_hotel:
+            register_rows = [row for row in register_rows if row["hotel_name"] == selected_hotel.name]
+        register_rows.sort(key=lambda row: (row["created_at"], row["guest_name"]), reverse=True)
+
     return render(
         request,
         "management/reservations_occupancy.html",
@@ -269,7 +371,11 @@ def management_reservations_occupancy(request):
             **reporting_context,
             **reservations,
             **occupancy,
-            "selected_source": (request.GET.get("source") or "").strip(),
+            "selected_source": selected_source,
+            "selected_status": selected_status,
+            "show_register": show_register,
+            "register_rows": register_rows,
+            "register_count": len(register_rows),
             "is_management_overview": True,
             "is_director": True,
             "is_general_manager": request.user.role == "GENERAL_MANAGER",
