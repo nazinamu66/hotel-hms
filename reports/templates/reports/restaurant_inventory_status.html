@@ -1,0 +1,53 @@
+{% extends "base/base.html" %}
+{% load accounting_extras %}
+{% block title %}Restaurant Inventory Status | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.restaurant-inventory{box-sizing:border-box;max-width:none;min-height:100%;margin:calc(-1 * clamp(18px,2.5vw,34px));padding:clamp(18px,2.5vw,34px);background:radial-gradient(ellipse at 85% 0%,rgba(37,99,235,.16),transparent 34%),#0d1728;color:#e8eef8}
+.restaurant-inventory *{box-sizing:border-box}
+.ri-head{margin-bottom:22px}.ri-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#91a4bf}
+.ri-head h1{font-size:28px;line-height:1.2;margin:5px 0 7px;color:#f8fafc}.ri-muted{color:#9aabc1;font-size:13px;line-height:1.5}
+.ri-panel,.ri-kpi{background:#172b43;border:1px solid #29415e;border-radius:14px;box-shadow:0 8px 24px rgba(3,12,25,.16)}
+.ri-panel{padding:18px;margin-bottom:18px}.ri-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
+.ri-field{min-width:160px;flex:1}.ri-field label{display:block;font-size:12px;font-weight:750;color:#b8c7da;margin-bottom:6px}
+.ri-field input,.ri-field select{width:100%;min-height:40px;padding:8px 10px;border:1px solid #3b5573;border-radius:8px;background:#102239;color:#f8fafc}
+.ri-btn{min-height:40px;padding:9px 15px;border-radius:8px;background:#2563eb;color:white;border:0;font-weight:750;cursor:pointer}
+.ri-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.ri-kpi{padding:17px;min-width:0}.ri-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#9aabc1}
+.ri-value{display:block;font-size:23px;font-weight:850;color:#f8fafc;margin-top:8px;overflow-wrap:anywhere}.ri-note{font-size:12px;color:#91a4bf;margin-top:5px}
+.ri-section{font-size:17px;color:#f8fafc;margin:0 0 12px}.ri-table-wrap{overflow-x:auto}
+.ri-table{width:100%;min-width:1050px;border-collapse:collapse}.ri-table th{background:#102239;color:#aebfd4;text-transform:uppercase;font-size:10px;letter-spacing:.06em;text-align:left;padding:12px;white-space:nowrap}
+.ri-table td{padding:12px;border-bottom:1px solid #29415e;color:#dce6f2;font-size:13px;white-space:nowrap}.ri-table tbody tr:hover{background:#1c3552}
+.ri-status{display:inline-block;padding:4px 8px;border-radius:99px;font-size:10px;font-weight:800;background:#263e59;color:#cbd5e1}
+.ri-good{background:#164e3a;color:#bbf7d0}.ri-warn{background:#713f12;color:#fde68a}
+.ri-alert{padding:13px 15px;margin-bottom:18px;border:1px solid #8b5a24;border-radius:11px;background:#3a2b1a;color:#fde68a;font-size:13px}
+@media(max-width:950px){.ri-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.ri-grid{grid-template-columns:1fr}.ri-head h1{font-size:23px}}
+</style>
+<div class="restaurant-inventory">
+  <header class="ri-head"><div class="ri-eyebrow">Restaurant · Management reporting</div><h1>Inventory Status</h1><p class="ri-muted">Current drinks and prepared snacks held by Restaurant departments, with FIFO valuation, reorder alerts and stock movement history.</p></header>
+  <section class="ri-panel"><form method="get" class="ri-filters">
+    <div class="ri-field"><label for="ri-from">Movement from</label><input id="ri-from" type="date" name="from" value="{{ date_from }}"></div>
+    <div class="ri-field"><label for="ri-to">Movement to</label><input id="ri-to" type="date" name="to" value="{{ date_to }}"></div>
+    {% if hotels|length > 1 %}<div class="ri-field"><label for="ri-hotel">Hotel</label><select id="ri-hotel" name="hotel"><option value="">All accessible hotels</option>{% for hotel in hotels %}<option value="{{ hotel.pk }}" {% if selected_hotel == hotel.pk|stringformat:"s" %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}</select></div>{% elif hotels|length == 1 %}{% for hotel in hotels %}<div class="ri-field"><label>Hotel scope</label><div>{{ hotel.name }}</div></div>{% endfor %}{% endif %}
+    <button class="ri-btn" type="submit">Apply filters</button>
+  </form></section>
+  <section class="ri-grid">
+    <article class="ri-kpi"><div class="ri-label">Stock records</div><strong class="ri-value">{{ total_products }}</strong><div class="ri-note">Product and Restaurant department combinations</div></article>
+    <article class="ri-kpi"><div class="ri-label">Physical stock</div><strong class="ri-value">{{ total_physical_quantity|quantity }}</strong><div class="ri-note">Recorded quantities in product base units</div></article>
+    <article class="ri-kpi"><div class="ri-label">FIFO inventory value</div><strong class="ri-value">{{ total_fifo_value|money }}</strong><div class="ri-note">Remaining cost layers only</div></article>
+    <article class="ri-kpi"><div class="ri-label">Low-stock records</div><strong class="ri-value">{{ low_stock_count }}</strong><div class="ri-note">At or below department reorder level</div></article>
+    <article class="ri-kpi"><div class="ri-label">Reconciliation exceptions</div><strong class="ri-value">{{ discrepancy_count }}</strong><div class="ri-note">Physical quantity differs from remaining FIFO layers</div></article>
+    <article class="ri-kpi"><div class="ri-label">Unvalued quantity</div><strong class="ri-value">{{ unvalued_quantity|quantity }}</strong><div class="ri-note">Physical stock without matching FIFO layers</div></article>
+    <article class="ri-kpi"><div class="ri-label">FIFO layer quantity</div><strong class="ri-value">{{ total_layer_quantity|quantity }}</strong><div class="ri-note">Shown separately from physical stock</div></article>
+    <article class="ri-kpi"><div class="ri-label">Movements in period</div><strong class="ri-value">{{ movement_count }}</strong><div class="ri-note">Receipts, issues and transfers</div></article>
+  </section>
+  {% if discrepancy_count %}<div class="ri-alert"><strong>Reconciliation attention:</strong> {{ discrepancy_count }} product/department balance(s) differ from remaining FIFO layers. No estimated Product.cost_price has been substituted for missing layer valuation.</div>{% endif %}
+  <section class="ri-panel"><h2 class="ri-section">Current Restaurant stock</h2><p class="ri-muted">This is a current stock snapshot. The date range applies only to the movement register below.</p><div class="ri-table-wrap"><table class="ri-table"><thead><tr><th>Hotel / Department</th><th>Product</th><th>Type</th><th>Physical qty</th><th>FIFO qty</th><th>Difference</th><th>FIFO value</th><th>Reorder level</th><th>Status</th><th>Reconciliation</th></tr></thead><tbody>
+  {% for row in inventory_rows %}<tr><td>{{ row.department.hotel.name }}<br><strong>{{ row.department.name }}</strong></td><td><strong>{{ row.product.name }}</strong><br><span class="ri-muted">{{ row.product.sku }} · {{ row.product.base_unit }}</span></td><td>{{ row.product.get_product_type_display }}</td><td>{{ row.physical_quantity|quantity }}</td><td>{{ row.layer_quantity|quantity }}</td><td>{{ row.difference|quantity }}</td><td>{{ row.fifo_value|money }}</td><td>{{ row.reorder_level|quantity }}</td><td>{% if row.is_low_stock %}<span class="ri-status ri-warn">At / below reorder</span>{% else %}<span class="ri-status ri-good">In range</span>{% endif %}</td><td>{% if row.reconciliation_status == "MATCH" %}<span class="ri-status ri-good">Matched</span>{% elif row.reconciliation_status == "MISSING_LAYERS" %}<span class="ri-status ri-warn">Missing FIFO layers</span>{% else %}<span class="ri-status ri-warn">Layers exceed stock</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="10" style="text-align:center;padding:30px;color:#9aabc1">No Restaurant stock records or remaining FIFO layers found for this hotel scope.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+  <section class="ri-panel"><h2 class="ri-section">Stock movement register</h2><p class="ri-muted">{{ date_from }} to {{ date_to }} · FIFO cost is the sum of recorded movement cost allocations; zero means no allocation was recorded.</p><div class="ri-table-wrap"><table class="ri-table"><thead><tr><th>Date</th><th>Product</th><th>Movement</th><th>Quantity</th><th>From</th><th>To</th><th>Reference</th><th>Recorded by</th><th>FIFO cost</th></tr></thead><tbody>
+  {% for row in movement_rows %}<tr><td>{{ row.movement.created_at|date:"d M Y H:i" }}</td><td>{{ row.movement.product.name }}</td><td>{{ row.direction }}</td><td>{{ row.movement.quantity|quantity }} {{ row.movement.product.base_unit }}</td><td>{{ row.movement.from_department.name|default:"—" }}</td><td>{{ row.movement.to_department.name|default:"—" }}</td><td>{{ row.movement.reference|default:"—" }}</td><td>{{ row.movement.created_by|default:"System" }}</td><td>{{ row.fifo_cost|money }}</td></tr>{% empty %}<tr><td colspan="9" style="text-align:center;padding:30px;color:#9aabc1">No Restaurant stock movements in this date range.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+  <p class="ri-muted">Important: this report covers resale drinks and prepared snacks physically held in Restaurant departments. It does not include Kitchen-held food or Store inventory. FIFO value includes only remaining cost layers; physical stock without matching layers is flagged as unvalued, and no estimated cost is added. This is an operational snapshot, not a posted accounting valuation.</p>
+</div>
+{% endblock %}
