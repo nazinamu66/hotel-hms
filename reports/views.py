@@ -732,7 +732,7 @@ def restaurant_sales_performance(request):
         order__in=revenue_orders,
     ).select_related("menu_item", "menu_item__product", "order")
     item_rows = {}
-    category_totals = {"FOOD": {"quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00")},
+    category_totals = {"FOOD": {"quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00"), "profit": Decimal("0.00")},
                        "DRINK": {"quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00")}}
     total_cogs = Decimal("0.00")
     uncosted_quantity = 0
@@ -753,7 +753,7 @@ def restaurant_sales_performance(request):
                               "quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00")}
         item_rows[key]["quantity"] += item.quantity
         item_rows[key]["revenue"] += revenue
-        item_rows[key]["cost"] += cost
+        item_rows[key]["cost"] += cost\n        item_rows[key]["profit"] += revenue - cost
 
     top_items = sorted(item_rows.values(), key=lambda row: (row["revenue"], row["quantity"]), reverse=True)[:15]
     category_rows = [
