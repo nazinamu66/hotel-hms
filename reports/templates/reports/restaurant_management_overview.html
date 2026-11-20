@@ -1,0 +1,65 @@
+{% extends "base/base.html" %}
+{% block title %}Restaurant Management & Shift Performance{% endblock %}
+{% block content %}
+<style>
+.restaurant-management{max-width:1600px;margin:0 auto;color:#e8eef8}
+.restaurant-management .rm-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}
+.restaurant-management .rm-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#91a4bf}
+.restaurant-management h1{font-size:28px;line-height:1.2;margin:5px 0 7px;color:#f8fafc}
+.restaurant-management .rm-muted{color:#9aabc1}
+.restaurant-management .rm-panel,.restaurant-management .rm-kpi{background:#172b43;border:1px solid #29415e;border-radius:14px;box-shadow:0 8px 24px rgba(3,12,25,.16)}
+.restaurant-management .rm-panel{padding:18px;margin-bottom:18px}
+.restaurant-management .rm-filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
+.restaurant-management .rm-field{min-width:160px;flex:1}
+.restaurant-management label{display:block;font-size:12px;font-weight:750;color:#b8c7da;margin-bottom:6px}
+.restaurant-management input,.restaurant-management select{width:100%;box-sizing:border-box;min-height:40px;padding:8px 10px;border:1px solid #3b5573;border-radius:8px;background:#102239;color:#f8fafc}
+.restaurant-management .rm-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 15px;border-radius:8px;background:#2563eb;color:white;text-decoration:none;border:0;font-weight:750;cursor:pointer}
+.restaurant-management .rm-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.restaurant-management .rm-kpi{padding:17px}
+.restaurant-management .rm-kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;color:#9aabc1}
+.restaurant-management .rm-kpi-value{display:block;font-size:24px;font-weight:800;color:#f8fafc;margin-top:8px;font-variant-numeric:tabular-nums}
+.restaurant-management .rm-kpi-note{font-size:12px;color:#91a4bf;margin-top:5px}
+.restaurant-management .rm-table-wrap{overflow-x:auto}
+.restaurant-management table{width:100%;border-collapse:collapse;min-width:1120px}
+.restaurant-management th{background:#102239;color:#aebfd4;text-transform:uppercase;font-size:10px;letter-spacing:.06em;text-align:left;padding:12px 10px;white-space:nowrap}
+.restaurant-management td{padding:13px 10px;border-bottom:1px solid #29415e;color:#dce6f2;font-size:13px;white-space:nowrap}
+.restaurant-management tbody tr:hover{background:#1c3552}
+.restaurant-management a.rm-link{color:#93c5fd;font-weight:750;text-decoration:none}
+.restaurant-management .rm-status{display:inline-block;padding:4px 8px;border-radius:99px;font-size:10px;font-weight:800;background:#263e59;color:#cbd5e1}
+.restaurant-management .rm-open{background:#164e3a;color:#bbf7d0}
+.restaurant-management .rm-warning{background:#713f12;color:#fde68a}
+@media(max-width:900px){.restaurant-management .rm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.restaurant-management h1{font-size:23px}.restaurant-management .rm-kpis{grid-template-columns:1fr}}
+</style>
+<div class="restaurant-management">
+  <header class="rm-header"><div><div class="rm-eyebrow">Restaurant · Management reporting</div><h1>Management &amp; Shift Performance</h1><p class="rm-muted">A shift-led view of sales, collections, cashier activity and cash handovers.</p></div></header>
+  <section class="rm-panel"><form method="get" class="rm-filters">
+    <div class="rm-field"><label for="rm-from">From date</label><input id="rm-from" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}"></div>
+    <div class="rm-field"><label for="rm-to">To date</label><input id="rm-to" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}"></div>
+    {% if hotels %}<div class="rm-field"><label for="rm-hotel">Hotel</label><select id="rm-hotel" name="hotel"><option value="">All accessible hotels</option>{% for hotel in hotels %}<option value="{{ hotel.pk }}" {% if selected_hotel == hotel.pk|stringformat:"s" %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}</select></div>{% endif %}
+    <button class="rm-btn" type="submit">Apply filters</button>
+  </form></section>
+  <section class="rm-kpis">
+    <div class="rm-kpi"><div class="rm-kpi-label">Net sales</div><strong class="rm-kpi-value">₦{{ totals.net_sales|floatformat:2 }}</strong><div class="rm-kpi-note">Settled sales less recorded refunds</div></div>
+    <div class="rm-kpi"><div class="rm-kpi-label">Orders</div><strong class="rm-kpi-value">{{ order_count }}</strong><div class="rm-kpi-note">Orders attached to shifts in this period</div></div>
+    <div class="rm-kpi"><div class="rm-kpi-label">Open shifts</div><strong class="rm-kpi-value">{{ open_count }}</strong><div class="rm-kpi-note">{{ closed_count }} closed shifts</div></div>
+    <div class="rm-kpi"><div class="rm-kpi-label">Pending handovers</div><strong class="rm-kpi-value">{{ handover_pending }}</strong><div class="rm-kpi-note">Cash handovers awaiting confirmation</div></div>
+  </section>
+  <section class="rm-panel"><h2 style="font-size:17px;margin:0 0 14px;color:#f8fafc">Sales &amp; collection breakdown</h2>
+    <div class="rm-kpis" style="margin:0">
+      <div><div class="rm-kpi-label">Walk-in sales</div><strong class="rm-kpi-value">₦{{ totals.walkin|floatformat:2 }}</strong></div>
+      <div><div class="rm-kpi-label">Room charges</div><strong class="rm-kpi-value">₦{{ totals.room|floatformat:2 }}</strong></div>
+      <div><div class="rm-kpi-label">Cash collected</div><strong class="rm-kpi-value">₦{{ totals.cash|floatformat:2 }}</strong></div>
+      <div><div class="rm-kpi-label">POS / Transfer</div><strong class="rm-kpi-value">₦{{ totals.pos|add:totals.transfer|floatformat:2 }}</strong><div class="rm-kpi-note">POS ₦{{ totals.pos|floatformat:2 }} · Transfer ₦{{ totals.transfer|floatformat:2 }}</div></div>
+    </div>
+    <p class="rm-muted" style="font-size:12px;margin:14px 0 0">Room charges are shown separately from collected payments. Complimentary breakfast redemptions are excluded from revenue. Collection totals use Payment records linked to each shift.</p>
+  </section>
+  <section class="rm-panel"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px"><h2 style="font-size:17px;margin:0;color:#f8fafc">Shift performance</h2><span class="rm-muted" style="font-size:12px">{{ shift_rows|length }} shift{{ shift_rows|length|pluralize }}</span></div>
+    <div class="rm-table-wrap"><table><thead><tr><th>Shift</th><th>Hotel / Department</th><th>Cashier</th><th>Opened</th><th>Closed</th><th>Orders</th><th>Sales</th><th>Cash</th><th>POS</th><th>Transfer</th><th>Refunds</th><th>Handover</th><th>Status</th></tr></thead><tbody>
+    {% for row in shift_rows %}<tr>
+      <td><a class="rm-link" href="{% url 'restaurant_shift_detail' row.shift.pk %}">#{{ row.shift.pk }}</a></td><td>{{ row.shift.department.hotel.name }} · {{ row.shift.department.name }}</td><td>{{ row.shift.user.get_full_name|default:row.shift.user.username }}</td><td>{{ row.shift.opened_at|date:"d M Y, H:i" }}</td><td>{% if row.shift.closed_at %}{{ row.shift.closed_at|date:"d M Y, H:i" }}{% else %}—{% endif %}</td><td>{{ row.order_count }}</td><td>₦{{ row.sales|floatformat:2 }}</td><td>₦{{ row.cash|floatformat:2 }}</td><td>₦{{ row.pos|floatformat:2 }}</td><td>₦{{ row.transfer|floatformat:2 }}</td><td>₦{{ row.refunds|floatformat:2 }}</td><td>{% if row.pending_handovers %}<span class="rm-status rm-warning">{{ row.pending_handovers }} pending</span>{% else %}<span class="rm-status">Clear</span>{% endif %}</td><td><span class="rm-status {% if row.shift.status == 'OPEN' %}rm-open{% endif %}">{{ row.shift.get_status_display }}</span></td>
+    </tr>{% empty %}<tr><td colspan="13" style="text-align:center;padding:35px;color:#9aabc1">No Restaurant shifts found for this date range.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+</div>
+{% endblock %}
