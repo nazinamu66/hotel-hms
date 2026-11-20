@@ -574,6 +574,13 @@ class GuestDepositTransaction(models.Model):
         choices=TYPE_CHOICES,
     )
 
+    payment_method = models.CharField(
+        max_length=20,
+        choices=(("CASH", "Cash"), ("POS", "POS"), ("TRANSFER", "Bank Transfer")),
+        blank=True,
+        default="",
+    )
+
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
