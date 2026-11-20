@@ -1234,10 +1234,7 @@ def maintenance_management_overview(request):
 
     ticket_scope = Q(room__hotel__in=accessible_hotels) | Q(location__hotel__in=accessible_hotels)
     base_tickets = MaintenanceTicket.objects.filter(ticket_scope)
-    hotels_with_tickets = accessible_hotels.filter(
-        Q(rooms__maintenance_tickets__isnull=False)
-        | Q(maintenance_locations__maintenance_tickets__isnull=False)
-    ).distinct().order_by("name")
+    report_hotels = accessible_hotels.order_by("name")
     selected_hotel = request.GET.get("hotel", "").strip()
     if selected_hotel:
         if not selected_hotel.isdigit() or not accessible_hotels.filter(pk=int(selected_hotel)).exists():
@@ -1246,7 +1243,7 @@ def maintenance_management_overview(request):
         base_tickets = base_tickets.filter(
             Q(room__hotel_id=hotel_id) | Q(location__hotel_id=hotel_id)
         )
-        hotels_with_tickets = hotels_with_tickets.filter(pk=hotel_id)
+        report_hotels = report_hotels.filter(pk=hotel_id)
 
     tickets = base_tickets.filter(
         created_at__date__range=(date_from, date_to)
@@ -1295,15 +1292,15 @@ def maintenance_management_overview(request):
         {"month": key, **values}
         for key, values in sorted(monthly.items())
     ]
-    active_assets = MaintenanceAsset.objects.filter(hotel__in=hotels_with_tickets, is_active=True).count()
+    active_assets = MaintenanceAsset.objects.filter(hotel__in=report_hotels, is_active=True).count()
     due_schedules = MaintenanceSchedule.objects.filter(
-        asset__hotel__in=hotels_with_tickets,
+        asset__hotel__in=report_hotels,
         is_active=True,
         next_due_date__lte=today,
     ).count()
     resolved_count = status_totals.get("RESOLVED", 0)
     context = {
-        "hotels": hotels_with_tickets,
+        "hotels": report_hotels,
         "selected_hotel": selected_hotel,
         "date_from": date_from.isoformat(),
         "date_to": date_to.isoformat(),
