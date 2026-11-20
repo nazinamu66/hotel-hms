@@ -137,7 +137,7 @@
                     {% elif metric.unit == "days" %}
                         {{ metric.value|floatformat:"2g" }} days
                     {% elif metric.unit == "count" %}
-                        {{ metric.value|floatformat:0 }}
+                        {{ metric.value|floatformat:"0g" }}
                     {% else %}
                         {{ metric.value }}
                     {% endif %}
@@ -172,7 +172,7 @@
                                         {% elif metric.unit == "percent" %}{{ row.value|floatformat:"2g" }}%
                                         {% elif metric.unit == "nights" %}{{ row.value|floatformat:"2g" }}
                                         {% elif metric.unit == "days" %}{{ row.value|floatformat:"2g" }}
-                                        {% elif metric.unit == "count" %}{{ row.value|floatformat:0 }}
+                                        {% elif metric.unit == "count" %}{{ row.value|floatformat:"0g" }}
                                         {% else %}{{ row.value }}{% endif %}
                                     </td>
                                 </tr>
