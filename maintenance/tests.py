@@ -1,3 +1,4 @@
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -45,6 +46,7 @@ class PreventiveWorkOrderLocationTests(TestCase):
             is_active=True,
             asset=asset,
             name="Quarterly Generator Service",
+            next_due_date=date(2026, 11, 21),
         )
 
     @patch("maintenance.workflows.preventive.MaintenanceScheduleCycle.objects.get_or_create")
