@@ -791,7 +791,18 @@ def restaurant_sales_performance(request):
     complimentary_orders = orders.filter(
         is_complimentary_breakfast=True,
         status__in=("CHARGED", "PAID", "CANCELLED"),
-    ).select_related("created_by", "folio", "shift").order_by("-created_at")
+    ).select_related("created_by", "folio", "shift")
+
+    # Reconcile existing operational records to the accounting journal.
+    # This is read-only: it never creates or repairs a posting.
+    from reports.restaurant_reconciliation import build_restaurant_accounting_reconciliation
+    accounting_reconciliation = build_restaurant_accounting_reconciliation(
+        revenue_orders=revenue_orders,
+        refund_charges=refund_charge_records,
+        payments=payments,
+        complimentary_orders=complimentary_orders,
+    )
+    complimentary_orders = complimentary_orders.order_by("-created_at")
 
     detail_totals = {
         "orders": order_rows.count(),
@@ -897,5 +908,6 @@ def restaurant_sales_performance(request):
         "refund_rows": refund_rows,
         "cost_rows": cost_rows,
         "complimentary_orders": complimentary_orders,
+        "accounting_reconciliation": accounting_reconciliation,
     })
 
