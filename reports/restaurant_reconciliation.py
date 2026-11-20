@@ -260,17 +260,13 @@ def build_restaurant_accounting_reconciliation(
     # Complimentary breakfast costs debit Complimentary Meals Expense,
     # not Restaurant Revenue or ordinary Cost of Goods Sold.
     for order in complimentary_orders:
-        expected = Decimal("0.00")
+        expected_category_amounts = []
         refs = [
             f"COMP-BREAKFAST-DRINK-COGS-{order.pk}",
             f"COMP-BREAKFAST-FOOD-COGS-{order.pk}",
         ]
         matched = []
         expected_entry_count = 0
-        for item in order.items.select_related("menu_item__product"):
-            product = item.menu_item.product
-            if product.is_stock_item():
-                expected += Decimal(item.cost_at_sale or 0) * item.quantity
         for reference in refs:
             category = "DRINK" if "DRINK" in reference else "FOOD"
             category_expected = sum(
@@ -285,9 +281,12 @@ def build_restaurant_accounting_reconciliation(
                 ),
                 Decimal("0.00"),
             )
-            if _money(category_expected) > 0:
+            category_amount = _money(category_expected)
+            expected_category_amounts.append(category_amount)
+            if category_amount > 0:
                 expected_entry_count += 1
             matched.extend(entries_by_reference.get(reference, []))
+        expected = sum(expected_category_amounts, Decimal("0.00"))
         actual = _entry_account_movement(
             matched, "complimentary_meals_expense", debit_normal=True
         )
