@@ -49,22 +49,22 @@
     <section class="exec-kpi-grid" aria-label="Financial performance indicators">
         <article class="exec-kpi" style="--kpi-accent:#60a5fa">
             <div class="exec-kpi-label">Total Revenue</div>
-            <div class="exec-kpi-value">₦{{ revenue|floatformat:2 }}</div>
+            <div class="exec-kpi-value">₦{{ revenue|floatformat:"2g" }}</div>
             <div class="exec-kpi-note">Posted income and other income</div>
         </article>
         <article class="exec-kpi" style="--kpi-accent:#fbbf24">
             <div class="exec-kpi-label">Cost of Goods Sold</div>
-            <div class="exec-kpi-value">₦{{ cogs|floatformat:2 }}</div>
+            <div class="exec-kpi-value">₦{{ cogs|floatformat:"2g" }}</div>
             <div class="exec-kpi-note">Posted COGS ledger entries</div>
         </article>
         <article class="exec-kpi" style="--kpi-accent:#c4b5fd">
             <div class="exec-kpi-label">Operating Expenses</div>
-            <div class="exec-kpi-value">₦{{ expenses|floatformat:2 }}</div>
+            <div class="exec-kpi-value">₦{{ expenses|floatformat:"2g" }}</div>
             <div class="exec-kpi-note">Posted expense account activity</div>
         </article>
         <article class="exec-kpi" style="--kpi-accent:#34d399">
             <div class="exec-kpi-label">Operating Profit</div>
-            <div class="exec-kpi-value">₦{{ operating_result|floatformat:2 }}</div>
+            <div class="exec-kpi-value">₦{{ operating_result|floatformat:"2g" }}</div>
             <div class="exec-kpi-note">Revenue less COGS and expenses</div>
         </article>
     </section>
@@ -92,7 +92,7 @@
                 <div class="exec-hotel-row">
                     <div class="exec-hotel-row-head">
                         <strong>{{ row.hotel.name }}</strong>
-                        <span>₦{{ row.revenue|floatformat:2 }}</span>
+                        <span>₦{{ row.revenue|floatformat:"2g" }}</span>
                     </div>
                     <div class="exec-bar-track">
                         <div class="exec-bar-fill" style="width:{{ row.revenue_bar_width }}%"></div>
@@ -110,12 +110,12 @@
             Current balances for the selected hotel scope. These are live snapshots and are not limited by the P&amp;L date range.
         </p>
         <div class="exec-position-grid">
-            <div class="exec-position-item"><span>Cash on Hand</span><strong>₦{{ cash_balance|floatformat:2 }}</strong></div>
-            <div class="exec-position-item"><span>Bank Balances</span><strong>₦{{ bank_balance|floatformat:2 }}</strong></div>
-            <div class="exec-position-item"><span>Accounts Receivable</span><strong>₦{{ accounts_receivable|floatformat:2 }}</strong></div>
-            <div class="exec-position-item"><span>Accounts Payable</span><strong>₦{{ accounts_payable|floatformat:2 }}</strong></div>
-            <div class="exec-position-item"><span>Corporate Deposits Held</span><strong>₦{{ corporate_deposits_held|floatformat:2 }}</strong></div>
-            <div class="exec-position-item"><span>Guest Deposits Held</span><strong>₦{{ guest_deposits_held|floatformat:2 }}</strong></div>
+            <div class="exec-position-item"><span>Cash on Hand</span><strong>₦{{ cash_balance|floatformat:"2g" }}</strong></div>
+            <div class="exec-position-item"><span>Bank Balances</span><strong>₦{{ bank_balance|floatformat:"2g" }}</strong></div>
+            <div class="exec-position-item"><span>Accounts Receivable</span><strong>₦{{ accounts_receivable|floatformat:"2g" }}</strong></div>
+            <div class="exec-position-item"><span>Accounts Payable</span><strong>₦{{ accounts_payable|floatformat:"2g" }}</strong></div>
+            <div class="exec-position-item"><span>Corporate Deposits Held</span><strong>₦{{ corporate_deposits_held|floatformat:"2g" }}</strong></div>
+            <div class="exec-position-item"><span>Guest Deposits Held</span><strong>₦{{ guest_deposits_held|floatformat:"2g" }}</strong></div>
         </div>
         <p class="exec-footnote">
             Deposits held are liabilities, not revenue. Payments and deposits are not added again to posted revenue.
