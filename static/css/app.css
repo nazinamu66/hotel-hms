@@ -907,3 +907,28 @@ input, select, textarea { font-size: 16px; }
     .management-overview .exec-position-grid { grid-template-columns: minmax(0, 1fr); }
     .management-overview .exec-filter-actions { width: 100%; justify-content: space-between; }
 }
+
+
+/* Executive Dashboard topbar — scoped to the management overview only. */
+.topbar.topbar-executive {
+    background: #0d1728;
+    color: #f1f5f9;
+    border-bottom: 1px solid rgba(148, 163, 184, .17);
+}
+.topbar.topbar-executive .user-info {
+    color: #cbd5e1;
+}
+.topbar.topbar-executive .user-info strong {
+    color: #f8fafc;
+}
+.topbar.topbar-executive .user-info a {
+    color: #93c5fd;
+}
+.topbar.topbar-executive .user-info a:hover {
+    color: #ffffff;
+}
+.topbar.topbar-executive .mobile-nav-toggle {
+    background: #15243a;
+    border-color: rgba(148, 163, 184, .25);
+    color: #f1f5f9;
+}
