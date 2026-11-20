@@ -2591,6 +2591,51 @@ class KitchenManagementReportAccessTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
 
+    def test_inventory_product_drilldown_shows_fifo_layers_and_movements(self):
+        product = Product.objects.create(
+            hotel=self.hotel, name="Drilldown Rice", sku="DRILL-RICE",
+            product_type="RAW", base_unit="kg",
+        )
+        Stock.objects.create(product=product, department=self.kitchen, quantity=Decimal("4.000"))
+        layer = StockCostLayer.objects.create(
+            product=product, department=self.kitchen,
+            quantity_received=Decimal("5.000"), quantity_remaining=Decimal("4.000"),
+            unit_cost=Decimal("12.5000"), source_reference="OPENING-DRILL",
+        )
+        movement = StockMovement.objects.create(
+            product=product, to_department=self.kitchen, quantity=Decimal("5.000"),
+            movement_type="IN", created_by=self.manager, reference="DRILL-RECEIPT",
+        )
+        StockMovementCostAllocation.objects.create(
+            movement=movement, cost_layer=layer, quantity=Decimal("5.000"),
+            unit_cost=Decimal("12.5000"), total_cost=Decimal("62.50"),
+        )
+        self.client.force_login(self.director)
+        response = self.client.get(reverse(
+            "kitchen_inventory_product_detail", args=[product.pk, self.kitchen.pk]
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["physical_quantity"], Decimal("4.000"))
+        self.assertEqual(response.context["layer_quantity"], Decimal("4.000"))
+        self.assertEqual(response.context["fifo_value"], Decimal("50.000000"))
+        self.assertContains(response, "OPENING-DRILL")
+        self.assertContains(response, "DRILL-RECEIPT")
+
+    def test_inventory_product_drilldown_cannot_cross_hotel_scope(self):
+        product = Product.objects.create(
+            hotel=self.other_hotel, name="Foreign Drilldown Rice",
+            sku="FOREIGN-DRILL-RICE", product_type="RAW", base_unit="kg",
+        )
+        foreign_kitchen = Department.objects.create(
+            hotel=self.other_hotel, code="FDK", name="Foreign Kitchen",
+            department_type="KITCHEN",
+        )
+        self.client.force_login(self.director)
+        response = self.client.get(reverse(
+            "kitchen_inventory_product_detail", args=[product.pk, foreign_kitchen.pk]
+        ))
+        self.assertEqual(response.status_code, 404)
+
     def test_kitchen_inventory_report_uses_fifo_layers_and_flags_quantity_gap(self):
         product = Product.objects.create(
             hotel=self.hotel,
