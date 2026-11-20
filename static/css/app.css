@@ -585,3 +585,325 @@ input, select, textarea { font-size: 16px; }
   .equipment-form-page, .equipment-form-card { width: 100% !important; max-width: 100% !important; min-width: 0 !important; }
   .equipment-grid { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; }
 }
+
+
+/* =========================================================
+   Executive workspace
+   Scoped to the management overview; shared HMS shell and
+   department pages intentionally retain their existing theme.
+   ========================================================= */
+.management-overview {
+    --exec-bg: #0d1728;
+    --exec-surface: #15243a;
+    --exec-surface-raised: #1b2d46;
+    --exec-border: rgba(148, 163, 184, .17);
+    --exec-text: #f1f5f9;
+    --exec-muted: #9aabc1;
+    --exec-blue: #60a5fa;
+    --exec-green: #34d399;
+    --exec-amber: #fbbf24;
+    --exec-purple: #c4b5fd;
+    box-sizing: border-box;
+    margin: -clamp(18px, 2.5vw, 34px);
+    min-height: 100%;
+    padding: clamp(18px, 2.5vw, 34px);
+    border-radius: 0;
+    background:
+        radial-gradient(ellipse at 85% 0%, rgba(37, 99, 235, .16), transparent 34%),
+        var(--exec-bg);
+    color: var(--exec-text);
+}
+.management-overview * { box-sizing: border-box; }
+.management-overview .exec-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 22px;
+}
+.management-overview .exec-eyebrow {
+    margin: 0 0 8px;
+    color: var(--exec-blue);
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+}
+.management-overview .exec-heading h1 {
+    margin: 0;
+    color: var(--exec-text);
+    font-size: clamp(1.55rem, 2.4vw, 2.1rem);
+    letter-spacing: -.04em;
+}
+.management-overview .exec-heading p {
+    margin: 7px 0 0;
+    color: var(--exec-muted);
+    font-size: .88rem;
+}
+.management-overview .exec-period {
+    flex: 0 0 auto;
+    padding: 9px 12px;
+    border: 1px solid var(--exec-border);
+    border-radius: 10px;
+    background: rgba(21, 36, 58, .72);
+    color: #dbeafe;
+    font-size: .76rem;
+    font-weight: 700;
+}
+.management-overview .exec-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+    margin: 0 0 18px;
+    padding: 15px;
+    border: 1px solid var(--exec-border);
+    border-radius: 13px;
+    background: rgba(21, 36, 58, .82);
+}
+.management-overview .exec-filter-field {
+    display: flex;
+    flex: 1 1 160px;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+.management-overview .exec-filter-field label {
+    color: var(--exec-muted);
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .09em;
+}
+.management-overview .exec-filter-field input,
+.management-overview .exec-filter-field select {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    border: 1px solid rgba(148, 163, 184, .25);
+    border-radius: 8px;
+    background: #0e1b2d;
+    color: var(--exec-text);
+    color-scheme: dark;
+}
+.management-overview .exec-filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.management-overview .exec-filter-actions button {
+    min-height: 40px;
+    padding: 9px 15px;
+    border: 1px solid #3b82f6;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #fff;
+    font-size: .8rem;
+    font-weight: 750;
+}
+.management-overview .exec-filter-actions a {
+    color: #bfdbfe;
+    font-size: .8rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+.management-overview .exec-filter-actions a:hover { color: #fff; }
+.management-overview .exec-section-label {
+    margin: 22px 0 11px;
+    color: #c3d0e0;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+.management-overview .exec-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 13px;
+}
+.management-overview .exec-kpi {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    padding: 17px 18px 16px;
+    border: 1px solid var(--exec-border);
+    border-radius: 13px;
+    background: linear-gradient(145deg, rgba(27, 45, 70, .98), rgba(19, 34, 54, .98));
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .13);
+}
+.management-overview .exec-kpi::after {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--kpi-accent, var(--exec-blue));
+    content: "";
+}
+.management-overview .exec-kpi-label {
+    color: var(--exec-muted);
+    font-size: .73rem;
+    font-weight: 750;
+    letter-spacing: .035em;
+}
+.management-overview .exec-kpi-value {
+    margin: 11px 0 5px;
+    color: var(--exec-text);
+    font-size: clamp(1.15rem, 1.8vw, 1.7rem);
+    font-weight: 800;
+    letter-spacing: -.035em;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+.management-overview .exec-kpi-note {
+    color: #8497b0;
+    font-size: .7rem;
+    line-height: 1.4;
+}
+.management-overview .exec-panel-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(270px, 1fr);
+    gap: 14px;
+    margin-top: 14px;
+}
+.management-overview .exec-panel {
+    min-width: 0;
+    padding: 19px;
+    border: 1px solid var(--exec-border);
+    border-radius: 13px;
+    background: rgba(21, 36, 58, .92);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .12);
+}
+.management-overview .exec-panel-heading {
+    margin: 0;
+    color: var(--exec-text);
+    font-size: .96rem;
+    font-weight: 800;
+}
+.management-overview .exec-panel-subtitle {
+    margin: 6px 0 16px;
+    color: var(--exec-muted);
+    font-size: .73rem;
+    line-height: 1.5;
+}
+.management-overview .exec-chart {
+    width: 100%;
+    min-height: 150px;
+    overflow: hidden;
+    border-radius: 9px;
+    background: rgba(9, 20, 35, .48);
+}
+.management-overview .exec-chart svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+.management-overview .exec-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 13px;
+    margin-top: 13px;
+    color: var(--exec-muted);
+    font-size: .72rem;
+}
+.management-overview .exec-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.management-overview .exec-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.management-overview .exec-hotel-row { margin: 17px 0; }
+.management-overview .exec-hotel-row:first-child { margin-top: 5px; }
+.management-overview .exec-hotel-row-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    color: #dbe5f2;
+    font-size: .76rem;
+}
+.management-overview .exec-hotel-row-head strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.management-overview .exec-hotel-row-head span {
+    flex: 0 0 auto;
+    color: #fff;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+.management-overview .exec-bar-track {
+    height: 7px;
+    overflow: hidden;
+    border-radius: 20px;
+    background: rgba(148, 163, 184, .16);
+}
+.management-overview .exec-bar-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+.management-overview .exec-position {
+    margin-top: 14px;
+    padding: 19px;
+    border: 1px solid var(--exec-border);
+    border-radius: 13px;
+    background: linear-gradient(115deg, #172b43, #142238);
+}
+.management-overview .exec-position-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px 14px;
+    margin-top: 18px;
+}
+.management-overview .exec-position-item {
+    min-width: 0;
+    padding-left: 12px;
+    border-left: 2px solid rgba(96, 165, 250, .55);
+}
+.management-overview .exec-position-item span {
+    display: block;
+    color: var(--exec-muted);
+    font-size: .7rem;
+}
+.management-overview .exec-position-item strong {
+    display: block;
+    margin-top: 6px;
+    color: var(--exec-text);
+    font-size: clamp(.9rem, 1.3vw, 1.1rem);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.management-overview .exec-footnote {
+    margin: 15px 2px 0;
+    color: #91a2b8;
+    font-size: .72rem;
+    line-height: 1.55;
+}
+.management-overview .exec-empty {
+    padding: 28px 14px;
+    border: 1px dashed rgba(148, 163, 184, .24);
+    border-radius: 9px;
+    color: var(--exec-muted);
+    font-size: .78rem;
+    text-align: center;
+}
+@media (max-width: 1050px) {
+    .management-overview .exec-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .management-overview .exec-panel-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 700px) {
+    .management-overview { margin: -18px -16px; padding: 18px 16px 26px; }
+    .management-overview .exec-heading { align-items: flex-start; flex-direction: column; }
+    .management-overview .exec-period { align-self: flex-start; }
+    .management-overview .exec-position-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 460px) {
+    .management-overview .exec-kpi-grid { grid-template-columns: minmax(0, 1fr); }
+    .management-overview .exec-kpi { padding: 15px 16px; }
+    .management-overview .exec-position-grid { grid-template-columns: minmax(0, 1fr); }
+    .management-overview .exec-filter-actions { width: 100%; justify-content: space-between; }
+}
