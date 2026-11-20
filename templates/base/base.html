@@ -917,7 +917,7 @@
 
         <!-- TOP BAR -->
 
-        <div class="topbar{% if request.resolver_match.url_name == 'management_overview' or request.resolver_match.url_name == 'management_hotel_performance' or request.resolver_match.url_name == 'management_front_desk_analytics' or request.resolver_match.url_name == 'management_guest_search' or request.resolver_match.url_name == 'management_guest_profile' or request.resolver_match.url_name == 'management_reservations_occupancy' or request.resolver_match.url_name == 'management_reservation_detail' %} topbar-executive{% endif %}">
+        <div class="topbar{% if request.resolver_match.url_name == 'management_overview' or request.resolver_match.url_name == 'management_hotel_performance' or request.resolver_match.url_name == 'management_front_desk_analytics' or request.resolver_match.url_name == 'management_guest_search' or request.resolver_match.url_name == 'management_guest_profile' or request.resolver_match.url_name == 'management_reservations_occupancy' or request.resolver_match.url_name == 'management_reservation_detail' or request.resolver_match.url_name == 'management_front_desk_drilldown' %} topbar-executive{% endif %}">
             <button type="button" class="mobile-nav-toggle" onclick="toggleMobileSidebar()" aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation">☰ <span>Menu</span></button>
 
             <div class="system-name">
@@ -960,7 +960,7 @@
 
             {% if messages %}
 
-            <div class="{% if request.resolver_match.url_name == 'management_overview' or request.resolver_match.url_name == 'management_hotel_performance' or request.resolver_match.url_name == 'management_front_desk_analytics' or request.resolver_match.url_name == 'management_guest_search' or request.resolver_match.url_name == 'management_guest_profile' or request.resolver_match.url_name == 'management_reservations_occupancy' or request.resolver_match.url_name == 'management_reservation_detail' %}management-message-area{% else %}standard-message-area{% endif %}">
+            <div class="{% if request.resolver_match.url_name == 'management_overview' or request.resolver_match.url_name == 'management_hotel_performance' or request.resolver_match.url_name == 'management_front_desk_analytics' or request.resolver_match.url_name == 'management_guest_search' or request.resolver_match.url_name == 'management_guest_profile' or request.resolver_match.url_name == 'management_reservations_occupancy' or request.resolver_match.url_name == 'management_reservation_detail' or request.resolver_match.url_name == 'management_front_desk_drilldown' %}management-message-area{% else %}standard-message-area{% endif %}">
 
                 {% for message in messages %}
 
