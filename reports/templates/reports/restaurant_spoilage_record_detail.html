@@ -1,0 +1,37 @@
+{% extends "base/base.html" %}
+{% load accounting_extras %}
+{% block title %}Spoilage RS-{{ record.pk }} | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.rsd{box-sizing:border-box;min-height:100%;margin:calc(-1 * clamp(18px,2.5vw,34px));padding:clamp(18px,2.5vw,34px);background:#0d1728;color:#e8eef8}.rsd *{box-sizing:border-box}.rsd-head{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}.rsd h1,.rsd h2{color:#f8fafc}.rsd h1{font-size:26px;margin:5px 0}.rsd h2{font-size:17px;margin:0 0 14px}.rsd-muted{color:#9aabc1;font-size:13px;line-height:1.5}.rsd-panel{background:#172b43;border:1px solid #29415e;border-radius:14px;padding:18px;margin:16px 0}.rsd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.rsd-item{padding:12px;background:#102239;border-radius:9px;min-width:0}.rsd-label{display:block;color:#9aabc1;font-size:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:800;margin-bottom:6px}.rsd-value{color:#f8fafc;font-weight:700;overflow-wrap:anywhere}.rsd-pill{display:inline-block;padding:4px 8px;border-radius:99px;font-size:10px;font-weight:850}.PENDING{background:#713f12;color:#fde68a}.APPROVED{background:#164e3a;color:#bbf7d0}.REJECTED{background:#512b2b;color:#fecaca}.rsd table{width:100%;border-collapse:collapse}.rsd th,.rsd td{text-align:left;padding:11px;border-bottom:1px solid #29415e;font-size:13px}.rsd th{color:#aebfd4;background:#102239}.rsd-btn{display:inline-flex;padding:9px 13px;border-radius:8px;background:#2563eb;color:white;text-decoration:none;font-weight:750}@media(max-width:800px){.rsd-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.rsd-grid{grid-template-columns:1fr}}
+</style>
+<div class="rsd"><div class="rsd-head"><div><div class="rsd-muted">RESTAURANT · AUDIT DETAIL</div><h1>Spoilage record RS-{{ record.pk }}</h1><span class="rsd-pill {{ record.status }}">{{ record.get_status_display }}</span></div><a class="rsd-btn" href="{% url 'restaurant_spoilage_records' %}">Back to records</a></div>
+<section class="rsd-panel"><h2>Incident details</h2><div class="rsd-grid">
+<div class="rsd-item"><span class="rsd-label">Hotel / Department</span><div class="rsd-value">{{ record.department.hotel.name }}<br>{{ record.department.name }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Product</span><div class="rsd-value">{{ record.product.name }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Quantity</span><div class="rsd-value">{{ record.quantity|quantity }} {{ record.product.base_unit }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Reason</span><div class="rsd-value">{{ record.get_reason_code_display }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Reported by</span><div class="rsd-value">{{ record.reported_by|default:"Unknown" }}</div><span class="rsd-muted">{{ record.reported_at|date:"d M Y H:i:s" }}</span></div>
+<div class="rsd-item"><span class="rsd-label">Approved loss value</span><div class="rsd-value">{% if record.status == "APPROVED" %}{{ record.cost_amount|money }}{% else %}Not recognized as loss{% endif %}</div></div>
+<div class="rsd-item"><span class="rsd-label">Incident notes</span><div class="rsd-value">{{ record.notes|default:"No notes recorded" }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Review note</span><div class="rsd-value">{{ record.review_note|default:"No review note recorded" }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Decision</span><div class="rsd-value">{% if record.status == "APPROVED" %}Approved by {{ record.approved_by|default:"Unknown" }}<br>{{ record.approved_at|date:"d M Y H:i:s" }}{% elif record.status == "REJECTED" %}Rejected by {{ record.rejected_by|default:"Unknown" }}<br>{{ record.rejected_at|date:"d M Y H:i:s" }}{% else %}Awaiting management decision{% endif %}</div></div>
+</div></section>
+<section class="rsd-panel"><h2>Inventory source record</h2>{% if record.stock_movement %}<div class="rsd-grid">
+<div class="rsd-item"><span class="rsd-label">Stock movement</span><div class="rsd-value">#{{ record.stock_movement.pk }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Movement type</span><div class="rsd-value">{{ record.stock_movement.get_movement_type_display }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Movement quantity</span><div class="rsd-value">{{ record.stock_movement.quantity|quantity }} {{ record.product.base_unit }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Movement date</span><div class="rsd-value">{{ record.stock_movement.created_at|date:"d M Y H:i:s" }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Created by</span><div class="rsd-value">{{ record.stock_movement.created_by|default:"Unknown" }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Reference</span><div class="rsd-value">{{ record.stock_movement.reference|default:"—" }}</div></div>
+</div>{% else %}<p class="rsd-muted">No stock movement is linked to this record. Pending and rejected reports should not deduct stock.</p>{% endif %}</section>
+<section class="rsd-panel"><h2>Accounting source record</h2>{% if record.journal_entry %}<div class="rsd-grid">
+<div class="rsd-item"><span class="rsd-label">Journal entry</span><div class="rsd-value">#{{ record.journal_entry.pk }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Journal date</span><div class="rsd-value">{{ record.journal_entry.date|date:"d M Y" }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Reference</span><div class="rsd-value">{{ record.journal_entry.reference|default:"—" }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Description</span><div class="rsd-value">{{ record.journal_entry.description }}</div></div>
+<div class="rsd-item"><span class="rsd-label">Created by</span><div class="rsd-value">{{ record.journal_entry.created_by|default:"Unknown" }}</div></div>
+</div><div style="overflow-x:auto;margin-top:14px"><table><thead><tr><th>Account</th><th>Debit</th><th>Credit</th></tr></thead><tbody>{% for line in journal_lines %}<tr><td>{{ line.account.name }}</td><td>{{ line.debit|money }}</td><td>{{ line.credit|money }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="rsd-muted">No journal entry is linked to this record. This may occur when the approved FIFO cost is zero.</p>{% endif %}</section>
+<p class="rsd-muted">This page is read-only. It displays the operational, inventory and accounting records linked to the original spoilage report; it does not approve, reject, alter stock or post journals.</p>
+</div>
+{% endblock %}
