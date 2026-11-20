@@ -382,3 +382,75 @@ class MaintenanceCostAnalysisTests(TestCase):
             {"hotel": self.other_hotel.pk},
         )
         self.assertEqual(response.status_code, 403)
+
+
+class MaintenanceAssetPerformanceTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Hotel, Organization
+        from maintenance.models import (
+            MaintenanceAsset, MaintenanceLocation, MaintenanceSchedule,
+            MaintenanceTicket, MaintenanceLabour,
+        )
+
+        User = get_user_model()
+        organization = Organization.objects.create(name="Asset Performance Report Org")
+        self.hotel = Hotel.objects.create(organization=organization, name="Asset Performance Hotel")
+        self.other_hotel = Hotel.objects.create(organization=organization, name="Other Asset Hotel")
+        self.manager = User.objects.create_user(
+            username="asset_performance_manager", password="test-password",
+            role="MANAGER", hotel=self.hotel,
+        )
+        location = MaintenanceLocation.objects.create(
+            hotel=self.hotel, name="Plant Room", location_type="PLANT_ROOM",
+        )
+        other_location = MaintenanceLocation.objects.create(
+            hotel=self.other_hotel, name="Other Plant Room", location_type="PLANT_ROOM",
+        )
+        self.asset = MaintenanceAsset.objects.create(
+            hotel=self.hotel, location=location, name="Main Generator",
+            asset_type="Generator", condition="POOR",
+        )
+        other_asset = MaintenanceAsset.objects.create(
+            hotel=self.other_hotel, location=other_location, name="Other Generator",
+        )
+        MaintenanceSchedule.objects.create(
+            asset=self.asset, name="Generator inspection",
+            interval_days=30, next_due_date=timezone.localdate(),
+        )
+        ticket = MaintenanceTicket.objects.create(
+            location=location, asset=self.asset, description="Generator inspection repair",
+            reported_by=self.manager, status="RESOLVED",
+        )
+        other_ticket = MaintenanceTicket.objects.create(
+            location=other_location, asset=other_asset, description="Other hotel repair",
+            reported_by=self.manager, status="RESOLVED",
+        )
+        MaintenanceLabour.objects.create(
+            ticket=ticket, labour_type="INTERNAL", description="Inspection labour",
+            amount="1800.00", created_by=self.manager,
+        )
+        MaintenanceLabour.objects.create(
+            ticket=other_ticket, labour_type="INTERNAL", description="Other hotel labour",
+            amount="9900.00", created_by=self.manager,
+        )
+        self.client.force_login(self.manager)
+
+    def test_report_shows_asset_condition_schedule_and_cost(self):
+        from decimal import Decimal
+        response = self.client.get("/reports/maintenance/management/assets/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Asset Performance")
+        self.assertContains(response, "Main Generator")
+        self.assertNotContains(response, "Other Generator")
+        self.assertEqual(response.context["asset_count"], 1)
+        self.assertEqual(response.context["poor_or_damaged_count"], 1)
+        self.assertEqual(response.context["due_schedule_count"], 1)
+        self.assertEqual(response.context["period_cost_total"], Decimal("1800.00"))
+
+    def test_unauthorized_hotel_filter_is_rejected(self):
+        response = self.client.get(
+            "/reports/maintenance/management/assets/",
+            {"hotel": self.other_hotel.pk},
+        )
+        self.assertEqual(response.status_code, 403)
