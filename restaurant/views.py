@@ -728,7 +728,7 @@ def collect_room_order_payment(request, order_id):
     return redirect("restaurant_order_detail", order_id=order.pk)
 
 
-@role_required("RESTAURANT", "MANAGER", "ADMIN")
+@role_required("RESTAURANT", "MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT", "ADMIN")
 def pos_order_detail(request, order_id):
     if request.user.role == "RESTAURANT":
         order = get_object_or_404(
