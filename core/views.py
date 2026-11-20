@@ -412,7 +412,7 @@ def management_guest_profile(request, guest_id):
             "available": max(deposit.balance - guaranteed, Decimal("0.00")),
             "transactions": deposit.transactions.select_related("created_by", "folio").order_by("-created_at")[:50],
         })
-    active_folios = folios.filter(is_closed=False)
+    active_folios = folios.filter(folio_type="ROOM", is_closed=False)
     bank_accounts = BankAccount.objects.filter(
         hotel=guest.hotel, is_active=True
     ).select_related("account").order_by("-is_default", "bank_name")
