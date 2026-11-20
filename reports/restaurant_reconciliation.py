@@ -70,7 +70,7 @@ def build_restaurant_accounting_reconciliation(
     revenue_orders = list(_select_related_if_supported(revenue_orders, "business_day", "department__hotel"))
     complimentary_orders = list(_select_related_if_supported(complimentary_orders, "business_day", "department__hotel"))
     refund_charges = list(refund_charges)
-    payments = list(_select_related_if_supported(payments, "folio"))
+    payments = list(_select_related_if_supported(payments, "folio", "shift"))
 
     hotel_ids = {
         order.department.hotel_id for order in revenue_orders + complimentary_orders
@@ -325,6 +325,7 @@ def build_restaurant_accounting_reconciliation(
             actual=actual,
             matched_entries=matched,
             order_id=None,
+            shift_id=payment.shift_id,
             note=f"Receipt reference: {payment.reference or '—'}",
         )
 
