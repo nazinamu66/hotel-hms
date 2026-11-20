@@ -67,12 +67,17 @@
                 <h2>Financial Performance by Hotel</h2>
                 <p>Posted ledger activity · ranked by operating result, then revenue</p>
             </div>
-            <span class="perf-count">{{ hotel_rows|length }} hotel{{ hotel_rows|length|pluralize }}</span>
+            <div class="perf-panel-tools">
+                {% if selected_hotel %}
+                    <a class="perf-scope-reset" href="{% url 'management_hotel_performance' %}?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}">← All accessible hotels</a>
+                {% endif %}
+                <span class="perf-count">{{ hotel_rows|length }} hotel{{ hotel_rows|length|pluralize }}</span>
+            </div>
         </div>
         <div class="perf-table-wrap">
             <table class="perf-table">
                 <thead>
-                    <tr><th>Rank</th><th>Hotel</th><th>Revenue</th><th>COGS</th><th>Expenses</th><th>Operating Result</th></tr>
+                    <tr><th>Rank</th><th>Hotel</th><th>Revenue</th><th>COGS</th><th>Expenses</th><th>Operating Result</th><th>Explore</th></tr>
                 </thead>
                 <tbody>
                     {% for row in hotel_rows %}
@@ -83,9 +88,10 @@
                         <td>₦{{ row.cogs|floatformat:2 }}</td>
                         <td>₦{{ row.expenses|floatformat:2 }}</td>
                         <td class="perf-result {% if row.operating_result < 0 %}is-negative{% else %}is-positive{% endif %}">₦{{ row.operating_result|floatformat:2 }}</td>
+                        <td><a class="perf-drill-link" href="{% url 'management_hotel_performance' %}?hotel={{ row.hotel.id }}&amp;from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}">View hotel →</a></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="perf-empty">No active hotels are available in your reporting scope.</td></tr>
+                    <tr><td colspan="7" class="perf-empty">No active hotels are available in your reporting scope.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
