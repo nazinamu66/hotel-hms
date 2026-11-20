@@ -750,10 +750,11 @@ def restaurant_sales_performance(request):
         key = item.menu_item_id
         if key not in item_rows:
             item_rows[key] = {"name": item.menu_item.name, "category": category,
-                              "quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00"), "profit": Decimal("0.00")
+                              "quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00"), "profit": Decimal("0.00")}
         item_rows[key]["quantity"] += item.quantity
         item_rows[key]["revenue"] += revenue
-        item_rows[key]["cost"] += cost\n        item_rows[key]["profit"] += revenue - cost
+        item_rows[key]["cost"] += cost
+        item_rows[key]["profit"] += revenue - cost
 
     top_items = sorted(item_rows.values(), key=lambda row: (row["revenue"], row["quantity"]), reverse=True)[:15]
     category_rows = [
