@@ -26,7 +26,7 @@ def _lead_days(created_at, check_in):
     return max((check_in - created_at.date()).days, 0)
 
 
-def build_reservations_occupancy_analytics(*, hotels, date_from, date_to):
+def build_reservations_occupancy_analytics(*, hotels, date_from, date_to, source=None):
     """
     Build reservation and room-night metrics from the three supported booking
     shapes: legacy single reservations, ordinary room allocations, and
@@ -91,6 +91,9 @@ def build_reservations_occupancy_analytics(*, hotels, date_from, date_to):
             "kind": "Corporate",
         })
 
+    if source:
+        booking_rows = [row for row in booking_rows if row["source"] == source]
+
     arrival_rows = [
         row for row in booking_rows
         if date_from <= row["check_in"] <= date_to
@@ -139,11 +142,11 @@ def build_reservations_occupancy_analytics(*, hotels, date_from, date_to):
         )
     ]
 
-    hotel_counts = Counter(row["hotel_name"] for row in created_rows)
+    hotel_counts = Counter((row["hotel_id"], row["hotel_name"]) for row in created_rows)
     hotel_rows = [
-        {"hotel_name": name, "booking_count": count}
-        for name, count in sorted(
-            hotel_counts.items(), key=lambda item: (-item[1], item[0].lower())
+        {"hotel_id": hotel_id, "hotel_name": name, "booking_count": count}
+        for (hotel_id, name), count in sorted(
+            hotel_counts.items(), key=lambda item: (-item[1], item[0][1].lower())
         )
     ]
 
