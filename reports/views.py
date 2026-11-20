@@ -914,6 +914,139 @@ def restaurant_sales_performance(request):
 
 
 @role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def restaurant_spoilage_records(request):
+    """Read-only, hotel-scoped drill-down for Restaurant spoilage records."""
+    from django.core.exceptions import PermissionDenied
+    from django.core.paginator import Paginator
+    from django.utils.dateparse import parse_date
+    from accounts.services.access import get_accessible_hotels
+    from restaurant.models import RestaurantSpoilageRecord
+
+    hotels_accessible = get_accessible_hotels(request.user)
+    departments = Department.objects.filter(
+        hotel__in=hotels_accessible,
+        department_type="RESTAURANT",
+        is_active=True,
+    )
+    hotels = hotels_accessible.filter(
+        pk__in=departments.values_list("hotel_id", flat=True)
+    ).order_by("name")
+
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not hotels.filter(pk=int(selected_hotel)).exists():
+            raise PermissionDenied("You do not have access to that Restaurant hotel.")
+        departments = departments.filter(hotel_id=int(selected_hotel))
+
+    records = RestaurantSpoilageRecord.objects.filter(
+        department__in=departments,
+        reported_at__date__range=(date_from, date_to),
+    ).select_related(
+        "product", "department", "department__hotel",
+        "reported_by", "approved_by", "rejected_by",
+        "stock_movement", "journal_entry",
+    ).order_by("-reported_at", "-pk")
+
+    filters = {
+        "product": request.GET.get("product", "").strip(),
+        "reason": request.GET.get("reason", "").strip().upper(),
+        "reported_by": request.GET.get("reported_by", "").strip(),
+        "approved_by": request.GET.get("approved_by", "").strip(),
+        "month": request.GET.get("month", "").strip(),
+        "status": request.GET.get("status", "").strip().upper(),
+        "q": request.GET.get("q", "").strip(),
+    }
+    for key in ("product", "reported_by", "approved_by"):
+        if filters[key]:
+            if not filters[key].isdigit():
+                raise PermissionDenied("Invalid Restaurant spoilage filter.")
+            records = records.filter(**{f"{key}_id": int(filters[key])})
+    valid_reasons = {value for value, _label in RestaurantSpoilageRecord.REASON_CHOICES}
+    if filters["reason"]:
+        if filters["reason"] not in valid_reasons:
+            raise PermissionDenied("Invalid Restaurant spoilage reason.")
+        records = records.filter(reason_code=filters["reason"])
+    if filters["status"] in {"PENDING", "APPROVED", "REJECTED"}:
+        records = records.filter(status=filters["status"])
+    elif filters["status"]:
+        raise PermissionDenied("Invalid Restaurant spoilage status.")
+    if filters["month"]:
+        try:
+            month_year, month_number = (int(part) for part in filters["month"].split("-", 1))
+            if not 1 <= month_number <= 12:
+                raise ValueError
+            records = records.filter(
+                approved_at__year=month_year,
+                approved_at__month=month_number,
+                status="APPROVED",
+            )
+        except (TypeError, ValueError):
+            raise PermissionDenied("Invalid Restaurant spoilage month.")
+    if filters["q"]:
+        from django.db.models import Q
+        term = filters["q"]
+        records = records.filter(
+            Q(product__name__icontains=term)
+            | Q(notes__icontains=term)
+            | Q(review_note__icontains=term)
+            | Q(reported_by__username__icontains=term)
+            | Q(reported_by__first_name__icontains=term)
+            | Q(reported_by__last_name__icontains=term)
+        )
+
+    total_records = records.count()
+    page_obj = Paginator(records, 30).get_page(request.GET.get("page"))
+    return render(request, "reports/restaurant_spoilage_records.html", {
+        "records": page_obj.object_list,
+        "page_obj": page_obj,
+        "total_records": total_records,
+        "hotels": hotels,
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "filters": filters,
+        "active_filter_count": sum(bool(value) for value in filters.values()),
+        "reason_choices": RestaurantSpoilageRecord.REASON_CHOICES,
+    })
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def restaurant_spoilage_record_detail(request, pk):
+    """Read-only audit detail for one spoilage record within the user's hotel scope."""
+    from django.shortcuts import get_object_or_404
+    from accounts.services.access import get_accessible_hotels
+    from restaurant.models import RestaurantSpoilageRecord
+
+    departments = Department.objects.filter(
+        hotel__in=get_accessible_hotels(request.user),
+        department_type="RESTAURANT",
+        is_active=True,
+    )
+    record = get_object_or_404(
+        RestaurantSpoilageRecord.objects.filter(department__in=departments).select_related(
+            "product", "department", "department__hotel",
+            "reported_by", "approved_by", "rejected_by",
+            "stock_movement", "stock_movement__created_by",
+            "journal_entry", "journal_entry__created_by",
+        ),
+        pk=pk,
+    )
+    journal_lines = []
+    if record.journal_entry_id:
+        journal_lines = record.journal_entry.lines.select_related("account").order_by("pk")
+    return render(request, "reports/restaurant_spoilage_record_detail.html", {
+        "record": record,
+        "journal_lines": journal_lines,
+    })
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def restaurant_spoilage_analysis(request):
     """Management analysis of reported Restaurant spoilage and approved write-offs."""
     from django.core.exceptions import PermissionDenied
