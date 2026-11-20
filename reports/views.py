@@ -911,3 +911,167 @@ def restaurant_sales_performance(request):
         "accounting_reconciliation": accounting_reconciliation,
     })
 
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def restaurant_spoilage_analysis(request):
+    """Management analysis of reported Restaurant spoilage and approved write-offs."""
+    from django.core.exceptions import PermissionDenied
+    from django.utils.dateparse import parse_date
+    from django.db.models import Count
+    from accounts.services.access import get_accessible_hotels
+    from restaurant.models import RestaurantSpoilageRecord
+
+    accessible_hotels = get_accessible_hotels(request.user)
+    restaurant_departments = Department.objects.filter(
+        hotel__in=accessible_hotels,
+        department_type="RESTAURANT",
+        is_active=True,
+    ).select_related("hotel")
+    hotel_ids = restaurant_departments.values_list("hotel_id", flat=True).distinct()
+    hotels = accessible_hotels.filter(pk__in=hotel_ids).order_by("name")
+
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not hotels.filter(pk=int(selected_hotel)).exists():
+            raise PermissionDenied("You do not have access to that Restaurant hotel.")
+        restaurant_departments = restaurant_departments.filter(hotel_id=int(selected_hotel))
+
+    records = RestaurantSpoilageRecord.objects.filter(
+        department__in=restaurant_departments,
+        reported_at__date__range=(date_from, date_to),
+    ).select_related(
+        "product", "department", "department__hotel",
+        "reported_by", "approved_by", "rejected_by",
+        "stock_movement", "journal_entry",
+    ).order_by("-reported_at", "-pk")
+
+    status_totals = {
+        status: {
+            "count": records.filter(status=status).count(),
+            "quantity": records.filter(status=status).aggregate(total=Sum("quantity"))["total"] or Decimal("0.000"),
+        }
+        for status in ("PENDING", "APPROVED", "REJECTED")
+    }
+    approved_records = records.filter(status="APPROVED")
+    approved_summary = approved_records.aggregate(
+        total_cost=Sum("cost_amount"),
+        total_quantity=Sum("quantity"),
+        count=Count("pk"),
+    )
+    approved_loss = approved_summary["total_cost"] or Decimal("0.00")
+    approved_quantity = approved_summary["total_quantity"] or Decimal("0.000")
+
+    product_data = {}
+    reason_data = {}
+    hotel_data = {}
+    reporter_data = {}
+    approver_data = {}
+    monthly_data = {}
+    for record in approved_records:
+        product_key = record.product_id
+        product_row = product_data.setdefault(product_key, {
+            "name": record.product.name,
+            "unit": record.product.base_unit,
+            "quantity": Decimal("0.000"),
+            "loss": Decimal("0.00"),
+            "records": 0,
+        })
+        product_row["quantity"] += record.quantity
+        product_row["loss"] += record.cost_amount
+        product_row["records"] += 1
+
+        reason_label = record.get_reason_code_display()
+        reason_row = reason_data.setdefault(reason_label, {
+            "reason": reason_label,
+            "quantity": Decimal("0.000"),
+            "loss": Decimal("0.00"),
+            "records": 0,
+        })
+        reason_row["quantity"] += record.quantity
+        reason_row["loss"] += record.cost_amount
+        reason_row["records"] += 1
+
+        hotel = record.department.hotel
+        hotel_row = hotel_data.setdefault(hotel.pk, {
+            "name": hotel.name,
+            "quantity": Decimal("0.000"),
+            "loss": Decimal("0.00"),
+            "records": 0,
+        })
+        hotel_row["quantity"] += record.quantity
+        hotel_row["loss"] += record.cost_amount
+        hotel_row["records"] += 1
+
+        reporter_name = (
+            record.reported_by.get_full_name() or record.reported_by.username
+            if record.reported_by else "Unknown"
+        )
+        reporter_row = reporter_data.setdefault(reporter_name, {
+            "name": reporter_name, "quantity": Decimal("0.000"),
+            "loss": Decimal("0.00"), "records": 0,
+        })
+        reporter_row["quantity"] += record.quantity
+        reporter_row["loss"] += record.cost_amount
+        reporter_row["records"] += 1
+
+        approver_name = (
+            record.approved_by.get_full_name() or record.approved_by.username
+            if record.approved_by else "Unknown"
+        )
+        approver_row = approver_data.setdefault(approver_name, {
+            "name": approver_name, "quantity": Decimal("0.000"),
+            "loss": Decimal("0.00"), "records": 0,
+        })
+        approver_row["quantity"] += record.quantity
+        approver_row["loss"] += record.cost_amount
+        approver_row["records"] += 1
+
+        if record.approved_at:
+            month = record.approved_at.date().replace(day=1)
+            month_row = monthly_data.setdefault(month, {
+                "month": month, "loss": Decimal("0.00"),
+                "quantity": Decimal("0.000"), "records": 0,
+            })
+            month_row["loss"] += record.cost_amount
+            month_row["quantity"] += record.quantity
+            month_row["records"] += 1
+
+    product_rows = sorted(product_data.values(), key=lambda row: row["loss"], reverse=True)
+    reason_rows = sorted(reason_data.values(), key=lambda row: row["loss"], reverse=True)
+    hotel_rows = sorted(hotel_data.values(), key=lambda row: row["loss"], reverse=True)
+    reporter_rows = sorted(reporter_data.values(), key=lambda row: row["loss"], reverse=True)
+    approver_rows = sorted(approver_data.values(), key=lambda row: row["loss"], reverse=True)
+    monthly_rows = sorted(monthly_data.values(), key=lambda row: row["month"])
+    monthly_max = max((row["loss"] for row in monthly_rows), default=Decimal("0.00"))
+    for row in monthly_rows:
+        row["share"] = float(row["loss"] / monthly_max * 100) if monthly_max else 0
+
+    recent_records = records[:150]
+    return render(request, "reports/restaurant_spoilage_analysis.html", {
+        "hotels": hotels,
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "status_totals": status_totals,
+        "approved_loss": approved_loss,
+        "approved_quantity": approved_quantity,
+        "approved_count": approved_summary["count"] or 0,
+        "pending_quantity": status_totals["PENDING"]["quantity"],
+        "pending_count": status_totals["PENDING"]["count"],
+        "rejected_count": status_totals["REJECTED"]["count"],
+        "product_rows": product_rows[:15],
+        "reason_rows": reason_rows,
+        "hotel_rows": hotel_rows,
+        "reporter_rows": reporter_rows,
+        "approver_rows": approver_rows,
+        "monthly_rows": monthly_rows,
+        "recent_records": recent_records,
+        "record_count": records.count(),
+    })
