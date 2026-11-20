@@ -318,8 +318,8 @@
                 Previous Orders
             </a>
 
-            <a href="/reports/restaurant/end-of-shift/">
-                End of Shift
+            <a href="{% url 'restaurant_management_overview' %}">
+                📊 Management &amp; Shift Performance
             </a>
 
             {% if user.department and user.department.department_type == "RESTAURANT" and user.is_department_head %}
