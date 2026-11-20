@@ -1790,3 +1790,26 @@ input, select, textarea { font-size: 16px; }
 .kir-page .kir-status.match, .kird-page .kird-status.match { background:#123c36; color:#72e0bd; }
 .kir-page .kir-status.warn, .kird-page .kird-status.warn { background:#49351e; color:#ffd28a; }
 .kir-page .kir-alert, .kird-page .kird-alert { background:#392d1c; border-color:#805b28; color:#ffd28a; }
+
+/* Kitchen inventory product drill-down. */
+.kird-page{max-width:1550px;margin:0 auto;padding:26px 20px 48px;color:#e7eefb}
+.kird-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:22px}
+.kird-eyebrow{font-size:.72rem;letter-spacing:.1em;font-weight:850;color:#83b8ff}
+.kird-title{font-size:clamp(1.8rem,2.5vw,2.35rem);font-weight:850;letter-spacing:-.04em;margin:0 0 7px;color:#f4f7ff}
+.kird-muted,.kird-note,.kird-foot{color:#9aacc4;font-size:.84rem;line-height:1.55}
+.kird-btn{display:inline-block;border:1px solid #2d6bea;border-radius:9px;background:#2563eb;color:#fff;text-decoration:none;padding:11px 15px;font-weight:800}.kird-btn.secondary{background:#203650;border-color:#344b68}
+.kird-filter,.kird-card,.kird-panel{background:#15263d;border:1px solid #293d58;border-radius:15px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.kird-filter{display:flex;align-items:end;gap:14px;flex-wrap:wrap;padding:18px;margin-bottom:20px}
+.kird-field{display:flex;flex-direction:column;gap:7px;min-width:180px}.kird-field label,.kird-label{font-size:.74rem;text-transform:uppercase;letter-spacing:.07em;font-weight:800;color:#9aacc4}
+.kird-field input{padding:11px 12px;border:1px solid #344b68;border-radius:9px;background:#0e1b2e;color:#edf4ff;font:inherit}
+.kird-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:22px}.kird-card{padding:18px;min-width:0}
+.kird-value{font-size:clamp(1.3rem,2vw,1.8rem);font-weight:850;color:#f4f7ff;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;margin-top:8px}.kird-note{font-size:.78rem;margin:8px 0 0}
+.kird-section{font-size:1.08rem;font-weight:850;margin:26px 0 12px;color:#eaf1ff}.kird-panel{overflow:hidden;margin-bottom:18px}
+.kird-panel-head{padding:18px 20px;border-bottom:1px solid #293d58}.kird-panel-head h2{margin:0;font-size:1rem;color:#edf4ff}.kird-panel-head p{margin:5px 0 0;color:#9aacc4;font-size:.8rem}
+.kird-table-wrap{overflow-x:auto}.kird-table{width:100%;border-collapse:collapse;min-width:900px;font-size:.82rem}
+.kird-table th{background:#0e1b2e;color:#9aacc4;text-align:left;font-size:.7rem;letter-spacing:.045em;text-transform:uppercase;white-space:nowrap;padding:12px}
+.kird-table td{padding:12px;border-top:1px solid #293d58;vertical-align:top;color:#dce7f6}
+.kird-status{display:inline-block;padding:4px 8px;border-radius:99px;font-size:.7rem;font-weight:800}.kird-status.match{background:#123c36;color:#72e0bd}.kird-status.warn{background:#49351e;color:#ffd28a}
+.kird-foot{margin-top:18px}
+@media(max-width:1000px){.kird-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.kird-page{padding:18px 12px 32px}.kird-grid{grid-template-columns:1fr}.kird-head{flex-direction:column}.kird-filter{align-items:stretch}.kird-field{min-width:100%}}
