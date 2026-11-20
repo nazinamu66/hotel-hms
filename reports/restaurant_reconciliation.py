@@ -126,7 +126,7 @@ def build_restaurant_accounting_reconciliation(
     rows = []
 
     def add_row(*, group, label, reference, expected, actual, matched_entries,
-                expected_entries=1, order_id=None, date_mismatch=False, note=""):
+                expected_entries=1, order_id=None, shift_id=None, date_mismatch=False, note=""):
         expected = _money(expected)
         actual = _money(actual)
         rows.append({
@@ -143,6 +143,7 @@ def build_restaurant_accounting_reconciliation(
             ),
             "entry_count": len(matched_entries),
             "order_id": order_id,
+            "shift_id": shift_id,
             "note": note,
         })
 
