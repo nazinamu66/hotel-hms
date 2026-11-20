@@ -299,6 +299,145 @@ def management_front_desk_analytics(request):
     )
 
 
+
+@role_required("DIRECTOR", "GENERAL_MANAGER")
+def management_guest_search(request):
+    """Read-only guest search restricted to the management user's hotel scope."""
+    from django.db.models import Q
+    from billing.models import Guest
+
+    reporting_context = build_management_reporting_context(request.user, request.GET)
+    query = (request.GET.get("q") or "").strip()
+    guests = Guest.objects.filter(
+        hotel__in=reporting_context["scoped_hotels"]
+    ).select_related("hotel")
+    if query:
+        guests = guests.filter(
+            Q(first_name__icontains=query)
+            | Q(last_name__icontains=query)
+            | Q(phone__icontains=query)
+            | Q(email__icontains=query)
+            | Q(id_number__icontains=query)
+        )
+    else:
+        guests = guests.none()
+
+    guests = guests.order_by("last_name", "first_name")[:100]
+    return render(
+        request,
+        "management/guest_search.html",
+        {
+            **reporting_context,
+            "query": query,
+            "guest_results": guests,
+            "is_management_overview": True,
+            "is_director": True,
+            "is_general_manager": request.user.role == "GENERAL_MANAGER",
+        },
+    )
+
+
+@role_required("DIRECTOR", "GENERAL_MANAGER")
+def management_guest_profile(request, guest_id):
+    """Guest 360 profile and controlled guest-deposit receipt for management."""
+    from decimal import Decimal, InvalidOperation
+    from django.contrib import messages
+    from django.core.exceptions import ValidationError
+    from django.db.models import Sum
+    from django.shortcuts import get_object_or_404
+    from django.utils import timezone
+    from accounting.models import BankAccount
+    from billing.models import (
+        Guest, Folio, Reservation, GuestDeposit,
+        GuestDepositTransaction, ReservationDeposit,
+    )
+    from billing.services.guest_deposit import receive_guest_deposit
+
+    reporting_context = build_management_reporting_context(request.user, request.GET)
+    guest = get_object_or_404(
+        Guest.objects.select_related("hotel"),
+        pk=guest_id,
+        hotel__in=reporting_context["scoped_hotels"],
+    )
+    if request.method == "POST":
+        try:
+            amount = Decimal((request.POST.get("amount") or "").strip())
+            method = (request.POST.get("method") or "").strip().upper()
+            reference = (request.POST.get("reference") or "").strip()
+            note = (request.POST.get("note") or "").strip()
+            bank_account = None
+            if method in ("POS", "TRANSFER"):
+                bank_account = get_object_or_404(
+                    BankAccount,
+                    pk=request.POST.get("bank_account"),
+                    hotel=guest.hotel,
+                    is_active=True,
+                )
+            receive_guest_deposit(
+                guest=guest,
+                hotel=guest.hotel,
+                amount=amount,
+                method=method,
+                user=request.user,
+                reference=reference,
+                note=note,
+                bank_account=bank_account,
+            )
+            messages.success(request, "Guest deposit received and posted successfully.")
+            return redirect("management_guest_profile", guest_id=guest.pk)
+        except (InvalidOperation, ValueError, ValidationError) as exc:
+            messages.error(request, str(exc) or "Please enter a valid deposit.")
+        except Exception as exc:
+            # The service is atomic; surface expected validation messages only.
+            messages.error(request, str(exc))
+
+    folios = (
+        Folio.objects.filter(guest=guest, hotel__in=reporting_context["scoped_hotels"])
+        .select_related("hotel", "room")
+        .prefetch_related("charges", "payments", "balance_waivers")
+        .order_by("-check_in_at")
+    )
+    reservations = (
+        Reservation.objects.filter(guest=guest, hotel__in=reporting_context["scoped_hotels"])
+        .select_related("hotel", "room", "room_category")
+        .order_by("-check_in_date", "-id")
+    )
+    deposits = GuestDeposit.objects.filter(
+        guest=guest, hotel__in=reporting_context["scoped_hotels"]
+    ).prefetch_related("transactions", "reservation_allocations")
+    deposit_rows = []
+    for deposit in deposits:
+        guaranteed = deposit.reservation_allocations.filter(status="GUARANTEED").aggregate(
+            total=Sum("allocated_amount")
+        )["total"] or Decimal("0.00")
+        deposit_rows.append({
+            "deposit": deposit,
+            "guaranteed": guaranteed,
+            "available": max(deposit.balance - guaranteed, Decimal("0.00")),
+            "transactions": deposit.transactions.select_related("created_by", "folio").order_by("-created_at")[:50],
+        })
+    active_folios = folios.filter(is_closed=False)
+    bank_accounts = BankAccount.objects.filter(
+        hotel=guest.hotel, is_active=True
+    ).select_related("account").order_by("-is_default", "bank_name")
+    return render(
+        request,
+        "management/guest_profile.html",
+        {
+            **reporting_context,
+            "guest": guest,
+            "folios": folios[:50],
+            "active_folios": active_folios,
+            "reservations": reservations[:50],
+            "deposit_rows": deposit_rows,
+            "bank_accounts": bank_accounts,
+            "today": timezone.localdate(),
+            "is_management_overview": True,
+            "is_director": True,
+            "is_general_manager": request.user.role == "GENERAL_MANAGER",
+        },
+    )
+
 @role_required("RESTAURANT", "MANAGER", "ACCOUNTANT")
 def cash_handover_list(request):
     """
