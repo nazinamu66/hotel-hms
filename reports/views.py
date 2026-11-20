@@ -742,33 +742,54 @@ def restaurant_sales_performance(request):
     if request.user.role == "RESTAURANT":
         payment_rows_detail = payment_rows_detail.filter(shift__user=request.user)
 
-    refund_order_rows = orders.filter(is_refunded=True).select_related(
-        "department__hotel", "created_by", "refunded_by", "folio"
-    ).order_by("-refunded_at", "-id")
-    refund_rows = []
-    for refunded_order in refund_order_rows:
-        refund_charge = Charge.objects.filter(
+    refund_charge_records = list(Charge.objects.filter(
+        department_id__in=department_ids,
+        amount__lt=0,
+        reference__startswith="POS-REFUND-",
+        created_at__date__range=(date_from, date_to),
+    ).order_by("-created_at"))
+    refund_order_ids = []
+    for charge_record in refund_charge_records:
+        try:
+            refund_order_ids.append(int(charge_record.reference.rsplit("-", 1)[-1]))
+        except (TypeError, ValueError):
+            continue
+    refund_orders_by_id = {
+        order.pk: order for order in POSOrder.objects.filter(
+            pk__in=refund_order_ids,
             department_id__in=department_ids,
-            reference=f"POS-REFUND-{refunded_order.pk}",
-            amount__lt=0,
-            created_at__date__range=(date_from, date_to),
-        ).order_by("-created_at").first()
+        ).select_related("department__hotel", "created_by", "refunded_by", "folio")
+    }
+    refund_rows = []
+    for charge_record in refund_charge_records:
+        try:
+            order_id = int(charge_record.reference.rsplit("-", 1)[-1])
+        except (TypeError, ValueError):
+            continue
+        refunded_order = refund_orders_by_id.get(order_id)
+        if not refunded_order:
+            continue
         refund_payment = Payment.objects.filter(
             reference=f"POS-REFUND-{refunded_order.pk}",
             amount__lt=0,
         ).order_by("-collected_at").first()
-        if refund_charge or refund_payment:
-            refund_rows.append({
-                "order": refunded_order,
-                "charge": refund_charge,
-                "payment": refund_payment,
-                "amount": abs(refund_charge.amount if refund_charge else (refund_payment.amount if refund_payment else Decimal("0.00"))),
-                "date": refund_charge.created_at if refund_charge else refund_payment.collected_at,
-            })
+        refund_rows.append({
+            "order": refunded_order,
+            "charge": charge_record,
+            "payment": refund_payment,
+            "amount": abs(charge_record.amount),
+            "date": charge_record.created_at,
+        })
 
-    cost_rows = POSOrderItem.objects.filter(
+    cost_items = POSOrderItem.objects.filter(
         order__in=revenue_orders
     ).select_related("order", "menu_item", "menu_item__product").order_by("-order__created_at")
+    cost_rows = [{
+        "item": item,
+        "line_revenue": item.line_total(),
+        "line_cost": item.cost_at_sale * item.quantity,
+        "line_profit": item.line_total() - (item.cost_at_sale * item.quantity),
+    } for item in cost_items]
     complimentary_orders = orders.filter(
         is_complimentary_breakfast=True,
         status__in=("CHARGED", "PAID", "CANCELLED"),
