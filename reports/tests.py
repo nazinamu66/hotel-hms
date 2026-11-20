@@ -318,3 +318,67 @@ class MaintenanceWorkOrderAnalysisTests(TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
+
+
+class MaintenanceCostAnalysisTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Hotel, Organization
+        from maintenance.models import MaintenanceLocation, MaintenanceTicket, MaintenanceLabour
+
+        User = get_user_model()
+        organization = Organization.objects.create(name="Maintenance Cost Report Org")
+        self.hotel = Hotel.objects.create(organization=organization, name="Cost Report Hotel")
+        self.other_hotel = Hotel.objects.create(organization=organization, name="Other Cost Hotel")
+        self.manager = User.objects.create_user(
+            username="maintenance_cost_manager", password="test-password",
+            role="MANAGER", hotel=self.hotel,
+        )
+        location = MaintenanceLocation.objects.create(
+            hotel=self.hotel, name="Cost Report Lobby", location_type="LOBBY",
+        )
+        other_location = MaintenanceLocation.objects.create(
+            hotel=self.other_hotel, name="Other Cost Lobby", location_type="LOBBY",
+        )
+        self.ticket = MaintenanceTicket.objects.create(
+            location=location, description="Repair lobby lighting",
+            reported_by=self.manager, status="RESOLVED",
+        )
+        other_ticket = MaintenanceTicket.objects.create(
+            location=other_location, description="Repair other hotel lighting",
+            reported_by=self.manager, status="RESOLVED",
+        )
+        MaintenanceLabour.objects.create(
+            ticket=self.ticket, labour_type="INTERNAL",
+            description="Internal technician work", amount= "1250.00",
+            created_by=self.manager,
+        )
+        MaintenanceLabour.objects.create(
+            ticket=self.ticket, labour_type="OUTSOURCED",
+            description="Contractor work", amount="2750.00",
+            created_by=self.manager,
+        )
+        MaintenanceLabour.objects.create(
+            ticket=other_ticket, labour_type="INTERNAL",
+            description="Other hotel work", amount="9000.00",
+            created_by=self.manager,
+        )
+        self.client.force_login(self.manager)
+
+    def test_report_sums_labour_and_separates_labour_types(self):
+        from decimal import Decimal
+        response = self.client.get("/reports/maintenance/management/costs/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Maintenance Cost Analysis")
+        self.assertEqual(response.context["totals"]["labour"], Decimal("4000.00"))
+        self.assertEqual(response.context["totals"]["internal_labour"], Decimal("1250.00"))
+        self.assertEqual(response.context["totals"]["outsourced_labour"], Decimal("2750.00"))
+        self.assertEqual(response.context["cost_ticket_count"], 1)
+        self.assertNotContains(response, "Other hotel work")
+
+    def test_unauthorized_hotel_filter_is_rejected(self):
+        response = self.client.get(
+            "/reports/maintenance/management/costs/",
+            {"hotel": self.other_hotel.pk},
+        )
+        self.assertEqual(response.status_code, 403)
