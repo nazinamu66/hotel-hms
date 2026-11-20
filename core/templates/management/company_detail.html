@@ -1,0 +1,77 @@
+{% extends "base/base.html" %}
+{% block title %}{{ company.name }} | Corporate Performance{% endblock %}
+{% block content %}
+<div class="management-frontdesk management-guest-profile">
+    <header class="fd-command-heading">
+        <div>
+            <p class="fd-eyebrow">Hotel HMS · Corporate 360°</p>
+            <h1>{{ company.name }}</h1>
+            <p>{{ company.hotel.name }} · {% if company.is_active %}Active client{% else %}Inactive client{% endif %}</p>
+        </div>
+        <a class="fd-back-link" href="{% url 'management_corporate_performance' %}?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}">← Corporate Performance</a>
+    </header>
+
+    <section class="fd-guest-summary">
+        <div><span>Contact Person</span><strong>{{ company.contact_person|default:"—" }}</strong></div>
+        <div><span>Phone</span><strong>{{ company.phone|default:"—" }}</strong></div>
+        <div><span>Email</span><strong>{{ company.email|default:"—" }}</strong></div>
+        <div><span>Registration / Tax ID</span><strong>{{ company.registration_number|default:company.tax_number|default:"—" }}</strong></div>
+    </section>
+
+    <section class="fd-panel">
+        <div class="fd-panel-heading"><div><h2>Company Profile</h2><p>Registered corporate account details</p></div></div>
+        <p><strong>Billing address:</strong> {{ company.billing_address|default:"Not recorded" }}</p>
+        {% if company.notes %}<p>{{ company.notes|linebreaksbr }}</p>{% endif %}
+        <p class="fd-muted">Reporting activity: {{ date_from|date:"M j, Y" }} – {{ date_to|date:"M j, Y" }}</p>
+    </section>
+
+    <section class="fd-panel">
+        <div class="fd-panel-heading"><div><h2>Group Bookings</h2><p>Corporate bookings created during the selected reporting period</p></div><span class="fd-count">{{ group_bookings|length }} records</span></div>
+        <div class="fd-table-wrap"><table class="fd-table"><thead><tr><th>Reference</th><th>Group / Project</th><th>Stay</th><th>Status</th><th>Billing Party</th></tr></thead><tbody>
+        {% for group in group_bookings %}
+        <tr><td>{{ group.reference }}</td><td>{{ group.name|default:"—" }}</td><td>{{ group.check_in_date|date:"M j, Y" }} – {{ group.check_out_date|date:"M j, Y" }}</td><td>{{ group.get_status_display }}</td><td>{{ group.get_room_billing_party_display }}</td></tr>
+        {% empty %}<tr><td colspan="5" class="fd-empty">No group bookings created in this period.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+
+    <section class="fd-panel">
+        <div class="fd-panel-heading"><div><h2>Room Allocations</h2><p>Individual occupants and assigned rooms within corporate bookings</p></div><span class="fd-count">{{ room_allocations|length }} records</span></div>
+        <div class="fd-table-wrap"><table class="fd-table"><thead><tr><th>Group</th><th>Guest</th><th>Room</th><th>Category</th><th>Stay</th><th>Negotiated Rate</th><th>Status</th></tr></thead><tbody>
+        {% for allocation in room_allocations %}
+        <tr><td>{{ allocation.group_reservation.reference }}</td><td>{{ allocation.guest.full_name }}</td><td>{% if allocation.room %}{{ allocation.room.room_number }}{% else %}Unassigned{% endif %}</td><td>{{ allocation.room_category.name }}</td><td>{{ allocation.check_in_date|date:"M j" }} – {{ allocation.check_out_date|date:"M j, Y" }}</td><td>{% if allocation.negotiated_nightly_rate %}₦{{ allocation.negotiated_nightly_rate|floatformat:"2g" }}{% else %}Group rate{% endif %}</td><td>{{ allocation.get_status_display }}</td></tr>
+        {% empty %}<tr><td colspan="7" class="fd-empty">No room allocations created in this period.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+
+    <section class="fd-panel">
+        <div class="fd-panel-heading"><div><h2>Company-billed Charges</h2><p>Source charges for the selected reporting period; not invoice totals</p></div><span class="fd-count">{{ corporate_charges|length }} records</span></div>
+        <div class="fd-table-wrap"><table class="fd-table"><thead><tr><th>Date</th><th>Guest</th><th>Group</th><th>Room</th><th>Description</th><th>Rate Source</th><th>Amount</th></tr></thead><tbody>
+        {% for charge in corporate_charges %}
+        <tr><td>{% if charge.room_night_date %}{{ charge.room_night_date|date:"M j, Y" }}{% else %}{{ charge.created_at|date:"M j, Y H:i" }}{% endif %}</td><td>{{ charge.folio.guest.full_name|default:"—" }}</td><td>{{ charge.group_room_allocation.group_reservation.reference }}</td><td>{{ charge.folio.room.room_number|default:"—" }}</td><td>{{ charge.description }}</td><td>{{ charge.get_room_rate_source_display|default:"—" }}</td><td>₦{{ charge.amount|floatformat:"2g" }}</td></tr>
+        {% empty %}<tr><td colspan="7" class="fd-empty">No company-billed charges in this period.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+
+    <section class="fd-panel">
+        <div class="fd-panel-heading"><div><h2>Company Invoices</h2><p>Invoice settlement position, separate from revenue recognition</p></div><span class="fd-count">{{ company_invoices|length }} records</span></div>
+        <div class="fd-table-wrap"><table class="fd-table"><thead><tr><th>Invoice</th><th>Group</th><th>Issue Date</th><th>Due Date</th><th>Status</th><th>Total</th><th>Settled</th><th>Balance</th></tr></thead><tbody>
+        {% for invoice in company_invoices %}
+        <tr><td>{{ invoice.invoice_number }}</td><td>{{ invoice.group_reference_snapshot }}</td><td>{{ invoice.issue_date|date:"M j, Y" }}</td><td>{{ invoice.due_date|date:"M j, Y"|default:"—" }}</td><td>{{ invoice.get_status_display }}</td><td>₦{{ invoice.total_amount|floatformat:"2g" }}</td><td>₦{{ invoice.amount_paid|floatformat:"2g" }}</td><td>₦{{ invoice.balance_due|floatformat:"2g" }}</td></tr>
+        {% empty %}<tr><td colspan="8" class="fd-empty">No company invoices found.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+
+    <section class="fd-panel">
+        <div class="fd-panel-heading"><div><h2>Company Deposit Ledger</h2><p>Current deposit balance and transactions within the selected period</p></div></div>
+        {% if company_deposit %}
+        <div class="fd-deposit-totals"><div><span>Current Balance</span><strong>₦{{ company_deposit.balance|floatformat:"2g" }}</strong></div></div>
+        <div class="fd-table-wrap"><table class="fd-table"><thead><tr><th>Date</th><th>Transaction</th><th>Method</th><th>Amount</th><th>Invoice</th><th>Reference</th><th>Recorded By</th></tr></thead><tbody>
+        {% for transaction in deposit_transactions %}
+        <tr><td>{{ transaction.created_at|date:"M j, Y H:i" }}</td><td>{{ transaction.get_transaction_type_display }}</td><td>{{ transaction.get_payment_method_display|default:"—" }}</td><td>₦{{ transaction.amount|floatformat:"2g" }}</td><td>{{ transaction.company_invoice.invoice_number|default:"—" }}</td><td>{{ transaction.reference|default:"—" }}</td><td>{{ transaction.created_by|default:"—" }}</td></tr>
+        {% empty %}<tr><td colspan="7" class="fd-empty">No deposit activity in this period.</td></tr>{% endfor %}
+        </tbody></table></div>
+        {% else %}<p class="fd-empty">No company deposit account exists for this hotel.</p>{% endif %}
+    </section>
+    <p class="fd-note">This is a read-only management view. It does not create bookings, edit invoices, receive payments or alter deposit balances.</p>
+</div>
+{% endblock %}
