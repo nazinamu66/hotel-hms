@@ -1956,7 +1956,8 @@ def kitchen_inventory_product_detail(request, product_id, department_id):
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def kitchen_spoilage_report(request):
     """Management audit register for recorded Kitchen spoilage within authorized hotel scope."""
-    from django.db.models import Sum
+    from django.db.models import Count, Sum
+    from django.db.models.functions import TruncMonth, TruncWeek
 
     hotels = get_accessible_hotels(request.user)
     if not hotels.exists():
@@ -2012,6 +2013,41 @@ def kitchen_spoilage_report(request):
         product_filter = ""
 
     summary = records.aggregate(total_cost=Sum("cost_amount"), total_quantity=Sum("quantity"))
+
+    # Both comparisons use the exact same authorized and user-filtered
+    # record set as the audit register. Quantity is deliberately not charted:
+    # products can use different base units.
+    def build_spoilage_period_rows(truncator):
+        grouped = list(
+            records.annotate(period=truncator("recorded_at", tzinfo=timezone.get_current_timezone()))
+            .values("period")
+            .annotate(
+                total_cost=Sum("cost_amount"),
+                record_count=Count("pk"),
+            )
+            .order_by("period")
+        )
+        maximum = max((row["total_cost"] or Decimal("0.00") for row in grouped), default=Decimal("0.00"))
+        rows = []
+        for row in grouped:
+            period = row["period"]
+            cost = row["total_cost"] or Decimal("0.00")
+            if truncator == TruncMonth:
+                label = period.strftime("%b %Y")
+            else:
+                week_end = (period + timezone.timedelta(days=6)).date()
+                label = f"{period:%d %b} – {week_end:%d %b %Y}"
+            rows.append({
+                "label": label,
+                "cost": cost,
+                "record_count": row["record_count"],
+                "bar_width": round(float(cost / maximum * 100), 1) if maximum else 0,
+            })
+        return rows
+
+    monthly_spoilage_rows = build_spoilage_period_rows(TruncMonth)
+    weekly_spoilage_rows = build_spoilage_period_rows(TruncWeek)
+
     return render(request, "kitchen/reports/spoilage_report.html", {
         "hotels": hotels.order_by("name"),
         "selected_hotel": selected_hotel,
@@ -2019,6 +2055,8 @@ def kitchen_spoilage_report(request):
         "date_to": date_to.isoformat(),
         "records": records.order_by("-recorded_at", "-id"),
         "total_records": records.count(),
+        "monthly_spoilage_rows": monthly_spoilage_rows,
+        "weekly_spoilage_rows": weekly_spoilage_rows,
         "total_cost": summary["total_cost"] or Decimal("0.00"),
         "total_quantity": summary["total_quantity"] or Decimal("0.000"),
         "pending_count": records.filter(review_status="PENDING").count(),
