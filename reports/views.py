@@ -733,7 +733,7 @@ def restaurant_sales_performance(request):
     ).select_related("menu_item", "menu_item__product", "order")
     item_rows = {}
     category_totals = {"FOOD": {"quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00"), "profit": Decimal("0.00")},
-                       "DRINK": {"quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00")}}
+                       "DRINK": {"quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00"), "profit": Decimal("0.00")}}
     total_cogs = Decimal("0.00")
     uncosted_quantity = 0
     for item in items:
@@ -750,7 +750,7 @@ def restaurant_sales_performance(request):
         key = item.menu_item_id
         if key not in item_rows:
             item_rows[key] = {"name": item.menu_item.name, "category": category,
-                              "quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00")}
+                              "quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00"), "profit": Decimal("0.00")
         item_rows[key]["quantity"] += item.quantity
         item_rows[key]["revenue"] += revenue
         item_rows[key]["cost"] += cost\n        item_rows[key]["profit"] += revenue - cost
