@@ -1186,6 +1186,21 @@ class ManagementGuest360AccessTests(TestCase):
         )
         self.assertNotContains(response, "Outside Guest")
 
+    def test_guest_directory_shows_recent_guests_without_search_term(self):
+        director = User.objects.create_user(
+            username="guest360-directory-default",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+        response = self.client.get("/management/guests/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {guest.pk for guest in response.context["guest_results"]},
+            {self.guest_one.pk, self.guest_two.pk},
+        )
+
     def test_general_manager_guest_search_is_assigned_hotel_scoped(self):
         general_manager = User.objects.create_user(
             username="guest360-gm",
