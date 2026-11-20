@@ -427,7 +427,9 @@ def management_front_desk_analytics(request):
 @role_required("DIRECTOR", "GENERAL_MANAGER")
 def management_front_desk_drilldown(request, metric):
     """Read-only, hotel-scoped detail behind Front Desk KPI cards."""
+    from datetime import datetime, time, timedelta
     from django.db.models import Exists, OuterRef, Subquery
+    from django.utils import timezone
     from billing.models import Folio, Guest
 
     metric_titles = {
