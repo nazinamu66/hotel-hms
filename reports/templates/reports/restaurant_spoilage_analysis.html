@@ -33,7 +33,7 @@
 @media(max-width:560px){.rsa-grid{grid-template-columns:1fr}.rsa-head h1{font-size:23px}}
 </style>
 <div class="restaurant-spoilage">
-  <header class="rsa-head"><div><div class="rsa-eyebrow">Restaurant · Management reporting</div><h1>Spoilage &amp; Loss Analysis</h1><p class="rsa-muted">Approved stock write-offs, reasons, products, accountability and unresolved reports.</p></div><a class="rsa-btn" href="{% url 'restaurant_spoilage' %}">Open spoilage register</a></header>
+  <header class="rsa-head"><div><div class="rsa-eyebrow">Restaurant · Management reporting</div><h1>Spoilage &amp; Loss Analysis</h1><p class="rsa-muted">Approved stock write-offs, reasons, products, accountability and unresolved reports.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="rsa-btn" href="{% url 'restaurant_spoilage_records' %}?from={{ date_from }}&amp;to={{ date_to }}&amp;hotel={{ selected_hotel }}">View all records</a><a class="rsa-btn" href="{% url 'restaurant_spoilage' %}">Open spoilage register</a></div></header>
   <section class="rsa-panel"><form method="get" class="rsa-filters">
     <div class="rsa-field"><label for="rsa-from">Reports from</label><input id="rsa-from" type="date" name="from" value="{{ date_from }}"></div>
     <div class="rsa-field"><label for="rsa-to">Reports to</label><input id="rsa-to" type="date" name="to" value="{{ date_to }}"></div>
@@ -48,14 +48,14 @@
   </section>
   <section class="rsa-split">
     <div class="rsa-panel"><h2 class="rsa-section">Approved loss by product</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Product</th><th>Quantity</th><th>Reports</th><th>Loss value</th></tr></thead><tbody>
-      {% for row in product_rows %}<tr><td><strong>{{ row.name }}</strong><br><span class="rsa-muted">{{ row.unit }}</span></td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}</td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved write-offs in this period.</td></tr>{% endfor %}
+      {% for row in product_rows %}<tr><td><a class="rsa-link" href="{% url 'restaurant_spoilage_records' %}?from={{ date_from }}&amp;to={{ date_to }}&amp;hotel={{ selected_hotel }}&amp;product={{ row.product_id }}">{{ row.name }}</a><br><span class="rsa-muted">{{ row.unit }}</span></td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}</td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved write-offs in this period.</td></tr>{% endfor %}
     </tbody></table></div></div>
     <div class="rsa-panel"><h2 class="rsa-section">Approved loss by reason</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Reason</th><th>Quantity</th><th>Reports</th><th>Loss value</th></tr></thead><tbody>
-      {% for row in reason_rows %}<tr><td>{{ row.reason }}</td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}</td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved write-offs in this period.</td></tr>{% endfor %}
+      {% for row in reason_rows %}<tr><td><a class="rsa-link" href="{% url 'restaurant_spoilage_records' %}?from={{ date_from }}&amp;to={{ date_to }}&amp;hotel={{ selected_hotel }}&amp;reason={{ row.code }}">{{ row.reason }}</a></td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}</td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved write-offs in this period.</td></tr>{% endfor %}
     </tbody></table></div></div>
   </section>
   <section class="rsa-panel"><h2 class="rsa-section">Monthly approved loss trend</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Approval month</th><th>Approved quantity</th><th>Reports</th><th>Loss value · relative volume</th></tr></thead><tbody>
-    {% for row in monthly_rows %}<tr><td>{{ row.month|date:"M Y" }}</td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}<div class="rsa-bar"><span style="width:{{ row.share }}%"></span></div></td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved losses to chart.</td></tr>{% endfor %}
+    {% for row in monthly_rows %}<tr><td><a class="rsa-link" href="{% url 'restaurant_spoilage_records' %}?from={{ date_from }}&amp;to={{ date_to }}&amp;hotel={{ selected_hotel }}&amp;month={{ row.month_key }}">{{ row.month|date:"M Y" }}</a></td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}<div class="rsa-bar"><span style="width:{{ row.share }}%"></span></div></td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved losses to chart.</td></tr>{% endfor %}
   </tbody></table></div></section>
   <section class="rsa-split">
     <div class="rsa-panel"><h2 class="rsa-section">Loss by hotel</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Hotel</th><th>Quantity</th><th>Reports</th><th>Loss</th></tr></thead><tbody>{% for row in hotel_rows %}<tr><td>{{ row.name }}</td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}</td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved losses.</td></tr>{% endfor %}</tbody></table></div></div>
@@ -64,7 +64,7 @@
   <section class="rsa-panel"><h2 class="rsa-section">Approved by</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Approver</th><th>Quantity approved</th><th>Records</th><th>Approved loss value</th></tr></thead><tbody>{% for row in approver_rows %}<tr><td>{{ row.name }}</td><td>{{ row.quantity|quantity }}</td><td>{{ row.records }}</td><td>{{ row.loss|money }}</td></tr>{% empty %}<tr><td colspan="4" class="rsa-empty">No approved losses.</td></tr>{% endfor %}</tbody></table></div></section>
   <section class="rsa-panel"><h2 class="rsa-section">Spoilage audit register · {{ record_count }} records</h2><div class="rsa-table-wrap"><table class="rsa-table"><thead><tr><th>Reported</th><th>Hotel / Department</th><th>Product / Reason</th><th>Quantity</th><th>Reported by</th><th>Status / Cost</th><th>Reviewed by</th><th>Source records</th></tr></thead><tbody>
     {% for record in recent_records %}<tr>
-      <td>{{ record.reported_at|date:"d M Y H:i" }}<br><span class="rsa-muted">RS-{{ record.pk }}</span></td>
+      <td><a class="rsa-link" href="{% url 'restaurant_spoilage_record_detail' record.pk %}">{{ record.reported_at|date:"d M Y H:i" }} · RS-{{ record.pk }}</a></td>
       <td>{{ record.department.hotel.name }}<br>{{ record.department.name }}</td>
       <td><strong>{{ record.product.name }}</strong><br><span class="rsa-muted">{{ record.get_reason_code_display }}</span></td>
       <td>{{ record.quantity|quantity }} {{ record.product.base_unit }}</td>
