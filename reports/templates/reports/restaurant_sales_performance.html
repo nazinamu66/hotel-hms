@@ -58,7 +58,7 @@
     </tbody></table></div></section>
   </div>
   <section class="rs-panel"><h2 class="rs-section">Top-selling menu items</h2><div class="rs-table-wrap"><table class="rs-table"><thead><tr><th>Menu item</th><th>Category</th><th>Quantity sold</th><th>Revenue</th><th>Recorded cost</th><th>Gross profit</th></tr></thead><tbody>
-    {% for row in top_items %}<tr><td><strong>{{ row.name }}</strong></td><td>{{ row.category }}</td><td>{{ row.quantity }}</td><td>{{ row.revenue|money }}</td><td>{{ row.cost|money }}</td><td>{{ row.revenue|add:row.cost|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="6" style="text-align:center;padding:28px;color:#9aabc1">No Restaurant menu sales found for this period.</td></tr>{% endfor %}
+    {% for row in top_items %}<tr><td><strong>{{ row.name }}</strong></td><td>{{ row.category }}</td><td>{{ row.quantity }}</td><td>{{ row.revenue|money }}</td><td>{{ row.cost|money }}</td><td>{{ row.profit|money }}</td></tr>{% empty %}<tr><td colspan="6" style="text-align:center;padding:28px;color:#9aabc1">No Restaurant menu sales found for this period.</td></tr>{% endfor %}
   </tbody></table></div></section>
   <section class="rs-panel"><h2 class="rs-section">Daily sales</h2><div class="rs-table-wrap"><table class="rs-table"><thead><tr><th>Date</th><th>Gross sales</th></tr></thead><tbody>
     {% for row in daily_rows %}<tr><td>{{ row.day|date:"d M Y" }}</td><td>{{ row.sales|money }}</td></tr>{% empty %}<tr><td colspan="2" style="text-align:center;padding:28px;color:#9aabc1">No sales in this date range.</td></tr>{% endfor %}
