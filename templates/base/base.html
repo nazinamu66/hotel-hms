@@ -78,9 +78,6 @@
             <a href="{% url 'accounting:bank_transfer' %}">
                 Bank Transfer
             </a>
-            <a href="{% url 'restaurant_management_overview' %}">
-                Restaurant Performance
-            </a>
 
         </div>
 
@@ -322,9 +319,6 @@
                 Previous Orders
             </a>
 
-            <a href="{% url 'restaurant_management_overview' %}">
-                📊 Management &amp; Shift Performance
-            </a>
 
             {% if user.department and user.department.department_type == "RESTAURANT" and user.is_department_head %}
                 <a href="{% url 'restaurant_stock_requests' %}">
