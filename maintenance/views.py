@@ -149,7 +149,7 @@ def create_ticket_location(request, location_id):
     return render(request, "maintenance/create_ticket_location.html", {"location": location, "assets": assets})
 
 
-@role_required("MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR")
+@role_required("MAINTENANCE", "ADMIN")
 def maintenance_locations(request):
     hotels = get_accessible_hotels(request.user)
     if request.user.role in {"MAINTENANCE", "MANAGER"}:
@@ -252,7 +252,7 @@ def maintenance_locations(request):
     })
 
 
-@role_required("MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR")
+@role_required("MAINTENANCE", "ADMIN")
 def maintenance_location_edit(request, location_id):
     hotels = get_accessible_hotels(request.user)
     if request.user.role in {"MAINTENANCE", "MANAGER"}:
@@ -294,7 +294,7 @@ def maintenance_location_edit(request, location_id):
 
 
 @require_POST
-@role_required("MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR")
+@role_required("MAINTENANCE", "ADMIN")
 def maintenance_location_toggle_status(request, location_id):
     hotels = get_accessible_hotels(request.user)
     if request.user.role in {"MAINTENANCE", "MANAGER"}:
@@ -311,9 +311,7 @@ def maintenance_location_toggle_status(request, location_id):
 
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_dashboard(request):
 
@@ -554,9 +552,7 @@ def maintenance_dashboard(request):
 
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_ticket_detail(request, ticket_id):
 
@@ -841,9 +837,7 @@ def resolve_ticket(request, ticket_id):
 
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 @transaction.atomic
 def add_labour(request, ticket_id):
@@ -1140,9 +1134,7 @@ def add_material(request, ticket_id):
 
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_assets(request):
 
@@ -1195,7 +1187,7 @@ def maintenance_assets(request):
     )
 
 
-@role_required("MAINTENANCE", "MANAGER", "ADMIN", "DIRECTOR")
+@role_required("MAINTENANCE", "ADMIN")
 def maintenance_asset_create(request, asset_id=None):
 
     hotels = get_accessible_hotels(request.user)
@@ -1357,9 +1349,7 @@ def maintenance_asset_create(request, asset_id=None):
 
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_schedules(request):
 
@@ -1561,9 +1551,7 @@ def maintenance_schedule_create(request):
     )
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_schedule_work_order(
     request,
@@ -1769,9 +1757,7 @@ def my_maintenance_stock_requests(request):
 
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_work_orders(request):
 
@@ -1971,9 +1957,7 @@ def my_work_orders(request):
 
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_work_history(request):
 
@@ -2070,9 +2054,7 @@ def maintenance_work_history(request):
 
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_stock(request):
 
@@ -2168,9 +2150,7 @@ def maintenance_stock(request):
 
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_stock_movements(request):
 
@@ -2352,9 +2332,7 @@ def maintenance_stock_movements(request):
 
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_products(request):
 
@@ -2404,9 +2382,7 @@ def maintenance_products(request):
     )
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_product_create(request):
 
@@ -2482,9 +2458,7 @@ def maintenance_product_create(request):
 
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_suppliers(request):
 
@@ -2531,9 +2505,7 @@ def maintenance_suppliers(request):
     )
 @role_required(
     "MAINTENANCE",
-    "MANAGER",
     "ADMIN",
-    "DIRECTOR",
 )
 def maintenance_supplier_create(request):
 
