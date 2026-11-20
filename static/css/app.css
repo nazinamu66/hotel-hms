@@ -1026,6 +1026,21 @@ input, select, textarea { font-size: 16px; }
     color: var(--perf-text);
     color-scheme: dark;
 }
+
+/* Keep the native date picker indicator visible on the light date fields. */
+.management-performance .perf-filter-field input[type="date"] {
+    color-scheme: light;
+    -webkit-appearance: auto;
+    appearance: auto;
+    background-color: #fff;
+    color: #172033;
+}
+.management-performance .perf-filter-field input[type="date"]::-webkit-calendar-picker-indicator {
+    display: block;
+    opacity: .85;
+    cursor: pointer;
+}
+
 .management-performance .perf-filter-actions {
     display: flex;
     align-items: center;
