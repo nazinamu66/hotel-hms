@@ -1,5 +1,4 @@
 {% extends "base/base.html" %}
-{% load humanize %}
 {% block title %}Kitchen Inventory Report | Hotel HMS{% endblock %}
 {% block content %}
 <style>
@@ -79,14 +78,14 @@
 
   <div class="kir-grid">
     <article class="kir-card"><div class="kir-label">Stock records</div><div class="kir-value">{{ total_products }}</div><div class="kir-note">Product and Kitchen department combinations.</div></article>
-    <article class="kir-card"><div class="kir-label">Physical stock quantity</div><div class="kir-value">{{ total_physical_quantity|floatformat:3|intcomma }}</div><div class="kir-note">Sum of recorded Stock quantities in product base units.</div></article>
-    <article class="kir-card"><div class="kir-label">Raw ingredients value</div><div class="kir-value">{{ raw_fifo_value|floatformat:2|intcomma }}</div><div class="kir-note">FIFO value of remaining ingredient cost layers.</div></article>
-    <article class="kir-card"><div class="kir-label">Prepared foods & snacks value</div><div class="kir-value">{{ food_fifo_value|floatformat:2|intcomma }}</div><div class="kir-note">FIFO value of remaining prepared food and snack cost layers.</div></article>
-    <article class="kir-card"><div class="kir-label">Total Kitchen inventory value</div><div class="kir-value">{{ total_fifo_value|floatformat:2|intcomma }}</div><div class="kir-note">Combined raw ingredients, prepared foods and snacks, using remaining FIFO layers only.</div></article>
+    <article class="kir-card"><div class="kir-label">Physical stock quantity</div><div class="kir-value">{{ total_physical_quantity|floatformat:3 }}</div><div class="kir-note">Sum of recorded Stock quantities in product base units.</div></article>
+    <article class="kir-card"><div class="kir-label">Raw ingredients value</div><div class="kir-value">{{ raw_fifo_value|floatformat:2 }}</div><div class="kir-note">FIFO value of remaining ingredient cost layers.</div></article>
+    <article class="kir-card"><div class="kir-label">Prepared foods & snacks value</div><div class="kir-value">{{ food_fifo_value|floatformat:2 }}</div><div class="kir-note">FIFO value of remaining prepared food and snack cost layers.</div></article>
+    <article class="kir-card"><div class="kir-label">Total Kitchen inventory value</div><div class="kir-value">{{ total_fifo_value|floatformat:2 }}</div><div class="kir-note">Combined raw ingredients, prepared foods and snacks, using remaining FIFO layers only.</div></article>
     <article class="kir-card"><div class="kir-label">Reconciliation exceptions</div><div class="kir-value">{{ discrepancy_count }}</div><div class="kir-note">Product/department balances where physical quantity differs from remaining FIFO layer quantity.</div></article>
     <article class="kir-card"><div class="kir-label">Low-stock records</div><div class="kir-value">{{ low_stock_count }}</div><div class="kir-note">Physical quantity at or below the department stock reorder level.</div></article>
-    <article class="kir-card"><div class="kir-label">Unvalued physical quantity</div><div class="kir-value">{{ unvalued_quantity|floatformat:3|intcomma }}</div><div class="kir-note">Raw ingredients: {{ raw_unvalued_quantity|floatformat:3|intcomma }} · Prepared foods & snacks: {{ food_unvalued_quantity|floatformat:3|intcomma }}. Physical stock beyond remaining FIFO layers.</div></article>
-    <article class="kir-card"><div class="kir-label">FIFO layer quantity</div><div class="kir-value">{{ total_layer_quantity|floatformat:3|intcomma }}</div><div class="kir-note">Sum of remaining FIFO quantities; shown separately from physical stock.</div></article>
+    <article class="kir-card"><div class="kir-label">Unvalued physical quantity</div><div class="kir-value">{{ unvalued_quantity|floatformat:3 }}</div><div class="kir-note">Raw ingredients: {{ raw_unvalued_quantity|floatformat:3 }} · Prepared foods & snacks: {{ food_unvalued_quantity|floatformat:3 }}. Physical stock beyond remaining FIFO layers.</div></article>
+    <article class="kir-card"><div class="kir-label">FIFO layer quantity</div><div class="kir-value">{{ total_layer_quantity|floatformat:3 }}</div><div class="kir-note">Sum of remaining FIFO quantities; shown separately from physical stock.</div></article>
     <article class="kir-card"><div class="kir-label">Movements in period</div><div class="kir-value">{{ movement_count }}</div><div class="kir-note">Receipts, issues/consumption and transfers dated by movement creation.</div></article>
   </div>
 
@@ -109,10 +108,10 @@
             <td>{{ row.department.hotel.name }}<br><strong>{{ row.department.name }}</strong></td>
             <td><a class="kir-link" href="{% url 'kitchen_inventory_product_detail' row.product.pk row.department.pk %}?from={{ date_from }}&amp;to={{ date_to }}"><strong>{{ row.product.name }}</strong></a><br><span class="kir-muted">{{ row.product.sku }} · {{ row.product.base_unit }} · View FIFO detail →</span></td>
             <td>{{ row.product.get_product_type_display }}</td>
-            <td>{{ row.physical_quantity|floatformat:3|intcomma }}</td>
-            <td>{{ row.layer_quantity|floatformat:3|intcomma }}</td>
-            <td>{{ row.difference|floatformat:3|intcomma }}</td>
-            <td>{{ row.fifo_value|floatformat:2|intcomma }}</td>
+            <td>{{ row.physical_quantity|floatformat:3 }}</td>
+            <td>{{ row.layer_quantity|floatformat:3 }}</td>
+            <td>{{ row.difference|floatformat:3 }}</td>
+            <td>{{ row.fifo_value|floatformat:2 }}</td>
             <td>{{ row.reorder_level }}</td>
             <td>{% if row.is_low_stock %}<span class="kir-status warn">At / below reorder</span>{% else %}<span class="kir-status match">In range</span>{% endif %}</td>
             <td>{% if row.reconciliation_status == "MATCH" %}<span class="kir-status match">Matched</span>{% elif row.reconciliation_status == "MISSING_LAYERS" %}<span class="kir-status warn">Missing FIFO layers</span>{% else %}<span class="kir-status warn">Layers exceed stock</span>{% endif %}</td>
@@ -140,12 +139,12 @@
             <td>{{ row.movement.created_at|date:"d M Y H:i" }}</td>
             <td>{{ row.movement.product.name }}</td>
             <td>{{ row.direction }}</td>
-            <td>{{ row.movement.quantity|floatformat:3|intcomma }} {{ row.movement.product.base_unit }}</td>
+            <td>{{ row.movement.quantity|floatformat:3 }} {{ row.movement.product.base_unit }}</td>
             <td>{{ row.movement.from_department.name|default:"—" }}</td>
             <td>{{ row.movement.to_department.name|default:"—" }}</td>
             <td>{{ row.movement.reference|default:"—" }}</td>
             <td>{{ row.movement.created_by|default:"System" }}</td>
-            <td>{{ row.fifo_cost|floatformat:2|intcomma }}</td>
+            <td>{{ row.fifo_cost|floatformat:2 }}</td>
           </tr>
         {% empty %}
           <tr><td colspan="9" style="padding:20px;text-align:center;color:#64748b">No Kitchen stock movements in this date range.</td></tr>
