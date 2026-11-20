@@ -960,7 +960,7 @@
 
             {% if messages %}
 
-            <div style="margin-bottom:20px;">
+            <div class="{% if request.resolver_match.url_name == 'management_overview' or request.resolver_match.url_name == 'management_hotel_performance' or request.resolver_match.url_name == 'management_front_desk_analytics' or request.resolver_match.url_name == 'management_guest_search' or request.resolver_match.url_name == 'management_guest_profile' %}management-message-area{% else %}standard-message-area{% endif %}">
 
                 {% for message in messages %}
 
