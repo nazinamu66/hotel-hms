@@ -17,8 +17,8 @@
         {% for row in deposit_rows %}
         <div class="fd-deposit-card">
             <div class="fd-deposit-totals"><div><span>Deposit Balance</span><strong>₦{{ row.deposit.balance|floatformat:2 }}</strong></div><div><span>Guaranteed</span><strong>₦{{ row.guaranteed|floatformat:2 }}</strong></div><div><span>Available</span><strong class="is-positive">₦{{ row.available|floatformat:2 }}</strong></div></div>
-            <div class="fd-table-wrap"><table class="fd-table"><thead><tr><th>Date</th><th>Transaction</th><th>Amount</th><th>Reference</th><th>Folio</th><th>Recorded By</th></tr></thead><tbody>
-            {% for txn in row.transactions %}<tr><td>{{ txn.created_at|date:"M j, Y H:i" }}</td><td>{{ txn.get_transaction_type_display }}</td><td>₦{{ txn.amount|floatformat:2 }}</td><td>{{ txn.reference|default:"—" }}</td><td>{% if txn.folio_id %}#{{ txn.folio_id }}{% else %}—{% endif %}</td><td>{{ txn.created_by|default:"System" }}</td></tr>{% empty %}<tr><td colspan="6" class="fd-empty">No deposit transactions recorded.</td></tr>{% endfor %}
+            <div class="fd-table-wrap"><table class="fd-table"><thead><tr><th>Date</th><th>Transaction</th><th>Method</th><th>Amount</th><th>Reference</th><th>Folio</th><th>Recorded By</th></tr></thead><tbody>
+            {% for txn in row.transactions %}<tr><td>{{ txn.created_at|date:"M j, Y H:i" }}</td><td>{{ txn.get_transaction_type_display }}</td><td>{{ txn.get_payment_method_display|default:"—" }}</td><td>₦{{ txn.amount|floatformat:2 }}</td><td>{{ txn.reference|default:"—" }}</td><td>{% if txn.folio_id %}#{{ txn.folio_id }}{% else %}—{% endif %}</td><td>{{ txn.created_by|default:"System" }}</td></tr>{% empty %}<tr><td colspan="7" class="fd-empty">No deposit transactions recorded.</td></tr>{% endfor %}
             </tbody></table></div>
         </div>
         {% empty %}<p class="fd-empty">No guest deposit account exists for this guest at this hotel.</p>{% endfor %}
