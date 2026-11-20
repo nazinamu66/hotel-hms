@@ -7,7 +7,7 @@
 @media(max-width:900px){.mm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.mm-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.mm-kpis,.mm-grid,.mm-filters{grid-template-columns:1fr}}
 </style>
 <div class="mm">
-<header class="mm-head"><div><div class="mm-muted">FACILITIES &amp; ENGINEERING · MANAGEMENT REPORTING</div><h1>Maintenance Performance</h1><p class="mm-muted">Work-order activity, maintenance spending, asset coverage and preventive maintenance due.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="mm-btn" href="{% url 'maintenance_work_order_analysis' %}">Work Order Analysis</a><a class="mm-btn" href="{% url 'maintenance_cost_analysis' %}">Cost Analysis</a></div></header>
+<header class="mm-head"><div><div class="mm-muted">FACILITIES &amp; ENGINEERING · MANAGEMENT REPORTING</div><h1>Maintenance Performance</h1><p class="mm-muted">Work-order activity, maintenance spending, asset coverage and preventive maintenance due.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="mm-btn" href="{% url 'maintenance_work_order_analysis' %}">Work Order Analysis</a><a class="mm-btn" href="{% url 'maintenance_cost_analysis' %}">Cost Analysis</a><a class="mm-btn" href="{% url 'maintenance_asset_performance' %}">Asset Performance</a></div></header>
 <section class="mm-panel"><form method="get" class="mm-filters">
 <div><label>From date</label><input type="date" name="from" value="{{ date_from }}"></div>
 <div><label>To date</label><input type="date" name="to" value="{{ date_to }}"></div>
