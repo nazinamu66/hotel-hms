@@ -1,3 +1,4 @@
+{% load humanize %}
 {% extends "base/base.html" %}
 {% block title %}Kitchen Inventory Report | Hotel HMS{% endblock %}
 {% block content %}
@@ -106,7 +107,7 @@
         {% for row in inventory_rows %}
           <tr>
             <td>{{ row.department.hotel.name }}<br><strong>{{ row.department.name }}</strong></td>
-            <td><strong>{{ row.product.name }}</strong><br><span class="kir-muted">{{ row.product.sku }} · {{ row.product.base_unit }}</span></td>
+            <td><a class="kir-link" href="{% url 'kitchen_inventory_product_detail' row.product.pk row.department.pk %}?from={{ date_from }}&amp;to={{ date_to }}"><strong>{{ row.product.name }}</strong></a><br><span class="kir-muted">{{ row.product.sku }} · {{ row.product.base_unit }} · View FIFO detail →</span></td>
             <td>{{ row.product.get_product_type_display }}</td>
             <td>{{ row.physical_quantity|floatformat:3 }}</td>
             <td>{{ row.layer_quantity|floatformat:3 }}</td>
