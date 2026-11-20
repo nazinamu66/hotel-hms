@@ -1425,3 +1425,78 @@ class ManagementGuest360AccessTests(TestCase):
         self.assertEqual(receive.call_args.kwargs["method"], "CASH")
         self.assertEqual(receive.call_args.kwargs["user"], director)
 
+
+
+class ManagementCorporateCompanyDetailTests(TestCase):
+    def setUp(self):
+        from billing.models import Company
+
+        self.organization = Organization.objects.create(name="Corporate Detail Org")
+        self.hotel = Hotel.objects.create(
+            organization=self.organization, name="Corporate Detail Hotel"
+        )
+        self.other_hotel = Hotel.objects.create(
+            name="Corporate Detail Outside Hotel"
+        )
+        self.company = Company.objects.create(
+            hotel=self.hotel, name="Example Corporate Client",
+            contact_person="Ada Example", phone="08000000000",
+        )
+        self.outside_company = Company.objects.create(
+            hotel=self.other_hotel, name="Outside Corporate Client"
+        )
+
+    def test_director_can_open_company_detail_within_organization(self):
+        director = User.objects.create_user(
+            username="corporate-detail-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+        response = self.client.get(
+            f"/management/companies/{self.company.pk}/"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["company"], self.company)
+        self.assertTemplateUsed(response, "management/company_detail.html")
+
+    def test_director_cannot_open_company_outside_organization(self):
+        director = User.objects.create_user(
+            username="corporate-detail-isolation",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+        response = self.client.get(
+            f"/management/companies/{self.outside_company.pk}/"
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_general_manager_cannot_open_company_outside_assigned_hotels(self):
+        general_manager = User.objects.create_user(
+            username="corporate-detail-gm",
+            password="test-password",
+            role="GENERAL_MANAGER",
+            organization=self.organization,
+        )
+        general_manager.assigned_hotels.add(self.hotel)
+        self.client.force_login(general_manager)
+        response = self.client.get(
+            f"/management/companies/{self.outside_company.pk}/"
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_operational_user_cannot_open_company_detail(self):
+        operational_user = User.objects.create_user(
+            username="corporate-detail-frontdesk",
+            password="test-password",
+            role="FRONTDESK",
+            hotel=self.hotel,
+        )
+        self.client.force_login(operational_user)
+        response = self.client.get(
+            f"/management/companies/{self.company.pk}/"
+        )
+        self.assertEqual(response.status_code, 403)
