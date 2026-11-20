@@ -51,6 +51,7 @@ class PreventiveWorkOrderLocationTests(TestCase):
     @patch("maintenance.workflows.preventive.MaintenanceTicket.objects.create")
     @patch("maintenance.workflows.preventive.MaintenanceTicket.objects.filter")
     def test_room_asset_creates_room_work_order(self, filter_tickets, create_ticket, get_cycle):
+        get_cycle.return_value = (SimpleNamespace(work_order_id=None, save=lambda **kwargs: None), True)
         filter_tickets.return_value.first.return_value = None
         schedule = self.make_schedule(room=self.room)
         create_ticket.return_value = SimpleNamespace(pk=10)
@@ -69,6 +70,7 @@ class PreventiveWorkOrderLocationTests(TestCase):
     @patch("maintenance.workflows.preventive.MaintenanceTicket.objects.create")
     @patch("maintenance.workflows.preventive.MaintenanceTicket.objects.filter")
     def test_non_room_asset_creates_location_work_order(self, filter_tickets, create_ticket, get_cycle):
+        get_cycle.return_value = (SimpleNamespace(work_order_id=None, save=lambda **kwargs: None), True)
         filter_tickets.return_value.first.return_value = None
         schedule = self.make_schedule(location=self.location)
         create_ticket.return_value = SimpleNamespace(pk=11)
