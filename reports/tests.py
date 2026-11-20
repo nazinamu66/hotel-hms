@@ -499,7 +499,7 @@ class MaintenancePreventiveComplianceTests(TestCase):
         today = timezone.localdate()
         MaintenanceScheduleCycle.objects.create(
             schedule=schedule, due_date=today - timedelta(days=5),
-            completed_at=timezone.now() - timedelta(days=2),
+            completed_at=timezone.now() - timedelta(days=6),
         )
         MaintenanceScheduleCycle.objects.create(
             schedule=schedule, due_date=today - timedelta(days=3),
