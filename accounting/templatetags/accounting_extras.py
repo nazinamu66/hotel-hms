@@ -23,3 +23,15 @@ def money(value):
         return value
 
     return f"₦{value:,.2f}"
+
+
+@register.filter
+def quantity(value):
+    """Format stock quantities with thousands separators and three decimals."""
+    if value is None:
+        return "0.000"
+    try:
+        value = Decimal(str(value))
+    except (TypeError, ValueError):
+        return value
+    return f"{value:,.3f}"
