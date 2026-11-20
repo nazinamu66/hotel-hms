@@ -28,7 +28,7 @@
 
     <div class="mr-section-heading"><span>RESERVATION INTELLIGENCE</span><small>Bookings created and arrivals scheduled within the selected period</small></div>
     <section class="mr-kpis mr-kpis-compact">
-        <article class="mr-kpi"><span>Room Bookings Created</span><strong>{{ reservation_count }}</strong><small>Individual rooms and corporate allocations</small></article>
+        <a class="mr-kpi mr-kpi-link" href="?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}{% if selected_source %}&amp;source={{ selected_source|urlencode }}{% endif %}&amp;register=1"><span>Room Bookings Created</span><strong>{{ reservation_count }}</strong><small>Open the read-only reservation register</small></a>
         <article class="mr-kpi"><span>Scheduled Arrivals</span><strong>{{ arrival_count }}</strong><small>Arrival dates in selected period</small></article>
         <article class="mr-kpi"><span>Cancellations</span><strong>{{ cancelled_count }}</strong><small>{% if cancellation_rate != None %}{{ cancellation_rate }}% of scheduled arrivals{% else %}Rate unavailable{% endif %}</small></article>
         <article class="mr-kpi"><span>No-shows</span><strong>{{ no_show_count }}</strong><small>{% if no_show_rate != None %}{{ no_show_rate }}% of scheduled arrivals{% else %}Rate unavailable{% endif %}</small></article>
@@ -49,7 +49,7 @@
         <section class="mr-panel">
             <div class="mr-panel-heading"><div><h2>Booking Sources</h2><p>Room bookings created during the selected period</p></div></div>
             <div class="mr-table-wrap"><table class="mr-table"><thead><tr><th>Source</th><th>Room bookings</th></tr></thead><tbody>
-                {% for row in booking_source_rows %}<tr><td><a class="mr-drill-link" href="?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}&amp;source={{ row.source|urlencode }}">{{ row.source }}</a></td><td>{{ row.booking_count }}</td></tr>{% empty %}<tr><td colspan="2" class="mr-empty">No booking source activity in this period.</td></tr>{% endfor %}
+                {% for row in booking_source_rows %}<tr><td><a class="mr-drill-link" href="?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}&amp;source={{ row.source|urlencode }}&amp;register=1">{{ row.source }}</a></td><td>{{ row.booking_count }}</td></tr>{% empty %}<tr><td colspan="2" class="mr-empty">No booking source activity in this period.</td></tr>{% endfor %}
             </tbody></table></div>
         </section>
     </div>
@@ -57,9 +57,51 @@
     <section class="mr-panel mr-hotel-panel">
         <div class="mr-panel-heading"><div><h2>Booking Activity by Hotel</h2><p>Room bookings created in the selected period</p></div><span class="mr-count">{{ hotel_booking_rows|length }} hotels</span></div>
         <div class="mr-table-wrap"><table class="mr-table"><thead><tr><th>Hotel</th><th>Room bookings</th></tr></thead><tbody>
-            {% for row in hotel_booking_rows %}<tr><td><a class="mr-drill-link" href="?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}&amp;hotel={{ row.hotel_id }}{% if selected_source %}&amp;source={{ selected_source|urlencode }}{% endif %}">{{ row.hotel_name }}</a></td><td>{{ row.booking_count }}</td></tr>{% empty %}<tr><td colspan="2" class="mr-empty">No hotel booking activity in this period.</td></tr>{% endfor %}
+            {% for row in hotel_booking_rows %}<tr><td><a class="mr-drill-link" href="?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}&amp;hotel={{ row.hotel_id }}{% if selected_source %}&amp;source={{ selected_source|urlencode }}{% endif %}&amp;register=1">{{ row.hotel_name }}</a></td><td>{{ row.booking_count }}</td></tr>{% empty %}<tr><td colspan="2" class="mr-empty">No hotel booking activity in this period.</td></tr>{% endfor %}
         </tbody></table></div>
     </section>
+
+    {% if show_register %}
+    <section class="mr-panel mr-register-panel" id="mr-register">
+        <div class="mr-panel-heading">
+            <div><h2>Reservation Register</h2><p>Read-only booking records created during the selected reporting period</p></div>
+            <span class="mr-count">{{ register_count }} records</span>
+        </div>
+        <form method="get" class="mr-register-filter">
+            <input type="hidden" name="from" value="{{ date_from|date:'Y-m-d' }}">
+            <input type="hidden" name="to" value="{{ date_to|date:'Y-m-d' }}">
+            {% if selected_hotel %}<input type="hidden" name="hotel" value="{{ selected_hotel.id }}">{% endif %}
+            {% if selected_source %}<input type="hidden" name="source" value="{{ selected_source }}">{% endif %}
+            <input type="hidden" name="register" value="1">
+            <label for="mr-status">STATUS</label>
+            <select id="mr-status" name="status">
+                <option value="">All statuses</option>
+                {% for value,label in status_choices %}<option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <button type="submit">Filter register</button>
+            <a href="?from={{ date_from|date:'Y-m-d' }}&amp;to={{ date_to|date:'Y-m-d' }}{% if selected_hotel %}&amp;hotel={{ selected_hotel.id }}{% endif %}{% if selected_source %}&amp;source={{ selected_source|urlencode }}{% endif %}&amp;register=1">Clear status</a>
+        </form>
+        <div class="mr-table-wrap">
+            <table class="mr-table mr-register-table">
+                <thead><tr><th>Guest</th><th>Hotel</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Source</th><th>Type</th><th>Status</th><th>Reference</th></tr></thead>
+                <tbody>
+                {% for row in register_rows %}
+                    <tr>
+                        <td><a class="mr-drill-link" href="{% url 'management_guest_profile' row.guest_id %}">{{ row.guest_name }}</a></td>
+                        <td>{{ row.hotel_name }}</td><td>{{ row.room_number }}</td>
+                        <td>{{ row.check_in|date:"M j, Y" }}</td><td>{{ row.check_out|date:"M j, Y" }}</td>
+                        <td>{{ row.source }}</td><td>{{ row.booking_type }}</td>
+                        <td><span class="mr-status">{{ row.status|title }}</span></td><td>{{ row.reference }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="9" class="mr-empty">No reservation records match these filters.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="mr-note">Guest names open the management Guest 360 profile. This register is read-only and does not expose check-in, checkout, cancellation or booking-edit controls.</p>
+    </section>
+    {% endif %}
 
     <section class="mr-panel mr-calendar-panel" id="mr-calendar">
         <div class="mr-panel-heading"><div><h2>Daily Occupancy Calendar</h2><p>Actual posted room nights for completed dates; booking forecast for today and future dates</p></div><span class="mr-count">{{ daily_rows|length }} hotel-days</span></div>
