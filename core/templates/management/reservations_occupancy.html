@@ -91,7 +91,8 @@
                         <td>{{ row.hotel_name }}</td><td>{{ row.room_number }}</td>
                         <td>{{ row.check_in|date:"M j, Y" }}</td><td>{{ row.check_out|date:"M j, Y" }}</td>
                         <td>{{ row.source }}</td><td>{{ row.booking_type }}</td>
-                        <td><span class="mr-status">{{ row.status|title }}</span></td><td>{{ row.reference }}</td>
+                        <td><span class="mr-status">{{ row.status|title }}</span></td>
+                        <td><a class="mr-drill-link" href="{% url 'management_reservation_detail' row.record_type row.record_id %}">{{ row.reference }}</a></td>
                     </tr>
                 {% empty %}
                     <tr><td colspan="9" class="mr-empty">No reservation records match these filters.</td></tr>
