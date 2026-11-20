@@ -1136,3 +1136,137 @@ class ManagementReservationsOccupancyViewTests(TestCase):
             {hotel.pk for hotel in response.context["hotels"]},
             {self.hotel_one.pk, self.hotel_two.pk},
         )
+
+
+class ManagementGuest360AccessTests(TestCase):
+    def setUp(self):
+        from billing.models import Guest
+
+        self.organization = Organization.objects.create(name="Guest 360 Org")
+        self.hotel_one = Hotel.objects.create(
+            organization=self.organization, name="Guest 360 Hotel One"
+        )
+        self.hotel_two = Hotel.objects.create(
+            organization=self.organization, name="Guest 360 Hotel Two"
+        )
+        self.outside_hotel = Hotel.objects.create(name="Guest 360 Outside Hotel")
+        self.guest_one = Guest.objects.create(
+            hotel=self.hotel_one,
+            first_name="Ada",
+            last_name="Lovelace",
+            phone="08000000001",
+            email="ada@example.test",
+        )
+        self.guest_two = Guest.objects.create(
+            hotel=self.hotel_two,
+            first_name="Grace",
+            last_name="Hopper",
+            phone="08000000002",
+        )
+        self.outside_guest = Guest.objects.create(
+            hotel=self.outside_hotel,
+            first_name="Outside",
+            last_name="Guest",
+            phone="08000000003",
+        )
+
+    def test_director_guest_search_is_organization_scoped(self):
+        director = User.objects.create_user(
+            username="guest360-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+        response = self.client.get("/management/guests/", {"q": "Guest"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {guest.pk for guest in response.context["guest_results"]},
+            {self.guest_one.pk, self.guest_two.pk},
+        )
+        self.assertNotContains(response, "Outside Guest")
+
+    def test_general_manager_guest_search_is_assigned_hotel_scoped(self):
+        general_manager = User.objects.create_user(
+            username="guest360-gm",
+            password="test-password",
+            role="GENERAL_MANAGER",
+            organization=self.organization,
+        )
+        general_manager.assigned_hotels.add(self.hotel_two)
+        self.client.force_login(general_manager)
+        response = self.client.get("/management/guests/", {"q": "Grace"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [guest.pk for guest in response.context["guest_results"]],
+            [self.guest_two.pk],
+        )
+
+    def test_director_can_open_guest_profile_within_scope(self):
+        director = User.objects.create_user(
+            username="guest360-profile-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+        response = self.client.get(
+            f"/management/guests/{self.guest_one.pk}/"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["guest"], self.guest_one)
+
+    def test_guest_profile_cannot_be_opened_outside_management_scope(self):
+        director = User.objects.create_user(
+            username="guest360-profile-isolation",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+        response = self.client.get(
+            f"/management/guests/{self.outside_guest.pk}/"
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_frontdesk_role_cannot_use_management_guest_search(self):
+        frontdesk_user = User.objects.create_user(
+            username="guest360-frontdesk-denied",
+            password="test-password",
+            role="FRONTDESK",
+            hotel=self.hotel_one,
+        )
+        self.client.force_login(frontdesk_user)
+        response = self.client.get("/management/guests/", {"q": "Ada"})
+        self.assertEqual(response.status_code, 403)
+
+    def test_director_deposit_receipt_uses_existing_deposit_service(self):
+        from unittest.mock import patch
+
+        director = User.objects.create_user(
+            username="guest360-deposit-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+        with patch("billing.services.guest_deposit.receive_guest_deposit") as receive:
+            response = self.client.post(
+                f"/management/guests/{self.guest_one.pk}/",
+                {
+                    "amount": "25000.00",
+                    "method": "CASH",
+                    "reference": "",
+                    "note": "Management guest deposit",
+                },
+            )
+        self.assertRedirects(
+            response,
+            f"/management/guests/{self.guest_one.pk}/",
+            fetch_redirect_response=False,
+        )
+        receive.assert_called_once()
+        self.assertEqual(receive.call_args.kwargs["guest"], self.guest_one)
+        self.assertEqual(receive.call_args.kwargs["method"], "CASH")
+        self.assertEqual(receive.call_args.kwargs["user"], director)
+
