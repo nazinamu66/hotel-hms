@@ -1135,6 +1135,7 @@ def restaurant_spoilage_analysis(request):
 
         hotel = record.department.hotel
         hotel_row = hotel_data.setdefault(hotel.pk, {
+            "hotel_id": hotel.pk,
             "name": hotel.name,
             "quantity": Decimal("0.000"),
             "loss": Decimal("0.00"),
