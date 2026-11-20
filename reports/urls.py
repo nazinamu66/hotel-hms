@@ -1,11 +1,11 @@
 from django.urls import path
-from .views import restaurant_daily_report, restaurant_end_of_shift, restaurant_management_overview
+from .views import restaurant_daily_report, restaurant_end_of_shift, restaurant_management_overview, restaurant_sales_performance
 from . import views
 
 
 urlpatterns = [
     path("restaurant/management/", restaurant_management_overview, name="restaurant_management_overview"),
-    path("restaurant/management/inventory/", views.restaurant_inventory_status, name="restaurant_inventory_status"),
+    path("restaurant/management/inventory/", views.restaurant_inventory_status, name="restaurant_inventory_status"),\n    path("restaurant/management/sales/", restaurant_sales_performance, name="restaurant_sales_performance"),
     path("restaurant/daily/", restaurant_management_overview, name="restaurant_daily_report"),
     path("restaurant/end-of-shift/", restaurant_management_overview, name="restaurant_end_of_shift"),
     path("daily-stock/",views.daily_stock_report,name="daily_stock_report"),
