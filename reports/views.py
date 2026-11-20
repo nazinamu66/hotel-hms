@@ -1737,3 +1737,106 @@ def maintenance_asset_performance(request):
         "poor_or_damaged_count": condition_counts.get("POOR", 0) + condition_counts.get("DAMAGED", 0),
     }
     return render(request, "reports/maintenance_asset_performance.html", context)
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def maintenance_preventive_compliance(request):
+    """Historical preventive schedule compliance from recorded schedule cycles."""
+    from collections import defaultdict
+    from django.core.exceptions import PermissionDenied
+    from django.db.models import Q
+    from django.utils.dateparse import parse_date
+    from accounts.services.access import get_accessible_hotels
+    from maintenance.models import MaintenanceScheduleCycle
+
+    accessible_hotels = get_accessible_hotels(request.user)
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    hotels = accessible_hotels.order_by("name")
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not accessible_hotels.filter(pk=int(selected_hotel)).exists():
+            raise PermissionDenied("You do not have access to this hotel.")
+        hotels = hotels.filter(pk=int(selected_hotel))
+
+    cycles = MaintenanceScheduleCycle.objects.filter(
+        schedule__asset__hotel__in=hotels,
+        due_date__range=(date_from, date_to),
+    ).select_related(
+        "schedule", "schedule__asset", "schedule__asset__hotel",
+        "work_order", "work_order__assigned_to",
+    ).order_by("due_date", "schedule__asset__hotel__name", "schedule__asset__name")
+
+    rows = []
+    hotel_stats = defaultdict(lambda: {
+        "due": 0, "on_time": 0, "late": 0, "overdue": 0, "pending": 0,
+    })
+    totals = {"due": 0, "on_time": 0, "late": 0, "overdue": 0, "pending": 0}
+    for cycle in cycles:
+        if cycle.completed_at:
+            status = "COMPLETED ON TIME" if cycle.is_completed_on_time else "COMPLETED LATE"
+        elif cycle.due_date < today:
+            status = "OVERDUE"
+        elif cycle.due_date == today:
+            status = "DUE TODAY"
+        else:
+            status = "UPCOMING"
+
+        hotel_name = cycle.schedule.asset.hotel.name
+        stats = hotel_stats[hotel_name]
+        stats["due"] += 1
+        totals["due"] += 1
+        if status == "COMPLETED ON TIME":
+            stats["on_time"] += 1
+            totals["on_time"] += 1
+        elif status == "COMPLETED LATE":
+            stats["late"] += 1
+            totals["late"] += 1
+        elif status == "OVERDUE":
+            stats["overdue"] += 1
+            totals["overdue"] += 1
+        elif status == "DUE TODAY":
+            stats["pending"] += 1
+            totals["pending"] += 1
+
+        rows.append({
+            "cycle": cycle,
+            "hotel_name": hotel_name,
+            "asset_name": cycle.schedule.asset.name,
+            "schedule_name": cycle.schedule.name,
+            "status": status,
+            "days_variance": (
+                (cycle.completed_at.date() - cycle.due_date).days
+                if cycle.completed_at else None
+            ),
+        })
+
+    completed = totals["on_time"] + totals["late"]
+    compliance_rate = round((totals["on_time"] / completed) * 100, 1) if completed else None
+    hotel_rows = [
+        {"name": name, **values,
+         "completed": values["on_time"] + values["late"],
+         "compliance_rate": round(values["on_time"] / (values["on_time"] + values["late"]) * 100, 1)
+         if values["on_time"] + values["late"] else None}
+        for name, values in sorted(hotel_stats.items())
+    ]
+
+    context = {
+        "hotels": hotels,
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "today": today,
+        "rows": rows,
+        "hotel_rows": hotel_rows,
+        "totals": totals,
+        "completed_cycles": completed,
+        "compliance_rate": compliance_rate,
+        "late_rate": round((totals["late"] / completed) * 100, 1) if completed else None,
+        "unresolved_due": totals["overdue"] + totals["pending"],
+    }
+    return render(request, "reports/maintenance_preventive_compliance.html", context)
