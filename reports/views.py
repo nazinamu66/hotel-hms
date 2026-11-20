@@ -1462,3 +1462,148 @@ def maintenance_work_order_analysis(request):
     }
     return render(request, "reports/maintenance_work_order_analysis.html", context)
 
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def maintenance_cost_analysis(request):
+    """Read-only cost analysis based on dated maintenance material and labour entries."""
+    from collections import defaultdict
+    from decimal import Decimal
+    from django.core.exceptions import PermissionDenied
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    from django.utils.dateparse import parse_date
+    from accounts.services.access import get_accessible_hotels
+    from maintenance.models import MaintenanceTicket
+
+    accessible_hotels = get_accessible_hotels(request.user)
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    hotel_scope = Q(room__hotel__in=accessible_hotels) | Q(location__hotel__in=accessible_hotels)
+    ticket_scope = MaintenanceTicket.objects.filter(hotel_scope)
+    hotels = accessible_hotels.order_by("name")
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not accessible_hotels.filter(pk=int(selected_hotel)).exists():
+            raise PermissionDenied("You do not have access to this hotel.")
+        hotel_id = int(selected_hotel)
+        ticket_scope = ticket_scope.filter(Q(room__hotel_id=hotel_id) | Q(location__hotel_id=hotel_id))
+        hotels = hotels.filter(pk=hotel_id)
+
+    tickets = ticket_scope.select_related(
+        "room", "room__hotel", "location", "location__hotel", "asset", "schedule"
+    ).prefetch_related(
+        "material_entries__product", "material_entries__supplier",
+        "labour_entries__technician", "labour_entries__supplier",
+    )
+
+    zero = Decimal("0.00")
+    totals = {
+        "materials": zero, "store_materials": zero, "direct_materials": zero,
+        "labour": zero, "internal_labour": zero, "outsourced_labour": zero,
+    }
+    monthly = defaultdict(lambda: {"materials": zero, "labour": zero, "total": zero})
+    hotel_data = defaultdict(lambda: {"tickets": 0, "materials": zero, "labour": zero, "total": zero})
+    asset_data = defaultdict(lambda: {"tickets": 0, "materials": zero, "labour": zero, "total": zero})
+    maintenance_type_data = {
+        "Preventive": {"tickets": 0, "materials": zero, "labour": zero, "total": zero},
+        "Corrective": {"tickets": 0, "materials": zero, "labour": zero, "total": zero},
+    }
+    rows = []
+    cost_ticket_count = 0
+
+    for ticket in tickets:
+        material_entries = [
+            item for item in ticket.material_entries.all()
+            if date_from <= item.created_at.date() <= date_to
+        ]
+        labour_entries = [
+            item for item in ticket.labour_entries.all()
+            if date_from <= item.created_at.date() <= date_to
+        ]
+        material_cost = sum((item.total_cost for item in material_entries), zero)
+        labour_cost = sum((item.amount for item in labour_entries), zero)
+        if not material_entries and not labour_entries:
+            continue
+
+        total_cost = material_cost + labour_cost
+        cost_ticket_count += 1
+        hotel = ticket.room.hotel if ticket.room_id else ticket.location.hotel
+        hotel_name = hotel.name
+        totals["materials"] += material_cost
+        totals["labour"] += labour_cost
+        for item in material_entries:
+            if item.source == "STORE":
+                totals["store_materials"] += item.total_cost
+            elif item.source == "DIRECT":
+                totals["direct_materials"] += item.total_cost
+            month_key = item.created_at.strftime("%Y-%m")
+            monthly[month_key]["materials"] += item.total_cost
+            monthly[month_key]["total"] += item.total_cost
+        for item in labour_entries:
+            totals_key = "internal_labour" if item.labour_type == "INTERNAL" else "outsourced_labour"
+            totals[totals_key] += item.amount
+            month_key = item.created_at.strftime("%Y-%m")
+            monthly[month_key]["labour"] += item.amount
+            monthly[month_key]["total"] += item.amount
+
+        hotel_data[hotel_name]["tickets"] += 1
+        hotel_data[hotel_name]["materials"] += material_cost
+        hotel_data[hotel_name]["labour"] += labour_cost
+        hotel_data[hotel_name]["total"] += total_cost
+
+        kind = "Preventive" if ticket.schedule_id else "Corrective"
+        maintenance_type_data[kind]["tickets"] += 1
+        maintenance_type_data[kind]["materials"] += material_cost
+        maintenance_type_data[kind]["labour"] += labour_cost
+        maintenance_type_data[kind]["total"] += total_cost
+
+        asset_name = ticket.asset.name if ticket.asset_id else (
+            f"Room {ticket.room.room_number}" if ticket.room_id else ticket.location.name
+        )
+        asset_key = (hotel_name, asset_name)
+        asset_data[asset_key]["tickets"] += 1
+        asset_data[asset_key]["materials"] += material_cost
+        asset_data[asset_key]["labour"] += labour_cost
+        asset_data[asset_key]["total"] += total_cost
+
+        rows.append({
+            "ticket": ticket,
+            "hotel_name": hotel_name,
+            "target": asset_name,
+            "material_cost": material_cost,
+            "labour_cost": labour_cost,
+            "total_cost": total_cost,
+            "maintenance_type": kind,
+        })
+
+    totals["total"] = totals["materials"] + totals["labour"]
+    month_rows = [{"month": key, **values} for key, values in sorted(monthly.items())]
+    hotel_rows = [{"name": key, **value} for key, value in sorted(hotel_data.items())]
+    asset_rows = [
+        {"hotel": key[0], "name": key[1], **value}
+        for key, value in sorted(asset_data.items(), key=lambda item: item[1]["total"], reverse=True)
+    ]
+    type_rows = [{"label": key, **value} for key, value in maintenance_type_data.items()]
+    paginator = Paginator(sorted(rows, key=lambda row: row["total_cost"], reverse=True), 50)
+    cost_page = paginator.get_page(request.GET.get("page"))
+
+    context = {
+        "hotels": hotels,
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "cost_ticket_count": cost_ticket_count,
+        "totals": totals,
+        "month_rows": month_rows,
+        "hotel_rows": hotel_rows,
+        "asset_rows": asset_rows[:20],
+        "type_rows": type_rows,
+        "cost_page": cost_page,
+        "cost_entry_count": sum(len(row["ticket"].material_entries.all()) + len(row["ticket"].labour_entries.all()) for row in rows),
+    }
+    return render(request, "reports/maintenance_cost_analysis.html", context)
