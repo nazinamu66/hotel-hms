@@ -542,7 +542,7 @@
         <!-- MAINTENANCE -->
         <!-- ========================= -->
 
-        {% if user|has_role:"MAINTENANCE,MANAGER,ADMIN,DIRECTOR" %}
+        {% if user|has_role:"MAINTENANCE,ADMIN" %}
         {% with maintenance_pages="maintenance_dashboard,maintenance_work_orders,maintenance_stock,maintenance_request_stock,maintenance_stock_requests,maintenance_incoming_pos,maintenance_stock_movements,maintenance_work_history,maintenance_ticket_detail,maintenance_locations,maintenance_assets,maintenance_schedules" %}
         <h4 class="menu-toggle {% if request.resolver_match.url_name in maintenance_pages %}active-menu{% endif %}"
             onclick="toggleMenu('maintenance_menu', this)">
