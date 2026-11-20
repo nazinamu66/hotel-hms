@@ -1,6 +1,8 @@
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.db.models import Q
+
 from accounting.models import JournalEntry
 
 
@@ -105,10 +107,12 @@ def build_restaurant_accounting_reconciliation(
     refunded_ids = [order.pk for order in revenue_orders if order.is_refunded]
     if hotel_ids and refunded_ids:
         # Resolve item-suffixed spoilage references for refunded orders in scope.
+        spoilage_scope = Q()
+        for order_id in refunded_ids:
+            spoilage_scope |= Q(reference__startswith=f"SPOILAGE-REFUND-{order_id}-")
         spoilage_entries = JournalEntry.objects.filter(
             hotel_id__in=hotel_ids,
-            reference__startswith="SPOILAGE-REFUND-",
-        ).prefetch_related("lines__account")
+        ).filter(spoilage_scope).prefetch_related("lines__account")
         for entry in spoilage_entries:
             if any(entry.reference.startswith(f"SPOILAGE-REFUND-{order_id}-") for order_id in refunded_ids):
                 entries_by_reference[entry.reference].append(entry)
@@ -330,7 +334,7 @@ def build_restaurant_accounting_reconciliation(
         "reconciled_count": sum(row["status"] == "RECONCILED" for row in rows),
         "missing_count": sum(row["status"] == "MISSING" for row in rows),
         "difference_total": _money(sum(
-            (row["difference"] for row in rows),
+            (abs(row["difference"]) for row in rows),
             Decimal("0.00"),
         )),
     }
