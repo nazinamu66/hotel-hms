@@ -1324,3 +1324,63 @@ input, select, textarea { font-size: 16px; }
 .content:has(.management-frontdesk) > .management-message-area .alert {
     margin: 0;
 }
+
+
+
+/* Executive Reservations & Occupancy report — isolated from department screens. */
+.management-reservations{--mr-bg:#0d1728;--mr-panel:#14243a;--mr-card:#192c45;--mr-border:#2a3c55;--mr-muted:#9aabc1;color:#f1f5f9;margin:calc(-1 * clamp(18px,2.5vw,34px));padding:clamp(18px,2.5vw,34px);background:linear-gradient(135deg,#10203a 0%,#0d1728 58%,#101d32 100%);min-height:100%}
+.content:has(.management-reservations){background:#0d1728}
+.content:has(.management-reservations)>.management-message-area{margin:0!important;padding:18px clamp(18px,2.5vw,34px) 0;background:#0d1728}
+.content:has(.management-reservations)>.management-message-area .alert{margin:0}
+.management-reservations .mr-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:24px}
+.management-reservations .mr-eyebrow{margin:0 0 8px;color:#60a5fa;font-size:.72rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+.management-reservations .mr-heading h1{margin:0;color:#f8fafc;font-size:clamp(1.65rem,3vw,2.25rem);letter-spacing:-.04em}
+.management-reservations .mr-heading p:not(.mr-eyebrow){margin:7px 0 0;color:var(--mr-muted)}
+.management-reservations .mr-period,.management-reservations .mr-count{padding:9px 13px;border:1px solid var(--mr-border);border-radius:12px;color:#dbeafe;background:#172940;font-size:.76rem;font-weight:700;white-space:nowrap}
+.management-reservations .mr-filter{display:flex;align-items:flex-end;flex-wrap:wrap;gap:13px;padding:17px;margin-bottom:24px;border:1px solid var(--mr-border);border-radius:15px;background:var(--mr-panel)}
+.management-reservations .mr-field{display:flex;flex:1 1 170px;flex-direction:column;gap:7px;min-width:150px}
+.management-reservations .mr-field label,.management-reservations .mr-section-heading{color:#9aabc1;font-size:.68rem;font-weight:800;letter-spacing:.12em}
+.management-reservations .mr-field input,.management-reservations .mr-field select{box-sizing:border-box;width:100%;min-height:42px;padding:9px 11px;border:1px solid #344861;border-radius:9px;background:#0e1b2d;color:#f1f5f9;color-scheme:dark}
+.management-reservations .mr-filter-actions{display:flex;align-items:center;gap:14px}
+.management-reservations .mr-filter-actions button{min-height:42px;padding:0 17px;border:0;border-radius:9px;background:#2563eb;color:white;font-weight:750;cursor:pointer}
+.management-reservations .mr-filter-actions a{color:#bfdbfe;font-size:.8rem;font-weight:700;text-decoration:none}
+.management-reservations .mr-section-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:22px 0 12px}
+.management-reservations .mr-section-heading small{color:var(--mr-muted);font-size:.7rem;font-weight:500;letter-spacing:0;text-align:right}
+.management-reservations .mr-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+.management-reservations .mr-kpi{position:relative;min-width:0;padding:17px;border:1px solid var(--mr-border);border-left:3px solid #64748b;border-radius:14px;background:linear-gradient(145deg,#1a2d47,#14243a);box-shadow:0 8px 22px #02081726}
+.management-reservations .mr-kpi.mr-blue{border-left-color:#60a5fa}.management-reservations .mr-kpi.mr-violet{border-left-color:#a78bfa}.management-reservations .mr-kpi.mr-green{border-left-color:#34d399}.management-reservations .mr-kpi.mr-amber{border-left-color:#fbbf24}
+.management-reservations .mr-kpi>span{display:block;color:#a8b8cc;font-size:.76rem;font-weight:700}
+.management-reservations .mr-kpi strong{display:block;margin:9px 0 5px;color:#f8fafc;font-size:clamp(1.45rem,2.4vw,1.9rem);letter-spacing:-.04em;overflow-wrap:anywhere}
+.management-reservations .mr-kpi small{display:block;color:#91a3bb;font-size:.7rem;line-height:1.45}
+.management-reservations .mr-kpis-compact .mr-kpi{padding:14px 16px}
+.management-reservations .mr-kpis-compact .mr-kpi strong{font-size:1.55rem}
+.management-reservations .mr-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-top:16px}
+.management-reservations .mr-panel{min-width:0;padding:19px;border:1px solid var(--mr-border);border-radius:15px;background:var(--mr-panel);box-shadow:0 8px 22px #02081720}
+.management-reservations .mr-panel-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px}
+.management-reservations .mr-panel-heading h2{margin:0;color:#f1f5f9;font-size:1rem;letter-spacing:-.02em}
+.management-reservations .mr-panel-heading p{margin:5px 0 0;color:var(--mr-muted);font-size:.74rem}
+.management-reservations .mr-stat-list{display:grid;gap:0}
+.management-reservations .mr-stat-list>div{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid #2a3c555e}
+.management-reservations .mr-stat-list>div:last-child{border-bottom:0}
+.management-reservations .mr-stat-list span{color:#b5c3d5;font-size:.78rem}
+.management-reservations .mr-stat-list strong{color:#f8fafc;font-size:.82rem;text-align:right}
+.management-reservations .mr-table-wrap{overflow-x:auto}
+.management-reservations .mr-table{width:100%;border-collapse:collapse;min-width:390px}
+.management-reservations .mr-table th{padding:11px 10px;background:#0e1b2d;color:#96a9c1;font-size:.65rem;font-weight:800;letter-spacing:.1em;text-align:left;text-transform:uppercase;white-space:nowrap}
+.management-reservations .mr-table td{padding:11px 10px;border-bottom:1px solid #2a3c5575;color:#d7e1ee;font-size:.77rem}
+.management-reservations .mr-table tbody tr:last-child td{border-bottom:0}
+.management-reservations .mr-table td:last-child,.management-reservations .mr-table th:last-child{text-align:right}
+.management-reservations .mr-empty{text-align:center!important;color:#91a3bb!important;padding:20px!important}
+.management-reservations .mr-hotel-panel,.management-reservations .mr-calendar-panel{margin-top:16px}
+.management-reservations .mr-basis{display:inline-block;padding:4px 8px;border-radius:20px;font-size:.65rem;font-weight:800}
+.management-reservations .mr-basis.is-actual{background:#123c35;color:#6ee7b7}
+.management-reservations .mr-basis.is-forecast{background:#342b50;color:#c4b5fd}
+.management-reservations .mr-occupancy-cell{display:flex;align-items:center;justify-content:flex-end;gap:9px;min-width:130px}
+.management-reservations .mr-track{width:76px;height:6px;overflow:hidden;border-radius:10px;background:#33465f}
+.management-reservations .mr-track span{display:block;height:100%;max-width:none;border-radius:10px;background:linear-gradient(90deg,#60a5fa,#34d399)}
+.management-reservations .mr-occupancy-cell strong{min-width:48px;color:#f1f5f9;font-size:.72rem;text-align:right}
+.management-reservations .mr-note{margin:13px 0 0;color:#91a3bb;font-size:.7rem;line-height:1.55}
+@media(max-width:1050px){.management-reservations .mr-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.management-reservations{margin:-18px -16px;padding:18px 16px 26px}.management-reservations .mr-heading{align-items:flex-start;flex-direction:column}.management-reservations .mr-panels{grid-template-columns:1fr}}
+@media(max-width:540px){.management-reservations .mr-kpis{grid-template-columns:1fr 1fr}.management-reservations .mr-section-heading{align-items:flex-start;flex-direction:column}.management-reservations .mr-section-heading small{text-align:left}.management-reservations .mr-filter-actions{width:100%;justify-content:space-between}.management-reservations .mr-panel{padding:14px}}
+
