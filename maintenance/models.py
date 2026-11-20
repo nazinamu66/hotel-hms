@@ -72,7 +72,7 @@ class MaintenanceScheduleCycle(models.Model):
     """A dated preventive-maintenance obligation and its completion record."""
 
     schedule = models.ForeignKey(
-        MaintenanceSchedule,
+        "MaintenanceSchedule",
         on_delete=models.CASCADE,
         related_name="cycles",
     )
