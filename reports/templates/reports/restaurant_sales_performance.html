@@ -27,6 +27,14 @@
 .rs-recon-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
 .rs-recon-kpi{padding:12px;border:1px solid #29415e;border-radius:10px;background:#102239}
 .rs-recon-kpi strong{display:block;font-size:20px;color:#f8fafc;margin-top:5px}
+.rs-recon-table-wrap{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#6484ad #102239}
+.rs-recon-table-wrap:focus{outline:2px solid #60a5fa;outline-offset:3px}
+.rs-recon-table-wrap::-webkit-scrollbar{height:10px}
+.rs-recon-table-wrap::-webkit-scrollbar-track{background:#102239;border-radius:8px}
+.rs-recon-table-wrap::-webkit-scrollbar-thumb{background:#6484ad;border:2px solid #102239;border-radius:8px}
+.rs-recon-table{min-width:1120px}
+.rs-recon-scroll-note{display:flex;align-items:center;gap:7px;margin:0 0 8px;color:#9aabc1;font-size:11px}
+.rs-recon-scroll-note strong{color:#c5d5e8}
 @media(max-width:700px){.rs-recon-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:950px){.rs-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rs-split{grid-template-columns:1fr}}
 @media(max-width:560px){.rs-grid{grid-template-columns:1fr}.rs-head h1{font-size:23px}}
@@ -61,8 +69,9 @@
       <div class="rs-recon-kpi"><div class="rs-label">Missing postings</div><strong>{{ accounting_reconciliation.missing_count }}</strong></div>
       <div class="rs-recon-kpi"><div class="rs-label">Sum of variances</div><strong>{{ accounting_reconciliation.difference_total|money }}</strong></div>
     </div>
-    <div class="rs-table-wrap">
-      <table class="rs-table">
+    <p class="rs-recon-scroll-note"><span aria-hidden="true">↔</span> <strong>More columns to the right.</strong> Scroll horizontally or use Shift + mouse wheel to view Difference, Status and Record.</p>
+    <div class="rs-table-wrap rs-recon-table-wrap" role="region" aria-label="Accounting reconciliation records" tabindex="0">
+      <table class="rs-table rs-recon-table">
         <thead><tr><th>Area</th><th>Operational record</th><th>Reference</th><th>Expected</th><th>Journal amount</th><th>Difference</th><th>Status</th><th>Record</th></tr></thead>
         <tbody>
           {% for row in accounting_reconciliation.rows %}
@@ -74,7 +83,7 @@
             <td>{{ row.actual|money }}</td>
             <td>{{ row.difference|money }}</td>
             <td><span class="rs-status rs-status-{{ row.status }}">{{ row.status|title|default:"—" }}</span></td>
-            <td>{% if row.order_id %}<a href="{% url 'restaurant_order_detail' row.order_id %}" target="_blank" rel="noopener">Open order →</a>{% else %}—{% endif %}</td>
+            <td>{% if row.order_id %}<a href="{% url 'restaurant_order_detail' row.order_id %}" target="_blank" rel="noopener">Open order #{{ row.order_id }} →</a>{% elif row.shift_id %}<a href="{% url 'restaurant_shift_detail' row.shift_id %}" target="_blank" rel="noopener">Open shift #{{ row.shift_id }} →</a>{% else %}—{% endif %}</td>
           </tr>
           {% empty %}
           <tr><td colspan="8">No Restaurant accounting activity was found for this period.</td></tr>
