@@ -1,9 +1,10 @@
 from django.urls import path
-from .views import restaurant_daily_report, restaurant_end_of_shift
+from .views import restaurant_daily_report, restaurant_end_of_shift, restaurant_management_overview
 from . import views
 
 
 urlpatterns = [
+    path("restaurant/management/", restaurant_management_overview, name="restaurant_management_overview"),
     path("restaurant/daily/", restaurant_daily_report, name="restaurant_daily_report"),
     path("restaurant/end-of-shift/",restaurant_end_of_shift,name="restaurant_end_of_shift"),
     path("daily-stock/",views.daily_stock_report,name="daily_stock_report"),
