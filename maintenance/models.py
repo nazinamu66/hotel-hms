@@ -67,6 +67,44 @@ class MaintenanceLocation(models.Model):
         return f"{self.name} ({self.hotel})"
 
 
+class MaintenanceScheduleCycle(models.Model):
+    """A dated preventive-maintenance obligation and its completion record."""
+
+    schedule = models.ForeignKey(
+        MaintenanceSchedule,
+        on_delete=models.CASCADE,
+        related_name="cycles",
+    )
+    due_date = models.DateField()
+    work_order = models.OneToOneField(
+        "MaintenanceTicket",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="schedule_cycle",
+    )
+    completed_at = models.DateTimeField(null=True, blank=True)
+    completion_note = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["due_date", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["schedule", "due_date"],
+                name="unique_maintenance_schedule_cycle_due",
+            )
+        ]
+
+    @property
+    def is_completed_on_time(self):
+        return bool(self.completed_at and self.completed_at.date() <= self.due_date)
+
+    @property
+    def is_completed_late(self):
+        return bool(self.completed_at and self.completed_at.date() > self.due_date)
+
+
 class MaintenanceTicket(models.Model):
 
     PRIORITY_CHOICES = (
