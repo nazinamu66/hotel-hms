@@ -428,7 +428,12 @@ def restaurant_management_overview(request):
     from restaurant.models import Shift
     from accounts.services.access import get_accessible_hotels
 
-    accessible_hotels = get_accessible_hotels(request.user)\n    restaurant_hotel_ids = Department.objects.filter(hotel__in=accessible_hotels, department_type="RESTAURANT").values_list("hotel_id", flat=True)\n    hotels = accessible_hotels.filter(pk__in=restaurant_hotel_ids)
+    accessible_hotels = get_accessible_hotels(request.user)
+    restaurant_hotel_ids = Department.objects.filter(
+        hotel__in=accessible_hotels,
+        department_type="RESTAURANT",
+    ).values_list("hotel_id", flat=True)
+    hotels = accessible_hotels.filter(pk__in=restaurant_hotel_ids)
     today = localdate()
     date_from = parse_date(request.GET.get("from", "")) or today
     date_to = parse_date(request.GET.get("to", "")) or today
