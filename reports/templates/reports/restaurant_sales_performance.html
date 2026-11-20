@@ -75,7 +75,7 @@
       </tbody></table>
       {% elif detail_section == "costs" %}
       <table class="rs-table"><thead><tr><th>Order</th><th>Date</th><th>Menu item</th><th>Product type</th><th>Qty</th><th>Unit price</th><th>Line revenue</th><th>Unit cost</th><th>Line cost</th><th>Line gross profit</th></tr></thead><tbody>
-      {% for item in cost_rows %}<tr><td><a href="{% url 'restaurant_order_detail' item.order_id %}" target="_blank" rel="noopener">#{{ item.order_id }}</a></td><td>{{ item.order.created_at|date:"d M Y" }}</td><td>{{ item.menu_item.name }}</td><td>{{ item.menu_item.product.product_type }}</td><td>{{ item.quantity }}</td><td>{{ item.price|money }}</td><td>{{ item.line_total|default:item.price|money }}</td><td>{{ item.cost_at_sale|money }}</td><td>{{ item.cost_at_sale|floatformat:2 }}</td><td>—</td></tr>{% empty %}<tr><td colspan="10">No sold line items in this period.</td></tr>{% endfor %}
+      {% for item in cost_rows %}<tr><td><a href="{% url 'restaurant_order_detail' item.order_id %}" target="_blank" rel="noopener">#{{ item.item.order_id }}</a></td><td>{{ item.item.order.created_at|date:"d M Y" }}</td><td>{{ item.item.menu_item.name }}</td><td>{{ item.item.menu_item.product.product_type }}</td><td>{{ item.item.quantity }}</td><td>{{ item.item.price|money }}</td><td>{{ item.line_revenue|money }}</td><td>{{ item.item.cost_at_sale|money }}</td><td>{{ item.line_cost|money }}</td><td>{{ item.line_profit|money }}</td></tr>{% empty %}<tr><td colspan="10">No sold line items in this period.</td></tr>{% endfor %}
       </tbody></table>
       {% else %}
       <table class="rs-table"><thead><tr><th>Order</th><th>Date</th><th>Room / guest</th><th>Cashier</th><th>Status</th><th>Shift</th><th>Revenue</th></tr></thead><tbody>
