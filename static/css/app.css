@@ -1482,3 +1482,12 @@ input, select, textarea { font-size: 16px; }
     .management-reservations .mr-heading { align-items:flex-start;flex-direction:column; }
     .management-reservations .mr-detail-grid { grid-template-columns:minmax(0,1fr); }
 }
+
+
+/* Keep the management reservations workspace background through the full shell height. */
+.main:has(.management-reservations) { background: #0d1728; }
+.main:has(.management-reservations) > .content {
+    flex: 1 1 auto;
+    min-height: 0;
+    background: #0d1728;
+}
