@@ -254,4 +254,67 @@ class MaintenanceManagementOverviewTests(TestCase):
         response = self.client.get("/maintenance/")
         self.assertEqual(response.status_code, 403)
 
+class MaintenanceWorkOrderAnalysisTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Hotel, Organization
+        from maintenance.models import MaintenanceLocation, MaintenanceTicket
+
+        User = get_user_model()
+        self.organization = Organization.objects.create(name="Work Order Analysis Org")
+        self.hotel = Hotel.objects.create(
+            organization=self.organization,
+            name="Work Order Analysis Hotel",
+        )
+        self.other_hotel = Hotel.objects.create(
+            organization=self.organization,
+            name="Other Work Order Hotel",
+        )
+        self.manager = User.objects.create_user(
+            username="work_order_analysis_manager",
+            password="test-password",
+            role="MANAGER",
+            hotel=self.hotel,
+        )
+        location = MaintenanceLocation.objects.create(
+            hotel=self.hotel,
+            name="Guest Lounge",
+            location_type="LOBBY",
+        )
+        other_location = MaintenanceLocation.objects.create(
+            hotel=self.other_hotel,
+            name="Other Lounge",
+            location_type="LOBBY",
+        )
+        self.ticket = MaintenanceTicket.objects.create(
+            location=location,
+            description="Guest lounge lighting failure",
+            reported_by=self.manager,
+            priority="HIGH",
+            status="OPEN",
+        )
+        self.other_ticket = MaintenanceTicket.objects.create(
+            location=other_location,
+            description="Other hotel's plumbing issue",
+            reported_by=self.manager,
+            priority="LOW",
+            status="OPEN",
+        )
+        self.client.force_login(self.manager)
+
+    def test_manager_sees_only_accessible_hotel_work_orders(self):
+        response = self.client.get("/reports/maintenance/management/work-orders/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Work Order Analysis")
+        self.assertContains(response, "Guest lounge lighting failure")
+        self.assertNotContains(response, "Other hotel's plumbing issue")
+        self.assertEqual(response.context["total_tickets"], 1)
+        self.assertEqual(response.context["open_total"], 1)
+
+    def test_unauthorized_hotel_filter_is_rejected(self):
+        response = self.client.get(
+            "/reports/maintenance/management/work-orders/",
+            {"hotel": self.other_hotel.pk},
+        )
+        self.assertEqual(response.status_code, 403)
 
