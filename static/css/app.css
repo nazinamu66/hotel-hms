@@ -1722,3 +1722,31 @@ input, select, textarea { font-size: 16px; }
 @media(max-width:1000px){.kitchen-management-report .kmr-trends{grid-template-columns:1fr}.kitchen-management-report .kmr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:680px){.kitchen-management-report{padding:20px 14px 34px}.kitchen-management-report .kmr-report-links{grid-template-columns:1fr}}
 @media(max-width:560px){.kitchen-management-report .kmr-grid{grid-template-columns:1fr}.kitchen-management-report .kmr-head{flex-direction:column}.kitchen-management-report .kmr-filter{align-items:stretch}.kitchen-management-report .kmr-field{min-width:100%}}
+
+
+/* Kitchen Management Overview: apply the executive theme to the shared shell,
+   not just the cards inside the report. This prevents the global white .content
+   and topbar styles from leaking through around the page. */
+.main:has(.kitchen-management-report) { background:#0d1728; }
+.main:has(.kitchen-management-report) > .content {
+    flex:1 1 auto;
+    min-height:0;
+    background:linear-gradient(135deg,#10203a 0%,#0d1728 58%,#101d32 100%);
+    color:#e7eefb;
+}
+.content:has(.kitchen-management-report) > .standard-message-area,
+.content:has(.kitchen-management-report) > .management-message-area {
+    margin:0;
+    padding:0 0 16px;
+    background:transparent;
+}
+.content:has(.kitchen-management-report) .kitchen-management-report h1,
+.content:has(.kitchen-management-report) .kitchen-management-report h2,
+.content:has(.kitchen-management-report) .kitchen-management-report h3 {
+    color:#f4f7ff;
+}
+.topbar.topbar-executive {
+    background:#0d1728 !important;
+    color:#f1f5f9 !important;
+    border-bottom:1px solid rgba(148,163,184,.17) !important;
+}
