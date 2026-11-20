@@ -425,6 +425,115 @@ def management_front_desk_analytics(request):
 
 
 @role_required("DIRECTOR", "GENERAL_MANAGER")
+def management_front_desk_drilldown(request, metric):
+    """Read-only, hotel-scoped detail behind Front Desk KPI cards."""
+    from django.db.models import Exists, OuterRef, Subquery
+    from billing.models import Folio, Guest
+
+    metric_titles = {
+        "check-ins": "Actual Check-ins",
+        "checkouts": "Actual Checkouts",
+        "in-house": "In-house Guests",
+        "repeat-guests": "Repeat Guests",
+    }
+    if metric not in metric_titles:
+        from django.http import Http404
+        raise Http404("Unknown Front Desk report.")
+
+    reporting_context = build_management_reporting_context(request.user, request.GET)
+    hotels = reporting_context["scoped_hotels"]
+    hotel_ids = hotels.values_list("pk", flat=True)
+    start_at = timezone.make_aware(
+        datetime.combine(reporting_context["date_from"], time.min),
+        timezone.get_current_timezone(),
+    )
+    end_at = timezone.make_aware(
+        datetime.combine(reporting_context["date_to"] + timedelta(days=1), time.min),
+        timezone.get_current_timezone(),
+    )
+    room_folios = Folio.objects.filter(
+        hotel_id__in=hotel_ids, folio_type="ROOM", guest_id__isnull=False
+    )
+
+    if metric == "check-ins":
+        records = room_folios.filter(
+            check_in_at__gte=start_at, check_in_at__lt=end_at
+        ).select_related("guest", "hotel", "room").order_by("-check_in_at")
+        record_type = "folios"
+        count = records.count()
+        description = "Room folios whose actual check-in timestamp falls within the selected reporting period."
+    elif metric == "checkouts":
+        records = room_folios.filter(
+            is_closed=True, check_out_at__gte=start_at, check_out_at__lt=end_at
+        ).select_related("guest", "hotel", "room").order_by("-check_out_at")
+        record_type = "folios"
+        count = records.count()
+        description = "Closed room folios whose actual checkout timestamp falls within the selected reporting period."
+    else:
+        if metric == "in-house":
+            matching_folios = room_folios.filter(
+                is_closed=False, check_in_at__lte=timezone.now()
+            )
+            description = "Distinct guests with an open room folio right now. This is a current snapshot, not a historical count for the selected dates."
+        else:
+            period_checkins = room_folios.filter(
+                check_in_at__gte=start_at, check_in_at__lt=end_at
+            ).values("guest_id")
+            previous_stay = room_folios.filter(
+                guest_id=OuterRef("pk"), check_in_at__lt=start_at
+            )
+            matching_folios = room_folios.filter(
+                guest_id__in=Subquery(period_checkins),
+            )
+            records = Guest.objects.filter(
+                pk__in=Subquery(matching_folios.values("guest_id").distinct()),
+                hotel_id__in=hotel_ids,
+            ).annotate(
+                has_previous_stay=Exists(previous_stay),
+                latest_period_checkin=Subquery(
+                    matching_folios.filter(guest_id=OuterRef("pk"))
+                    .order_by("-check_in_at").values("check_in_at")[:1]
+                ),
+            ).filter(has_previous_stay=True).select_related("hotel").order_by("last_name", "first_name")
+            record_type = "guests"
+            count = records.count()
+            description = "Distinct guests checked in during the selected period who also have an earlier room-folio check-in."
+        if metric == "in-house":
+            records = Guest.objects.filter(
+                pk__in=Subquery(matching_folios.values("guest_id").distinct()),
+                hotel_id__in=hotel_ids,
+            ).annotate(
+                current_room=Subquery(
+                    matching_folios.filter(guest_id=OuterRef("pk"))
+                    .order_by("-check_in_at").values("room__room_number")[:1]
+                ),
+                current_checkin=Subquery(
+                    matching_folios.filter(guest_id=OuterRef("pk"))
+                    .order_by("-check_in_at").values("check_in_at")[:1]
+                ),
+            ).select_related("hotel").order_by("last_name", "first_name")
+            record_type = "guests"
+            count = records.count()
+
+    return render(
+        request,
+        "management/front_desk_drilldown.html",
+        {
+            **reporting_context,
+            "metric": metric,
+            "metric_title": metric_titles[metric],
+            "records": records,
+            "record_type": record_type,
+            "record_count": count,
+            "description": description,
+            "is_management_overview": True,
+            "is_director": True,
+            "is_general_manager": request.user.role == "GENERAL_MANAGER",
+        },
+    )
+
+
+@role_required("DIRECTOR", "GENERAL_MANAGER")
 def management_guest_search(request):
     """Read-only guest search restricted to the management user's hotel scope."""
     from django.db.models import Q
