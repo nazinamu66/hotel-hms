@@ -1,142 +1,73 @@
 {% extends "base/base.html" %}
-
 {% block title %}Reservations & Occupancy | Hotel HMS{% endblock %}
-
 {% block content %}
-<style>
-.reservations-occupancy { color:#172033; }
-.reservations-occupancy .heading { margin-bottom:18px; }
-.reservations-occupancy .heading h2 { margin:0 0 6px; font-size:1.65rem; }
-.reservations-occupancy .muted, .reservations-occupancy .subtitle { color:#64748b; }
-.reservations-occupancy .filters { display:flex; flex-wrap:wrap; align-items:flex-end; gap:14px; padding:18px; margin-bottom:18px; }
-.reservations-occupancy .field { display:flex; flex-direction:column; gap:6px; min-width:160px; }
-.reservations-occupancy .field label { color:#64748b; font-size:.75rem; font-weight:700; }
-.reservations-occupancy .field input, .reservations-occupancy .field select { min-width:160px; }
-.reservations-occupancy .actions { display:flex; align-items:center; gap:12px; }
-.reservations-occupancy .actions button { border:0; border-radius:7px; padding:10px 16px; background:#2563eb; color:#fff; cursor:pointer; }
-.reservations-occupancy .actions a { color:#475569; font-weight:600; }
-.reservations-occupancy .kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
-.reservations-occupancy .kpi { padding:18px; min-width:0; }
-.reservations-occupancy .kpi span { color:#64748b; font-size:.78rem; font-weight:650; }
-.reservations-occupancy .kpi strong { display:block; margin-top:9px; font-size:1.55rem; overflow-wrap:anywhere; }
-.reservations-occupancy .kpi small { display:block; margin-top:5px; color:#94a3b8; font-size:.72rem; }
-.reservations-occupancy .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:18px; }
-.reservations-occupancy .panel { padding:20px; min-width:0; }
-.reservations-occupancy .panel h3 { margin:0 0 5px; font-size:1rem; }
-.reservations-occupancy .subtitle { margin:0 0 15px; font-size:.78rem; }
-.reservations-occupancy .table-wrap { overflow-x:auto; }
-.reservations-occupancy table { width:100%; border-collapse:collapse; min-width:520px; }
-.reservations-occupancy td, .reservations-occupancy th { padding:10px 8px; border-bottom:1px solid #e8edf5; text-align:left; white-space:nowrap; }
-.reservations-occupancy th { color:#64748b; font-size:.72rem; text-transform:uppercase; }
-.reservations-occupancy td:last-child, .reservations-occupancy th:last-child { text-align:right; }
-.reservations-occupancy .note { color:#64748b; font-size:.78rem; line-height:1.5; margin-top:14px; }
-.reservations-occupancy .empty { color:#94a3b8; padding:14px 8px; text-align:center; }
-.reservations-occupancy .section-gap { margin-top:18px; }
-@media(max-width:900px) { .reservations-occupancy .grid { grid-template-columns:1fr; } }
-@media(max-width:700px) { .reservations-occupancy .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media(max-width:540px) { .reservations-occupancy .field, .reservations-occupancy .field input, .reservations-occupancy .field select { width:100%; } .reservations-occupancy .actions { width:100%; justify-content:space-between; } }
-</style>
-
-<div class="reservations-occupancy">
-    <header class="heading">
-        <h2>Reservations &amp; Occupancy</h2>
-        <p class="muted">{% if is_general_manager %}Booking activity and room utilisation across your assigned hotels{% else %}Booking activity and room utilisation across your organization{% endif %}</p>
+<div class="management-reservations">
+    <header class="mr-heading">
+        <div>
+            <p class="mr-eyebrow">Hotel HMS · Management workspace</p>
+            <h1>Reservations &amp; Occupancy</h1>
+            <p>{% if is_general_manager %}Booking activity and room utilisation across your assigned hotels{% else %}Booking activity and room utilisation across your organization{% endif %}</p>
+        </div>
+        <div class="mr-period">{{ date_from|date:"M j, Y" }} – {{ date_to|date:"M j, Y" }}</div>
     </header>
 
-    <form method="get" class="card filters">
-        <div class="field">
-            <label for="ro-hotel">HOTEL</label>
-            <select id="ro-hotel" name="hotel">
-                <option value="">All accessible hotels</option>
-                {% for hotel in hotels %}
-                <option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="field">
-            <label for="ro-from">FROM</label>
-            <input id="ro-from" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}">
-        </div>
-        <div class="field">
-            <label for="ro-to">TO</label>
-            <input id="ro-to" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}">
-        </div>
-        <div class="actions">
-            <button type="submit">Apply filters</button>
-            <a href="{% url 'management_reservations_occupancy' %}">Reset</a>
-        </div>
+    <form method="get" class="mr-filter">
+        <div class="mr-field"><label for="mr-hotel">HOTEL SCOPE</label><select id="mr-hotel" name="hotel"><option value="">All accessible hotels</option>{% for hotel in hotels %}<option value="{{ hotel.id }}" {% if selected_hotel and selected_hotel.id == hotel.id %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}</select></div>
+        <div class="mr-field"><label for="mr-from">FROM DATE</label><input id="mr-from" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}"></div>
+        <div class="mr-field"><label for="mr-to">TO DATE</label><input id="mr-to" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}"></div>
+        <div class="mr-filter-actions"><button type="submit">Apply filters</button><a href="{% url 'management_reservations_occupancy' %}">Reset</a></div>
     </form>
 
-    <section class="kpis" aria-label="Occupancy summary">
-        <article class="card kpi"><span>Actual Occupancy</span><strong>{% if actual_occupancy_percent != None %}{{ actual_occupancy_percent }}%{% else %}—{% endif %}</strong><small>Room nights posted through {{ actual_through|date:"M j, Y" }}</small></article>
-        <article class="card kpi"><span>Forecast Occupancy</span><strong>{% if forecast_occupancy_percent != None %}{{ forecast_occupancy_percent }}%{% else %}—{% endif %}</strong><small>Bookings from {{ forecast_from|date:"M j, Y" }}</small></article>
-        <article class="card kpi"><span>Actual Room Nights</span><strong>{{ actual_room_nights }}</strong><small>Paid and consumed complimentary nights</small></article>
-        <article class="card kpi"><span>Forecast Room Nights</span><strong>{{ forecast_room_nights }}</strong><small>Active room-level bookings</small></article>
+    <div class="mr-section-heading"><span>OCCUPANCY PERFORMANCE</span><small>Room-night view · actuals and forecast shown separately</small></div>
+    <section class="mr-kpis">
+        <article class="mr-kpi mr-blue"><span>Actual Occupancy</span><strong>{% if actual_occupancy_percent != None %}{{ actual_occupancy_percent }}%{% else %}—{% endif %}</strong><small>Posted room nights through {{ actual_through|date:"M j, Y" }}</small></article>
+        <article class="mr-kpi mr-violet"><span>Forecast Occupancy</span><strong>{% if forecast_occupancy_percent != None %}{{ forecast_occupancy_percent }}%{% else %}—{% endif %}</strong><small>Bookings from {{ forecast_from|date:"M j, Y" }}</small></article>
+        <article class="mr-kpi mr-green"><span>Actual Room Nights</span><strong>{{ actual_room_nights }}</strong><small>Paid and consumed complimentary nights</small></article>
+        <article class="mr-kpi mr-amber"><span>Forecast Room Nights</span><strong>{{ forecast_room_nights }}</strong><small>Active room-level bookings</small></article>
     </section>
 
-    <div class="grid">
-        <section class="card panel">
-            <h3>Reservation Activity</h3>
-            <p class="subtitle">Room bookings created during the selected period</p>
-            <div class="table-wrap">
-                <table>
-                    <tbody>
-                        <tr><th>Room bookings created</th><td>{{ reservation_count }}</td></tr>
-                        <tr><th>Arrivals scheduled</th><td>{{ arrival_count }}</td></tr>
-                        <tr><th>Individual room bookings created</th><td>{{ individual_room_bookings }}</td></tr>
-                        <tr><th>Corporate room bookings created</th><td>{{ corporate_room_bookings }}</td></tr>
-                        <tr><th>Booked room nights</th><td>{{ booked_room_nights }}</td></tr>
-                        <tr><th>Average booking lead time</th><td>{% if average_lead_time_days != None %}{{ average_lead_time_days }} days{% else %}—{% endif %}</td></tr>
-                        <tr><th>Average planned stay</th><td>{% if average_stay_nights != None %}{{ average_stay_nights }} nights{% else %}—{% endif %}</td></tr>
-                        <tr><th>Cancellations</th><td>{{ cancelled_count }} ({{ cancellation_rate|default_if_none:"—" }}{% if cancellation_rate != None %}%{% endif %})</td></tr>
-                        <tr><th>No-shows</th><td>{{ no_show_count }} ({{ no_show_rate|default_if_none:"—" }}{% if no_show_rate != None %}%{% endif %})</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <p class="note">Room bookings count individual room-level bookings, not just master reservation records. Corporate bookings count group room allocations. Planned stay length is not an actual completed-stay measure.</p>
-        </section>
+    <div class="mr-section-heading"><span>RESERVATION INTELLIGENCE</span><small>Bookings created and arrivals scheduled within the selected period</small></div>
+    <section class="mr-kpis mr-kpis-compact">
+        <article class="mr-kpi"><span>Room Bookings Created</span><strong>{{ reservation_count }}</strong><small>Individual rooms and corporate allocations</small></article>
+        <article class="mr-kpi"><span>Scheduled Arrivals</span><strong>{{ arrival_count }}</strong><small>Arrival dates in selected period</small></article>
+        <article class="mr-kpi"><span>Cancellations</span><strong>{{ cancelled_count }}</strong><small>{% if cancellation_rate != None %}{{ cancellation_rate }}% of scheduled arrivals{% else %}Rate unavailable{% endif %}</small></article>
+        <article class="mr-kpi"><span>No-shows</span><strong>{{ no_show_count }}</strong><small>{% if no_show_rate != None %}{{ no_show_rate }}% of scheduled arrivals{% else %}Rate unavailable{% endif %}</small></article>
+    </section>
 
-        <section class="card panel">
-            <h3>Booking Sources</h3>
-            <p class="subtitle">Room bookings created in the selected period</p>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Source</th><th>Room bookings</th></tr></thead>
-                    <tbody>
-                        {% for row in booking_source_rows %}
-                        <tr><td>{{ row.source }}</td><td>{{ row.booking_count }}</td></tr>
-                        {% empty %}
-                        <tr><td colspan="2" class="empty">No booking source activity in this period.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <div class="mr-panels">
+        <section class="mr-panel">
+            <div class="mr-panel-heading"><div><h2>Booking Profile</h2><p>Composition and booking behaviour</p></div></div>
+            <div class="mr-stat-list">
+                <div><span>Individual room bookings</span><strong>{{ individual_room_bookings }}</strong></div>
+                <div><span>Corporate room bookings</span><strong>{{ corporate_room_bookings }}</strong></div>
+                <div><span>Booked room nights</span><strong>{{ booked_room_nights }}</strong></div>
+                <div><span>Average booking lead time</span><strong>{% if average_lead_time_days != None %}{{ average_lead_time_days }} days{% else %}—{% endif %}</strong></div>
+                <div><span>Average planned stay</span><strong>{% if average_stay_nights != None %}{{ average_stay_nights }} nights{% else %}—{% endif %}</strong></div>
             </div>
+            <p class="mr-note">Planned stay length is based on scheduled arrival records, not completed stays.</p>
+        </section>
+        <section class="mr-panel">
+            <div class="mr-panel-heading"><div><h2>Booking Sources</h2><p>Room bookings created during the selected period</p></div></div>
+            <div class="mr-table-wrap"><table class="mr-table"><thead><tr><th>Source</th><th>Room bookings</th></tr></thead><tbody>
+                {% for row in booking_source_rows %}<tr><td>{{ row.source }}</td><td>{{ row.booking_count }}</td></tr>{% empty %}<tr><td colspan="2" class="mr-empty">No booking source activity in this period.</td></tr>{% endfor %}
+            </tbody></table></div>
         </section>
     </div>
 
-    <section class="card panel section-gap">
-        <h3>Daily Occupancy Calendar</h3>
-        <p class="subtitle">Actual posted room nights for completed dates; booking forecast for today and future dates</p>
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>Date</th><th>Hotel</th><th>Basis</th><th>Occupied rooms</th><th>Configured rooms</th><th>Occupancy</th></tr></thead>
-                <tbody>
-                    {% for row in daily_rows %}
-                    <tr>
-                        <td>{{ row.date|date:"M j, Y" }}</td>
-                        <td>{{ row.hotel_name }}</td>
-                        <td>{{ row.basis|title }}</td>
-                        <td>{{ row.occupied_room_count }}</td>
-                        <td>{{ row.room_inventory }}</td>
-                        <td>{% if row.occupancy_percent != None %}{{ row.occupancy_percent }}%{% else %}—{% endif %}</td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="6" class="empty">No hotel or room data is available in this reporting scope.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <p class="note">Occupancy uses gross configured room inventory. Historical out-of-order periods are not recorded, so this report cannot yet calculate net sellable-room occupancy. Forecast percentages above 100% expose bookings exceeding configured room capacity; they are not capped.</p>
+    <section class="mr-panel mr-hotel-panel">
+        <div class="mr-panel-heading"><div><h2>Booking Activity by Hotel</h2><p>Room bookings created in the selected period</p></div><span class="mr-count">{{ hotel_booking_rows|length }} hotels</span></div>
+        <div class="mr-table-wrap"><table class="mr-table"><thead><tr><th>Hotel</th><th>Room bookings</th></tr></thead><tbody>
+            {% for row in hotel_booking_rows %}<tr><td>{{ row.hotel_name }}</td><td>{{ row.booking_count }}</td></tr>{% empty %}<tr><td colspan="2" class="mr-empty">No hotel booking activity in this period.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+
+    <section class="mr-panel mr-calendar-panel">
+        <div class="mr-panel-heading"><div><h2>Daily Occupancy Calendar</h2><p>Actual posted room nights for completed dates; booking forecast for today and future dates</p></div><span class="mr-count">{{ daily_rows|length }} hotel-days</span></div>
+        <div class="mr-table-wrap"><table class="mr-table mr-calendar"><thead><tr><th>Date</th><th>Hotel</th><th>Basis</th><th>Occupied rooms</th><th>Configured rooms</th><th>Occupancy</th></tr></thead><tbody>
+            {% for row in daily_rows %}<tr><td>{{ row.date|date:"M j, Y" }}</td><td>{{ row.hotel_name }}</td><td><span class="mr-basis {% if row.basis == 'ACTUAL' %}is-actual{% else %}is-forecast{% endif %}">{{ row.basis|title }}</span></td><td>{{ row.occupied_room_count }}</td><td>{{ row.room_inventory }}</td><td><div class="mr-occupancy-cell"><div class="mr-track"><span style="width:{% if row.occupancy_percent != None %}{{ row.occupancy_percent }}{% else %}0{% endif %}%;"></span></div><strong>{% if row.occupancy_percent != None %}{{ row.occupancy_percent }}%{% else %}—{% endif %}</strong></div></td></tr>
+            {% empty %}<tr><td colspan="6" class="mr-empty">No hotel or room data is available in this reporting scope.</td></tr>{% endfor %}
+        </tbody></table></div>
+        <p class="mr-note">Occupancy uses gross configured room inventory. Historical out-of-order periods are not recorded, so this report cannot yet calculate net sellable-room occupancy. Forecast percentages above 100% expose bookings exceeding configured room capacity; they are not capped.</p>
     </section>
 </div>
 {% endblock %}
