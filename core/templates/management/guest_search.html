@@ -2,16 +2,16 @@
 {% block title %}Guest Search | Hotel HMS{% endblock %}
 {% block content %}
 <div class="management-frontdesk management-guest-search">
-    <header class="fd-command-heading"><div><p class="fd-eyebrow">Hotel HMS · Management workspace</p><h1>Guest Search</h1><p>Find guest profiles across hotels within your management access</p></div><a class="fd-back-link" href="{% url 'management_front_desk_analytics' %}">← Front Desk Command Center</a></header>
+    <header class="fd-command-heading"><div><p class="fd-eyebrow">Hotel HMS · Management workspace</p><h1>Guest Directory</h1><p>Browse recent guest records or search by name, phone, email or ID</p></div><a class="fd-back-link" href="{% url 'management_front_desk_analytics' %}">← Front Desk Command Center</a></header>
     <form method="get" class="fd-filter fd-guest-search-form">
         <div class="fd-field fd-search-field"><label for="guest-query">GUEST NAME, PHONE, EMAIL OR ID NUMBER</label><input id="guest-query" type="search" name="q" value="{{ query }}" placeholder="Search guests..."></div>
         <div class="fd-filter-actions"><button type="submit">Search guests</button><a href="{% url 'management_guest_search' %}">Clear</a></div>
     </form>
     <section class="fd-panel">
-        <div class="fd-panel-heading"><div><h2>Guest Results</h2><p>{% if query %}Matching guest records in your accessible hotels{% else %}Enter a search term to find a guest{% endif %}</p></div><span class="fd-count">{{ guest_results|length }} shown</span></div>
+        <div class="fd-panel-heading"><div><h2>Guest Directory</h2><p>{% if query %}Matching guest records in your accessible hotels{% else %}Recently added guests across your accessible hotels{% endif %}</p></div><span class="fd-count">{{ guest_results|length }} shown</span></div>
         <div class="fd-table-wrap"><table class="fd-table fd-guest-table"><thead><tr><th>Guest</th><th>Hotel</th><th>Phone</th><th>Email</th><th>Nationality</th><th></th></tr></thead><tbody>
         {% for guest in guest_results %}<tr><td><strong>{{ guest.full_name }}</strong></td><td>{{ guest.hotel.name }}</td><td>{{ guest.phone|default:"—" }}</td><td>{{ guest.email|default:"—" }}</td><td>{{ guest.nationality|default:"—" }}</td><td><a class="fd-view-link" href="{% url 'management_guest_profile' guest.id %}">View guest →</a></td></tr>
-        {% empty %}<tr><td colspan="6" class="fd-empty">{% if query %}No matching guests found in your accessible hotels.{% else %}Search by name, phone, email or ID number.{% endif %}</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="6" class="fd-empty">{% if query %}No matching guests found in your accessible hotels.{% else %}No guest records found in your accessible hotels yet.{% endif %}</td></tr>{% endfor %}
         </tbody></table></div>
         <p class="fd-note">Search results are limited to hotels within your management access. Guest profiles are read-only except for the controlled guest-deposit receipt workflow.</p>
     </section>
