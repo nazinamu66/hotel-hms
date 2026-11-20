@@ -155,7 +155,6 @@ def restaurant_end_of_shift(request):
 
     order_ids = list(orders.values_list("id", flat=True))
 
-    settled_orders = orders.filter(status__in=["CHARGED", "PAID"])
     walkin_sales = (
         settled_orders.filter(folio__folio_type="WALKIN")
         .aggregate(total=Sum("total_amount"))["total"]
@@ -166,7 +165,6 @@ def restaurant_end_of_shift(request):
         .aggregate(total=Sum("total_amount"))["total"]
         or Decimal("0.00")
     )
-    unsettled_orders = orders.filter(status="OPEN").count()
 
     # -----------------------------
     # Charges
@@ -649,7 +647,6 @@ def restaurant_inventory_status(request):
 @role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def restaurant_sales_performance(request):
     """Restaurant sales, menu mix, cashier performance and collections."""
-    from django.db.models import Count
     from django.utils.dateparse import parse_date
     from restaurant.models import POSOrder, POSOrderItem
     from accounts.services.access import get_accessible_hotels
@@ -686,10 +683,10 @@ def restaurant_sales_performance(request):
     if request.user.role == "RESTAURANT":
         orders = orders.filter(created_by=request.user)
 
-    settled_orders = orders.filter(status__in=("CHARGED", "PAID"))
-    revenue_orders = orders.filter(\n        (Q(status__in=("CHARGED", "PAID")) | Q(is_refunded=True)),\n        is_complimentary_breakfast=False,\n    )
-    refunded_order_ids = set(
-        orders.filter(is_refunded=True).values_list("pk", flat=True)
+    revenue_orders = orders.filter(
+        (Q(status__in=("CHARGED", "PAID")) | Q(is_refunded=True)),
+        is_complimentary_breakfast=False,
+    )
     )
     gross_sales = revenue_orders.aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00")
 
