@@ -36,7 +36,7 @@ def _status(expected, actual, entries, *, expected_entries=1, date_mismatch=Fals
         return "NOT_REQUIRED"
     if not entries:
         return "MISSING"
-    if len(entries) != expected_entries:
+    if expected_entries is not None and len(entries) != expected_entries:
         return "DUPLICATE" if len(entries) > expected_entries else "MISSING"
     if _money(expected) != _money(actual):
         return "AMOUNT_MISMATCH"
@@ -81,9 +81,6 @@ def build_restaurant_accounting_reconciliation(
             f"COMP-BREAKFAST-DRINK-COGS-{order.pk}",
             f"COMP-BREAKFAST-FOOD-COGS-{order.pk}",
         })
-        references.update(
-            JournalEntry.objects.none().values_list("reference", flat=True)
-        )
     for charge in refund_charges:
         references.add(charge.reference)
     for payment in payments:
@@ -107,16 +104,7 @@ def build_restaurant_accounting_reconciliation(
     # SPOILAGE-REFUND-<order id>-<item id>.
     refunded_ids = [order.pk for order in revenue_orders if order.is_refunded]
     if hotel_ids and refunded_ids:
-        spoilage_entries = JournalEntry.objects.filter(
-            hotel_id__in=hotel_ids,
-            reference__startswith="SPOILAGE-REFUND-",
-        ).filter(
-            reference__in=[
-                entry.reference for entry in JournalEntry.objects.none()
-            ]
-        )
-        # Resolve the exact order prefix without scanning unrelated hotels'
-        # journals; reference matching remains bounded to the report's hotels.
+        # Resolve item-suffixed spoilage references for refunded orders in scope.
         spoilage_entries = JournalEntry.objects.filter(
             hotel_id__in=hotel_ids,
             reference__startswith="SPOILAGE-REFUND-",
@@ -260,7 +248,7 @@ def build_restaurant_accounting_reconciliation(
             expected=net_expected,
             actual=net_actual,
             matched_entries=net_entries,
-            expected_entries=1 if expected_initial > 0 else 0,
+            expected_entries=None,
             order_id=order.pk,
             note="Refunded prepared food is reclassified to spoilage expense; unprepared items are reversed.",
         )
@@ -274,11 +262,27 @@ def build_restaurant_accounting_reconciliation(
             f"COMP-BREAKFAST-FOOD-COGS-{order.pk}",
         ]
         matched = []
+        expected_entry_count = 0
         for item in order.items.select_related("menu_item__product"):
             product = item.menu_item.product
             if product.is_stock_item():
                 expected += Decimal(item.cost_at_sale or 0) * item.quantity
         for reference in refs:
+            category = "DRINK" if "DRINK" in reference else "FOOD"
+            category_expected = sum(
+                (
+                    Decimal(item.cost_at_sale or 0) * item.quantity
+                    for item in order.items.select_related("menu_item__product")
+                    if item.menu_item.product.is_stock_item()
+                    and (
+                        (category == "DRINK" and item.menu_item.product.product_type == "DRINK")
+                        or (category == "FOOD" and item.menu_item.product.product_type in ("FOOD", "SNACK"))
+                    )
+                ),
+                Decimal("0.00"),
+            )
+            if _money(category_expected) > 0:
+                expected_entry_count += 1
             matched.extend(entries_by_reference.get(reference, []))
         actual = _entry_account_movement(
             matched, "complimentary_meals_expense", debit_normal=True
@@ -290,9 +294,7 @@ def build_restaurant_accounting_reconciliation(
             expected=_money(expected),
             actual=actual,
             matched_entries=matched,
-            expected_entries=sum(
-                1 for reference in refs if entries_by_reference.get(reference)
-            ) or (1 if expected > 0 else 0),
+            expected_entries=expected_entry_count,
             order_id=order.pk,
             note="Cost is expensed to Complimentary Meals Expense; no guest revenue is recorded.",
         )
