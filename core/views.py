@@ -319,10 +319,7 @@ def management_guest_search(request):
             | Q(email__icontains=query)
             | Q(id_number__icontains=query)
         )
-    else:
-        guests = guests.none()
-
-    guests = guests.order_by("last_name", "first_name")[:100]
+    guests = guests.order_by("-created_at", "last_name", "first_name")[:100]
     return render(
         request,
         "management/guest_search.html",
