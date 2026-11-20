@@ -1608,3 +1608,134 @@ def maintenance_cost_analysis(request):
         "cost_page": cost_page,
     }
     return render(request, "reports/maintenance_cost_analysis.html", context)
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def maintenance_asset_performance(request):
+    """Read-only overview of asset condition and preventive-maintenance activity."""
+    from collections import Counter, defaultdict
+    from decimal import Decimal
+    from django.core.exceptions import PermissionDenied
+    from django.db.models import Q
+    from django.utils.dateparse import parse_date
+    from accounts.services.access import get_accessible_hotels
+    from maintenance.models import MaintenanceAsset, MaintenanceSchedule, MaintenanceTicket
+
+    accessible_hotels = get_accessible_hotels(request.user)
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    hotels = accessible_hotels.order_by("name")
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not accessible_hotels.filter(pk=int(selected_hotel)).exists():
+            raise PermissionDenied("You do not have access to this hotel.")
+        hotels = hotels.filter(pk=int(selected_hotel))
+
+    assets = MaintenanceAsset.objects.filter(hotel__in=hotels).select_related(
+        "hotel", "room", "location", "product"
+    ).order_by("hotel__name", "name")
+    asset_ids = list(assets.values_list("pk", flat=True))
+    schedules = MaintenanceSchedule.objects.filter(
+        asset_id__in=asset_ids, is_active=True
+    ).select_related("asset", "asset__hotel").order_by("next_due_date", "asset__name")
+
+    ticket_scope = MaintenanceTicket.objects.filter(
+        Q(asset_id__in=asset_ids)
+    ).select_related("asset", "asset__hotel", "room", "location", "schedule").prefetch_related(
+        "material_entries", "labour_entries"
+    )
+    period_tickets = ticket_scope.filter(created_at__date__range=(date_from, date_to))
+    period_costs = defaultdict(lambda: Decimal("0.00"))
+    asset_activity = defaultdict(lambda: {
+        "tickets": 0, "corrective": 0, "preventive": 0,
+        "materials": Decimal("0.00"), "labour": Decimal("0.00"),
+    })
+    for ticket in period_tickets:
+        if not ticket.asset_id:
+            continue
+        activity = asset_activity[ticket.asset_id]
+        activity["tickets"] += 1
+        if ticket.schedule_id:
+            activity["preventive"] += 1
+        else:
+            activity["corrective"] += 1
+        for item in ticket.material_entries.all():
+            if date_from <= item.created_at.date() <= date_to:
+                activity["materials"] += item.total_cost
+        for item in ticket.labour_entries.all():
+            if date_from <= item.created_at.date() <= date_to:
+                activity["labour"] += item.amount
+        period_costs[ticket.asset_id] += activity["materials"] + activity["labour"]
+
+    condition_counts = Counter()
+    for asset in assets:
+        condition_counts[asset.condition] += 1
+
+    due_count = overdue_count = 0
+    schedule_rows = []
+    for schedule in schedules:
+        if schedule.next_due_date < today:
+            status = "OVERDUE"
+            overdue_count += 1
+        elif schedule.next_due_date == today:
+            status = "DUE TODAY"
+            due_count += 1
+        else:
+            status = "UPCOMING"
+        if status != "UPCOMING":
+            due_count += 1
+        schedule_rows.append({
+            "schedule": schedule,
+            "status": status,
+            "hotel_name": schedule.asset.hotel.name,
+        })
+
+    asset_rows = []
+    for asset in assets:
+        activity = asset_activity[asset.pk]
+        total_cost = activity["materials"] + activity["labour"]
+        target = (
+            f"Room {asset.room.room_number}" if asset.room_id
+            else asset.location.name if asset.location_id
+            else "Unassigned"
+        )
+        asset_rows.append({
+            "asset": asset,
+            "hotel_name": asset.hotel.name,
+            "target": target,
+            "ticket_count": activity["tickets"],
+            "corrective_count": activity["corrective"],
+            "preventive_count": activity["preventive"],
+            "material_cost": activity["materials"],
+            "labour_cost": activity["labour"],
+            "total_cost": total_cost,
+        })
+    asset_rows.sort(key=lambda row: (row["total_cost"], row["ticket_count"]), reverse=True)
+
+    context = {
+        "hotels": hotels,
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "active_asset_count": assets.filter(is_active=True).count(),
+        "inactive_asset_count": assets.filter(is_active=False).count(),
+        "asset_count": assets.count(),
+        "due_schedule_count": due_count,
+        "overdue_schedule_count": overdue_count,
+        "condition_rows": [
+            {"label": label, "count": condition_counts.get(value, 0)}
+            for value, label in MaintenanceAsset.CONDITION_CHOICES
+        ],
+        "schedule_rows": schedule_rows,
+        "asset_rows": asset_rows,
+        "period_ticket_count": period_tickets.count(),
+        "period_corrective_count": period_tickets.filter(schedule__isnull=True).count(),
+        "period_preventive_count": period_tickets.filter(schedule__isnull=False).count(),
+        "period_cost_total": sum((row["total_cost"] for row in asset_rows), Decimal("0.00")),
+        "poor_or_damaged_count": condition_counts.get("POOR", 0) + condition_counts.get("DAMAGED", 0),
+    }
+    return render(request, "reports/maintenance_asset_performance.html", context)
