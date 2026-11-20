@@ -1751,3 +1751,42 @@ input, select, textarea { font-size: 16px; }
     border-bottom:1px solid rgba(148,163,184,.17) !important;
 }
 
+
+
+/* Kitchen inventory report and FIFO drill-down: consistent executive shell. */
+.main:has(.kir-page), .main:has(.kird-page) { background:#0d1728; }
+.main:has(.kir-page) > .content, .main:has(.kird-page) > .content {
+    flex:1 1 auto; min-height:0;
+    background:linear-gradient(135deg,#10203a 0%,#0d1728 58%,#101d32 100%);
+    color:#e7eefb;
+}
+.main:has(.kir-page) > .topbar, .main:has(.kird-page) > .topbar {
+    background:#0d1728 !important; color:#f1f5f9 !important;
+    border-bottom:1px solid rgba(148,163,184,.17) !important;
+}
+.main:has(.kir-page) .sidebar, .main:has(.kird-page) .sidebar { background:#0d1728; }
+.kir-page .kir-title, .kir-page .kir-section,
+.kird-page .kird-title, .kird-page .kird-section { color:#f4f7ff; }
+.kir-page .kir-filter, .kir-page .kir-card, .kir-page .kir-panel,
+.kird-page .kird-filter, .kird-page .kird-card, .kird-page .kird-panel {
+    background:#15263d; border-color:#293d58; box-shadow:0 8px 24px rgba(0,0,0,.12);
+}
+.kir-page .kir-label, .kird-page .kird-label { color:#9aacc4; }
+.kir-page .kir-value, .kird-page .kird-value { color:#f4f7ff; font-variant-numeric:tabular-nums; }
+.kir-page .kir-muted, .kir-page .kir-note, .kir-page .kir-foot,
+.kird-page .kird-muted, .kird-page .kird-note, .kird-page .kird-foot { color:#9aacc4; }
+.kir-page .kir-panel-head, .kird-page .kird-panel-head { border-color:#293d58; }
+.kir-page .kir-panel-head h2, .kird-page .kird-panel-head h2 { color:#edf4ff; }
+.kir-page .kir-table th, .kird-page .kird-table th { background:#0e1b2e; color:#9aacc4; }
+.kir-page .kir-table td, .kird-page .kird-table td { border-color:#293d58; color:#dce7f6; }
+.kir-page .kir-table tr:hover, .kird-page .kird-table tr:hover { background:#1b304b; }
+.kir-page .kir-link, .kird-page .kird-link { color:#83b8ff; font-weight:800; text-decoration:none; }
+.kir-page .kir-link:hover, .kird-page .kird-link:hover { text-decoration:underline; }
+.kir-page .kir-field label, .kird-page .kird-field label { color:#9aacc4; }
+.kir-page .kir-field input, .kir-page .kir-field select,
+.kird-page .kird-field input, .kird-page .kird-field select {
+    background:#0e1b2e; color:#edf4ff; border-color:#344b68;
+}
+.kir-page .kir-status.match, .kird-page .kird-status.match { background:#123c36; color:#72e0bd; }
+.kir-page .kir-status.warn, .kird-page .kird-status.warn { background:#49351e; color:#ffd28a; }
+.kir-page .kir-alert, .kird-page .kird-alert { background:#392d1c; border-color:#805b28; color:#ffd28a; }
