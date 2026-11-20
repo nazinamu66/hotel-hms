@@ -700,7 +700,7 @@
         <!-- RESTAURANT CONFIGURATION -->
         <!-- ========================= -->
 
-        {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
         <h4 class="menu-toggle {% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_inventory_status,restaurant_sales_performance,restaurant_menu_management' %}active-menu{% endif %}"
             onclick="toggleMenu('restaurant_management_menu', this)">
             <span class="arrow">{% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_inventory_status,restaurant_sales_performance,restaurant_menu_management' %}▾{% else %}▸{% endif %}</span>
