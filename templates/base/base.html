@@ -543,49 +543,26 @@
         <!-- ========================= -->
 
         {% if user|has_role:"MAINTENANCE,MANAGER,ADMIN,DIRECTOR" %}
-
-        <h4 class="menu-toggle"
+        {% with maintenance_pages="maintenance_dashboard,maintenance_work_orders,maintenance_stock,maintenance_request_stock,maintenance_stock_requests,maintenance_incoming_pos,maintenance_stock_movements,maintenance_work_history,maintenance_ticket_detail,maintenance_locations,maintenance_assets,maintenance_schedules" %}
+        <h4 class="menu-toggle {% if request.resolver_match.url_name in maintenance_pages %}active-menu{% endif %}"
             onclick="toggleMenu('maintenance_menu', this)">
-            <span class="arrow">▸</span>
+            <span class="arrow">{% if request.resolver_match.url_name in maintenance_pages %}▾{% else %}▸{% endif %}</span>
             Maintenance
         </h4>
-
-        <div id="maintenance_menu" class="menu-section">
-
-        <a href="{% url 'maintenance_dashboard' %}">
-            Maintenance Dashboard
-        </a>
-
-        <a href="{% url 'maintenance_work_orders' %}">
-            📋Work Orders
-        </a>
-
-        <a href="{% url 'maintenance_stock' %}">
-            📦Maintenance Stock
-        </a>
-
-        <a href="{% url 'maintenance_request_stock' %}">
-            ➕Request Stock
-        </a>
-
-        <a href="{% url 'maintenance_stock_requests' %}">
-            📋My Stock Requests
-        </a>
-
-        <a href="{% url 'maintenance_incoming_pos' %}">
-            🚚Incoming Deliveries
-        </a>
-
-        <a href="{% url 'maintenance_stock_movements' %}">
-            🔄Stock Movements
-        </a>
-
-        <a href="{% url 'maintenance_work_history' %}">
-            📜Work History
-        </a>
-
-    </div>
-
+        <div id="maintenance_menu" class="menu-section {% if request.resolver_match.url_name in maintenance_pages %}open{% endif %}">
+            <a href="{% url 'maintenance_dashboard' %}">Maintenance Dashboard</a>
+            <a href="{% url 'maintenance_work_orders' %}">📋 Work Orders</a>
+            <a href="{% url 'maintenance_create_ticket_room' %}">＋ Report an Issue</a>
+            <a href="{% url 'maintenance_stock' %}">📦 Maintenance Stock</a>
+            <a href="{% url 'maintenance_stock_movements' %}">🔄 Stock Movements</a>
+            <a href="{% url 'maintenance_work_history' %}">📜 Work History</a>
+            {% if user.role == "MAINTENANCE" %}
+            <a href="{% url 'maintenance_request_stock' %}">➕ Request Stock</a>
+            <a href="{% url 'maintenance_stock_requests' %}">📋 My Stock Requests</a>
+            <a href="{% url 'maintenance_incoming_pos' %}">🚚 Incoming Deliveries</a>
+            {% endif %}
+        </div>
+        {% endwith %}
         {% endif %}
 
         <!-- ========================= -->
