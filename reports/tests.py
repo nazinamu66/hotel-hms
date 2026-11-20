@@ -210,3 +210,48 @@ class RestaurantSpoilageDrilldownTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f"RS-{self.record.pk}")
 
+class MaintenanceManagementOverviewTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Hotel, Organization
+        from maintenance.models import MaintenanceLocation, MaintenanceTicket
+
+        User = get_user_model()
+        self.organization = Organization.objects.create(name="Maintenance Report Org")
+        self.hotel = Hotel.objects.create(
+            organization=self.organization,
+            name="Maintenance Report Hotel",
+        )
+        self.manager = User.objects.create_user(
+            username="maintenance_report_manager",
+            password="test-password",
+            role="MANAGER",
+            hotel=self.hotel,
+        )
+        self.location = MaintenanceLocation.objects.create(
+            hotel=self.hotel,
+            name="Main Lobby",
+            location_type="LOBBY",
+        )
+        self.ticket = MaintenanceTicket.objects.create(
+            location=self.location,
+            description="Lobby air conditioner is not cooling",
+            reported_by=self.manager,
+            priority="HIGH",
+            status="OPEN",
+        )
+        self.client.force_login(self.manager)
+
+    def test_manager_can_view_hotel_scoped_management_report(self):
+        response = self.client.get("/reports/maintenance/management/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Maintenance Performance")
+        self.assertContains(response, "Lobby air conditioner is not cooling")
+        self.assertEqual(response.context["total_tickets"], 1)
+        self.assertEqual(response.context["high_priority_count"], 1)
+
+    def test_manager_cannot_access_technician_dashboard(self):
+        response = self.client.get("/maintenance/")
+        self.assertEqual(response.status_code, 403)
+
+
