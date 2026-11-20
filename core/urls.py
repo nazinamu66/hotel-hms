@@ -12,6 +12,7 @@ from .views import (
     management_reservation_detail,
     management_reservations_occupancy,
     management_corporate_performance,
+    management_company_detail,
     management_guest_company_billing,
     cash_handover_list,
     cash_handover_accept,
@@ -71,6 +72,11 @@ urlpatterns = [
         "management/guest-company-billing/",
         management_guest_company_billing,
         name="management_guest_company_billing",
+    ),
+    path(
+        "management/companies/<int:company_id>/",
+        management_company_detail,
+        name="management_company_detail",
     ),
     path(
         "management/corporate/",
