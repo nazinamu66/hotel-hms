@@ -421,7 +421,7 @@ def owner_dashboard(request):
 
 
 
-@role_required("RESTAURANT", "MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def restaurant_management_overview(request):
     """Shift-led Restaurant performance report using the operational shift ledger."""
     from django.utils.dateparse import parse_date
