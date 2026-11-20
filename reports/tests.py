@@ -387,6 +387,7 @@ class MaintenanceCostAnalysisTests(TestCase):
 class MaintenanceAssetPerformanceTests(TestCase):
     def setUp(self):
         from django.contrib.auth import get_user_model
+        from django.utils import timezone
         from inventory.models import Hotel, Organization
         from maintenance.models import (
             MaintenanceAsset, MaintenanceLocation, MaintenanceSchedule,
