@@ -853,7 +853,8 @@ def restaurant_sales_performance(request):
     for order in revenue_orders:
         day = order.created_at.date()
         daily_data[day] = daily_data.get(day, Decimal("0.00")) + order.total_amount
-    daily_rows = [{"day": day, "sales": amount} for day, amount in sorted(daily_data.items())]
+    daily_max = max(daily_data.values(), default=Decimal("0.00"))
+    daily_rows = [{"day": day, "sales": amount, "share": (float(amount / daily_max * 100) if daily_max else 0)} for day, amount in sorted(daily_data.items())]
 
     complimentary_count = orders.filter(
         is_complimentary_breakfast=True,
