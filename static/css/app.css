@@ -1886,3 +1886,63 @@ input, select, textarea { font-size: 16px; }
 .kbp-foot{margin-top:18px;font-size:.78rem}
 @media(max-width:1050px){.kbp-chart-grid{grid-template-columns:1fr}.kbp-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.kbp-page{padding:18px 12px 32px}.kbp-kpis{grid-template-columns:1fr}.kbp-head{flex-direction:column}.kbp-filter{align-items:stretch}.kbp-field{min-width:100%}.kbp-bar-line{grid-template-columns:48px minmax(0,1fr) 82px}}
+
+
+/* Batch profitability page heading: override the shared light-theme h1 rule. */
+.main:has(.kbp-page) .content .kbp-title { color:#f4f7ff !important; }
+
+/* Production batch drill-down: match the Kitchen executive reporting workspace. */
+.main:has(.production-page) { background:#0d1728; }
+.main:has(.production-page) > .content {
+  flex:1 1 auto; min-height:0;
+  background:linear-gradient(135deg,#10203a 0%,#0d1728 58%,#101d32 100%);
+  color:#e7eefb;
+}
+.main:has(.production-page) > .topbar {
+  background:#0d1728 !important; color:#f1f5f9 !important;
+  border-bottom:1px solid rgba(148,163,184,.17) !important;
+}
+.main:has(.production-page) .sidebar { background:#0d1728; }
+.main:has(.production-page) .content .production-page .page-header h1 {
+  color:#f4f7ff !important; font-weight:850; letter-spacing:-.035em;
+}
+.main:has(.production-page) .content .production-page .page-header p,
+.main:has(.production-page) .content .production-page .eyebrow { color:#9aacc4; }
+.main:has(.production-page) .content .production-page .summary-card,
+.main:has(.production-page) .content .production-page .info-card {
+  background:#15263d; border:1px solid #293d58;
+  box-shadow:0 8px 24px rgba(0,0,0,.12); color:#e7eefb;
+}
+.main:has(.production-page) .content .production-page .summary-label { color:#9aacc4; }
+.main:has(.production-page) .content .production-page .summary-value,
+.main:has(.production-page) .content .production-page .ingredient-name,
+.main:has(.production-page) .content .production-page .quantity { color:#f1f5f9; }
+.main:has(.production-page) .content .production-page .card-header { border-color:#293d58; }
+.main:has(.production-page) .content .production-page .card-header h2 {
+  color:#edf4ff; font-weight:850;
+}
+.main:has(.production-page) .content .production-page .card-header p { color:#9aacc4; }
+.main:has(.production-page) .content .production-page .usage-table th {
+  background:#0e1b2e; color:#9aacc4;
+}
+.main:has(.production-page) .content .production-page .usage-table td {
+  border-color:#293d58; color:#dce7f6;
+}
+.main:has(.production-page) .content .production-page .usage-table tbody tr:hover {
+  background:#1b304b;
+}
+.main:has(.production-page) .content .production-page .back-link {
+  background:#203650; border-color:#344b68; color:#dce7f6;
+}
+.main:has(.production-page) .content .production-page .back-link:hover { background:#294563; }
+.main:has(.production-page) .content .production-page .empty-state { color:#9aacc4; }
+@media(max-width:900px) {
+  .main:has(.production-page) .content .production-page .summary-grid {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width:600px) {
+  .main:has(.production-page) .content .production-page .summary-grid {
+    grid-template-columns:minmax(0,1fr);
+  }
+}
