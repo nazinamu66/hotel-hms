@@ -646,3 +646,169 @@ def restaurant_inventory_status(request):
         "movement_count": len(movement_rows),
     })
 
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def restaurant_sales_performance(request):
+    """Restaurant sales, menu mix, cashier performance and collections."""
+    from django.db.models import Count
+    from django.utils.dateparse import parse_date
+    from restaurant.models import POSOrder, POSOrderItem
+    from accounts.services.access import get_accessible_hotels
+
+    accessible_hotels = get_accessible_hotels(request.user)
+    departments = Department.objects.filter(
+        hotel__in=accessible_hotels,
+        department_type="RESTAURANT",
+        is_active=True,
+    ).select_related("hotel")
+    hotel_ids = departments.values_list("hotel_id", flat=True).distinct()
+    hotels = accessible_hotels.filter(pk__in=hotel_ids).order_by("name")
+
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not hotels.filter(pk=int(selected_hotel)).exists():
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have access to that Restaurant hotel.")
+        departments = departments.filter(hotel_id=int(selected_hotel))
+    department_ids = list(departments.values_list("pk", flat=True))
+
+    orders = POSOrder.objects.filter(
+        department_id__in=department_ids,
+        created_at__date__range=(date_from, date_to),
+    ).select_related("department__hotel", "created_by", "folio").prefetch_related(
+        "items__menu_item__product"
+    )
+    if request.user.role == "RESTAURANT":
+        orders = orders.filter(created_by=request.user)
+
+    settled_orders = orders.filter(status__in=("CHARGED", "PAID"))
+    revenue_orders = settled_orders.filter(is_complimentary_breakfast=False)
+    refunded_order_ids = set(
+        orders.filter(is_refunded=True).values_list("pk", flat=True)
+    )
+    gross_sales = revenue_orders.aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00")
+
+    refund_charges = Charge.objects.filter(
+        department_id__in=department_ids,
+        created_at__date__range=(date_from, date_to),
+        amount__lt=0,
+        reference__startswith="POS-REFUND-",
+    )
+    if request.user.role == "RESTAURANT":
+        refund_charges = refund_charges.filter(
+            reference__in=[f"POS-REFUND-{pk}" for pk in orders.values_list("pk", flat=True)]
+        )
+    refunds = abs(refund_charges.aggregate(total=Sum("amount"))["total"] or Decimal("0.00"))
+    net_sales = gross_sales - refunds
+
+    walkin_sales = revenue_orders.filter(folio__folio_type="WALKIN").aggregate(
+        total=Sum("total_amount")
+    )["total"] or Decimal("0.00")
+    room_sales = revenue_orders.filter(folio__folio_type="ROOM").aggregate(
+        total=Sum("total_amount")
+    )["total"] or Decimal("0.00")
+
+    payments = Payment.objects.filter(
+        shift__department_id__in=department_ids,
+        shift__isnull=False,
+        collected_at__date__range=(date_from, date_to),
+        reference__startswith="POS-",
+        amount__gt=0,
+    )
+    if request.user.role == "RESTAURANT":
+        payments = payments.filter(shift__user=request.user)
+    payment_rows = payments.values("method").annotate(total=Sum("amount")).order_by("method")
+    collections = {method: Decimal("0.00") for method in ("CASH", "POS", "TRANSFER", "DEPOSIT")}
+    for row in payment_rows:
+        collections[row["method"]] = row["total"] or Decimal("0.00")
+    total_collections = sum(collections.values(), Decimal("0.00"))
+
+    items = POSOrderItem.objects.filter(
+        order__in=revenue_orders,
+    ).select_related("menu_item", "menu_item__product", "order")
+    item_rows = {}
+    category_totals = {"FOOD": {"quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00")},
+                       "DRINK": {"quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00")}}
+    total_cogs = Decimal("0.00")
+    uncosted_quantity = 0
+    for item in items:
+        product = item.menu_item.product
+        category = "DRINK" if product.product_type == "DRINK" else "FOOD"
+        revenue = item.line_total()
+        cost = item.cost_at_sale * item.quantity
+        category_totals[category]["quantity"] += item.quantity
+        category_totals[category]["revenue"] += revenue
+        category_totals[category]["cost"] += cost
+        total_cogs += cost
+        if item.cost_at_sale <= 0:
+            uncosted_quantity += item.quantity
+        key = item.menu_item_id
+        if key not in item_rows:
+            item_rows[key] = {"name": item.menu_item.name, "category": category,
+                              "quantity": 0, "revenue": Decimal("0.00"), "cost": Decimal("0.00")}
+        item_rows[key]["quantity"] += item.quantity
+        item_rows[key]["revenue"] += revenue
+        item_rows[key]["cost"] += cost
+
+    top_items = sorted(item_rows.values(), key=lambda row: (row["revenue"], row["quantity"]), reverse=True)[:15]
+    category_rows = [
+        {"name": name, **values,
+         "profit": values["revenue"] - values["cost"]}
+        for name, values in category_totals.items()
+    ]
+
+    cashier_rows = []
+    cashier_data = {}
+    for order in revenue_orders.select_related("created_by"):
+        key = order.created_by_id or 0
+        if key not in cashier_data:
+            cashier_data[key] = {"name": (order.created_by.get_full_name() or order.created_by.username)
+                                 if order.created_by else "Unassigned",
+                                 "orders": 0, "sales": Decimal("0.00")}
+        cashier_data[key]["orders"] += 1
+        cashier_data[key]["sales"] += order.total_amount
+    cashier_rows = sorted(cashier_data.values(), key=lambda row: row["sales"], reverse=True)
+
+    daily_data = {}
+    for order in revenue_orders:
+        day = order.created_at.date()
+        daily_data[day] = daily_data.get(day, Decimal("0.00")) + order.total_amount
+    daily_rows = [{"day": day, "sales": amount} for day, amount in sorted(daily_data.items())]
+
+    complimentary_count = orders.filter(
+        is_complimentary_breakfast=True,
+        status__in=("CHARGED", "PAID", "CANCELLED"),
+    ).count()
+    settled_count = revenue_orders.count()
+    refunded_order_count = orders.filter(is_refunded=True).count()
+    gross_profit = gross_sales - total_cogs
+
+    return render(request, "reports/restaurant_sales_performance.html", {
+        "hotels": hotels,
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "gross_sales": gross_sales,
+        "refunds": refunds,
+        "net_sales": net_sales,
+        "walkin_sales": walkin_sales,
+        "room_sales": room_sales,
+        "total_cogs": total_cogs,
+        "gross_profit": gross_profit,
+        "total_collections": total_collections,
+        "collections": collections,
+        "settled_count": settled_count,
+        "refunded_order_count": refunded_order_count,
+        "complimentary_count": complimentary_count,
+        "uncosted_quantity": uncosted_quantity,
+        "top_items": top_items,
+        "category_rows": category_rows,
+        "cashier_rows": cashier_rows,
+        "daily_rows": daily_rows,
+    })
+
