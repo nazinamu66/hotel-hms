@@ -5,8 +5,8 @@ from . import views
 
 urlpatterns = [
     path("restaurant/management/", restaurant_management_overview, name="restaurant_management_overview"),
-    path("restaurant/daily/", restaurant_daily_report, name="restaurant_daily_report"),
-    path("restaurant/end-of-shift/",restaurant_end_of_shift,name="restaurant_end_of_shift"),
+    path("restaurant/daily/", restaurant_management_overview, name="restaurant_daily_report"),
+    path("restaurant/end-of-shift/", restaurant_management_overview, name="restaurant_end_of_shift"),
     path("daily-stock/",views.daily_stock_report,name="daily_stock_report"),
     path("department-consumption/",views.department_consumption_report,name="department_consumption_report"),
     path("owner/dashboard/", views.owner_dashboard, name="owner_dashboard"),
