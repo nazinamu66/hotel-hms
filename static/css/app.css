@@ -1813,3 +1813,76 @@ input, select, textarea { font-size: 16px; }
 .kird-foot{margin-top:18px}
 @media(max-width:1000px){.kird-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.kird-page{padding:18px 12px 32px}.kird-grid{grid-template-columns:1fr}.kird-head{flex-direction:column}.kird-filter{align-items:stretch}.kird-field{min-width:100%}}
+
+
+/* Kitchen batch profitability: executive reporting theme and chart components. */
+.main:has(.kbp-page) { background:#0d1728; }
+.main:has(.kbp-page) > .content {
+  flex:1 1 auto; min-height:0;
+  background:linear-gradient(135deg,#10203a 0%,#0d1728 58%,#101d32 100%);
+  color:#e7eefb;
+}
+.main:has(.kbp-page) > .topbar {
+  background:#0d1728 !important; color:#f1f5f9 !important;
+  border-bottom:1px solid rgba(148,163,184,.17) !important;
+}
+.main:has(.kbp-page) .sidebar { background:#0d1728; }
+.kbp-page{max-width:1600px;margin:0 auto;padding:26px 20px 48px;color:#e7eefb}
+.kbp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:22px}
+.kbp-eyebrow{font-size:.7rem;letter-spacing:.1em;font-weight:850;color:#83b8ff;margin-bottom:8px}
+.kbp-title{font-size:clamp(1.7rem,2.4vw,2.2rem);font-weight:850;letter-spacing:-.035em;margin:0 0 7px;color:#f4f7ff}
+.kbp-muted,.kbp-note,.kbp-foot{color:#9aacc4;font-size:.84rem;line-height:1.55}
+.kbp-btn{display:inline-block;border:1px solid #2d6bea;border-radius:9px;background:#2563eb;color:#fff;text-decoration:none;padding:11px 15px;font-weight:800}
+.kbp-btn.secondary{background:#203650;border-color:#344b68}
+.kbp-filter,.kbp-card,.kbp-panel{background:#15263d;border:1px solid #293d58;border-radius:15px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.kbp-filter{padding:18px;margin-bottom:20px;display:flex;align-items:end;gap:14px;flex-wrap:wrap}
+.kbp-field{display:flex;flex-direction:column;gap:7px;min-width:180px}
+.kbp-field label,.kbp-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;font-weight:850;color:#9aacc4}
+.kbp-field input,.kbp-field select{padding:11px 12px;border:1px solid #344b68;border-radius:9px;background:#0e1b2e;color:#edf4ff;font:inherit}
+.kbp-scope{color:#edf4ff;padding:10px 0}
+.kbp-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.kbp-card{padding:17px;min-width:0}
+.kbp-value{font-size:clamp(1.35rem,2vw,1.75rem);font-weight:850;color:#f4f7ff;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;margin-top:8px}
+.kbp-note{font-size:.77rem;margin-top:7px}
+.kbp-chart-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:0 0 20px}
+.kbp-panel{overflow:hidden;margin-bottom:18px}
+.kbp-panel-head{padding:17px 19px;border-bottom:1px solid #293d58}
+.kbp-panel-head h2{margin:0;color:#edf4ff;font-size:1rem;font-weight:850}
+.kbp-panel-head p{margin:5px 0 0;color:#9aacc4;font-size:.79rem}
+.kbp-chart-body{padding:17px 19px}
+.kbp-legend{display:flex;gap:13px;flex-wrap:wrap;margin-bottom:16px;color:#aebed3;font-size:.72rem}
+.kbp-legend span{display:inline-flex;align-items:center;gap:6px}
+.kbp-legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
+.kbp-legend .revenue,.kbp-bar-line i.revenue{background:#5795ff}
+.kbp-legend .cogs,.kbp-bar-line i.cogs{background:#f4b544}
+.kbp-legend .profit,.kbp-bar-line i.profit{background:#22c79a}
+.kbp-legend .sold,.kbp-flow-track .sold{background:#5795ff}
+.kbp-legend .comp,.kbp-flow-track .comp{background:#9b8afb}
+.kbp-legend .spoiled,.kbp-flow-track .spoiled{background:#f4b544}
+.kbp-legend .remaining,.kbp-flow-track .remaining{background:#22c79a}
+.kbp-chart-row{padding:12px 0;border-top:1px solid #293d58}
+.kbp-chart-name,.kbp-flow-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:9px;color:#e7eefb;font-size:.8rem}
+.kbp-chart-name small,.kbp-flow-head span{color:#9aacc4;font-size:.72rem}
+.kbp-bars{display:grid;gap:7px}
+.kbp-bar-line{display:grid;grid-template-columns:52px minmax(0,1fr) 94px;gap:8px;align-items:center;color:#9aacc4;font-size:.7rem}
+.kbp-bar-line b{color:#e7eefb;text-align:right;font-size:.7rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kbp-track{height:9px;background:#263b56;border-radius:99px;overflow:hidden}
+.kbp-bar-line i{height:100%;display:block;border-radius:99px;min-width:0}
+.kbp-flow-row{padding:13px 0;border-top:1px solid #293d58}
+.kbp-flow-track{height:14px;display:flex;background:#263b56;border-radius:99px;overflow:hidden}
+.kbp-flow-track i{height:100%;display:block;min-width:0}
+.kbp-flow-values{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:8px;color:#9aacc4;font-size:.68rem}
+.kbp-wrap{overflow-x:auto}
+.kbp-table{width:100%;border-collapse:collapse;min-width:1450px;font-size:.8rem}
+.kbp-table th{padding:11px;background:#0e1b2e;text-align:left;color:#9aacc4;font-size:.68rem;text-transform:uppercase;white-space:nowrap}
+.kbp-table td{padding:10px;border-top:1px solid #293d58;vertical-align:top;color:#dce7f6}
+.kbp-table small{color:#9aacc4}
+.kbp-link{color:#83b8ff;font-weight:800;text-decoration:none}
+.kbp-link:hover{text-decoration:underline}
+.kbp-status{display:inline-block;padding:4px 8px;border-radius:99px;font-size:.7rem;font-weight:800;white-space:nowrap}
+.kbp-status.good{background:#123c36;color:#72e0bd}
+.kbp-status.warn{background:#49351e;color:#ffd28a}
+.kbp-empty{padding:20px;text-align:center;color:#9aacc4}
+.kbp-foot{margin-top:18px;font-size:.78rem}
+@media(max-width:1050px){.kbp-chart-grid{grid-template-columns:1fr}.kbp-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.kbp-page{padding:18px 12px 32px}.kbp-kpis{grid-template-columns:1fr}.kbp-head{flex-direction:column}.kbp-filter{align-items:stretch}.kbp-field{min-width:100%}.kbp-bar-line{grid-template-columns:48px minmax(0,1fr) 82px}}
