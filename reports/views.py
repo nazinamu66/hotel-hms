@@ -1563,7 +1563,9 @@ def maintenance_cost_analysis(request):
         maintenance_type_data[kind]["total"] += total_cost
 
         asset_name = ticket.asset.name if ticket.asset_id else (
-            f"Room {ticket.room.room_number}" if ticket.room_id else ticket.location.name
+            f"Room {ticket.room.room_number}" if ticket.room_id
+            else ticket.location.name if ticket.location_id
+            else "Unspecified location"
         )
         asset_key = (hotel_name, asset_name)
         asset_data[asset_key]["tickets"] += 1
@@ -1604,6 +1606,5 @@ def maintenance_cost_analysis(request):
         "asset_rows": asset_rows[:20],
         "type_rows": type_rows,
         "cost_page": cost_page,
-        "cost_entry_count": sum(len(row["ticket"].material_entries.all()) + len(row["ticket"].labour_entries.all()) for row in rows),
     }
     return render(request, "reports/maintenance_cost_analysis.html", context)
