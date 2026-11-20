@@ -59,7 +59,7 @@
       <div class="rs-recon-kpi"><div class="rs-label">Records checked</div><strong>{{ accounting_reconciliation.count }}</strong></div>
       <div class="rs-recon-kpi"><div class="rs-label">Reconciled</div><strong>{{ accounting_reconciliation.reconciled_count }}</strong></div>
       <div class="rs-recon-kpi"><div class="rs-label">Missing postings</div><strong>{{ accounting_reconciliation.missing_count }}</strong></div>
-      <div class="rs-recon-kpi"><div class="rs-label">Net difference</div><strong>{{ accounting_reconciliation.difference_total|money }}</strong></div>
+      <div class="rs-recon-kpi"><div class="rs-label">Sum of variances</div><strong>{{ accounting_reconciliation.difference_total|money }}</strong></div>
     </div>
     <div class="rs-table-wrap">
       <table class="rs-table">
@@ -73,7 +73,7 @@
             <td>{{ row.expected|money }}</td>
             <td>{{ row.actual|money }}</td>
             <td>{{ row.difference|money }}</td>
-            <td><span class="rs-status rs-status-{{ row.status }}">{{ row.status|cut:"_"|default:"—" }}</span></td>
+            <td><span class="rs-status rs-status-{{ row.status }}">{{ row.status|title|default:"—" }}</span></td>
             <td>{% if row.order_id %}<a href="{% url 'restaurant_order_detail' row.order_id %}" target="_blank" rel="noopener">Open order →</a>{% else %}—{% endif %}</td>
           </tr>
           {% empty %}
@@ -82,7 +82,7 @@
         </tbody>
       </table>
     </div>
-    <p class="rs-muted" style="margin:12px 0 0">A missing or mismatched record is an investigation flag, not an automatic correction. Sales posting dates are checked against the POS order's business day; collection and refund records retain their own posting references.</p>
+    <p class="rs-muted" style="margin:12px 0 0">The variance total sums absolute row differences; it is an investigation aid, not a journal balance. A missing or mismatched record is an investigation flag, not an automatic correction. Sales posting dates are checked against the POS order's business day; collection and refund records retain their own posting references.</p>
   </section>
   <section class="rs-panel">
     <h2 class="rs-section">Audit drill-down</h2>
