@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from django.conf import settings
 from rooms.models import Room
 from decimal import Decimal
@@ -98,11 +99,11 @@ class MaintenanceScheduleCycle(models.Model):
 
     @property
     def is_completed_on_time(self):
-        return bool(self.completed_at and self.completed_at.date() <= self.due_date)
+        return bool(self.completed_at and timezone.localtime(self.completed_at).date() <= self.due_date)
 
     @property
     def is_completed_late(self):
-        return bool(self.completed_at and self.completed_at.date() > self.due_date)
+        return bool(self.completed_at and timezone.localtime(self.completed_at).date() > self.due_date)
 
 
 class MaintenanceTicket(models.Model):
