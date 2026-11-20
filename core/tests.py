@@ -673,6 +673,109 @@ class ManagementFrontDeskAnalyticsViewTests(TestCase):
         )
 
 
+    def test_kpi_drilldowns_return_scoped_folio_and_guest_records(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from billing.models import Folio, Guest
+
+        now = timezone.now()
+        today = timezone.localdate()
+        current_guest = Guest.objects.create(
+            hotel=self.hotel_one, first_name="Current", last_name="Guest"
+        )
+        repeat_guest = Guest.objects.create(
+            hotel=self.hotel_one, first_name="Repeat", last_name="Guest"
+        )
+        outside_guest = Guest.objects.create(
+            hotel=self.outside_hotel, first_name="Outside", last_name="Guest"
+        )
+        Folio.objects.create(
+            folio_type="ROOM", hotel=self.hotel_one, guest=current_guest,
+            check_in_at=now, is_closed=False,
+        )
+        Folio.objects.create(
+            folio_type="ROOM", hotel=self.hotel_one, guest=repeat_guest,
+            check_in_at=now - timedelta(days=30), is_closed=True,
+            check_out_at=now - timedelta(days=27),
+        )
+        Folio.objects.create(
+            folio_type="ROOM", hotel=self.hotel_one, guest=repeat_guest,
+            check_in_at=now, is_closed=False,
+        )
+        Folio.objects.create(
+            folio_type="ROOM", hotel=self.outside_hotel, guest=outside_guest,
+            check_in_at=now, is_closed=False,
+        )
+
+        director = User.objects.create_user(
+            username="frontdesk-drilldown-director",
+            password="test-password",
+            role="DIRECTOR",
+            organization=self.organization,
+        )
+        self.client.force_login(director)
+        params = {"from": today.isoformat(), "to": today.isoformat()}
+
+        in_house = self.client.get("/management/front-desk/in-house/", params)
+        self.assertEqual(in_house.status_code, 200)
+        self.assertEqual(in_house.context["record_count"], 2)
+        self.assertEqual(
+            set(in_house.context["records"].values_list("pk", flat=True)),
+            {current_guest.pk, repeat_guest.pk},
+        )
+        self.assertNotContains(in_house, "Outside Guest")
+
+        repeat = self.client.get("/management/front-desk/repeat-guests/", params)
+        self.assertEqual(repeat.status_code, 200)
+        self.assertEqual(repeat.context["record_count"], 1)
+        self.assertEqual(
+            list(repeat.context["records"].values_list("pk", flat=True)),
+            [repeat_guest.pk],
+        )
+
+        checkins = self.client.get("/management/front-desk/check-ins/", params)
+        self.assertEqual(checkins.status_code, 200)
+        self.assertEqual(checkins.context["record_count"], 2)
+        self.assertNotContains(checkins, "Outside Guest")
+
+    def test_general_manager_drilldown_cannot_expand_assigned_hotel_scope(self):
+        from django.utils import timezone
+        from billing.models import Folio, Guest
+
+        assigned_guest = Guest.objects.create(
+            hotel=self.hotel_two, first_name="Assigned", last_name="Guest"
+        )
+        outside_guest = Guest.objects.create(
+            hotel=self.hotel_one, first_name="Unassigned", last_name="Guest"
+        )
+        Folio.objects.create(
+            folio_type="ROOM", hotel=self.hotel_two, guest=assigned_guest,
+            check_in_at=timezone.now(), is_closed=False,
+        )
+        Folio.objects.create(
+            folio_type="ROOM", hotel=self.hotel_one, guest=outside_guest,
+            check_in_at=timezone.now(), is_closed=False,
+        )
+        manager = User.objects.create_user(
+            username="frontdesk-drilldown-gm",
+            password="test-password",
+            role="GENERAL_MANAGER",
+            organization=self.organization,
+        )
+        manager.assigned_hotels.add(self.hotel_two)
+        self.client.force_login(manager)
+        response = self.client.get(
+            "/management/front-desk/in-house/",
+            {"hotel": str(self.hotel_one.pk)},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["record_count"], 1)
+        self.assertEqual(
+            list(response.context["records"].values_list("pk", flat=True)),
+            [assigned_guest.pk],
+        )
+
+
 class ReservationsOccupancyCalculationTests(TestCase):
     def setUp(self):
         from billing.models import (
