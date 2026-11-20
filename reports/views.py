@@ -687,7 +687,7 @@ def restaurant_sales_performance(request):
         orders = orders.filter(created_by=request.user)
 
     settled_orders = orders.filter(status__in=("CHARGED", "PAID"))
-    revenue_orders = settled_orders.filter(is_complimentary_breakfast=False)
+    revenue_orders = orders.filter(\n        (Q(status__in=("CHARGED", "PAID")) | Q(is_refunded=True)),\n        is_complimentary_breakfast=False,\n    )
     refunded_order_ids = set(
         orders.filter(is_refunded=True).values_list("pk", flat=True)
     )
