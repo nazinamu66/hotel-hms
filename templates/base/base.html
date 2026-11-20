@@ -115,14 +115,7 @@
             <a href="{% url 'management_guest_company_billing' %}">Guest &amp; Company Billing</a>
             <a href="{% url 'management_custom_reports' %}">Custom Reports</a>
 
-            <h5 class="menu-subtoggle {% if request.resolver_match.url_name == 'restaurant_management_overview' %}active-menu{% endif %}"
-                onclick="toggleMenu('management_restaurant_menu', this)">
-                <span class="arrow">{% if request.resolver_match.url_name == 'restaurant_management_overview' %}▾{% else %}▸{% endif %}</span>
-                Restaurant Management
-            </h5>
-            <div id="management_restaurant_menu" class="menu-section {% if request.resolver_match.url_name == 'restaurant_management_overview' %}open{% endif %}">
-                <a href="{% url 'restaurant_management_overview' %}">Shift Performance</a>
-            </div>
+
         </div>
         {% endif %}
 
@@ -708,15 +701,14 @@
         <!-- ========================= -->
 
         {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
-        <h4 class="menu-toggle {% if request.resolver_match.url_name == 'restaurant_menu_management' %}active-menu{% endif %}"
-            onclick="toggleMenu('restaurant_setup_menu', this)">
-            <span class="arrow">▸</span>
-            Restaurant Setup
+        <h4 class="menu-toggle {% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_menu_management' %}active-menu{% endif %}"
+            onclick="toggleMenu('simply_restaurant_menu', this)">
+            <span class="arrow">{% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_menu_management' %}▾{% else %}▸{% endif %}</span>
+            Simply Restaurant
         </h4>
-        <div id="restaurant_setup_menu" class="menu-section {% if request.resolver_match.url_name == 'restaurant_menu_management' %}open{% endif %}">
-            <a href="{% url 'restaurant_menu_management' %}">
-                Menu Management
-            </a>
+        <div id="simply_restaurant_menu" class="menu-section {% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_menu_management' %}open{% endif %}">
+            <a href="{% url 'restaurant_management_overview' %}">Shift Performance</a>
+            <a href="{% url 'restaurant_menu_management' %}">Menu Management</a>
         </div>
         {% endif %}
 
@@ -923,7 +915,7 @@
 
         <!-- TOP BAR -->
 
-        <div class="topbar{% if request.resolver_match.url_name == 'management_overview' or request.resolver_match.url_name == 'management_hotel_performance' or request.resolver_match.url_name == 'management_front_desk_analytics' or request.resolver_match.url_name == 'management_guest_search' or request.resolver_match.url_name == 'management_guest_profile' or request.resolver_match.url_name == 'management_reservations_occupancy' or request.resolver_match.url_name == 'management_reservation_detail' or request.resolver_match.url_name == 'management_front_desk_drilldown' or request.resolver_match.url_name == 'management_company_detail' or request.resolver_match.url_name == 'management_corporate_performance' or request.resolver_match.url_name == 'management_guest_company_billing' or request.resolver_match.url_name == 'management_custom_reports' or request.resolver_match.url_name == 'kitchen_management_report' %} topbar-executive{% endif %}">
+        <div class="topbar{% if request.resolver_match.url_name == 'management_overview' or request.resolver_match.url_name == 'management_hotel_performance' or request.resolver_match.url_name == 'management_front_desk_analytics' or request.resolver_match.url_name == 'management_guest_search' or request.resolver_match.url_name == 'management_guest_profile' or request.resolver_match.url_name == 'management_reservations_occupancy' or request.resolver_match.url_name == 'management_reservation_detail' or request.resolver_match.url_name == 'management_front_desk_drilldown' or request.resolver_match.url_name == 'management_company_detail' or request.resolver_match.url_name == 'management_corporate_performance' or request.resolver_match.url_name == 'management_guest_company_billing' or request.resolver_match.url_name == 'management_custom_reports' or request.resolver_match.url_name == 'restaurant_management_overview' or request.resolver_match.url_name == 'restaurant_menu_management' or request.resolver_match.url_name == 'kitchen_management_report' %} topbar-executive{% endif %}">
             <button type="button" class="mobile-nav-toggle" onclick="toggleMobileSidebar()" aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation">☰ <span>Menu</span></button>
 
             <div class="system-name">
@@ -1071,11 +1063,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const menuRules = {
 
         management_menu: [
-            "/management/",
-            "/reports/restaurant/management/"
+            "/management/"
         ],
-        management_restaurant_menu: [
-            "/reports/restaurant/management/"
+        simply_restaurant_menu: [
+            "/reports/restaurant/management/",
+            "/restaurant/menu-management/"
         ],
         frontdesk_menu: [
             "/frontdesk/"
