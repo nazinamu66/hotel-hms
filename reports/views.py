@@ -1683,7 +1683,6 @@ def maintenance_asset_performance(request):
             overdue_count += 1
         elif schedule.next_due_date == today:
             status = "DUE TODAY"
-            due_count += 1
         else:
             status = "UPCOMING"
         if status != "UPCOMING":
