@@ -455,3 +455,79 @@ class MaintenanceAssetPerformanceTests(TestCase):
             {"hotel": self.other_hotel.pk},
         )
         self.assertEqual(response.status_code, 403)
+
+
+class MaintenancePreventiveComplianceTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
+        from datetime import timedelta
+        from inventory.models import Hotel, Organization
+        from maintenance.models import (
+            MaintenanceAsset, MaintenanceLocation, MaintenanceSchedule,
+            MaintenanceScheduleCycle,
+        )
+
+        User = get_user_model()
+        organization = Organization.objects.create(name="Preventive Compliance Org")
+        self.hotel = Hotel.objects.create(organization=organization, name="Compliance Hotel")
+        self.other_hotel = Hotel.objects.create(organization=organization, name="Other Compliance Hotel")
+        self.manager = User.objects.create_user(
+            username="preventive_compliance_manager", password="test-password",
+            role="MANAGER", hotel=self.hotel,
+        )
+        location = MaintenanceLocation.objects.create(
+            hotel=self.hotel, name="Compliance Plant Room", location_type="PLANT_ROOM",
+        )
+        other_location = MaintenanceLocation.objects.create(
+            hotel=self.other_hotel, name="Other Compliance Plant Room", location_type="PLANT_ROOM",
+        )
+        asset = MaintenanceAsset.objects.create(
+            hotel=self.hotel, location=location, name="Compliance Generator",
+        )
+        other_asset = MaintenanceAsset.objects.create(
+            hotel=self.other_hotel, location=other_location, name="Other Compliance Generator",
+        )
+        schedule = MaintenanceSchedule.objects.create(
+            asset=asset, name="Monthly generator service",
+            interval_days=30, next_due_date=timezone.localdate(),
+        )
+        other_schedule = MaintenanceSchedule.objects.create(
+            asset=other_asset, name="Other hotel service",
+            interval_days=30, next_due_date=timezone.localdate(),
+        )
+        today = timezone.localdate()
+        MaintenanceScheduleCycle.objects.create(
+            schedule=schedule, due_date=today - timedelta(days=5),
+            completed_at=timezone.now() - timedelta(days=2),
+        )
+        MaintenanceScheduleCycle.objects.create(
+            schedule=schedule, due_date=today - timedelta(days=3),
+            completed_at=timezone.now() - timedelta(days=1),
+        )
+        MaintenanceScheduleCycle.objects.create(
+            schedule=schedule, due_date=today - timedelta(days=1),
+        )
+        MaintenanceScheduleCycle.objects.create(
+            schedule=other_schedule, due_date=today - timedelta(days=1),
+        )
+        self.client.force_login(self.manager)
+
+    def test_compliance_report_classifies_cycles_and_scopes_hotel(self):
+        response = self.client.get("/reports/maintenance/management/preventive-compliance/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Preventive Maintenance Compliance")
+        self.assertEqual(response.context["totals"]["on_time"], 1)
+        self.assertEqual(response.context["totals"]["late"], 1)
+        self.assertEqual(response.context["totals"]["overdue"], 1)
+        self.assertEqual(response.context["totals"]["due"], 3)
+        self.assertEqual(response.context["compliance_rate"], 50.0)
+        self.assertEqual(len(response.context["rows"]), 3)
+        self.assertNotContains(response, "Other Compliance Generator")
+
+    def test_unauthorized_hotel_filter_is_rejected(self):
+        response = self.client.get(
+            "/reports/maintenance/management/preventive-compliance/",
+            {"hotel": self.other_hotel.pk},
+        )
+        self.assertEqual(response.status_code, 403)
