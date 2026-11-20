@@ -43,6 +43,48 @@
     <article class="rs-kpi"><div class="rs-label">Room charges</div><strong class="rs-value">{{ room_sales|money }}</strong><div class="rs-note">Sales posted to guest room folios</div></article>
     <article class="rs-kpi"><div class="rs-label">Complimentary breakfasts</div><strong class="rs-value">{{ complimentary_count }}</strong><div class="rs-note">Redemptions tracked separately from revenue</div></article>
   </section>
+  <section class="rs-panel">
+    <h2 class="rs-section">Audit drill-down</h2>
+    <p class="rs-muted">Open the underlying operational records behind each headline figure. The selected date and hotel filters are retained.</p>
+    <div class="rs-grid" style="margin:12px 0 0">
+      <a class="rs-kpi" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=orders"><div class="rs-label">POS orders</div><strong class="rs-value">{{ detail_totals.orders }}</strong><div class="rs-note">Open the sales register →</div></a>
+      <a class="rs-kpi" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=payments"><div class="rs-label">Payment receipts</div><strong class="rs-value">{{ detail_totals.payments }}</strong><div class="rs-note">Inspect actual shift collections →</div></a>
+      <a class="rs-kpi" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=refunds"><div class="rs-label">Refund records</div><strong class="rs-value">{{ detail_totals.refunds }}</strong><div class="rs-note">Review refund posting and reason →</div></a>
+      <a class="rs-kpi" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=costs"><div class="rs-label">Sold line items</div><strong class="rs-value">{{ detail_totals.costs }}</strong><div class="rs-note">Trace item revenue and sale-time cost →</div></a>
+      <a class="rs-kpi" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=complimentary"><div class="rs-label">Complimentary breakfasts</div><strong class="rs-value">{{ detail_totals.complimentary }}</strong><div class="rs-note">Review complimentary redemptions →</div></a>
+    </div>
+  </section>
+  {% if detail_section %}
+  <section class="rs-panel">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+      <h2 class="rs-section" style="margin:0"> {% if detail_section == "orders" %}POS order register{% elif detail_section == "payments" %}Payment receipt register{% elif detail_section == "refunds" %}Refund register{% elif detail_section == "costs" %}Sold item cost register{% else %}Complimentary breakfast register{% endif %}</h2>
+      <a class="rs-btn" style="text-decoration:none" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}">Close details</a>
+    </div>
+    <div class="rs-table-wrap" style="margin-top:14px">
+      {% if detail_section == "orders" %}
+      <table class="rs-table"><thead><tr><th>Order</th><th>Date</th><th>Hotel</th><th>Cashier</th><th>Folio / guest</th><th>Shift</th><th>Status</th><th>Amount</th><th>Record</th></tr></thead><tbody>
+      {% for order in order_rows %}<tr><td>#{{ order.id }}</td><td>{{ order.created_at|date:"d M Y H:i" }}</td><td>{{ order.department.hotel.name }}</td><td>{{ order.created_by.get_full_name|default:order.created_by.username|default:"—" }}</td><td>{% if order.folio.folio_type == "ROOM" %}Room {{ order.folio.room.room_number }}{% if order.folio.guest %} · {{ order.folio.guest.full_name }}{% endif %}{% else %}Walk-in{% endif %}</td><td>{% if order.shift_id %}#{{ order.shift_id }}{% else %}—{% endif %}</td><td>{{ order.get_status_display }}</td><td>{{ order.total_amount|money }}</td><td><a href="{% url 'restaurant_order_detail' order.id %}" target="_blank" rel="noopener">Open order →</a></td></tr>{% empty %}<tr><td colspan="9">No POS orders in this period.</td></tr>{% endfor %}
+      </tbody></table>
+      {% elif detail_section == "payments" %}
+      <table class="rs-table"><thead><tr><th>Receipt date</th><th>Method</th><th>Amount</th><th>Reference</th><th>Cashier</th><th>Shift</th><th>Folio</th><th>Note</th></tr></thead><tbody>
+      {% for payment in payment_rows_detail %}<tr><td>{{ payment.collected_at|date:"d M Y H:i" }}</td><td>{{ payment.get_method_display }}</td><td>{{ payment.amount|money }}</td><td>{{ payment.reference|default:"—" }}</td><td>{{ payment.collected_by.get_full_name|default:payment.collected_by.username|default:"—" }}</td><td>#{{ payment.shift_id }}</td><td>#{{ payment.folio_id }}</td><td>{{ payment.note|default:"—" }}</td></tr>{% empty %}<tr><td colspan="8">No positive receipts recorded against Restaurant shifts in this period.</td></tr>{% endfor %}
+      </tbody></table>
+      {% elif detail_section == "refunds" %}
+      <table class="rs-table"><thead><tr><th>Refund date</th><th>Order</th><th>Refund amount</th><th>Reason</th><th>Processed by</th><th>Charge reversal</th><th>Payment reversal</th></tr></thead><tbody>
+      {% for row in refund_rows %}<tr><td>{{ row.date|date:"d M Y H:i" }}</td><td><a href="{% url 'restaurant_order_detail' row.order.id %}" target="_blank" rel="noopener">Order #{{ row.order.id }}</a></td><td>{{ row.amount|money }}</td><td>{{ row.order.refund_reason|default:"—" }}</td><td>{{ row.order.refunded_by.get_full_name|default:row.order.refunded_by.username|default:"—" }}</td><td>{% if row.charge %}Posted{% else %}Missing{% endif %}</td><td>{% if row.payment %}Posted{% else %}Not applicable / missing{% endif %}</td></tr>{% empty %}<tr><td colspan="7">No refund postings found in this period.</td></tr>{% endfor %}
+      </tbody></table>
+      {% elif detail_section == "costs" %}
+      <table class="rs-table"><thead><tr><th>Order</th><th>Date</th><th>Menu item</th><th>Product type</th><th>Qty</th><th>Unit price</th><th>Line revenue</th><th>Unit cost</th><th>Line cost</th><th>Line gross profit</th></tr></thead><tbody>
+      {% for item in cost_rows %}<tr><td><a href="{% url 'restaurant_order_detail' item.order_id %}" target="_blank" rel="noopener">#{{ item.order_id }}</a></td><td>{{ item.order.created_at|date:"d M Y" }}</td><td>{{ item.menu_item.name }}</td><td>{{ item.menu_item.product.product_type }}</td><td>{{ item.quantity }}</td><td>{{ item.price|money }}</td><td>{{ item.line_total|default:item.price|money }}</td><td>{{ item.cost_at_sale|money }}</td><td>{{ item.cost_at_sale|floatformat:2 }}</td><td>—</td></tr>{% empty %}<tr><td colspan="10">No sold line items in this period.</td></tr>{% endfor %}
+      </tbody></table>
+      {% else %}
+      <table class="rs-table"><thead><tr><th>Order</th><th>Date</th><th>Room / guest</th><th>Cashier</th><th>Status</th><th>Shift</th><th>Revenue</th></tr></thead><tbody>
+      {% for order in complimentary_orders %}<tr><td><a href="{% url 'restaurant_order_detail' order.id %}" target="_blank" rel="noopener">#{{ order.id }}</a></td><td>{{ order.created_at|date:"d M Y H:i" }}</td><td>{% if order.folio.room %}Room {{ order.folio.room.room_number }}{% endif %}{% if order.folio.guest %} · {{ order.folio.guest.full_name }}{% endif %}</td><td>{{ order.created_by.get_full_name|default:order.created_by.username|default:"—" }}</td><td>{{ order.get_status_display }}</td><td>{% if order.shift_id %}#{{ order.shift_id }}{% else %}—{% endif %}</td><td>₦0.00</td></tr>{% empty %}<tr><td colspan="7">No complimentary breakfast redemptions in this period.</td></tr>{% endfor %}
+      </tbody></table>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
   {% if uncosted_quantity %}<div class="rs-alert"><strong>Costing attention:</strong> {{ uncosted_quantity }} sold units have no recorded sale-time unit cost. Gross profit may therefore be overstated until those costs are reconciled.</div>{% endif %}
   <section class="rs-panel"><h2 class="rs-section">Collections by payment method</h2><div class="rs-grid" style="margin:0">
     <div><div class="rs-label">Cash</div><strong class="rs-value">{{ collections.CASH|money }}</strong></div>
