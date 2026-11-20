@@ -1110,6 +1110,7 @@ def restaurant_spoilage_analysis(request):
     for record in approved_records:
         product_key = record.product_id
         product_row = product_data.setdefault(product_key, {
+            "product_id": record.product_id,
             "name": record.product.name,
             "unit": record.product.base_unit,
             "quantity": Decimal("0.000"),
@@ -1121,7 +1122,8 @@ def restaurant_spoilage_analysis(request):
         product_row["records"] += 1
 
         reason_label = record.get_reason_code_display()
-        reason_row = reason_data.setdefault(reason_label, {
+        reason_row = reason_data.setdefault(record.reason_code, {
+            "code": record.reason_code,
             "reason": reason_label,
             "quantity": Decimal("0.000"),
             "loss": Decimal("0.00"),
@@ -1146,7 +1148,8 @@ def restaurant_spoilage_analysis(request):
             record.reported_by.get_full_name() or record.reported_by.username
             if record.reported_by else "Unknown"
         )
-        reporter_row = reporter_data.setdefault(reporter_name, {
+        reporter_row = reporter_data.setdefault(record.reported_by_id, {
+            "user_id": record.reported_by_id,
             "name": reporter_name, "quantity": Decimal("0.000"),
             "loss": Decimal("0.00"), "records": 0,
         })
@@ -1158,7 +1161,8 @@ def restaurant_spoilage_analysis(request):
             record.approved_by.get_full_name() or record.approved_by.username
             if record.approved_by else "Unknown"
         )
-        approver_row = approver_data.setdefault(approver_name, {
+        approver_row = approver_data.setdefault(record.approved_by_id, {
+            "user_id": record.approved_by_id,
             "name": approver_name, "quantity": Decimal("0.000"),
             "loss": Decimal("0.00"), "records": 0,
         })
@@ -1169,7 +1173,7 @@ def restaurant_spoilage_analysis(request):
         if record.approved_at:
             month = record.approved_at.date().replace(day=1)
             month_row = monthly_data.setdefault(month, {
-                "month": month, "loss": Decimal("0.00"),
+                "month": month, "month_key": month.strftime("%Y-%m"), "loss": Decimal("0.00"),
                 "quantity": Decimal("0.000"), "records": 0,
             })
             month_row["loss"] += record.cost_amount
