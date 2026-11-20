@@ -355,3 +355,119 @@ class EnsureDailyBusinessDaysCommandTests(TestCase):
             1,
         )
         self.assertIn("1 already existed", output.getvalue())
+
+
+class MaintenanceLocationAccountingPostingTests(SimpleTestCase):
+    def setUp(self):
+        self.hotel = SimpleNamespace(id=31)
+        self.location = SimpleNamespace(hotel=self.hotel)
+        self.ticket = SimpleNamespace(
+            id=902,
+            room_id=None,
+            location_id=44,
+            location=self.location,
+        )
+
+    @patch("accounting.services.postings.maintenance.record_transaction")
+    def test_store_material_consumption_posts_to_location_hotel(self, record):
+        from accounting.services.postings.maintenance import (
+            post_maintenance_material_consumption,
+        )
+
+        material = SimpleNamespace(
+            source="STORE",
+            ticket=self.ticket,
+            quantity=Decimal("2.5"),
+            unit_cost=Decimal("400.00"),
+            id=77,
+        )
+        user = object()
+
+        post_maintenance_material_consumption(material, user)
+
+        kwargs = record.call_args.kwargs
+        self.assertIs(kwargs["hotel"], self.hotel)
+        self.assertEqual(kwargs["amount"], Decimal("1000.000"))
+        self.assertEqual(kwargs["reference"], "MAINT-902-MAT-77")
+        self.assertEqual(kwargs["debit_system_key"], "maintenance_expense")
+        self.assertEqual(kwargs["credit_system_key"], "inventory_asset")
+
+    @patch("accounting.services.postings.maintenance.SupplierLedger.objects.get_or_create")
+    @patch("accounting.services.postings.maintenance.record_transaction")
+    def test_outsourced_labour_posts_to_location_hotel_and_supplier_ledger(
+        self, record, ledger
+    ):
+        from accounting.services.postings.maintenance import post_maintenance_labour
+
+        supplier = SimpleNamespace(hotel_id=self.hotel.id)
+        labour = SimpleNamespace(
+            labour_type="OUTSOURCED",
+            supplier=supplier,
+            amount=Decimal("2500.00"),
+            ticket=self.ticket,
+            ticket_id=self.ticket.id,
+            id=19,
+            created_by="creator",
+        )
+        journal_entry = object()
+        record.return_value = journal_entry
+        user = object()
+
+        result = post_maintenance_labour(labour, user=user)
+
+        self.assertIs(result, journal_entry)
+        self.assertIs(record.call_args.kwargs["hotel"], self.hotel)
+        self.assertEqual(record.call_args.kwargs["amount"], Decimal("2500.00"))
+        self.assertEqual(record.call_args.kwargs["reference"], "MAINT-902-LAB-19")
+        ledger.assert_called_once_with(
+            supplier=supplier,
+            journal_entry=journal_entry,
+            defaults={"amount": Decimal("2500.00"), "entry_type": "credit"},
+        )
+
+    @patch("accounting.services.postings.maintenance.record_transaction")
+    def test_outsourced_labour_rejects_supplier_from_another_hotel(self, record):
+        from django.core.exceptions import ValidationError
+        from accounting.services.postings.maintenance import post_maintenance_labour
+
+        labour = SimpleNamespace(
+            labour_type="OUTSOURCED",
+            supplier=SimpleNamespace(hotel_id=999),
+            amount=Decimal("2500.00"),
+            ticket=self.ticket,
+            ticket_id=self.ticket.id,
+            id=20,
+            created_by=None,
+        )
+
+        with self.assertRaisesMessage(
+            ValidationError,
+            "Supplier does not belong to the maintenance ticket's hotel.",
+        ):
+            post_maintenance_labour(labour)
+
+        record.assert_not_called()
+
+    @patch("accounting.services.postings.maintenance.record_transaction")
+    def test_posting_rejects_ticket_without_room_or_location(self, record):
+        from django.core.exceptions import ValidationError
+        from accounting.services.postings.maintenance import (
+            post_maintenance_material_consumption,
+        )
+
+        ticket = SimpleNamespace(id=903, room_id=None, location_id=None)
+        material = SimpleNamespace(
+            source="STORE",
+            ticket=ticket,
+            quantity=Decimal("1"),
+            unit_cost=Decimal("100.00"),
+            id=78,
+        )
+
+        with self.assertRaisesMessage(
+            ValidationError,
+            "Maintenance ticket must belong to a room or maintenance location.",
+        ):
+            post_maintenance_material_consumption(material, user=None)
+
+        record.assert_not_called()
