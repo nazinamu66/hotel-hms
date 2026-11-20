@@ -1231,3 +1231,82 @@ input, select, textarea { font-size: 16px; }
     .management-performance .perf-filter-actions { width: 100%; justify-content: space-between; }
     .management-performance .perf-panel { padding: 14px; }
 }
+
+
+/* =========================================================
+   Management Front Desk Command Center and Guest 360
+   ========================================================= */
+.management-frontdesk {
+    --fd-bg:#0d1728; --fd-panel:#15243a; --fd-raised:#1b2d46;
+    --fd-border:rgba(148,163,184,.17); --fd-text:#f1f5f9; --fd-muted:#9aabc1;
+    box-sizing:border-box; margin:calc(-1 * clamp(18px,2.5vw,34px));
+    min-height:100%; padding:clamp(18px,2.5vw,34px);
+    background:radial-gradient(ellipse at 84% 0%,rgba(37,99,235,.15),transparent 34%),var(--fd-bg);
+    color:var(--fd-text);
+}
+.management-frontdesk *{box-sizing:border-box}
+.management-frontdesk .fd-command-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:22px}
+.management-frontdesk .fd-eyebrow{margin:0 0 8px;color:#60a5fa;font-size:.7rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
+.management-frontdesk .fd-command-heading h1{margin:0;color:var(--fd-text);font-size:clamp(1.55rem,2.4vw,2.1rem);letter-spacing:-.04em}
+.management-frontdesk .fd-command-heading p{margin:7px 0 0;color:var(--fd-muted);font-size:.88rem}
+.management-frontdesk .fd-period,.management-frontdesk .fd-count{flex:0 0 auto;padding:8px 11px;border:1px solid var(--fd-border);border-radius:20px;background:rgba(21,36,58,.8);color:#dbeafe;font-size:.72rem;font-weight:750}
+.management-frontdesk .fd-back-link{color:#93c5fd;font-size:.8rem;font-weight:750;text-decoration:none}
+.management-frontdesk .fd-filter{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin-bottom:20px;padding:15px;border:1px solid var(--fd-border);border-radius:13px;background:rgba(21,36,58,.86)}
+.management-frontdesk .fd-field{display:flex;flex:1 1 160px;flex-direction:column;gap:6px;min-width:0}
+.management-frontdesk .fd-field label{color:var(--fd-muted);font-size:.67rem;font-weight:800;letter-spacing:.08em}
+.management-frontdesk .fd-field input,.management-frontdesk .fd-field select{width:100%;min-width:0;min-height:40px;padding:8px 10px;border:1px solid rgba(148,163,184,.25);border-radius:8px;background:#0e1b2d;color:#f1f5f9}
+.management-frontdesk .fd-field input[type=date]{color-scheme:light;background:#fff;color:#172033}
+.management-frontdesk .fd-filter-actions{display:flex;align-items:center;gap:12px}
+.management-frontdesk .fd-filter-actions button,.management-frontdesk .fd-deposit-actions button{min-height:40px;padding:9px 15px;border:1px solid #3b82f6;border-radius:8px;background:#2563eb;color:#fff;font-size:.8rem;font-weight:750;cursor:pointer}
+.management-frontdesk .fd-filter-actions a{color:#bfdbfe;font-size:.8rem;font-weight:700;text-decoration:none}
+.management-frontdesk .fd-section-label{margin:22px 0 11px;color:#c3d0e0;font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.management-frontdesk .fd-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+.management-frontdesk .fd-kpi{position:relative;display:flex;min-width:0;flex-direction:column;overflow:hidden;padding:17px 18px;border:1px solid var(--fd-border);border-radius:13px;background:linear-gradient(145deg,#1b2d46,#132236)}
+.management-frontdesk .fd-kpi:before{position:absolute;top:0;left:0;width:3px;height:100%;background:var(--fd-accent);content:""}
+.management-frontdesk .fd-kpi span{color:var(--fd-muted);font-size:.73rem;font-weight:750}
+.management-frontdesk .fd-kpi strong{margin:10px 0 5px;color:var(--fd-text);font-size:clamp(1.3rem,2vw,1.8rem);font-weight:850}
+.management-frontdesk .fd-kpi small{color:#8497b0;font-size:.69rem;line-height:1.4}
+.management-frontdesk .fd-dashboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.management-frontdesk .fd-panel{min-width:0;margin-top:14px;padding:19px;border:1px solid var(--fd-border);border-radius:13px;background:rgba(21,36,58,.94);box-shadow:0 10px 26px rgba(0,0,0,.12)}
+.management-frontdesk .fd-dashboard-grid .fd-panel{margin-top:0}
+.management-frontdesk .fd-panel-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:15px}
+.management-frontdesk .fd-panel-heading h2{margin:0;color:var(--fd-text);font-size:.96rem;font-weight:800}
+.management-frontdesk .fd-panel-heading p{margin:6px 0 0;color:var(--fd-muted);font-size:.73rem;line-height:1.5}
+.management-frontdesk .fd-panel-icon,.management-frontdesk .fd-command-symbol{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;border:1px solid var(--fd-border);border-radius:9px;background:#203651;color:#93c5fd;font-size:1.1rem}
+.management-frontdesk .fd-watch-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.management-frontdesk .fd-watch-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--fd-border);border-radius:9px;background:rgba(10,24,42,.55)}
+.management-frontdesk .fd-watch-item span,.management-frontdesk .fd-status-list span{color:#b6c5d8;font-size:.76rem}
+.management-frontdesk .fd-watch-item strong,.management-frontdesk .fd-status-list strong{color:#f8fafc;font-size:.9rem}
+.management-frontdesk .fd-command-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.management-frontdesk .fd-command-link{position:relative;display:flex;min-height:145px;flex-direction:column;align-items:flex-start;gap:8px;padding:14px;border:1px solid #344a66;border-radius:10px;background:#17283f;color:inherit;text-decoration:none;transition:border-color .15s,transform .15s}
+.management-frontdesk .fd-command-link:hover{transform:translateY(-2px);border-color:#60a5fa;background:#1b304c}
+.management-frontdesk .fd-command-link strong{color:#f1f5f9;font-size:.9rem}
+.management-frontdesk .fd-command-link small{max-width:90%;color:var(--fd-muted);font-size:.71rem;line-height:1.45}
+.management-frontdesk .fd-link-arrow{position:absolute;right:14px;bottom:13px;color:#93c5fd;font-size:1.1rem}
+.management-frontdesk .fd-status-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px}
+.management-frontdesk .fd-status-list>div{display:flex;justify-content:space-between;gap:12px;padding:11px 2px;border-bottom:1px solid rgba(148,163,184,.12)}
+.management-frontdesk .fd-note{margin:13px 2px 0;color:#91a2b8;font-size:.72rem;line-height:1.55}
+.management-frontdesk .fd-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--fd-border);border-radius:9px}
+.management-frontdesk .fd-table{width:100%;min-width:560px;border-collapse:collapse}
+.management-frontdesk .fd-table th,.management-frontdesk .fd-table td{padding:12px;border-bottom:1px solid rgba(148,163,184,.12);color:#dbe5f2;font-size:.75rem;text-align:left;white-space:nowrap}
+.management-frontdesk .fd-table th{background:rgba(9,20,35,.52);color:var(--fd-muted);font-size:.65rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.management-frontdesk .fd-table tbody tr:last-child td{border-bottom:0}
+.management-frontdesk .fd-empty{padding:24px 12px!important;color:var(--fd-muted)!important;text-align:center!important}
+.management-frontdesk .fd-search-field{flex:1 1 360px}
+.management-frontdesk .fd-view-link{color:#93c5fd;font-weight:750;text-decoration:none}
+.management-frontdesk .fd-view-link:hover{color:#fff}
+.management-frontdesk .fd-guest-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.management-frontdesk .fd-guest-summary>div,.management-frontdesk .fd-deposit-totals>div{display:flex;min-width:0;flex-direction:column;gap:7px;padding:14px;border:1px solid var(--fd-border);border-radius:10px;background:#17283f}
+.management-frontdesk .fd-guest-summary span,.management-frontdesk .fd-deposit-totals span{color:var(--fd-muted);font-size:.68rem;font-weight:750}
+.management-frontdesk .fd-guest-summary strong,.management-frontdesk .fd-deposit-totals strong{overflow-wrap:anywhere;color:#f1f5f9;font-size:.86rem}
+.management-frontdesk .fd-deposit-card+.fd-deposit-card{margin-top:16px}
+.management-frontdesk .fd-deposit-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.management-frontdesk .fd-deposit-totals strong{font-size:1.05rem}
+.management-frontdesk .fd-deposit-totals .is-positive{color:#34d399}
+.management-frontdesk .fd-deposit-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.management-frontdesk .fd-deposit-form .fd-field{flex:auto}
+.management-frontdesk .fd-deposit-actions{grid-column:1/-1;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.management-frontdesk .fd-deposit-actions span{color:var(--fd-muted);font-size:.7rem}
+@media(max-width:1050px){.management-frontdesk .fd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.management-frontdesk .fd-guest-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.management-frontdesk{margin:-18px -16px;padding:18px 16px 26px}.management-frontdesk .fd-command-heading{align-items:flex-start;flex-direction:column}.management-frontdesk .fd-dashboard-grid{grid-template-columns:1fr}}
+@media(max-width:520px){.management-frontdesk .fd-kpis,.management-frontdesk .fd-command-links,.management-frontdesk .fd-watch-grid,.management-frontdesk .fd-status-list,.management-frontdesk .fd-guest-summary,.management-frontdesk .fd-deposit-totals,.management-frontdesk .fd-deposit-form{grid-template-columns:1fr}.management-frontdesk .fd-filter-actions{width:100%;justify-content:space-between}.management-frontdesk .fd-panel{padding:14px}}
