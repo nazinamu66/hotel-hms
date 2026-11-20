@@ -1310,3 +1310,17 @@ input, select, textarea { font-size: 16px; }
 @media(max-width:1050px){.management-frontdesk .fd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.management-frontdesk .fd-guest-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.management-frontdesk{margin:-18px -16px;padding:18px 16px 26px}.management-frontdesk .fd-command-heading{align-items:flex-start;flex-direction:column}.management-frontdesk .fd-dashboard-grid{grid-template-columns:1fr}}
 @media(max-width:520px){.management-frontdesk .fd-kpis,.management-frontdesk .fd-command-links,.management-frontdesk .fd-watch-grid,.management-frontdesk .fd-status-list,.management-frontdesk .fd-guest-summary,.management-frontdesk .fd-deposit-totals,.management-frontdesk .fd-deposit-form{grid-template-columns:1fr}.management-frontdesk .fd-filter-actions{width:100%;justify-content:space-between}.management-frontdesk .fd-panel{padding:14px}}
+
+
+/* Management flash messages share the executive workspace background. */
+.content:has(.management-frontdesk) {
+    background: #0d1728;
+}
+.content:has(.management-frontdesk) > .management-message-area {
+    margin: 0 !important;
+    padding: 18px clamp(18px, 2.5vw, 34px) 0;
+    background: #0d1728;
+}
+.content:has(.management-frontdesk) > .management-message-area .alert {
+    margin: 0;
+}
