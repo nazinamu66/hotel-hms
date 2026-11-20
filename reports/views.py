@@ -419,3 +419,68 @@ def owner_dashboard(request):
 
     return render(request, "reports/owner_dashboard.html", context)
 
+
+
+@role_required("RESTAURANT", "MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def restaurant_management_overview(request):
+    """Shift-led Restaurant performance report using the operational shift ledger."""
+    from django.utils.dateparse import parse_date
+    from restaurant.models import Shift
+    from accounts.services.access import get_accessible_hotels
+
+    hotels = get_accessible_hotels(request.user).filter(departments__department_type="RESTAURANT").distinct()
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    shifts = Shift.objects.filter(
+        department__hotel__in=hotels,
+        department__department_type="RESTAURANT",
+        opened_at__date__range=(date_from, date_to),
+    ).select_related("user", "department", "department__hotel").prefetch_related("orders", "payments", "cash_handovers")
+    if request.user.role == "RESTAURANT":
+        shifts = shifts.filter(user=request.user)
+
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if selected_hotel.isdigit() and hotels.filter(pk=int(selected_hotel)).exists():
+            shifts = shifts.filter(department__hotel_id=int(selected_hotel))
+        else:
+            selected_hotel = ""
+
+    shift_rows = []
+    totals = {key: Decimal("0.00") for key in ("sales", "walkin", "room", "cash", "pos", "transfer", "refunds")}
+    order_count = open_count = closed_count = handover_pending = 0
+    for shift in shifts.order_by("-opened_at"):
+        orders = list(shift.orders.all())
+        settled = [o for o in orders if o.status in {"CHARGED", "PAID"} and not o.is_complimentary_breakfast]
+        sales = sum((o.total_amount for o in settled), Decimal("0.00"))
+        walkin = sum((o.total_amount for o in settled if o.folio.folio_type == "WALKIN"), Decimal("0.00"))
+        room = sum((o.total_amount for o in settled if o.folio.folio_type == "ROOM"), Decimal("0.00"))
+        payments = list(shift.payments.all())
+        methods = {m: sum((p.amount for p in payments if p.method == m), Decimal("0.00")) for m in ("CASH", "POS", "TRANSFER")}
+        refunds = abs(sum(Charge.objects.filter(reference__in=[f"POS-{o.pk}" for o in orders], amount__lt=0).values_list("amount", flat=True), Decimal("0.00")))
+        pending = shift.cash_handovers.filter(status="PENDING").count()
+        totals["sales"] += sales
+        totals["walkin"] += walkin
+        totals["room"] += room
+        totals["cash"] += methods["CASH"]
+        totals["pos"] += methods["POS"]
+        totals["transfer"] += methods["TRANSFER"]
+        totals["refunds"] += refunds
+        order_count += len(orders)
+        open_count += int(shift.status == "OPEN")
+        closed_count += int(shift.status == "CLOSED")
+        handover_pending += pending
+        shift_rows.append({"shift": shift, "sales": sales, "walkin": walkin, "room": room, "cash": methods["CASH"], "pos": methods["POS"], "transfer": methods["TRANSFER"], "refunds": refunds, "order_count": len(orders), "pending_handovers": pending})
+
+    totals["net_sales"] = totals["sales"] - totals["refunds"]
+    return render(request, "reports/restaurant_management_overview.html", {
+        "date_from": date_from, "date_to": date_to,
+        "hotels": hotels.order_by("name") if request.user.role != "RESTAURANT" else hotels.none(),
+        "selected_hotel": selected_hotel, "shift_rows": shift_rows, "totals": totals,
+        "order_count": order_count, "open_count": open_count, "closed_count": closed_count,
+        "handover_pending": handover_pending,
+    })
