@@ -39,12 +39,13 @@
     <button class="kmr-btn" type="submit">Apply filters</button>
   </form>
 
+  <h2 class="kmr-section">Production batch profitability and detailed reports</h2>
   <section class="kmr-report-links" aria-label="Kitchen detailed reports">
     <a class="kmr-report-link" href="{% url 'kitchen_inventory_report' %}?from={{ date_from }}&amp;to={{ date_to }}{% if selected_hotel %}&amp;hotel={{ selected_hotel }}{% endif %}">
       <span class="kmr-report-icon">▦</span><span><strong>Inventory &amp; FIFO Valuation</strong><small>Current stock, valuation and movement history</small></span><span class="kmr-report-arrow">→</span>
     </a>
     <a class="kmr-report-link" href="{% url 'kitchen_batch_profitability_report' %}?from={{ date_from }}&amp;to={{ date_to }}{% if selected_hotel %}&amp;hotel={{ selected_hotel }}{% endif %}">
-      <span class="kmr-report-icon">↗</span><span><strong>Batch Profitability</strong><small>Sales, COGS, waste and remaining batch stock</small></span><span class="kmr-report-arrow">→</span>
+      <span class="kmr-report-icon">↗</span><span><strong>Open Batch Profitability Report</strong><small>Sales, COGS, waste and remaining batch stock</small></span><span class="kmr-report-arrow">→</span>
     </a>
     <a class="kmr-report-link" href="{% url 'kitchen_spoilage_report' %}?from={{ date_from }}&amp;to={{ date_to }}{% if selected_hotel %}&amp;hotel={{ selected_hotel }}{% endif %}">
       <span class="kmr-report-icon">◇</span><span><strong>Spoilage Register</strong><small>Recorded waste, review status and reasons</small></span><span class="kmr-report-arrow">→</span>
