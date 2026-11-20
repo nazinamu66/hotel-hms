@@ -1,0 +1,39 @@
+{% extends "base/base.html" %}
+{% load accounting_extras %}
+{% block title %}Maintenance Management Reporting | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.mm{box-sizing:border-box;min-height:100%;margin:calc(-1 * clamp(18px,2.5vw,34px));padding:clamp(18px,2.5vw,34px);background:#0d1728;color:#e8eef8}.mm *{box-sizing:border-box}.mm-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}.mm h1{font-size:27px;color:#f8fafc;margin:5px 0}.mm h2{font-size:16px;color:#f8fafc;margin:0 0 14px}.mm-muted{color:#9aabc1;font-size:13px;line-height:1.5}.mm-panel{background:#172b43;border:1px solid #29415e;border-radius:14px;padding:18px;margin:16px 0}.mm-filters{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr)) auto;gap:12px;align-items:end}.mm label{display:block;color:#b8c7da;font-size:12px;font-weight:750;margin-bottom:5px}.mm input,.mm select{width:100%;min-height:40px;border:1px solid #3b5573;border-radius:8px;background:#102239;color:#f8fafc;padding:8px}.mm-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 14px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none;border:0;font-weight:750}.mm-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.mm-kpi{background:#172b43;border:1px solid #29415e;border-radius:13px;padding:17px;min-width:0}.mm-kpi span{display:block;color:#9aabc1;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}.mm-kpi strong{display:block;color:#f8fafc;font-size:25px;margin:7px 0 3px}.mm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.mm table{width:100%;border-collapse:collapse;min-width:540px}.mm-wrap{overflow-x:auto}.mm th{background:#102239;color:#aebfd4;text-transform:uppercase;font-size:10px;letter-spacing:.06em;text-align:left;padding:11px;white-space:nowrap}.mm td{padding:11px;border-bottom:1px solid #29415e;font-size:13px}.mm-pill{display:inline-block;padding:4px 8px;border-radius:20px;font-size:10px;font-weight:800;background:#263c58;color:#dbeafe}.mm-open{background:#713f12;color:#fde68a}.mm-progress{background:#1e3a8a;color:#bfdbfe}.mm-resolved{background:#164e3a;color:#bbf7d0}.mm-empty{text-align:center;color:#9aabc1;padding:22px!important}
+@media(max-width:900px){.mm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.mm-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.mm-kpis,.mm-grid,.mm-filters{grid-template-columns:1fr}}
+</style>
+<div class="mm">
+<header class="mm-head"><div><div class="mm-muted">FACILITIES &amp; ENGINEERING · MANAGEMENT REPORTING</div><h1>Maintenance Performance</h1><p class="mm-muted">Work-order activity, maintenance spending, asset coverage and preventive maintenance due.</p></div></header>
+<section class="mm-panel"><form method="get" class="mm-filters">
+<div><label>From date</label><input type="date" name="from" value="{{ date_from }}"></div>
+<div><label>To date</label><input type="date" name="to" value="{{ date_to }}"></div>
+<div><label>Hotel</label><select name="hotel"><option value="">All accessible hotels</option>{% for hotel in hotels %}<option value="{{ hotel.pk }}" {% if selected_hotel == hotel.pk|stringformat:"s" %}selected{% endif %}>{{ hotel.name }}</option>{% endfor %}</select></div>
+<button class="mm-btn" type="submit">Apply filters</button>
+</form><p class="mm-muted" style="margin:12px 0 0">Tickets are grouped by the date they were reported. Costs are calculated from recorded material and labour entries for those tickets.</p></section>
+<section class="mm-kpis">
+<div class="mm-kpi"><span>Tickets reported</span><strong>{{ total_tickets }}</strong><div class="mm-muted">Within selected period</div></div>
+<div class="mm-kpi"><span>Open tickets</span><strong>{{ open_count }}</strong><div class="mm-muted">Awaiting work</div></div>
+<div class="mm-kpi"><span>In progress</span><strong>{{ in_progress_count }}</strong><div class="mm-muted">Currently being handled</div></div>
+<div class="mm-kpi"><span>Resolved</span><strong>{{ resolved_count }}</strong><div class="mm-muted">Reported in selected period</div></div>
+<div class="mm-kpi"><span>High priority</span><strong>{{ high_priority_count }}</strong><div class="mm-muted">All statuses in period</div></div>
+<div class="mm-kpi"><span>Total recorded cost</span><strong>{{ total_cost|money }}</strong><div class="mm-muted">Materials + labour</div></div>
+<div class="mm-kpi"><span>Active equipment</span><strong>{{ active_assets }}</strong><div class="mm-muted">In selected hotel scope</div></div>
+<div class="mm-kpi"><span>Preventive tasks due</span><strong>{{ due_schedules }}</strong><div class="mm-muted">Due today or overdue</div></div>
+</section>
+<div class="mm-grid">
+<section class="mm-panel"><h2>Ticket status</h2><div class="mm-wrap"><table><thead><tr><th>Status</th><th>Tickets</th></tr></thead><tbody>{% for row in status_rows %}<tr><td>{{ row.label }}</td><td>{{ row.count }}</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="mm-panel"><h2>Priority profile</h2><div class="mm-wrap"><table><thead><tr><th>Priority</th><th>Tickets</th></tr></thead><tbody>{% for row in priority_rows %}<tr><td>{{ row.label }}</td><td>{{ row.count }}</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="mm-panel"><h2>Maintenance cost breakdown</h2><div class="mm-wrap"><table><thead><tr><th>Cost category</th><th>Recorded amount</th></tr></thead><tbody><tr><td>Materials</td><td>{{ material_cost|money }}</td></tr><tr><td>Labour</td><td>{{ labour_cost|money }}</td></tr><tr><td><strong>Total</strong></td><td><strong>{{ total_cost|money }}</strong></td></tr></tbody></table></div></section>
+<section class="mm-panel"><h2>Cost by hotel</h2><div class="mm-wrap"><table><thead><tr><th>Hotel</th><th>Tickets</th><th>Recorded cost</th></tr></thead><tbody>{% for row in hotel_rows %}<tr><td>{{ row.name }}</td><td>{{ row.tickets }}</td><td>{{ row.cost|money }}</td></tr>{% empty %}<tr><td colspan="3" class="mm-empty">No tickets in this period.</td></tr>{% endfor %}</tbody></table></div></section>
+</div>
+<section class="mm-panel"><h2>Monthly trend</h2><div class="mm-wrap"><table><thead><tr><th>Month</th><th>Tickets reported</th><th>Resolved tickets</th><th>Recorded cost</th></tr></thead><tbody>{% for row in month_rows %}<tr><td>{{ row.month }}</td><td>{{ row.tickets }}</td><td>{{ row.resolved }}</td><td>{{ row.cost|money }}</td></tr>{% empty %}<tr><td colspan="4" class="mm-empty">No maintenance activity in this period.</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="mm-panel"><h2>Recent maintenance reports</h2><div class="mm-wrap"><table><thead><tr><th>Reported</th><th>Hotel</th><th>Room / location</th><th>Issue</th><th>Priority</th><th>Status</th><th>Material</th><th>Labour</th><th>Total</th></tr></thead><tbody>
+{% for row in recent_rows %}<tr><td>{{ row.ticket.created_at|date:"d M Y H:i" }}</td><td>{{ row.hotel_name }}</td><td>{{ row.target }}</td><td>{{ row.ticket.description|truncatechars:65 }}</td><td>{{ row.ticket.get_priority_display }}</td><td><span class="mm-pill {% if row.ticket.status == 'OPEN' %}mm-open{% elif row.ticket.status == 'IN_PROGRESS' %}mm-progress{% else %}mm-resolved{% endif %}">{{ row.ticket.get_status_display }}</span></td><td>{{ row.material_cost|money }}</td><td>{{ row.labour_cost|money }}</td><td>{{ row.total_cost|money }}</td></tr>{% empty %}<tr><td colspan="9" class="mm-empty">No maintenance tickets match this period.</td></tr>{% endfor %}
+</tbody></table></div>{% if total_tickets > 100 %}<p class="mm-muted">Showing the latest 100 of {{ total_tickets }} tickets. Summary totals include all matching tickets.</p>{% endif %}</section>
+<p class="mm-muted">Management report is read-only. It does not expose work-order controls or change maintenance records.</p>
+</div>
+{% endblock %}
