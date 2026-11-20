@@ -702,11 +702,11 @@
 
         {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
         <h4 class="menu-toggle {% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_menu_management' %}active-menu{% endif %}"
-            onclick="toggleMenu('simply_restaurant_menu', this)">
+            onclick="toggleMenu('restaurant_management_menu', this)">
             <span class="arrow">{% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_menu_management' %}▾{% else %}▸{% endif %}</span>
-            Simply Restaurant
+            Restaurant
         </h4>
-        <div id="simply_restaurant_menu" class="menu-section {% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_menu_management' %}open{% endif %}">
+        <div id="restaurant_management_menu" class="menu-section {% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_menu_management' %}open{% endif %}">
             <a href="{% url 'restaurant_management_overview' %}">Shift Performance</a>
             <a href="{% url 'restaurant_menu_management' %}">Menu Management</a>
         </div>
@@ -1065,7 +1065,7 @@ document.addEventListener("DOMContentLoaded", function () {
         management_menu: [
             "/management/"
         ],
-        simply_restaurant_menu: [
+        restaurant_management_menu: [
             "/reports/restaurant/management/",
             "/restaurant/menu-management/"
         ],
