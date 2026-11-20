@@ -1484,6 +1484,15 @@ input, select, textarea { font-size: 16px; }
 }
 
 
+/* Keep Front Desk management pages painted through the full shared shell height.
+   The content area can be shorter than the viewport on compact drill-down registers. */
+.main:has(.management-frontdesk) { background: #0d1728; }
+.main:has(.management-frontdesk) > .content {
+    flex: 1 1 auto;
+    min-height: 0;
+    background: #0d1728;
+}
+
 /* Keep the management reservations workspace background through the full shell height. */
 .main:has(.management-reservations) { background: #0d1728; }
 .main:has(.management-reservations) > .content {
