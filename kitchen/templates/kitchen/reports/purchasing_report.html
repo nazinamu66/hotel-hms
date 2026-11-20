@@ -33,6 +33,42 @@
 .kpr-note{font-size:.76rem;color:#64748b;line-height:1.5;margin-top:18px}
 @media(max-width:1000px){.kpr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.kpr{padding:16px 11px 30px}.kpr-grid{grid-template-columns:1fr}.kpr-head{flex-direction:column}.kpr-field{min-width:100%}}
+
+/* Purchasing & fulfilment: match the Kitchen executive reporting workspace. */
+.main:has(.kpr) { background:#0d1728 !important; }
+.main:has(.kpr) > .content {
+  flex:1 1 auto; min-height:0;
+  background:linear-gradient(135deg,#10203a 0%,#0d1728 58%,#101d32 100%) !important;
+  color:#e7eefb !important;
+}
+.main:has(.kpr) > .topbar {
+  background:#0d1728 !important; color:#f1f5f9 !important;
+  border-bottom:1px solid rgba(148,163,184,.17) !important;
+}
+.main:has(.kpr) .sidebar { background:#0d1728; }
+.kpr{color:#e7eefb !important}
+.kpr h1,.kpr-section{color:#f4f7ff !important}
+.kpr-muted,.kpr-note{color:#9aacc4 !important}
+.kpr-filter,.kpr-panel,.kpr-card{
+  background:#15263d !important;border:1px solid #293d58 !important;
+  box-shadow:0 8px 24px rgba(0,0,0,.12) !important;color:#e7eefb !important;
+}
+.kpr-field label,.kpr-label{color:#9aacc4 !important}
+.kpr-field input,.kpr-field select{
+  background:#0e1b2e !important;color:#edf4ff !important;
+  border:1px solid #344b68 !important;color-scheme:dark;
+}
+.kpr-field input:focus,.kpr-field select:focus{outline:2px solid #5795ff;outline-offset:1px}
+.kpr-panel-head{border-color:#293d58 !important}
+.kpr-panel-head h2{color:#edf4ff !important}
+.kpr-panel-head p{color:#9aacc4 !important}
+.kpr th{background:#0e1b2e !important;color:#9aacc4 !important}
+.kpr td{border-color:#293d58 !important;color:#dce7f6 !important}
+.kpr tr:hover{background:#1b304b !important}
+.kpr-pill{background:#263b56 !important;color:#c7d5e8 !important}
+.kpr-pill.warn{background:#49351e !important;color:#ffd28a !important}
+.kpr-pill.good{background:#123c36 !important;color:#72e0bd !important}
+.kpr-btn.secondary{background:#203650 !important;border:1px solid #344b68;color:#e7eefb}
 </style>
 <div class="kpr">
   <header class="kpr-head">
