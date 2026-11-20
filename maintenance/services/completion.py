@@ -5,6 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from billing.models import Folio
+from maintenance.models import MaintenanceScheduleCycle
 
 
 @transaction.atomic
@@ -157,19 +158,26 @@ def complete_maintenance_ticket(
             .get(pk=ticket.schedule_id)
         )
 
-        if schedule.is_active:
+        cycle, _ = MaintenanceScheduleCycle.objects.get_or_create(
+            schedule=schedule,
+            due_date=schedule.next_due_date,
+            defaults={"work_order": ticket},
+        )
+        if cycle.work_order_id is None:
+            cycle.work_order = ticket
+        cycle.completed_at = ticket.resolved_at
+        cycle.completion_note = resolution_note
+        cycle.save(update_fields=["work_order", "completed_at", "completion_note"])
 
+        if schedule.is_active:
             schedule.next_due_date = (
                 timezone.localdate()
-                + timedelta(
-                    days=schedule.interval_days,
-                )
+                + timedelta(days=schedule.interval_days)
             )
-
-            schedule.save(
-                update_fields=[
-                    "next_due_date",
-                ]
+            schedule.save(update_fields=["next_due_date"])
+            MaintenanceScheduleCycle.objects.get_or_create(
+                schedule=schedule,
+                due_date=schedule.next_due_date,
             )
 
     # =========================================================
