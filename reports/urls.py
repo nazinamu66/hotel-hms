@@ -7,6 +7,7 @@ urlpatterns = [
     path("restaurant/management/", restaurant_management_overview, name="restaurant_management_overview"),
     path("maintenance/management/", views.maintenance_management_overview, name="maintenance_management_overview"),
     path("maintenance/management/work-orders/", views.maintenance_work_order_analysis, name="maintenance_work_order_analysis"),
+    path("maintenance/management/costs/", views.maintenance_cost_analysis, name="maintenance_cost_analysis"),
     path("restaurant/management/inventory/", views.restaurant_inventory_status, name="restaurant_inventory_status"),
     path("restaurant/management/spoilage/", views.restaurant_spoilage_analysis, name="restaurant_spoilage_analysis"),
     path("restaurant/management/spoilage/records/", views.restaurant_spoilage_records, name="restaurant_spoilage_records"),
