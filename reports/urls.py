@@ -5,6 +5,7 @@ from . import views
 
 urlpatterns = [
     path("restaurant/management/", restaurant_management_overview, name="restaurant_management_overview"),
+    path("restaurant/management/inventory/", views.restaurant_inventory_status, name="restaurant_inventory_status"),
     path("restaurant/daily/", restaurant_management_overview, name="restaurant_daily_report"),
     path("restaurant/end-of-shift/", restaurant_management_overview, name="restaurant_end_of_shift"),
     path("daily-stock/",views.daily_stock_report,name="daily_stock_report"),
