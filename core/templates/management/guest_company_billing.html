@@ -83,14 +83,14 @@
     </form>
 
     <section class="kpis" aria-label="Receivables summary">
-        <article class="card kpi"><span>Guest Receivables</span><strong>₦{{ guest_receivables|floatformat:2 }}</strong><small>Positive individual folio balances</small></article>
-        <article class="card kpi"><span>Company Receivables</span><strong>₦{{ company_receivables|floatformat:2 }}</strong><small>Issued invoice balances + uninvoiced charges</small></article>
-        <article class="card kpi"><span>Total Operational Receivables</span><strong>₦{{ total_operational_receivables|floatformat:2 }}</strong><small>As of {{ receivables_as_of|date:"M j, Y" }}</small></article>
-        <article class="card kpi"><span>Ledger Accounts Receivable</span><strong>₦{{ ledger_accounts_receivable|floatformat:2 }}</strong><small>Posted GL control account balance</small></article>
-        <article class="card kpi"><span>Overdue Company Invoices</span><strong>₦{{ overdue_company_outstanding|floatformat:2 }}</strong><small>Issued invoices past due date</small></article>
-        <article class="card kpi"><span>Guest Deposits Held</span><strong>₦{{ guest_deposits_held|floatformat:2 }}</strong><small>Liability balance; includes unapplied credits</small></article>
-        <article class="card kpi"><span>Company Deposits Held</span><strong>₦{{ company_deposits_held|floatformat:2 }}</strong><small>Corporate deposit liability balance</small></article>
-        <article class="card kpi"><span>Guest Deposit Available</span><strong>₦{{ guest_deposits_available|floatformat:2 }}</strong><small>After ₦{{ guest_guarantees_earmarked|floatformat:2 }} in active guarantees</small></article>
+        <article class="card kpi"><span>Guest Receivables</span><strong>₦{{ guest_receivables|floatformat:"2g" }}</strong><small>Positive individual folio balances</small></article>
+        <article class="card kpi"><span>Company Receivables</span><strong>₦{{ company_receivables|floatformat:"2g" }}</strong><small>Issued invoice balances + uninvoiced charges</small></article>
+        <article class="card kpi"><span>Total Operational Receivables</span><strong>₦{{ total_operational_receivables|floatformat:"2g" }}</strong><small>As of {{ receivables_as_of|date:"M j, Y" }}</small></article>
+        <article class="card kpi"><span>Ledger Accounts Receivable</span><strong>₦{{ ledger_accounts_receivable|floatformat:"2g" }}</strong><small>Posted GL control account balance</small></article>
+        <article class="card kpi"><span>Overdue Company Invoices</span><strong>₦{{ overdue_company_outstanding|floatformat:"2g" }}</strong><small>Issued invoices past due date</small></article>
+        <article class="card kpi"><span>Guest Deposits Held</span><strong>₦{{ guest_deposits_held|floatformat:"2g" }}</strong><small>Liability balance; includes unapplied credits</small></article>
+        <article class="card kpi"><span>Company Deposits Held</span><strong>₦{{ company_deposits_held|floatformat:"2g" }}</strong><small>Corporate deposit liability balance</small></article>
+        <article class="card kpi"><span>Guest Deposit Available</span><strong>₦{{ guest_deposits_available|floatformat:"2g" }}</strong><small>After ₦{{ guest_guarantees_earmarked|floatformat:"2g" }} in active guarantees</small></article>
     </section>
 
     <section class="card panel reconciliation">
@@ -99,11 +99,11 @@
         <div class="table-wrap">
             <table>
                 <tbody>
-                    <tr><th>Guest folio receivables</th><td class="numeric">₦{{ guest_receivables|floatformat:2 }}</td></tr>
-                    <tr><th>Company receivables</th><td class="numeric">₦{{ company_receivables|floatformat:2 }}</td></tr>
-                    <tr><th>Total operational receivables</th><td class="numeric">₦{{ total_operational_receivables|floatformat:2 }}</td></tr>
-                    <tr><th>GL Accounts Receivable</th><td class="numeric">₦{{ ledger_accounts_receivable|floatformat:2 }}</td></tr>
-                    <tr><th>Difference (GL less operational)</th><td class="numeric"><strong>₦{{ receivables_reconciliation_difference|floatformat:2 }}</strong></td></tr>
+                    <tr><th>Guest folio receivables</th><td class="numeric">₦{{ guest_receivables|floatformat:"2g" }}</td></tr>
+                    <tr><th>Company receivables</th><td class="numeric">₦{{ company_receivables|floatformat:"2g" }}</td></tr>
+                    <tr><th>Total operational receivables</th><td class="numeric">₦{{ total_operational_receivables|floatformat:"2g" }}</td></tr>
+                    <tr><th>GL Accounts Receivable</th><td class="numeric">₦{{ ledger_accounts_receivable|floatformat:"2g" }}</td></tr>
+                    <tr><th>Difference (GL less operational)</th><td class="numeric"><strong>₦{{ receivables_reconciliation_difference|floatformat:"2g" }}</strong></td></tr>
                 </tbody>
             </table>
         </div>
@@ -124,7 +124,7 @@
                             <td>{{ row.hotel.name }}</td>
                             <td>#{{ row.folio.id }}</td>
                             <td>{% if row.is_closed %}Closed{% else %}Open{% endif %}</td>
-                            <td class="numeric">₦{{ row.balance|floatformat:2 }}</td>
+                            <td class="numeric">₦{{ row.balance|floatformat:"2g" }}</td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="5" class="empty">No positive guest folio balances.</td></tr>
@@ -132,7 +132,7 @@
                     </tbody>
                 </table>
             </div>
-            <p class="note">Negative folio balances are reported separately as guest credit balances: ₦{{ guest_credit_balances|floatformat:2 }}. They are not netted against other guests' debts.</p>
+            <p class="note">Negative folio balances are reported separately as guest credit balances: ₦{{ guest_credit_balances|floatformat:"2g" }}. They are not netted against other guests' debts.</p>
         </section>
 
         <section class="card panel">
@@ -148,7 +148,7 @@
                             <td>{{ row.company.name }}</td>
                             <td>{% if row.invoice.due_date %}{{ row.invoice.due_date|date:"M j, Y" }}{% else %}—{% endif %}</td>
                             <td class="numeric">{{ row.age_days }} days</td>
-                            <td class="numeric">₦{{ row.balance|floatformat:2 }}</td>
+                            <td class="numeric">₦{{ row.balance|floatformat:"2g" }}</td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="5" class="empty">No outstanding issued company invoices.</td></tr>
@@ -173,7 +173,7 @@
                             <td>{{ row.hotel.name }}</td>
                             <td>{{ row.charge.description }}</td>
                             <td>{{ row.age_days }} days</td>
-                            <td class="numeric">₦{{ row.amount|floatformat:2 }}</td>
+                            <td class="numeric">₦{{ row.amount|floatformat:"2g" }}</td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="5" class="empty">No uninvoiced company charges.</td></tr>
@@ -190,10 +190,10 @@
                 <table>
                     <thead><tr><th>Age bucket</th><th class="numeric">Issued invoices</th><th class="numeric">Uninvoiced charges</th></tr></thead>
                     <tbody>
-                        <tr><td>0–30 days</td><td class="numeric">₦{{ company_invoice_ageing.current|floatformat:2 }}</td><td class="numeric">₦{{ unbilled_company_ageing.current|floatformat:2 }}</td></tr>
-                        <tr><td>31–60 days</td><td class="numeric">₦{{ company_invoice_ageing.days_31_60|floatformat:2 }}</td><td class="numeric">₦{{ unbilled_company_ageing.days_31_60|floatformat:2 }}</td></tr>
-                        <tr><td>61–90 days</td><td class="numeric">₦{{ company_invoice_ageing.days_61_90|floatformat:2 }}</td><td class="numeric">₦{{ unbilled_company_ageing.days_61_90|floatformat:2 }}</td></tr>
-                        <tr><td>Over 90 days</td><td class="numeric">₦{{ company_invoice_ageing.over_90|floatformat:2 }}</td><td class="numeric">₦{{ unbilled_company_ageing.over_90|floatformat:2 }}</td></tr>
+                        <tr><td>0–30 days</td><td class="numeric">₦{{ company_invoice_ageing.current|floatformat:"2g" }}</td><td class="numeric">₦{{ unbilled_company_ageing.current|floatformat:"2g" }}</td></tr>
+                        <tr><td>31–60 days</td><td class="numeric">₦{{ company_invoice_ageing.days_31_60|floatformat:"2g" }}</td><td class="numeric">₦{{ unbilled_company_ageing.days_31_60|floatformat:"2g" }}</td></tr>
+                        <tr><td>61–90 days</td><td class="numeric">₦{{ company_invoice_ageing.days_61_90|floatformat:"2g" }}</td><td class="numeric">₦{{ unbilled_company_ageing.days_61_90|floatformat:"2g" }}</td></tr>
+                        <tr><td>Over 90 days</td><td class="numeric">₦{{ company_invoice_ageing.over_90|floatformat:"2g" }}</td><td class="numeric">₦{{ unbilled_company_ageing.over_90|floatformat:"2g" }}</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -206,11 +206,11 @@
         <div class="table-wrap">
             <table>
                 <tbody>
-                    <tr><th>Guest cash / POS / transfer receipts</th><td class="numeric">₦{{ collections.guest_cash_bank|floatformat:2 }}</td></tr>
-                    <tr><th>Guest deposits received</th><td class="numeric">₦{{ collections.guest_deposit_received|floatformat:2 }}</td></tr>
-                    <tr><th>Company invoice payments</th><td class="numeric">₦{{ collections.company_invoice_payments|floatformat:2 }}</td></tr>
-                    <tr><th>Company deposits received</th><td class="numeric">₦{{ collections.company_deposit_received|floatformat:2 }}</td></tr>
-                    <tr><th>Total receipts</th><td class="numeric"><strong>₦{{ collection_total|floatformat:2 }}</strong></td></tr>
+                    <tr><th>Guest cash / POS / transfer receipts</th><td class="numeric">₦{{ collections.guest_cash_bank|floatformat:"2g" }}</td></tr>
+                    <tr><th>Guest deposits received</th><td class="numeric">₦{{ collections.guest_deposit_received|floatformat:"2g" }}</td></tr>
+                    <tr><th>Company invoice payments</th><td class="numeric">₦{{ collections.company_invoice_payments|floatformat:"2g" }}</td></tr>
+                    <tr><th>Company deposits received</th><td class="numeric">₦{{ collections.company_deposit_received|floatformat:"2g" }}</td></tr>
+                    <tr><th>Total receipts</th><td class="numeric"><strong>₦{{ collection_total|floatformat:"2g" }}</strong></td></tr>
                 </tbody>
             </table>
         </div>
