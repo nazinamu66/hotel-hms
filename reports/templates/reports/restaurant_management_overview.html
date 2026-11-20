@@ -32,6 +32,7 @@
 @media(max-width:560px){.restaurant-management h1{font-size:23px}.restaurant-management .rm-kpis{grid-template-columns:1fr}}
 </style>
 <div class="restaurant-management">
+  <nav style="display:flex;gap:9px;flex-wrap:wrap;margin:0 0 18px;font-size:13px;font-weight:750"><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_management_overview" %}">Management overview</a><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_sales_performance" %}">Sales performance</a><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_inventory_status" %}">Inventory status</a><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_spoilage_analysis" %}">Spoilage &amp; loss</a></nav>
   <header class="rm-header"><div><div class="rm-eyebrow">Restaurant · Management reporting</div><h1>Management &amp; Shift Performance</h1><p class="rm-muted">A shift-led view of sales, collections, cashier activity and cash handovers.</p></div></header>
   <section class="rm-panel"><form method="get" class="rm-filters">
     <div class="rm-field"><label for="rm-from">From date</label><input id="rm-from" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}"></div>
