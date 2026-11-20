@@ -1833,6 +1833,100 @@ def kitchen_inventory_report(request):
 
 
 @role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def kitchen_inventory_product_detail(request, product_id, department_id):
+    """Read-only product/department drill-down for Kitchen physical stock and FIFO traceability."""
+    from django.db.models import Q
+
+    hotels = get_accessible_hotels(request.user)
+    if not hotels.exists():
+        raise PermissionDenied("You do not have access to Kitchen inventory reports.")
+
+    department = get_object_or_404(
+        Department.objects.select_related("hotel"),
+        pk=department_id,
+        hotel__in=hotels,
+        department_type="KITCHEN",
+    )
+    product = get_object_or_404(
+        Product,
+        pk=product_id,
+        hotel_id=department.hotel_id,
+        product_type__in=("RAW", "FOOD", "SNACK"),
+    )
+
+    stock = Stock.objects.filter(product=product, department=department).first()
+    physical_quantity = stock.quantity if stock else Decimal("0.000")
+    reorder_level = stock.reorder_level if stock else product.reorder_level
+
+    layers = StockCostLayer.objects.filter(
+        product=product,
+        department=department,
+    ).order_by("received_at", "pk")
+    remaining_layers = layers.filter(quantity_remaining__gt=0)
+    layer_quantity = remaining_layers.aggregate(total=Sum("quantity_remaining"))["total"] or Decimal("0.000")
+    fifo_value = sum(
+        (layer.quantity_remaining * layer.unit_cost for layer in remaining_layers),
+        Decimal("0.00"),
+    )
+    difference = physical_quantity - layer_quantity
+
+    today = timezone.localdate()
+    try:
+        date_from = date.fromisoformat(request.GET.get("from", "").strip()) if request.GET.get("from") else today.replace(day=1)
+    except ValueError:
+        date_from = today.replace(day=1)
+    try:
+        date_to = date.fromisoformat(request.GET.get("to", "").strip()) if request.GET.get("to") else today
+    except ValueError:
+        date_to = today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    movements = StockMovement.objects.filter(
+        product=product,
+    ).filter(
+        Q(from_department=department) | Q(to_department=department),
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+    ).select_related(
+        "from_department", "to_department", "created_by",
+    ).prefetch_related("cost_allocations").order_by("-created_at", "-pk")
+
+    movement_rows = []
+    for movement in movements:
+        if movement.movement_type == "TRANSFER":
+            direction = "TRANSFER OUT" if movement.from_department_id == department.pk else "TRANSFER IN"
+        elif movement.movement_type == "IN":
+            direction = "RECEIPT"
+        else:
+            direction = "ISSUE / CONSUMPTION"
+        cost = sum(
+            (allocation.total_cost for allocation in movement.cost_allocations.all()),
+            Decimal("0.00"),
+        )
+        movement_rows.append({"movement": movement, "direction": direction, "fifo_cost": cost})
+
+    return render(request, "kitchen/reports/inventory_product_detail.html", {
+        "product": product,
+        "department": department,
+        "physical_quantity": physical_quantity,
+        "reorder_level": reorder_level,
+        "layer_quantity": layer_quantity,
+        "fifo_value": fifo_value,
+        "difference": difference,
+        "reconciliation_status": (
+            "MATCH" if difference == 0 else
+            "MISSING_LAYERS" if difference > 0 else
+            "LAYERS_EXCEED_STOCK"
+        ),
+        "layers": layers,
+        "movement_rows": movement_rows,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+    })
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def kitchen_spoilage_report(request):
     """Management audit register for recorded Kitchen spoilage within authorized hotel scope."""
     from django.db.models import Sum
