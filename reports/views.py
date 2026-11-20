@@ -1322,3 +1322,143 @@ def maintenance_management_overview(request):
     }
     return render(request, "reports/maintenance_management_overview.html", context)
 
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def maintenance_work_order_analysis(request):
+    """Read-only analysis of work-order volume, ageing and resolution performance."""
+    from collections import Counter, defaultdict
+    from datetime import timedelta
+    from statistics import median
+    from django.core.exceptions import PermissionDenied
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    from django.utils.dateparse import parse_date
+    from django.utils import timezone
+    from accounts.services.access import get_accessible_hotels
+    from maintenance.models import MaintenanceTicket
+
+    accessible_hotels = get_accessible_hotels(request.user)
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    hotel_scope = Q(room__hotel__in=accessible_hotels) | Q(location__hotel__in=accessible_hotels)
+    base = MaintenanceTicket.objects.filter(hotel_scope)
+    hotels = accessible_hotels.order_by("name")
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not accessible_hotels.filter(pk=int(selected_hotel)).exists():
+            raise PermissionDenied("You do not have access to this hotel.")
+        hotel_id = int(selected_hotel)
+        base = base.filter(Q(room__hotel_id=hotel_id) | Q(location__hotel_id=hotel_id))
+        hotels = hotels.filter(pk=hotel_id)
+
+    period_tickets = base.filter(created_at__date__range=(date_from, date_to)).select_related(
+        "room", "room__hotel", "location", "location__hotel",
+        "reported_by", "assigned_to",
+    ).order_by("-created_at")
+    now = timezone.now()
+    open_tickets = base.exclude(status="RESOLVED").select_related(
+        "room", "room__hotel", "location", "location__hotel",
+        "reported_by", "assigned_to",
+    ).order_by("created_at")
+    resolved_tickets = period_tickets.filter(
+        status="RESOLVED", resolved_at__isnull=False
+    )
+
+    durations = []
+    for ticket in resolved_tickets:
+        if ticket.resolved_at and ticket.created_at:
+            duration = ticket.resolved_at - ticket.created_at
+            if duration.total_seconds() >= 0:
+                durations.append(duration.total_seconds() / 3600)
+
+    status_counts = Counter()
+    priority_counts = Counter()
+    technician_data = defaultdict(lambda: {"assigned": 0, "resolved": 0, "open": 0})
+    hotel_data = defaultdict(lambda: {"tickets": 0, "resolved": 0, "open": 0})
+    issue_counts = Counter()
+    age_bands = {"Under 1 day": 0, "1–7 days": 0, "8–30 days": 0, "Over 30 days": 0}
+    open_rows = []
+    for ticket in period_tickets:
+        status_counts[ticket.status] += 1
+        priority_counts[ticket.priority] += 1
+        hotel = ticket.room.hotel if ticket.room_id else ticket.location.hotel if ticket.location_id else None
+        hotel_name = hotel.name if hotel else "Unassigned hotel"
+        hotel_data[hotel_name]["tickets"] += 1
+        if ticket.status == "RESOLVED":
+            hotel_data[hotel_name]["resolved"] += 1
+        else:
+            hotel_data[hotel_name]["open"] += 1
+        issue_key = " ".join((ticket.description or "").lower().split())
+        if issue_key:
+            issue_counts[issue_key] += 1
+        if ticket.assigned_to_id:
+            tech = ticket.assigned_to
+            tech_name = tech.get_full_name() or tech.username
+            technician_data[(ticket.assigned_to_id, tech_name)]["assigned"] += 1
+            if ticket.status == "RESOLVED":
+                technician_data[(ticket.assigned_to_id, tech_name)]["resolved"] += 1
+            else:
+                technician_data[(ticket.assigned_to_id, tech_name)]["open"] += 1
+
+    for ticket in open_tickets:
+        age_days = max(0, (now - ticket.created_at).total_seconds() / 86400)
+        if age_days < 1:
+            band = "Under 1 day"
+        elif age_days <= 7:
+            band = "1–7 days"
+        elif age_days <= 30:
+            band = "8–30 days"
+        else:
+            band = "Over 30 days"
+        age_bands[band] += 1
+        hotel = ticket.room.hotel if ticket.room_id else ticket.location.hotel if ticket.location_id else None
+        open_rows.append({
+            "ticket": ticket,
+            "hotel_name": hotel.name if hotel else "Unassigned hotel",
+            "age_days": round(age_days, 1),
+            "target": f"Room {ticket.room.room_number}" if ticket.room_id else ticket.location.name if ticket.location_id else "Unspecified",
+        })
+
+    resolved_hours = sorted(durations)
+    avg_resolution = sum(resolved_hours) / len(resolved_hours) if resolved_hours else None
+    median_resolution = median(resolved_hours) if resolved_hours else None
+    technician_rows = [
+        {"user_id": key[0], "name": key[1], **values}
+        for key, values in sorted(technician_data.items(), key=lambda item: item[1]["assigned"], reverse=True)
+    ]
+    hotel_rows = [
+        {"name": name, **values}
+        for name, values in sorted(hotel_data.items())
+    ]
+    repeated_issues = [
+        {"description": description, "count": count}
+        for description, count in issue_counts.most_common(10)
+        if count > 1
+    ]
+    paginator = Paginator(open_rows, 30)
+    open_page = paginator.get_page(request.GET.get("page"))
+    context = {
+        "hotels": hotels,
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "total_tickets": period_tickets.count(),
+        "open_count": status_counts.get("OPEN", 0),
+        "in_progress_count": status_counts.get("IN_PROGRESS", 0),
+        "resolved_count": status_counts.get("RESOLVED", 0),
+        "high_priority_count": priority_counts.get("HIGH", 0),
+        "resolved_sample_count": len(resolved_hours),
+        "average_resolution_hours": avg_resolution,
+        "median_resolution_hours": median_resolution,
+        "age_band_rows": [{"label": label, "count": age_bands[label]} for label in age_bands],
+        "technician_rows": technician_rows,
+        "hotel_rows": hotel_rows,
+        "repeated_issues": repeated_issues,
+        "open_page": open_page,
+        "open_total": len(open_rows),
+    }
+    return render(request, "reports/maintenance_work_order_analysis.html", context)
+
