@@ -114,7 +114,15 @@
             <a href="{% url 'management_corporate_performance' %}">Corporate Performance</a>
             <a href="{% url 'management_guest_company_billing' %}">Guest &amp; Company Billing</a>
             <a href="{% url 'management_custom_reports' %}">Custom Reports</a>
-            <a href="{% url 'restaurant_management_overview' %}">Restaurant Performance</a>
+
+            <h5 class="menu-subtoggle {% if request.resolver_match.url_name == 'restaurant_management_overview' %}active-menu{% endif %}"
+                onclick="toggleMenu('management_restaurant_menu', this)">
+                <span class="arrow">{% if request.resolver_match.url_name == 'restaurant_management_overview' %}▾{% else %}▸{% endif %}</span>
+                Restaurant Management
+            </h5>
+            <div id="management_restaurant_menu" class="menu-section {% if request.resolver_match.url_name == 'restaurant_management_overview' %}open{% endif %}">
+                <a href="{% url 'restaurant_management_overview' %}">Shift Performance</a>
+            </div>
         </div>
         {% endif %}
 
@@ -1063,7 +1071,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const menuRules = {
 
         management_menu: [
-            "/management/"
+            "/management/",
+            "/reports/restaurant/management/"
+        ],
+        management_restaurant_menu: [
+            "/reports/restaurant/management/"
         ],
         frontdesk_menu: [
             "/frontdesk/"
