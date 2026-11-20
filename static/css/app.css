@@ -604,7 +604,7 @@ input, select, textarea { font-size: 16px; }
     --exec-amber: #fbbf24;
     --exec-purple: #c4b5fd;
     box-sizing: border-box;
-    margin: -clamp(18px, 2.5vw, 34px);
+    margin: calc(-1 * clamp(18px, 2.5vw, 34px));
     min-height: 100%;
     padding: clamp(18px, 2.5vw, 34px);
     border-radius: 0;
