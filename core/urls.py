@@ -6,6 +6,8 @@ from .views import (
     management_custom_reports,
     management_hotel_performance,
     management_front_desk_analytics,
+    management_guest_search,
+    management_guest_profile,
     management_reservations_occupancy,
     management_corporate_performance,
     management_guest_company_billing,
@@ -32,6 +34,16 @@ urlpatterns = [
         "management/hotels/",
         management_hotel_performance,
         name="management_hotel_performance",
+    ),
+    path(
+        "management/guests/",
+        management_guest_search,
+        name="management_guest_search",
+    ),
+    path(
+        "management/guests/<int:guest_id>/",
+        management_guest_profile,
+        name="management_guest_profile",
     ),
     path(
         "management/front-desk/",
