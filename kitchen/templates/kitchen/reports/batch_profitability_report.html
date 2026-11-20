@@ -19,7 +19,7 @@
   </form>
 
   <section class="kbp-kpis">
-    <article class="kbp-card"><div class="kbp-label">Executed batches</div><div class="kbp-value">{{ batch_count|intcomma }}</div></article>
+    <article class="kbp-card"><div class="kbp-label">Executed batches</div><div class="kbp-value">{{ batch_count }}</div></article>
     <article class="kbp-card"><div class="kbp-label">Produced quantity</div><div class="kbp-value">{{ totals.produced|floatformat:"3g" }}</div></article>
     <article class="kbp-card"><div class="kbp-label">Sales revenue</div><div class="kbp-value">₦{{ totals.revenue|floatformat:"2g" }}</div></article>
     <article class="kbp-card"><div class="kbp-label">Sales COGS</div><div class="kbp-value">₦{{ totals.cogs|floatformat:"2g" }}</div></article>
