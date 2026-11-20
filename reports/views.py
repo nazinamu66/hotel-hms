@@ -1213,3 +1213,115 @@ def restaurant_spoilage_analysis(request):
         "recent_records": recent_records,
         "record_count": records.count(),
     })
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def maintenance_management_overview(request):
+    """Read-only, hotel-scoped Maintenance performance and cost report."""
+    from collections import defaultdict
+    from decimal import Decimal
+    from django.core.exceptions import PermissionDenied
+    from django.db.models import Q
+    from django.utils.dateparse import parse_date
+    from accounts.services.access import get_accessible_hotels
+    from maintenance.models import MaintenanceTicket, MaintenanceAsset, MaintenanceSchedule
+
+    accessible_hotels = get_accessible_hotels(request.user)
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    ticket_scope = Q(room__hotel__in=accessible_hotels) | Q(location__hotel__in=accessible_hotels)
+    base_tickets = MaintenanceTicket.objects.filter(ticket_scope)
+    hotels_with_tickets = accessible_hotels.filter(
+        Q(rooms__maintenance_tickets__isnull=False)
+        | Q(maintenance_locations__maintenance_tickets__isnull=False)
+    ).distinct().order_by("name")
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not accessible_hotels.filter(pk=int(selected_hotel)).exists():
+            raise PermissionDenied("You do not have access to this hotel.")
+        hotel_id = int(selected_hotel)
+        base_tickets = base_tickets.filter(
+            Q(room__hotel_id=hotel_id) | Q(location__hotel_id=hotel_id)
+        )
+        hotels_with_tickets = hotels_with_tickets.filter(pk=hotel_id)
+
+    tickets = base_tickets.filter(
+        created_at__date__range=(date_from, date_to)
+    ).select_related(
+        "room", "room__hotel", "location", "location__hotel",
+        "asset", "reported_by", "assigned_to",
+    ).prefetch_related("material_entries", "labour_entries").order_by("-created_at")
+
+    rows = []
+    status_totals = {"OPEN": 0, "IN_PROGRESS": 0, "RESOLVED": 0}
+    priority_totals = {"HIGH": 0, "MEDIUM": 0, "LOW": 0}
+    total_cost = Decimal("0.00")
+    cost_by_hotel = defaultdict(lambda: Decimal("0.00"))
+    tickets_by_hotel = defaultdict(int)
+    monthly = defaultdict(lambda: {"tickets": 0, "resolved": 0, "cost": Decimal("0.00")})
+    for ticket in tickets:
+        status_totals[ticket.status] = status_totals.get(ticket.status, 0) + 1
+        priority_totals[ticket.priority] = priority_totals.get(ticket.priority, 0) + 1
+        material_cost = sum((item.total_cost for item in ticket.material_entries.all()), Decimal("0.00"))
+        labour_cost = sum((item.amount for item in ticket.labour_entries.all()), Decimal("0.00"))
+        ticket_cost = material_cost + labour_cost
+        total_cost += ticket_cost
+        hotel = ticket.room.hotel if ticket.room_id else ticket.location.hotel
+        cost_by_hotel[hotel.name] += ticket_cost
+        tickets_by_hotel[hotel.name] += 1
+        month_key = ticket.created_at.strftime("%Y-%m")
+        monthly[month_key]["tickets"] += 1
+        monthly[month_key]["cost"] += ticket_cost
+        if ticket.status == "RESOLVED":
+            monthly[month_key]["resolved"] += 1
+        target = (
+            f"Room {ticket.room.room_number}" if ticket.room_id
+            else ticket.location.name if ticket.location_id
+            else "Unspecified"
+        )
+        rows.append({
+            "ticket": ticket,
+            "hotel_name": hotel.name,
+            "target": target,
+            "material_cost": material_cost,
+            "labour_cost": labour_cost,
+            "total_cost": ticket_cost,
+        })
+
+    month_rows = [
+        {"month": key, **values}
+        for key, values in sorted(monthly.items())
+    ]
+    active_assets = MaintenanceAsset.objects.filter(hotel__in=hotels_with_tickets, is_active=True).count()
+    due_schedules = MaintenanceSchedule.objects.filter(
+        asset__hotel__in=hotels_with_tickets,
+        is_active=True,
+        next_due_date__lte=today,
+    ).count()
+    resolved_count = status_totals.get("RESOLVED", 0)
+    context = {
+        "hotels": hotels_with_tickets,
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "total_tickets": len(rows),
+        "open_count": status_totals.get("OPEN", 0),
+        "in_progress_count": status_totals.get("IN_PROGRESS", 0),
+        "resolved_count": resolved_count,
+        "high_priority_count": priority_totals.get("HIGH", 0),
+        "total_cost": total_cost,
+        "material_cost": sum((row["material_cost"] for row in rows), Decimal("0.00")),
+        "labour_cost": sum((row["labour_cost"] for row in rows), Decimal("0.00")),
+        "active_assets": active_assets,
+        "due_schedules": due_schedules,
+        "status_rows": [{"label": label, "count": status_totals[key]} for key, label in MaintenanceTicket.STATUS_CHOICES],
+        "priority_rows": [{"label": label, "count": priority_totals[key]} for key, label in MaintenanceTicket.PRIORITY_CHOICES],
+        "hotel_rows": [{"name": name, "tickets": tickets_by_hotel[name], "cost": cost} for name, cost in sorted(cost_by_hotel.items())],
+        "month_rows": month_rows,
+        "recent_rows": rows[:100],
+    }
+    return render(request, "reports/maintenance_management_overview.html", context)
+
