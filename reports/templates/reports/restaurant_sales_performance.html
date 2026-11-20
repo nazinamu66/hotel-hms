@@ -33,15 +33,15 @@
     <button class="rs-btn" type="submit">Apply filters</button>
   </form></section>
   <section class="rs-grid">
-    <article class="rs-kpi"><div class="rs-label">Gross sales</div><strong class="rs-value">{{ gross_sales|money }}</strong><div class="rs-note">{{ settled_count }} settled or refunded orders, excluding complimentary breakfast</div></article>
-    <article class="rs-kpi"><div class="rs-label">Refunds</div><strong class="rs-value">{{ refunds|money }}</strong><div class="rs-note">{{ refunded_order_count }} refunded orders in the selected order period</div></article>
-    <article class="rs-kpi"><div class="rs-label">Net sales</div><strong class="rs-value">{{ net_sales|money }}</strong><div class="rs-note">Gross sales less refunds recorded in this period</div></article>
-    <article class="rs-kpi"><div class="rs-label">Gross profit</div><strong class="rs-value">{{ gross_profit|money }}</strong><div class="rs-note">Gross sales less recorded sale-time FIFO cost, before refunds</div></article>
-    <article class="rs-kpi"><div class="rs-label">Cost of goods sold</div><strong class="rs-value">{{ total_cogs|money }}</strong><div class="rs-note">Based on POS item cost_at_sale</div></article>
-    <article class="rs-kpi"><div class="rs-label">Collections</div><strong class="rs-value">{{ total_collections|money }}</strong><div class="rs-note">Positive POS payments recorded against Restaurant shifts</div></article>
-    <article class="rs-kpi"><div class="rs-label">Walk-in sales</div><strong class="rs-value">{{ walkin_sales|money }}</strong><div class="rs-note">Sales assigned to walk-in folios</div></article>
-    <article class="rs-kpi"><div class="rs-label">Room charges</div><strong class="rs-value">{{ room_sales|money }}</strong><div class="rs-note">Sales posted to guest room folios</div></article>
-    <article class="rs-kpi"><div class="rs-label">Complimentary breakfasts</div><strong class="rs-value">{{ complimentary_count }}</strong><div class="rs-note">Redemptions tracked separately from revenue</div></article>
+    <a class="rs-kpi" style="display:block;text-decoration:none;color:inherit" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=orders"><div class="rs-label">Gross sales</div><strong class="rs-value">{{ gross_sales|money }}</strong><div class="rs-note">{{ settled_count }} settled or refunded orders, excluding complimentary breakfast</div></a>
+    <a class="rs-kpi" style="display:block;text-decoration:none;color:inherit" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=refunds"><div class="rs-label">Refunds</div><strong class="rs-value">{{ refunds|money }}</strong><div class="rs-note">{{ refunded_order_count }} refunded orders in the selected order period</div></a>
+    <a class="rs-kpi" style="display:block;text-decoration:none;color:inherit" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=orders"><div class="rs-label">Net sales</div><strong class="rs-value">{{ net_sales|money }}</strong><div class="rs-note">Gross sales less refunds recorded in this period</div></a>
+    <a class="rs-kpi" style="display:block;text-decoration:none;color:inherit" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=costs"><div class="rs-label">Gross profit</div><strong class="rs-value">{{ gross_profit|money }}</strong><div class="rs-note">Gross sales less recorded sale-time FIFO cost, before refunds</div></a>
+    <a class="rs-kpi" style="display:block;text-decoration:none;color:inherit" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=costs"><div class="rs-label">Cost of goods sold</div><strong class="rs-value">{{ total_cogs|money }}</strong><div class="rs-note">Based on POS item cost_at_sale</div></a>
+    <a class="rs-kpi" style="display:block;text-decoration:none;color:inherit" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=payments"><div class="rs-label">Collections</div><strong class="rs-value">{{ total_collections|money }}</strong><div class="rs-note">Positive POS payments recorded against Restaurant shifts</div></a>
+    <a class="rs-kpi" style="display:block;text-decoration:none;color:inherit" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=orders"><div class="rs-label">Walk-in sales</div><strong class="rs-value">{{ walkin_sales|money }}</strong><div class="rs-note">Sales assigned to walk-in folios</div></a>
+    <a class="rs-kpi" style="display:block;text-decoration:none;color:inherit" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=orders"><div class="rs-label">Room charges</div><strong class="rs-value">{{ room_sales|money }}</strong><div class="rs-note">Sales posted to guest room folios</div></a>
+    <a class="rs-kpi" style="display:block;text-decoration:none;color:inherit" href="?from={{ date_from }}&to={{ date_to }}{% if selected_hotel %}&hotel={{ selected_hotel }}{% endif %}&detail=complimentary"><div class="rs-label">Complimentary breakfasts</div><strong class="rs-value">{{ complimentary_count }}</strong><div class="rs-note">Redemptions tracked separately from revenue</div></a>
   </section>
   <section class="rs-panel">
     <h2 class="rs-section">Audit drill-down</h2>
@@ -86,6 +86,16 @@
   </section>
   {% endif %}
   {% if uncosted_quantity %}<div class="rs-alert"><strong>Costing attention:</strong> {{ uncosted_quantity }} sold units have no recorded sale-time unit cost. Gross profit may therefore be overstated until those costs are reconciled.</div>{% endif %}
+  <section class="rs-panel"><h2 class="rs-section">Sales channel reconciliation</h2>
+    <div class="rs-table-wrap"><table class="rs-table"><thead><tr><th>Revenue channel</th><th>Amount</th><th>Explanation</th></tr></thead><tbody>
+      <tr><td>Walk-in folios</td><td>{{ walkin_sales|money }}</td><td>Walk-in POS sales</td></tr>
+      <tr><td>Room folios</td><td>{{ room_sales|money }}</td><td>Guest room charges; collection may occur later</td></tr>
+      <tr><td><strong>Channel total</strong></td><td><strong>{{ sales_channel_total|money }}</strong></td><td>Walk-in plus room revenue</td></tr>
+      <tr><td><strong>Gross POS sales</strong></td><td><strong>{{ gross_sales|money }}</strong></td><td>Original settled/refunded POS orders, excluding complimentary breakfast</td></tr>
+      <tr><td><strong>Difference</strong></td><td><strong>{{ sales_channel_difference|money }}</strong></td><td>{% if sales_channel_difference == 0 %}Revenue channels reconcile to gross sales{% else %}Investigate classification or order totals{% endif %}</td></tr>
+    </tbody></table></div>
+    <p class="rs-muted">Collections are cash actually received through Restaurant shifts, not a direct substitute for sales. Room charges can remain outstanding or be collected later; therefore collections are intentionally not subtracted from gross sales to calculate a balance due.</p>
+  </section>
   <section class="rs-panel"><h2 class="rs-section">Collections by payment method</h2><div class="rs-grid" style="margin:0">
     <div><div class="rs-label">Cash</div><strong class="rs-value">{{ collections.CASH|money }}</strong></div>
     <div><div class="rs-label">POS</div><strong class="rs-value">{{ collections.POS|money }}</strong></div>
