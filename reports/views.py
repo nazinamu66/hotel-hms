@@ -861,6 +861,8 @@ def restaurant_sales_performance(request):
     ).count()
     settled_count = revenue_orders.count()
     refunded_order_count = orders.filter(is_refunded=True).count()
+    sales_channel_total = walkin_sales + room_sales
+    sales_channel_difference = gross_sales - sales_channel_total
     gross_profit = gross_sales - total_cogs
 
     return render(request, "reports/restaurant_sales_performance.html", {
@@ -875,6 +877,8 @@ def restaurant_sales_performance(request):
         "room_sales": room_sales,
         "total_cogs": total_cogs,
         "gross_profit": gross_profit,
+        "sales_channel_total": sales_channel_total,
+        "sales_channel_difference": sales_channel_difference,
         "total_collections": total_collections,
         "collections": collections,
         "settled_count": settled_count,
