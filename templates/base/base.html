@@ -569,13 +569,13 @@
         <!-- MAINTENANCE MANAGEMENT REPORTING -->
         <!-- ========================= -->
         {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
-        <h4 class="menu-toggle {% if request.resolver_match.url_name in maintenance_report_pages %}active-menu{% endif %}"
+        <h4 class="menu-toggle {% if request.resolver_match.url_name in "maintenance_management_overview,maintenance_work_order_analysis,maintenance_cost_analysis" %}active-menu{% endif %}"
             onclick="toggleMenu('maintenance_management_menu', this)">
-            <span class="arrow">{% if request.resolver_match.url_name in maintenance_report_pages %}▾{% else %}▸{% endif %}</span>
+            <span class="arrow">{% if request.resolver_match.url_name in "maintenance_management_overview,maintenance_work_order_analysis,maintenance_cost_analysis" %}▾{% else %}▸{% endif %}</span>
             Maintenance
         </h4>
         {% with maintenance_report_pages="maintenance_management_overview,maintenance_work_order_analysis,maintenance_cost_analysis" %}
-        <div id="maintenance_management_menu" class="menu-section {% if request.resolver_match.url_name in maintenance_report_pages %}open{% endif %}">
+        <div id="maintenance_management_menu" class="menu-section {% if request.resolver_match.url_name in "maintenance_management_overview,maintenance_work_order_analysis,maintenance_cost_analysis" %}open{% endif %}">
             <a href="{% url 'maintenance_management_overview' %}">Management Overview</a>
             <a href="{% url 'maintenance_work_order_analysis' %}">Work Order Analysis</a>
             <a href="{% url 'maintenance_cost_analysis' %}">Cost Analysis</a>
