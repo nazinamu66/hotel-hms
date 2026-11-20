@@ -135,3 +135,78 @@ class RestaurantAccountingReconciliationTests(SimpleTestCase):
         self.assertEqual(sale_row["expected"], Decimal("100.00"))
         self.assertEqual(sale_row["actual"], Decimal("0.00"))
         self.assertEqual(len(entries), 1)
+
+class RestaurantSpoilageDrilldownTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Department, Hotel, Organization, Product
+        from restaurant.models import RestaurantSpoilageRecord
+
+        User = get_user_model()
+        self.org = Organization.objects.create(name="Spoilage Report Org")
+        self.hotel = Hotel.objects.create(organization=self.org, name="Spoilage Report Hotel")
+        self.other_hotel = Hotel.objects.create(organization=self.org, name="Other Spoilage Hotel")
+        self.department = Department.objects.create(
+            hotel=self.hotel, code="RPT", name="Report Restaurant",
+            department_type="RESTAURANT",
+        )
+        self.other_department = Department.objects.create(
+            hotel=self.other_hotel, code="RPO", name="Other Restaurant",
+            department_type="RESTAURANT",
+        )
+        self.manager = User.objects.create_user(
+            username="spoilage_report_manager", password="test-password",
+            role="MANAGER", hotel=self.hotel,
+        )
+        self.product = Product.objects.create(
+            hotel=self.hotel, name="Report Cola", sku="REPORT-COLA",
+            product_type="DRINK", usage_type="RESALE", base_unit="can",
+            price=Decimal("500.00"), cost_price=Decimal("250.00"),
+        )
+        self.record = RestaurantSpoilageRecord.objects.create(
+            product=self.product,
+            department=self.department,
+            quantity=Decimal("2.000"),
+            reason_code="DAMAGED",
+            notes="Can damaged during service",
+            reported_by=self.manager,
+            status="APPROVED",
+            approved_by=self.manager,
+            cost_amount=Decimal("500.00"),
+        )
+        self.other_record = RestaurantSpoilageRecord.objects.create(
+            product=self.product,
+            department=self.other_department,
+            quantity=Decimal("1.000"),
+            reason_code="EXPIRED",
+            reported_by=self.manager,
+        )
+        self.client.force_login(self.manager)
+
+    def test_drilldown_list_is_scoped_to_accessible_hotel(self):
+        response = self.client.get("/reports/restaurant/management/spoilage/records/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"RS-{self.record.pk}")
+        self.assertNotContains(response, f"RS-{self.other_record.pk}")
+
+    def test_detail_shows_record_and_is_scoped_to_accessible_hotel(self):
+        response = self.client.get(
+            f"/reports/restaurant/management/spoilage/records/{self.record.pk}/"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Can damaged during service")
+        self.assertContains(response, "Approved loss value")
+
+        forbidden = self.client.get(
+            f"/reports/restaurant/management/spoilage/records/{self.other_record.pk}/"
+        )
+        self.assertEqual(forbidden.status_code, 404)
+
+    def test_product_filter_returns_only_matching_spoilage_records(self):
+        response = self.client.get(
+            "/reports/restaurant/management/spoilage/records/",
+            {"product": self.product.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"RS-{self.record.pk}")
+
