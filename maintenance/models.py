@@ -573,3 +573,47 @@ class MaintenanceSchedule(models.Model):
             f"{self.asset.name} - "
             f"{self.name}"
         )
+
+class MaintenanceDirectPurchaseRequest(models.Model):
+    """A technician's request to buy a part directly for one work order."""
+
+    STATUS_CHOICES = (
+        ("PENDING", "Pending approval"),
+        ("REJECTED", "Rejected"),
+        ("APPROVED", "Approved — purchase order required"),
+        ("PARTIALLY_RECEIVED", "Partially received"),
+        ("FULFILLED", "Fulfilled"),
+    )
+
+    ticket = models.ForeignKey(
+        MaintenanceTicket, on_delete=models.PROTECT,
+        related_name="direct_purchase_requests",
+    )
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT,
+        related_name="maintenance_direct_purchase_requests",
+    )
+    requested_quantity = models.PositiveIntegerField()
+    reason = models.TextField(blank=True)
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="maintenance_direct_purchase_requests",
+    )
+    status = models.CharField(max_length=24, choices=STATUS_CHOICES, default="PENDING")
+    manager_note = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="reviewed_maintenance_purchase_requests",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    purchase_order = models.OneToOneField(
+        "inventory.PurchaseOrder", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="maintenance_direct_request",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"Direct purchase request #{self.pk} · Work order #{self.ticket_id}"
