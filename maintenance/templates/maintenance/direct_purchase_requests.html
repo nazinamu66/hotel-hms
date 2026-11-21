@@ -1,0 +1,11 @@
+{% extends "base/base.html" %}
+{% block title %}Maintenance Direct Purchases{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+ <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3"><div><h2>Maintenance direct purchases</h2><p class="text-muted mb-0">Requests raised against work orders. Review and approve before supplier pricing and Director approval.</p></div><a class="btn btn-outline-secondary" href="{% url 'maintenance_dashboard' %}">Maintenance</a></div>
+ <div class="table-responsive card"><table class="table table-hover align-middle mb-0"><thead><tr><th>Work order</th><th>Part</th><th>Qty</th><th>Requested by</th><th>Date</th><th>Status</th><th></th></tr></thead><tbody>
+ {% for item in purchase_requests %}<tr><td>#{{ item.ticket_id }}<div class="small text-muted">{% if item.ticket.room_id %}Room {{ item.ticket.room.room_number }}{% else %}{{ item.ticket.location.name }}{% endif %}</div></td><td>{{ item.product.name }}{% if item.reason %}<div class="small text-muted">{{ item.reason|truncatechars:90 }}</div>{% endif %}</td><td>{{ item.requested_quantity }}</td><td>{{ item.requested_by }}</td><td>{{ item.created_at|date:"d M Y H:i" }}</td><td>{{ item.get_status_display }}{% if item.purchase_order_id %}<div class="small"><a href="{% url 'inventory:po_detail' item.purchase_order_id %}">PO #{{ item.purchase_order_id }}</a></div>{% endif %}</td><td>{% if item.status == "PENDING" %}<a class="btn btn-sm btn-primary" href="{% url 'maintenance_direct_purchase_review' item.pk %}">Review</a>{% endif %}</td></tr>
+ {% empty %}<tr><td colspan="7" class="text-center text-muted py-4">No direct purchase requests yet.</td></tr>{% endfor %}
+ </tbody></table></div>
+</div>
+{% endblock %}
