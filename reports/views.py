@@ -1362,9 +1362,6 @@ def housekeeping_inspection_quality(request):
 
     for row in staff_rows:
         row["bar_width"] = row["pass_rate"]
-    for row in hotel_rows:
-        row["passed_width"] = round(row["passed"] / row["inspections"] * 100, 1) if row["inspections"] else 0
-        row["failed_width"] = round(row["failed"] / row["inspections"] * 100, 1) if row["inspections"] else 0
 
     # Daily columns for shorter periods; weekly columns for longer periods.
     trend_days = (date_to - date_from).days + 1
@@ -1405,6 +1402,10 @@ def housekeeping_inspection_quality(request):
             "passed": hotel_passed, "failed": hotel_failed,
             "pass_rate": round(hotel_passed / len(hotel_inspections) * 100, 1) if hotel_inspections else None,
         })
+
+    for row in hotel_rows:
+        row["passed_width"] = round(row["passed"] / row["inspections"] * 100, 1) if row["inspections"] else 0
+        row["failed_width"] = round(row["failed"] / row["inspections"] * 100, 1) if row["inspections"] else 0
 
     context = {
         "hotels": report_hotels, "selected_hotel": selected_hotel,
