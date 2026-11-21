@@ -763,6 +763,13 @@ class PurchaseOrder(models.Model):
         )
         receipt_reference = f"PO-{po.pk}-REC-{receipt.pk}"
 
+        # A maintenance direct-purchase PO is expensed against its work order.
+        # It must never increase department stock or create FIFO cost layers.
+        from maintenance.models import MaintenanceDirectPurchaseRequest, MaintenanceMaterial
+        direct_request = MaintenanceDirectPurchaseRequest.objects.select_related(
+            "ticket", "product"
+        ).filter(purchase_order_id=po.pk).first()
+
         for item in items:
             quantity = normalized[item.pk]
             if quantity <= 0:
@@ -776,6 +783,29 @@ class PurchaseOrder(models.Model):
             )
 
             product = item.product
+            if direct_request:
+                if product.pk != direct_request.product_id or product.product_type == "EQUIPMENT" or product.usage_type != "INTERNAL":
+                    raise ValidationError("Direct maintenance purchase orders may contain only the requested internal consumable.")
+                if not po.supplier_id or po.supplier.hotel_id != po.department.hotel_id:
+                    raise ValidationError("Select a supplier belonging to this hotel before receiving a direct purchase.")
+                multiplier = Decimal(product.unit_multiplier or 1)
+                if multiplier <= 0 or item.unit_cost <= 0:
+                    raise ValidationError(f"{product.name} must have a positive unit cost and valid unit conversion.")
+                base_quantity = Decimal(quantity) * multiplier
+                material = MaintenanceMaterial.objects.create(
+                    ticket=direct_request.ticket,
+                    product=product,
+                    source="DIRECT",
+                    quantity=base_quantity,
+                    unit_cost=Decimal(item.unit_cost) / multiplier,
+                    supplier=po.supplier,
+                    description=f"Direct purchase receipt {receipt_reference}",
+                    created_by=user,
+                )
+                from accounting.services.postings.maintenance import post_maintenance_direct_material_receipt
+                post_maintenance_direct_material_receipt(material, user=user)
+                continue
+
             if product.product_type == "EQUIPMENT":
                 if product.usage_type != "ASSET" or product.unit_multiplier != 1:
                     raise ValidationError(
@@ -882,7 +912,11 @@ class PurchaseOrder(models.Model):
             po.received_at = timezone.now()
         po.save(update_fields=["status", "received_at"])
 
-        post_inventory_receipt(receipt)
+        if direct_request:
+            direct_request.status = "FULFILLED" if all_received else "PARTIALLY_RECEIVED"
+            direct_request.save(update_fields=["status"])
+        else:
+            post_inventory_receipt(receipt)
         self.status = po.status
         self.received_at = po.received_at
         return receipt
