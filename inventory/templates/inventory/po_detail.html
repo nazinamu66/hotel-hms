@@ -558,6 +558,10 @@ Purchase Order #{{ po.id }}
                 Manage this purchase order through preparation,
                 approval, payment and receipt.
             </p>
+            {% if po.maintenance_direct_request %}
+                <p style="margin-top:9px"><strong>Direct work-order purchase</strong> ·
+                <a href="{% url 'maintenance_ticket_detail' po.maintenance_direct_request.ticket_id %}">Work Order #{{ po.maintenance_direct_request.ticket_id }}</a></p>
+            {% endif %}
         </div>
 
         <a
