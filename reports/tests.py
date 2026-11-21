@@ -784,6 +784,12 @@ class HousekeepingManagementOverviewTests(TestCase):
         self.assertEqual(response.context["first_fail_count"], 1)
         self.assertEqual(len(response.context["recurring_rooms"]), 1)
         self.assertEqual(response.context["staff_rows"][0]["rework_count"], 2)
+        self.assertTrue(response.context["trend_rows"])
+        self.assertEqual(sum(row["total"] for row in response.context["trend_rows"]), 3)
+        bathroom = next(row for row in response.context["checklist_rows"] if row["key"] == "bathroom_clean")
+        self.assertEqual(bathroom["bar_width"], 100)
+        hotel_row = response.context["hotel_rows"][0]
+        self.assertEqual(hotel_row["passed_width"] + hotel_row["failed_width"], 100)
 
     def test_inspection_quality_rejects_hotel_outside_manager_scope(self):
         response = self.client.get(
