@@ -152,7 +152,7 @@ def dashboard(request):
     timer_assignments = list(active_assignments.filter(status="IN_PROGRESS"))
     timer_warnings = [
         item for item in timer_assignments
-        if item.warning_sent_at and not item.overdue_alert_sent_at
+        if item.warning_sent_at and not item.overdue_alert_sent_at and not item.time_extensions.exists()
     ]
     overdue_cleanings = [
         item for item in timer_assignments
