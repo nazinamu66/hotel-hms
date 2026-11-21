@@ -140,3 +140,34 @@ def post_maintenance_labour(
     )
 
     return journal_entry
+
+
+@transaction.atomic
+def post_maintenance_direct_material_receipt(material, user=None):
+    """Recognize a work-order direct purchase only when goods are received."""
+    if material.source != "DIRECT":
+        raise ValidationError("Only DIRECT maintenance materials can use direct-purchase posting.")
+    if not material.supplier_id:
+        raise ValidationError("A direct-purchase material must identify its supplier.")
+    hotel = _get_maintenance_ticket_hotel(material.ticket)
+    if material.supplier.hotel_id != hotel.id:
+        raise ValidationError("Supplier does not belong to the maintenance ticket's hotel.")
+    amount = Decimal(str(material.quantity)) * Decimal(str(material.unit_cost))
+    if amount <= 0:
+        raise ValidationError("Direct-purchase material cost must be greater than zero.")
+    journal_entry = record_transaction(
+        debit_system_key="maintenance_expense",
+        credit_system_key="accounts_payable",
+        amount=amount,
+        description=f"Direct maintenance material received for Ticket #{material.ticket_id}",
+        hotel=hotel,
+        created_by=user or material.created_by,
+        entry_type="MAINTENANCE",
+        reference=f"MAINT-{material.ticket_id}-DIRECT-{material.pk}",
+    )
+    SupplierLedger.objects.get_or_create(
+        supplier=material.supplier,
+        journal_entry=journal_entry,
+        defaults={"amount": amount, "entry_type": "credit"},
+    )
+    return journal_entry
