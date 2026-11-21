@@ -472,6 +472,17 @@
 
         {% endif %}
 
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
+        <h4 class="menu-toggle {% if request.resolver_match.url_name == 'housekeeping_management_overview' %}active-menu{% endif %}"
+            onclick="toggleMenu('housekeeping_management_menu', this)">
+            <span class="arrow">▸</span>
+            Housekeeping Reports
+        </h4>
+        <div id="housekeeping_management_menu" class="menu-section {% if request.resolver_match.url_name == 'housekeeping_management_overview' %}open{% endif %}">
+            <a href="{% url 'housekeeping_management_overview' %}">Management Overview</a>
+        </div>
+        {% endif %}
+
     
 
 
