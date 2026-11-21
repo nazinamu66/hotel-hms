@@ -1985,7 +1985,7 @@ def department_incoming_pos(request):
             department=department,
             status__in=("APPROVED", "PARTIALLY_RECEIVED"),
         )
-        .select_related("supplier")
+        .select_related("supplier", "maintenance_direct_request__ticket")
         .prefetch_related("items__product", "items__receipt_lines")
         .order_by("approved_at", "id")
     )
