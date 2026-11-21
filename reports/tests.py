@@ -647,3 +647,75 @@ class LaundryReportScopeTests(SimpleTestCase):
         with patch("accounts.services.access.get_accessible_hotels", return_value=hotels):
             with self.assertRaises(PermissionDenied):
                 _laundry_report_scope(request)
+
+
+class HousekeepingManagementOverviewTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Hotel, Organization, Department
+        from rooms.models import Room, RoomCategory
+        from housekeeping.models import CleaningAssignment, CleaningLog, CleaningInspection
+        from django.utils import timezone
+        from datetime import timedelta
+
+        User = get_user_model()
+        organization = Organization.objects.create(name="Housekeeping Report Org")
+        self.hotel = Hotel.objects.create(organization=organization, name="Housekeeping Report Hotel")
+        self.other_hotel = Hotel.objects.create(organization=organization, name="Other Housekeeping Hotel")
+        self.manager = User.objects.create_user(
+            username="housekeeping_report_manager", password="test-password",
+            role="MANAGER", hotel=self.hotel,
+        )
+        self.staff = User.objects.create_user(
+            username="housekeeping_report_staff", password="test-password",
+            role="HOUSEKEEPING", hotel=self.hotel,
+        )
+        self.hk_department = Department.objects.create(
+            hotel=self.hotel, code="HKR", name="Housekeeping Report Department",
+            department_type="HOUSEKEEPING",
+        )
+        self.staff.department = self.hk_department
+        self.staff.save(update_fields=["department"])
+        category = RoomCategory.objects.create(name="Housekeeping Report Category")
+        self.room = Room.objects.create(
+            hotel=self.hotel, room_number="R-101", category=category, status="VACANT_DIRTY",
+        )
+        self.other_room = Room.objects.create(
+            hotel=self.other_hotel, room_number="R-201", category=category, status="VACANT_DIRTY",
+        )
+        assignment = CleaningAssignment.objects.create(
+            room=self.room, assigned_to=self.staff, assigned_by=self.manager,
+            status="DONE", started_at=timezone.now() - timedelta(minutes=30),
+            completed_at=timezone.now() - timedelta(minutes=5),
+        )
+        CleaningLog.objects.create(
+            room=self.room, cleaned_by=self.staff, previous_status="VACANT_DIRTY",
+            assignment=assignment,
+        )
+        CleaningInspection.objects.create(
+            assignment=assignment, inspected_by=self.manager, result="PASS",
+            checklist={"bed_made": True},
+        )
+        self.client.force_login(self.manager)
+
+    def test_management_overview_shows_room_release_and_inspection_metrics(self):
+        response = self.client.get("/reports/housekeeping/management/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Housekeeping Performance")
+        self.assertEqual(response.context["total_rooms"], 1)
+        self.assertEqual(response.context["dirty_count"], 1)
+        self.assertEqual(response.context["released_count"], 1)
+        self.assertEqual(response.context["passed_count"], 1)
+        self.assertEqual(response.context["pass_rate"], 100.0)
+        self.assertNotContains(response, "R-201")
+
+    def test_manager_cannot_filter_to_another_hotel(self):
+        response = self.client.get(
+            "/reports/housekeeping/management/", {"hotel": self.other_hotel.pk}
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_housekeeping_head_cannot_open_management_report(self):
+        self.client.force_login(self.staff)
+        response = self.client.get("/reports/housekeeping/management/")
+        self.assertEqual(response.status_code, 403)
