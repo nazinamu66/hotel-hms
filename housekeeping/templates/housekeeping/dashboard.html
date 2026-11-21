@@ -73,6 +73,19 @@
 .hk-head-dashboard .hk-quick-links a{padding:10px 13px!important;border-radius:10px!important;background:#fff!important;border-color:#dbe4f0!important;color:#334155!important}
 .hk-head-dashboard .hk-quick-links a:hover{background:#eff6ff!important;color:#1d4ed8!important}
 @media(max-width:700px){.hk-head-dashboard .hk-hero{padding:18px!important}.hk-head-dashboard .hk-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}.hk-head-dashboard table{display:block!important;overflow-x:auto!important}}
+
+/* Room timer extension controls */
+.hk-head-dashboard .hk-extension-form{display:grid;grid-template-columns:minmax(118px,.8fr) minmax(165px,1.25fr) auto;align-items:center;gap:8px;min-width:330px;margin:0}
+.hk-head-dashboard .hk-extension-form select,
+.hk-head-dashboard .hk-extension-form input{width:100%;min-height:40px;margin:0;padding:9px 11px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#1e293b;font:inherit;font-size:.84rem;outline:none;box-sizing:border-box;transition:border-color .15s,box-shadow .15s}
+.hk-head-dashboard .hk-extension-form select:focus,
+.hk-head-dashboard .hk-extension-form input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.13)}
+.hk-head-dashboard .hk-extension-form input::placeholder{color:#94a3b8}
+.hk-head-dashboard .hk-extension-form button{min-height:40px;padding:9px 14px;border:0;border-radius:9px;background:#2563eb;color:#fff;font-size:.84rem;font-weight:750;white-space:nowrap;cursor:pointer;box-shadow:0 2px 5px rgba(37,99,235,.16);transition:background .15s,transform .15s}
+.hk-head-dashboard .hk-extension-form button:hover{background:#1d4ed8;transform:translateY(-1px)}
+.hk-head-dashboard .hk-extension-form button:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}
+.hk-head-dashboard .hk-timer-available{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;background:#f1f5f9;color:#64748b;font-size:.8rem;font-weight:650;white-space:nowrap}
+@media(max-width:1050px){.hk-head-dashboard .hk-extension-form{grid-template-columns:1fr;min-width:155px}.hk-head-dashboard .hk-extension-form button{width:100%}}
 </style>
 <div class="hk-head-dashboard">
 <div class="hk-hero">
@@ -299,8 +312,8 @@
 </td>
 <td>
 {% if assignment.warning_sent_at or assignment.overdue_alert_sent_at %}
-<form method="post" action="{% url 'housekeeping_extend_cleaning_time' assignment.id %}">{% csrf_token %}<select name="minutes"><option value="10">+10 minutes</option><option value="20">+20 minutes</option><option value="30">+30 minutes</option></select><input name="reason" placeholder="Reason for extension" required style="max-width:180px"><button type="submit">Approve</button></form>
-{% else %}<span style="color:#94a3b8;">Available at warning</span>{% endif %}
+<form class="hk-extension-form" method="post" action="{% url 'housekeeping_extend_cleaning_time' assignment.id %}">{% csrf_token %}<select name="minutes" aria-label="Additional cleaning time"><option value="10">+10 minutes</option><option value="20">+20 minutes</option><option value="30">+30 minutes</option></select><input name="reason" placeholder="Reason for extension" aria-label="Reason for extension" required><button type="submit">Approve extension</button></form>
+{% else %}<span class="hk-timer-available">Available at warning</span>{% endif %}
 </td>
 </tr>
 {% endfor %}
