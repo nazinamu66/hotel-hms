@@ -1407,6 +1407,37 @@ def housekeeping_inspection_quality(request):
         row["passed_width"] = round(row["passed"] / row["inspections"] * 100, 1) if row["inspections"] else 0
         row["failed_width"] = round(row["failed"] / row["inspections"] * 100, 1) if row["inspections"] else 0
 
+    for row in hotel_rows:
+        row["released_width"] = round(row["released"] / row["assigned"] * 100, 1) if row["assigned"] else 0
+        row["rework_width"] = round(row["rework"] / row["assigned"] * 100, 1) if row["assigned"] else 0
+
+    # Assignment and release activity trend. Buckets are daily up to 31 days,
+    # then weekly to keep the chart readable for longer report periods.
+    trend_days = (date_to - date_from).days + 1
+    bucket_days = 1 if trend_days <= 31 else 7
+    trend = {}
+    cursor = date_from
+    while cursor <= date_to:
+        bucket_start = date_from + timedelta(days=((cursor - date_from).days // bucket_days) * bucket_days)
+        trend[bucket_start] = {"date": bucket_start, "assigned": 0, "released": 0}
+        cursor += timedelta(days=1)
+    for assignment in assignments:
+        day = timezone.localtime(assignment.assigned_at).date()
+        bucket_start = date_from + timedelta(days=((day - date_from).days // bucket_days) * bucket_days)
+        if bucket_start in trend:
+            trend[bucket_start]["assigned"] += 1
+    for log in logs:
+        day = timezone.localtime(log.cleaned_at).date()
+        bucket_start = date_from + timedelta(days=((day - date_from).days // bucket_days) * bucket_days)
+        if bucket_start in trend:
+            trend[bucket_start]["released"] += 1
+    trend_rows = list(trend.values())
+    max_trend = max((max(row["assigned"], row["released"]) for row in trend_rows), default=0)
+    for row in trend_rows:
+        row["assigned_height"] = round(row["assigned"] / max_trend * 100) if max_trend else 0
+        row["released_height"] = round(row["released"] / max_trend * 100) if max_trend else 0
+        row["label"] = row["date"].strftime("%d %b")
+
     context = {
         "hotels": report_hotels, "selected_hotel": selected_hotel,
         "date_from": date_from.isoformat(), "date_to": date_to.isoformat(),
@@ -1547,6 +1578,12 @@ def housekeeping_staff_productivity(request):
         staff_rows.append(bucket)
 
     staff_rows.sort(key=lambda row: (-row["released"], row["staff"].get_full_name() or row["staff"].username))
+    max_released = max((row["released"] for row in staff_rows), default=0)
+    for row in staff_rows:
+        row["released_width"] = round(row["released"] / max_released * 100) if max_released else 0
+        row["assigned_width"] = round(row["assigned"] / max_released * 100) if max_released else 0
+    chart_staff_rows = staff_rows[:10]
+
     total_assigned = sum(row["assigned"] for row in staff_rows)
     total_released = sum(row["released"] for row in staff_rows)
     total_rework = sum(row["rework_count"] for row in staff_rows)
@@ -1588,6 +1625,8 @@ def housekeeping_staff_productivity(request):
         "on_time_rate": round(total_on_time / total_timed * 100, 1) if total_timed else None,
         "total_extensions": total_extensions, "total_extension_minutes": total_extension_minutes,
         "active_assignments": active_assignments,
+        "chart_staff_rows": chart_staff_rows, "trend_rows": trend_rows,
+        "trend_bucket_label": "Daily" if bucket_days == 1 else "Weekly",
     }
     return render(request, "reports/housekeeping_staff_productivity.html", context)
 
