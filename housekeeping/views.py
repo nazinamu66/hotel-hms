@@ -85,6 +85,11 @@ def dashboard(request):
     # ROOM COUNTS
     # ---------------------------------------------------------
 
+    assigned_room_ids = CleaningAssignment.objects.filter(
+        room__hotel__in=hotels,
+        status__in=("ASSIGNED", "IN_PROGRESS", "INSPECTION"),
+    ).values_list("room_id", flat=True)
+
     dirty_rooms = (
         Room.objects
         .filter(
@@ -94,6 +99,7 @@ def dashboard(request):
                 "OCCUPIED_DIRTY",
             ],
         )
+        .exclude(pk__in=assigned_room_ids)
         .select_related("hotel")
         .order_by(
             "hotel__name",
