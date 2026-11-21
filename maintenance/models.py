@@ -590,9 +590,11 @@ class MaintenanceDirectPurchaseRequest(models.Model):
         related_name="direct_purchase_requests",
     )
     product = models.ForeignKey(
-        Product, on_delete=models.PROTECT,
+        Product, on_delete=models.PROTECT, null=True, blank=True,
         related_name="maintenance_direct_purchase_requests",
     )
+    requested_item_name = models.CharField(max_length=150, blank=True)
+    requested_unit = models.CharField(max_length=20, default="pcs")
     requested_quantity = models.PositiveIntegerField()
     reason = models.TextField(blank=True)
     requested_by = models.ForeignKey(
