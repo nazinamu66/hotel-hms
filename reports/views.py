@@ -1996,3 +1996,176 @@ def maintenance_supplier_analysis(request):
         "entry_page": entry_page,
     }
     return render(request, "reports/maintenance_supplier_analysis.html", context)
+
+
+# ---------------------------------------------------------------------------
+# LAUNDRY MANAGEMENT REPORTING
+# Read-only reports built from Laundry, Linen and Guest Laundry records.
+# ---------------------------------------------------------------------------
+def _laundry_report_scope(request):
+    from django.core.exceptions import PermissionDenied
+    from django.utils.dateparse import parse_date
+    from accounts.services.access import get_accessible_hotels
+
+    hotels = get_accessible_hotels(request.user).order_by("name")
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not hotels.filter(pk=int(selected_hotel)).exists():
+            raise PermissionDenied("You do not have access to this hotel.")
+        hotels = hotels.filter(pk=int(selected_hotel))
+
+    return hotels, selected_hotel, date_from, date_to
+
+
+def _laundry_report_context(hotels, selected_hotel, date_from, date_to, title, subtitle):
+    return {
+        "hotels": hotels,
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "report_title": title,
+        "report_subtitle": subtitle,
+    }
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def laundry_management_overview(request):
+    from decimal import Decimal
+    from collections import defaultdict
+    from laundry.models import LaundryReceipt, LaundryReceiptDiscrepancy, LaundryProcessing, LaundryProcessingMaterial, GuestLaundryOrder
+    from linen.models import LinenItem, LinenTransaction
+    from linen.services.balances import get_linen_condition_balance
+
+    hotels, selected_hotel, date_from, date_to = _laundry_report_scope(request)
+    context = _laundry_report_context(
+        hotels, selected_hotel, date_from, date_to,
+        "Laundry Management Overview",
+        "Department performance, linen custody, processing activity and guest laundry revenue.",
+    )
+    receipts = LaundryReceipt.objects.filter(
+        linen_item__product__hotel__in=hotels,
+        created_at__date__range=(date_from, date_to),
+    )
+    processings = LaundryProcessing.objects.filter(
+        hotel__in=hotels, created_at__date__range=(date_from, date_to),
+    ).select_related("hotel")
+    orders = GuestLaundryOrder.objects.filter(
+        folio__hotel__in=hotels, created_at__date__range=(date_from, date_to),
+    ).select_related("folio", "folio__hotel")
+    materials = LaundryProcessingMaterial.objects.filter(
+        processing__in=processings,
+    )
+    discrepancies = LaundryReceiptDiscrepancy.objects.filter(
+        receipt__in=receipts,
+    )
+    processed_linen = LinenTransaction.objects.filter(
+        linen_item__product__hotel__in=hotels,
+        event_type="PROCESSED",
+        created_at__date__range=(date_from, date_to),
+    )
+
+    context.update({
+        "receipt_count": receipts.count(),
+        "pending_receipts": receipts.filter(status__in=("PENDING", "DISCREPANCY_PENDING")).count(),
+        "confirmed_receipts": receipts.filter(status__in=("RECEIVED", "DISCREPANCY_RESOLVED")).count(),
+        "discrepancy_count": discrepancies.filter(status="OPEN").count(),
+        "processed_linen_qty": sum(row.quantity for row in processed_linen),
+        "processing_count": processings.count(),
+        "guest_orders": orders.count(),
+        "guest_orders_pending": orders.exclude(status__in=("DELIVERED", "CANCELLED")).count(),
+        "guest_revenue": orders.filter(status="DELIVERED").aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00"),
+        "consumables_cost": materials.aggregate(total=Sum("total_cost"))["total"] or Decimal("0.00"),
+    })
+
+    linen_rows = []
+    hotel_rows = []
+    for hotel in hotels:
+        hotel_items = LinenItem.objects.filter(product__hotel=hotel, is_active=True).select_related("product")
+        clean = dirty = 0
+        for item in hotel_items:
+            balance = get_linen_condition_balance(item, "LAUNDRY")
+            clean += balance["CLEAN"]
+            dirty += balance["DIRTY"]
+        hotel_rows.append({"hotel": hotel, "clean": clean, "dirty": dirty, "total": clean + dirty})
+        for item in hotel_items:
+            balance = get_linen_condition_balance(item, "LAUNDRY")
+            if balance["CLEAN"] or balance["DIRTY"]:
+                linen_rows.append({"hotel": hotel, "item": item, "clean": balance["CLEAN"], "dirty": balance["DIRTY"]})
+    context["hotel_rows"] = hotel_rows
+    context["linen_rows"] = linen_rows[:100]
+    context["monthly_rows"] = list(
+        processings.extra(select={"month": "strftime('%%Y-%%m', laundry_laundryprocessing.created_at)"}).values("month").annotate(entries=Count("id")).order_by("month")
+    )
+    return render(request, "reports/laundry_management_report.html", context)
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def laundry_production_analysis(request):
+    from laundry.models import LaundryProcessing, GuestLaundryOrder
+    from linen.models import LinenTransaction
+
+    hotels, selected_hotel, date_from, date_to = _laundry_report_scope(request)
+    processings = LaundryProcessing.objects.filter(hotel__in=hotels, created_at__date__range=(date_from, date_to)).select_related("hotel", "linen_item__product", "guest_order")
+    transactions = LinenTransaction.objects.filter(linen_item__product__hotel__in=hotels, event_type="PROCESSED", created_at__date__range=(date_from, date_to)).select_related("linen_item__product")
+    orders = GuestLaundryOrder.objects.filter(folio__hotel__in=hotels, created_at__date__range=(date_from, date_to)).select_related("folio__hotel")
+    rows = [{"date": p.created_at, "hotel": p.hotel.name, "type": p.get_processing_type_display(), "subject": p.linen_item.product.name if p.linen_item_id else str(p.guest_order), "staff": p.performed_by, "reference": p.reference} for p in processings]
+    qty_rows = list(transactions.values("linen_item__product__name").annotate(quantity=Sum("quantity")).order_by("-quantity"))
+    context = _laundry_report_context(hotels, selected_hotel, date_from, date_to, "Laundry Production & Productivity", "Recorded linen processing events and Guest Laundry order throughput.")
+    context.update({"processing_count": processings.count(), "hotel_linen_qty": sum(x.quantity for x in transactions), "guest_order_count": orders.count(), "delivered_orders": orders.filter(status="DELIVERED").count(), "pending_orders": orders.exclude(status__in=("DELIVERED", "CANCELLED")).count(), "processing_rows": rows[:150], "quantity_rows": qty_rows})
+    return render(request, "reports/laundry_management_report.html", context)
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def laundry_linen_movement_analysis(request):
+    from laundry.models import LaundryReceipt, LaundryReceiptDiscrepancy
+    from linen.models import LinenTransaction
+
+    hotels, selected_hotel, date_from, date_to = _laundry_report_scope(request)
+    transactions = LinenTransaction.objects.filter(linen_item__product__hotel__in=hotels, created_at__date__range=(date_from, date_to)).select_related("linen_item__product", "performed_by")
+    receipts = LaundryReceipt.objects.filter(linen_item__product__hotel__in=hotels, created_at__date__range=(date_from, date_to)).select_related("linen_item__product", "returned_by", "received_by")
+    discrepancies = LaundryReceiptDiscrepancy.objects.filter(receipt__in=receipts).select_related("receipt__linen_item__product", "resolved_by")
+    loss_events = transactions.filter(event_type__in=("LOST", "DAMAGED", "WRITTEN_OFF"))
+    movement_rows = [{"date": x.created_at, "item": x.linen_item.product.name, "event": x.get_event_type_display(), "quantity": x.quantity, "from": x.get_from_location_display() if x.from_location else "—", "to": x.get_to_location_display() if x.to_location else "—", "staff": x.performed_by} for x in transactions]
+    discrepancy_rows = [{"date": x.created_at, "item": x.receipt.linen_item.product.name, "condition": x.get_condition_display(), "quantity": x.quantity, "status": x.get_status_display(), "resolution": x.get_resolution_display() if x.resolution else "—"} for x in discrepancies]
+    context = _laundry_report_context(hotels, selected_hotel, date_from, date_to, "Linen Movement & Loss Analysis", "Movement ledger, handover discrepancies and recorded linen loss or damage.")
+    context.update({"transaction_count": transactions.count(), "received_receipts": receipts.filter(status__in=("RECEIVED", "DISCREPANCY_RESOLVED")).count(), "open_discrepancies": discrepancies.filter(status="OPEN").count(), "lost_qty": sum(x.quantity for x in loss_events.filter(event_type="LOST")), "damaged_qty": sum(x.quantity for x in loss_events.filter(event_type="DAMAGED")), "written_off_qty": sum(x.quantity for x in loss_events.filter(event_type="WRITTEN_OFF")), "movement_rows": movement_rows[:200], "discrepancy_rows": discrepancy_rows[:100]})
+    return render(request, "reports/laundry_management_report.html", context)
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def laundry_cost_analysis(request):
+    from decimal import Decimal
+    from laundry.models import LaundryProcessing, LaundryProcessingMaterial, GuestLaundryOrder
+
+    hotels, selected_hotel, date_from, date_to = _laundry_report_scope(request)
+    processings = LaundryProcessing.objects.filter(hotel__in=hotels, created_at__date__range=(date_from, date_to))
+    material_rows = LaundryProcessingMaterial.objects.filter(processing__in=processings).select_related("product", "processing__hotel")
+    guest_orders = GuestLaundryOrder.objects.filter(folio__hotel__in=hotels, created_at__date__range=(date_from, date_to))
+    cost_by_product = list(material_rows.values("product__name").annotate(quantity=Sum("quantity"), cost=Sum("total_cost")).order_by("-cost"))
+    context = _laundry_report_context(hotels, selected_hotel, date_from, date_to, "Laundry Cost Analysis", "Recorded operational consumables cost and completed Guest Laundry service value.")
+    context.update({"consumables_cost": material_rows.aggregate(total=Sum("total_cost"))["total"] or Decimal("0.00"), "guest_revenue": guest_orders.filter(status="DELIVERED").aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00"), "guest_orders": guest_orders.count(), "cost_rows": cost_by_product, "cost_register": [{"date": x.processing.created_at, "hotel": x.processing.hotel.name, "processing": x.processing_id, "product": x.product.name, "quantity": x.quantity, "cost": x.total_cost} for x in material_rows.order_by("-created_at")[:150]]})
+    return render(request, "reports/laundry_management_report.html", context)
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def laundry_service_quality_analysis(request):
+    from laundry.models import LaundryReceipt, LaundryReceiptDiscrepancy, GuestLaundryOrder
+
+    hotels, selected_hotel, date_from, date_to = _laundry_report_scope(request)
+    receipts = LaundryReceipt.objects.filter(linen_item__product__hotel__in=hotels, created_at__date__range=(date_from, date_to))
+    discrepancies = LaundryReceiptDiscrepancy.objects.filter(receipt__in=receipts)
+    orders = GuestLaundryOrder.objects.filter(folio__hotel__in=hotels, created_at__date__range=(date_from, date_to))
+    delivered = orders.filter(status="DELIVERED", created_at__isnull=False, delivered_at__isnull=False)
+    durations = [(x.delivered_at - x.created_at).total_seconds() / 3600 for x in delivered if x.delivered_at and x.created_at]
+    avg_hours = round(sum(durations) / len(durations), 1) if durations else None
+    status_rows = list(orders.values("status").annotate(count=Count("id")).order_by("status"))
+    discrepancy_rows = [{"date": x.created_at, "item": x.receipt.linen_item.product.name, "condition": x.get_condition_display(), "quantity": x.quantity, "status": x.get_status_display(), "outcome": x.get_resolution_display() if x.resolution else "Pending"} for x in discrepancies.select_related("receipt__linen_item__product")]
+    context = _laundry_report_context(hotels, selected_hotel, date_from, date_to, "Laundry Quality & Service", "Guest order turnaround and recorded linen handover discrepancies.")
+    context.update({"guest_orders": orders.count(), "delivered_orders": delivered.count(), "average_turnaround_hours": avg_hours, "receipt_discrepancies": discrepancies.count(), "open_discrepancies": discrepancies.filter(status="OPEN").count(), "status_rows": status_rows, "discrepancy_rows": discrepancy_rows[:150]})
+    return render(request, "reports/laundry_management_report.html", context)
