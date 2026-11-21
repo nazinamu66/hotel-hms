@@ -1214,6 +1214,114 @@ def restaurant_spoilage_analysis(request):
         "record_count": records.count(),
     })
 
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def housekeeping_management_overview(request):
+    """Read-only, hotel-scoped overview of Housekeeping operations."""
+    from django.core.exceptions import PermissionDenied
+    from django.db.models import Count, Sum
+    from django.utils.dateparse import parse_date
+    from accounts.services.access import get_accessible_hotels
+    from housekeeping.models import CleaningAssignment, CleaningLog, CleaningInspection, CleaningMaterialUsage, LostFoundItem
+    from rooms.models import Room, RoomAmenity
+    from inventory.models import Department, Stock
+
+    accessible_hotels = get_accessible_hotels(request.user).filter(is_active=True)
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    report_hotels = accessible_hotels.order_by("name")
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not accessible_hotels.filter(pk=int(selected_hotel)).exists():
+            raise PermissionDenied("You do not have access to this hotel.")
+        report_hotels = report_hotels.filter(pk=int(selected_hotel))
+
+    rooms = Room.objects.filter(hotel__in=report_hotels).select_related("hotel")
+    room_status = {row["status"]: row["total"] for row in rooms.values("status").annotate(total=Count("id"))}
+    dirty_count = room_status.get("VACANT_DIRTY", 0) + room_status.get("OCCUPIED_DIRTY", 0)
+
+    active_assignments = CleaningAssignment.objects.filter(
+        room__hotel__in=report_hotels,
+        status__in=("ASSIGNED", "IN_PROGRESS", "INSPECTION"),
+    ).select_related("room", "room__hotel", "assigned_to").order_by("room__hotel__name", "room__room_number")
+    assigned_count = active_assignments.filter(status="ASSIGNED").count()
+    in_progress_count = active_assignments.filter(status="IN_PROGRESS").count()
+    inspection_count = active_assignments.filter(status="INSPECTION").count()
+    overdue_count = active_assignments.filter(status="IN_PROGRESS", cleaning_deadline_at__lt=timezone.now()).count()
+
+    period_assignments = CleaningAssignment.objects.filter(room__hotel__in=report_hotels, assigned_at__date__range=(date_from, date_to))
+    cleaning_logs = CleaningLog.objects.filter(
+        room__hotel__in=report_hotels, cleaned_at__date__range=(date_from, date_to)
+    ).select_related("room", "room__hotel", "cleaned_by").order_by("-cleaned_at")
+    inspections = CleaningInspection.objects.filter(
+        assignment__room__hotel__in=report_hotels, inspected_at__date__range=(date_from, date_to)
+    ).select_related("assignment__room", "assignment__room__hotel", "inspected_by")
+    passed_count = inspections.filter(result="PASS").count()
+    failed_count = inspections.filter(result="FAIL").count()
+    inspection_total = inspections.count()
+
+    material_usage = CleaningMaterialUsage.objects.filter(
+        assignment__room__hotel__in=report_hotels, recorded_at__date__range=(date_from, date_to)
+    ).select_related("assignment__room", "assignment__room__hotel", "product", "recorded_by")
+    material_totals = list(material_usage.values("product__name", "product__base_unit").annotate(
+        quantity=Sum("quantity")
+    ).order_by("-quantity", "product__name")[:20])
+
+    hk_departments = Department.objects.filter(hotel__in=report_hotels, department_type="HOUSEKEEPING", is_active=True)
+    stock_rows = Stock.objects.filter(
+        department__in=hk_departments, product__is_active=True, product__usage_type="INTERNAL"
+    ).select_related("product", "department", "department__hotel")
+    low_stock_rows = [row for row in stock_rows if row.quantity <= row.product.reorder_level]
+
+    amenity_exceptions = RoomAmenity.objects.filter(room__hotel__in=report_hotels).exclude(status="AVAILABLE").select_related(
+        "room", "room__hotel", "amenity"
+    ).order_by("room__hotel__name", "room__room_number", "amenity__name")
+
+    lost_found = LostFoundItem.objects.filter(
+        hotel__in=report_hotels, found_at__date__range=(date_from, date_to)
+    ).select_related("hotel", "room", "found_by")
+    open_lost_found = LostFoundItem.objects.filter(hotel__in=report_hotels, status="FOUND").count()
+
+    hotel_rows = []
+    for hotel in report_hotels:
+        hotel_rooms = rooms.filter(hotel=hotel)
+        hotel_assignments = active_assignments.filter(room__hotel=hotel)
+        hotel_rows.append({
+            "hotel": hotel, "rooms": hotel_rooms.count(),
+            "dirty": hotel_rooms.filter(status__in=("VACANT_DIRTY", "OCCUPIED_DIRTY")).count(),
+            "assigned": hotel_assignments.filter(status="ASSIGNED").count(),
+            "in_progress": hotel_assignments.filter(status="IN_PROGRESS").count(),
+            "inspection": hotel_assignments.filter(status="INSPECTION").count(),
+            "released": CleaningLog.objects.filter(room__hotel=hotel, cleaned_at__date__range=(date_from, date_to)).count(),
+        })
+
+    context = {
+        "hotels": report_hotels, "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(), "date_to": date_to.isoformat(),
+        "total_rooms": rooms.count(), "dirty_count": dirty_count,
+        "available_count": room_status.get("AVAILABLE", 0), "occupied_count": room_status.get("OCCUPIED", 0),
+        "out_of_order_count": room_status.get("OUT_OF_ORDER", 0),
+        "assigned_count": assigned_count, "in_progress_count": in_progress_count,
+        "inspection_count": inspection_count, "overdue_count": overdue_count,
+        "assigned_in_period": period_assignments.count(), "released_count": cleaning_logs.count(),
+        "inspection_count_period": inspection_total, "passed_count": passed_count, "failed_count": failed_count,
+        "pass_rate": round(passed_count / inspection_total * 100, 1) if inspection_total else None,
+        "material_usage_count": material_usage.count(),
+        "material_quantity_total": material_usage.aggregate(total=Sum("quantity"))["total"] or Decimal("0.00"),
+        "material_totals": material_totals, "low_stock_count": len(low_stock_rows), "low_stock_rows": low_stock_rows[:30],
+        "amenity_exception_count": amenity_exceptions.count(), "amenity_exception_rows": amenity_exceptions[:50],
+        "open_lost_found": open_lost_found, "lost_found_count_period": lost_found.count(),
+        "lost_found_rows": lost_found.order_by("-found_at")[:30], "hotel_rows": hotel_rows,
+        "recent_cleanings": cleaning_logs[:40], "recent_inspections": inspections[:40],
+        "active_assignments": active_assignments,
+    }
+    return render(request, "reports/housekeeping_management_overview.html", context)
+
+
 @role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
 def maintenance_management_overview(request):
     """Read-only, hotel-scoped Maintenance performance and cost report."""
