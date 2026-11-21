@@ -1216,6 +1216,160 @@ def restaurant_spoilage_analysis(request):
 
 
 
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def housekeeping_inspection_quality(request):
+    """Inspection outcomes and checklist defects, scoped to hotels the viewer can access."""
+    from collections import defaultdict
+    from datetime import datetime, time, timedelta
+    from django.core.exceptions import PermissionDenied
+    from django.utils.dateparse import parse_date
+    from django.utils import timezone
+    from accounts.services.access import get_accessible_hotels
+    from housekeeping.models import CleaningInspection
+
+    checklist_labels = {
+        "bed_made": "Bed properly made and presentation checked",
+        "bathroom_clean": "Bathroom, toilet and mirrors clean",
+        "linen": "Linen and towels clean, correct and present",
+        "amenities": "Guest amenities replenished",
+        "surfaces": "Furniture and high-touch surfaces clean",
+        "floor": "Floor and visible areas clean",
+        "waste": "Waste bins emptied and liners replaced",
+        "maintenance": "No visible damage or unresolved maintenance issue",
+    }
+    accessible_hotels = get_accessible_hotels(request.user).filter(is_active=True)
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    report_hotels = accessible_hotels.order_by("name")
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not accessible_hotels.filter(pk=int(selected_hotel)).exists():
+            raise PermissionDenied("You do not have access to this hotel.")
+        report_hotels = report_hotels.filter(pk=int(selected_hotel))
+
+    start_dt = timezone.make_aware(datetime.combine(date_from, time.min))
+    end_dt = timezone.make_aware(datetime.combine(date_to + timedelta(days=1), time.min))
+    inspections = list(CleaningInspection.objects.filter(
+        assignment__room__hotel__in=report_hotels,
+        inspected_at__gte=start_dt, inspected_at__lt=end_dt,
+    ).select_related(
+        "assignment", "assignment__assigned_to", "assignment__room",
+        "assignment__room__hotel", "inspected_by",
+    ).order_by("inspected_at", "pk"))
+
+    passed = [item for item in inspections if item.result == "PASS"]
+    failed = [item for item in inspections if item.result == "FAIL"]
+    total = len(inspections)
+    pass_rate = round(len(passed) / total * 100, 1) if total else None
+    first_by_assignment = {}
+    staff_stats = {}
+    inspector_stats = {}
+    room_stats = {}
+    checklist_failures = defaultdict(int)
+
+    for inspection in inspections:
+        assignment = inspection.assignment
+        staff = assignment.assigned_to
+        inspector = inspection.inspected_by
+        staff_row = staff_stats.setdefault(staff.pk, {
+            "staff": staff, "inspections": 0, "passed": 0, "failed": 0,
+            "failed_assignments": set(), "rooms": set(),
+        })
+        staff_row["inspections"] += 1
+        staff_row["rooms"].add(assignment.room_id)
+        if inspection.result == "PASS":
+            staff_row["passed"] += 1
+        else:
+            staff_row["failed"] += 1
+            staff_row["failed_assignments"].add(assignment.pk)
+
+        inspector_row = inspector_stats.setdefault(inspector.pk, {
+            "inspector": inspector, "inspections": 0, "passed": 0, "failed": 0,
+        })
+        inspector_row["inspections"] += 1
+        if inspection.result == "PASS":
+            inspector_row["passed"] += 1
+        else:
+            inspector_row["failed"] += 1
+
+        room = assignment.room
+        room_row = room_stats.setdefault(room.pk, {
+            "room": room, "hotel": room.hotel, "inspections": 0,
+            "failed": 0, "failed_items": 0, "last_inspected": inspection.inspected_at,
+        })
+        room_row["inspections"] += 1
+        room_row["last_inspected"] = inspection.inspected_at
+        if inspection.result == "FAIL":
+            room_row["failed"] += 1
+
+        checklist = inspection.checklist if isinstance(inspection.checklist, dict) else {}
+        for key in checklist_labels:
+            # The current inspection form stores True for pass and False for fail.
+            if key in checklist and checklist[key] is False:
+                checklist_failures[key] += 1
+                room_row["failed_items"] += 1
+
+        current = first_by_assignment.get(assignment.pk)
+        if current is None or inspection.inspected_at < current.inspected_at:
+            first_by_assignment[assignment.pk] = inspection
+
+    first_pass = sum(1 for item in first_by_assignment.values() if item.result == "PASS")
+    first_fail = sum(1 for item in first_by_assignment.values() if item.result == "FAIL")
+    first_total = first_pass + first_fail
+    first_pass_rate = round(first_pass / first_total * 100, 1) if first_total else None
+    checklist_rows = [
+        {"key": key, "label": label, "failures": checklist_failures[key]}
+        for key, label in checklist_labels.items()
+    ]
+    checklist_rows.sort(key=lambda row: (-row["failures"], row["label"]))
+
+    staff_rows = []
+    for row in staff_stats.values():
+        row["rework_count"] = len(row["failed_assignments"])
+        row["pass_rate"] = round(row["passed"] / row["inspections"] * 100, 1)
+        row["room_count"] = len(row["rooms"])
+        staff_rows.append(row)
+    staff_rows.sort(key=lambda row: (-row["failed"], row["staff"].get_full_name() or row["staff"].username))
+
+    inspector_rows = []
+    for row in inspector_stats.values():
+        row["pass_rate"] = round(row["passed"] / row["inspections"] * 100, 1)
+        inspector_rows.append(row)
+    inspector_rows.sort(key=lambda row: (-row["inspections"], row["inspector"].get_full_name() or row["inspector"].username))
+
+    recurring_rooms = [row for row in room_stats.values() if row["failed"] > 1]
+    recurring_rooms.sort(key=lambda row: (-row["failed"], -row["failed_items"], row["hotel"].name, row["room"].room_number))
+
+    hotel_rows = []
+    for hotel in report_hotels:
+        hotel_inspections = [item for item in inspections if item.assignment.room.hotel_id == hotel.pk]
+        hotel_passed = sum(1 for item in hotel_inspections if item.result == "PASS")
+        hotel_failed = sum(1 for item in hotel_inspections if item.result == "FAIL")
+        hotel_rows.append({
+            "hotel": hotel, "inspections": len(hotel_inspections),
+            "passed": hotel_passed, "failed": hotel_failed,
+            "pass_rate": round(hotel_passed / len(hotel_inspections) * 100, 1) if hotel_inspections else None,
+        })
+
+    context = {
+        "hotels": report_hotels, "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(), "date_to": date_to.isoformat(),
+        "inspection_total": total, "passed_count": len(passed), "failed_count": len(failed),
+        "pass_rate": pass_rate, "first_pass_count": first_pass, "first_fail_count": first_fail,
+        "first_pass_rate": first_pass_rate, "checklist_rows": checklist_rows,
+        "failed_checklist_total": sum(checklist_failures.values()),
+        "staff_rows": staff_rows, "inspector_rows": inspector_rows,
+        "recurring_rooms": recurring_rooms, "hotel_rows": hotel_rows,
+        "recent_failures": sorted(failed, key=lambda item: item.inspected_at, reverse=True)[:40],
+    }
+    return render(request, "reports/housekeeping_inspection_quality.html", context)
+
+
 @role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
 def housekeeping_staff_productivity(request):
     """Hotel-scoped housekeeping staff productivity based on completed operational records."""
