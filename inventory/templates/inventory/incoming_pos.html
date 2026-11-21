@@ -374,9 +374,13 @@ Incoming Deliveries
                         <tr>
 
                             <td>
-                                <span class="po-number">
-                                    #{{ po.id }}
-                                </span>
+                                <span class="po-number">#{{ po.id }}</span>
+                                {% if po.maintenance_direct_request %}
+                                    <div style="margin-top:6px">
+                                        <span class="payment-badge" style="background:#eff8ff;color:#175cd3">Work order #{{ po.maintenance_direct_request.ticket_id }}</span>
+                                    </div>
+                                    <div style="margin-top:5px;color:#667085;font-size:11px">Direct purchase · reserved for repair</div>
+                                {% endif %}
                             </td>
 
 
