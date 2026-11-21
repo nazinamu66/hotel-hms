@@ -22,6 +22,7 @@ from linen.services.workflows import (
 
 from accounts.models import User
 from decimal import Decimal, InvalidOperation
+from datetime import timedelta
 from django.core.exceptions import PermissionDenied, ValidationError
 
 from linen.models import (
@@ -55,7 +56,7 @@ def _refresh_cleaning_timer_alerts(assignments):
         if assignment.status != "IN_PROGRESS" or not assignment.started_at or not assignment.cleaning_deadline_at:
             continue
         changed = []
-        warning_at = assignment.started_at + timezone.timedelta(minutes=15)
+        warning_at = assignment.started_at + timedelta(minutes=15)
         if now >= warning_at and assignment.warning_sent_at is None:
             assignment.warning_sent_at = now
             changed.append("warning_sent_at")
@@ -933,7 +934,7 @@ def extend_cleaning_time(request, assignment_id):
     with transaction.atomic():
         assignment = CleaningAssignment.objects.select_for_update().get(pk=assignment.pk)
         previous_deadline = assignment.cleaning_deadline_at
-        new_deadline = previous_deadline + timezone.timedelta(minutes=minutes)
+        new_deadline = previous_deadline + timedelta(minutes=minutes)
         CleaningTimeExtension.objects.create(
             assignment=assignment,
             minutes_added=minutes,
