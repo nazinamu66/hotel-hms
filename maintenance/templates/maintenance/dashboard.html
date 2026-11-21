@@ -260,6 +260,9 @@
             <a class="md-shortcut" href="{% url 'maintenance_schedules' %}"><span class="md-shortcut-icon">▦</span>Maintenance schedules</a>
             <a class="md-shortcut" href="{% url 'maintenance_stock' %}"><span class="md-shortcut-icon">▣</span>Maintenance stock</a>
             <a class="md-shortcut" href="{% url 'maintenance_stock_movements' %}"><span class="md-shortcut-icon">⇄</span>Stock movements</a>
+            {% if request.user.role == "MANAGER" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+            <a class="md-shortcut" href="{% url 'maintenance_direct_purchase_requests' %}"><span class="md-shortcut-icon">🧾</span>Direct purchase approvals</a>
+            {% endif %}
             {% if request.user.role == "MAINTENANCE" %}
             <a class="md-shortcut" href="{% url 'maintenance_request_stock' %}"><span class="md-shortcut-icon">＋</span>Request stock</a>
             <a class="md-shortcut" href="{% url 'maintenance_stock_requests' %}"><span class="md-shortcut-icon">☷</span>My stock requests</a>
