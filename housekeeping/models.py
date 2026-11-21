@@ -101,9 +101,39 @@ class CleaningAssignment(models.Model):
         related_name="inspected_cleanings",
     )
 
+    cleaning_deadline_at = models.DateTimeField(null=True, blank=True)
+    warning_sent_at = models.DateTimeField(null=True, blank=True)
+    overdue_alert_sent_at = models.DateTimeField(null=True, blank=True)
+
 
     def __str__(self):
         return f"Room {self.room.room_number} → {self.assigned_to}"
+
+class CleaningTimeExtension(models.Model):
+    """Auditable 10-minute increments added to an active room-cleaning deadline."""
+
+    assignment = models.ForeignKey(
+        CleaningAssignment,
+        on_delete=models.PROTECT,
+        related_name="time_extensions",
+    )
+    minutes_added = models.PositiveSmallIntegerField()
+    reason = models.TextField()
+    extended_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="housekeeping_time_extensions",
+    )
+    previous_deadline_at = models.DateTimeField()
+    new_deadline_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("created_at", "id")
+
+    def __str__(self):
+        return f"Room {self.assignment.room.room_number}: +{self.minutes_added} minutes"
+
 
 class CleaningMaterialUsage(models.Model):
 
