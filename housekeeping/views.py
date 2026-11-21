@@ -42,13 +42,6 @@ from accounts.services.access import (
 from housekeeping.workflows.materials import consume_cleaning_material
 from housekeeping.workflows.linen_check import reset_linen_checks_for_retry
 
-@role_required(
-    "HOUSEKEEPING",
-    "MANAGER",
-    "ADMIN",
-    "DIRECTOR",
-)
-
 def _refresh_cleaning_timer_alerts(assignments):
     """Persist one 15-minute warning and one overdue alert per current deadline."""
     now = timezone.now()
@@ -67,6 +60,13 @@ def _refresh_cleaning_timer_alerts(assignments):
             assignment.save(update_fields=changed)
 
 
+
+@role_required(
+    "HOUSEKEEPING",
+    "MANAGER",
+    "ADMIN",
+    "DIRECTOR",
+)
 def dashboard(request):
 
     # ---------------------------------------------------------
