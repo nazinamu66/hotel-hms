@@ -956,6 +956,55 @@ def add_labour(request, ticket_id):
 # ============================================================
 
 @role_required("MAINTENANCE")
+
+@role_required("MAINTENANCE")
+@require_POST
+@transaction.atomic
+def record_direct_material_usage(request, ticket_id, material_id):
+    ticket = get_object_or_404(
+        MaintenanceTicket.objects.select_related("room", "location", "assigned_to"),
+        pk=ticket_id,
+    )
+    if ticket.assigned_to_id != request.user.id:
+        raise PermissionDenied("Only the assigned technician can record material usage.")
+    if not request.user.hotel_id:
+        raise PermissionDenied
+    ticket_hotel_id = ticket.room.hotel_id if ticket.room_id else ticket.location.hotel_id
+    if ticket_hotel_id != request.user.hotel_id:
+        raise PermissionDenied
+    if ticket.status != "IN_PROGRESS":
+        messages.error(request, "Material usage can only be recorded on an in-progress work order.")
+        return redirect("maintenance_ticket_detail", ticket_id=ticket.pk)
+
+    material = get_object_or_404(
+        MaintenanceMaterial.objects.select_for_update().select_related("product"),
+        pk=material_id,
+        ticket=ticket,
+        source="DIRECT",
+    )
+    try:
+        quantity = Decimal(request.POST.get("quantity", "").strip())
+    except (InvalidOperation, TypeError, ValueError):
+        quantity = Decimal("0")
+    if not quantity.is_finite() or quantity <= 0:
+        messages.error(request, "Enter a valid quantity greater than zero.")
+        return redirect("maintenance_ticket_detail", ticket_id=ticket.pk)
+    if quantity > material.remaining_quantity:
+        messages.error(
+            request,
+            f"Only {material.remaining_quantity} {material.product.base_unit} remains available for this work order.",
+        )
+        return redirect("maintenance_ticket_detail", ticket_id=ticket.pk)
+
+    material.quantity = Decimal(material.quantity) + quantity
+    material.save(update_fields=["quantity"])
+    messages.success(
+        request,
+        f"{quantity} {material.product.base_unit} of {material.product.name} recorded as used.",
+    )
+    return redirect("maintenance_ticket_detail", ticket_id=ticket.pk)
+
+
 def add_material(request, ticket_id):
 
     ticket = get_object_or_404(
