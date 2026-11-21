@@ -2073,7 +2073,7 @@ def laundry_management_overview(request):
     context.update({
         "receipt_count": receipts.count(),
         "pending_receipts": receipts.filter(status__in=("PENDING", "DISCREPANCY_PENDING")).count(),
-        "confirmed_receipts": receipts.filter(status__in=("RECEIVED", "DISCREPANCY_RESOLVED")).count(),
+        "confirmed_receipts": receipts.filter(status__in=("RECEIVED", "DISCREPANCY_PENDING", "DISCREPANCY_RESOLVED")).count(),
         "discrepancy_count": discrepancies.filter(status="OPEN").count(),
         "processed_linen_qty": sum(row.quantity for row in processed_linen),
         "processing_count": processings.count(),
@@ -2125,14 +2125,14 @@ def laundry_linen_movement_analysis(request):
     from linen.models import LinenTransaction
 
     hotels, selected_hotel, date_from, date_to = _laundry_report_scope(request)
-    transactions = LinenTransaction.objects.filter(linen_item__product__hotel__in=hotels, created_at__date__range=(date_from, date_to)).select_related("linen_item__product", "performed_by")
+    transactions = LinenTransaction.objects.filter(\n        linen_item__product__hotel__in=hotels,\n        created_at__date__range=(date_from, date_to),\n    ).filter(\n        Q(event_type__in=("SENT_TO_LAUNDRY", "RECEIVED_AT_LAUNDRY", "PROCESSED", "ISSUED_FROM_LAUNDRY"))\n        | Q(event_type__in=("LOST", "DAMAGED", "WRITTEN_OFF"), from_location="LAUNDRY")\n    ).select_related("linen_item__product", "performed_by")
     receipts = LaundryReceipt.objects.filter(linen_item__product__hotel__in=hotels, created_at__date__range=(date_from, date_to)).select_related("linen_item__product", "returned_by", "received_by")
     discrepancies = LaundryReceiptDiscrepancy.objects.filter(receipt__in=receipts).select_related("receipt__linen_item__product", "resolved_by")
     loss_events = transactions.filter(event_type__in=("LOST", "DAMAGED", "WRITTEN_OFF"))
     movement_rows = [{"date": x.created_at, "item": x.linen_item.product.name, "event": x.get_event_type_display(), "quantity": x.quantity, "from": x.get_from_location_display() if x.from_location else "—", "to": x.get_to_location_display() if x.to_location else "—", "staff": x.performed_by} for x in transactions]
     discrepancy_rows = [{"date": x.created_at, "item": x.receipt.linen_item.product.name, "condition": x.get_condition_display(), "quantity": x.quantity, "status": x.get_status_display(), "resolution": x.get_resolution_display() if x.resolution else "—"} for x in discrepancies]
     context = _laundry_report_context(hotels, selected_hotel, date_from, date_to, "Linen Movement & Loss Analysis", "Movement ledger, handover discrepancies and recorded linen loss or damage.")
-    context.update({"transaction_count": transactions.count(), "received_receipts": receipts.filter(status__in=("RECEIVED", "DISCREPANCY_RESOLVED")).count(), "open_discrepancies": discrepancies.filter(status="OPEN").count(), "lost_qty": sum(x.quantity for x in loss_events.filter(event_type="LOST")), "damaged_qty": sum(x.quantity for x in loss_events.filter(event_type="DAMAGED")), "written_off_qty": sum(x.quantity for x in loss_events.filter(event_type="WRITTEN_OFF")), "movement_rows": movement_rows[:200], "discrepancy_rows": discrepancy_rows[:100]})
+    context.update({"transaction_count": transactions.count(), "received_receipts": receipts.filter(status__in=("RECEIVED", "DISCREPANCY_PENDING", "DISCREPANCY_RESOLVED")).count(), "open_discrepancies": discrepancies.filter(status="OPEN").count(), "lost_qty": sum(x.quantity for x in loss_events.filter(event_type="LOST")), "damaged_qty": sum(x.quantity for x in loss_events.filter(event_type="DAMAGED")), "written_off_qty": sum(x.quantity for x in loss_events.filter(event_type="WRITTEN_OFF")), "movement_rows": movement_rows[:200], "discrepancy_rows": discrepancy_rows[:100]})
     return render(request, "reports/laundry_management_report.html", context)
 
 
