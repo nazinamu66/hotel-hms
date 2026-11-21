@@ -34,7 +34,7 @@ from inventory.views import (
     department_stock_requests,
     department_incoming_pos
 )
-urlpatterns = [
+urlpatterns = [\n    path("management/direct-purchases/", maintenance_direct_purchase_requests, name="maintenance_direct_purchase_requests"),\n    path("management/direct-purchases/<int:request_id>/review/", maintenance_direct_purchase_review, name="maintenance_direct_purchase_review"),\n    path("ticket/<int:ticket_id>/direct-purchase/request/", maintenance_direct_purchase_request, name="maintenance_direct_purchase_request"),
 
     path(
         "",
