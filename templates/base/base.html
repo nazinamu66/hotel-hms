@@ -569,18 +569,19 @@
         <!-- MAINTENANCE MANAGEMENT REPORTING -->
         <!-- ========================= -->
         {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
-        <h4 class="menu-toggle {% if request.resolver_match.url_name in "maintenance_management_overview,maintenance_work_order_analysis,maintenance_cost_analysis,maintenance_asset_performance,maintenance_preventive_compliance" %}active-menu{% endif %}"
+        <h4 class="menu-toggle {% if request.resolver_match.url_name in "maintenance_management_overview,maintenance_work_order_analysis,maintenance_cost_analysis,maintenance_asset_performance,maintenance_preventive_compliance,maintenance_supplier_analysis" %}active-menu{% endif %}"
             onclick="toggleMenu('maintenance_management_menu', this)">
-            <span class="arrow">{% if request.resolver_match.url_name in "maintenance_management_overview,maintenance_work_order_analysis,maintenance_cost_analysis,maintenance_asset_performance,maintenance_preventive_compliance" %}▾{% else %}▸{% endif %}</span>
+            <span class="arrow">{% if request.resolver_match.url_name in "maintenance_management_overview,maintenance_work_order_analysis,maintenance_cost_analysis,maintenance_asset_performance,maintenance_preventive_compliance,maintenance_supplier_analysis" %}▾{% else %}▸{% endif %}</span>
             Maintenance
         </h4>
-        {% with maintenance_report_pages="maintenance_management_overview,maintenance_work_order_analysis,maintenance_cost_analysis,maintenance_asset_performance,maintenance_preventive_compliance" %}
-        <div id="maintenance_management_menu" class="menu-section {% if request.resolver_match.url_name in "maintenance_management_overview,maintenance_work_order_analysis,maintenance_cost_analysis,maintenance_asset_performance,maintenance_preventive_compliance" %}open{% endif %}">
+        {% with maintenance_report_pages="maintenance_management_overview,maintenance_work_order_analysis,maintenance_cost_analysis,maintenance_asset_performance,maintenance_preventive_compliance,maintenance_supplier_analysis" %}
+        <div id="maintenance_management_menu" class="menu-section {% if request.resolver_match.url_name in "maintenance_management_overview,maintenance_work_order_analysis,maintenance_cost_analysis,maintenance_asset_performance,maintenance_preventive_compliance,maintenance_supplier_analysis" %}open{% endif %}">
             <a href="{% url 'maintenance_management_overview' %}">Management Overview</a>
             <a href="{% url 'maintenance_work_order_analysis' %}">Work Order Analysis</a>
             <a href="{% url 'maintenance_cost_analysis' %}">Cost Analysis</a>
             <a href="{% url 'maintenance_asset_performance' %}">Asset Performance</a>
             <a href="{% url 'maintenance_preventive_compliance' %}">Preventive Compliance</a>
+            <a href="{% url 'maintenance_supplier_analysis' %}">Supplier &amp; Contractor Analysis</a>
         </div>
         {% endwith %}
         {% endif %}
