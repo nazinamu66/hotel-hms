@@ -430,6 +430,19 @@ Receive Purchase Order #{{ po.id }}
                 have physically arrived at your department.
             </p>
         </div>
+    {% if po.maintenance_direct_request %}
+    <div class="receive-card" style="border-color:#bfdbfe;background:#f8fbff">
+      <div class="receive-card-body" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+        <div>
+          <span class="receive-label">Direct work-order delivery</span>
+          <div class="receive-value">This delivery is reserved for Maintenance Work Order #{{ po.maintenance_direct_request.ticket_id }}.</div>
+          <p style="margin:6px 0 0;color:#667085;font-size:13px">Accepted quantities will be assigned to this work order, not added to Maintenance Store stock. The technician records installation or usage from the work-order page.</p>
+        </div>
+        <a class="receive-back" href="{% url 'maintenance_ticket_detail' po.maintenance_direct_request.ticket_id %}">Open work order →</a>
+      </div>
+    </div>
+    {% endif %}
+
 
         <a
             href="{% url 'inventory:department_incoming_pos' %}"
