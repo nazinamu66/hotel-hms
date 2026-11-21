@@ -744,3 +744,55 @@ class HousekeepingManagementOverviewTests(TestCase):
         self.client.force_login(self.staff)
         response = self.client.get("/reports/housekeeping/management/productivity/")
         self.assertEqual(response.status_code, 403)
+
+
+    def test_inspection_quality_counts_failed_items_rework_and_recurring_rooms(self):
+        from django.utils import timezone
+        from housekeeping.models import CleaningAssignment, CleaningInspection
+
+        original_assignment = self.room.cleaning_assignments.first()
+        CleaningInspection.objects.create(
+            assignment=original_assignment,
+            inspected_by=self.manager,
+            result="FAIL",
+            checklist={"bed_made": False, "bathroom_clean": True},
+            notes="Bed presentation needs correction.",
+        )
+        second_assignment = CleaningAssignment.objects.create(
+            room=self.room,
+            assigned_to=self.staff,
+            assigned_by=self.manager,
+            status="DONE",
+            started_at=timezone.now(),
+            completed_at=timezone.now(),
+        )
+        CleaningInspection.objects.create(
+            assignment=second_assignment,
+            inspected_by=self.manager,
+            result="FAIL",
+            checklist={"bed_made": False, "linen": False},
+            notes="Bed and linen need correction.",
+        )
+
+        response = self.client.get("/reports/housekeeping/management/quality/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["inspection_total"], 3)
+        self.assertEqual(response.context["failed_count"], 2)
+        self.assertEqual(response.context["passed_count"], 1)
+        self.assertEqual(response.context["failed_checklist_total"], 3)
+        self.assertEqual(response.context["first_pass_count"], 1)
+        self.assertEqual(response.context["first_fail_count"], 1)
+        self.assertEqual(len(response.context["recurring_rooms"]), 1)
+        self.assertEqual(response.context["staff_rows"][0]["rework_count"], 2)
+
+    def test_inspection_quality_rejects_hotel_outside_manager_scope(self):
+        response = self.client.get(
+            "/reports/housekeeping/management/quality/",
+            {"hotel": self.other_hotel.pk},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_housekeeping_staff_cannot_open_inspection_quality_report(self):
+        self.client.force_login(self.staff)
+        response = self.client.get("/reports/housekeeping/management/quality/")
+        self.assertEqual(response.status_code, 403)
