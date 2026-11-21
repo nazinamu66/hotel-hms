@@ -74,7 +74,7 @@
    <div class="md-card-head"><h3>Direct purchase requests</h3><span class="md-pill">{{ ticket.direct_purchase_requests.count }} requests</span></div>
    <div class="md-card-body">
     {% for purchase_request in ticket.direct_purchase_requests.all %}
-     <div class="md-entry"><div class="md-entry-title">{{ purchase_request.product.name }} · {{ purchase_request.requested_quantity }} requested</div><p>{{ purchase_request.get_status_display }}{% if purchase_request.reason %}<br>{{ purchase_request.reason|linebreaksbr }}{% endif %}</p>{% if purchase_request.purchase_order_id %}<a href="{% url 'inventory:po_detail' purchase_request.purchase_order_id %}">Purchase Order #{{ purchase_request.purchase_order_id }}</a>{% endif %}<small>Requested by {{ purchase_request.requested_by }} · {{ purchase_request.created_at|date:"d M Y, H:i" }}</small></div>
+     <div class="md-entry"><div class="md-entry-title">{% if purchase_request.product_id %}{{ purchase_request.product.name }}{% else %}{{ purchase_request.requested_item_name }}{% endif %} · {{ purchase_request.requested_quantity }} {{ purchase_request.requested_unit }} requested</div><p>{{ purchase_request.get_status_display }}{% if purchase_request.reason %}<br>{{ purchase_request.reason|linebreaksbr }}{% endif %}</p>{% if purchase_request.purchase_order_id %}<a href="{% url 'inventory:po_detail' purchase_request.purchase_order_id %}">Purchase Order #{{ purchase_request.purchase_order_id }}</a>{% endif %}<small>Requested by {{ purchase_request.requested_by }} · {{ purchase_request.created_at|date:"d M Y, H:i" }}</small></div>
     {% empty %}<div class="md-empty">No direct purchase requests for this work order.</div>{% endfor %}
    </div>
   </section>
