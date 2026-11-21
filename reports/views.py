@@ -1271,6 +1271,7 @@ def housekeeping_staff_productivity(request):
             stats[user.pk] = {
                 "staff": user, "assigned": 0, "started": 0, "released": 0,
                 "failed_inspections": 0, "passed_inspections": 0,
+                "first_inspection_pass": 0, "first_inspection_fail": 0,
                 "rework_assignments": set(), "durations": [], "on_time": 0,
                 "timed": 0, "extensions": 0, "extension_minutes": 0,
                 "active": 0, "outstanding": 0,
@@ -1290,6 +1291,7 @@ def housekeeping_staff_productivity(request):
         bucket["extensions"] += len(extensions)
         bucket["extension_minutes"] += sum(item.minutes_added for item in extensions)
 
+    first_inspections = {}
     for inspection in inspection_rows:
         bucket = staff_bucket(inspection.assignment.assigned_to)
         if inspection.result == "PASS":
@@ -1297,6 +1299,16 @@ def housekeeping_staff_productivity(request):
         elif inspection.result == "FAIL":
             bucket["failed_inspections"] += 1
             bucket["rework_assignments"].add(inspection.assignment_id)
+        current = first_inspections.get(inspection.assignment_id)
+        if current is None or inspection.inspected_at < current.inspected_at:
+            first_inspections[inspection.assignment_id] = inspection
+
+    for inspection in first_inspections.values():
+        bucket = staff_bucket(inspection.assignment.assigned_to)
+        if inspection.result == "PASS":
+            bucket["first_inspection_pass"] += 1
+        else:
+            bucket["first_inspection_fail"] += 1
 
     for log in logs:
         assignment = log.assignment
@@ -1321,9 +1333,10 @@ def housekeeping_staff_productivity(request):
         bucket["average_minutes"] = round(sum(durations) / len(durations), 1) if durations else None
         bucket["on_time_rate"] = round(bucket["on_time"] / bucket["timed"] * 100, 1) if bucket["timed"] else None
         bucket["inspection_total"] = bucket["passed_inspections"] + bucket["failed_inspections"]
+        first_total = bucket["first_inspection_pass"] + bucket["first_inspection_fail"]
         bucket["first_pass_rate"] = round(
-            bucket["passed_inspections"] / bucket["inspection_total"] * 100, 1
-        ) if bucket["inspection_total"] else None
+            bucket["first_inspection_pass"] / first_total * 100, 1
+        ) if first_total else None
         staff_rows.append(bucket)
 
     staff_rows.sort(key=lambda row: (-row["released"], row["staff"].get_full_name() or row["staff"].username))
