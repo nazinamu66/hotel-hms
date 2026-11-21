@@ -55,11 +55,17 @@ def mark_cleaning_started(assignment):
 
     assignment.status = "IN_PROGRESS"
     assignment.started_at = timezone.now()
+    assignment.cleaning_deadline_at = assignment.started_at + timezone.timedelta(minutes=20)
+    assignment.warning_sent_at = None
+    assignment.overdue_alert_sent_at = None
 
     assignment.save(
         update_fields=[
             "status",
             "started_at",
+            "cleaning_deadline_at",
+            "warning_sent_at",
+            "overdue_alert_sent_at",
         ]
     )
 
