@@ -531,3 +531,85 @@ class MaintenancePreventiveComplianceTests(TestCase):
             {"hotel": self.other_hotel.pk},
         )
         self.assertEqual(response.status_code, 403)
+
+
+class MaintenanceSupplierAnalysisTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Hotel, Organization, Supplier, Product
+        from maintenance.models import (
+            MaintenanceLocation, MaintenanceTicket, MaintenanceLabour,
+            MaintenanceMaterial,
+        )
+
+        User = get_user_model()
+        organization = Organization.objects.create(name="Maintenance Supplier Report Org")
+        self.hotel = Hotel.objects.create(organization=organization, name="Supplier Report Hotel")
+        self.other_hotel = Hotel.objects.create(organization=organization, name="Other Supplier Hotel")
+        self.manager = User.objects.create_user(
+            username="maintenance_supplier_manager", password="test-password",
+            role="MANAGER", hotel=self.hotel,
+        )
+        location = MaintenanceLocation.objects.create(
+            hotel=self.hotel, name="Supplier Report Plant Room", location_type="PLANT_ROOM",
+        )
+        other_location = MaintenanceLocation.objects.create(
+            hotel=self.other_hotel, name="Other Supplier Plant Room", location_type="PLANT_ROOM",
+        )
+        self.ticket = MaintenanceTicket.objects.create(
+            location=location, description="Repair generator cooling system",
+            reported_by=self.manager, status="RESOLVED",
+        )
+        other_ticket = MaintenanceTicket.objects.create(
+            location=other_location, description="Other hotel's generator repair",
+            reported_by=self.manager, status="RESOLVED",
+        )
+        self.supplier = Supplier.objects.create(
+            hotel=self.hotel, name="Local Engineering Services",
+        )
+        other_supplier = Supplier.objects.create(
+            hotel=self.other_hotel, name="Other Hotel Engineering",
+        )
+        product = Product.objects.create(
+            hotel=self.hotel, name="Radiator Hose", sku="MAINT-HOSE-01",
+            base_unit="pcs", usage_type="INTERNAL",
+        )
+        MaintenanceLabour.objects.create(
+            ticket=self.ticket, labour_type="OUTSOURCED",
+            supplier=self.supplier, description="Generator repair labour",
+            amount="2750.00", created_by=self.manager,
+        )
+        MaintenanceLabour.objects.create(
+            ticket=other_ticket, labour_type="OUTSOURCED",
+            supplier=other_supplier, description="Other hotel contractor labour",
+            amount="9900.00", created_by=self.manager,
+        )
+        MaintenanceMaterial.objects.create(
+            ticket=self.ticket, product=product, source="DIRECT",
+            quantity="2", unit_cost="625.00", supplier=self.supplier,
+            description="Emergency radiator hose purchase", created_by=self.manager,
+        )
+        self.client.force_login(self.manager)
+
+    def test_report_aggregates_supplier_labour_and_direct_materials(self):
+        from decimal import Decimal
+
+        response = self.client.get("/reports/maintenance/management/suppliers/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Supplier &amp; Contractor Analysis")
+        self.assertEqual(response.context["supplier_count"], 1)
+        self.assertEqual(response.context["supplier_entry_count"], 2)
+        self.assertEqual(response.context["work_order_count"], 1)
+        self.assertEqual(response.context["outsourced_labour_total"], Decimal("2750.00"))
+        self.assertEqual(response.context["direct_material_total"], Decimal("1250.00"))
+        self.assertEqual(response.context["total_supplier_spend"], Decimal("4000.00"))
+        self.assertContains(response, "Local Engineering Services")
+        self.assertNotContains(response, "Other Hotel Engineering")
+
+    def test_unauthorized_hotel_filter_is_rejected(self):
+        response = self.client.get(
+            "/reports/maintenance/management/suppliers/",
+            {"hotel": self.other_hotel.pk},
+        )
+        self.assertEqual(response.status_code, 403)
