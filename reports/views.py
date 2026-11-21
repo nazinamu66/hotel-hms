@@ -2104,7 +2104,7 @@ def laundry_management_overview(request):
 
 @role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
 def laundry_production_analysis(request):
-    from django.db.models import Sum
+    from django.db.models import Sum, Count
     from laundry.models import LaundryProcessing, GuestLaundryOrder
     from linen.models import LinenTransaction
 
@@ -2115,7 +2115,7 @@ def laundry_production_analysis(request):
     rows = [{"date": p.created_at, "hotel": p.hotel.name, "type": p.get_processing_type_display(), "subject": p.linen_item.product.name if p.linen_item_id else str(p.guest_order), "staff": p.performed_by, "reference": p.reference} for p in processings]
     qty_rows = list(transactions.values("linen_item__product__name").annotate(quantity=Sum("quantity")).order_by("-quantity"))
     context = _laundry_report_context(hotels, selected_hotel, date_from, date_to, "Laundry Production & Productivity", "Recorded linen processing events and Guest Laundry order throughput.")
-    context.update({"processing_count": processings.count(), "hotel_linen_qty": sum(x.quantity for x in transactions), "guest_order_count": orders.count(), "delivered_orders": orders.filter(status="DELIVERED").count(), "pending_orders": orders.exclude(status__in=("DELIVERED", "CANCELLED")).count(), "processing_rows": rows[:150], "quantity_rows": qty_rows})
+    context.update({"processing_count": processings.count(), "hotel_linen_qty": sum(x.quantity for x in transactions), "guest_order_count": orders.count(), "delivered_orders": orders.filter(status="DELIVERED").count(), "pending_orders": orders.exclude(status__in=("DELIVERED", "CANCELLED")).count(), "processing_rows": rows[:150], "quantity_rows": qty_rows, "staff_rows": list(processings.values("performed_by__username").annotate(processings=Count("id")).order_by("-processings"))})
     return render(request, "reports/laundry_management_report.html", context)
 
 
