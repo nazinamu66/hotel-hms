@@ -28,6 +28,9 @@ from .views import (
     maintenance_supplier_create,
     request_maintenance_stock,
     my_maintenance_stock_requests,
+    maintenance_direct_purchase_requests,
+    maintenance_direct_purchase_review,
+    maintenance_direct_purchase_request,
 )
 from inventory.views import (
     department_request_stock,
