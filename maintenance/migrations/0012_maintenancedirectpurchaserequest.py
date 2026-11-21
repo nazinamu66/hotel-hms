@@ -6,7 +6,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
     dependencies = [
         ("maintenance", "0011_maintenanceschedulecycle"),
-        ("inventory", "0033_charge_billing_party_company_groupreservation_and_more"),
+        ("inventory", "0055_merge_20261110"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
