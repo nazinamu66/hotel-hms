@@ -613,3 +613,37 @@ class MaintenanceSupplierAnalysisTests(TestCase):
             {"hotel": self.other_hotel.pk},
         )
         self.assertEqual(response.status_code, 403)
+
+
+class LaundryReportScopeTests(SimpleTestCase):
+    def test_laundry_report_defaults_to_current_month_and_all_accessible_hotels(self):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+        from django.utils.timezone import localdate
+        from reports.views import _laundry_report_scope
+
+        hotels = MagicMock()
+        hotels.order_by.return_value = hotels
+        request = SimpleNamespace(user=object(), GET={})
+        with patch("accounts.services.access.get_accessible_hotels", return_value=hotels):
+            scoped_hotels, selected, date_from, date_to = _laundry_report_scope(request)
+
+        today = localdate()
+        self.assertIs(scoped_hotels, hotels)
+        self.assertEqual(selected, "")
+        self.assertEqual(date_from, today.replace(day=1))
+        self.assertEqual(date_to, today)
+
+    def test_laundry_report_rejects_a_hotel_outside_access_scope(self):
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock, patch
+        from django.core.exceptions import PermissionDenied
+        from reports.views import _laundry_report_scope
+
+        hotels = MagicMock()
+        hotels.order_by.return_value = hotels
+        hotels.filter.return_value.exists.return_value = False
+        request = SimpleNamespace(user=object(), GET={"hotel": "999"})
+        with patch("accounts.services.access.get_accessible_hotels", return_value=hotels):
+            with self.assertRaises(PermissionDenied):
+                _laundry_report_scope(request)
