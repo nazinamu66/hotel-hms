@@ -2579,7 +2579,23 @@ def maintenance_direct_purchase_request(request, ticket_id):
     ).exclude(product_type="EQUIPMENT").order_by("name")
 
     if request.method == "POST":
-        product = get_object_or_404(products, pk=request.POST.get("product"))
+        selected_product_id = (request.POST.get("product") or "").strip()
+        item_name = (request.POST.get("item_name") or "").strip()
+        item_unit = (request.POST.get("item_unit") or "pcs").strip()[:20] or "pcs"
+        product = None
+        if selected_product_id and selected_product_id != "NEW":
+            product = get_object_or_404(products, pk=selected_product_id)
+            item_name = product.name
+            item_unit = product.purchase_unit or product.base_unit or "pcs"
+        elif selected_product_id == "NEW":
+            if not item_name:
+                messages.error(request, "Enter the name of the item you need.")
+            elif Product.objects.filter(hotel=hotel, name__iexact=item_name).exists():
+                existing = Product.objects.filter(hotel=hotel, name__iexact=item_name).first()
+                messages.error(request, f"{existing.name} already exists in the catalogue. Select it from the list.")
+        else:
+            messages.error(request, "Select a catalogue item or choose 'Not in catalogue'.")
+
         try:
             quantity = int(request.POST.get("quantity", "0"))
         except (TypeError, ValueError):
@@ -2587,15 +2603,21 @@ def maintenance_direct_purchase_request(request, ticket_id):
         reason = request.POST.get("reason", "").strip()
         if quantity <= 0:
             messages.error(request, "Enter a whole-number quantity greater than zero.")
-        else:
-            pending_exists = MaintenanceDirectPurchaseRequest.objects.filter(
-                ticket=ticket, product=product, status="PENDING"
-            ).exists()
-            if pending_exists:
-                messages.error(request, "There is already a pending request for this part on this work order.")
+        elif (product or (selected_product_id == "NEW" and item_name and not Product.objects.filter(hotel=hotel, name__iexact=item_name).exists())):
+            duplicate_filter = {"ticket": ticket, "status": "PENDING"}
+            if product:
+                duplicate_filter["product"] = product
+            else:
+                duplicate_filter["requested_item_name__iexact"] = item_name
+                duplicate_filter["product__isnull"] = True
+            if MaintenanceDirectPurchaseRequest.objects.filter(**duplicate_filter).exists():
+                messages.error(request, "There is already a pending request for this item on this work order.")
             else:
                 MaintenanceDirectPurchaseRequest.objects.create(
-                    ticket=ticket, product=product, requested_quantity=quantity,
+                    ticket=ticket, product=product,
+                    requested_item_name="" if product else item_name,
+                    requested_unit=item_unit,
+                    requested_quantity=quantity,
                     reason=reason, requested_by=request.user,
                 )
                 messages.success(request, "Direct purchase request submitted for management approval.")
