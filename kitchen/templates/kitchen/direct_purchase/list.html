@@ -79,5 +79,39 @@
       </table>
     </div>
   </section>
+
+  <section class="purchase-card" style="margin-top:22px">
+    <div class="purchase-card-head">
+      <div><h2>Maintenance work-order requests</h2><span class="muted">Direct parts and materials requested by maintenance technicians</span></div>
+      <span class="purchase-count">{{ maintenance_pending_count }} awaiting review</span>
+    </div>
+    <div class="table-wrap">
+      <table class="purchase-table">
+        <thead><tr><th>Request / work order</th><th>Part</th><th>Requested by</th><th>Quantity</th><th>Status</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+        {% for item in maintenance_requests %}
+          <tr>
+            <td><strong>MR-{{ item.pk }}</strong><span class="muted">Work order #{{ item.ticket_id }} · {% if item.ticket.room_id %}Room {{ item.ticket.room.room_number }}{% else %}{{ item.ticket.location.name }}{% endif %}</span></td>
+            <td>{% if item.product_id %}{{ item.product.name }}{% else %}{{ item.requested_item_name }} <span class="status status-approved">New catalogue item</span>{% endif %}{% if item.reason %}<span class="muted">{{ item.reason|truncatechars:80 }}</span>{% endif %}</td>
+            <td>{{ item.requested_by.get_full_name|default:item.requested_by.username }}</td>
+            <td>{{ item.requested_quantity }} {{ item.requested_unit }}</td>
+            <td>
+              {% if item.status == "PENDING" %}<span class="status status-approved">Awaiting management review</span>
+              {% elif item.status == "REJECTED" %}<span class="status">Rejected</span>
+              {% elif item.status == "APPROVED" %}<span class="status status-paid">Approved · PO pending</span>
+              {% elif item.status == "PARTIALLY_RECEIVED" %}<span class="status status-partial">Partially received</span>
+              {% else %}<span class="status status-received">Fulfilled</span>{% endif %}
+              {% if item.purchase_order_id %}<span class="muted">PO #{{ item.purchase_order_id }}</span>{% endif %}
+            </td>
+            <td>{{ item.created_at|date:"d M Y" }}<span class="muted">{{ item.created_at|date:"H:i" }}</span></td>
+            <td>{% if item.status == "PENDING" %}<a class="purchase-link" href="{% url 'maintenance_direct_purchase_review' item.pk %}">Review →</a>{% else %}<a class="purchase-link" href="{% url 'maintenance_ticket_detail' item.ticket_id %}">Work order →</a>{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7"><div class="empty-state"><strong>No Maintenance requests</strong>Technician direct-purchase requests will appear here for management review.</div></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 </div>
 {% endblock %}
