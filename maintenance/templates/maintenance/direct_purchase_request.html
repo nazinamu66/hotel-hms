@@ -4,18 +4,39 @@
 <div class="container py-4" style="max-width:760px">
  <a href="{% url 'maintenance_ticket_detail' ticket.pk %}">← Back to work order #{{ ticket.pk }}</a>
  <h2 class="mt-3">Request a direct purchase</h2>
- <p class="text-muted">Use this for a maintenance part that must be purchased specifically for this work order. Approved deliveries will be charged to maintenance expense and will not enter Maintenance Store stock.</p>
+ <p class="text-muted">Request an existing catalogue item or type a new item. New catalogue entries are created by management when the request is approved. Delivered items are charged to this work order, not added to Maintenance Store stock.</p>
  <form method="post" class="card card-body">{% csrf_token %}
   <label class="form-label" for="product">Part / product</label>
   <select class="form-select mb-3" name="product" id="product" required>
-   <option value="">Select a maintenance product</option>
+   <option value="">Select a catalogue item</option>
    {% for product in products %}<option value="{{ product.pk }}">{{ product.name }} ({{ product.purchase_unit|default:product.base_unit }})</option>{% endfor %}
+   <option value="NEW">＋ Item not in catalogue</option>
   </select>
+  <div id="new-item-fields" hidden>
+   <label class="form-label" for="item_name">New item name</label>
+   <input class="form-control mb-3" type="text" name="item_name" id="item_name" maxlength="150" placeholder="e.g. Shower Head">
+   <label class="form-label" for="item_unit">Unit</label>
+   <input class="form-control mb-3" type="text" name="item_unit" id="item_unit" maxlength="20" value="pcs" placeholder="e.g. pcs, set, metre">
+  </div>
   <label class="form-label" for="quantity">Quantity requested</label>
   <input class="form-control mb-3" type="number" min="1" step="1" name="quantity" id="quantity" required>
-  <label class="form-label" for="reason">Reason / diagnosis</label>
-  <textarea class="form-control mb-3" name="reason" id="reason" rows="4" placeholder="Explain why this part is required for this repair"></textarea>
+  <label class="form-label" for="reason">Reason / specification</label>
+  <textarea class="form-control mb-3" name="reason" id="reason" rows="4" placeholder="Describe the part, specification and why it is required for this repair"></textarea>
   <button class="btn btn-primary" type="submit">Submit for approval</button>
  </form>
 </div>
+<script>
+(function(){
+ const select=document.getElementById("product");
+ const fields=document.getElementById("new-item-fields");
+ const name=document.getElementById("item_name");
+ function toggleNewItem(){
+   const isNew=select.value==="NEW";
+   fields.hidden=!isNew;
+   name.required=isNew;
+ }
+ select.addEventListener("change",toggleNewItem);
+ toggleNewItem();
+})();
+</script>
 {% endblock %}
