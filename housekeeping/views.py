@@ -47,6 +47,25 @@ from housekeeping.workflows.linen_check import reset_linen_checks_for_retry
     "ADMIN",
     "DIRECTOR",
 )
+
+def _refresh_cleaning_timer_alerts(assignments):
+    """Persist one 15-minute warning and one overdue alert per current deadline."""
+    now = timezone.now()
+    for assignment in assignments:
+        if assignment.status != "IN_PROGRESS" or not assignment.started_at or not assignment.cleaning_deadline_at:
+            continue
+        changed = []
+        warning_at = assignment.started_at + timezone.timedelta(minutes=15)
+        if now >= warning_at and assignment.warning_sent_at is None:
+            assignment.warning_sent_at = now
+            changed.append("warning_sent_at")
+        if now >= assignment.cleaning_deadline_at and assignment.overdue_alert_sent_at is None:
+            assignment.overdue_alert_sent_at = now
+            changed.append("overdue_alert_sent_at")
+        if changed:
+            assignment.save(update_fields=changed)
+
+
 def dashboard(request):
 
     # ---------------------------------------------------------
@@ -127,6 +146,18 @@ def dashboard(request):
         status="INSPECTION"
     ).count()
 
+    timer_assignments = list(active_assignments.filter(status="IN_PROGRESS"))
+    _refresh_cleaning_timer_alerts(timer_assignments)
+    timer_assignments = list(active_assignments.filter(status="IN_PROGRESS"))
+    timer_warnings = [
+        item for item in timer_assignments
+        if item.warning_sent_at and not item.overdue_alert_sent_at
+    ]
+    overdue_cleanings = [
+        item for item in timer_assignments
+        if item.overdue_alert_sent_at
+    ]
+
     if is_hk_staff:
         return render(
             request,
@@ -136,6 +167,7 @@ def dashboard(request):
                 "assigned_count": assigned_count,
                 "in_progress_count": in_progress_count,
                 "inspection_count": inspection_count,
+                "timer_assignments": timer_assignments,
             },
         )
 
@@ -347,6 +379,9 @@ def dashboard(request):
             "lost_found_today_count": lost_found_today_count,
             "linen_totals": linen_totals,
             "staff_linen_requests_count": staff_linen_requests_count,
+            "timer_assignments": timer_assignments,
+            "timer_warnings": timer_warnings,
+            "overdue_cleanings": overdue_cleanings,
         },
     )
 
@@ -853,6 +888,67 @@ def lost_found_dispose(request, item_id):
     "MANAGER",
     "ADMIN",
 )
+
+@role_required("HOUSEKEEPING", "MANAGER", "ADMIN", "DIRECTOR")
+def extend_cleaning_time(request, assignment_id):
+    if request.method != "POST":
+        return redirect("housekeeping_dashboard")
+
+    hotels = get_accessible_hotels(request.user)
+    assignment = get_object_or_404(
+        CleaningAssignment.objects.select_related("room", "room__hotel"),
+        pk=assignment_id,
+        room__hotel__in=hotels,
+        status="IN_PROGRESS",
+    )
+    department = Department.objects.filter(
+        hotel=assignment.room.hotel,
+        department_type="HOUSEKEEPING",
+        is_active=True,
+    ).first()
+    if request.user.role == "HOUSEKEEPING":
+        if not is_department_head(request.user) or not department or request.user.department_id != department.id:
+            raise PermissionDenied("Only this hotel's Housekeeping Head may extend cleaning time.")
+    elif not department or not can_manage_department(request.user, department):
+        raise PermissionDenied("You cannot manage this hotel's Housekeeping tasks.")
+
+    try:
+        minutes = int(request.POST.get("minutes", ""))
+    except (TypeError, ValueError):
+        messages.error(request, "Choose a valid extension.")
+        return redirect("housekeeping_dashboard")
+    reason = request.POST.get("reason", "").strip()
+    if minutes not in (10, 20, 30):
+        messages.error(request, "Extensions must be 10, 20 or 30 minutes.")
+        return redirect("housekeeping_dashboard")
+    if not reason:
+        messages.error(request, "Please provide a reason for the extension.")
+        return redirect("housekeeping_dashboard")
+    if not assignment.cleaning_deadline_at:
+        messages.error(request, "This assignment has no active cleaning deadline.")
+        return redirect("housekeeping_dashboard")
+
+    from django.db import transaction
+    from .models import CleaningTimeExtension
+    with transaction.atomic():
+        assignment = CleaningAssignment.objects.select_for_update().get(pk=assignment.pk)
+        previous_deadline = assignment.cleaning_deadline_at
+        new_deadline = previous_deadline + timezone.timedelta(minutes=minutes)
+        CleaningTimeExtension.objects.create(
+            assignment=assignment,
+            minutes_added=minutes,
+            reason=reason,
+            extended_by=request.user,
+            previous_deadline_at=previous_deadline,
+            new_deadline_at=new_deadline,
+        )
+        assignment.cleaning_deadline_at = new_deadline
+        assignment.overdue_alert_sent_at = None
+        assignment.save(update_fields=["cleaning_deadline_at", "overdue_alert_sent_at"])
+    messages.success(request, f"Room {assignment.room.room_number} extended by {minutes} minutes.")
+    return redirect("housekeeping_dashboard")
+
+
 def start_cleaning(request, room_id):
 
     from housekeeping.workflows.start_cleaning import (
