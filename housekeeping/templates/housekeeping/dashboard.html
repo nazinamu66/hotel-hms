@@ -277,32 +277,55 @@
 {% endif %}
 
 
-<!-- ROOM TIMER EXCEPTIONS -->
+<!-- ROOM CLEANING TIMERS -->
 <h3>Room Cleaning Timers</h3>
-<p class="hk-section-note">A warning is raised at 15 minutes; overdue rooms are flagged at the 20-minute deadline. Extensions are recorded for audit.</p>
-{% if timer_warnings or overdue_cleanings %}
+<p class="hk-section-note">Every room in progress is monitored from its own start time. A warning is raised at 15 minutes; overdue rooms are flagged at the 20-minute deadline. Extensions are recorded for audit.</p>
+{% if timer_assignments %}
 <table>
-<thead><tr><th>Room</th><th>Housekeeper</th><th>Timer status</th><th>Deadline</th><th>Extend time</th></tr></thead>
+<thead><tr><th>Room</th><th>Housekeeper</th><th>Started</th><th>Deadline</th><th>Time remaining</th><th>Timer status</th><th>Extend time</th></tr></thead>
 <tbody>
-{% for assignment in timer_warnings %}
+{% for assignment in timer_assignments %}
 <tr>
 <td><strong>{{ assignment.room.hotel.name }} · Room {{ assignment.room.room_number }}</strong></td>
-<td>{{ assignment.assigned_to }}</td><td><strong style="color:#b45309;">15-minute warning</strong></td>
+<td>{{ assignment.assigned_to }}</td>
+<td>{{ assignment.started_at|date:"H:i" }}</td>
 <td>{{ assignment.cleaning_deadline_at|date:"H:i" }}</td>
-<td><form method="post" action="{% url 'housekeeping_extend_cleaning_time' assignment.id %}">{% csrf_token %}<select name="minutes"><option value="10">+10 minutes</option><option value="20">+20 minutes</option><option value="30">+30 minutes</option></select><input name="reason" placeholder="Reason for extension" required style="max-width:180px"><button type="submit">Approve</button></form></td>
-</tr>
-{% endfor %}
-{% for assignment in overdue_cleanings %}
-<tr>
-<td><strong>{{ assignment.room.hotel.name }} · Room {{ assignment.room.room_number }}</strong></td>
-<td>{{ assignment.assigned_to }}</td><td><strong style="color:#b91c1c;">OVERDUE</strong></td>
-<td>{{ assignment.cleaning_deadline_at|date:"H:i" }}</td>
-<td><form method="post" action="{% url 'housekeeping_extend_cleaning_time' assignment.id %}">{% csrf_token %}<select name="minutes"><option value="10">+10 minutes</option><option value="20">+20 minutes</option><option value="30">+30 minutes</option></select><input name="reason" placeholder="Reason for extension" required style="max-width:180px"><button type="submit">Approve</button></form></td>
+<td><strong class="hk-room-countdown" data-deadline="{{ assignment.cleaning_deadline_at|date:'c' }}">Calculating…</strong></td>
+<td>
+{% if assignment.overdue_alert_sent_at %}<strong style="color:#b91c1c;">OVERDUE</strong>
+{% elif assignment.warning_sent_at %}<strong style="color:#b45309;">15-minute warning</strong>
+{% else %}<strong style="color:#15803d;">Within time</strong>{% endif %}
+{% if assignment.time_extensions.exists %}<div style="font-size:.8rem;color:#64748b;">Extension approved</div>{% endif %}
+</td>
+<td>
+{% if assignment.warning_sent_at or assignment.overdue_alert_sent_at %}
+<form method="post" action="{% url 'housekeeping_extend_cleaning_time' assignment.id %}">{% csrf_token %}<select name="minutes"><option value="10">+10 minutes</option><option value="20">+20 minutes</option><option value="30">+30 minutes</option></select><input name="reason" placeholder="Reason for extension" required style="max-width:180px"><button type="submit">Approve</button></form>
+{% else %}<span style="color:#94a3b8;">Available at warning</span>{% endif %}
+</td>
 </tr>
 {% endfor %}
 </tbody></table>
-{% else %}<p>✓ No room timer warnings or overdue cleaning tasks.</p>{% endif %}
-<script>window.setTimeout(function(){window.location.reload();},60000);</script>
+{% else %}<p>✓ No rooms are currently being cleaned.</p>{% endif %}
+<script>
+(function () {
+  function updateRoomTimers() {
+    document.querySelectorAll(".hk-room-countdown[data-deadline]").forEach(function (node) {
+      var deadline = new Date(node.dataset.deadline).getTime();
+      var remaining = deadline - Date.now();
+      if (!Number.isFinite(deadline)) { node.textContent = "Unavailable"; return; }
+      if (remaining <= 0) { node.textContent = "Overdue"; node.style.color = "#b91c1c"; return; }
+      var totalSeconds = Math.floor(remaining / 1000);
+      var minutes = Math.floor(totalSeconds / 60);
+      var seconds = totalSeconds % 60;
+      node.textContent = minutes + "m " + String(seconds).padStart(2, "0") + "s";
+      node.style.color = remaining <= 5 * 60 * 1000 ? "#b45309" : "#15803d";
+    });
+  }
+  updateRoomTimers();
+  window.setInterval(updateRoomTimers, 1000);
+  window.setTimeout(function(){window.location.reload();}, 60000);
+})();
+</script>
 
 <!-- ===================================================== -->
 <!-- DIRTY ROOMS -->
