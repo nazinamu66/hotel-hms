@@ -369,9 +369,18 @@ class MaintenanceMaterial(models.Model):
         choices=SOURCE_CHOICES,
     )
 
+    # For DIRECT purchases, received_quantity is accepted delivery quantity
+    # and quantity is the amount actually installed/consumed on the work order.
+    # STORE materials are consumed immediately, so both values are equal.
     quantity = models.DecimalField(
         max_digits=12,
         decimal_places=2,
+    )
+
+    received_quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
     )
 
     unit_cost = models.DecimalField(
@@ -405,7 +414,18 @@ class MaintenanceMaterial(models.Model):
 
     @property
     def total_cost(self):
+        # Work-order cost reflects materials actually used, not merely delivered.
         return self.quantity * self.unit_cost
+
+    @property
+    def remaining_quantity(self):
+        if self.source != "DIRECT":
+            return Decimal("0.00")
+        return max(self.received_quantity - self.quantity, Decimal("0.00"))
+
+    @property
+    def received_cost(self):
+        return self.received_quantity * self.unit_cost
 
     def __str__(self):
         return (
