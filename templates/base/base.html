@@ -539,7 +539,27 @@
 
 
         <!-- ========================= -->
-        <!-- MAINTENANCE OPERATIONS -->
+                <!-- ========================= -->
+        <!-- LAUNDRY MANAGEMENT REPORTING -->
+        <!-- ========================= -->
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
+        {% with laundry_report_pages="laundry_management_overview,laundry_production_analysis,laundry_linen_movement_analysis,laundry_cost_analysis,laundry_service_quality_analysis" %}
+        <h4 class="menu-toggle {% if request.resolver_match.url_name in laundry_report_pages %}active-menu{% endif %}"
+            onclick="toggleMenu('laundry_management_menu', this)">
+            <span class="arrow">{% if request.resolver_match.url_name in laundry_report_pages %}▾{% else %}▸{% endif %}</span>
+            Laundry Reports
+        </h4>
+        <div id="laundry_management_menu" class="menu-section {% if request.resolver_match.url_name in laundry_report_pages %}open{% endif %}">
+            <a href="{% url 'laundry_management_overview' %}">Management Overview</a>
+            <a href="{% url 'laundry_production_analysis' %}">Production &amp; Productivity</a>
+            <a href="{% url 'laundry_linen_movement_analysis' %}">Linen Movement &amp; Loss</a>
+            <a href="{% url 'laundry_cost_analysis' %}">Cost Analysis</a>
+            <a href="{% url 'laundry_service_quality_analysis' %}">Quality &amp; Service</a>
+        </div>
+        {% endwith %}
+        {% endif %}
+
+<!-- MAINTENANCE OPERATIONS -->
         <!-- ========================= -->
 
         {% if user|has_role:"MAINTENANCE,ADMIN" %}
