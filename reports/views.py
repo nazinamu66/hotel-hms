@@ -1215,6 +1215,163 @@ def restaurant_spoilage_analysis(request):
     })
 
 
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def housekeeping_staff_productivity(request):
+    """Hotel-scoped housekeeping staff productivity based on completed operational records."""
+    from collections import defaultdict
+    from datetime import datetime, time, timedelta
+    from django.core.exceptions import PermissionDenied
+    from django.db.models import Count
+    from django.utils.dateparse import parse_date
+    from django.utils import timezone
+    from accounts.services.access import get_accessible_hotels
+    from housekeeping.models import CleaningAssignment, CleaningLog, CleaningInspection, CleaningTimeExtension
+
+    accessible_hotels = get_accessible_hotels(request.user).filter(is_active=True)
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    report_hotels = accessible_hotels.order_by("name")
+    selected_hotel = request.GET.get("hotel", "").strip()
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not accessible_hotels.filter(pk=int(selected_hotel)).exists():
+            raise PermissionDenied("You do not have access to this hotel.")
+        report_hotels = report_hotels.filter(pk=int(selected_hotel))
+
+    start_dt = timezone.make_aware(datetime.combine(date_from, time.min))
+    end_dt = timezone.make_aware(datetime.combine(date_to + timedelta(days=1), time.min))
+
+    assignments = CleaningAssignment.objects.filter(
+        room__hotel__in=report_hotels,
+        assigned_at__gte=start_dt,
+        assigned_at__lt=end_dt,
+    ).select_related("assigned_to", "room", "room__hotel").prefetch_related("inspections", "time_extensions")
+
+    logs = CleaningLog.objects.filter(
+        room__hotel__in=report_hotels,
+        cleaned_at__gte=start_dt,
+        cleaned_at__lt=end_dt,
+        assignment__isnull=False,
+    ).select_related("cleaned_by", "room", "room__hotel", "assignment")
+
+    inspection_rows = CleaningInspection.objects.filter(
+        assignment__room__hotel__in=report_hotels,
+        inspected_at__gte=start_dt,
+        inspected_at__lt=end_dt,
+    ).select_related("assignment", "assignment__assigned_to", "assignment__room", "assignment__room__hotel")
+
+    # Keep one row per staff member and use the same assignment scope for every measure.
+    stats = {}
+    def staff_bucket(user):
+        if user.pk not in stats:
+            stats[user.pk] = {
+                "staff": user, "assigned": 0, "started": 0, "released": 0,
+                "failed_inspections": 0, "passed_inspections": 0,
+                "rework_assignments": set(), "durations": [], "on_time": 0,
+                "timed": 0, "extensions": 0, "extension_minutes": 0,
+                "active": 0, "outstanding": 0,
+            }
+        return stats[user.pk]
+
+    for assignment in assignments:
+        bucket = staff_bucket(assignment.assigned_to)
+        bucket["assigned"] += 1
+        if assignment.started_at:
+            bucket["started"] += 1
+        if assignment.status in ("ASSIGNED", "IN_PROGRESS", "INSPECTION"):
+            bucket["active"] += 1
+        if assignment.status in ("ASSIGNED", "IN_PROGRESS", "INSPECTION"):
+            bucket["outstanding"] += 1
+        extensions = list(assignment.time_extensions.all())
+        bucket["extensions"] += len(extensions)
+        bucket["extension_minutes"] += sum(item.minutes_added for item in extensions)
+
+    for inspection in inspection_rows:
+        bucket = staff_bucket(inspection.assignment.assigned_to)
+        if inspection.result == "PASS":
+            bucket["passed_inspections"] += 1
+        elif inspection.result == "FAIL":
+            bucket["failed_inspections"] += 1
+            bucket["rework_assignments"].add(inspection.assignment_id)
+
+    for log in logs:
+        assignment = log.assignment
+        if not assignment or not assignment.started_at or not assignment.completed_at:
+            continue
+        bucket = staff_bucket(log.cleaned_by or assignment.assigned_to)
+        bucket["released"] += 1
+        elapsed_seconds = (assignment.completed_at - assignment.started_at).total_seconds()
+        if elapsed_seconds >= 0:
+            bucket["durations"].append(elapsed_seconds / 60)
+        extensions = list(assignment.time_extensions.all())
+        effective_deadline = extensions[-1].new_deadline_at if extensions else assignment.cleaning_deadline_at
+        if effective_deadline:
+            bucket["timed"] += 1
+            if assignment.completed_at <= effective_deadline:
+                bucket["on_time"] += 1
+
+    staff_rows = []
+    for bucket in stats.values():
+        durations = bucket["durations"]
+        bucket["rework_count"] = len(bucket["rework_assignments"])
+        bucket["average_minutes"] = round(sum(durations) / len(durations), 1) if durations else None
+        bucket["on_time_rate"] = round(bucket["on_time"] / bucket["timed"] * 100, 1) if bucket["timed"] else None
+        bucket["inspection_total"] = bucket["passed_inspections"] + bucket["failed_inspections"]
+        bucket["first_pass_rate"] = round(
+            bucket["passed_inspections"] / bucket["inspection_total"] * 100, 1
+        ) if bucket["inspection_total"] else None
+        staff_rows.append(bucket)
+
+    staff_rows.sort(key=lambda row: (-row["released"], row["staff"].get_full_name() or row["staff"].username))
+    total_assigned = sum(row["assigned"] for row in staff_rows)
+    total_released = sum(row["released"] for row in staff_rows)
+    total_rework = sum(row["rework_count"] for row in staff_rows)
+    all_durations = [value for row in staff_rows for value in row["durations"]]
+    total_timed = sum(row["timed"] for row in staff_rows)
+    total_on_time = sum(row["on_time"] for row in staff_rows)
+    total_extensions = sum(row["extensions"] for row in staff_rows)
+    total_extension_minutes = sum(row["extension_minutes"] for row in staff_rows)
+    active_assignments = CleaningAssignment.objects.filter(
+        room__hotel__in=report_hotels, status__in=("ASSIGNED", "IN_PROGRESS", "INSPECTION")
+    ).select_related("room", "room__hotel", "assigned_to").order_by("room__hotel__name", "assigned_to__username")
+    active_by_staff = defaultdict(int)
+    for assignment in active_assignments:
+        active_by_staff[assignment.assigned_to_id] += 1
+
+    for row in staff_rows:
+        row["active"] = active_by_staff.get(row["staff"].pk, 0)
+        row["outstanding"] = max(row["assigned"] - row["released"], 0)
+
+    hotel_rows = []
+    for hotel in report_hotels:
+        hotel_logs = logs.filter(room__hotel=hotel)
+        hotel_assignments = assignments.filter(room__hotel=hotel)
+        hotel_rows.append({
+            "hotel": hotel,
+            "assigned": hotel_assignments.count(),
+            "released": hotel_logs.count(),
+            "active": active_assignments.filter(room__hotel=hotel).count(),
+            "rework": inspection_rows.filter(assignment__room__hotel=hotel, result="FAIL").count(),
+        })
+
+    context = {
+        "hotels": report_hotels, "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(), "date_to": date_to.isoformat(),
+        "staff_rows": staff_rows, "hotel_rows": hotel_rows,
+        "total_staff": len(staff_rows), "total_assigned": total_assigned,
+        "total_released": total_released, "total_rework": total_rework,
+        "average_minutes": round(sum(all_durations) / len(all_durations), 1) if all_durations else None,
+        "on_time_rate": round(total_on_time / total_timed * 100, 1) if total_timed else None,
+        "total_extensions": total_extensions, "total_extension_minutes": total_extension_minutes,
+        "active_assignments": active_assignments,
+    }
+    return render(request, "reports/housekeeping_staff_productivity.html", context)
+
+
 @role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
 def housekeeping_management_overview(request):
     """Read-only, hotel-scoped overview of Housekeeping operations."""
