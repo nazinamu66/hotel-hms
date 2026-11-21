@@ -1318,6 +1318,21 @@ def housekeeping_inspection_quality(request):
         if current is None or inspection.inspected_at < current.inspected_at:
             first_by_assignment[assignment.pk] = inspection
 
+    # A first-pass metric must use the assignment's first-ever inspection,
+    # not merely its first inspection inside the selected date range.
+    assignment_ids = {item.assignment_id for item in inspections}
+    if assignment_ids:
+        all_assignment_inspections = CleaningInspection.objects.filter(
+            assignment_id__in=assignment_ids
+        ).order_by("assignment_id", "inspected_at", "pk")
+        first_ever = {}
+        for item in all_assignment_inspections:
+            first_ever.setdefault(item.assignment_id, item)
+        first_by_assignment = {
+            assignment_id: item for assignment_id, item in first_ever.items()
+            if start_dt <= item.inspected_at < end_dt
+        }
+
     first_pass = sum(1 for item in first_by_assignment.values() if item.result == "PASS")
     first_fail = sum(1 for item in first_by_assignment.values() if item.result == "FAIL")
     first_total = first_pass + first_fail
