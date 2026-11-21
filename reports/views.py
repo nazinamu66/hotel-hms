@@ -1341,6 +1341,9 @@ def housekeeping_inspection_quality(request):
         {"key": key, "label": label, "failures": checklist_failures[key]}
         for key, label in checklist_labels.items()
     ]
+    max_checklist_failures = max((row["failures"] for row in checklist_rows), default=0)
+    for row in checklist_rows:
+        row["bar_width"] = round(row["failures"] / max_checklist_failures * 100) if max_checklist_failures else 0
     checklist_rows.sort(key=lambda row: (-row["failures"], row["label"]))
 
     staff_rows = []
@@ -1356,6 +1359,38 @@ def housekeeping_inspection_quality(request):
         row["pass_rate"] = round(row["passed"] / row["inspections"] * 100, 1)
         inspector_rows.append(row)
     inspector_rows.sort(key=lambda row: (-row["inspections"], row["inspector"].get_full_name() or row["inspector"].username))
+
+    for row in staff_rows:
+        row["bar_width"] = row["pass_rate"]
+    for row in hotel_rows:
+        row["passed_width"] = round(row["passed"] / row["inspections"] * 100, 1) if row["inspections"] else 0
+        row["failed_width"] = round(row["failed"] / row["inspections"] * 100, 1) if row["inspections"] else 0
+
+    # Daily columns for shorter periods; weekly columns for longer periods.
+    trend_days = (date_to - date_from).days + 1
+    bucket_days = 1 if trend_days <= 31 else 7
+    trend = {}
+    cursor = date_from
+    while cursor <= date_to:
+        bucket_start = date_from + timedelta(days=((cursor - date_from).days // bucket_days) * bucket_days)
+        trend.setdefault(bucket_start, {"date": bucket_start, "passed": 0, "failed": 0})
+        cursor += timedelta(days=1)
+    for inspection in inspections:
+        inspection_day = timezone.localtime(inspection.inspected_at).date()
+        bucket_start = date_from + timedelta(days=((inspection_day - date_from).days // bucket_days) * bucket_days)
+        bucket = trend.get(bucket_start)
+        if bucket:
+            if inspection.result == "PASS":
+                bucket["passed"] += 1
+            elif inspection.result == "FAIL":
+                bucket["failed"] += 1
+    trend_rows = list(trend.values())
+    max_trend_count = max((row["passed"] + row["failed"] for row in trend_rows), default=0)
+    for row in trend_rows:
+        row["total"] = row["passed"] + row["failed"]
+        row["passed_height"] = round(row["passed"] / max_trend_count * 100) if max_trend_count else 0
+        row["failed_height"] = round(row["failed"] / max_trend_count * 100) if max_trend_count else 0
+        row["label"] = row["date"].strftime("%d %b")
 
     recurring_rooms = [row for row in room_stats.values() if row["failed"] > 1]
     recurring_rooms.sort(key=lambda row: (-row["failed"], -row["failed_items"], row["hotel"].name, row["room"].room_number))
@@ -1381,6 +1416,8 @@ def housekeeping_inspection_quality(request):
         "staff_rows": staff_rows, "inspector_rows": inspector_rows,
         "recurring_rooms": recurring_rooms, "hotel_rows": hotel_rows,
         "recent_failures": sorted(failed, key=lambda item: item.inspected_at, reverse=True)[:40],
+        "trend_rows": trend_rows, "trend_bucket_label": "Daily" if bucket_days == 1 else "Weekly",
+        "first_fail_width": round(first_fail / first_total * 100, 1) if first_total else 0,
     }
     return render(request, "reports/housekeeping_inspection_quality.html", context)
 
