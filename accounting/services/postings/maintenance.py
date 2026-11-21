@@ -152,9 +152,11 @@ def post_maintenance_direct_material_receipt(material, user=None):
     hotel = _get_maintenance_ticket_hotel(material.ticket)
     if material.supplier.hotel_id != hotel.id:
         raise ValidationError("Supplier does not belong to the maintenance ticket's hotel.")
-    amount = Decimal(str(material.quantity)) * Decimal(str(material.unit_cost))
+    # The supplier liability and maintenance expense are recognized when
+    # the goods are accepted, even if the technician installs them later.
+    amount = Decimal(str(material.received_quantity)) * Decimal(str(material.unit_cost))
     if amount <= 0:
-        raise ValidationError("Direct-purchase material cost must be greater than zero.")
+        raise ValidationError("Direct-purchase material receipt cost must be greater than zero.")
     journal_entry = record_transaction(
         debit_system_key="maintenance_expense",
         credit_system_key="accounts_payable",
