@@ -480,6 +480,7 @@
         </h4>
         <div id="housekeeping_management_menu" class="menu-section {% if request.resolver_match.url_name == 'housekeeping_management_overview' %}open{% endif %}">
             <a href="{% url 'housekeeping_management_overview' %}">Management Overview</a>
+            <a href="{% url 'housekeeping_staff_productivity' %}">Staff Productivity</a>
         </div>
         {% endif %}
 
