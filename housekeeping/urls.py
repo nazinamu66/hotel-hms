@@ -7,6 +7,7 @@ from .views import (
     lost_found_create,
     lost_found_list,
     start_cleaning,
+    extend_cleaning_time,
     finish_cleaning,
     approve_cleaning,
     inspect_cleaning,
@@ -61,6 +62,7 @@ urlpatterns = [
     ),
 
     # Cleaning lifecycle
+    path("cleaning/<int:assignment_id>/extend-time/", extend_cleaning_time, name="housekeeping_extend_cleaning_time"),
     path(
         "rooms/<int:room_id>/start-cleaning/",
         start_cleaning,
