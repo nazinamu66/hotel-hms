@@ -27,6 +27,7 @@
   {% if request.user.role == "MAINTENANCE" and ticket.assigned_to_id == request.user.id and ticket.status == "IN_PROGRESS" %}
    <a class="md-btn" href="{% url 'maintenance_add_labour' ticket.id %}">＋ Add labour</a>
    <a class="md-btn" href="{% url 'maintenance_add_material' ticket.id %}">＋ Add material</a>
+   <a class="md-btn" href="{% url 'maintenance_direct_purchase_request' ticket.id %}">＋ Request direct purchase</a>
    <a class="md-btn md-btn-primary" href="{% url 'maintenance_resolve_ticket' ticket.id %}">Complete work</a>
   {% endif %}
  </div>
@@ -66,6 +67,15 @@
     {% for material in ticket.material_entries.all %}
      <div class="md-entry"><div class="md-entry-title">{{ material.product.name }}</div><p>{{ material.quantity }} {{ material.product.base_unit }} · {{ material.get_source_display }}<br>Unit cost ₦{{ material.unit_cost|floatformat:2 }} · Total <strong>₦{{ material.total_cost|floatformat:2 }}</strong></p>{% if material.description %}<p>{{ material.description|linebreaksbr }}</p>{% endif %}<small>Added by {{ material.created_by|default:"Staff" }} · {{ material.created_at|date:"d M Y, H:i" }}</small></div>
     {% empty %}<div class="md-empty">No materials have been recorded.</div>{% endfor %}
+   </div>
+  </section>
+
+  <section class="md-card">
+   <div class="md-card-head"><h3>Direct purchase requests</h3><span class="md-pill">{{ ticket.direct_purchase_requests.count }} requests</span></div>
+   <div class="md-card-body">
+    {% for purchase_request in ticket.direct_purchase_requests.all %}
+     <div class="md-entry"><div class="md-entry-title">{{ purchase_request.product.name }} · {{ purchase_request.requested_quantity }} requested</div><p>{{ purchase_request.get_status_display }}{% if purchase_request.reason %}<br>{{ purchase_request.reason|linebreaksbr }}{% endif %}</p>{% if purchase_request.purchase_order_id %}<a href="{% url 'inventory:po_detail' purchase_request.purchase_order_id %}">Purchase Order #{{ purchase_request.purchase_order_id }}</a>{% endif %}<small>Requested by {{ purchase_request.requested_by }} · {{ purchase_request.created_at|date:"d M Y, H:i" }}</small></div>
+    {% empty %}<div class="md-empty">No direct purchase requests for this work order.</div>{% endfor %}
    </div>
   </section>
 
