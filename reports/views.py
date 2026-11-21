@@ -2037,7 +2037,7 @@ def _laundry_report_context(hotels, selected_hotel, date_from, date_to, title, s
 @role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
 def laundry_management_overview(request):
     from decimal import Decimal
-    from collections import defaultdict
+    from django.db.models import Sum, Count
     from laundry.models import LaundryReceipt, LaundryReceiptDiscrepancy, LaundryProcessing, LaundryProcessingMaterial, GuestLaundryOrder
     from linen.models import LinenItem, LinenTransaction
     from linen.services.balances import get_linen_condition_balance
@@ -2099,14 +2099,12 @@ def laundry_management_overview(request):
                 linen_rows.append({"hotel": hotel, "item": item, "clean": balance["CLEAN"], "dirty": balance["DIRTY"]})
     context["hotel_rows"] = hotel_rows
     context["linen_rows"] = linen_rows[:100]
-    context["monthly_rows"] = list(
-        processings.extra(select={"month": "strftime('%%Y-%%m', laundry_laundryprocessing.created_at)"}).values("month").annotate(entries=Count("id")).order_by("month")
-    )
     return render(request, "reports/laundry_management_report.html", context)
 
 
 @role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
 def laundry_production_analysis(request):
+    from django.db.models import Sum
     from laundry.models import LaundryProcessing, GuestLaundryOrder
     from linen.models import LinenTransaction
 
@@ -2141,6 +2139,7 @@ def laundry_linen_movement_analysis(request):
 @role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
 def laundry_cost_analysis(request):
     from decimal import Decimal
+    from django.db.models import Sum
     from laundry.models import LaundryProcessing, LaundryProcessingMaterial, GuestLaundryOrder
 
     hotels, selected_hotel, date_from, date_to = _laundry_report_scope(request)
@@ -2155,6 +2154,7 @@ def laundry_cost_analysis(request):
 
 @role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
 def laundry_service_quality_analysis(request):
+    from django.db.models import Count
     from laundry.models import LaundryReceipt, LaundryReceiptDiscrepancy, GuestLaundryOrder
 
     hotels, selected_hotel, date_from, date_to = _laundry_report_scope(request)
