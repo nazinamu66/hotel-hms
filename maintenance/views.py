@@ -2630,20 +2630,9 @@ def maintenance_direct_purchase_request(request, ticket_id):
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
 def maintenance_direct_purchase_requests(request):
-    hotels = get_accessible_hotels(request.user)
-    requests_qs = MaintenanceDirectPurchaseRequest.objects.filter(
-        Q(ticket__room__hotel__in=hotels) | Q(ticket__location__hotel__in=hotels)
-    ).select_related("ticket", "ticket__room", "ticket__location", "product", "requested_by", "purchase_order")
-    if request.user.role == "MANAGER":
-        if not request.user.hotel_id:
-            raise PermissionDenied
-        requests_qs = requests_qs.filter(
-            Q(ticket__room__hotel_id=request.user.hotel_id) |
-            Q(ticket__location__hotel_id=request.user.hotel_id)
-        )
-    return render(request, "maintenance/direct_purchase_requests.html", {
-        "purchase_requests": requests_qs.order_by("-created_at"),
-    })
+    # Keep old bookmarks working while routing everyone to the unified
+    # Direct Purchases register under Approvals.
+    return redirect("direct_purchase_list")
 
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR")
