@@ -719,3 +719,28 @@ class HousekeepingManagementOverviewTests(TestCase):
         self.client.force_login(self.staff)
         response = self.client.get("/reports/housekeeping/management/")
         self.assertEqual(response.status_code, 403)
+
+
+    def test_staff_productivity_uses_released_rooms_and_inspection_results(self):
+        response = self.client.get("/reports/housekeeping/management/productivity/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["total_assigned"], 1)
+        self.assertEqual(response.context["total_released"], 1)
+        self.assertEqual(response.context["total_rework"], 0)
+        self.assertEqual(response.context["total_staff"], 1)
+        row = response.context["staff_rows"][0]
+        self.assertEqual(row["released"], 1)
+        self.assertEqual(row["first_pass_rate"], 100.0)
+        self.assertIsNotNone(row["average_minutes"])
+
+    def test_staff_productivity_rejects_hotel_outside_manager_scope(self):
+        response = self.client.get(
+            "/reports/housekeeping/management/productivity/",
+            {"hotel": self.other_hotel.pk},
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_housekeeping_staff_cannot_open_staff_productivity_report(self):
+        self.client.force_login(self.staff)
+        response = self.client.get("/reports/housekeeping/management/productivity/")
+        self.assertEqual(response.status_code, 403)
