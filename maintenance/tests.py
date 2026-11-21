@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.test import RequestFactory, SimpleTestCase, TestCase
 
 from maintenance.views import start_ticket
+from maintenance.models import MaintenanceMaterial
+from decimal import Decimal
 from maintenance.workflows.preventive import create_preventive_work_order
 
 
@@ -96,3 +98,39 @@ class PreventiveWorkOrderLocationTests(TestCase):
             "This asset is not assigned to a room or maintenance location.",
         ):
             create_preventive_work_order(schedule, self.user)
+
+
+class MaintenanceDirectMaterialQuantityTests(SimpleTestCase):
+    def test_received_direct_material_is_not_costed_as_used_until_recorded(self):
+        material = MaintenanceMaterial(
+            source="DIRECT",
+            quantity=Decimal("0.00"),
+            received_quantity=Decimal("2.00"),
+            unit_cost=Decimal("2000.00"),
+        )
+
+        self.assertEqual(material.remaining_quantity, Decimal("2.00"))
+        self.assertEqual(material.received_cost, Decimal("4000.00"))
+        self.assertEqual(material.total_cost, Decimal("0.00"))
+
+    def test_partial_usage_reduces_remaining_quantity_and_costs_used_amount(self):
+        material = MaintenanceMaterial(
+            source="DIRECT",
+            quantity=Decimal("1.00"),
+            received_quantity=Decimal("2.00"),
+            unit_cost=Decimal("2000.00"),
+        )
+
+        self.assertEqual(material.remaining_quantity, Decimal("1.00"))
+        self.assertEqual(material.total_cost, Decimal("2000.00"))
+
+    def test_fully_used_direct_material_has_no_remaining_quantity(self):
+        material = MaintenanceMaterial(
+            source="DIRECT",
+            quantity=Decimal("2.00"),
+            received_quantity=Decimal("2.00"),
+            unit_cost=Decimal("2000.00"),
+        )
+
+        self.assertEqual(material.remaining_quantity, Decimal("0.00"))
+        self.assertEqual(material.total_cost, Decimal("4000.00"))
