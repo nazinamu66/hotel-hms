@@ -1840,3 +1840,159 @@ def maintenance_preventive_compliance(request):
         "unresolved_due": totals["overdue"] + totals["pending"],
     }
     return render(request, "reports/maintenance_preventive_compliance.html", context)
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "DIRECTOR", "ADMIN")
+def maintenance_supplier_analysis(request):
+    """Read-only supplier and contractor analysis from supplier-linked maintenance entries."""
+    from collections import defaultdict
+    from decimal import Decimal
+    from django.core.exceptions import PermissionDenied
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    from django.utils.dateparse import parse_date
+    from accounts.services.access import get_accessible_hotels
+    from maintenance.models import MaintenanceTicket
+
+    accessible_hotels = get_accessible_hotels(request.user)
+    today = localdate()
+    date_from = parse_date(request.GET.get("from", "")) or today.replace(day=1)
+    date_to = parse_date(request.GET.get("to", "")) or today
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    hotels = accessible_hotels.order_by("name")
+    selected_hotel = request.GET.get("hotel", "").strip()
+    ticket_scope = MaintenanceTicket.objects.filter(
+        Q(room__hotel__in=accessible_hotels) |
+        Q(location__hotel__in=accessible_hotels)
+    )
+    if selected_hotel:
+        if not selected_hotel.isdigit() or not accessible_hotels.filter(pk=int(selected_hotel)).exists():
+            raise PermissionDenied("You do not have access to this hotel.")
+        hotel_id = int(selected_hotel)
+        hotels = hotels.filter(pk=hotel_id)
+        ticket_scope = ticket_scope.filter(
+            Q(room__hotel_id=hotel_id) | Q(location__hotel_id=hotel_id)
+        )
+
+    tickets = ticket_scope.select_related(
+        "room", "room__hotel", "location", "location__hotel"
+    ).prefetch_related(
+        "labour_entries__supplier",
+        "material_entries__supplier",
+        "material_entries__product",
+    )
+
+    zero = Decimal("0.00")
+    supplier_totals = {}
+    monthly = defaultdict(lambda: {
+        "labour": zero, "direct_materials": zero, "total": zero,
+        "entries": 0,
+    })
+    register = []
+    supplier_entry_count = 0
+    outsourced_labour_total = zero
+    direct_material_total = zero
+    work_order_ids = set()
+
+    def add_supplier_entry(supplier, ticket, hotel, entry_date, entry_type, description, amount, reference):
+        nonlocal supplier_entry_count, outsourced_labour_total, direct_material_total
+        # Supplier records are hotel-owned. Ignore mismatched historical links
+        # rather than exposing another hotel's supplier in this report.
+        if not supplier or supplier.hotel_id != hotel.id:
+            return
+        key = (hotel.id, supplier.id)
+        if key not in supplier_totals:
+            supplier_totals[key] = {
+                "supplier": supplier, "hotel": hotel,
+                "labour": zero, "direct_materials": zero,
+                "total": zero, "entries": 0, "ticket_ids": set(),
+            }
+        row = supplier_totals[key]
+        if entry_type == "OUTSOURCED LABOUR":
+            row["labour"] += amount
+            outsourced_labour_total += amount
+            month_key = "labour"
+        else:
+            row["direct_materials"] += amount
+            direct_material_total += amount
+            month_key = "direct_materials"
+        row["total"] += amount
+        row["entries"] += 1
+        row["ticket_ids"].add(ticket.id)
+        supplier_entry_count += 1
+        work_order_ids.add(ticket.id)
+        month = entry_date.strftime("%Y-%m")
+        monthly[month][month_key] += amount
+        monthly[month]["total"] += amount
+        monthly[month]["entries"] += 1
+        register.append({
+            "date": entry_date,
+            "supplier": supplier,
+            "hotel": hotel,
+            "ticket": ticket,
+            "entry_type": entry_type,
+            "description": description,
+            "amount": amount,
+            "reference": reference,
+        })
+
+    for ticket in tickets:
+        hotel = ticket.room.hotel if ticket.room_id else ticket.location.hotel
+        for labour in ticket.labour_entries.all():
+            entry_date = labour.created_at.date()
+            if (
+                labour.labour_type == "OUTSOURCED"
+                and date_from <= entry_date <= date_to
+                and labour.supplier_id
+            ):
+                add_supplier_entry(
+                    labour.supplier, ticket, hotel, entry_date,
+                    "OUTSOURCED LABOUR", labour.description,
+                    labour.amount, f"MAINT-{ticket.id}-LAB-{labour.id}",
+                )
+        for material in ticket.material_entries.all():
+            entry_date = material.created_at.date()
+            if (
+                material.source == "DIRECT"
+                and date_from <= entry_date <= date_to
+                and material.supplier_id
+            ):
+                add_supplier_entry(
+                    material.supplier, ticket, hotel, entry_date,
+                    "DIRECT MATERIAL", material.description or material.product.name,
+                    material.total_cost, f"MAINT-{ticket.id}-MAT-{material.id}",
+                )
+
+    supplier_rows = []
+    for row in supplier_totals.values():
+        supplier_rows.append({
+            **row,
+            "work_orders": len(row["ticket_ids"]),
+        })
+    supplier_rows.sort(key=lambda row: row["total"], reverse=True)
+    for row in supplier_rows:
+        row.pop("ticket_ids", None)
+
+    month_rows = [{"month": month, **values} for month, values in sorted(monthly.items())]
+    register.sort(key=lambda row: (row["date"], row["amount"]), reverse=True)
+    paginator = Paginator(register, 50)
+    entry_page = paginator.get_page(request.GET.get("page"))
+
+    context = {
+        "hotels": hotels,
+        "selected_hotel": selected_hotel,
+        "date_from": date_from.isoformat(),
+        "date_to": date_to.isoformat(),
+        "supplier_count": len(supplier_rows),
+        "supplier_entry_count": supplier_entry_count,
+        "work_order_count": len(work_order_ids),
+        "outsourced_labour_total": outsourced_labour_total,
+        "direct_material_total": direct_material_total,
+        "total_supplier_spend": outsourced_labour_total + direct_material_total,
+        "supplier_rows": supplier_rows,
+        "month_rows": month_rows,
+        "entry_page": entry_page,
+    }
+    return render(request, "reports/maintenance_supplier_analysis.html", context)
