@@ -2680,13 +2680,43 @@ def maintenance_direct_purchase_review(request, request_id):
             department = get_object_or_404(
                 Department, hotel=hotel, code="MNT", department_type="MAINTENANCE", is_active=True
             )
-            if req.product.hotel_id != hotel.id or req.product.usage_type != "INTERNAL" or req.product.product_type == "EQUIPMENT":
+            product = req.product
+            if product is None:
+                item_name = (req.requested_item_name or "").strip()
+                if not item_name:
+                    raise ValidationError("The requested item needs a name before it can be approved.")
+                product = Product.objects.filter(hotel=hotel, name__iexact=item_name).first()
+                if product is None:
+                    # Catalogue creation is performed by the approving manager,
+                    # never by the technician. A SERVICE/INTERNAL record keeps
+                    # this ad-hoc part out of resale, food and fixed-asset flows.
+                    product = Product.objects.create(
+                        hotel=hotel,
+                        name=item_name,
+                        sku=f"MNT-REQ-{hotel.pk}-{req.pk}",
+                        product_type="SERVICE",
+                        usage_type="INTERNAL",
+                        supply_source="DIRECT",
+                        base_unit=req.requested_unit or "pcs",
+                        purchase_unit=req.requested_unit or "pcs",
+                        unit_multiplier=1,
+                        cost_price=Decimal("0.00"),
+                        purchase_cost=Decimal("0.00"),
+                    )
+                    product.departments.add(department)
+                elif product.usage_type != "INTERNAL" or product.product_type == "EQUIPMENT":
+                    raise ValidationError("An existing catalogue item with this name is not eligible for direct maintenance purchase.")
+                else:
+                    product.departments.add(department)
+                req.product = product
+                req.save(update_fields=["product"])
+            if product.hotel_id != hotel.id or product.usage_type != "INTERNAL" or product.product_type == "EQUIPMENT":
                 raise ValidationError("Only internal maintenance consumables can be purchased directly.")
             po = PurchaseOrder.objects.create(
                 department=department, created_by=request.user, status="DRAFT"
             )
             PurchaseItem.objects.create(
-                purchase_order=po, product=req.product,
+                purchase_order=po, product=product,
                 purchase_quantity=req.requested_quantity, unit_cost=Decimal("0.00"),
             )
             req.status = "APPROVED"
