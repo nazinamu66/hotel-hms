@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from datetime import timedelta
 
 from housekeeping.models import CleaningAssignment
 from housekeeping.workflows.common import (
@@ -55,7 +56,7 @@ def mark_cleaning_started(assignment):
 
     assignment.status = "IN_PROGRESS"
     assignment.started_at = timezone.now()
-    assignment.cleaning_deadline_at = assignment.started_at + timezone.timedelta(minutes=20)
+    assignment.cleaning_deadline_at = assignment.started_at + timedelta(minutes=20)
     assignment.warning_sent_at = None
     assignment.overdue_alert_sent_at = None
 
