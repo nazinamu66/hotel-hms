@@ -154,6 +154,7 @@ def consume_maintenance_material(
         product=product,
         source="STORE",
         quantity=quantity,
+        received_quantity=quantity,
         unit_cost=product.cost_price,
         description=description,
         created_by=user,
