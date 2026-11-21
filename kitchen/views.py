@@ -635,34 +635,42 @@ def urgent_purchase_review(request):
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def direct_purchase_list(request):
+    from maintenance.models import MaintenanceDirectPurchaseRequest
+
+    hotels = get_accessible_hotels(request.user)
     qs = DirectPurchase.objects.select_related(
         "supplier", "requested_by", "supplier__hotel"
-    ).filter(
-        supplier__hotel__in=get_accessible_hotels(request.user)
-    ).order_by("-created_at")
+    ).filter(supplier__hotel__in=hotels).order_by("-created_at")
 
-    if request.user.role == "KITCHEN":
-        qs = qs.filter(requested_by=request.user)
-    
     from django.db.models import Sum, F, DecimalField, ExpressionWrapper
-
-    purchases = (
-        qs
-        .select_related("supplier")
-        .annotate(
-            computed_total=Sum(
-                ExpressionWrapper(
-                    F("items__quantity") * F("items__unit_cost"),
-                    output_field=DecimalField()
-                )
+    purchases = qs.annotate(
+        computed_total=Sum(
+            ExpressionWrapper(
+                F("items__quantity") * F("items__unit_cost"),
+                output_field=DecimalField()
             )
         )
     )
 
+    maintenance_requests = MaintenanceDirectPurchaseRequest.objects.filter(
+        Q(ticket__room__hotel__in=hotels) | Q(ticket__location__hotel__in=hotels)
+    ).select_related(
+        "ticket", "ticket__room", "ticket__location", "product",
+        "requested_by", "purchase_order",
+    ).order_by("-created_at")
+
+    if request.user.role == "KITCHEN":
+        purchases = purchases.filter(requested_by=request.user)
+        maintenance_requests = maintenance_requests.none()
+
     return render(
         request,
         "kitchen/direct_purchase/list.html",
-        {"purchases": purchases}
+        {
+            "purchases": purchases,
+            "maintenance_requests": maintenance_requests,
+            "maintenance_pending_count": maintenance_requests.filter(status="PENDING").count(),
+        }
     )
 
 @role_required("KITCHEN", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
