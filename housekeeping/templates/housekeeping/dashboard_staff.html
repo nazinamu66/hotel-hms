@@ -68,7 +68,7 @@
                     <tr>
                         <th>Room</th>
                         <th>Hotel</th>
-                        <th>Task status</th>
+                        <th>Task status / timer</th>
                         <th>Notes / corrections</th>
                         <th>My actions</th>
                     </tr>
@@ -78,7 +78,11 @@
                     <tr>
                         <td><strong>Room {{ assignment.room.room_number }}</strong></td>
                         <td>{{ assignment.room.hotel.name }}</td>
-                        <td><span class="hk-pill">{{ assignment.get_status_display }}</span></td>
+                        <td><span class="hk-pill">{{ assignment.get_status_display }}</span>
+{% if assignment.status == "IN_PROGRESS" and assignment.cleaning_deadline_at %}
+<div class="hk-muted" style="margin-top:7px;">Deadline: {{ assignment.cleaning_deadline_at|date:"H:i" }}</div>
+<strong class="hk-room-countdown" data-deadline="{{ assignment.cleaning_deadline_at|date:'c' }}">Calculating…</strong>
+{% endif %}</td>
                         <td>
                             {% if assignment.notes %}
                                 {{ assignment.notes|linebreaksbr }}
@@ -109,4 +113,19 @@
     </section>
 
 </div>
+<script>
+(function () {
+ function updateRoomTimers() {
+  document.querySelectorAll(".hk-room-countdown").forEach(function (node) {
+   var remaining = new Date(node.dataset.deadline).getTime() - Date.now();
+   if (remaining <= 0) { node.textContent = "Overdue"; node.style.color = "#b91c1c"; return; }
+   var minutes = Math.floor(remaining / 60000), seconds = Math.floor((remaining % 60000) / 1000);
+   node.textContent = minutes + "m " + String(seconds).padStart(2, "0") + "s remaining";
+   node.style.color = remaining <= 300000 ? "#b45309" : "#166534";
+  });
+ }
+ updateRoomTimers(); window.setInterval(updateRoomTimers, 1000);
+ window.setInterval(function () { window.location.reload(); }, 60000);
+})();
+</script>
 {% endblock %}
