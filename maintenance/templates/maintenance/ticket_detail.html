@@ -62,11 +62,38 @@
   </section>
 
   <section class="md-card">
-   <div class="md-card-head"><h3>Materials used</h3><span class="md-pill">{{ ticket.material_entries.count }} items</span></div>
+   <div class="md-card-head"><div><h3>Materials for this work order</h3><span class="md-muted">Store issues and direct-purchase deliveries, with usage tracked separately</span></div><span class="md-pill">{{ ticket.material_entries.count }} items</span></div>
    <div class="md-card-body">
     {% for material in ticket.material_entries.all %}
-     <div class="md-entry"><div class="md-entry-title">{{ material.product.name }}</div><p>{{ material.quantity }} {{ material.product.base_unit }} · {{ material.get_source_display }}<br>Unit cost ₦{{ material.unit_cost|floatformat:2 }} · Total <strong>₦{{ material.total_cost|floatformat:2 }}</strong></p>{% if material.description %}<p>{{ material.description|linebreaksbr }}</p>{% endif %}<small>Added by {{ material.created_by|default:"Staff" }} · {{ material.created_at|date:"d M Y, H:i" }}</small></div>
-    {% empty %}<div class="md-empty">No materials have been recorded.</div>{% endfor %}
+     <div class="md-entry">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+       <div class="md-entry-title">{{ material.product.name }}</div>
+       {% if material.source == "DIRECT" %}
+        {% if material.remaining_quantity > 0 %}<span class="md-pill md-progress">Received · awaiting use</span>{% else %}<span class="md-pill md-low">Fully used</span>{% endif %}
+       {% else %}<span class="md-pill">Issued from Maintenance Store</span>{% endif %}
+      </div>
+      {% if material.source == "DIRECT" %}
+       <div class="md-meta" style="margin-top:12px">
+        <div class="md-meta-item"><span class="md-label">Received</span><span class="md-value">{{ material.received_quantity }} {{ material.product.base_unit }}</span></div>
+        <div class="md-meta-item"><span class="md-label">Used / installed</span><span class="md-value">{{ material.quantity }} {{ material.product.base_unit }}</span></div>
+        <div class="md-meta-item"><span class="md-label">Remaining</span><span class="md-value">{{ material.remaining_quantity }} {{ material.product.base_unit }}</span></div>
+        <div class="md-meta-item"><span class="md-label">Value received</span><span class="md-value">₦{{ material.received_cost|floatformat:2 }}</span></div>
+       </div>
+       {% if material.remaining_quantity > 0 and request.user.role == "MAINTENANCE" and ticket.assigned_to_id == request.user.id and ticket.status == "IN_PROGRESS" %}
+        <form method="post" action="{% url 'maintenance_record_direct_material_usage' ticket.id material.id %}" style="display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-top:14px;padding:14px;border:1px solid #e5eaf1;border-radius:12px;background:#fbfcfe">
+         {% csrf_token %}
+         <div style="min-width:150px;flex:1"><label class="md-label" for="use-{{ material.id }}">Quantity installed / used</label><input id="use-{{ material.id }}" type="number" name="quantity" min="0.01" max="{{ material.remaining_quantity }}" step="0.01" required style="width:100%;min-height:40px;border:1px solid #cbd5e1;border-radius:9px;padding:8px 10px" placeholder="Up to {{ material.remaining_quantity }}"></div>
+         <button class="md-btn md-btn-primary" type="submit">Record usage</button>
+        </form>
+       {% endif %}
+      {% else %}
+       <p>{{ material.quantity }} {{ material.product.base_unit }} consumed · Unit cost ₦{{ material.unit_cost|floatformat:2 }} · Work-order cost <strong>₦{{ material.total_cost|floatformat:2 }}</strong></p>
+      {% endif %}
+      {% if material.supplier %}<p>Supplier: {{ material.supplier.name }}</p>{% endif %}
+      {% if material.description %}<p>{{ material.description|linebreaksbr }}</p>{% endif %}
+      <small>Recorded by {{ material.created_by|default:"Staff" }} · {{ material.created_at|date:"d M Y, H:i" }}</small>
+     </div>
+    {% empty %}<div class="md-empty">No materials have been received or issued for this work order yet.</div>{% endfor %}
    </div>
   </section>
 
