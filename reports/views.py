@@ -2125,7 +2125,13 @@ def laundry_linen_movement_analysis(request):
     from linen.models import LinenTransaction
 
     hotels, selected_hotel, date_from, date_to = _laundry_report_scope(request)
-    transactions = LinenTransaction.objects.filter(\n        linen_item__product__hotel__in=hotels,\n        created_at__date__range=(date_from, date_to),\n    ).filter(\n        Q(event_type__in=("SENT_TO_LAUNDRY", "RECEIVED_AT_LAUNDRY", "PROCESSED", "ISSUED_FROM_LAUNDRY"))\n        | Q(event_type__in=("LOST", "DAMAGED", "WRITTEN_OFF"), from_location="LAUNDRY")\n    ).select_related("linen_item__product", "performed_by")
+    transactions = LinenTransaction.objects.filter(
+        linen_item__product__hotel__in=hotels,
+        created_at__date__range=(date_from, date_to),
+    ).filter(
+        Q(event_type__in=("SENT_TO_LAUNDRY", "RECEIVED_AT_LAUNDRY", "PROCESSED", "ISSUED_FROM_LAUNDRY"))
+        | Q(event_type__in=("LOST", "DAMAGED", "WRITTEN_OFF"), from_location="LAUNDRY")
+    ).select_related("linen_item__product", "performed_by")
     receipts = LaundryReceipt.objects.filter(linen_item__product__hotel__in=hotels, created_at__date__range=(date_from, date_to)).select_related("linen_item__product", "returned_by", "received_by")
     discrepancies = LaundryReceiptDiscrepancy.objects.filter(receipt__in=receipts).select_related("receipt__linen_item__product", "resolved_by")
     loss_events = transactions.filter(event_type__in=("LOST", "DAMAGED", "WRITTEN_OFF"))
