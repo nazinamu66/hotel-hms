@@ -357,7 +357,7 @@ class EnsureDailyBusinessDaysCommandTests(TestCase):
         self.assertIn("1 already existed", output.getvalue())
 
 
-class MaintenanceLocationAccountingPostingTests(SimpleTestCase):
+class MaintenanceLocationAccountingPostingTests(TestCase):
     def setUp(self):
         self.hotel = SimpleNamespace(id=31)
         self.location = SimpleNamespace(hotel=self.hotel)
