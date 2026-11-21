@@ -12,6 +12,7 @@ from .views import (
     maintenance_location_toggle_status,
     add_labour,
     add_material,
+    record_direct_material_usage,
     maintenance_work_orders,
     my_work_orders,
     maintenance_work_history,
@@ -143,6 +144,11 @@ urlpatterns = [
         name="maintenance_asset_edit",
     ),
 
+    path(
+        "ticket/<int:ticket_id>/materials/<int:material_id>/use/",
+        record_direct_material_usage,
+        name="maintenance_record_direct_material_usage",
+    ),
     path(
         "ticket/<int:ticket_id>/materials/add/",
         add_material,
