@@ -1251,7 +1251,7 @@ def housekeeping_management_overview(request):
     assigned_count = active_assignments.filter(status="ASSIGNED").count()
     in_progress_count = active_assignments.filter(status="IN_PROGRESS").count()
     inspection_count = active_assignments.filter(status="INSPECTION").count()
-    overdue_count = active_assignments.filter(status="IN_PROGRESS", cleaning_deadline_at__lt=timezone.now()).count()
+    overdue_count = active_assignments.filter(status="IN_PROGRESS", cleaning_deadline_at__lt=now()).count()
 
     period_assignments = CleaningAssignment.objects.filter(room__hotel__in=report_hotels, assigned_at__date__range=(date_from, date_to))
     cleaning_logs = CleaningLog.objects.filter(
