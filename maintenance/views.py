@@ -8,11 +8,11 @@ from accounts.decorators import role_required
 from rooms.models import Room
 from .models import MaintenanceTicket
 from django.core.exceptions import PermissionDenied, ValidationError
-from .models import MaintenanceTicket, MaintenanceLabour, MaintenanceMaterial, MaintenanceAsset, MaintenanceSchedule, MaintenanceScheduleCycle, MaintenanceLocation
+from .models import MaintenanceTicket, MaintenanceLabour, MaintenanceMaterial, MaintenanceAsset, MaintenanceSchedule, MaintenanceScheduleCycle, MaintenanceLocation, MaintenanceDirectPurchaseRequest
 
 from datetime import timedelta, date
 from accounts.models import User
-from inventory.models import Product, Supplier,Department,Stock,StockMovement,LowStockRequest
+from inventory.models import Product, Supplier,Department,Stock,StockMovement,LowStockRequest,PurchaseOrder,PurchaseItem
 from decimal import Decimal, InvalidOperation
 from django.db.models import Q
 from django.db import transaction
@@ -2554,3 +2554,129 @@ def maintenance_supplier_create(request):
             "hotel": hotel,
         },
     )
+
+# ============================================================
+# WORK-ORDER DIRECT PURCHASES
+# ============================================================
+
+@role_required("MAINTENANCE")
+@transaction.atomic
+def maintenance_direct_purchase_request(request, ticket_id):
+    ticket = get_object_or_404(
+        MaintenanceTicket.objects.select_related("room__hotel", "location__hotel", "assigned_to"),
+        pk=ticket_id,
+        status="IN_PROGRESS",
+    )
+    hotel = ticket.room.hotel if ticket.room_id else ticket.location.hotel
+    if ticket.assigned_to_id != request.user.id or request.user.hotel_id != hotel.id:
+        raise PermissionDenied("Only the assigned technician may request parts for this work order.")
+    department = get_object_or_404(
+        Department, hotel=hotel, code="MNT", department_type="MAINTENANCE", is_active=True
+    )
+    products = Product.objects.filter(
+        hotel=hotel, is_active=True, usage_type="INTERNAL",
+        departments=department,
+    ).exclude(product_type="EQUIPMENT").order_by("name")
+
+    if request.method == "POST":
+        product = get_object_or_404(products, pk=request.POST.get("product"))
+        try:
+            quantity = int(request.POST.get("quantity", "0"))
+        except (TypeError, ValueError):
+            quantity = 0
+        reason = request.POST.get("reason", "").strip()
+        if quantity <= 0:
+            messages.error(request, "Enter a whole-number quantity greater than zero.")
+        else:
+            pending_exists = MaintenanceDirectPurchaseRequest.objects.filter(
+                ticket=ticket, product=product, status="PENDING"
+            ).exists()
+            if pending_exists:
+                messages.error(request, "There is already a pending request for this part on this work order.")
+            else:
+                MaintenanceDirectPurchaseRequest.objects.create(
+                    ticket=ticket, product=product, requested_quantity=quantity,
+                    reason=reason, requested_by=request.user,
+                )
+                messages.success(request, "Direct purchase request submitted for management approval.")
+                return redirect("maintenance_ticket_detail", ticket_id=ticket.pk)
+
+    return render(request, "maintenance/direct_purchase_request.html", {
+        "ticket": ticket, "products": products,
+    })
+
+
+@role_required("MANAGER", "ADMIN", "DIRECTOR")
+def maintenance_direct_purchase_requests(request):
+    hotels = get_accessible_hotels(request.user)
+    requests_qs = MaintenanceDirectPurchaseRequest.objects.filter(
+        Q(ticket__room__hotel__in=hotels) | Q(ticket__location__hotel__in=hotels)
+    ).select_related("ticket", "ticket__room", "ticket__location", "product", "requested_by", "purchase_order")
+    if request.user.role == "MANAGER":
+        if not request.user.hotel_id:
+            raise PermissionDenied
+        requests_qs = requests_qs.filter(
+            Q(ticket__room__hotel_id=request.user.hotel_id) |
+            Q(ticket__location__hotel_id=request.user.hotel_id)
+        )
+    return render(request, "maintenance/direct_purchase_requests.html", {
+        "purchase_requests": requests_qs.order_by("-created_at"),
+    })
+
+
+@role_required("MANAGER", "ADMIN", "DIRECTOR")
+@transaction.atomic
+def maintenance_direct_purchase_review(request, request_id):
+    hotels = get_accessible_hotels(request.user)
+    req = get_object_or_404(
+        MaintenanceDirectPurchaseRequest.objects.select_for_update().select_related(
+            "ticket__room__hotel", "ticket__location__hotel", "product"
+        ),
+        pk=request_id,
+    )
+    hotel = req.ticket.room.hotel if req.ticket.room_id else req.ticket.location.hotel
+    if not hotels.filter(pk=hotel.pk).exists():
+        raise PermissionDenied
+    if request.user.role == "MANAGER" and request.user.hotel_id != hotel.id:
+        raise PermissionDenied
+
+    if request.method == "POST":
+        if req.status != "PENDING":
+            messages.error(request, "This request has already been reviewed.")
+            return redirect("maintenance_direct_purchase_requests")
+        action = request.POST.get("action")
+        note = request.POST.get("manager_note", "").strip()
+        if action == "reject":
+            req.status = "REJECTED"
+            req.manager_note = note
+            req.reviewed_by = request.user
+            req.reviewed_at = timezone.now()
+            req.save(update_fields=["status", "manager_note", "reviewed_by", "reviewed_at"])
+            messages.success(request, "Direct purchase request rejected.")
+            return redirect("maintenance_direct_purchase_requests")
+        if action == "approve":
+            department = get_object_or_404(
+                Department, hotel=hotel, code="MNT", department_type="MAINTENANCE", is_active=True
+            )
+            if req.product.hotel_id != hotel.id or req.product.usage_type != "INTERNAL" or req.product.product_type == "EQUIPMENT":
+                raise ValidationError("Only internal maintenance consumables can be purchased directly.")
+            po = PurchaseOrder.objects.create(
+                department=department, created_by=request.user, status="DRAFT"
+            )
+            PurchaseItem.objects.create(
+                purchase_order=po, product=req.product,
+                purchase_quantity=req.requested_quantity, unit_cost=Decimal("0.00"),
+            )
+            req.status = "APPROVED"
+            req.manager_note = note
+            req.reviewed_by = request.user
+            req.reviewed_at = timezone.now()
+            req.purchase_order = po
+            req.save(update_fields=[
+                "status", "manager_note", "reviewed_by", "reviewed_at", "purchase_order"
+            ])
+            messages.success(request, f"Approved. Draft Purchase Order #{po.pk} created; add supplier and cost before approval.")
+            return redirect("inventory:po_detail", pk=po.pk)
+        messages.error(request, "Choose approve or reject.")
+
+    return render(request, "maintenance/direct_purchase_review.html", {"purchase_request": req})
