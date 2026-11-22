@@ -676,12 +676,17 @@ class HousekeepingManagementOverviewTests(TestCase):
         )
         self.staff.department = self.hk_department
         self.staff.save(update_fields=["department"])
-        category = RoomCategory.objects.create(name="Housekeeping Report Category")
+        category = RoomCategory.objects.create(
+            hotel=self.hotel, name="Housekeeping Report Category"
+        )
+        other_category = RoomCategory.objects.create(
+            hotel=self.other_hotel, name="Other Housekeeping Report Category"
+        )
         self.room = Room.objects.create(
             hotel=self.hotel, room_number="R-101", category=category, status="VACANT_DIRTY",
         )
         self.other_room = Room.objects.create(
-            hotel=self.other_hotel, room_number="R-201", category=category, status="VACANT_DIRTY",
+            hotel=self.other_hotel, room_number="R-201", category=other_category, status="VACANT_DIRTY",
         )
         assignment = CleaningAssignment.objects.create(
             room=self.room, assigned_to=self.staff, assigned_by=self.manager,
