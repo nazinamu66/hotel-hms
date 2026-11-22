@@ -178,7 +178,15 @@
     }
     .ld-empty strong { display: block; color: var(--ld-ink); font-size: 13px; }
     .ld-empty p { margin: 5px 0 0; font-size: 12px; }
-    .ld-bottom-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+    .ld-bottom-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .ld-bottom-grid > .ld-panel { min-width: 0; }
+    .ld-receipts-table { min-width: 720px; table-layout: auto; }
+    .ld-receipts-table th:nth-child(1) { width: 19%; }
+    .ld-receipts-table th:nth-child(2) { width: 15%; }
+    .ld-receipts-table th:nth-child(3) { width: 23%; }
+    .ld-receipts-table th:nth-child(4) { width: 20%; }
+    .ld-receipts-table th:nth-child(5) { width: 23%; }
+    .ld-receipt-action { padding: 8px 13px; }
     @media (max-width: 1050px) {
         .ld-actions, .ld-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
