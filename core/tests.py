@@ -1018,6 +1018,10 @@ class RoomOccupancyAnalyticsTests(TestCase):
             hotel=self.hotel,
             name="Room Occupancy Category"
         )
+        self.outside_category = RoomCategory.objects.create(
+            hotel=self.outside_hotel,
+            name="Outside Room Occupancy Category"
+        )
         self.guest = __import__("billing.models", fromlist=["Guest"]).Guest.objects.create(
             hotel=self.hotel,
             first_name="Occupancy",
@@ -1026,10 +1030,15 @@ class RoomOccupancyAnalyticsTests(TestCase):
         self.Room = Room
 
     def _room(self, hotel, number):
+        category = (
+            self.category
+            if hotel.pk == self.hotel.pk
+            else self.outside_category
+        )
         return self.Room.objects.create(
             hotel=hotel,
             room_number=number,
-            category=self.category,
+            category=category,
         )
 
     def test_actual_room_nights_are_deduplicated_and_hotel_scoped(self):
@@ -1087,7 +1096,7 @@ class RoomOccupancyAnalyticsTests(TestCase):
         outside_reservation = Reservation.objects.create(
             hotel=self.outside_hotel,
             guest=outside_guest,
-            room_category=self.category,
+            room_category=self.outside_category,
             room=outside_room,
             check_in_date=yesterday,
             check_out_date=today,
