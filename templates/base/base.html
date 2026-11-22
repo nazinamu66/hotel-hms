@@ -185,6 +185,15 @@
             </div>
             {% endif %}
 
+            {% if user|has_role:"ADMIN,DIRECTOR,GENERAL_MANAGER,MANAGER" %}
+            <h5 class="menu-subtoggle {% if request.resolver_match.url_name == 'linen_category_setup' %}active-menu{% endif %}" onclick="toggleMenu('setup_linen_menu', this)">
+                <span class="arrow">▸</span> 🛏️ Linen
+            </h5>
+            <div id="setup_linen_menu" class="menu-section {% if request.resolver_match.url_name == 'linen_category_setup' %}open{% endif %}">
+                <a href="{% url 'linen_category_setup' %}">Room Category Defaults</a>
+            </div>
+            {% endif %}
+
             {% if user|has_role:"ADMIN,DIRECTOR" %}
             <h5 class="menu-subtoggle" onclick="toggleMenu('setup_people_menu', this)">
                 <span class="arrow">▸</span> 👥 Staff &amp; Access
@@ -476,7 +485,7 @@
         <h4 class="menu-toggle {% if request.resolver_match.namespace == 'linen' %}active-menu{% endif %}"
             onclick="toggleMenu('linen_management_menu', this)">
             <span class="arrow">{% if request.resolver_match.namespace == 'linen' %}▾{% else %}▸{% endif %}</span>
-            🛏️ Linen Management
+            🛏️ Linen
         </h4>
         <div id="linen_management_menu" class="menu-section {% if request.resolver_match.namespace == 'linen' %}open{% endif %}">
             <a href="{% url 'linen_dashboard' %}">Hotel-wide Linen Overview</a>
