@@ -2,34 +2,65 @@
 {% block title %}Room Linen Opening{% endblock %}
 {% block content %}
 <style>
-.room-opening{max-width:1400px;margin:auto}.room-opening header{margin:8px 0 22px}.room-opening h1{font-size:27px;margin:0 0 7px}.room-opening p{color:#64748b}.ro-card{background:var(--card-bg,#fff);border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin:0 0 18px}.ro-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.ro-field{display:flex;flex-direction:column;gap:6px}.ro-field label{font-weight:700;font-size:13px}.ro-field input,.ro-field select,.ro-field textarea{padding:10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit}.ro-btn{border:0;border-radius:8px;padding:10px 15px;background:#1d4ed8;color:#fff;font-weight:700;cursor:pointer}.ro-btn.secondary{background:#eef2f7;color:#334155}.ro-table-wrap{overflow:auto}.ro-table{width:100%;border-collapse:collapse;min-width:700px}.ro-table th,.ro-table td{padding:11px;border-bottom:1px solid #e9edf2;text-align:left;font-size:13px}.ro-table th{background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase}.ro-inline{display:flex;align-items:center;gap:8px}.ro-inline input{width:85px;padding:7px;border:1px solid #cbd5e1;border-radius:7px}.ro-room{background:#f8fafc;font-weight:800}.ro-note{padding:12px 14px;background:#eff6ff;border:1px solid #dbeafe;border-radius:9px;color:#1e40af;font-size:13px;margin-bottom:14px}.ro-status{font-size:11px;font-weight:800;border-radius:20px;padding:5px 9px;background:#eef2f7}.ro-status.posted{background:#eaf8ef;color:#17633a}@media(max-width:700px){.ro-grid{grid-template-columns:1fr}.ro-card{padding:15px}}
+.ro-page{max-width:1480px;margin:0 auto;color:#17243a}
+.ro-hero{background:linear-gradient(120deg,#0b1730 0%,#142b50 62%,#1d3c68 100%);color:#fff;border-radius:18px;padding:26px 30px;margin:8px 0 22px;box-shadow:0 14px 32px rgba(8,23,48,.18)}
+.ro-kicker{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#b8c9e1;font-weight:800;margin:0 0 8px}
+.ro-hero h1{font-size:28px;margin:0 0 8px;color:#fff}.ro-hero p{color:#d0dced;margin:0;max-width:780px;line-height:1.5}
+.ro-hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.ro-btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:9px;padding:10px 15px;background:#2563eb;color:#fff!important;text-decoration:none;font-weight:750;cursor:pointer}
+.ro-btn.secondary{background:#edf2f8;color:#24344d!important}.ro-btn.ghost{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.24);color:#fff!important}
+.ro-card{background:#fff;border:1px solid #dce5f0;border-radius:15px;padding:20px;margin:0 0 18px;box-shadow:0 7px 22px rgba(15,35,65,.055)}
+.ro-card h2{font-size:18px;margin:0 0 7px;color:#152641}.ro-muted{color:#65758d;font-size:13px;line-height:1.5;margin:0 0 16px}
+.ro-toolbar{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.ro-field{display:flex;flex-direction:column;gap:6px;min-width:220px;flex:1}.ro-field label{font-size:12px;font-weight:800;color:#34445d}
+.ro-field input,.ro-field select{width:100%;padding:11px 12px;border:1px solid #cbd7e6;border-radius:9px;font:inherit;background:#fff;color:#17243a}
+.ro-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ro-table-wrap{overflow:auto;border:1px solid #e3eaf3;border-radius:11px}
+.ro-table{width:100%;border-collapse:separate;border-spacing:0;min-width:760px}
+.ro-table th{position:sticky;top:0;background:#eef3f9;color:#52647d;text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:12px}
+.ro-table td{padding:12px;border-top:1px solid #e9eef5;font-size:13px;color:#27364d}
+.ro-room td{background:#f3f6fb;color:#172b49;font-weight:800;border-top:1px solid #dfe7f1}
+.ro-inline{display:flex;align-items:center;gap:8px}.ro-inline input{width:92px;padding:8px 9px;border:1px solid #cbd7e6;border-radius:8px;font:inherit}
+.ro-note{padding:12px 14px;background:#edf4ff;border:1px solid #d7e6fb;border-radius:10px;color:#234b7d;font-size:13px;line-height:1.5;margin:14px 0}
+.ro-status{display:inline-flex;padding:5px 10px;border-radius:99px;background:#fff3d8;color:#88570b;font-size:11px;font-weight:800}
+.ro-status.posted{background:#e2f6e9;color:#17633a}.ro-alert{padding:11px 14px;background:#e4f5e9;color:#17633a;border:1px solid #c7e9d1;border-radius:10px;margin-bottom:12px;font-size:13px}
+.ro-batch-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.ro-empty{text-align:center;color:#738198;padding:24px!important}
+@media(max-width:700px){.ro-hero{padding:22px 18px}.ro-hero h1{font-size:23px}.ro-card{padding:15px}.ro-grid{grid-template-columns:1fr}}
 </style>
-<div class="room-opening">
-<header><h1>Room Linen Opening</h1><p>Initialize physical linen counts for rooms using their room-category defaults.</p></header>
-{% if messages %}{% for message in messages %}<div class="ro-note">{{ message }}</div>{% endfor %}{% endif %}
+<div class="ro-page">
+<header class="ro-hero">
+<p class="ro-kicker">Linen · Stock control</p>
+<h1>Room Linen Opening</h1>
+<p>Initialize the physical linen held in guest rooms. Category defaults provide the expected quantities; confirm actual counts before posting the opening batch.</p>
+<div class="ro-hero-actions">
+<a class="ro-btn ghost" href="{% url 'linen_dashboard' %}">← Back to Linen</a>
+<a class="ro-btn ghost" href="{% url 'linen_category_setup' %}">Room category defaults</a>
+</div>
+</header>
+{% if messages %}{% for message in messages %}<div class="ro-alert">{{ message }}</div>{% endfor %}{% endif %}
 <section class="ro-card">
-<form method="get" class="ro-inline"><label for="hotel">Hotel</label><select id="hotel" name="hotel" required><option value="">Select hotel</option>{% for item in hotels %}<option value="{{ item.pk }}" {% if selected_hotel.pk == item.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select><button class="ro-btn secondary" type="submit">Load</button></form>
+<form method="get" class="ro-toolbar"><div class="ro-field" style="max-width:420px"><label for="hotel">Hotel</label><select id="hotel" name="hotel" required><option value="">Select hotel</option>{% for item in hotels %}<option value="{{ item.pk }}" {% if selected_hotel.pk == item.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></div><button class="ro-btn secondary" type="submit">Load hotel</button></form>
 </section>
 {% if selected_hotel %}
 <section class="ro-card">
-<h2>Create opening batch</h2><p>All rooms in this hotel that have not yet been initialized will be included. Category defaults are copied as the starting count; confirm the actual pieces physically present before posting.</p>
+<h2>Create opening batch</h2><p class="ro-muted">All rooms in {{ selected_hotel.name }} that have not yet been initialized will be included. The batch snapshots category defaults as expected quantities and allows actual physical counts to be confirmed.</p>
 <form method="post" class="ro-grid">{% csrf_token %}<input type="hidden" name="hotel" value="{{ selected_hotel.pk }}"><input type="hidden" name="action" value="CREATE_BATCH">
 <div class="ro-field"><label>Batch reference</label><input name="reference" required maxlength="60" placeholder="e.g. LINEN-OPENING-2026-01"></div>
-<div class="ro-field"><label>Notes</label><input name="notes" placeholder="Optional opening count notes"></div>
-<div><button class="ro-btn" type="submit">Create room batch</button></div></form>
+<div class="ro-field"><label>Notes (optional)</label><input name="notes" placeholder="Opening count notes"></div>
+<div><button class="ro-btn" type="submit">＋ Create room batch</button></div></form>
 </section>
-<section class="ro-card"><h2>Opening batches</h2><div class="ro-table-wrap"><table class="ro-table"><thead><tr><th>Reference</th><th>Created</th><th>Status</th><th></th></tr></thead><tbody>{% for batch in batches %}<tr><td>{{ batch.reference }}</td><td>{{ batch.created_at|date:"d M Y H:i" }}</td><td><span class="ro-status {% if batch.status == 'POSTED' %}posted{% endif %}">{{ batch.get_status_display }}</span></td><td><a href="?hotel={{ selected_hotel.pk }}&batch={{ batch.pk }}">Open batch</a></td></tr>{% empty %}<tr><td colspan="4">No room opening batches yet.</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="ro-card"><h2>Opening batches</h2><p class="ro-muted">Review drafts and previously posted room counts.</p><div class="ro-table-wrap"><table class="ro-table"><thead><tr><th>Reference</th><th>Created</th><th>Status</th><th></th></tr></thead><tbody>{% for batch in batches %}<tr><td><strong>{{ batch.reference }}</strong></td><td>{{ batch.created_at|date:"d M Y H:i" }}</td><td><span class="ro-status {% if batch.status == 'POSTED' %}posted{% endif %}">{{ batch.get_status_display }}</span></td><td><a class="ro-btn secondary" href="?hotel={{ selected_hotel.pk }}&batch={{ batch.pk }}">View batch →</a></td></tr>{% empty %}<tr><td colspan="4" class="ro-empty">No room opening batches yet.</td></tr>{% endfor %}</tbody></table></div></section>
 {% if selected_batch %}
 <section class="ro-card">
-<div class="ro-inline" style="justify-content:space-between"><div><h2>{{ selected_batch.reference }}</h2><p>{{ selected_batch.rooms.count }} rooms · {{ selected_batch.get_status_display }}</p></div>
-{% if selected_batch.status == "DRAFT" %}<form method="post" onsubmit="return confirm('Post these physical room opening counts?');">{% csrf_token %}<input type="hidden" name="hotel" value="{{ selected_hotel.pk }}"><input type="hidden" name="batch_id" value="{{ selected_batch.pk }}"><input type="hidden" name="action" value="POST_BATCH"><button class="ro-btn" type="submit">Post room opening counts</button></form>{% endif %}</div>
-<div class="ro-note">Expected is calculated from the category setup. Actual is the quantity physically counted in the room. Posting records the room opening event and does not add to Store, Housekeeping or Laundry stock.</div>
+<div class="ro-batch-head"><div><h2>{{ selected_batch.reference }}</h2><p class="ro-muted" style="margin:4px 0 0">{{ selected_batch.rooms.count }} rooms · <span class="ro-status {% if selected_batch.status == 'POSTED' %}posted{% endif %}">{{ selected_batch.get_status_display }}</span></p></div>
+{% if selected_batch.status == "DRAFT" %}<form method="post" onsubmit="return confirm('Post these physical room opening counts?');">{% csrf_token %}<input type="hidden" name="hotel" value="{{ selected_hotel.pk }}"><input type="hidden" name="batch_id" value="{{ selected_batch.pk }}"><input type="hidden" name="action" value="POST_BATCH"><button class="ro-btn" type="submit">Post opening counts</button></form>{% endif %}</div>
+<div class="ro-note"><strong>Stock treatment:</strong> Expected is based on category setup; actual is physically counted. Posting adds the room quantity to the hotel's owned linen total and records it separately as In Rooms. Later replenishment and dirty collection transfer quantities between Housekeeping and rooms.</div>
 <div class="ro-table-wrap"><table class="ro-table"><thead><tr><th>Room</th><th>Category</th><th>Linen item</th><th>Expected</th><th>Actual count</th></tr></thead><tbody>
 {% for opening_room in selected_batch.rooms.all %}
 <tr class="ro-room"><td>{{ opening_room.room.room_number }}</td><td>{{ opening_room.category_name }}</td><td colspan="3"></td></tr>
 {% for line in opening_room.lines.all %}
-<tr><td></td><td></td><td>{{ line.linen_item.product.name }}</td><td>{{ line.expected_quantity }}</td><td>{% if selected_batch.status == "DRAFT" %}<form method="post" class="ro-inline">{% csrf_token %}<input type="hidden" name="hotel" value="{{ selected_hotel.pk }}"><input type="hidden" name="batch_id" value="{{ selected_batch.pk }}"><input type="hidden" name="line_id" value="{{ line.pk }}"><input type="hidden" name="action" value="UPDATE_LINE"><input aria-label="Actual quantity" type="number" min="0" step="1" name="actual_quantity" value="{{ line.actual_quantity }}"><button class="ro-btn secondary" type="submit">Save</button></form>{% else %}{{ line.actual_quantity }}{% endif %}</td></tr>
-{% empty %}<tr><td colspan="5">No category linen defaults were configured for this room.</td></tr>{% endfor %}
+<tr><td></td><td></td><td>{{ line.linen_item.product.name }}</td><td>{{ line.expected_quantity }}</td><td>{% if selected_batch.status == "DRAFT" %}<form method="post" class="ro-inline">{% csrf_token %}<input type="hidden" name="hotel" value="{{ selected_hotel.pk }}"><input type="hidden" name="batch_id" value="{{ selected_batch.pk }}"><input type="hidden" name="line_id" value="{{ line.pk }}"><input type="hidden" name="action" value="UPDATE_LINE"><input aria-label="Actual quantity" type="number" min="0" step="1" name="actual_quantity" value="{{ line.actual_quantity }}"><button class="ro-btn secondary" type="submit">Save</button></form>{% else %}<strong>{{ line.actual_quantity }}</strong>{% endif %}</td></tr>
+{% empty %}<tr><td colspan="5" class="ro-empty">No category linen defaults were configured for this room.</td></tr>{% endfor %}
 {% endfor %}
 </tbody></table></div>
 </section>
