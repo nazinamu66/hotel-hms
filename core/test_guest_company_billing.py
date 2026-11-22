@@ -46,7 +46,10 @@ class GuestCompanyBillingServiceTests(TestCase):
         self.folio = Folio.objects.create(
             hotel=self.hotel, folio_type="WALKIN", guest=self.guest
         )
-        self.category = RoomCategory.objects.create(name="Billing Reporting Category")
+        self.category = RoomCategory.objects.create(
+            hotel=self.hotel,
+            name="Billing Reporting Category",
+        )
         self.company = Company.objects.create(hotel=self.hotel, name="Billing Client Ltd")
         self.group = GroupReservation.objects.create(
             hotel=self.hotel,
