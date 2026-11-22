@@ -124,10 +124,10 @@
         <!-- ========================= -->
 
         {% if user|has_role:"ADMIN,DIRECTOR,GENERAL_MANAGER,MANAGER,MAINTENANCE" %}
-        <h4 class="menu-toggle" onclick="toggleMenu('setup_menu', this)">
-            <span class="arrow">▸</span> <span aria-hidden="true">⚙️</span> Setup
+        <h4 class="menu-toggle {% if request.resolver_match.url_name == 'linen_category_setup' %}active-menu{% endif %}" onclick="toggleMenu('setup_menu', this)">
+            <span class="arrow">{% if request.resolver_match.url_name == 'linen_category_setup' %}▾{% else %}▸{% endif %}</span> <span aria-hidden="true">⚙️</span> Setup
         </h4>
-        <div id="setup_menu" class="menu-section">
+        <div id="setup_menu" class="menu-section {% if request.resolver_match.url_name == 'linen_category_setup' %}open{% endif %}">
 
             {% if user|has_role:"ADMIN,DIRECTOR" %}
             <h5 class="menu-subtoggle" onclick="toggleMenu('setup_hotels_menu', this)">
