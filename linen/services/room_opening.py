@@ -2,6 +2,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from accounts.services.access import user_can_access_hotel
+
 from linen.models import (
     LinenTransaction,
     RoomLinenOpeningBatch,
@@ -17,6 +19,8 @@ from rooms.models import Room
 @transaction.atomic
 def create_room_linen_opening_batch(*, hotel, user, reference, notes=""):
     """Snapshot category defaults for every room not yet initialized."""
+    if not user_can_access_hotel(user, hotel):
+        raise ValidationError("You do not have access to this hotel.")
     reference = (reference or "").strip()
     if not reference:
         raise ValidationError("Opening batch reference is required.")
@@ -60,6 +64,8 @@ def create_room_linen_opening_batch(*, hotel, user, reference, notes=""):
 def post_room_linen_opening_batch(*, batch, user):
     """Post confirmed physical room counts without changing department balances."""
     batch = RoomLinenOpeningBatch.objects.select_for_update().get(pk=batch.pk)
+    if not user_can_access_hotel(user, batch.hotel):
+        raise ValidationError("You do not have access to this hotel.")
     if batch.status != "DRAFT":
         raise ValidationError("Only a draft room linen opening batch can be posted.")
 
@@ -72,7 +78,7 @@ def post_room_linen_opening_batch(*, batch, user):
         raise ValidationError("The room opening batch contains no rooms.")
 
     for opening_room in rooms:
-        room = opening_room.room
+        room = Room.objects.select_for_update().get(pk=opening_room.room_id)
         setup, _ = RoomLinenSetup.objects.select_for_update().get_or_create(room=room)
         if setup.is_configured:
             raise ValidationError(
