@@ -2,7 +2,8 @@ from django.db import models
 from inventory.models import Hotel
 
 class RoomCategory(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="room_categories")
+    name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
 
@@ -14,9 +15,15 @@ class RoomCategory(models.Model):
 
     class Meta:
         ordering = ["name"]
+        constraints = [models.UniqueConstraint(fields=["hotel", "name"], name="unique_room_category_per_hotel")]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.name and self.hotel_id and RoomCategory.objects.filter(hotel_id=self.hotel_id, name__iexact=self.name.strip()).exclude(pk=self.pk).exists():
+            raise ValidationError({"name": "This category already exists for the selected hotel."})
 
     def __str__(self):
-        return self.name
+        return f"{self.hotel.name} - {self.name}"
 
 
 class Building(models.Model):
@@ -93,6 +100,15 @@ class Room(models.Model):
     class Meta:
         unique_together = ("hotel", "room_number")
         ordering = ["room_number"]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.hotel_id and self.category_id and self.category.hotel_id != self.hotel_id:
+            raise ValidationError({"category": "Select a room category belonging to this hotel."})
+        if self.building_id and self.building.hotel_id != self.hotel_id:
+            raise ValidationError({"building": "Selected building belongs to another hotel."})
+        if self.floor_id and self.floor.building.hotel_id != self.hotel_id:
+            raise ValidationError({"floor": "Selected floor belongs to another hotel."})
 
     def __str__(self):
         return f"{self.hotel.name} - Room {self.room_number}"
