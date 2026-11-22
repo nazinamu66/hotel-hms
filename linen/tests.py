@@ -731,3 +731,57 @@ class LinenPurchaseOrderReceivingTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertFalse(LinenTransaction.objects.filter(linen_item=self.linen_item).exists())
 
+
+
+
+class CleanLaundryReturnBalanceTests(TestCase):
+    def test_clean_return_cannot_consume_dirty_laundry_linen(self):
+        from .models import LinenTransaction
+        from .services.workflows import return_clean_linen_from_laundry
+
+        organization = Organization.objects.create(name="Clean Return Test Org")
+        hotel = Hotel.objects.create(organization=organization, name="Clean Return Test Hotel")
+        laundry = Department.objects.filter(
+            hotel=hotel, department_type="LAUNDRY",
+        ).first()
+        if laundry is None:
+            laundry = Department.objects.create(
+                hotel=hotel, code="LAUN", name="Laundry", department_type="LAUNDRY",
+            )
+        user = get_user_model().objects.create_user(
+            username="clean-return-manager",
+            password="test-password",
+            role="MANAGER",
+            hotel=hotel,
+            department=laundry,
+        )
+        product = Product.objects.create(
+            hotel=hotel,
+            name="Dirty Only Towel",
+            sku="DIRTY-ONLY-TOWEL",
+            product_type="HOUSEKEEPING",
+            usage_type="ASSET",
+            base_unit="pcs",
+        )
+        linen_item = LinenItem.objects.create(product=product)
+        LinenTransaction.objects.create(
+            linen_item=linen_item,
+            quantity=5,
+            condition="DIRTY",
+            event_type="RECEIVED",
+            to_location="LAUNDRY",
+            performed_by=user,
+            reference="DIRTY-ONLY-OPENING",
+        )
+
+        with self.assertRaises(ValidationError):
+            return_clean_linen_from_laundry(
+                linen_item=linen_item,
+                quantity=3,
+                user=user,
+                reference="INVALID-CLEAN-RETURN",
+            )
+
+        self.assertFalse(
+            LinenTransaction.objects.filter(reference="INVALID-CLEAN-RETURN").exists()
+        )
