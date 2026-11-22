@@ -1,0 +1,61 @@
+{% extends "base/base.html" %}
+{% block title %}Adjust Staff Linen Custody{% endblock %}
+{% block content %}
+<style>
+.lca-wrap{max-width:760px;margin:24px auto;color:var(--text-color,#1f2937)}
+.lca-card{background:var(--card-bg,#fff);border:1px solid #e2e8f0;border-radius:14px;padding:22px;margin-bottom:18px}
+.lca-card h1{font-size:23px;margin:0 0 8px}.lca-muted{color:#64748b;font-size:13px}
+.lca-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.lca-field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+.lca-field input,.lca-field textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;background:var(--input-bg,#fff);color:inherit}
+.lca-check{display:flex;gap:9px;align-items:flex-start;margin:16px 0;font-size:13px}
+.lca-actions{display:flex;gap:10px;flex-wrap:wrap}.lca-btn{border:0;border-radius:8px;padding:10px 15px;font-weight:700;cursor:pointer;text-decoration:none}.lca-primary{background:#1d4ed8;color:white}.lca-secondary{background:#e2e8f0;color:#1e293b}
+.lca-history{font-size:13px}.lca-history li{margin:10px 0}
+@media(max-width:600px){.lca-grid{grid-template-columns:1fr}}
+</style>
+<div class="lca-wrap">
+  <section class="lca-card">
+    <h1>Verified custody count adjustment</h1>
+    <p class="lca-muted">{{ custody.linen_item.product.hotel.name }} · {{ custody.linen_item.product.name }} · Staff: {{ custody.user.get_full_name|default:custody.user.username }}</p>
+    <p>Current recorded custody: <strong>{{ custody.clean_quantity }} clean</strong> and <strong>{{ custody.dirty_quantity }} dirty</strong>.</p>
+    <p class="lca-muted">Enter the quantities physically counted. This corrects the employee subledger only; it does not move departmental stock or change the Linen transaction ledger.</p>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="expected_clean_quantity" value="{{ custody.clean_quantity }}">
+      <input type="hidden" name="expected_dirty_quantity" value="{{ custody.dirty_quantity }}">
+      <div class="lca-grid">
+        <div class="lca-field">
+          <label for="counted_clean_quantity">Physically counted clean linen</label>
+          <input id="counted_clean_quantity" type="number" name="counted_clean_quantity" min="0" step="1" value="{{ custody.clean_quantity }}" required>
+        </div>
+        <div class="lca-field">
+          <label for="counted_dirty_quantity">Physically counted dirty linen</label>
+          <input id="counted_dirty_quantity" type="number" name="counted_dirty_quantity" min="0" step="1" value="{{ custody.dirty_quantity }}" required>
+        </div>
+      </div>
+      <div class="lca-field" style="margin-top:15px">
+        <label for="reason">Reason for adjustment</label>
+        <textarea id="reason" name="reason" rows="4" required placeholder="Explain the physical verification and why the recorded count differed."></textarea>
+      </div>
+      <label class="lca-check"><input type="checkbox" name="physical_count_confirmed" value="yes" required> I confirm these quantities were physically counted and verified, not estimated.</label>
+      <div class="lca-actions">
+        <button class="lca-btn lca-primary" type="submit">Post audited correction</button>
+        <a class="lca-btn lca-secondary" href="{% url 'linen_reconciliation' %}">Cancel</a>
+      </div>
+    </form>
+  </section>
+  <section class="lca-card">
+    <h2 style="font-size:17px;margin-top:0">Adjustment history</h2>
+    <ul class="lca-history">
+      {% for adjustment in adjustments %}
+        <li><strong>{{ adjustment.reference }}</strong> · {{ adjustment.created_at|date:"Y-m-d H:i" }} by {{ adjustment.adjusted_by.username }}<br>
+          Clean: {{ adjustment.previous_clean_quantity }} → {{ adjustment.counted_clean_quantity }}; Dirty: {{ adjustment.previous_dirty_quantity }} → {{ adjustment.counted_dirty_quantity }}<br>
+          {{ adjustment.reason }}
+        </li>
+      {% empty %}
+        <li class="lca-muted">No custody count adjustments have been recorded for this staff member and linen item.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}
