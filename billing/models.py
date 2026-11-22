@@ -692,6 +692,15 @@ class Reservation(models.Model):
         null=True
     )
 
+    def clean(self):
+        super().clean()
+        if self.hotel_id and self.room_category_id and self.room_category.hotel_id != self.hotel_id:
+            raise ValidationError({"room_category": "Room category belongs to another hotel."})
+        if self.room_id and self.room.hotel_id != self.hotel_id:
+            raise ValidationError({"room": "Selected room belongs to another hotel."})
+        if self.room_id and self.room.category_id != self.room_category_id:
+            raise ValidationError({"room": "Selected room does not match the reservation category."})
+
     def __str__(self):
         return f"Reservation {self.id} - {self.guest}"
 
@@ -1048,6 +1057,9 @@ class GroupReservationRate(models.Model):
         ]
 
     def clean(self):
+        super().clean()
+        if self.group_reservation_id and self.room_category_id and self.room_category.hotel_id != self.group_reservation.hotel_id:
+            raise ValidationError({"room_category": "Room category must belong to the group reservation hotel."})
         if self.nightly_rate is not None and self.nightly_rate <= 0:
             raise ValidationError("Negotiated nightly rate must be greater than zero.")
 
@@ -1111,8 +1123,8 @@ class GroupReservationRoom(models.Model):
         group = self.group_reservation
         if self.guest_id and self.guest.hotel_id != group.hotel_id:
             raise ValidationError("Occupant must belong to the group's hotel.")
-        # RoomCategory is a shared catalogue model and is not hotel-scoped.
-        # Hotel ownership is established by the selected Room instead.
+        if self.room_category_id and self.room_category.hotel_id != group.hotel_id:
+            raise ValidationError("Room category must belong to the group reservation hotel.")
         if self.room_id and self.room.hotel_id != group.hotel_id:
             raise ValidationError("Room must belong to the group's hotel.")
         if self.room_id and self.room_category_id and self.room.category_id != self.room_category_id:
