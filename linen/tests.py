@@ -650,3 +650,73 @@ class EmergencyLinenCustodyReassignmentTests(TestCase):
                 authorized_by=other_manager,
                 reason="Custodian unavailable.",
             )
+
+
+class LinenPurchaseOrderReceivingTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.organization = Organization.objects.create(name="Linen PO Test Org")
+        cls.hotel = Hotel.objects.create(organization=cls.organization, name="Linen PO Test Hotel")
+        cls.store = Department.objects.create(
+            hotel=cls.hotel, code="STORE", name="Hotel Store", department_type="STORE",
+        )
+        cls.housekeeping = Department.objects.create(
+            hotel=cls.hotel, code="HK", name="Housekeeping", department_type="HOUSEKEEPING",
+        )
+        cls.user = User.objects.create_user(
+            username="linen-po-receiver", password="test-password", role="MANAGER", hotel=cls.hotel,
+        )
+        from inventory.models import Supplier
+        cls.supplier = Supplier.objects.create(hotel=cls.hotel, name="Linen Supplier")
+        cls.product = Product.objects.create(
+            hotel=cls.hotel, name="PO Bedsheet", sku="PO-LINEN-SHEET",
+            product_type="HOUSEKEEPING", usage_type="ASSET", base_unit="pcs",
+            unit_multiplier=1,
+        )
+        cls.linen_item = LinenItem.objects.create(product=cls.product)
+
+    def _purchase_order(self, department):
+        from inventory.models import PurchaseOrder, PurchaseItem
+        po = PurchaseOrder.objects.create(
+            supplier=self.supplier, department=department, status="APPROVED", created_by=self.user,
+        )
+        item = PurchaseItem.objects.create(
+            purchase_order=po, product=self.product, purchase_quantity=5, unit_cost=100,
+        )
+        return po, item
+
+    def test_store_po_receipt_updates_inventory_and_linen_ledger_together(self):
+        from unittest.mock import patch
+        from inventory.models import Stock, StockCostLayer
+        from .models import LinenTransaction
+        po, item = self._purchase_order(self.store)
+        with patch("accounting.services.postings.purchase.post_inventory_receipt"):
+            receipt = po.receive(self.user, {str(item.pk): 3}, notes="Partial linen delivery")
+        self.assertEqual(receipt.items.get(purchase_item=item).quantity, 3)
+        self.assertEqual(Stock.objects.get(product=self.product, department=self.store).quantity, 3)
+        self.assertEqual(StockCostLayer.objects.filter(purchase_item=item).first().quantity_remaining, 3)
+        movement = LinenTransaction.objects.get(
+            linen_item=self.linen_item, event_type="RECEIVED", reference=f"PO-{po.pk}-REC-{receipt.pk}",
+        )
+        self.assertEqual(movement.quantity, 3)
+        self.assertEqual(movement.to_location, "STORE")
+        self.assertEqual(po.__class__.objects.get(pk=po.pk).status, "PARTIALLY_RECEIVED")
+
+    def test_linen_cannot_be_received_against_non_store_department_po(self):
+        from inventory.models import PurchaseOrder, PurchaseItem, Stock
+        from .models import LinenTransaction
+        po, item = self._purchase_order(self.housekeeping)
+        with self.assertRaises(ValidationError):
+            po.receive(self.user, {str(item.pk): 2})
+        self.assertFalse(Stock.objects.filter(product=self.product, department=self.housekeeping).exists())
+        self.assertFalse(LinenTransaction.objects.filter(linen_item=self.linen_item).exists())
+
+    def test_direct_linen_receipt_endpoint_cannot_create_stock(self):
+        from .models import LinenTransaction
+        response = self.client.post(reverse("linen_receive"), {
+            "linen_item": str(self.linen_item.pk), "quantity": "20",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(LinenTransaction.objects.filter(linen_item=self.linen_item).exists())
+
