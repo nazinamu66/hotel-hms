@@ -77,6 +77,23 @@ def get_linen_balance(linen_item):
             pass
 
         # --------------------------------------------------
+        # ROOM-LEVEL CUSTODY
+        # --------------------------------------------------
+        elif event == "ROOM_OPENING":
+            # Initial physical count: linen starts in the room.
+            balances["ROOMS"] += quantity
+
+        elif event == "ROOM_REPLENISHED":
+            # Clean linen moves from Housekeeping custody into a room.
+            balances["HOUSEKEEPING"] -= quantity
+            balances["ROOMS"] += quantity
+
+        elif event == "DIRTY_COLLECTED":
+            # Dirty linen leaves the room and returns to Housekeeping custody.
+            balances["ROOMS"] -= quantity
+            balances["HOUSEKEEPING"] += quantity
+
+        # --------------------------------------------------
         # LOSS / DAMAGE / WRITE-OFF
         # --------------------------------------------------
 
@@ -228,11 +245,17 @@ def get_linen_summary(linen_item):
         Decimal("0"),
     )
 
+    rooms = balance.get(
+        "ROOMS",
+        Decimal("0"),
+    )
+
     owned = (
         store
         + housekeeping
         + laundry
         + in_transit
+        + rooms
         + damaged
         + lost
         + discrepancy
@@ -242,12 +265,14 @@ def get_linen_summary(linen_item):
         store
         + housekeeping
         + laundry
+        + rooms
     )
 
     return {
         "store": store,
         "housekeeping": housekeeping,
         "laundry": laundry,
+        "rooms": rooms,
         "in_transit": in_transit,
         "discrepancy": discrepancy,
         "damaged": damaged,
