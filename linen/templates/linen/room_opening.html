@@ -37,7 +37,6 @@
 <a class="ro-btn ghost" href="{% url 'linen_category_setup' %}">Room category defaults</a>
 </div>
 </header>
-{% if messages %}{% for message in messages %}<div class="ro-alert">{{ message }}</div>{% endfor %}{% endif %}
 <section class="ro-card">
 <form method="get" class="ro-toolbar"><div class="ro-field" style="max-width:420px"><label for="hotel">Hotel</label><select id="hotel" name="hotel" required><option value="">Select hotel</option>{% for item in hotels %}<option value="{{ item.pk }}" {% if selected_hotel.pk == item.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></div><button class="ro-btn secondary" type="submit">Load hotel</button></form>
 </section>
