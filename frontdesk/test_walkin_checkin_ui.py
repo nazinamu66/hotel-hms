@@ -33,7 +33,9 @@ class WalkInCheckInUITests(TestCase):
             hotel=cls.hotel,
             department=department,
         )
-        cls.category = RoomCategory.objects.create(name="Walk-in Check-in Category")
+        cls.category = RoomCategory.objects.create(
+            hotel=cls.hotel, name="Walk-in Check-in Category"
+        )
         RoomRate.objects.create(
             category=cls.category,
             price_per_night=Decimal("45000.00"),
@@ -175,7 +177,9 @@ class WalkInCheckInUITests(TestCase):
         self.assertFalse(Folio.objects.filter(room=self.room, is_closed=False).exists())
 
     def test_walk_in_check_in_is_blocked_when_room_category_has_no_active_rate(self):
-        unpriced_category = RoomCategory.objects.create(name="Unpriced Walk-in Category")
+        unpriced_category = RoomCategory.objects.create(
+            hotel=self.hotel, name="Unpriced Walk-in Category"
+        )
         unpriced_room = Room.objects.create(
             hotel=self.hotel,
             room_number="WCI-02",
