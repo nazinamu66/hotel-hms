@@ -144,7 +144,7 @@ class CorporateFrontdeskViewTests(TestCase):
         self.assertContains(response, "Add occupant")
 
     def test_add_new_group_occupant_creates_guest_reservation_and_allocation(self):
-        category = RoomCategory.objects.create(name="Corporate Standard")
+        category = RoomCategory.objects.create(hotel=self.hotel, name="Corporate Standard")
         Room.objects.create(
             hotel=self.hotel, room_number="CS-01", category=category,
         )
@@ -177,7 +177,7 @@ class CorporateFrontdeskViewTests(TestCase):
         self.assertEqual(allocation.reservation.guest_id, guest.pk)
 
     def test_new_group_occupant_warns_on_possible_duplicate_guest(self):
-        category = RoomCategory.objects.create(name="Duplicate Check Category")
+        category = RoomCategory.objects.create(hotel=self.hotel, name="Duplicate Check Category")
         Room.objects.create(hotel=self.hotel, room_number="DC-01", category=category)
         Guest.objects.create(
             hotel=self.hotel, first_name="Existing", last_name="Guest",
@@ -199,7 +199,7 @@ class CorporateFrontdeskViewTests(TestCase):
     def test_group_room_rates_can_be_saved_per_category(self):
         self.group.status = "DRAFT"
         self.group.save(update_fields=["status"])
-        category = RoomCategory.objects.create(name="Corporate Deluxe")
+        category = RoomCategory.objects.create(hotel=self.hotel, name="Corporate Deluxe")
         Room.objects.create(
             hotel=self.hotel, room_number="CD-01", category=category,
         )
@@ -218,7 +218,7 @@ class CorporateFrontdeskViewTests(TestCase):
     def test_blank_group_room_rate_removes_override(self):
         self.group.status = "DRAFT"
         self.group.save(update_fields=["status"])
-        category = RoomCategory.objects.create(name="Corporate Economy")
+        category = RoomCategory.objects.create(hotel=self.hotel, name="Corporate Economy")
         Room.objects.create(
             hotel=self.hotel, room_number="CE-01", category=category,
         )
@@ -242,7 +242,7 @@ class CorporateFrontdeskViewTests(TestCase):
         )
 
     def test_group_room_rates_are_locked_after_confirmation(self):
-        category = RoomCategory.objects.create(name="Corporate Executive")
+        category = RoomCategory.objects.create(hotel=self.hotel, name="Corporate Executive")
         Room.objects.create(
             hotel=self.hotel, room_number="CX-01", category=category,
         )
