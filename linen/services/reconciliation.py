@@ -1,9 +1,7 @@
 from collections import defaultdict
 from decimal import Decimal
 
-from django.db.models import Sum
-
-from linen.models import LinenCustody, LinenItem, RoomLinenState
+from linen.models import LinenCustody, LinenItem, LinenTransaction, RoomLinenState
 from linen.services.balances import get_linen_summary
 
 
@@ -57,6 +55,11 @@ def build_linen_reconciliation(*, hotels):
             .order_by("room__room_number")
         )
         room_state_total = sum((Decimal(row.quantity) for row in room_rows), ZERO)
+        transactions = list(
+            LinenTransaction.objects.filter(linen_item=item)
+            .select_related("performed_by", "from_user", "to_user", "from_room", "to_room")
+            .order_by("-created_at", "-id")[:100]
+        )
         room_ledger = summary["rooms"]
         room_variance = room_state_total - room_ledger
 
@@ -75,6 +78,7 @@ def build_linen_reconciliation(*, hotels):
             "housekeeping_ledger": housekeeping_ledger,
             "unassigned_housekeeping": unassigned_housekeeping,
             "room_rows": room_rows,
+            "transactions": transactions,
             "room_state_total": room_state_total,
             "room_ledger": room_ledger,
             "room_variance": room_variance,
