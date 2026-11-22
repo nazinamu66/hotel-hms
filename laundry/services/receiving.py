@@ -77,6 +77,16 @@ def confirm_laundry_receipt(
     Housekeeping-to-Laundry movement and confirmation behavior.
     """
 
+    # Lock and reload the persisted receipt before checking status.
+    # A stale caller instance must not allow a second confirmation to
+    # post duplicate location movements.
+    receipt = (
+        LaundryReceipt.objects
+        .select_for_update()
+        .select_related("linen_item")
+        .get(pk=receipt.pk)
+    )
+
     if receipt.status != "PENDING":
         raise ValidationError(
             "This Laundry receipt is no longer pending."
