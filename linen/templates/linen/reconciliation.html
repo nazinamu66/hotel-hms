@@ -1,0 +1,72 @@
+{% extends "base/base.html" %}
+{% block title %}Linen Reconciliation{% endblock %}
+{% block content %}
+<style>
+.lr-page{color:var(--text-color,#1f2937)}
+.lr-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;background:linear-gradient(120deg,#0b1730,#1d3c68);color:#fff;border-radius:16px;padding:24px;margin-bottom:20px}
+.lr-hero h1{color:#fff;margin:0 0 7px;font-size:26px}.lr-hero p{color:#c5d3e7;margin:0}
+.lr-link{display:inline-block;text-decoration:none;padding:9px 13px;border-radius:8px;background:#fff;color:#1e3a5f;font-weight:700}
+.lr-grid{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px;margin-bottom:20px}
+.lr-stat,.lr-panel{background:var(--card-bg,#fff);border:1px solid #e2e8f0;border-radius:12px;padding:15px}
+.lr-stat span{display:block;color:#64748b;font-size:12px;margin-bottom:6px}.lr-stat strong{font-size:21px}
+.lr-panel{margin-bottom:16px;overflow:hidden}.lr-panel h2{font-size:17px;margin:0 0 4px}.lr-sub{font-size:12px;color:#64748b;margin:0 0 13px}
+.lr-scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:850px}th,td{padding:10px 11px;border-bottom:1px solid #edf1f5;text-align:right;font-size:13px;white-space:nowrap}th{background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase}th:first-child,td:first-child{text-align:left}
+.lr-ok{color:#166534;font-weight:700}.lr-warn{color:#b45309;font-weight:700}.lr-bad{color:#b91c1c;font-weight:700}
+details{margin-top:9px;border-top:1px solid #edf1f5;padding-top:9px}summary{cursor:pointer;color:#1d4ed8;font-weight:600;font-size:12px}
+.lr-detail{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:12px;margin-top:10px}.lr-detail h3{font-size:13px;margin:0 0 6px}.lr-detail ul{margin:0;padding-left:18px;font-size:12px;color:#475569}.lr-empty{text-align:center;color:#64748b;padding:25px}
+@media(max-width:900px){.lr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.lr-detail{grid-template-columns:1fr}}
+</style>
+<div class="lr-page">
+  <header class="lr-hero">
+    <div><h1>Linen Reconciliation</h1><p>Read-only comparison of transaction balances, staff custody and room linen state.</p></div>
+    <a class="lr-link" href="{% url 'linen_dashboard' %}">Back to Linen</a>
+  </header>
+  <section class="lr-grid">
+    <div class="lr-stat"><span>Owned linen</span><strong>{{ totals.owned|default:0 }}</strong></div>
+    <div class="lr-stat"><span>Staff custody</span><strong>{{ totals.custody|default:0 }}</strong></div>
+    <div class="lr-stat"><span>Unassigned Housekeeping</span><strong>{{ totals.unassigned_housekeeping|default:0 }}</strong></div>
+    <div class="lr-stat"><span>Room state quantity</span><strong>{{ totals.room_state|default:0 }}</strong></div>
+    <div class="lr-stat"><span>Items with variances</span><strong>{{ totals.items_with_variances|default:0 }}</strong></div>
+  </section>
+  <section class="lr-panel">
+    <h2>Reconciliation by linen item</h2>
+    <p class="lr-sub">Staff custody is included within Housekeeping. Room state is compared with the separate room ledger balance; it is not added again to owned stock.</p>
+    <div class="lr-scroll">
+      <table>
+        <thead><tr><th>Hotel / linen item</th><th>Store</th><th>HK ledger</th><th>Staff custody</th><th>Unassigned HK</th><th>Laundry</th><th>Room ledger</th><th>Room state</th><th>Room variance</th><th>Owned</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+          <tr>
+            <td><strong>{{ row.hotel.name }}</strong><br>{{ row.linen_item.product.name }}</td>
+            <td>{{ row.summary.store }}</td><td>{{ row.housekeeping_ledger }}</td><td>{{ row.custody_total }}</td>
+            <td class="{% if row.unassigned_housekeeping < 0 %}lr-bad{% else %}lr-ok{% endif %}">{{ row.unassigned_housekeeping }}</td>
+            <td>{{ row.summary.laundry }}</td><td>{{ row.room_ledger }}</td><td>{{ row.room_state_total }}</td>
+            <td class="{% if row.room_variance != 0 %}lr-bad{% else %}lr-ok{% endif %}">{{ row.room_variance }}</td>
+            <td><strong>{{ row.summary.owned }}</strong></td>
+            <td>{% if row.has_issue %}<span class="lr-warn">Review</span>{% else %}<span class="lr-ok">Balanced</span>{% endif %}</td>
+          </tr>
+          <tr><td colspan="11" style="text-align:left;padding-top:0">
+            <details><summary>View staff and room breakdown</summary>
+              <div class="lr-detail">
+                <div><h3>Employee custody</h3><ul>
+                  {% for custody in row.custody_rows %}
+                    <li>{{ custody.user.username }} — clean {{ custody.clean_quantity }}, dirty {{ custody.dirty_quantity }}</li>
+                  {% empty %}<li>No employee custody records.</li>{% endfor %}
+                </ul></div>
+                <div><h3>Room state</h3><ul>
+                  {% for room_state in row.room_rows %}
+                    <li>Room {{ room_state.room.room_number }} — {{ room_state.quantity }}</li>
+                  {% empty %}<li>No room state records.</li>{% endfor %}
+                </ul></div>
+              </div>
+            </details>
+          </td></tr>
+        {% empty %}
+          <tr><td colspan="11" class="lr-empty">No active linen items are configured for the accessible hotels.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
