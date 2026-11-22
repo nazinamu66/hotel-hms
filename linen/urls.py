@@ -7,10 +7,12 @@ from .views import (
     linen_receive,
     linen_issue,
 )
+from .reconciliation_views import linen_reconciliation
 
 
 urlpatterns = [
     path("", linen_dashboard, name="linen_dashboard"),
+    path("reconciliation/", linen_reconciliation, name="linen_reconciliation"),
     path("receive/", linen_receive, name="linen_receive"),
     path("issue/", linen_issue, name="linen_issue"),
     path("setup/categories/", linen_category_setup, name="linen_category_setup"),
