@@ -16,6 +16,24 @@
 .linen-setup-page .linen-setup-table td{color:#17243a;border-color:#e5ebf3}
 .linen-setup-page .linen-btn{background:#eaf1fc;color:#142b50}
 
+
+/* Dark navy management workspace — scoped to this Linen page only */
+body:has(.linen-setup-page) .layout{background:#0b1424}
+body:has(.linen-setup-page) .main{background:#0b1424}
+body:has(.linen-setup-page) .topbar{background:#0d1a2d!important;color:#e7eefb!important;border-bottom:1px solid #263a55!important}
+body:has(.linen-setup-page) .topbar a{color:#9fc2ff!important}
+body:has(.linen-setup-page) .content{background:#0b1424!important;color:#e7eefb!important}
+.linen-setup-page{background:transparent!important;color:#e7eefb!important}
+.linen-setup-card{background:#14243a!important;border:1px solid #293d58!important;color:#e7eefb!important;box-shadow:0 8px 22px rgba(0,0,0,.16)!important}
+.linen-chip,.linen-info{background:#192c45!important;border-color:#304763!important;color:#e7eefb!important}
+.linen-setup-card h2{color:#f3f7ff!important}
+.linen-setup-card p{color:#9aacc4!important}
+.linen-setup-table th{background:#1b304b!important;color:#aebed3!important;border-color:#304763!important}
+.linen-setup-table td{background:transparent!important;color:#e0e9f7!important;border-color:#293d58!important}
+.linen-setup-page a:not(.linen-primary):not(.linen-btn-primary):not(.ro-btn):not(.lca-primary):not(.lr-link){color:#8db7ff}
+.linen-setup-page input,.linen-setup-page select,.linen-setup-page textarea{background:#fff!important;color:#17243a!important;border-color:#536a87!important;color-scheme:light}
+.linen-setup-page button,.linen-setup-page .linen-btn-primary,.linen-setup-page .linen-primary,.linen-setup-page .ro-btn:not(.secondary):not(.ghost),.linen-setup-page .lca-primary{background:#2563eb!important;color:#fff!important;border-color:#2563eb!important}
+
 </style>
 <div class="linen-setup-page">
 <header class="linen-setup-head"><p class="linen-kicker">Linen configuration · Room record</p><h1>Room linen details</h1><p>View the opening count and current linen quantities for this room.</p><div class="linen-room-meta"><span class="linen-chip">Room {{ room.room_number }}</span><span class="linen-chip">{{ room.category.name }}</span><span class="linen-chip">{{ room.hotel.name }}</span>{% if setup and setup.is_configured %}<span class="linen-chip">Opening count posted</span>{% else %}<span class="linen-chip">Awaiting opening count</span>{% endif %}</div></header>
