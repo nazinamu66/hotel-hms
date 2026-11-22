@@ -25,6 +25,7 @@ class RoomSpecificLinenSetupTests(TestCase):
             name="Other Linen Setup Hotel",
         )
         cls.category = RoomCategory.objects.create(
+            hotel=cls.hotel,
             name="Linen Setup Standard",
         )
         cls.room = Room.objects.create(
