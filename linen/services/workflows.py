@@ -12,33 +12,10 @@ from linen.models import (
 
 
 @transaction.atomic
-def receive_new_linen(
-    linen_item,
-    quantity,
-    user,
-    reference="",
-    note="",
-):
-    """
-    Receive newly purchased/unused linen into the Linen Store.
-
-    This does NOT create an Inventory Stock record.
-    Linen has its own circulation ledger.
-    """
-
-    if quantity <= 0:
-        raise ValidationError(
-            "Quantity must be greater than zero."
-        )
-
-    return LinenTransaction.objects.create(
-        linen_item=linen_item,
-        quantity=quantity,
-        event_type="RECEIVED",
-        to_location="STORE",
-        performed_by=user,
-        reference=reference,
-        note=note,
+def receive_new_linen(*args, **kwargs):
+    """Disabled: new linen must enter through Hotel Store PO receiving."""
+    raise ValidationError(
+        "Direct linen receipts are disabled. Receive new linen through an approved Hotel Store purchase order."
     )
 
 
