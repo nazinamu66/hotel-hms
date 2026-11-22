@@ -253,9 +253,11 @@ def category_list(request):
     categories = (
         RoomCategory.objects
         .filter(
+            hotel__in=get_accessible_hotels(request.user),
             is_active=True,
         )
         .select_related(
+            "hotel",
             "rate",
         )
         .order_by(
@@ -271,10 +273,10 @@ def category_list(request):
         },
     )
 
-def _category_linen_context(category, user):
-    hotels = get_accessible_hotels(user)
+def _category_linen_context(category, user, hotel=None):
+    hotel = hotel or (category.hotel if category else None)
     items = LinenItem.objects.filter(
-        product__hotel__in=hotels,
+        product__hotel=hotel,
         is_active=True,
         product__is_active=True,
     ).select_related("product").order_by("product__name")
@@ -295,7 +297,7 @@ def _category_linen_context(category, user):
 
 def _save_category_linen_defaults(request, category):
     items = LinenItem.objects.filter(
-        product__hotel__in=get_accessible_hotels(request.user),
+        product__hotel=category.hotel,
         is_active=True,
         product__is_active=True,
     ).select_related("product")
@@ -326,8 +328,10 @@ def _save_category_linen_defaults(request, category):
 
 @user_passes_test(manager_admin_or_director)
 def category_create(request):
+    hotels = get_accessible_hotels(request.user)
 
     if request.method == "POST":
+        hotel = get_object_or_404(hotels, pk=request.POST.get("hotel"))
 
         name = request.POST.get(
             "name",
@@ -383,6 +387,7 @@ def category_create(request):
             )
 
         if RoomCategory.objects.filter(
+            hotel=hotel,
             name__iexact=name,
         ).exists():
 
@@ -397,6 +402,7 @@ def category_create(request):
         with transaction.atomic():
 
             category = RoomCategory.objects.create(
+                hotel=hotel,
                 name=name,
                 description=description,
             )
@@ -425,7 +431,7 @@ def category_create(request):
     return render(
         request,
         "rooms/category_form.html",
-        {"category_linen_rows": _category_linen_context(None, request.user)},
+        {"hotels": hotels, "category_linen_rows": _category_linen_context(None, request.user, hotels.first())},
     )
 
 @user_passes_test(manager_admin_or_director)
@@ -434,6 +440,7 @@ def category_edit(request, pk):
     category = get_object_or_404(
         RoomCategory,
         pk=pk,
+        hotel__in=get_accessible_hotels(request.user),
     )
 
     rate = getattr(
@@ -505,6 +512,7 @@ def category_edit(request, pk):
         duplicate = (
             RoomCategory.objects
             .filter(
+                hotel=category.hotel,
                 name__iexact=name,
             )
             .exclude(
@@ -577,6 +585,7 @@ def category_edit(request, pk):
         "rooms/category_form.html",
         {
             "category": category,
+            "hotels": [category.hotel],
             "rate": rate,
             "category_linen_rows": _category_linen_context(category, request.user),
         },
@@ -691,6 +700,7 @@ def room_create(request):
         category = get_object_or_404(
             categories,
             pk=category_id,
+            hotel=hotel,
         )
         building = None
         if building_id:
@@ -723,14 +733,9 @@ def room_create(request):
             )
             return redirect("room_create")
         with transaction.atomic():
-            Room.objects.create(
-                hotel=hotel,
-                room_number=room_number,
-                category=category,
-                building=building,
-                floor=floor,
-                status=status or "AVAILABLE",
-            )
+            room = Room(hotel=hotel, room_number=room_number, category=category, building=building, floor=floor, status=status or "AVAILABLE")
+            room.full_clean()
+            room.save()
         messages.success(
             request,
             "Room created successfully.",
@@ -912,7 +917,7 @@ def room_edit(request, pk):
             room.building = building
             room.floor = floor
             room.status = status
-
+            room.full_clean()
             room.save()
 
         messages.success(
