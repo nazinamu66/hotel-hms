@@ -145,8 +145,9 @@ class StoreStockTransferTests(TestCase):
             reference=f"TRANSFER-{transfer.id}",
         )
         self.assertEqual(entry.quantity, 5)
-        self.assertEqual(entry.event_type, "RECEIVED")
+        self.assertEqual(entry.event_type, "ISSUED")
         self.assertEqual(entry.condition, "CLEAN")
+        self.assertEqual(entry.from_location, "STORE")
         self.assertEqual(entry.to_location, "LAUNDRY")
 
         with self.assertRaises(ValidationError):
