@@ -60,7 +60,7 @@ class CleaningLinenMovementAuditTests(TestCase):
             minimum_level=5,
         )
 
-    def test_room_movements_are_audited_without_changing_hotel_location_total(self):
+    def test_room_movements_transfer_owned_linen_between_housekeeping_and_rooms(self):
         assignment = CleaningAssignment.objects.create(
             room=self.room,
             assigned_to=self.staff,
@@ -77,6 +77,14 @@ class CleaningLinenMovementAuditTests(TestCase):
             linen_item=self.linen_item,
             clean_quantity=10,
             dirty_quantity=0,
+        )
+        LinenTransaction.objects.create(
+            linen_item=self.linen_item,
+            quantity=1,
+            event_type="ROOM_OPENING",
+            to_room=self.room,
+            performed_by=self.staff,
+            reference="INITIAL-ROOM-LINEN",
         )
         LinenTransaction.objects.create(
             linen_item=self.linen_item,
@@ -130,11 +138,13 @@ class CleaningLinenMovementAuditTests(TestCase):
         self.assertEqual(dirty_collection.to_user, self.staff)
         self.assertEqual(dirty_collection.cleaning_assignment, assignment)
 
-        # These are internal Housekeeping movements. They are
-        # audit records, not transfers into or out of the hotel
-        # department, so the aggregate location balance stays 10.
+        # Room replenishment moves two clean pieces into the room;
+        # collecting one dirty piece returns it to Housekeeping.
+        # The total owned quantity remains 11 (10 initially in HK + 1 in room).
         summary = get_linen_summary(self.linen_item)
-        self.assertEqual(summary["housekeeping"], 10)
+        self.assertEqual(summary["housekeeping"], 9)
+        self.assertEqual(summary["rooms"], 2)
+        self.assertEqual(summary["owned"], 11)
 
     def test_partial_replacement_and_room_quantity_increase_are_reconciled(self):
         assignment = CleaningAssignment.objects.create(
