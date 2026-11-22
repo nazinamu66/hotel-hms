@@ -707,6 +707,52 @@ class LinenCustody(models.Model):
             f"Dirty: {self.dirty_quantity}"
         )
 
+class LinenCustodyAdjustment(models.Model):
+    """Immutable audit record for a physically verified staff custody count correction."""
+
+    custody = models.ForeignKey(
+        LinenCustody,
+        on_delete=models.PROTECT,
+        related_name="adjustments",
+    )
+    linen_item = models.ForeignKey(
+        LinenItem,
+        on_delete=models.PROTECT,
+        related_name="custody_adjustments",
+    )
+    staff_member = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="linen_custody_adjustments",
+    )
+    previous_clean_quantity = models.PositiveIntegerField()
+    previous_dirty_quantity = models.PositiveIntegerField()
+    counted_clean_quantity = models.PositiveIntegerField()
+    counted_dirty_quantity = models.PositiveIntegerField()
+    reason = models.TextField()
+    reference = models.CharField(max_length=80, unique=True)
+    adjusted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="linen_custody_adjustments_made",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    @property
+    def clean_delta(self):
+        return self.counted_clean_quantity - self.previous_clean_quantity
+
+    @property
+    def dirty_delta(self):
+        return self.counted_dirty_quantity - self.previous_dirty_quantity
+
+    def __str__(self):
+        return f"{self.reference} - {self.staff_member} - {self.linen_item}"
+
+
 class RoomLinenSetup(models.Model):
     """Persistent marker distinguishing an unconfigured room from an intentionally empty setup."""
 
