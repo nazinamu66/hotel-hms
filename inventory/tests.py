@@ -372,6 +372,94 @@ class FractionalStockTransferTests(TestCase):
         self.assertEqual(destination_layer.quantity_remaining, Decimal("1.250"))
         self.assertEqual(movement.quantity, Decimal("1.250"))
 
+    def test_registered_linen_store_to_laundry_transfer_moves_both_ledger_balances(self):
+        from linen.models import LinenItem, LinenTransaction
+        from linen.services.balances import get_linen_summary
+
+        laundry, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            department_type="LAUNDRY",
+            defaults={"code": "FLA", "name": "Fractional Test Laundry"},
+        )
+        linen_product = Product.objects.create(
+            hotel=self.hotel,
+            name="Transfer Test Bedsheet",
+            sku="TRANSFER-TEST-BEDSHEET",
+            product_type="HOUSEKEEPING",
+            usage_type="ASSET",
+            base_unit="pcs",
+        )
+        linen_item = LinenItem.objects.create(product=linen_product)
+        Stock.objects.create(product=linen_product, department=self.store, quantity=Decimal("10"))
+        StockCostLayer.objects.create(
+            product=linen_product,
+            department=self.store,
+            quantity_received=Decimal("10"),
+            quantity_remaining=Decimal("10"),
+            unit_cost=Decimal("25"),
+        )
+        LinenTransaction.objects.create(
+            linen_item=linen_item,
+            quantity=10,
+            event_type="RECEIVED",
+            to_location="STORE",
+            reference="TRANSFER-TEST-OPENING",
+        )
+        transfer = StockTransfer.objects.create(
+            product=linen_product,
+            from_department=self.store,
+            to_department=laundry,
+            quantity=Decimal("3"),
+        )
+
+        transfer.execute()
+
+        summary = get_linen_summary(linen_item)
+        movement = LinenTransaction.objects.get(reference=f"TRANSFER-{transfer.pk}")
+        self.assertEqual(summary["store"], Decimal("7"))
+        self.assertEqual(summary["laundry"], Decimal("3"))
+        self.assertEqual(movement.event_type, "ISSUED")
+        self.assertEqual(movement.from_location, "STORE")
+        self.assertEqual(movement.to_location, "LAUNDRY")
+
+    def test_registered_linen_transfer_rejects_fractional_piece_quantity(self):
+        from linen.models import LinenItem, LinenTransaction
+
+        laundry, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            department_type="LAUNDRY",
+            defaults={"code": "FLB", "name": "Fractional Test Laundry"},
+        )
+        linen_product = Product.objects.create(
+            hotel=self.hotel,
+            name="Fractional Transfer Bedsheet",
+            sku="FRACTIONAL-TRANSFER-BEDSHEET",
+            product_type="HOUSEKEEPING",
+            usage_type="ASSET",
+            base_unit="pcs",
+        )
+        LinenItem.objects.create(product=linen_product)
+        Stock.objects.create(product=linen_product, department=self.store, quantity=Decimal("5"))
+        StockCostLayer.objects.create(
+            product=linen_product,
+            department=self.store,
+            quantity_received=Decimal("5"),
+            quantity_remaining=Decimal("5"),
+            unit_cost=Decimal("25"),
+        )
+        transfer = StockTransfer.objects.create(
+            product=linen_product,
+            from_department=self.store,
+            to_department=laundry,
+            quantity=Decimal("1.5"),
+        )
+
+        with self.assertRaises(ValidationError):
+            transfer.execute()
+
+        self.assertFalse(StockMovement.objects.filter(reference=f"TRANSFER-{transfer.pk}").exists())
+        self.assertFalse(LinenTransaction.objects.filter(reference=f"TRANSFER-{transfer.pk}").exists())
+
 
 
 
