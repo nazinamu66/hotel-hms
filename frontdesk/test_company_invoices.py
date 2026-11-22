@@ -39,7 +39,7 @@ class CorporateInvoiceFrontdeskTests(TestCase):
             check_in_date=date(2026, 12, 1), check_out_date=date(2026, 12, 5),
             status="COMPLETED",
         )
-        cls.category = RoomCategory.objects.create(name="Corporate Invoice Standard")
+        cls.category = RoomCategory.objects.create(hotel=cls.hotel, name="Corporate Invoice Standard")
         cls.frontdesk_department = cls.department
 
     def setUp(self):
