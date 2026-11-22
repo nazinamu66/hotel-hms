@@ -55,7 +55,10 @@ def build_linen_reconciliation(*, hotels):
         all_custody_rows = list(
             LinenCustody.objects.filter(linen_item=item)
             .filter(
-                models.Q(user__department__isnull=True)
+                models.Q(
+                    user__department__isnull=True,
+                    user__hotel=item.product.hotel,
+                )
                 | models.Q(user__department__hotel=item.product.hotel)
             )
             .select_related("user", "user__department", "user__department__hotel")
