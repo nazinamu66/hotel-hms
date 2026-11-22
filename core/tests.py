@@ -836,6 +836,7 @@ class ReservationsOccupancyCalculationTests(TestCase):
             name="Outside Reservations Analytics Hotel"
         )
         self.category = RoomCategory.objects.create(
+            hotel=self.hotel,
             name="Reservations Analytics Category"
         )
         self.guest = Guest.objects.create(
@@ -971,6 +972,7 @@ class ReservationsOccupancyCalculationTests(TestCase):
         )
 
         other_category = RoomCategory.objects.create(
+            hotel=self.other_hotel,
             name="Outside Reservations Category"
         )
         other_guest = Guest.objects.create(
@@ -1013,6 +1015,7 @@ class RoomOccupancyAnalyticsTests(TestCase):
             name="Outside Room Occupancy Hotel"
         )
         self.category = RoomCategory.objects.create(
+            hotel=self.hotel,
             name="Room Occupancy Category"
         )
         self.guest = __import__("billing.models", fromlist=["Guest"]).Guest.objects.create(
