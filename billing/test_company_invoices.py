@@ -36,7 +36,7 @@ class CompanyInvoiceServiceTests(TestCase):
             hotel=cls.hotel, code="INV", name="Invoice Test Frontdesk",
             department_type="FRONTDESK",
         )
-        cls.category = RoomCategory.objects.create(name="Invoice Test Standard")
+        cls.category = RoomCategory.objects.create(hotel=cls.hotel, name="Invoice Test Standard")
 
     def setUp(self):
         guest = Guest.objects.create(
