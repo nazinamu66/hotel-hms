@@ -32,6 +32,7 @@ class CleaningLinenMovementAuditTests(TestCase):
             name="Cleaning Linen Audit Hotel",
         )
         cls.category = RoomCategory.objects.create(
+            hotel=cls.hotel,
             name="Cleaning Linen Audit Standard",
         )
         cls.room = Room.objects.create(
