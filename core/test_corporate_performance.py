@@ -54,7 +54,14 @@ class CorporatePerformanceServiceTests(TestCase):
             folio_type="WALKIN",
             guest=self.guest,
         )
-        self.category = RoomCategory.objects.create(name="Corporate Reporting Standard")
+        self.category = RoomCategory.objects.create(
+            hotel=self.hotel,
+            name="Corporate Reporting Standard",
+        )
+        self.outside_category = RoomCategory.objects.create(
+            hotel=self.outside_hotel,
+            name="Outside Corporate Reporting Standard",
+        )
         self.allocation = GroupReservationRoom.objects.create(
             group_reservation=self.group,
             guest=self.guest,
@@ -155,7 +162,7 @@ class CorporatePerformanceServiceTests(TestCase):
         outside_allocation = GroupReservationRoom.objects.create(
             group_reservation=outside_group,
             guest=outside_guest,
-            room_category=self.category,
+            room_category=self.outside_category,
             folio=outside_folio,
             check_in_date=date(2026, 11, 1),
             check_out_date=date(2026, 11, 2),
