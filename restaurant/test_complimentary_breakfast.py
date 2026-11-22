@@ -26,7 +26,9 @@ class ComplimentaryBreakfastEligibilityTests(TestCase):
             name="Breakfast Restaurant",
             department_type="RESTAURANT",
         )
-        self.category = RoomCategory.objects.create(name="Breakfast Test Standard")
+        self.category = RoomCategory.objects.create(
+            hotel=self.hotel, name="Breakfast Test Standard"
+        )
         self.guest = Guest.objects.create(
             hotel=self.hotel,
             first_name="Test",
