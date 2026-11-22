@@ -744,7 +744,6 @@ class PurchaseOrder(models.Model):
             row.product_id: row
             for row in LinenItem.objects.filter(
                 product_id__in=[item.product_id for item in items],
-                is_active=True,
             )
         }
         if linen_items_by_product:
