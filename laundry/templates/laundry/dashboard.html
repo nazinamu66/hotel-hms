@@ -153,6 +153,24 @@
     }
     .ld-pill.clean { background: var(--ld-green-soft); color: var(--ld-green); }
     .ld-pill.dirty { background: var(--ld-amber-soft); color: var(--ld-amber); }
+    .ld-receipts-table { min-width: 0; table-layout: fixed; }
+    .ld-receipts-table th, .ld-receipts-table td { padding-left: 10px; padding-right: 10px; overflow-wrap: anywhere; }
+    .ld-receipts-table th:nth-child(1) { width: 21%; }
+    .ld-receipts-table th:nth-child(2) { width: 17%; }
+    .ld-receipts-table th:nth-child(3) { width: 24%; }
+    .ld-receipts-table th:nth-child(4) { width: 19%; }
+    .ld-receipts-table th:nth-child(5) { width: 19%; }
+    .ld-receipt-action {
+        display: inline-flex; align-items: center; justify-content: center;
+        padding: 7px 10px; border-radius: 8px; background: var(--ld-blue);
+        color: #fff; font-size: 11px; font-weight: 800; text-decoration: none;
+        white-space: nowrap;
+    }
+    .ld-receipt-action:hover { background: #1d4ed8; color: #fff; }
+    @media (max-width: 700px) {
+        .ld-receipts-table th, .ld-receipts-table td { padding: 9px 7px; font-size: 11px; }
+        .ld-receipt-action { padding: 6px 7px; font-size: 10px; }
+    }
     .ld-empty { padding: 30px 18px; text-align: center; color: var(--ld-muted); }
     .ld-empty-icon {
         width: 42px; height: 42px; display: grid; place-items: center;
@@ -311,7 +329,7 @@
             </div>
             {% if pending_receipts %}
                 <div class="ld-table-wrap">
-                    <table class="ld-table">
+                    <table class="ld-table ld-receipts-table">
                         <thead>
                             <tr>
                                 <th>Linen</th>
@@ -328,7 +346,7 @@
                                 <td>{{ receipt.returned_by.username }}</td>
                                 <td><span class="ld-number">{{ receipt.declared_clean_quantity|add:receipt.declared_dirty_quantity }}</span><br><span style="color:#64748b;font-size:11px;">{{ receipt.declared_clean_quantity }} clean · {{ receipt.declared_dirty_quantity }} dirty</span></td>
                                 <td><span class="ld-pill">{% if receipt.status == "PENDING" %}Awaiting confirmation{% else %}Discrepancy pending review{% endif %}</span></td>
-                                <td><a class="ld-link" href="{% url 'laundry:receipt_detail' receipt.id %}">Review →</a></td>
+                                <td><a class="ld-receipt-action" href="{% url 'laundry:receipt_detail' receipt.id %}" aria-label="Accept and confirm {{ receipt.linen_item.product.name }} returned by {{ receipt.returned_by.username }}">Accept &amp; confirm</a></td>
                             </tr>
                             {% endfor %}
                         </tbody>
