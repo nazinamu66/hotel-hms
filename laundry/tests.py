@@ -447,6 +447,47 @@ class HousekeepingLinenTransitReceiptTests(TestCase):
         self.assertEqual(laundry["CLEAN"], 2)
         self.assertEqual(laundry["DIRTY"], 3)
 
+    def test_stale_receipt_cannot_be_confirmed_twice(self):
+        from laundry.models import LaundryReceipt
+        from laundry.services.receiving import confirm_laundry_receipt
+
+        receipt = return_linen_to_laundry(
+            linen_item=self.linen_item,
+            user=self.housekeeper,
+            clean_quantity=2,
+            dirty_quantity=3,
+            note="Duplicate confirmation protection",
+        )
+        stale_receipt = LaundryReceipt.objects.get(pk=receipt.pk)
+
+        confirm_laundry_receipt(
+            receipt=receipt,
+            received_by=self.laundry_user,
+            received_clean_quantity=2,
+            received_dirty_quantity=3,
+        )
+
+        with self.assertRaises(ValidationError):
+            confirm_laundry_receipt(
+                receipt=stale_receipt,
+                received_by=self.laundry_user,
+                received_clean_quantity=2,
+                received_dirty_quantity=3,
+            )
+
+        laundry = get_linen_condition_balance(self.linen_item, "LAUNDRY")
+        self.assertEqual(laundry["CLEAN"], 2)
+        self.assertEqual(laundry["DIRTY"], 3)
+        self.assertEqual(
+            LinenTransaction.objects.filter(
+                linen_item=self.linen_item,
+                event_type="RETURNED",
+                from_location="IN_TRANSIT",
+                to_location="LAUNDRY",
+            ).count(),
+            2,
+        )
+
     def test_short_return_moves_only_confirmed_quantity_to_laundry(self):
         receipt = return_linen_to_laundry(
             linen_item=self.linen_item,
