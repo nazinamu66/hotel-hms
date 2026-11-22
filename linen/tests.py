@@ -653,6 +653,9 @@ class EmergencyLinenCustodyReassignmentTests(TestCase):
 
 
 class LinenPurchaseOrderReceivingTests(TestCase):
+    def setUp(self):
+        self.client.force_login(self.user)
+
     @classmethod
     def setUpTestData(cls):
         User = get_user_model()
