@@ -35,6 +35,24 @@
 .linen-setup-page .linen-setup-table th{background:#edf3fb;color:#526783}
 .linen-setup-page .linen-btn-primary{background:#2563eb;color:#fff}
 
+
+/* Dark navy management workspace — scoped to this Linen page only */
+body:has(.linen-setup-page) .layout{background:#0b1424}
+body:has(.linen-setup-page) .main{background:#0b1424}
+body:has(.linen-setup-page) .topbar{background:#0d1a2d!important;color:#e7eefb!important;border-bottom:1px solid #263a55!important}
+body:has(.linen-setup-page) .topbar a{color:#9fc2ff!important}
+body:has(.linen-setup-page) .content{background:#0b1424!important;color:#e7eefb!important}
+.linen-setup-page{background:transparent!important;color:#e7eefb!important}
+.linen-setup-card{background:#14243a!important;border:1px solid #293d58!important;color:#e7eefb!important;box-shadow:0 8px 22px rgba(0,0,0,.16)!important}
+.linen-category-card{background:#192c45!important;border-color:#304763!important;color:#e7eefb!important}
+.linen-setup-card h2,.linen-category-copy strong{color:#f3f7ff!important}
+.linen-setup-card p,.linen-category-copy small{color:#9aacc4!important}
+.linen-setup-table th{background:#1b304b!important;color:#aebed3!important;border-color:#304763!important}
+.linen-setup-table td{background:transparent!important;color:#e0e9f7!important;border-color:#293d58!important}
+.linen-setup-page a:not(.linen-primary):not(.linen-btn-primary):not(.ro-btn):not(.lca-primary):not(.lr-link){color:#8db7ff}
+.linen-setup-page input,.linen-setup-page select,.linen-setup-page textarea{background:#fff!important;color:#17243a!important;border-color:#536a87!important;color-scheme:light}
+.linen-setup-page button,.linen-setup-page .linen-btn-primary,.linen-setup-page .linen-primary,.linen-setup-page .ro-btn:not(.secondary):not(.ghost),.linen-setup-page .lca-primary{background:#2563eb!important;color:#fff!important;border-color:#2563eb!important}
+
 </style>
 <div class="linen-setup-page">
   <header class="linen-setup-head"><p class="linen-kicker">Setup · Linen configuration</p><h1>Room category defaults</h1><p>Define the standard linen quantities required in each room category. These become the expected quantities in the room opening count.</p><a class="linen-btn" href="{% url 'linen_dashboard' %}">← Back to Linen</a></header>
