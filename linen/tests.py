@@ -111,56 +111,85 @@ class RoomSpecificLinenSetupTests(TestCase):
             4,
         )
 
-    def test_room_setup_copies_category_defaults_and_preserves_room_overrides(self):
+    def test_room_setup_get_does_not_create_physical_room_states(self):
         RoomLinenRequirement.objects.create(
             category=self.category,
             linen_item=self.linen_a,
             quantity=2,
         )
+        response = self.client.get(
+            reverse("linen_room_setup", args=[self.room.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(RoomLinenState.objects.filter(room=self.room).exists())
+        self.assertFalse(RoomLinenSetup.objects.filter(room=self.room).exists())
+
+    def test_room_opening_batch_uses_category_defaults_and_posts_room_ledger(self):
+        from .models import LinenTransaction, RoomLinenOpeningLine
+        from .services.room_opening import (
+            create_room_linen_opening_batch,
+            post_room_linen_opening_batch,
+        )
+        from .services.balances import get_linen_summary
+
         RoomLinenRequirement.objects.create(
-            category=self.category,
-            linen_item=self.linen_b,
-            quantity=4,
+            category=self.category, linen_item=self.linen_a, quantity=2,
         )
+        RoomLinenRequirement.objects.create(
+            category=self.category, linen_item=self.linen_b, quantity=4,
+        )
+        batch = create_room_linen_opening_batch(
+            hotel=self.hotel, user=self.user, reference="ROOM-LINEN-OPEN-001",
+        )
+        opening_room = batch.rooms.get(room=self.room)
+        lines = {line.linen_item_id: line for line in opening_room.lines.all()}
+        self.assertEqual(lines[self.linen_a.pk].expected_quantity, 2)
+        self.assertEqual(lines[self.linen_a.pk].actual_quantity, 2)
+        lines[self.linen_a.pk].actual_quantity = 3
+        lines[self.linen_a.pk].save(update_fields=["actual_quantity"])
 
-        response = self.client.get(
-            reverse("linen_room_setup", args=[self.room.pk])
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            RoomLinenState.objects.get(
-                room=self.room,
-                linen_item=self.linen_a,
-            ).quantity,
-            2,
-        )
+        post_room_linen_opening_batch(batch=batch, user=self.user)
 
-        self.client.post(
-            reverse("linen_room_setup", args=[self.room.pk]),
-            {
-                f"quantity_{self.linen_a.pk}": "7",
-                f"quantity_{self.linen_b.pk}": "4",
-            },
+        self.assertEqual(
+            RoomLinenState.objects.get(room=self.room, linen_item=self.linen_a).quantity,
+            3,
         )
+        self.assertTrue(RoomLinenSetup.objects.get(room=self.room).is_configured)
+        movement = LinenTransaction.objects.get(
+            event_type="ROOM_OPENING", to_room=self.room, linen_item=self.linen_a,
+        )
+        self.assertEqual(movement.quantity, 3)
+        # Room-opening counts are not departmental stock receipts.
+        self.assertEqual(get_linen_summary(self.linen_a)["owned"], 0)
 
-        response = self.client.get(
-            reverse("linen_room_setup", args=[self.room.pk])
+    def test_posted_room_opening_batch_cannot_be_posted_twice(self):
+        from .services.room_opening import (
+            create_room_linen_opening_batch,
+            post_room_linen_opening_batch,
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            RoomLinenState.objects.get(
-                room=self.room,
-                linen_item=self.linen_a,
-            ).quantity,
-            7,
+        batch = create_room_linen_opening_batch(
+            hotel=self.hotel, user=self.user, reference="ROOM-LINEN-OPEN-002",
         )
-        self.assertEqual(
-            RoomLinenState.objects.get(
-                room=self.room,
-                linen_item=self.linen_b,
-            ).quantity,
-            4,
+        post_room_linen_opening_batch(batch=batch, user=self.user)
+        with self.assertRaises(ValidationError):
+            post_room_linen_opening_batch(batch=batch, user=self.user)
+
+    def test_new_rooms_are_eligible_for_a_later_room_opening_batch(self):
+        from .services.room_opening import (
+            create_room_linen_opening_batch,
+            post_room_linen_opening_batch,
         )
+        first = create_room_linen_opening_batch(
+            hotel=self.hotel, user=self.user, reference="ROOM-LINEN-OPEN-003",
+        )
+        post_room_linen_opening_batch(batch=first, user=self.user)
+        new_room = Room.objects.create(
+            hotel=self.hotel, room_number="102", category=self.category,
+        )
+        second = create_room_linen_opening_batch(
+            hotel=self.hotel, user=self.user, reference="ROOM-LINEN-OPEN-004",
+        )
+        self.assertEqual(list(second.rooms.values_list("room_id", flat=True)), [new_room.pk])
 
     def test_excluded_room_linen_item_is_not_recreated_on_next_visit(self):
         RoomLinenRequirement.objects.create(
