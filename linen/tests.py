@@ -159,8 +159,14 @@ class RoomSpecificLinenSetupTests(TestCase):
             event_type="ROOM_OPENING", to_room=self.room, linen_item=self.linen_a,
         )
         self.assertEqual(movement.quantity, 3)
-        # Room-opening counts are not departmental stock receipts.
-        self.assertEqual(get_linen_summary(self.linen_a)["owned"], 0)
+        # Opening room stock is included in owned stock, but remains separate
+        # from Store, Housekeeping and Laundry balances.
+        summary = get_linen_summary(self.linen_a)
+        self.assertEqual(summary["owned"], 3)
+        self.assertEqual(summary["rooms"], 3)
+        self.assertEqual(summary["store"], 0)
+        self.assertEqual(summary["housekeeping"], 0)
+        self.assertEqual(summary["laundry"], 0)
 
     def test_posted_room_opening_batch_cannot_be_posted_twice(self):
         from .services.room_opening import (
