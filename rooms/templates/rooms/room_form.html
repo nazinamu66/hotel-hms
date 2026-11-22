@@ -2,6 +2,38 @@
 
 {% block title %}
     {% if room %}Edit Room{% else %}Add Room{% endif %}
+<script>
+(function () {
+    const hotel = document.getElementById("id_hotel");
+    const category = document.getElementById("id_category");
+    if (!hotel || !category) return;
+    const options = Array.from(category.options);
+    function filterCategories() {
+        const selectedHotel = hotel.value;
+        let selectedStillVisible = false;
+        options.forEach(function (option, index) {
+            if (!option.value) return;
+            const visible = option.dataset.hotel === selectedHotel;
+            option.hidden = !visible;
+            option.disabled = !visible;
+            if (visible && option.selected) selectedStillVisible = true;
+        });
+        if (!selectedStillVisible) {
+            const first = options.find(option => option.value && !option.disabled);
+            if (first) category.value = first.value;
+        }
+    }
+    options.forEach(function (option) {
+        if (!option.value) return;
+        const match = option.textContent.match(/^(.+?) — /);
+        option.dataset.hotelName = match ? match[1] : "";
+    });
+    // The hotel IDs are emitted directly on each category option by the server.
+    filterCategories();
+    hotel.addEventListener("change", filterCategories);
+})();
+</script>
+
 {% endblock %}
 
 {% block content %}
@@ -311,11 +343,12 @@
 
                             <option
                                 value="{{ c.id }}"
+                                data-hotel="{{ c.hotel_id }}"
                                 {% if room and room.category_id == c.id %}
                                     selected
                                 {% endif %}
                             >
-                                {{ c.name }}
+                                {{ c.hotel.name }} — {{ c.name }}
                             </option>
 
                         {% endfor %}
