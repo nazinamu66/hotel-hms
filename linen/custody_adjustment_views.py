@@ -5,7 +5,7 @@ from django.db.models import F
 
 from accounts.decorators import role_required
 from accounts.services.access import get_accessible_hotels
-from linen.models import LinenCustody
+from linen.models import LinenCustody, LinenCustodyAdjustment
 from linen.services.workflows import adjust_linen_custody_count
 
 
@@ -27,6 +27,8 @@ def linen_custody_adjustment(request, pk):
 
     if request.method == "POST":
         try:
+            if request.POST.get("physical_count_confirmed") != "yes":
+                raise ValidationError("Confirm that the physical clean and dirty counts were verified before posting.")
             adjustment = adjust_linen_custody_count(
                 custody=custody,
                 counted_clean_quantity=request.POST.get("counted_clean_quantity"),
@@ -49,5 +51,10 @@ def linen_custody_adjustment(request, pk):
     return render(
         request,
         "linen/custody_adjustment.html",
-        {"custody": custody},
+        {
+            "custody": custody,
+            "adjustments": LinenCustodyAdjustment.objects.filter(custody=custody)
+            .select_related("adjusted_by")
+            .order_by("-created_at", "-id")[:20],
+        },
     )
