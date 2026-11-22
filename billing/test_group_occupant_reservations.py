@@ -28,6 +28,7 @@ class GroupOccupantReservationTests(TestCase):
             name="Group Workflow Hotel",
         )
         cls.category = RoomCategory.objects.create(
+            hotel=cls.hotel,
             name="Group Workflow Standard",
         )
         cls.room = Room.objects.create(
@@ -128,7 +129,7 @@ class GroupRoomPricingTests(TestCase):
             organization=organization,
             name="Group Pricing Test Hotel",
         )
-        cls.category = RoomCategory.objects.create(name="Group Pricing Standard")
+        cls.category = RoomCategory.objects.create(hotel=cls.hotel, name="Group Pricing Standard")
         cls.room = Room.objects.create(
             hotel=cls.hotel,
             room_number="GP01",
