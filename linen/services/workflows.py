@@ -703,3 +703,99 @@ def reassign_linen_custody(
                 note=reason,
             )
     return reference
+
+
+@transaction.atomic
+def adjust_linen_custody_count(
+    *,
+    custody,
+    counted_clean_quantity,
+    counted_dirty_quantity,
+    expected_clean_quantity,
+    expected_dirty_quantity,
+    authorized_by,
+    reason,
+):
+    """Correct a staff custody subledger after a physical count, with immutable audit."""
+    import uuid
+
+    from django.core.exceptions import PermissionDenied
+    from accounts.services.access import user_can_access_hotel
+    from linen.models import LinenCustody, LinenCustodyAdjustment
+
+    allowed_roles = {"ADMIN", "DIRECTOR", "GENERAL_MANAGER", "MANAGER"}
+    if (
+        not authorized_by
+        or not authorized_by.is_authenticated
+        or not authorized_by.is_active
+        or authorized_by.role not in allowed_roles
+    ):
+        raise PermissionDenied("You are not authorized to adjust linen custody counts.")
+
+    try:
+        counted_clean_quantity = int(counted_clean_quantity)
+        counted_dirty_quantity = int(counted_dirty_quantity)
+        expected_clean_quantity = int(expected_clean_quantity)
+        expected_dirty_quantity = int(expected_dirty_quantity)
+    except (TypeError, ValueError):
+        raise ValidationError("All linen counts must be whole numbers.")
+
+    if min(
+        counted_clean_quantity,
+        counted_dirty_quantity,
+        expected_clean_quantity,
+        expected_dirty_quantity,
+    ) < 0:
+        raise ValidationError("Linen counts cannot be negative.")
+
+    if not reason or not reason.strip():
+        raise ValidationError("A reason is required for a custody count adjustment.")
+    reason = reason.strip()
+
+    linen_item = (
+        LinenItem.objects.select_for_update()
+        .select_related("product", "product__hotel")
+        .get(pk=custody.linen_item_id)
+    )
+    if not user_can_access_hotel(authorized_by, linen_item.product.hotel):
+        raise PermissionDenied("You cannot adjust linen custody outside your accessible hotels.")
+
+    locked_custody = (
+        LinenCustody.objects.select_for_update()
+        .select_related("user", "linen_item", "linen_item__product")
+        .get(pk=custody.pk)
+    )
+    if locked_custody.user.hotel_id != linen_item.product.hotel_id:
+        raise ValidationError("The staff member does not belong to this linen item's hotel.")
+
+    if (
+        locked_custody.clean_quantity != expected_clean_quantity
+        or locked_custody.dirty_quantity != expected_dirty_quantity
+    ):
+        raise ValidationError(
+            "This custody record changed after the page was opened. Reload it and verify the physical count again."
+        )
+
+    previous_clean = locked_custody.clean_quantity
+    previous_dirty = locked_custody.dirty_quantity
+    reference = f"HK-COUNT-{uuid.uuid4().hex[:16].upper()}"
+
+    locked_custody.clean_quantity = counted_clean_quantity
+    locked_custody.dirty_quantity = counted_dirty_quantity
+    locked_custody.save(
+        update_fields=["clean_quantity", "dirty_quantity", "updated_at"]
+    )
+
+    adjustment = LinenCustodyAdjustment.objects.create(
+        custody=locked_custody,
+        linen_item=linen_item,
+        staff_member=locked_custody.user,
+        previous_clean_quantity=previous_clean,
+        previous_dirty_quantity=previous_dirty,
+        counted_clean_quantity=counted_clean_quantity,
+        counted_dirty_quantity=counted_dirty_quantity,
+        reason=reason,
+        reference=reference,
+        adjusted_by=authorized_by,
+    )
+    return adjustment
