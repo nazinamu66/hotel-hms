@@ -746,6 +746,19 @@ class PurchaseOrder(models.Model):
                 product_id__in=[item.product_id for item in items],
             )
         }
+        unregistered_linen_products = [
+            item.product.name
+            for item in items
+            if item.product.product_type == "HOUSEKEEPING"
+            and item.product.usage_type == "ASSET"
+            and item.product_id not in linen_items_by_product
+        ]
+        if unregistered_linen_products:
+            raise ValidationError(
+                "Register these linen products in the Linen catalogue before PO receipt: "
+                + ", ".join(unregistered_linen_products)
+            )
+
         if linen_items_by_product:
             if po.department.department_type != "STORE":
                 raise ValidationError(
