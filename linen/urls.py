@@ -8,11 +8,13 @@ from .views import (
     linen_issue,
 )
 from .reconciliation_views import linen_reconciliation
+from .custody_adjustment_views import linen_custody_adjustment
 
 
 urlpatterns = [
     path("", linen_dashboard, name="linen_dashboard"),
     path("reconciliation/", linen_reconciliation, name="linen_reconciliation"),
+    path("reconciliation/custody/<int:pk>/adjust/", linen_custody_adjustment, name="linen_custody_adjustment"),
     path("receive/", linen_receive, name="linen_receive"),
     path("issue/", linen_issue, name="linen_issue"),
     path("setup/categories/", linen_category_setup, name="linen_category_setup"),
