@@ -583,13 +583,10 @@ def return_clean_linen_from_laundry(
     # Check current Laundry balance
     # --------------------------------------------------------
 
-    from linen.services.balances import get_linen_summary
-
-    summary = get_linen_summary(
+    laundry_balance = get_linen_condition_balance(
         linen_item,
-    )
-
-    laundry_balance = summary["laundry"]
+        "LAUNDRY",
+    )["CLEAN"]
 
     if laundry_balance < quantity:
         raise ValidationError(
