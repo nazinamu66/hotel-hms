@@ -49,6 +49,7 @@
       <p class="linen-muted">Monitor linen quantities, circulation and replenishment across Store, Housekeeping and Laundry.</p>
     </div>
     <nav class="linen-actions" aria-label="Linen actions">
+      <a class="linen-secondary" href="{% url 'linen_reconciliation' %}">Reconciliation</a>
       <a class="linen-secondary" href="{% url 'linen_category_setup' %}">Room category defaults</a>
       <a class="linen-secondary" href="{% url 'linen_room_opening' %}">Room opening counts</a>
       <a class="linen-secondary" href="{% url 'inventory:product_list' %}">Linen catalogue</a>
