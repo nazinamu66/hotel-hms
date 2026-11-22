@@ -661,12 +661,20 @@ class LinenPurchaseOrderReceivingTests(TestCase):
         User = get_user_model()
         cls.organization = Organization.objects.create(name="Linen PO Test Org")
         cls.hotel = Hotel.objects.create(organization=cls.organization, name="Linen PO Test Hotel")
-        cls.store = Department.objects.create(
-            hotel=cls.hotel, code="STORE", name="Hotel Store", department_type="STORE",
-        )
-        cls.housekeeping = Department.objects.create(
-            hotel=cls.hotel, code="HK", name="Housekeeping", department_type="HOUSEKEEPING",
-        )
+        cls.store = Department.objects.filter(
+            hotel=cls.hotel, department_type="STORE",
+        ).first()
+        if cls.store is None:
+            cls.store = Department.objects.create(
+                hotel=cls.hotel, code="STORE", name="Hotel Store", department_type="STORE",
+            )
+        cls.housekeeping = Department.objects.filter(
+            hotel=cls.hotel, department_type="HOUSEKEEPING",
+        ).first()
+        if cls.housekeeping is None:
+            cls.housekeeping = Department.objects.create(
+                hotel=cls.hotel, code="HK", name="Housekeeping", department_type="HOUSEKEEPING",
+            )
         cls.user = User.objects.create_user(
             username="linen-po-receiver", password="test-password", role="MANAGER", hotel=cls.hotel,
         )
