@@ -174,6 +174,11 @@ def approve_linen_request(
     # Request status
     # --------------------------------------------------------
 
+    if request_obj.status != "PENDING":
+        raise ValidationError(
+            "Only pending linen requests can be approved."
+        )
+
     # --------------------------------------------------------
     # Request type
     # --------------------------------------------------------
