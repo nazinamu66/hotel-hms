@@ -62,7 +62,7 @@ class OrdinaryMultiRoomReservationTests(TestCase):
             first_name="Second",
             last_name="Occupant",
         )
-        cls.category = RoomCategory.objects.create(name="Multi Room Category")
+        cls.category = RoomCategory.objects.create(hotel=cls.hotel, name="Multi Room Category")
 
     def setUp(self):
         self.room_one = Room.objects.create(
@@ -425,7 +425,7 @@ class TodayBoardAllocationTests(TestCase):
             first_name="Second",
             last_name="Occupant",
         )
-        cls.category = RoomCategory.objects.create(name="Today Board Category")
+        cls.category = RoomCategory.objects.create(hotel=cls.hotel, name="Today Board Category")
 
     @patch("billing.models.Folio.apply_daily_room_charge")
     def test_departures_and_in_house_track_each_room_allocation_independently(self, apply_charge):
