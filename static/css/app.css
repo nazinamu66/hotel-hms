@@ -1946,3 +1946,259 @@ input, select, textarea { font-size: 16px; }
     grid-template-columns:minmax(0,1fr);
   }
 }
+
+
+/* =========================================================
+   Management reporting design system
+   Shared by executive dashboards and department management
+   reports only. Operational workspaces retain their own
+   departmental themes.
+   ========================================================= */
+:root {
+    --mgt-navy: #142b50;
+    --mgt-navy-deep: #0f2342;
+    --mgt-blue: #2563eb;
+    --mgt-blue-hover: #1d4ed8;
+    --mgt-page: #f3f6fc;
+    --mgt-surface: #ffffff;
+    --mgt-surface-soft: #f7f9fd;
+    --mgt-border: #dce5f1;
+    --mgt-text: #17243a;
+    --mgt-muted: #647894;
+}
+.main:has(.management-overview),
+.main:has(.management-performance),
+.main:has(.management-frontdesk),
+.main:has(.management-reservations),
+.main:has(.management-custom-reports),
+.main:has(.hk-report),
+.main:has(.hk-productivity),
+.main:has(.mm),
+.main:has(.restaurant-management),
+.main:has(.owner-management) {
+    background: var(--mgt-page);
+}
+.main:has(.management-overview) > .content,
+.main:has(.management-performance) > .content,
+.main:has(.management-frontdesk) > .content,
+.main:has(.management-reservations) > .content,
+.main:has(.management-custom-reports) > .content,
+.main:has(.hk-report) > .content,
+.main:has(.hk-productivity) > .content,
+.main:has(.mm) > .content,
+.main:has(.restaurant-management) > .content,
+.main:has(.owner-management) > .content {
+    background: var(--mgt-page);
+    color: var(--mgt-text);
+}
+.main:has(.management-overview) > .topbar,
+.main:has(.management-performance) > .topbar,
+.main:has(.management-frontdesk) > .topbar,
+.main:has(.management-reservations) > .topbar,
+.main:has(.management-custom-reports) > .topbar,
+.main:has(.hk-report) > .topbar,
+.main:has(.hk-productivity) > .topbar,
+.main:has(.mm) > .topbar,
+.main:has(.restaurant-management) > .topbar,
+.main:has(.owner-management) > .topbar {
+    background: var(--mgt-navy-deep) !important;
+    color: #f8fafc !important;
+    border-bottom: 1px solid #263e61 !important;
+}
+.main:has(.management-overview) .sidebar,
+.main:has(.management-performance) .sidebar,
+.main:has(.management-frontdesk) .sidebar,
+.main:has(.management-reservations) .sidebar,
+.main:has(.management-custom-reports) .sidebar,
+.main:has(.hk-report) .sidebar,
+.main:has(.hk-productivity) .sidebar,
+.main:has(.mm) .sidebar,
+.main:has(.restaurant-management) .sidebar,
+.main:has(.owner-management) .sidebar {
+    background: var(--mgt-navy-deep);
+}
+
+/* Shared report canvas and typography */
+.management-overview,
+.management-performance,
+.management-frontdesk,
+.management-reservations,
+.management-custom-reports,
+.hk-report,
+.hk-productivity,
+.mm,
+.restaurant-management,
+.owner-management {
+    background: var(--mgt-page) !important;
+    color: var(--mgt-text) !important;
+}
+.management-overview h1, .management-overview h2, .management-overview h3,
+.management-performance h1, .management-performance h2, .management-performance h3,
+.management-frontdesk h1, .management-frontdesk h2, .management-frontdesk h3,
+.management-reservations h1, .management-reservations h2, .management-reservations h3,
+.management-custom-reports h1, .management-custom-reports h2, .management-custom-reports h3,
+.hk-report h1, .hk-report h2, .hk-report h3,
+.hk-productivity h1, .hk-productivity h2, .hk-productivity h3,
+.mm h1, .mm h2, .mm h3,
+.restaurant-management h1, .restaurant-management h2, .restaurant-management h3,
+.owner-management h1, .owner-management h2, .owner-management h3 {
+    color: var(--mgt-navy) !important;
+}
+.management-overview p, .management-performance p,
+.management-frontdesk p, .management-reservations p,
+.management-custom-reports p, .hk-report p,
+.hk-productivity p, .mm p, .restaurant-management p,
+.owner-management p {
+    color: var(--mgt-muted);
+}
+.management-overview .exec-eyebrow,
+.management-performance .perf-eyebrow,
+.management-frontdesk .fd-eyebrow,
+.management-reservations .mr-eyebrow {
+    color: var(--mgt-blue) !important;
+}
+
+/* White cards, filters and report panels */
+.management-overview .exec-filter,
+.management-performance .perf-filter,
+.management-frontdesk .fd-filter,
+.management-reservations .mr-filter,
+.management-custom-reports .panel,
+.management-custom-reports .category,
+.hk-report .hk-panel,
+.hk-report .hk-kpi,
+.hk-productivity .hk-p-panel,
+.hk-productivity .hk-p-kpi,
+.mm .mm-panel,
+.mm .mm-kpi,
+.restaurant-management .rm-panel,
+.restaurant-management .rm-kpi,
+.owner-management .card,
+.management-frontdesk .fd-panel,
+.management-frontdesk .fd-kpi,
+.management-reservations .mr-panel,
+.management-reservations .mr-kpi,
+.management-overview .exec-kpi,
+.management-performance .perf-kpi {
+    background: var(--mgt-surface) !important;
+    border: 1px solid var(--mgt-border) !important;
+    color: var(--mgt-text) !important;
+    box-shadow: 0 5px 18px rgba(20,43,80,.055) !important;
+}
+.management-overview .exec-period,
+.management-performance .perf-period,
+.management-frontdesk .fd-period,
+.management-frontdesk .fd-count,
+.management-reservations .mr-period,
+.management-reservations .mr-count {
+    background: #eaf1fc !important;
+    border-color: var(--mgt-border) !important;
+    color: var(--mgt-navy) !important;
+}
+.management-overview .exec-filter-field label,
+.management-performance .perf-filter-field label,
+.management-frontdesk .fd-field label,
+.management-reservations .mr-field label,
+.management-custom-reports .field label,
+.hk-report label, .hk-productivity label, .mm label,
+.restaurant-management label {
+    color: var(--mgt-muted) !important;
+}
+.management-overview input, .management-overview select,
+.management-performance input, .management-performance select,
+.management-frontdesk input, .management-frontdesk select,
+.management-reservations input, .management-reservations select,
+.management-custom-reports input, .management-custom-reports select,
+.hk-report input, .hk-report select,
+.hk-productivity input, .hk-productivity select,
+.mm input, .mm select,
+.restaurant-management input, .restaurant-management select {
+    background: #fff !important;
+    color: var(--mgt-text) !important;
+    border-color: #cbd8e8 !important;
+    color-scheme: light;
+}
+
+/* Management action buttons and links */
+.management-overview button, .management-performance button,
+.management-frontdesk button, .management-reservations button,
+.management-custom-reports button, .hk-report .hk-btn,
+.hk-productivity .hk-p-btn, .mm .mm-btn,
+.restaurant-management .rm-btn {
+    background: var(--mgt-blue) !important;
+    border-color: var(--mgt-blue) !important;
+    color: #fff !important;
+}
+.management-overview button:hover, .management-performance button:hover,
+.management-frontdesk button:hover, .management-reservations button:hover,
+.management-custom-reports button:hover, .hk-report .hk-btn:hover,
+.hk-productivity .hk-p-btn:hover, .mm .mm-btn:hover,
+.restaurant-management .rm-btn:hover {
+    background: var(--mgt-blue-hover) !important;
+}
+.management-overview a, .management-performance a,
+.management-frontdesk a, .management-reservations a,
+.management-custom-reports a, .hk-report a,
+.hk-productivity a, .mm a, .restaurant-management a,
+.owner-management a {
+    color: var(--mgt-blue);
+}
+.management-overview .exec-filter-actions a,
+.management-performance .perf-filter-actions a,
+.management-frontdesk .fd-filter-actions a,
+.management-reservations .mr-filter-actions a {
+    color: var(--mgt-blue) !important;
+}
+
+/* Consistent table treatment while preserving status badges and chart colours */
+.management-overview table, .management-performance table,
+.management-frontdesk table, .management-reservations table,
+.management-custom-reports table, .hk-report table,
+.hk-productivity table, .mm table, .restaurant-management table,
+.owner-management table {
+    color: var(--mgt-text);
+}
+.management-overview th, .management-performance th,
+.management-frontdesk th, .management-reservations th,
+.management-custom-reports th, .hk-report th,
+.hk-productivity th, .mm th, .restaurant-management th,
+.owner-management th {
+    background: #edf3fb !important;
+    color: #526783 !important;
+    border-color: var(--mgt-border) !important;
+}
+.management-overview td, .management-performance td,
+.management-frontdesk td, .management-reservations td,
+.management-custom-reports td, .hk-report td,
+.hk-productivity td, .mm td, .restaurant-management td,
+.owner-management td {
+    color: var(--mgt-text) !important;
+    border-color: var(--mgt-border) !important;
+}
+.management-overview tbody tr:hover, .management-performance tbody tr:hover,
+.management-frontdesk tbody tr:hover, .management-reservations tbody tr:hover,
+.management-custom-reports tbody tr:hover, .hk-report tbody tr:hover,
+.hk-productivity tbody tr:hover, .mm tbody tr:hover,
+.restaurant-management tbody tr:hover, .owner-management tbody tr:hover {
+    background: #f3f7fd !important;
+}
+.hk-muted, .hk-p-muted, .mm-muted,
+.restaurant-management .rm-muted,
+.management-overview .exec-muted,
+.management-performance .perf-muted,
+.management-frontdesk .fd-muted,
+.management-reservations .mr-muted {
+    color: var(--mgt-muted) !important;
+}
+.owner-management .owner-heading {
+    margin: 0 0 20px;
+    padding: 22px 25px;
+    border-radius: 15px;
+    background: var(--mgt-navy);
+    color: #fff;
+}
+.owner-management .owner-heading h1 { color: #fff !important; margin: 0; }
+.owner-management .owner-heading p { color: #d5e2f5; margin: 6px 0 0; }
+@media(max-width:700px) {
+    .owner-management .grid-3 { grid-template-columns: 1fr; }
+}
