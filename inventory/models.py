@@ -1381,6 +1381,23 @@ class StockTransfer(models.Model):
                     f"({remaining_quantity})."
                 )
 
+        from linen.models import LinenItem, LinenTransaction
+
+        linen_item = LinenItem.objects.filter(
+            product_id=transfer.product_id,
+        ).first()
+        if linen_item:
+            if (
+                transfer.from_department.department_type != "STORE"
+                or transfer.to_department.department_type != "LAUNDRY"
+            ):
+                raise ValidationError(
+                    "Registered linen stock transfers must move from the Hotel Store to Laundry. "
+                    "Use the Linen workflows for Housekeeping issues and returns."
+                )
+            if transfer.quantity != transfer.quantity.to_integral_value():
+                raise ValidationError("Linen transfers must use whole-piece quantities.")
+
         transfer_stock(
             product=transfer.product,
             from_department=transfer.from_department,
@@ -1390,29 +1407,22 @@ class StockTransfer(models.Model):
             reference=f"TRANSFER-{transfer.id}",
         )
 
-        # A Store transfer of registered linen into Laundry must also
-        # update the dedicated linen ledger in this same atomic transaction.
-        if transfer.to_department.department_type == "LAUNDRY":
-            from linen.models import LinenItem, LinenTransaction
-
-            linen_item = LinenItem.objects.filter(
-                product_id=transfer.product_id,
-                is_active=True,
-            ).first()
-
-            if linen_item:
-                LinenTransaction.objects.create(
-                    linen_item=linen_item,
-                    quantity=int(transfer.quantity),
-                    condition="CLEAN",
-                    event_type="RECEIVED",
-                    to_location="LAUNDRY",
-                    performed_by=transfer.created_by,
-                    reference=f"TRANSFER-{transfer.id}",
-                    note=transfer.note or (
-                        f"Store transfer #{transfer.id} received into Laundry."
-                    ),
-                )
+        # Store -> Laundry is a movement between linen locations, not a
+        # second receipt. Record both sides in one ledger transaction.
+        if linen_item:
+            LinenTransaction.objects.create(
+                linen_item=linen_item,
+                quantity=int(transfer.quantity),
+                condition="CLEAN",
+                event_type="ISSUED",
+                from_location="STORE",
+                to_location="LAUNDRY",
+                performed_by=transfer.created_by,
+                reference=f"TRANSFER-{transfer.id}",
+                note=transfer.note or (
+                    f"Store transfer #{transfer.id} issued to Laundry."
+                ),
+            )
 
         if request_item:
             request_item.request.update_issue_status()
