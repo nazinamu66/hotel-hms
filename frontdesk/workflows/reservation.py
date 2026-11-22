@@ -89,10 +89,13 @@ def get_guest(
 
 def get_room_category(
     category_id,
+    hotel,
 ):
 
     return RoomCategory.objects.get(
         id=category_id,
+        hotel=hotel,
+        is_active=True,
     )
 
 
@@ -217,6 +220,7 @@ def create_reservation(
 
         category = get_room_category(
             category_id,
+            hotel,
         )
 
     validate_availability(
