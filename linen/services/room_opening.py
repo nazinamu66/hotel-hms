@@ -85,6 +85,10 @@ def post_room_linen_opening_batch(*, batch, user):
             if line.linen_item.product.hotel_id != batch.hotel_id:
                 raise ValidationError("A room opening line contains linen from another hotel.")
 
+        # Legacy setup visits could have created default states before the
+        # batch workflow existed. Replace that unposted configuration from
+        # the confirmed batch snapshot, never merge stale category rows.
+        RoomLinenState.objects.filter(room=room).delete()
         for line in lines:
             RoomLinenState.objects.update_or_create(
                 room=room,
