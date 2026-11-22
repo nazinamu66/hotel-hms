@@ -168,6 +168,44 @@ class RoomSpecificLinenSetupTests(TestCase):
         self.assertEqual(summary["housekeeping"], 0)
         self.assertEqual(summary["laundry"], 0)
 
+    def test_room_replenishment_and_dirty_collection_transfer_owned_stock_between_housekeeping_and_rooms(self):
+        from .models import LinenTransaction
+        from .services.balances import get_linen_summary
+
+        LinenTransaction.objects.create(
+            linen_item=self.linen_a, quantity=10, event_type="RECEIVED",
+            to_location="STORE", performed_by=self.user, reference="ROOM-BALANCE-RECEIPT",
+        )
+        LinenTransaction.objects.create(
+            linen_item=self.linen_a, quantity=4, event_type="ISSUED",
+            from_location="STORE", to_location="HOUSEKEEPING",
+            performed_by=self.user, reference="ROOM-BALANCE-ISSUE",
+        )
+        LinenTransaction.objects.create(
+            linen_item=self.linen_a, quantity=3, event_type="ROOM_OPENING",
+            to_room=self.room, performed_by=self.user, reference="ROOM-BALANCE-OPENING",
+        )
+        LinenTransaction.objects.create(
+            linen_item=self.linen_a, quantity=2, event_type="ROOM_REPLENISHED",
+            from_user=self.user, to_room=self.room, performed_by=self.user,
+            reference="ROOM-BALANCE-REPLENISH",
+        )
+        summary = get_linen_summary(self.linen_a)
+        self.assertEqual(summary["owned"], 13)
+        self.assertEqual(summary["store"], 6)
+        self.assertEqual(summary["housekeeping"], 2)
+        self.assertEqual(summary["rooms"], 5)
+
+        LinenTransaction.objects.create(
+            linen_item=self.linen_a, quantity=1, event_type="DIRTY_COLLECTED",
+            from_room=self.room, to_user=self.user, performed_by=self.user,
+            reference="ROOM-BALANCE-COLLECT",
+        )
+        summary = get_linen_summary(self.linen_a)
+        self.assertEqual(summary["owned"], 13)
+        self.assertEqual(summary["housekeeping"], 3)
+        self.assertEqual(summary["rooms"], 4)
+
     def test_posted_room_opening_batch_cannot_be_posted_twice(self):
         from .services.room_opening import (
             create_room_linen_opening_batch,
