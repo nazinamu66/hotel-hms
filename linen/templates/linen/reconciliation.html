@@ -50,7 +50,7 @@ details{margin-top:9px;border-top:1px solid #edf1f5;padding-top:9px}summary{curs
               <div class="lr-detail">
                 <div><h3>Employee custody</h3><ul>
                   {% for custody in row.custody_rows %}
-                    <li>{{ custody.user.username }} — clean {{ custody.clean_quantity }}, dirty {{ custody.dirty_quantity }}</li>
+                    <li>{{ custody.user.username }} — clean {{ custody.clean_quantity }}, dirty {{ custody.dirty_quantity }} · <a href="{% url 'linen_custody_adjustment' custody.pk %}">Verify / adjust count</a></li>
                   {% empty %}<li>No employee custody records.</li>{% endfor %}
                 </ul></div>
                 <div><h3>Room state</h3><ul>
@@ -60,7 +60,7 @@ details{margin-top:9px;border-top:1px solid #edf1f5;padding-top:9px}summary{curs
                 </ul></div>
                 <div><h3>Custody records needing staff/department review</h3><ul>
                   {% for custody in row.unlinked_custody_rows %}
-                    <li class="lr-bad">{{ custody.user.username }} — clean {{ custody.clean_quantity }}, dirty {{ custody.dirty_quantity }}; {% if custody.user.department %}currently assigned to {{ custody.user.department.name }} ({{ custody.user.department.hotel.name }}){% else %}no department currently assigned{% endif %}</li>
+                    <li class="lr-bad">{{ custody.user.username }} — clean {{ custody.clean_quantity }}, dirty {{ custody.dirty_quantity }}; {% if custody.user.department %}currently assigned to {{ custody.user.department.name }} ({{ custody.user.department.hotel.name }}){% else %}no department currently assigned{% endif %} · <a href="{% url 'linen_custody_adjustment' custody.pk %}">Review count</a></li>
                   {% empty %}<li>No detached or cross-department custody records.</li>{% endfor %}
                 </ul></div>
                 <div><h3>Staff custody movements (latest 100 linen transactions)</h3><ul>
