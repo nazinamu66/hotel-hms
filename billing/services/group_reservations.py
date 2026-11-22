@@ -59,7 +59,7 @@ def add_group_occupant(
         raise ValidationError("Select a guest belonging to this hotel.")
 
     try:
-        category = RoomCategory.objects.get(pk=room_category_id, is_active=True)
+        category = RoomCategory.objects.get(pk=room_category_id, hotel=group.hotel, is_active=True)
     except RoomCategory.DoesNotExist:
         raise ValidationError("Select a valid active room category.")
 
