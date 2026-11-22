@@ -3,6 +3,18 @@
 {% block content %}
 <style>
 .linen-setup-page{max-width:1180px}
+.linen-category-list-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:17px}
+.linen-category-count{background:#edf3fb;color:#345276;border-radius:99px;padding:7px 11px;font-size:12px;font-weight:800}
+.linen-category-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.linen-category-card{display:flex;align-items:center;gap:12px;padding:15px;border:1px solid #dce5f0;border-radius:12px;text-decoration:none;background:linear-gradient(145deg,#fff,#f8fafd);transition:transform .15s,border-color .15s,box-shadow .15s}
+.linen-category-card:hover{transform:translateY(-2px);border-color:#8ba9d0;box-shadow:0 8px 20px rgba(15,35,65,.08)}
+.linen-category-icon{display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border-radius:11px;background:#eaf1fb;color:#254d7d;font-size:22px}
+.linen-category-copy{display:flex;flex-direction:column;gap:4px;min-width:0}.linen-category-copy strong{color:#1c2e49;font-size:14px}.linen-category-copy small{color:#75849a;font-size:11px}
+.linen-category-arrow{margin-left:auto;color:#41648f;font-size:20px;font-weight:800}
+.linen-category-empty{grid-column:1/-1;display:flex;flex-direction:column;gap:8px;padding:20px;border:1px dashed #bdcadd;border-radius:12px;color:#53647d;font-size:13px}
+.linen-category-empty strong{color:#233650}.linen-category-empty a{color:#2459a2;font-weight:800;text-decoration:none}
+@media(max-width:900px){.linen-category-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.linen-category-grid{grid-template-columns:1fr}}
 .linen-setup-head{background:linear-gradient(120deg,#0b1730 0%,#142b50 62%,#1d3c68 100%);color:#fff;border-radius:18px;padding:25px 28px;box-shadow:0 14px 32px rgba(8,23,48,.18)}
 .linen-setup-head .linen-kicker,.linen-setup-head p{color:#c5d3e7}
 .linen-setup-head h1{color:#fff}
@@ -18,6 +30,26 @@
       <button class="linen-btn linen-btn-muted" type="submit">Load category</button>
     </form>
   </section>
+
+  {% if not selected_category %}
+  <section class="linen-setup-card">
+    <div class="linen-category-list-head">
+      <div><p class="linen-kicker" style="margin-bottom:4px">Existing room categories</p><h2 style="font-size:19px;margin:0">Choose a category to configure</h2><p style="font-size:13px;color:#64748b;margin:5px 0 0">These are the active room categories already registered in your accessible hotels.</p></div>
+      <span class="linen-category-count">{{ categories|length }} categories</span>
+    </div>
+    <div class="linen-category-grid">
+      {% for category in categories %}
+      <a class="linen-category-card" href="?category={{ category.pk }}">
+        <span class="linen-category-icon">▦</span>
+        <span class="linen-category-copy"><strong>{{ category.name }}</strong><small>{{ category.hotel.name }}</small></span>
+        <span class="linen-category-arrow">→</span>
+      </a>
+      {% empty %}
+      <div class="linen-category-empty"><strong>No active room categories were found.</strong><span>Check the Room Register and confirm that the categories belong to a hotel you can access and are marked active.</span><a href="{% url 'category_list' %}">Open Room Categories →</a></div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
 
   {% if selected_category %}
   <section class="linen-setup-card">
