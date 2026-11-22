@@ -58,6 +58,11 @@ details{margin-top:9px;border-top:1px solid #edf1f5;padding-top:9px}summary{curs
                     <li>Room {{ room_state.room.room_number }} — {{ room_state.quantity }}</li>
                   {% empty %}<li>No room state records.</li>{% endfor %}
                 </ul></div>
+                <div><h3>Recent transaction history (latest 100)</h3><ul>
+                  {% for movement in row.transactions %}
+                    <li>{{ movement.created_at|date:"Y-m-d H:i" }} — {{ movement.get_event_type_display }} {{ movement.quantity }} {{ movement.condition }}{% if movement.from_location %} from {{ movement.get_from_location_display }}{% endif %}{% if movement.to_location %} to {{ movement.get_to_location_display }}{% endif %}{% if movement.from_room %} from Room {{ movement.from_room.room_number }}{% endif %}{% if movement.to_room %} to Room {{ movement.to_room.room_number }}{% endif %}{% if movement.reference %} · {{ movement.reference }}{% endif %}</li>
+                  {% empty %}<li>No linen transactions recorded.</li>{% endfor %}
+                </ul></div>
               </div>
             </details>
           </td></tr>
