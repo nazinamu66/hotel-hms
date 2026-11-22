@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .setup_views import linen_category_setup, linen_room_setup
+from .room_opening_views import room_linen_opening
 from .views import (
     linen_dashboard,
     linen_receive,
@@ -13,5 +14,6 @@ urlpatterns = [
     path("receive/", linen_receive, name="linen_receive"),
     path("issue/", linen_issue, name="linen_issue"),
     path("setup/categories/", linen_category_setup, name="linen_category_setup"),
+    path("setup/room-opening/", room_linen_opening, name="linen_room_opening"),
     path("setup/rooms/<int:pk>/", linen_room_setup, name="linen_room_setup"),
 ]
