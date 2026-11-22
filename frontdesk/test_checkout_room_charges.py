@@ -48,7 +48,7 @@ class FrontdeskCheckoutWorkflowTests(TestCase):
             first_name="Checkout",
             last_name="Guest",
         )
-        cls.category = RoomCategory.objects.create(name="Checkout Workflow Category")
+        cls.category = RoomCategory.objects.create(hotel=cls.hotel, name="Checkout Workflow Category")
 
     def setUp(self):
         self.room = Room.objects.create(
@@ -132,7 +132,7 @@ class DailyRoomChargeCheckoutBoundaryTests(TestCase):
             first_name="Daily",
             last_name="Guest",
         )
-        cls.category = RoomCategory.objects.create(name="Daily Charge Boundary Category")
+        cls.category = RoomCategory.objects.create(hotel=cls.hotel, name="Daily Charge Boundary Category")
 
     def setUp(self):
         self.room = Room.objects.create(
@@ -216,7 +216,7 @@ class StayExtensionRoomChargeTests(TestCase):
             first_name="Extension",
             last_name="Guest",
         )
-        cls.category = RoomCategory.objects.create(name="Stay Extension Category")
+        cls.category = RoomCategory.objects.create(hotel=cls.hotel, name="Stay Extension Category")
 
     def setUp(self):
         self.room = Room.objects.create(
