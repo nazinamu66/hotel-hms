@@ -31,34 +31,30 @@ def fulfill_store_request(
     from the Linen Store.
     """
 
-    if request_obj.request_type != "STORE":
-        raise ValidationError(
-            "This request is not a Store linen request."
-        )
+    request_obj = (
+        LinenRequest.objects.select_for_update()
+        .select_related("requested_by")
+        .get(pk=request_obj.pk)
+    )
+    linen_item = (
+        LinenItem.objects.select_for_update()
+        .select_related("product")
+        .get(pk=request_obj.linen_item_id)
+    )
+    request_obj.linen_item = linen_item
 
-    if request_obj.status in (
-        "REJECTED",
-        "CANCELLED",
-        "FULFILLED",
-    ):
-        raise ValidationError(
-            "This linen request cannot be fulfilled."
-        )
+    if request_obj.request_type != "STORE":
+        raise ValidationError("This request is not a Store linen request.")
+
+    if request_obj.status in ("REJECTED", "CANCELLED", "FULFILLED"):
+        raise ValidationError("This linen request cannot be fulfilled.")
 
     if quantity <= 0:
-        raise ValidationError(
-            "Quantity must be greater than zero."
-        )
+        raise ValidationError("Quantity must be greater than zero.")
 
-    remaining = (
-        request_obj.quantity
-        - request_obj.fulfilled_quantity
-    )
-
+    remaining = request_obj.quantity - request_obj.fulfilled_quantity
     if quantity > remaining:
-        raise ValidationError(
-            "Fulfilled quantity exceeds the remaining request."
-        )
+        raise ValidationError("Fulfilled quantity exceeds the remaining request.")
 
     # --------------------------------------------------------
     # Check actual Linen Store balance
@@ -172,14 +168,11 @@ def approve_linen_request(
     It only authorizes the request for fulfillment.
     """
 
+    request_obj = LinenRequest.objects.select_for_update().get(pk=request_obj.pk)
+
     # --------------------------------------------------------
     # Request status
     # --------------------------------------------------------
-
-    if request_obj.status != "PENDING":
-        raise ValidationError(
-            "Only pending linen requests can be approved."
-        )
 
     # --------------------------------------------------------
     # Request type
@@ -226,26 +219,27 @@ def fulfill_laundry_request(
     Housekeeping employee's clean custody.
     """
 
+    request_obj = (
+        LinenRequest.objects.select_for_update()
+        .select_related("requested_by")
+        .get(pk=request_obj.pk)
+    )
+    linen_item = (
+        LinenItem.objects.select_for_update()
+        .select_related("product")
+        .get(pk=request_obj.linen_item_id)
+    )
+    request_obj.linen_item = linen_item
+
     # --------------------------------------------------------
     # Request type
     # --------------------------------------------------------
 
     if request_obj.request_type != "LAUNDRY":
-        raise ValidationError(
-            "This request is not a Laundry linen request."
-        )
+        raise ValidationError("This request is not a Laundry linen request.")
 
-    # --------------------------------------------------------
-    # Request status
-    # --------------------------------------------------------
-
-    if request_obj.status not in (
-        "APPROVED",
-        "PARTIAL",
-    ):
-        raise ValidationError(
-            "Only approved Laundry linen requests can be fulfilled."
-        )
+    if request_obj.status not in ("APPROVED", "PARTIAL"):
+        raise ValidationError("Only approved Laundry linen requests can be fulfilled.")
 
     # --------------------------------------------------------
     # Quantity
