@@ -1,8 +1,16 @@
 {% extends "base/base.html" %}
-{% block title %}Linen Management{% endblock %}
+{% block title %}Linen{% endblock %}
 {% block content %}
 <style>
 .linen-page{color:var(--text-color,#1f2937)}
+.linen-hero{background:linear-gradient(120deg,#0b1730 0%,#142b50 62%,#1d3c68 100%);color:#fff;border-radius:18px;padding:28px 30px;box-shadow:0 14px 32px rgba(8,23,48,.18)}
+.linen-hero .linen-eyebrow,.linen-hero .linen-muted{color:#c5d3e7}
+.linen-hero h1{color:#fff}
+.linen-primary{background:#2563eb;color:#fff!important}
+.linen-secondary{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#eaf1fb!important}
+.linen-panel{box-shadow:0 8px 24px rgba(15,35,65,.07);border-color:#dbe4f0}
+.linen-stat{background:#f3f6fb;border-color:#e1e8f2}
+
 .linen-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px}
 .linen-eyebrow{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#64748b;margin:0 0 7px}
 .linen-hero h1{font-size:28px;line-height:1.2;margin:0 0 8px}
@@ -36,7 +44,7 @@
   <header class="linen-hero">
     <div>
       <p class="linen-eyebrow">Housekeeping operations</p>
-      <h1>Linen Management</h1>
+      <h1>Linen</h1>
       <p class="linen-muted">Monitor linen quantities, circulation and replenishment across Store, Housekeeping and Laundry.</p>
     </div>
     <nav class="linen-actions" aria-label="Linen actions">
@@ -56,6 +64,7 @@
       <div class="linen-stat"><span>In Store</span><strong>{{ totals.store }}</strong></div>
       <div class="linen-stat"><span>Housekeeping</span><strong>{{ totals.housekeeping }}</strong></div>
       <div class="linen-stat"><span>In Laundry</span><strong>{{ totals.laundry }}</strong></div>
+      <div class="linen-stat"><span>In Rooms</span><strong>{{ totals.rooms }}</strong></div>
       <div class="linen-stat"><span>Damaged</span><strong>{{ totals.damaged }}</strong></div>
       <div class="linen-stat"><span>Lost</span><strong>{{ totals.lost }}</strong></div>
       <div class="linen-stat"><span>Written off</span><strong>{{ totals.written_off }}</strong></div>
@@ -69,7 +78,7 @@
     </div>
     <div class="linen-table-wrap">
       <table class="linen-table">
-        <thead><tr><th>Linen item</th><th>Par level</th><th>Minimum</th><th>Store</th><th>Housekeeping</th><th>Laundry</th><th>Owned</th><th>Status</th></tr></thead>
+        <thead><tr><th>Linen item</th><th>Par level</th><th>Minimum</th><th>Store</th><th>Housekeeping</th><th>Laundry</th><th>In Rooms</th><th>Owned</th><th>Status</th></tr></thead>
         <tbody>
         {% for row in linen_rows %}
           <tr>
@@ -79,6 +88,7 @@
             <td>{{ row.summary.store }}</td>
             <td>{{ row.summary.housekeeping }}</td>
             <td>{{ row.summary.laundry }}</td>
+            <td>{{ row.summary.rooms }}</td>
             <td><strong>{{ row.summary.owned }}</strong></td>
             <td>
               {% if row.below_minimum %}<span class="linen-status linen-low">Below minimum</span>
@@ -87,7 +97,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="8" class="linen-empty">No linen items have been configured yet. Register linen through Inventory Products to begin tracking circulation.</td></tr>
+          <tr><td colspan="9" class="linen-empty">No linen items have been configured yet. Register linen through Inventory Products to begin tracking circulation.</td></tr>
         {% endfor %}
         </tbody>
       </table>
