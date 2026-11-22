@@ -182,6 +182,11 @@ class OpeningStockPostingTests(TestCase):
         self.assertEqual(transaction.to_location, "STORE")
         self.assertEqual(transaction.quantity, 20)
         self.assertEqual(get_linen_summary(linen_item)["store"], Decimal("20"))
+        # Linen is maintained only in the dedicated ledger, not ordinary
+        # departmental stock, FIFO layers or stock movements.
+        self.assertFalse(Stock.objects.filter(product=linen_product).exists())
+        self.assertFalse(StockCostLayer.objects.filter(product=linen_product).exists())
+        self.assertFalse(StockMovement.objects.filter(product=linen_product).exists())
         self.assertEqual(
             JournalLine.objects.get(journal=result["journal_entry"], account__code="1250").debit,
             Decimal("500.00"),
@@ -190,6 +195,52 @@ class OpeningStockPostingTests(TestCase):
             JournalLine.objects.get(journal=result["journal_entry"], account__code="3002").credit,
             Decimal("500.00"),
         )
+
+    def test_linen_opening_rejects_non_housekeeping_product(self):
+        product = Product.objects.create(
+            hotel=self.hotel,
+            name="Misclassified Linen",
+            sku="MISCLASSIFIED-LINEN",
+            product_type="RAW",
+            usage_type="ASSET",
+            base_unit="pcs",
+        )
+        linen_item = LinenItem.objects.create(product=product, par_level=10, minimum_level=2)
+        line = OpeningStockLine(
+            batch=self.make_batch("OPENING-BAD-LINEN-TYPE"),
+            line_type="LINEN",
+            linen_item=linen_item,
+            linen_location="STORE",
+            linen_condition="CLEAN",
+            quantity=Decimal("5"),
+            unit_cost=Decimal("10"),
+        )
+        with self.assertRaises(ValidationError):
+            line.full_clean()
+
+    def test_linen_opening_rejects_foreign_hotel_linen_item(self):
+        other_org = Organization.objects.create(name="Foreign Linen Organization")
+        other_hotel = Hotel.objects.create(organization=other_org, name="Foreign Linen Hotel")
+        product = Product.objects.create(
+            hotel=other_hotel,
+            name="Foreign Bedsheet",
+            sku="FOREIGN-BEDSHEET",
+            product_type="HOUSEKEEPING",
+            usage_type="ASSET",
+            base_unit="pcs",
+        )
+        linen_item = LinenItem.objects.create(product=product, par_level=10, minimum_level=2)
+        line = OpeningStockLine(
+            batch=self.make_batch("OPENING-FOREIGN-LINEN"),
+            line_type="LINEN",
+            linen_item=linen_item,
+            linen_location="STORE",
+            linen_condition="CLEAN",
+            quantity=Decimal("5"),
+            unit_cost=Decimal("10"),
+        )
+        with self.assertRaises(ValidationError):
+            line.full_clean()
 
     def test_equipment_opening_registers_individual_asset(self):
         equipment_product = Product.objects.create(
