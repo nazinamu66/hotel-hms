@@ -472,6 +472,17 @@
 
         {% endif %}
 
+        {% if user|has_role:"ADMIN,DIRECTOR,GENERAL_MANAGER,MANAGER" %}
+        <h4 class="menu-toggle {% if request.resolver_match.namespace == 'linen' %}active-menu{% endif %}"
+            onclick="toggleMenu('linen_management_menu', this)">
+            <span class="arrow">{% if request.resolver_match.namespace == 'linen' %}▾{% else %}▸{% endif %}</span>
+            🛏️ Linen Management
+        </h4>
+        <div id="linen_management_menu" class="menu-section {% if request.resolver_match.namespace == 'linen' %}open{% endif %}">
+            <a href="{% url 'linen_dashboard' %}">Hotel-wide Linen Overview</a>
+        </div>
+        {% endif %}
+
         {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
         <h4 class="menu-toggle {% if request.resolver_match.url_name == 'housekeeping_management_overview' %}active-menu{% endif %}"
             onclick="toggleMenu('housekeeping_management_menu', this)">
