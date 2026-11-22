@@ -1,6 +1,8 @@
 from collections import defaultdict
 from decimal import Decimal
 
+from django.db import models
+
 from linen.models import (
     CleaningLinenSubmission,
     LinenCustody,
@@ -52,6 +54,10 @@ def build_linen_reconciliation(*, hotels):
         # visible as an exception; do not silently count them as valid HK custody.
         all_custody_rows = list(
             LinenCustody.objects.filter(linen_item=item)
+            .filter(
+                models.Q(user__department__isnull=True)
+                | models.Q(user__department__hotel=item.product.hotel)
+            )
             .select_related("user", "user__department", "user__department__hotel")
             .order_by("user__username")
         )
