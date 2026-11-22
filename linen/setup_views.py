@@ -30,7 +30,7 @@ def linen_category_setup(request):
     if not hotels.exists():
         raise PermissionDenied
 
-    categories = RoomCategory.objects.filter(is_active=True).order_by("name")
+    categories = RoomCategory.objects.filter(hotel__in=hotels, is_active=True).order_by("hotel__name", "name")
     linen_items = _accessible_linen_items(request.user)
     selected_id = request.GET.get("category") or request.POST.get("category")
     selected_category = None
@@ -102,9 +102,8 @@ def linen_category_setup(request):
 
 
 @role_required(*MANAGEMENT_ROLES)
-@transaction.atomic
 def linen_room_setup(request, pk):
-    """Copy category defaults once, then allow room-specific overrides."""
+    """Read-only room linen view; physical opening counts are posted in batches."""
     room = get_object_or_404(
         Room.objects.select_related("hotel", "category"),
         pk=pk,
@@ -112,74 +111,24 @@ def linen_room_setup(request, pk):
     )
     linen_items = _accessible_linen_items(request.user).filter(product__hotel=room.hotel)
 
-    # Copy defaults only when the room has never been configured. A missing
-    # state after configuration is meaningful: the item was intentionally
-    # excluded from that room's checklist and must not be re-created on GET.
-    setup, _ = RoomLinenSetup.objects.get_or_create(room=room)
-    states_qs = RoomLinenState.objects.filter(room=room)
-    if not states_qs.exists() and not setup.is_configured:
-        category_defaults = RoomLinenRequirement.objects.filter(
-            category=room.category,
-            linen_item__in=linen_items,
-        ).select_related("linen_item")
-        for default in category_defaults:
-            RoomLinenState.objects.get_or_create(
-                room=room,
-                linen_item=default.linen_item,
-                defaults={"quantity": default.quantity},
-            )
-
     if request.method == "POST":
-        # As with category defaults, validate all values before mutating rows.
-        submitted_quantities = {}
-        for item in linen_items:
-            field = f"quantity_{item.pk}"
-            if field not in request.POST:
-                continue
-            raw = request.POST.get(field, "").strip()
-            if raw == "":
-                submitted_quantities[item.pk] = None
-                continue
-            try:
-                quantity = int(raw)
-            except (TypeError, ValueError):
-                messages.error(request, f"Enter a whole number for {item.product.name}.")
-                return redirect("linen_room_setup", pk=room.pk)
-            if quantity < 0:
-                messages.error(request, f"Quantity for {item.product.name} cannot be negative.")
-                return redirect("linen_room_setup", pk=room.pk)
-            submitted_quantities[item.pk] = quantity
-
-        with transaction.atomic():
-            setup.is_configured = True
-            setup.save(update_fields=["is_configured", "configured_at"])
-            for item_id, quantity in submitted_quantities.items():
-                if quantity is None:
-                    RoomLinenState.objects.filter(
-                        room=room, linen_item_id=item_id
-                    ).delete()
-                    continue
-                RoomLinenState.objects.update_or_create(
-                    room=room,
-                    linen_item_id=item_id,
-                    defaults={"quantity": quantity},
-                )
-
-        messages.success(request, f"Room {room.room_number} linen configuration saved.")
+        messages.error(
+            request,
+            "Room opening quantities are managed through the Room Linen Opening batch.",
+        )
         return redirect("linen_room_setup", pk=room.pk)
 
+    setup = RoomLinenSetup.objects.filter(room=room).first()
     states = {
         state.linen_item_id: state.quantity
         for state in RoomLinenState.objects.filter(
-            room=room,
-            linen_item__in=linen_items,
+            room=room, linen_item__in=linen_items,
         )
     }
     category_defaults = {
         row.linen_item_id: row.quantity
         for row in RoomLinenRequirement.objects.filter(
-            category=room.category,
-            linen_item__in=linen_items,
+            category=room.category, linen_item__in=linen_items,
         )
     }
     item_rows = [
@@ -196,4 +145,5 @@ def linen_room_setup(request, pk):
         "states": states,
         "category_defaults": category_defaults,
         "item_rows": item_rows,
+        "setup": setup,
     })
