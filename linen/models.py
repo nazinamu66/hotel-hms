@@ -78,6 +78,7 @@ class LinenTransaction(models.Model):
         # Audit-only movements inside Housekeeping. These do not
         # change hotel location balances because the linen remains
         # within the Housekeeping department.
+        ("ROOM_OPENING", "Room Opening Count"),
         ("ROOM_REPLENISHED", "Clean Linen Placed in Room"),
         ("DIRTY_COLLECTED", "Dirty Linen Collected from Room"),
         ("CUSTODY_TRANSFER", "Emergency Staff Custody Transfer"),
@@ -716,6 +717,10 @@ class RoomLinenSetup(models.Model):
     )
     is_configured = models.BooleanField(default=False)
     configured_at = models.DateTimeField(auto_now=True)
+    opening_batch = models.ForeignKey(
+        "RoomLinenOpeningBatch", on_delete=models.PROTECT,
+        null=True, blank=True, related_name="configured_rooms",
+    )
 
     def __str__(self):
         return f"Linen setup for room {self.room.room_number}"
@@ -753,3 +758,82 @@ class CleaningLinenSubmission(models.Model):
 
     def __str__(self):
         return f"Cleaning #{self.assignment_id} linen submission {self.sequence}"
+
+
+class RoomLinenOpeningBatch(models.Model):
+    """Auditable batch used to initialize actual linen counts in hotel rooms."""
+
+    STATUS_CHOICES = (("DRAFT", "Draft"), ("POSTED", "Posted"))
+
+    hotel = models.ForeignKey(
+        "inventory.Hotel", on_delete=models.PROTECT,
+        related_name="room_linen_opening_batches",
+    )
+    reference = models.CharField(max_length=60)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="DRAFT")
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="room_linen_opening_batches_created",
+    )
+    posted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        null=True, blank=True, related_name="room_linen_opening_batches_posted",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    posted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "reference"],
+                name="unique_room_linen_opening_reference",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.hotel} - {self.reference} ({self.status})"
+
+
+class RoomLinenOpeningRoom(models.Model):
+    """A room included in an opening batch, including rooms with no defaults."""
+
+    batch = models.ForeignKey(
+        RoomLinenOpeningBatch, on_delete=models.CASCADE, related_name="rooms",
+    )
+    room = models.ForeignKey(
+        "rooms.Room", on_delete=models.PROTECT, related_name="linen_opening_batches",
+    )
+    category_name = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["batch", "room"], name="unique_room_per_linen_opening_batch",
+            ),
+        ]
+        ordering = ["room__room_number"]
+
+
+class RoomLinenOpeningLine(models.Model):
+    """Category-derived expected quantity and confirmed physical room count."""
+
+    opening_room = models.ForeignKey(
+        RoomLinenOpeningRoom, on_delete=models.CASCADE, related_name="lines",
+    )
+    linen_item = models.ForeignKey(
+        LinenItem, on_delete=models.PROTECT, related_name="room_opening_lines",
+    )
+    expected_quantity = models.PositiveIntegerField(default=0)
+    actual_quantity = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["opening_room", "linen_item"],
+                name="unique_linen_item_per_opening_room",
+            ),
+        ]
+        ordering = ["linen_item__product__name"]
