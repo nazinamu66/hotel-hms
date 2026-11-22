@@ -3,6 +3,19 @@
 {% block content %}
 <style>
 .linen-setup-page{max-width:1100px}.linen-setup-head{margin-bottom:22px}.linen-kicker{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin:0 0 7px}.linen-setup-head h1{font-size:26px;margin:0 0 7px}.linen-setup-head p{color:#64748b;margin:0;line-height:1.5}.linen-room-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.linen-chip{display:inline-flex;padding:6px 10px;border:1px solid #e2e8f0;background:#f8fafc;border-radius:99px;color:#475569;font-size:12px;font-weight:600}.linen-setup-card{background:var(--card-bg,#fff);border:1px solid #e2e8f0;border-radius:14px;padding:22px;margin-bottom:18px;box-shadow:0 3px 12px rgba(15,23,42,.035)}.linen-info{border-radius:10px;background:#eff6ff;border:1px solid #dbeafe;color:#1e40af;padding:13px 15px;font-size:13px;line-height:1.5;margin-bottom:18px}.linen-setup-table{width:100%;border-collapse:separate;border-spacing:0;min-width:580px}.linen-setup-table th{background:#f8fafc;color:#64748b;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:12px}.linen-setup-table th:not(:first-child),.linen-setup-table td:not(:first-child){text-align:center}.linen-setup-table td{padding:12px;border-top:1px solid #edf1f5;font-size:13px}.linen-table-wrap{overflow-x:auto}.linen-btn{display:inline-flex;border:0;border-radius:9px;padding:10px 15px;text-decoration:none;font-weight:700;background:#eef2f7;color:#334155}.linen-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}.linen-empty{padding:20px!important;color:#64748b;text-align:center}@media(max-width:600px){.linen-setup-card{padding:16px}.linen-setup-head h1{font-size:23px}}
+
+/* MGT navy theme — room-specific Linen configuration only */
+.linen-setup-page{background:#f3f6fc;color:#17243a}
+.linen-setup-page .linen-setup-head{background:linear-gradient(120deg,#0b1730 0%,#142b50 62%,#1d3c68 100%);color:#fff}
+.linen-setup-page .linen-setup-head h1{color:#fff}
+.linen-setup-page .linen-setup-head p,.linen-setup-page .linen-setup-head .linen-kicker{color:#d5e2f5}
+.linen-setup-page .linen-setup-card{background:#fff;border-color:#dce5f1;box-shadow:0 5px 18px rgba(20,43,80,.055)}
+.linen-setup-page .linen-info{background:#eaf1fc;border-color:#d5e3f5;color:#244a7a}
+.linen-setup-page .linen-chip{background:#f7f9fd;border-color:#dce5f1;color:#526783}
+.linen-setup-page .linen-setup-table th{background:#edf3fb;color:#526783}
+.linen-setup-page .linen-setup-table td{color:#17243a;border-color:#e5ebf3}
+.linen-setup-page .linen-btn{background:#eaf1fc;color:#142b50}
+
 </style>
 <div class="linen-setup-page">
 <header class="linen-setup-head"><p class="linen-kicker">Linen configuration · Room record</p><h1>Room linen details</h1><p>View the opening count and current linen quantities for this room.</p><div class="linen-room-meta"><span class="linen-chip">Room {{ room.room_number }}</span><span class="linen-chip">{{ room.category.name }}</span><span class="linen-chip">{{ room.hotel.name }}</span>{% if setup and setup.is_configured %}<span class="linen-chip">Opening count posted</span>{% else %}<span class="linen-chip">Awaiting opening count</span>{% endif %}</div></header>
