@@ -2202,3 +2202,88 @@ input, select, textarea { font-size: 16px; }
 @media(max-width:700px) {
     .owner-management .grid-3 { grid-template-columns: 1fr; }
 }
+
+
+/* Extend the management design system to the department analysis pages. */
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm) {
+    box-sizing:border-box;
+    background:var(--mgt-page) !important;
+    color:var(--mgt-text) !important;
+}
+.main:has(.hk-quality), .main:has(.mapr), .main:has(.mca),
+.main:has(.pmc), .main:has(.msa), .main:has(.mwa),
+.main:has(.restaurant-sales), .main:has(.restaurant-inventory),
+.main:has(.restaurant-spoilage), .main:has(.rsd), .main:has(.lrm) {
+    background:var(--mgt-page);
+}
+.main:has(.hk-quality) > .content, .main:has(.mapr) > .content,
+.main:has(.mca) > .content, .main:has(.pmc) > .content,
+.main:has(.msa) > .content, .main:has(.mwa) > .content,
+.main:has(.restaurant-sales) > .content,
+.main:has(.restaurant-inventory) > .content,
+.main:has(.restaurant-spoilage) > .content,
+.main:has(.rsd) > .content, .main:has(.lrm) > .content {
+    background:var(--mgt-page);
+    color:var(--mgt-text);
+}
+.main:has(.hk-quality) > .topbar, .main:has(.mapr) > .topbar,
+.main:has(.mca) > .topbar, .main:has(.pmc) > .topbar,
+.main:has(.msa) > .topbar, .main:has(.mwa) > .topbar,
+.main:has(.restaurant-sales) > .topbar,
+.main:has(.restaurant-inventory) > .topbar,
+.main:has(.restaurant-spoilage) > .topbar,
+.main:has(.rsd) > .topbar, .main:has(.lrm) > .topbar {
+    background:var(--mgt-navy-deep) !important;
+    color:#f8fafc !important;
+}
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm) h1,
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm) h2,
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm) h3 {
+    color:var(--mgt-navy) !important;
+}
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm)
+:where([class*="panel"],[class*="card"],[class*="kpi"],[class*="filter"]) {
+    background:var(--mgt-surface) !important;
+    border-color:var(--mgt-border) !important;
+    color:var(--mgt-text) !important;
+    box-shadow:0 5px 18px rgba(20,43,80,.055);
+}
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm) label {
+    color:var(--mgt-muted) !important;
+}
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm) input,
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm) select,
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm) textarea {
+    background:#fff !important;
+    color:var(--mgt-text) !important;
+    border-color:#cbd8e8 !important;
+    color-scheme:light;
+}
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm) button,
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm) [class*="btn"] {
+    background:var(--mgt-blue);
+    border-color:var(--mgt-blue);
+    color:#fff;
+}
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm) table th {
+    background:#edf3fb !important;
+    color:#526783 !important;
+    border-color:var(--mgt-border) !important;
+}
+:where(.hk-quality,.mapr,.mca,.pmc,.msa,.mwa,.restaurant-sales,
+       .restaurant-inventory,.restaurant-spoilage,.rsd,.lrm) table td {
+    color:var(--mgt-text) !important;
+    border-color:var(--mgt-border) !important;
+}
