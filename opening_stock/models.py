@@ -116,6 +116,8 @@ class OpeningStockLine(models.Model):
                 raise ValidationError("Linen quantity must be a positive whole number and unit cost must be greater than zero.")
             if self.linen_item.product.hotel_id != self.batch.hotel_id:
                 raise ValidationError("Linen item must belong to the batch hotel.")
+            if self.linen_item.product.product_type != "HOUSEKEEPING":
+                raise ValidationError("Linen items must use a HOUSEKEEPING product.")
             if self.linen_item.product.usage_type != "ASSET":
                 raise ValidationError("Linen products must use the ASSET usage type.")
             if self.product_id or self.department_id or self.asset_product_id or self.asset_name:
