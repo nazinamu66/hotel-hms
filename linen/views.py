@@ -106,114 +106,14 @@ def linen_dashboard(request):
 )
 @transaction.atomic
 def linen_receive(request):
-
-    accessible_hotels = get_accessible_hotels(
-        request.user,
-    )
-
-    if not accessible_hotels.exists():
-        raise PermissionDenied
-
-    linen_items = (
-        LinenItem.objects
-        .filter(
-            product__hotel__in=accessible_hotels,
-            is_active=True,
-            product__is_active=True,
-        )
-        .select_related(
-            "product",
-            "product__hotel",
-        )
-        .order_by(
-            "product__name",
-        )
-    )
-
-    if request.method == "POST":
-
-        linen_item_id = request.POST.get(
-            "linen_item",
-        )
-
-        quantity_raw = request.POST.get(
-            "quantity",
-            "",
-        ).strip()
-
-        reference = request.POST.get(
-            "reference",
-            "",
-        ).strip()
-
-        note = request.POST.get(
-            "note",
-            "",
-        ).strip()
-
-        if not linen_item_id:
-            messages.error(
-                request,
-                "Please select a linen item.",
-            )
-
-        elif not quantity_raw:
-            messages.error(
-                request,
-                "Please enter a quantity.",
-            )
-
-        else:
-
-            try:
-                quantity = int(
-                    quantity_raw,
-                )
-            except (TypeError, ValueError):
-                quantity = 0
-
-            if quantity <= 0:
-
-                messages.error(
-                    request,
-                    "Quantity must be greater than zero.",
-                )
-
-            else:
-
-                linen_item = get_object_or_404(
-                    linen_items,
-                    pk=linen_item_id,
-                )
-
-                LinenTransaction.objects.create(
-                    linen_item=linen_item,
-                    quantity=quantity,
-                    event_type="RECEIVED",
-                    from_location="",
-                    to_location="STORE",
-                    performed_by=request.user,
-                    reference=reference,
-                    note=note,
-                )
-
-                messages.success(
-                    request,
-                    f"{quantity} {linen_item.product.name} "
-                    "received into Linen Store.",
-                )
-
-                return redirect(
-                    "linen_dashboard",
-                )
-
-    return render(
+    """Legacy endpoint: new linen is accepted only through Store PO receiving."""
+    messages.error(
         request,
-        "linen/receive.html",
-        {
-            "linen_items": linen_items,
-        },
+        "Direct linen receipts are disabled. Receive new linen through an approved Hotel Store purchase order.",
     )
+    return redirect("linen_dashboard")
+
+
 # ============================================================
 # ISSUE LINEN FROM STORE TO HOUSEKEEPING
 # ============================================================
