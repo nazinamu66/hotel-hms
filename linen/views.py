@@ -240,14 +240,27 @@ def linen_issue(request):
             else:
 
                 linen_item = get_object_or_404(
-                    linen_items,
+                    linen_items.select_for_update(),
                     pk=linen_item_id,
                 )
-
                 issued_to = get_object_or_404(
                     housekeeping_staff,
                     pk=issued_to_id,
                 )
+
+                if issued_to.department.hotel_id != linen_item.product.hotel_id:
+                    messages.error(
+                        request,
+                        "The selected Housekeeping staff member belongs to a different hotel.",
+                    )
+                    return render(
+                        request,
+                        "linen/issue.html",
+                        {
+                            "linen_items": linen_items,
+                            "housekeeping_staff": housekeeping_staff,
+                        },
+                    )
 
                 # ------------------------------------------------
                 # Current Store balance
