@@ -787,7 +787,8 @@ class HousekeepingManagementOverviewTests(TestCase):
         self.assertTrue(response.context["trend_rows"])
         self.assertEqual(sum(row["total"] for row in response.context["trend_rows"]), 3)
         bathroom = next(row for row in response.context["checklist_rows"] if row["key"] == "bathroom_clean")
-        self.assertEqual(bathroom["bar_width"], 100)
+        self.assertEqual(bathroom["failures"], 0)
+        self.assertEqual(bathroom["bar_width"], 0)
         hotel_row = response.context["hotel_rows"][0]
         self.assertEqual(hotel_row["passed_width"] + hotel_row["failed_width"], 100)
 
