@@ -205,6 +205,7 @@ class GuestFolioPaymentViewTests(TestCase):
 
     def _create_active_stay_room(self, guest=None):
         category, _ = RoomCategory.objects.get_or_create(
+            hotel=self.hotel,
             name="Guest Folio Payment Test Category",
         )
         room = Room.objects.create(
@@ -364,6 +365,7 @@ class GuestFolioPaymentViewTests(TestCase):
 
     def test_reservation_calendar_reuses_category_day_availability(self):
         category, _ = RoomCategory.objects.get_or_create(
+            hotel=self.hotel,
             name="Calendar Performance Test Category",
         )
         Room.objects.create(
@@ -408,6 +410,7 @@ class GuestFolioPaymentViewTests(TestCase):
 
     def test_arrivals_board_uses_local_date_after_utc_midnight_boundary(self):
         category, _ = RoomCategory.objects.get_or_create(
+            hotel=self.hotel,
             name="Local Date Arrivals Test Category",
         )
         reservation = Reservation.objects.create(
