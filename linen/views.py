@@ -53,6 +53,7 @@ def linen_dashboard(request):
         "store": 0,
         "housekeeping": 0,
         "laundry": 0,
+        "rooms": 0,
         "damaged": 0,
         "lost": 0,
         "written_off": 0,
