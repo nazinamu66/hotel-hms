@@ -58,6 +58,21 @@ details{margin-top:9px;border-top:1px solid #edf1f5;padding-top:9px}summary{curs
                     <li>Room {{ room_state.room.room_number }} — {{ room_state.quantity }}</li>
                   {% empty %}<li>No room state records.</li>{% endfor %}
                 </ul></div>
+                <div><h3>Custody records needing staff/department review</h3><ul>
+                  {% for custody in row.unlinked_custody_rows %}
+                    <li class="lr-bad">{{ custody.user.username }} — clean {{ custody.clean_quantity }}, dirty {{ custody.dirty_quantity }}; {% if custody.user.department %}currently assigned to {{ custody.user.department.name }} ({{ custody.user.department.hotel.name }}){% else %}no department currently assigned{% endif %}</li>
+                  {% empty %}<li>No detached or cross-department custody records.</li>{% endfor %}
+                </ul></div>
+                <div><h3>Staff custody movements (latest 100 linen transactions)</h3><ul>
+                  {% for movement in row.custody_movements %}
+                    <li>{{ movement.created_at|date:"Y-m-d H:i" }} — {{ movement.get_event_type_display }} {{ movement.quantity }} {{ movement.condition }}{% if movement.from_user %} from {{ movement.from_user.username }}{% endif %}{% if movement.to_user %} to {{ movement.to_user.username }}{% endif %}{% if movement.performed_by %} · recorded by {{ movement.performed_by.username }}{% endif %}{% if movement.reference %} · {{ movement.reference }}{% endif %}</li>
+                  {% empty %}<li>No staff-linked linen movements in the latest 100 transactions.</li>{% endfor %}
+                </ul></div>
+                <div><h3>Cleaning checklist submissions (latest 100 hotel submissions)</h3><ul>
+                  {% for submission in row.cleaning_submissions %}
+                    <li><strong>{{ submission.submitted_at|date:"Y-m-d H:i" }}</strong> — Room {{ submission.assignment.room.room_number }}, sequence {{ submission.sequence }}, submitted by {{ submission.submitted_by.username|default:"Unknown user" }}{% for entry in submission.snapshot %}{% if entry.linen_item_id == row.linen_item.id %}<br>Expected {{ entry.expected_quantity }}, found {{ entry.found_quantity }}, dirty collected {{ entry.dirty_collected_quantity }}, clean issued {{ entry.clean_issued_quantity }}, final {{ entry.final_quantity }}{% if entry.note %} — {{ entry.note }}{% endif %}{% endif %}{% endfor %}</li>
+                  {% empty %}<li>No matching cleaning submissions found in the latest 100 hotel submissions.</li>{% endfor %}
+                </ul></div>
                 <div><h3>Recent transaction history (latest 100)</h3><ul>
                   {% for movement in row.transactions %}
                     <li>{{ movement.created_at|date:"Y-m-d H:i" }} — {{ movement.get_event_type_display }} {{ movement.quantity }} {{ movement.condition }}{% if movement.from_location %} from {{ movement.get_from_location_display }}{% endif %}{% if movement.to_location %} to {{ movement.get_to_location_display }}{% endif %}{% if movement.from_room %} from Room {{ movement.from_room.room_number }}{% endif %}{% if movement.to_room %} to Room {{ movement.to_room.room_number }}{% endif %}{% if movement.reference %} · {{ movement.reference }}{% endif %}</li>
