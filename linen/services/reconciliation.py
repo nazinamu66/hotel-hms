@@ -1,7 +1,13 @@
 from collections import defaultdict
 from decimal import Decimal
 
-from linen.models import LinenCustody, LinenItem, LinenTransaction, RoomLinenState
+from linen.models import (
+    CleaningLinenSubmission,
+    LinenCustody,
+    LinenItem,
+    LinenTransaction,
+    RoomLinenState,
+)
 from linen.services.balances import get_linen_summary
 
 
@@ -42,6 +48,21 @@ def build_linen_reconciliation(*, hotels):
             .select_related("user", "user__department")
             .order_by("user__username")
         )
+        # Keep custody records for staff whose department was changed or removed
+        # visible as an exception; do not silently count them as valid HK custody.
+        all_custody_rows = list(
+            LinenCustody.objects.filter(linen_item=item)
+            .select_related("user", "user__department", "user__department__hotel")
+            .order_by("user__username")
+        )
+        valid_custody_ids = {row.pk for row in custody_rows}
+        unlinked_custody_rows = [
+            row for row in all_custody_rows if row.pk not in valid_custody_ids
+        ]
+        unlinked_custody_total = sum(
+            (Decimal(row.clean_quantity + row.dirty_quantity) for row in unlinked_custody_rows),
+            ZERO,
+        )
         custody_clean = sum((Decimal(row.clean_quantity) for row in custody_rows), ZERO)
         custody_dirty = sum((Decimal(row.dirty_quantity) for row in custody_rows), ZERO)
         custody_total = custody_clean + custody_dirty
@@ -60,18 +81,45 @@ def build_linen_reconciliation(*, hotels):
             .select_related("performed_by", "from_user", "to_user", "from_room", "to_room")
             .order_by("-created_at", "-id")[:100]
         )
+        custody_movements = [
+            movement for movement in transactions
+            if movement.from_user_id or movement.to_user_id
+        ]
+        recent_submissions = (
+            CleaningLinenSubmission.objects.filter(
+                assignment__room__hotel=item.product.hotel,
+            )
+            .select_related("assignment", "assignment__room", "submitted_by")
+            .order_by("-submitted_at", "-id")[:100]
+        )
+        cleaning_submissions = [
+            submission for submission in recent_submissions
+            if any(
+                entry.get("linen_item_id") == item.pk
+                for entry in submission.snapshot
+                if isinstance(entry, dict)
+            )
+        ]
         room_ledger = summary["rooms"]
         room_variance = room_state_total - room_ledger
 
         housekeeping_ledger = summary["housekeeping"]
         unassigned_housekeeping = housekeeping_ledger - custody_total
 
-        has_issue = room_variance != ZERO or unassigned_housekeeping < ZERO
+        has_issue = (
+            room_variance != ZERO
+            or unassigned_housekeeping < ZERO
+            or bool(unlinked_custody_rows)
+        )
         row = {
             "linen_item": item,
             "hotel": item.product.hotel,
             "summary": summary,
             "custody_rows": custody_rows,
+            "unlinked_custody_rows": unlinked_custody_rows,
+            "unlinked_custody_total": unlinked_custody_total,
+            "custody_movements": custody_movements,
+            "cleaning_submissions": cleaning_submissions,
             "custody_clean": custody_clean,
             "custody_dirty": custody_dirty,
             "custody_total": custody_total,
