@@ -237,6 +237,17 @@
 
             <div class="form-grid">
 
+                <div class="form-group full-width">
+                    <label for="id_hotel">Hotel</label>
+                    <select id="id_hotel" name="hotel" class="form-control" {% if category %}disabled{% else %}required{% endif %}>
+                        {% for hotel in hotels %}
+                            <option value="{{ hotel.id }}" {% if category and category.hotel_id == hotel.id or not category and forloop.first %}selected{% endif %}>{{ hotel.name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if category %}<input type="hidden" name="hotel" value="{{ category.hotel_id }}">{% endif %}
+                    <div class="form-help">Categories, rates and linen defaults belong to this hotel only.</div>
+                </div>
+
                 <div class="form-group">
                     <label for="id_name">Category Name</label>
 
@@ -376,7 +387,7 @@
                 </div>
             {% else %}
                 <div style="padding:16px;border:1px dashed #d1d5db;border-radius:8px;color:#6b7280;background:#f9fafb;">
-                    No active linen items are configured for your accessible hotels. Add a linen item in Linen Management first.
+                    No active linen items are configured for this hotel. Add a linen item in this hotel’s Linen Management first.
                 </div>
             {% endif %}
         </div>
