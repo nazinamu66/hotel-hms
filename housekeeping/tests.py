@@ -30,9 +30,10 @@ class HousekeepingAccessAuditTests(TestCase):
             hotel=cls.hotel_a, name="Kitchen",
             defaults={"code": "KIT", "department_type": "KITCHEN", "is_active": True},
         )
-        cls.category = RoomCategory.objects.create(name="HK Access Standard")
+        cls.category = RoomCategory.objects.create(hotel=cls.hotel_a, name="HK Access Standard")
+        cls.other_category = RoomCategory.objects.create(hotel=cls.hotel_b, name="HK Access Standard")
         cls.room_a = Room.objects.create(hotel=cls.hotel_a, room_number="A101", category=cls.category)
-        cls.room_b = Room.objects.create(hotel=cls.hotel_b, room_number="B101", category=cls.category)
+        cls.room_b = Room.objects.create(hotel=cls.hotel_b, room_number="B101", category=cls.other_category)
         cls.hk_head = User.objects.create_user(
             username="access-hk-head", password="test", role="HOUSEKEEPING",
             hotel=cls.hotel_a, department=cls.hk_a, is_department_head=True,
