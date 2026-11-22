@@ -737,6 +737,27 @@ class PurchaseOrder(models.Model):
         if not items:
             raise ValidationError("This purchase order has no items to receive.")
 
+        # Registered linen is acquired only through a Hotel Store PO.
+        # Reject any attempt to receive it directly into another department.
+        from linen.models import LinenItem, LinenTransaction
+        linen_items_by_product = {
+            row.product_id: row
+            for row in LinenItem.objects.filter(
+                product_id__in=[item.product_id for item in items],
+                is_active=True,
+            )
+        }
+        if linen_items_by_product:
+            if po.department.department_type != "STORE":
+                raise ValidationError(
+                    "New linen can only be received against a Hotel Store purchase order."
+                )
+            for item in items:
+                if item.product_id in linen_items_by_product and item.product.hotel_id != po.department.hotel_id:
+                    raise ValidationError(
+                        "Linen purchase products and the Store department must belong to the same hotel."
+                    )
+
         normalized = {}
         for item in items:
             raw_quantity = quantities.get(str(item.pk), quantities.get(item.pk, 0))
@@ -903,6 +924,26 @@ class PurchaseOrder(models.Model):
                 unit_cost=unit_cost,
                 is_opening_balance=False,
             )
+
+            linen_item = linen_items_by_product.get(product.pk)
+            if linen_item:
+                if base_quantity != base_quantity.to_integral_value():
+                    raise ValidationError(
+                        f"{product.name} must be received in whole linen units."
+                    )
+                LinenTransaction.objects.create(
+                    linen_item=linen_item,
+                    quantity=int(base_quantity),
+                    condition="CLEAN",
+                    event_type="RECEIVED",
+                    to_location="STORE",
+                    performed_by=user,
+                    reference=receipt_reference,
+                    note=(
+                        f"Received through Hotel Store PO #{po.pk}, "
+                        f"receipt #{receipt.pk}."
+                    ),
+                )
 
         all_received = all(
             item.received_quantity >= item.purchase_quantity
