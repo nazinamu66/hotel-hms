@@ -256,6 +256,12 @@ class ProductForm(forms.ModelForm):
                     "Resale products must have a purchase cost."
                 )
 
+        if cleaned_data.get("housekeeping_issue_eligible") and cleaned_data.get("usage_type") != "RESALE":
+            self.add_error(
+                "housekeeping_issue_eligible",
+                "This opt-in is only available for resale products.",
+            )
+
         # ----------------------------------------------------
         # Linen validation
         # ----------------------------------------------------
