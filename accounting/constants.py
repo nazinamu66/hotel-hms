@@ -68,6 +68,8 @@ INVENTORY_VARIANCE_EXPENSE = "inventory_variance_expense"
 INVENTORY_VARIANCE_GAIN = "inventory_variance_gain"
 
 MAINTENANCE_EXPENSE = "maintenance_expense"
+HOUSEKEEPING_EXPENSE = "housekeeping_expense"
+GUEST_SUPPLIES_EXPENSE = "guest_supplies_expense"
 
 LAUNDRY_EXPENSE = "laundry_expense"
 
@@ -404,6 +406,26 @@ DEFAULT_ACCOUNTS = [
         "is_system": True,
         "allow_posting": True,
         "allow_manual_entries": True,
+    },
+
+    {
+        "code": "5500",
+        "name": "Housekeeping Expense",
+        "system_key": HOUSEKEEPING_EXPENSE,
+        "type": EXPENSE,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": False,
+    },
+
+    {
+        "code": "5510",
+        "name": "Guest Room Supplies Expense",
+        "system_key": GUEST_SUPPLIES_EXPENSE,
+        "type": EXPENSE,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": False,
     },
 
     {
