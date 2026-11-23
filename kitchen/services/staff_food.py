@@ -97,17 +97,20 @@ def execute_staff_food_production(*, production, ingredient_entries, user):
         if not ingredient.departments.filter(pk=department.pk).exists():
             raise ValidationError(f"{ingredient.name} is not assigned to this Kitchen.")
         actual = _decimal_quantity(row.get("actual_quantity"), ingredient)
-        submitted_unit = str(row.get("unit") or ingredient.base_unit)
-        actual = convert_quantity(actual, submitted_unit, ingredient.base_unit)
         expected = Decimal("0.000")
         if production.recipe_id:
             item = expected_items[ingredient.pk]
             recipe_unit = item.unit or ingredient.base_unit
+            # Recipe mode trusts the immutable approved snapshot for units.
+            actual = convert_quantity(actual, recipe_unit, ingredient.base_unit)
             expected = convert_quantity(
                 Decimal(item.quantity) * Decimal(production.portions_prepared),
                 recipe_unit,
                 ingredient.base_unit,
             )
+        else:
+            submitted_unit = str(row.get("unit") or ingredient.base_unit)
+            actual = convert_quantity(actual, submitted_unit, ingredient.base_unit)
             variance = actual - expected
             variance_percent = abs(variance) / expected * Decimal("100") if expected else Decimal("0")
             absolute_limit = getattr(item, "tolerance_quantity", None)
