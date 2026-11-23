@@ -3021,7 +3021,7 @@ def direct_purchase_detail(request, pk):
         },
     )
 
-@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
+@role_required("KITCHEN")
 def production_history(request):
 
     hotels = get_accessible_hotels(request.user)
@@ -3109,7 +3109,6 @@ def production_history(request):
             "users": users,
             "filters": request.GET,
             "ordering": ordering,
-            "is_management_view": request.user.role in {"MANAGER", "ADMIN", "DIRECTOR"},
         }
     )
 
