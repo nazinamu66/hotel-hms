@@ -117,21 +117,16 @@
         <div class="mv-scope">Complete movement history</div>
     </header>
 
-    <section class="mv-stats" aria-label="Movement summary">
+    <section class="mv-stats" aria-label="Movement register summary">
         <article class="mv-stat">
             <div class="mv-stat-label">Matching Movements</div>
             <div class="mv-stat-value">{{ movements|length }}</div>
-            <div class="mv-stat-note">Based on the filters below</div>
+            <div class="mv-stat-note">Records matching the selected filters</div>
         </article>
         <article class="mv-stat">
-            <div class="mv-stat-label">Stock In</div>
-            <div class="mv-stat-value">{{ movements|length|default:"0" }}</div>
-            <div class="mv-stat-note">Use the movement type filter to isolate receipts</div>
-        </article>
-        <article class="mv-stat">
-            <div class="mv-stat-label">Audit Trail</div>
-            <div class="mv-stat-value">Live</div>
-            <div class="mv-stat-note">References link to their source records where available</div>
+            <div class="mv-stat-label">Register Coverage</div>
+            <div class="mv-stat-value">Store</div>
+            <div class="mv-stat-note">Movements involving this Store department</div>
         </article>
     </section>
 
