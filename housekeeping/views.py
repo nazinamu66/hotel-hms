@@ -1816,7 +1816,7 @@ def housekeeping_stock(request):
             hotel__in=accessible_hotels,
             departments__in=housekeeping_departments,
             is_active=True,
-            product_type="HOUSEKEEPING",
+            usage_type__in=("INTERNAL", "CONSUMABLE"),
         )
         .order_by(
             "hotel__name",
