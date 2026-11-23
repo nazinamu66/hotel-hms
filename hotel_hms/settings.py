@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "wifi",
     "laundry",
     "opening_stock",
+    "security",
 ]
 
 MIDDLEWARE = [
