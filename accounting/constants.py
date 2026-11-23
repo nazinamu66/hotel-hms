@@ -81,6 +81,8 @@ UTILITIES_EXPENSE = "utilities_expense"
 
 GUEST_BALANCE_WAIVER_EXPENSE = "guest_balance_waiver_expense"
 
+STAFF_MEALS_EXPENSE = "staff_meals_expense"
+
 
 # ==================================================
 # ACCOUNT GROUPS
@@ -422,6 +424,16 @@ DEFAULT_ACCOUNTS = [
         "code": "5510",
         "name": "Guest Room Supplies Expense",
         "system_key": GUEST_SUPPLIES_EXPENSE,
+        "type": EXPENSE,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": False,
+    },
+
+    {
+        "code": "5320",
+        "name": "Staff Meals Expense",
+        "system_key": STAFF_MEALS_EXPENSE,
         "type": EXPENSE,
         "is_system": True,
         "allow_posting": True,
