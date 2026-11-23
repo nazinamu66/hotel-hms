@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from inventory.models import Organization, Hotel, Department
 from maintenance.models import MaintenanceAsset
-from .models import PropertyExitPass
+from .models import PropertyExitPass, VehicleVisit
 
 User = get_user_model()
 
@@ -90,4 +90,80 @@ class PropertyExitPassTests(TestCase):
     def test_security_cannot_create_management_authorisation(self):
         self.client.force_login(self.security)
         response = self.client.get(reverse("security_pass_create"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_security_can_record_vehicle_entry_and_dashboard_counts_it(self):
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_vehicle_entry"), {
+            "make": "TOYOTA", "model": "", "plate_number": "abc-123xy", "entry_note": "",
+        })
+        self.assertEqual(response.status_code, 302)
+        visit = VehicleVisit.objects.get()
+        self.assertEqual(visit.plate_number, "ABC-123XY")
+        self.assertEqual(visit.entered_by, self.security)
+        self.assertIsNone(visit.exited_at)
+        response = self.client.get(reverse("security_dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["vehicles_inside"], 1)
+        self.assertEqual(response.context["vehicles_entered_today"], 1)
+
+    def test_vehicle_model_is_optional(self):
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_vehicle_entry"), {
+            "make": "HONDA", "model": "", "plate_number": "ABC-222XY",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(VehicleVisit.objects.get().model, "")
+
+    def test_other_make_requires_and_saves_custom_make(self):
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_vehicle_entry"), {
+            "make": "OTHER", "other_make": "", "plate_number": "ABC-333XY",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(VehicleVisit.objects.exists())
+        response = self.client.post(reverse("security_vehicle_entry"), {
+            "make": "OTHER", "other_make": "Changan", "plate_number": "ABC-333XY",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(VehicleVisit.objects.get().display_make, "Changan")
+
+    def test_duplicate_vehicle_cannot_be_inside_twice_at_same_hotel(self):
+        VehicleVisit.objects.create(hotel=self.hotel, make="TOYOTA", plate_number="ABC-444XY", entered_by=self.security)
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_vehicle_entry"), {
+            "make": "HONDA", "plate_number": "abc-444xy",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(VehicleVisit.objects.count(), 1)
+
+    def test_vehicle_exit_removes_vehicle_from_live_inside_count(self):
+        visit = VehicleVisit.objects.create(
+            hotel=self.hotel, make="TOYOTA", model="Corolla",
+            plate_number="ABC-555XY", entered_by=self.security,
+        )
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_vehicle_exit", args=[visit.pk]), {"exit_note": "Visitor departed"})
+        self.assertEqual(response.status_code, 302)
+        visit.refresh_from_db()
+        self.assertIsNotNone(visit.exited_at)
+        self.assertEqual(visit.exited_by, self.security)
+        response = self.client.get(reverse("security_dashboard"))
+        self.assertEqual(response.context["vehicles_inside"], 0)
+
+    def test_vehicle_can_reenter_after_previous_visit_is_closed(self):
+        old_visit = VehicleVisit.objects.create(
+            hotel=self.hotel, make="TOYOTA", plate_number="ABC-666XY",
+            entered_by=self.security, exited_at=timezone.now(),
+        )
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_vehicle_entry"), {
+            "make": "TOYOTA", "plate_number": "ABC-666XY",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(VehicleVisit.objects.filter(hotel=self.hotel, plate_number="ABC-666XY").count(), 2)
+
+    def test_manager_cannot_record_vehicle_entry(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(reverse("security_vehicle_entry"))
         self.assertEqual(response.status_code, 403)
