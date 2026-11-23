@@ -68,7 +68,7 @@ class StaffFoodProductionTests(TestCase):
         values.update(overrides)
         return StaffFoodProduction.objects.create(**values)
 
-    @patch("kitchen.services.staff_food.record_transaction")
+    @patch("kitchen.services.staff_food.post_staff_food_consumption")
     def test_manual_staff_food_consumes_fifo_and_posts_staff_meal_expense(self, post_entry):
         production = self.make_production()
         execute_staff_food_production(
@@ -105,7 +105,7 @@ class StaffFoodProductionTests(TestCase):
             ).exists()
         )
 
-    @patch("kitchen.services.staff_food.record_transaction")
+    @patch("kitchen.services.staff_food.post_staff_food_consumption")
     def test_insufficient_stock_rolls_back_all_staff_food_consumption(self, post_entry):
         production = self.make_production()
         with self.assertRaises(ValidationError):
@@ -125,7 +125,7 @@ class StaffFoodProductionTests(TestCase):
         self.assertFalse(StaffFoodIngredientUsage.objects.filter(production=production).exists())
         post_entry.assert_not_called()
 
-    @patch("kitchen.services.staff_food.record_transaction")
+    @patch("kitchen.services.staff_food.post_staff_food_consumption")
     def test_no_meal_day_is_recorded_without_stock_or_accounting(self, post_entry):
         production = self.make_production(
             status="NOT_PREPARED", meal_name="", portions_prepared=0, portions_served=0,
@@ -153,7 +153,7 @@ class StaffFoodProductionTests(TestCase):
         denied = self.client.get(reverse("kitchen_staff_food"))
         self.assertEqual(denied.status_code, 403)
 
-    @patch("kitchen.services.staff_food.record_transaction")
+    @patch("kitchen.services.staff_food.post_staff_food_consumption")
     def test_manual_staff_food_can_be_recorded_from_kitchen_page(self, post_entry):
         self.client.force_login(self.cook)
         response = self.client.post(reverse("kitchen_staff_food"), {
@@ -182,7 +182,7 @@ class StaffFoodProductionTests(TestCase):
         self.assertEqual(self.stock.quantity, Decimal("8.000"))
         post_entry.assert_called_once()
 
-    @patch("kitchen.services.staff_food.record_transaction")
+    @patch("kitchen.services.staff_food.post_staff_food_consumption")
     def test_staff_food_can_use_an_approved_recipe_snapshot(self, post_entry):
         finished = Product.objects.create(
             hotel=self.hotel, name="Staff Food Rice Plate", sku="SF-PLATE",
