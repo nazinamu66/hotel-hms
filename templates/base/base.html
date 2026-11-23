@@ -927,21 +927,8 @@
 
         <div id="reports_menu" class="menu-section">
 
-            {% if store_enabled %}
-
-            <a href="{% url 'daily_stock_report' %}">
-                📊 Daily Stock Movement
-            </a>
-
-            {% endif %}
-
-            {% if kitchen_enabled %}
-
-            <a href="{% url 'department_consumption_report' %}">
-                🏭 Department Consumption
-            </a>
-
-            {% endif %}
+            {# Daily Stock Movement is covered by the Stock Movement Register. #}
+            {# Department Consumption belongs in future Kitchen/Management reporting. #}
 
         </div>
 
