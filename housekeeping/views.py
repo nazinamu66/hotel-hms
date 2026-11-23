@@ -1040,6 +1040,23 @@ def finish_cleaning(request, room_id):
                             user=request.user, purpose="ROOM_REPLENISHMENT",
                             notes="Guest supplies placed in the room during cleaning.",
                         )
+                # Submit any unused stock for the Housekeeping Head to verify.
+                for issue in assignment.material_issues.select_related("product").order_by("issued_at", "id"):
+                    raw_return = request.POST.get(f"return_{issue.pk}", "").strip()
+                    if not raw_return:
+                        continue
+                    try:
+                        return_quantity = Decimal(raw_return)
+                    except (InvalidOperation, TypeError, ValueError):
+                        raise ValidationError(f"Enter a valid return quantity for {issue.product.name}.")
+                    if return_quantity > 0:
+                        request_unused_material_return(
+                            issue=issue,
+                            quantity=return_quantity,
+                            returned_by=request.user,
+                            notes="Unused material returned after room cleaning.",
+                        )
+
                 finish_cleaning_workflow(room=room, user=request.user)
         except (ValidationError, PermissionDenied) as exc:
             messages.error(request, str(exc))
