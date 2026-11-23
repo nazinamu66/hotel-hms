@@ -1086,8 +1086,9 @@ def cleaning_material_custody(request, assignment_id):
     if not department:
         raise PermissionDenied("No active Housekeeping department exists for this hotel.")
     is_assignee = assignment.assigned_to_id == request.user.pk
-    can_issue = can_manage_department(request.user, department)
-    if not is_assignee and not can_issue:
+    can_manage = can_manage_department(request.user, department)
+    can_issue = can_manage and assignment.status in ("ASSIGNED", "IN_PROGRESS")
+    if not is_assignee and not can_manage:
         raise PermissionDenied("You cannot access this assignment's material custody.")
 
     if request.method == "POST":
@@ -1135,7 +1136,7 @@ def cleaning_material_custody(request, assignment_id):
     ).order_by("name").distinct() if can_issue else Product.objects.none()
     return render(request, "housekeeping/material_custody.html", {
         "assignment": assignment, "issues": issues, "products": products,
-        "can_issue": can_issue, "is_assignee": is_assignee,
+        "can_issue": can_issue, "can_manage": can_manage, "is_assignee": is_assignee,
     })
 
 
