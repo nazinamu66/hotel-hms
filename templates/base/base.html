@@ -687,63 +687,63 @@
 
         <div id="store_menu" class="menu-section">
 
-            <h5 class="menu-subtoggle">Dashboard</h5>
-            <a href="{% url 'store_dashboard' %}">
-                Store Dashboard
-            </a>
+            <h5 class="menu-subtoggle" onclick="toggleMenu('store_dashboard_group', this)">
+                <span class="arrow">▸</span> Dashboard
+            </h5>
+            <div id="store_dashboard_group" class="menu-section">
+                <a href="{% url 'store_dashboard' %}">Store Dashboard</a>
+            </div>
 
-            <h5 class="menu-subtoggle">Inventory Management</h5>
-            <a href="{% url 'store_issue_stock' %}">
-                Issue Stock
-            </a>
-            <a href="{% url 'store_movement_log' %}">
-                Stock Movement Register
-            </a>
+            <h5 class="menu-subtoggle" onclick="toggleMenu('store_inventory_group', this)">
+                <span class="arrow">▸</span> Inventory Management
+            </h5>
+            <div id="store_inventory_group" class="menu-section">
+                <a href="{% url 'store_issue_stock' %}">Issue Stock</a>
+                <a href="{% url 'store_movement_log' %}">Stock Movement Register</a>
+            </div>
 
-            <h5 class="menu-subtoggle">Requests &amp; Fulfilment</h5>
-            <a href="{% url 'store_stock_requests' %}">
-                Department Stock Requests
-                {% for action in pending_actions %}
-                    {% if action.type == "STORE_STOCK_REQUESTS" %}
-                        <span class="notification-badge">{{ action.count }}</span>
-                    {% endif %}
-                {% endfor %}
-            </a>
-            <a href="{% url 'store_ingredient_requests' %}">
-                Kitchen Ingredient Requests
-            </a>
-            <a href="{% url 'store_linen_stock_requests' %}">
-                Laundry Linen Requests
-            </a>
-            <a href="{% url 'store_linen_requests' %}">
-                Linen Requests
-            </a>
-            <a href="{% url 'store_request_low_stock' %}">
-                Store Replenishment Request
-            </a>
-            <a href="{% url 'store_requests' %}">
-                My Department Requests
-            </a>
+            <h5 class="menu-subtoggle" onclick="toggleMenu('store_requests_group', this)">
+                <span class="arrow">▸</span> Requests &amp; Fulfilment
+            </h5>
+            <div id="store_requests_group" class="menu-section">
+                <a href="{% url 'store_stock_requests' %}">
+                    Department Stock Requests
+                    {% for action in pending_actions %}
+                        {% if action.type == "STORE_STOCK_REQUESTS" %}
+                            <span class="notification-badge">{{ action.count }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </a>
+                <a href="{% url 'store_ingredient_requests' %}">Kitchen Ingredient Requests</a>
+                <a href="{% url 'store_linen_stock_requests' %}">Laundry Linen Requests</a>
+                <a href="{% url 'store_linen_requests' %}">Linen Requests</a>
+                <a href="{% url 'store_request_low_stock' %}">Store Replenishment Request</a>
+                <a href="{% url 'store_requests' %}">My Department Requests</a>
+            </div>
 
-            <h5 class="menu-subtoggle">Receiving</h5>
-            {% if request.user.role == "STORE" %}
-            <a href="{% url 'inventory:department_incoming_pos' %}">
-                Incoming Deliveries
-            </a>
-            {% endif %}
-            <a href="{% url 'store_receive_history' %}">
-                Goods Received History
-            </a>
+            <h5 class="menu-subtoggle" onclick="toggleMenu('store_receiving_group', this)">
+                <span class="arrow">▸</span> Receiving
+            </h5>
+            <div id="store_receiving_group" class="menu-section">
+                {% if request.user.role == "STORE" %}
+                <a href="{% url 'inventory:department_incoming_pos' %}">Incoming Deliveries</a>
+                {% endif %}
+                <a href="{% url 'store_receive_history' %}">Goods Received History</a>
+            </div>
 
-            <h5 class="menu-subtoggle">Issue History</h5>
-            <a href="{% url 'store_issue_history' %}">
-                Stock Issue History
-            </a>
+            <h5 class="menu-subtoggle" onclick="toggleMenu('store_issue_history_group', this)">
+                <span class="arrow">▸</span> Issue History
+            </h5>
+            <div id="store_issue_history_group" class="menu-section">
+                <a href="{% url 'store_issue_history' %}">Stock Issue History</a>
+            </div>
 
-            <h5 class="menu-subtoggle">Linen Records</h5>
-            <a href="{% url 'housekeeping_linen_movements' %}">
-                Linen Custody Register
-            </a>
+            <h5 class="menu-subtoggle" onclick="toggleMenu('store_linen_group', this)">
+                <span class="arrow">▸</span> Linen Records
+            </h5>
+            <div id="store_linen_group" class="menu-section">
+                <a href="{% url 'housekeeping_linen_movements' %}">Linen Custody Register</a>
+            </div>
 
         </div>
 
@@ -1303,6 +1303,18 @@ document.addEventListener("DOMContentLoaded", function () {
         ) {
 
             link.classList.add("active");
+
+            // Open every nested Store group containing the active page.
+            let parentMenu = link.parentElement;
+            while (parentMenu && parentMenu.classList.contains("menu-section")) {
+                parentMenu.classList.add("open");
+                const parentToggle = parentMenu.previousElementSibling;
+                if (parentToggle) {
+                    const parentArrow = parentToggle.querySelector(".arrow");
+                    if (parentArrow) parentArrow.textContent = "▾";
+                }
+                parentMenu = parentMenu.parentElement;
+            }
 
         }
 
