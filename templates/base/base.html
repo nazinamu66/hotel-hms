@@ -671,7 +671,8 @@
 
 
         <!-- ========================= -->
-        <!-- STORE -->
+        <!-- ========================= -->
+        <!-- STORE OPERATIONS -->
         <!-- ========================= -->
 
         {% feature_enabled user "STORE" as store_enabled %}
@@ -681,73 +682,76 @@
         <h4 class="menu-toggle"
             onclick="toggleMenu('store_menu', this)">
             <span class="arrow">▸</span>
-            Store
+            Store Operations
         </h4>
 
         <div id="store_menu" class="menu-section">
 
-            <a href="/store/">
-                Dashboard
+            <h5 class="menu-subtoggle">Dashboard</h5>
+            <a href="{% url 'store_dashboard' %}">
+                Store Dashboard
             </a>
-            <a href="{% url 'housekeeping_linen_movements' %}">Linen Custody</a>
 
-            <a href="/store/issue/">
+            <h5 class="menu-subtoggle">Inventory Management</h5>
+            <a href="{% url 'store_issue_stock' %}">
                 Issue Stock
-            <a href="{% url 'store_linen_stock_requests' %}">
-                🛏️ Laundry Linen Requests
+            </a>
+            <a href="{% url 'store_movement_log' %}">
+                Stock Movement Register
             </a>
 
+            <h5 class="menu-subtoggle">Requests &amp; Fulfilment</h5>
             <a href="{% url 'store_stock_requests' %}">
-                📋 Stock Requests
+                Department Stock Requests
                 {% for action in pending_actions %}
                     {% if action.type == "STORE_STOCK_REQUESTS" %}
-                        <span class="notification-badge">
-                            {{ action.count }}
-                        </span>
+                        <span class="notification-badge">{{ action.count }}</span>
                     {% endif %}
                 {% endfor %}
             </a>
-            <a href="{% url 'store_request_low_stock' %}">
-                Request Stock
+            <a href="{% url 'store_ingredient_requests' %}">
+                Kitchen Ingredient Requests
+            </a>
+            <a href="{% url 'store_linen_stock_requests' %}">
+                Laundry Linen Requests
             </a>
             <a href="{% url 'store_linen_requests' %}">
-                🛏️ Linen Requests
+                Linen Requests
             </a>
-
+            <a href="{% url 'store_request_low_stock' %}">
+                Store Replenishment Request
+            </a>
             <a href="{% url 'store_requests' %}">
-                My Stock Requests
+                My Department Requests
             </a>
 
-    {% if request.user.role == "STORE" or request.user.role == "MAINTENANCE" %}
-
-    <a href="{% url 'inventory:department_incoming_pos' %}">
-        Incoming Deliveries
-    </a>
-
-    {% endif %}
-
-            <a href="{% url 'store_movement_log' %}">
-                Stock Movements
+            {% if request.user.role == "STORE" %}
+            <h5 class="menu-subtoggle">Receiving</h5>
+            <a href="{% url 'inventory:department_incoming_pos' %}">
+                Incoming Deliveries
             </a>
-
-            <a href="{% url 'store_issue_history' %}">
-                📤 Issue History
-            </a>
-
             <a href="{% url 'store_receive_history' %}">
-                📥 Receive History
+                Goods Received History
+            </a>
+            {% endif %}
+
+            <h5 class="menu-subtoggle">Issue History</h5>
+            <a href="{% url 'store_issue_history' %}">
+                Stock Issue History
             </a>
 
-            <a href="{% url 'store_ingredient_requests' %}">
-                🧾 Kitchen Requests
+            {% if user|has_role:"ADMIN,MANAGER" %}
+            <h5 class="menu-subtoggle">Linen Records</h5>
+            <a href="{% url 'housekeeping_linen_movements' %}">
+                Linen Custody Register
             </a>
+            {% endif %}
 
         </div>
 
         {% endif %}
 
 
-        <!-- ========================= -->
         <!-- RESTAURANT CONFIGURATION -->
         <!-- ========================= -->
 
