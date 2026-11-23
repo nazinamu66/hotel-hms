@@ -363,6 +363,28 @@ class HousekeepingMaterialCustodyWorkflowTests(TestCase):
         )
         self.assertEqual(issue.product, resale)
 
+    def test_department_stock_shows_only_opted_in_resale_products(self):
+        approved = Product.objects.create(
+            hotel=self.hotel, name="Department Stock Fanta", sku="HK-STOCK-FANTA",
+            product_type="DRINK", usage_type="RESALE", base_unit="bottle",
+            housekeeping_issue_eligible=True,
+        )
+        approved.departments.add(self.department)
+        excluded = Product.objects.create(
+            hotel=self.hotel, name="Department Stock Beer", sku="HK-STOCK-BEER",
+            product_type="DRINK", usage_type="RESALE", base_unit="bottle",
+        )
+        excluded.departments.add(self.department)
+        Stock.objects.create(product=approved, department=self.department, quantity=Decimal("12"))
+        Stock.objects.create(product=excluded, department=self.department, quantity=Decimal("8"))
+
+        self.client.force_login(self.head)
+        response = self.client.get(reverse("housekeeping_stock"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Department Stock Fanta")
+        self.assertNotContains(response, "Department Stock Beer")
+
     def test_housekeeping_request_stock_shows_only_opted_in_resale_products(self):
         approved = Product.objects.create(
             hotel=self.hotel, name="Approved Room Fanta", sku="HK-FANTA-APPROVED",
