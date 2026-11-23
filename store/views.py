@@ -720,6 +720,7 @@ def issue_stock(request):
     if request.method == "POST":
         product_id = request.POST.get("product_id")
         department_id = request.POST.get("department_id")
+        note = request.POST.get("note", "").strip()
 
         try:
             quantity = Decimal(request.POST.get("quantity", "").strip())
@@ -768,6 +769,7 @@ def issue_stock(request):
             to_department=to_department,
             quantity=quantity,
             created_by=request.user,
+            note=note,
         )
 
         transfer.execute()
