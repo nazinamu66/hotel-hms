@@ -4,9 +4,9 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.services.access import get_accessible_hotels
-from housekeeping.models import CleaningAssignment, CleaningLog, LostFoundItem
+from housekeeping.models import (\n    CleaningAssignment, CleaningLog, LostFoundItem,\n    CleaningMaterialIssue, CleaningMaterialReturn, CleaningMaterialUsage,\n)
 from housekeeping.workflows.lost_found import can_manage_lost_found, claim_item, dispose_item
-from inventory.models import Department, Hotel, Organization
+from inventory.models import Department, Hotel, Organization, Product, Stock
 from rooms.models import Room, RoomCategory
 from linen.models import CleaningLinenSubmission
 
@@ -201,3 +201,139 @@ class HousekeepingAccessAuditTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["page_obj"].paginator.count, 1)
         self.assertEqual(response.context["logs"][0].cleaned_by, self.staff)
+
+
+class HousekeepingMaterialCustodyWorkflowTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        User = get_user_model()
+        cls.org = Organization.objects.create(name="HK Material Custody Org")
+        cls.hotel = Hotel.objects.create(organization=cls.org, name="HK Material Custody Hotel")
+        cls.department = Department.objects.create(
+            hotel=cls.hotel, code="HK", name="Housekeeping",
+            department_type="HOUSEKEEPING", is_active=True,
+        )
+        cls.staff = User.objects.create_user(
+            username="custody-housekeeper", password="test", role="HOUSEKEEPING",
+            hotel=cls.hotel, department=cls.department,
+        )
+        cls.head = User.objects.create_user(
+            username="custody-hk-head", password="test", role="HOUSEKEEPING",
+            hotel=cls.hotel, department=cls.department, is_department_head=True,
+        )
+        cls.kitchen = Department.objects.create(
+            hotel=cls.hotel, code="KIT", name="Kitchen",
+            department_type="KITCHEN", is_active=True,
+        )
+        cls.kitchen_head = User.objects.create_user(
+            username="custody-kitchen-head", password="test", role="KITCHEN",
+            hotel=cls.hotel, department=cls.kitchen, is_department_head=True,
+        )
+        category = RoomCategory.objects.create(hotel=cls.hotel, name="Custody Standard")
+        cls.room = Room.objects.create(hotel=cls.hotel, room_number="C101", category=category)
+        cls.product = Product.objects.create(
+            hotel=cls.hotel, name="Guest Water", sku="HK-WATER",
+            product_type="HOUSEKEEPING", usage_type="CONSUMABLE", base_unit="bottle",
+        )
+        cls.product.departments.add(cls.department)
+        Stock.objects.create(product=cls.product, department=cls.department, quantity=Decimal("5.000"))
+
+    def setUp(self):
+        self.assignment = CleaningAssignment.objects.create(
+            room=self.room, assigned_to=self.staff, assigned_by=self.head, status="IN_PROGRESS",
+        )
+
+    def test_only_housekeeping_management_can_issue_assignment_materials(self):
+        from housekeeping.workflows.material_custody import issue_material_to_assignment
+
+        with self.assertRaises(PermissionDenied):
+            issue_material_to_assignment(
+                assignment=self.assignment, product=self.product,
+                quantity=Decimal("1"), issued_by=self.staff,
+            )
+        with self.assertRaises(PermissionDenied):
+            issue_material_to_assignment(
+                assignment=self.assignment, product=self.product,
+                quantity=Decimal("1"), issued_by=self.kitchen_head,
+            )
+
+    def test_issues_reserve_stock_across_assignments(self):
+        from django.core.exceptions import ValidationError
+        from housekeeping.workflows.material_custody import issue_material_to_assignment
+
+        issue_material_to_assignment(
+            assignment=self.assignment, product=self.product,
+            quantity=Decimal("5"), issued_by=self.head,
+        )
+        second_assignment = CleaningAssignment.objects.create(
+            room=Room.objects.create(
+                hotel=self.hotel, room_number="C102",
+                category=self.room.category,
+            ),
+            assigned_to=self.staff, assigned_by=self.head, status="ASSIGNED",
+        )
+        with self.assertRaises(ValidationError):
+            issue_material_to_assignment(
+                assignment=second_assignment, product=self.product,
+                quantity=Decimal("0.001"), issued_by=self.head,
+            )
+
+    def test_consumption_is_limited_to_issue_and_records_room_replenishment_purpose(self):
+        from unittest.mock import patch
+        from django.core.exceptions import ValidationError
+        from housekeeping.workflows.material_custody import (
+            consume_assigned_material, issue_material_to_assignment, issue_remaining,
+        )
+
+        issue = issue_material_to_assignment(
+            assignment=self.assignment, product=self.product,
+            quantity=Decimal("4.000"), issued_by=self.head,
+        )
+        with patch("housekeeping.workflows.material_custody.stock_out"):
+            usages = consume_assigned_material(
+                assignment=self.assignment, product=self.product,
+                quantity=Decimal("2.000"), user=self.staff,
+                purpose="ROOM_REPLENISHMENT",
+            )
+        self.assertEqual(sum((item.quantity for item in usages), Decimal("0")), Decimal("2.000"))
+        self.assertEqual(usages[0].purpose, "ROOM_REPLENISHMENT")
+        self.assertEqual(issue_remaining(issue), Decimal("2.000"))
+        with patch("housekeeping.workflows.material_custody.stock_out"):
+            with self.assertRaises(ValidationError):
+                consume_assigned_material(
+                    assignment=self.assignment, product=self.product,
+                    quantity=Decimal("2.001"), user=self.staff,
+                )
+
+    def test_unused_material_return_requires_housekeeping_confirmation(self):
+        from housekeeping.workflows.material_custody import (
+            confirm_unused_material_return, issue_material_to_assignment,
+            issue_remaining, request_unused_material_return,
+        )
+
+        issue = issue_material_to_assignment(
+            assignment=self.assignment, product=self.product,
+            quantity=Decimal("4.000"), issued_by=self.head,
+        )
+        returned = request_unused_material_return(
+            issue=issue, quantity=Decimal("3.000"), returned_by=self.staff,
+        )
+        self.assertEqual(returned.status, "PENDING")
+        self.assertEqual(issue_remaining(issue), Decimal("4.000"))
+        confirm_unused_material_return(material_return=returned, confirmed_by=self.head)
+        self.assertEqual(issue_remaining(issue), Decimal("1.000"))
+
+    def test_housekeeping_cannot_issue_resale_or_asset_products(self):
+        from django.core.exceptions import ValidationError
+        from housekeeping.workflows.material_custody import issue_material_to_assignment
+
+        resale = Product.objects.create(
+            hotel=self.hotel, name="Retail Juice", sku="HK-RESALE",
+            product_type="DRINK", usage_type="RESALE", base_unit="bottle",
+        )
+        resale.departments.add(self.department)
+        with self.assertRaises(ValidationError):
+            issue_material_to_assignment(
+                assignment=self.assignment, product=resale,
+                quantity=Decimal("1"), issued_by=self.head,
+            )
