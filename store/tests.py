@@ -15,6 +15,7 @@ from inventory.models import (
     StockCostLayer,
     StockMovement,
     StockTransfer,
+    PurchaseOrder,
 )
 from linen.models import LinenItem, LinenTransaction
 from store.views import issue_request_item
@@ -69,6 +70,32 @@ class StoreStockTransferTests(TestCase):
             quantity_remaining=Decimal("10.000"),
             unit_cost=Decimal("100.0000"),
         )
+
+    def test_receipt_movement_links_to_purchase_order_id_not_full_receipt_reference(self):
+        purchase_order = PurchaseOrder.objects.create(
+            department=self.store,
+            created_by=self.store_user,
+            status="RECEIVED",
+        )
+        StockMovement.objects.create(
+            product=self.product,
+            to_department=self.store,
+            quantity=Decimal("2.000"),
+            movement_type="IN",
+            created_by=self.store_user,
+            reference=f"PO-{purchase_order.pk}-REC-6",
+        )
+
+        client = Client()
+        client.force_login(self.store_user)
+        response = client.get(reverse("store_movement_log"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            reverse("inventory:po_detail", kwargs={"pk": purchase_order.pk}),
+        )
+        self.assertContains(response, f"PO-{purchase_order.pk}-REC-6")
 
     def test_stock_transfer_cannot_execute_twice(self):
         transfer = StockTransfer.objects.create(
