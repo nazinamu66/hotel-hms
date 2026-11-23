@@ -143,6 +143,26 @@ class CleaningMaterialUsage(models.Model):
         related_name="material_usages",
     )
 
+    PURPOSE_CHOICES = (
+        ("CLEANING", "Cleaning"),
+        ("ROOM_REPLENISHMENT", "Guest Room Replenishment"),
+    )
+
+    purpose = models.CharField(
+        max_length=24,
+        choices=PURPOSE_CHOICES,
+        default="CLEANING",
+        db_index=True,
+    )
+
+    issue = models.ForeignKey(
+        "housekeeping.CleaningMaterialIssue",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="usages",
+    )
+
     product = models.ForeignKey(
         Product,
         on_delete=models.PROTECT,
@@ -176,6 +196,79 @@ class CleaningMaterialUsage(models.Model):
         )
     
 
+
+
+class CleaningMaterialIssue(models.Model):
+    """A per-assignment allocation of Housekeeping stock to a housekeeper."""
+
+    assignment = models.ForeignKey(
+        CleaningAssignment,
+        on_delete=models.PROTECT,
+        related_name="material_issues",
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        related_name="housekeeping_material_issues",
+    )
+    quantity = models.DecimalField(max_digits=12, decimal_places=3)
+    issued_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="housekeeping_material_issues_created",
+    )
+    issued_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("issued_at", "id")
+        indexes = [
+            models.Index(fields=("assignment", "product")),
+        ]
+
+    def __str__(self):
+        return f"{self.product} · {self.quantity} · Room {self.assignment.room.room_number}"
+
+
+class CleaningMaterialReturn(models.Model):
+    """A housekeeper's unused-stock return, subject to Housekeeping Head confirmation."""
+
+    STATUS_CHOICES = (
+        ("PENDING", "Pending Confirmation"),
+        ("CONFIRMED", "Confirmed"),
+        ("REJECTED", "Rejected"),
+    )
+
+    issue = models.ForeignKey(
+        CleaningMaterialIssue,
+        on_delete=models.PROTECT,
+        related_name="returns",
+    )
+    quantity = models.DecimalField(max_digits=12, decimal_places=3)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="PENDING", db_index=True)
+    returned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="housekeeping_material_returns",
+    )
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="housekeeping_material_returns_confirmed",
+    )
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ("recorded_at", "id")
+        indexes = [
+            models.Index(fields=("issue", "status")),
+        ]
+
+    def __str__(self):
+        return f"Return {self.quantity} · {self.issue.product} · {self.status}"
 
 
 class CleaningInspection(models.Model):
