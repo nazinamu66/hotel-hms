@@ -853,10 +853,37 @@ def issue_stock(request):
 @role_required("STORE")
 def store_issue_history(request):
     store = request.user.department
+    if not store or store.department_type != "STORE":
+        raise PermissionDenied("This account is not assigned to the Store department.")
 
-    date_from = request.GET.get("from")
-    date_to = request.GET.get("to")
-    sort = request.GET.get("sort", "-created_at")  # default
+    movements = StockMovement.objects.filter(
+        movement_type="TRANSFER",
+        from_department=store,
+    )
+
+    date_from = request.GET.get("from", "").strip()
+    date_to = request.GET.get("to", "").strip()
+    department_id = request.GET.get("department", "").strip()
+    user_id = request.GET.get("user", "").strip()
+    search = request.GET.get("q", "").strip()
+    sort = request.GET.get("sort", "-date")
+
+    if date_from:
+        movements = movements.filter(created_at__date__gte=date_from)
+    if date_to:
+        movements = movements.filter(created_at__date__lte=date_to)
+    if department_id:
+        movements = movements.filter(to_department_id=department_id)
+    if user_id:
+        movements = movements.filter(created_by_id=user_id)
+    if search:
+        movements = movements.filter(
+            Q(product__name__icontains=search)
+            | Q(product__sku__icontains=search)
+            | Q(reference__icontains=search)
+            | Q(to_department__name__icontains=search)
+            | Q(created_by__username__icontains=search)
+        )
 
     allowed_sorts = {
         "date": "created_at",
@@ -870,35 +897,36 @@ def store_issue_history(request):
         "user": "created_by__username",
         "-user": "-created_by__username",
     }
-
-    order_by = allowed_sorts.get(sort, "-created_at")
-
-    movements = StockMovement.objects.filter(
-        movement_type="TRANSFER",
-        from_department=store
-    )
-
-    if date_from and date_to:
-        movements = movements.filter(
-            created_at__date__range=[date_from, date_to]
-        )
-
     movements = movements.select_related(
-        "product",
-        "to_department",
-        "created_by"
-    ).order_by(order_by)
+        "product", "to_department", "created_by"
+    ).order_by(allowed_sorts.get(sort, "-created_at"))
 
-    return render(
-        request,
-        "store/issue_history.html",
-        {
-            "movements": movements,
-            "date_from": date_from,
-            "date_to": date_to,
-            "current_sort": sort,
-        }
+    # Derive filter options from this Store's own transfer history.
+    departments = Department.objects.filter(
+        hotel=store.hotel,
+        stock_in__movement_type="TRANSFER",
+        stock_out__from_department=store,
+    ).distinct().order_by("name")
+    users = (
+        request.user.__class__.objects.filter(
+            stockmovement__movement_type="TRANSFER",
+            stockmovement__from_department=store,
+        ).distinct().order_by("username")
     )
+
+    return render(request, "store/issue_history.html", {
+        "movements": movements,
+        "date_from": date_from,
+        "date_to": date_to,
+        "selected_department": department_id,
+        "selected_user": user_id,
+        "search": search,
+        "departments": departments,
+        "users": users,
+        "current_sort": sort,
+        "result_count": movements.count(),
+    })
+
 
 @role_required("STORE")
 def store_receive_history(request):
