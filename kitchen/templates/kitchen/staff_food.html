@@ -114,7 +114,7 @@
    if(m==="NO_MEAL"){rows.innerHTML="";total.value="0";}
    else if(m==="MANUAL" && !rows.children.length){addRow();}
  }
- mode.addEventListener("change",syncMode);
+ mode.addEventListener("change",function(){syncMode();if(mode.value==="RECIPE"&&recipe.value)recipe.dispatchEvent(new Event("change"));});
  recipe.addEventListener("change",async function(){
    if(mode.value!=="RECIPE"||!recipe.value)return;
    rows.innerHTML="";total.value="0";
