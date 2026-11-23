@@ -35,11 +35,11 @@
         <div class="sf-ingredients" id="ingredients-panel">
           <div class="sf-ingredients-head"><strong>Ingredients actually used</strong><button type="button" class="sf-add" id="add-ingredient">+ Add ingredient</button></div>
           <div class="sf-table-wrap">
-            <table class="sf-table"><thead><tr><th style="min-width:250px">Ingredient</th><th style="min-width:170px">Actual quantity used</th><th style="min-width:80px">Action</th></tr></thead>
+            <table class="sf-table"><thead><tr><th style="min-width:250px">Ingredient</th><th style="min-width:170px">Actual quantity used</th><th style="min-width:210px">Variance reason (if needed)</th><th style="min-width:80px">Action</th></tr></thead>
               <tbody id="ingredient-rows">
                 {% for row in formset %}
                 <tr class="sf-row">
-                  <td>{{ row.ingredient }}</td><td>{{ row.actual_quantity }}{{ row.unit }}</td><td>{{ row.DELETE }} <button type="button" class="sf-remove">Remove</button></td>
+                  <td>{{ row.ingredient }}</td><td>{{ row.actual_quantity }}{{ row.unit }}</td><td>{{ row.variance_reason }}</td><td>{{ row.DELETE }} <button type="button" class="sf-remove">Remove</button></td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -71,7 +71,7 @@
 
 <template id="ingredient-row-template">
 <tr class="sf-row">
-  <td>{{ formset.empty_form.ingredient }}</td><td>{{ formset.empty_form.actual_quantity }}{{ formset.empty_form.unit }}</td>
+  <td>{{ formset.empty_form.ingredient }}</td><td>{{ formset.empty_form.actual_quantity }}{{ formset.empty_form.unit }}</td><td>{{ formset.empty_form.variance_reason }}</td>
   <td>{{ formset.empty_form.DELETE }} <button type="button" class="sf-remove">Remove</button></td>
 </tr>
 </template>
