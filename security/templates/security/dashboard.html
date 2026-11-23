@@ -1,10 +1,29 @@
 {% extends "base/base.html" %}
 {% block title %}Security Dashboard{% endblock %}
 {% block content %}
-{% if available_hotels.count > 1 %}<form method="get" class="card"><label for="hotel">Hotel</label><select name="hotel" id="hotel">{% for h in available_hotels %}<option value="{{ h.pk }}" {% if h.pk == hotel.pk %}selected{% endif %}>{{ h.name }}</option>{% endfor %}</select><button type="submit">Switch Hotel</button></form>{% endif %}
-<div class="page-header"><div><h1>Security Dashboard</h1><p>{{ hotel.name }} · Property movement and gate control</p></div><a class="btn btn-primary" href="{% url 'security_pass_list' %}?hotel={{ hotel.pk }}">Open Register</a></div>
-<div class="dashboard-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin:20px 0">
-<div class="card"><h3>Awaiting Gate Exit</h3><strong>{{ pending }}</strong></div><div class="card"><h3>Currently Outside</h3><strong>{{ currently_out }}</strong></div><div class="card"><h3>Overdue Returns</h3><strong>{{ overdue }}</strong></div>
+<div class="hms-page">
+    {% if available_hotels.count > 1 %}
+    <form method="get" class="hms-toolbar">
+        <div class="hms-field"><label for="hotel">Hotel workspace</label><select name="hotel" id="hotel">{% for h in available_hotels %}<option value="{{ h.pk }}" {% if h.pk == hotel.pk %}selected{% endif %}>{{ h.name }}</option>{% endfor %}</select></div>
+        <button class="hms-btn hms-btn-secondary" type="submit">Switch hotel</button>
+    </form>
+    {% endif %}
+    <header class="hms-page-header">
+        <div class="hms-page-heading"><p class="hms-eyebrow">Gate control · Property custody</p><h1 class="hms-page-title">Security overview</h1><p class="hms-page-subtitle">{{ hotel.name }} · Monitor authorised property movements and items currently outside the hotel.</p></div>
+        <div class="hms-actions"><a class="hms-btn hms-btn-primary" href="{% url 'security_pass_list' %}?hotel={{ hotel.pk }}">Open property register <span aria-hidden="true">→</span></a></div>
+    </header>
+    <section class="hms-kpi-grid" aria-label="Security summary">
+        <article class="hms-kpi"><div class="hms-kpi-label">Awaiting gate exit</div><div class="hms-kpi-value">{{ pending }}</div><div class="hms-kpi-note">Authorised passes not yet processed</div></article>
+        <article class="hms-kpi"><div class="hms-kpi-label">Currently outside</div><div class="hms-kpi-value">{{ currently_out }}</div><div class="hms-kpi-note">Temporary removals awaiting return</div></article>
+        <article class="hms-kpi"><div class="hms-kpi-label">Overdue returns</div><div class="hms-kpi-value">{{ overdue }}</div><div class="hms-kpi-note">Past their expected return date</div></article>
+    </section>
+    <section class="hms-card">
+        <div class="hms-card-heading"><div><h2 class="hms-card-title">Recent authorisations</h2><p class="hms-card-description">Latest property movement records for {{ hotel.name }}</p></div><a class="hms-link" href="{% url 'security_pass_list' %}?hotel={{ hotel.pk }}">View all</a></div>
+        <div class="hms-table-wrap"><table class="hms-table"><thead><tr><th>Pass number</th><th>Staff member</th><th>Property item</th><th>Movement</th><th>Status</th><th></th></tr></thead><tbody>
+        {% for p in recent_passes %}
+        <tr><td><span class="hms-table-primary">{{ p.pass_number }}</span></td><td>{{ p.staff_name }}</td><td>{{ p.item_description }}</td><td>{{ p.get_pass_type_display }}</td><td><span class="hms-status hms-status-{{ p.status|lower }}">{{ p.get_status_display }}</span></td><td><a class="hms-link" href="{% url 'security_pass_detail' p.pk %}?hotel={{ hotel.pk }}">Details</a></td></tr>
+        {% empty %}<tr><td colspan="6"><div class="hms-empty"><strong>No authorisations recorded yet</strong>New management authorisations will appear here.</div></td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
 </div>
-<div class="card"><h2>Recent Authorisations</h2><div class="table-responsive"><table><thead><tr><th>Pass</th><th>Staff</th><th>Item</th><th>Type</th><th>Status</th><th></th></tr></thead><tbody>{% for p in recent_passes %}<tr><td>{{ p.pass_number }}</td><td>{{ p.staff_name }}</td><td>{{ p.item_description }}</td><td>{{ p.get_pass_type_display }}</td><td>{{ p.get_status_display }}</td><td><a href="{% url 'security_pass_detail' p.pk %}?hotel={{ hotel.pk }}">View</a></td></tr>{% empty %}<tr><td colspan="6">No property passes recorded yet.</td></tr>{% endfor %}</tbody></table></div></div>
 {% endblock %}
