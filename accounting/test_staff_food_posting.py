@@ -3,12 +3,12 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
-from django.test import SimpleTestCase
+from django.test import TestCase
 
 from accounting.services.postings.staff_food import post_staff_food_consumption
 
 
-class StaffFoodAccountingPostingTests(SimpleTestCase):
+class StaffFoodAccountingPostingTests(TestCase):
     @patch("accounting.services.postings.staff_food.record_transaction")
     def test_posts_fifo_cost_to_staff_meals_expense_and_inventory_asset(self, record):
         hotel = object()
