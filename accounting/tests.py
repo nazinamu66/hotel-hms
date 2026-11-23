@@ -471,3 +471,72 @@ class MaintenanceLocationAccountingPostingTests(TestCase):
             post_maintenance_material_consumption(material, user=None)
 
         record.assert_not_called()
+
+
+class HousekeepingMaterialAccountingPostingTests(SimpleTestCase):
+    @patch("accounting.services.postings.housekeeping.record_transaction")
+    @patch("accounting.services.postings.housekeeping.Account.objects.get_or_create")
+    def test_cleaning_and_guest_replenishment_use_separate_expense_accounts(
+        self, get_or_create, record
+    ):
+        from accounting.services.postings.housekeeping import (
+            post_housekeeping_material_consumption,
+        )
+
+        hotel = SimpleNamespace(id=7)
+        assignment = SimpleNamespace(
+            room=SimpleNamespace(room_number="007", hotel=hotel)
+        )
+        product = SimpleNamespace(name="Fanta")
+        movement = SimpleNamespace(pk=901)
+        stock_result = {"movement": movement, "total_cost": Decimal("1250.456")}
+        accounts = [
+            SimpleNamespace(
+                name="Housekeeping Expense", account_type="expense",
+                system_key="housekeeping_expense", is_system=True,
+                is_active=True, allow_posting=True,
+            ),
+            SimpleNamespace(
+                name="Guest Room Supplies Expense", account_type="expense",
+                system_key="guest_supplies_expense", is_system=True,
+                is_active=True, allow_posting=True,
+            ),
+        ]
+        get_or_create.side_effect = [(accounts[0], True), (accounts[1], True)]
+
+        for purpose in ("CLEANING", "ROOM_REPLENISHMENT"):
+            post_housekeeping_material_consumption(
+                assignment=assignment, product=product, purpose=purpose,
+                stock_result=stock_result, user="housekeeper",
+            )
+
+        self.assertEqual(get_or_create.call_args_list[0].kwargs["defaults"]["system_key"], "housekeeping_expense")
+        self.assertEqual(get_or_create.call_args_list[1].kwargs["defaults"]["system_key"], "guest_supplies_expense")
+        self.assertEqual(record.call_count, 2)
+        self.assertEqual(record.call_args_list[0].kwargs["debit_account"], accounts[0])
+        self.assertEqual(record.call_args_list[1].kwargs["debit_account"], accounts[1])
+        for posted in record.call_args_list:
+            self.assertEqual(posted.kwargs["credit_system_key"], "inventory_asset")
+            self.assertEqual(posted.kwargs["amount"], Decimal("1250.46"))
+            self.assertEqual(posted.kwargs["reference"], "HK-MATERIAL-MOVEMENT-901")
+
+    def test_zero_fifo_cost_is_rejected_instead_of_silently_omitted(self):
+        from django.core.exceptions import ValidationError
+        from accounting.services.postings.housekeeping import (
+            post_housekeeping_material_consumption,
+        )
+
+        assignment = SimpleNamespace(
+            room=SimpleNamespace(room_number="007", hotel=SimpleNamespace(id=7))
+        )
+        with self.assertRaises(ValidationError):
+            post_housekeeping_material_consumption(
+                assignment=assignment,
+                product=SimpleNamespace(name="Fanta"),
+                purpose="ROOM_REPLENISHMENT",
+                stock_result={
+                    "movement": SimpleNamespace(pk=902),
+                    "total_cost": Decimal("0.00"),
+                },
+                user=None,
+            )
