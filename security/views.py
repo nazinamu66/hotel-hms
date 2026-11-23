@@ -52,7 +52,7 @@ def security_dashboard(request):
         "available_hotels": _accessible_hotels(request.user),
         "vehicles_inside": visits.filter(exited_at__isnull=True).count(),
         "vehicles_entered_today": visits.filter(entered_at__date=today).count(),
-        "recent_vehicle_visits": visits.select_related("entered_by", "exited_by")[:8],
+        "recent_vehicle_visits": visits.filter(exited_at__isnull=True).select_related("entered_by")[:8],
         "pending": passes.filter(status=PropertyExitPass.AUTHORIZED).count(),
         "currently_out": passes.filter(status=PropertyExitPass.OUT).count(),
         "overdue": passes.filter(status=PropertyExitPass.OUT, pass_type=PropertyExitPass.TEMPORARY, expected_return_date__lt=today).count(),
