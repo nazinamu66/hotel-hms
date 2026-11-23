@@ -17,22 +17,6 @@ urlpatterns = [
         name="store_linen_stock_requests",
     ),
 
-    # ============================================================
-    # LINEN
-    # ============================================================
-
-    path(
-        "linen-requests/",
-        views.store_linen_requests,
-        name="store_linen_requests",
-    ),
-
-    path(
-        "linen-requests/<int:pk>/fulfill/",
-        views.store_fulfill_linen_request,
-        name="store_fulfill_linen_request",
-    ),
-    
     path(
         "stock-requests/<int:pk>/issue/",
         views.store_issue_stock_request,
