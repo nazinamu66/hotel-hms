@@ -382,6 +382,43 @@ class HousekeepingMaterialCustodyWorkflowTests(TestCase):
                 quantity=Decimal("1"), issued_by=self.head,
             )
 
+    def test_material_returns_page_shows_confirmed_and_rejected_history(self):
+        from housekeeping.workflows.material_custody import (
+            confirm_unused_material_return, issue_material_to_assignment,
+            reject_unused_material_return, request_unused_material_return,
+        )
+
+        issue = issue_material_to_assignment(
+            assignment=self.assignment, product=self.product,
+            quantity=Decimal("4.000"), issued_by=self.head,
+        )
+        confirmed = request_unused_material_return(
+            issue=issue, quantity=Decimal("1.000"), returned_by=self.staff,
+        )
+        rejected = request_unused_material_return(
+            issue=issue, quantity=Decimal("1.000"), returned_by=self.staff,
+        )
+        confirm_unused_material_return(material_return=confirmed, confirmed_by=self.head)
+        reject_unused_material_return(
+            material_return=rejected, rejected_by=self.head,
+            notes="Quantity did not match the physical return.",
+        )
+
+        self.client.force_login(self.head)
+        response = self.client.get(
+            reverse("housekeeping_material_returns"), {"view": "history"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Processed return records")
+        self.assertContains(response, "Confirmed")
+        self.assertContains(response, "Rejected")
+        self.assertContains(response, "Quantity did not match the physical return.")
+        self.assertContains(response, "Guest Water")
+        self.assertEqual(response.context["history_count"], 2)
+        self.assertEqual(response.context["confirmed_count"], 1)
+        self.assertEqual(response.context["rejected_count"], 1)
+
     def test_department_stock_shows_only_opted_in_resale_products(self):
         approved = Product.objects.create(
             hotel=self.hotel, name="Department Stock Fanta", sku="HK-STOCK-FANTA",
