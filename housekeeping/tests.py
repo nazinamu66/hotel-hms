@@ -363,6 +363,13 @@ class HousekeepingMaterialCustodyWorkflowTests(TestCase):
         )
         self.assertEqual(issue.product, resale)
 
+        self.client.force_login(self.head)
+        custody_response = self.client.get(
+            reverse("housekeeping_material_custody", args=[self.assignment.pk])
+        )
+        self.assertEqual(custody_response.status_code, 200)
+        self.assertContains(custody_response, "Retail Juice")
+
         asset = Product.objects.create(
             hotel=self.hotel, name="Housekeeping Linen Asset", sku="HK-LINEN-ASSET",
             product_type="HOUSEKEEPING", usage_type="ASSET", base_unit="piece",
