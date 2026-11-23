@@ -19,7 +19,7 @@
                 <div class="hk-field"><label for="quantity">Quantity</label><input id="quantity" name="quantity" type="number" min="0.001" step="0.001" required></div>
                 <div class="hk-field" style="display:flex;align-items:end"><button class="hk-btn" type="submit">Issue to {{ assignment.assigned_to }}</button></div>
             </div>
-            <p class="hk-muted">Only active INTERNAL and CONSUMABLE products authorized for Housekeeping are available. Issue quantities reserve the department's stock until consumed or returned.</p>
+            <p class="hk-muted">Active INTERNAL and CONSUMABLE products authorized for Housekeeping are available, together with RESALE products explicitly approved for Housekeeping. ASSET products are excluded. Issue quantities reserve the department's stock until consumed or returned.</p>
         </form>
     </section>
     {% endif %}
