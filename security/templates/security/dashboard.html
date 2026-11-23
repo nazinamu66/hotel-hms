@@ -1,6 +1,7 @@
 {% extends "base/base.html" %}
 {% block title %}Security Dashboard{% endblock %}
 {% block content %}
+{% if available_hotels.count > 1 %}<form method="get" class="card"><label for="hotel">Hotel</label><select name="hotel" id="hotel">{% for h in available_hotels %}<option value="{{ h.pk }}" {% if h.pk == hotel.pk %}selected{% endif %}>{{ h.name }}</option>{% endfor %}</select><button type="submit">Switch Hotel</button></form>{% endif %}
 <div class="page-header"><div><h1>Security Dashboard</h1><p>{{ hotel.name }} · Property movement and gate control</p></div><a class="btn btn-primary" href="{% url 'security_pass_list' %}">Open Register</a></div>
 <div class="dashboard-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin:20px 0">
 <div class="card"><h3>Awaiting Gate Exit</h3><strong>{{ pending }}</strong></div><div class="card"><h3>Currently Outside</h3><strong>{{ currently_out }}</strong></div><div class="card"><h3>Overdue Returns</h3><strong>{{ overdue }}</strong></div>
