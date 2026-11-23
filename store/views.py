@@ -1178,7 +1178,7 @@ def stock_movement_log(request):
         "-created_at",
     )
 
-    movements = (
+    movements = list(
         movements
         .select_related(
             "product",
@@ -1193,6 +1193,29 @@ def stock_movement_log(request):
             "-id",
         )
     )
+
+    # Receipt movements use references such as PO-6-REC-6.
+    # Resolve the actual PO primary key separately so templates never
+    # pass the full receipt reference (6-REC-6) to the integer URL.
+    purchase_order_ids = set()
+    for movement in movements:
+        movement.purchase_order_id = None
+        reference = movement.reference or ""
+        if movement.movement_type == "IN" and reference.startswith("PO-"):
+            po_token = reference[3:].split("-", 1)[0]
+            if po_token.isdigit():
+                purchase_order_ids.add(int(po_token))
+                movement.purchase_order_id = int(po_token)
+
+    valid_purchase_order_ids = set(
+        PurchaseOrder.objects.filter(
+            pk__in=purchase_order_ids,
+            department__hotel__in=hotels,
+        ).values_list("pk", flat=True)
+    )
+    for movement in movements:
+        if movement.purchase_order_id not in valid_purchase_order_ids:
+            movement.purchase_order_id = None
 
     return render(
         request,
