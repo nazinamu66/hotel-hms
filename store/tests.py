@@ -382,3 +382,66 @@ class StoreStockTransferTests(TestCase):
         response = issue_request_item(request, item_id=1)
 
         self.assertEqual(response.status_code, 405)
+
+
+class StoreLaundryLinenRequestPageTests(StoreStockTransferTests):
+    def test_store_user_can_view_laundry_linen_requests_with_fulfillment_totals(self):
+        laundry = Department.objects.create(
+            hotel=self.hotel,
+            code="LND",
+            name="Test Laundry",
+            department_type="LAUNDRY",
+        )
+        linen_product = Product.objects.create(
+            hotel=self.hotel,
+            name="Register Bedsheet",
+            sku="STORE-REGISTER-BEDSHEET",
+            product_type="LAUNDRY",
+            usage_type="ASSET",
+            base_unit="piece",
+            cost_price=Decimal("500.00"),
+        )
+        LinenItem.objects.create(product=linen_product)
+        stock_request = LowStockRequest.objects.create(
+            product=linen_product,
+            department=laundry,
+            requested_quantity=5,
+            fulfillment_type="STORE",
+            requested_by=self.store_user,
+            status="PARTIALLY_FULFILLED",
+        )
+        StockTransfer.objects.create(
+            product=linen_product,
+            from_department=self.store,
+            to_department=laundry,
+            quantity=Decimal("2.000"),
+            created_by=self.store_user,
+            stock_request=stock_request,
+        )
+
+        client = Client()
+        client.force_login(self.store_user)
+        response = client.get(reverse("store_linen_stock_requests"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Laundry Linen Requests")
+        self.assertContains(response, "Register Bedsheet")
+        self.assertContains(response, "3")
+        self.assertContains(response, "Partially Fulfilled")
+        self.assertEqual(response.context["open_count"], 1)
+        self.assertEqual(response.context["fulfilled_count"], 0)
+
+    def test_laundry_linen_requests_page_is_limited_to_store_role(self):
+        User = get_user_model()
+        manager = User.objects.create_user(
+            username="linen-page-manager",
+            password="test-password",
+            role="MANAGER",
+            department=self.store,
+        )
+        client = Client()
+        client.force_login(manager)
+
+        response = client.get(reverse("store_linen_stock_requests"))
+
+        self.assertNotEqual(response.status_code, 200)
