@@ -794,6 +794,9 @@ def role_redirect(request):
     if role == "LAUNDRY":
         return redirect("/laundry/")
 
+    if role == "SECURITY":
+        return redirect("/security/")
+
     return redirect("login")
 
 
