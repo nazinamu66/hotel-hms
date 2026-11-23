@@ -3,7 +3,6 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from accounting.services.journal import record_transaction
 from inventory.models import Product, Stock, stock_out
 from kitchen.models import StaffFoodIngredientUsage, StaffFoodProduction
 from kitchen.unit_conversion import convert_quantity
@@ -161,15 +160,11 @@ def execute_staff_food_production(*, production, ingredient_entries, user):
         total_cost += cost
 
     total_cost = total_cost.quantize(MONEY, rounding=ROUND_HALF_UP)
-    journal_entry = record_transaction(
-        debit_system_key="staff_meals_expense",
-        credit_system_key="inventory_asset",
+    from accounting.services.postings.staff_food import post_staff_food_consumption
+    post_staff_food_consumption(
+        production=production,
         amount=total_cost,
-        description=f"Staff food - {production.meal_name or 'Daily staff meal'} ({production.production_date})",
-        hotel=department.hotel,
-        created_by=user,
-        entry_type="NORMAL",
-        reference=f"STAFF-FOOD-{production.pk}",
+        user=user,
     )
     production.total_cost = total_cost
     production.save(update_fields=["total_cost"])
