@@ -262,7 +262,10 @@ def dashboard(request):
             .filter(
                 department=housekeeping_departments,
                 product__is_active=True,
-                (Q(product__usage_type__in=("INTERNAL", "CONSUMABLE")) | Q(product__usage_type="RESALE", product__housekeeping_issue_eligible=True)),
+            )
+            .filter(
+                Q(product__usage_type__in=("INTERNAL", "CONSUMABLE"))
+                | Q(product__usage_type="RESALE", product__housekeeping_issue_eligible=True)
             )
             .order_by(
                 "product__name",
@@ -281,7 +284,10 @@ def dashboard(request):
                 department__department_type="HOUSEKEEPING",
                 department__is_active=True,
                 product__is_active=True,
-                (Q(product__usage_type__in=("INTERNAL", "CONSUMABLE")) | Q(product__usage_type="RESALE", product__housekeeping_issue_eligible=True)),
+            )
+            .filter(
+                Q(product__usage_type__in=("INTERNAL", "CONSUMABLE"))
+                | Q(product__usage_type="RESALE", product__housekeeping_issue_eligible=True)
             )
             .order_by(
                 "department__hotel__name",
