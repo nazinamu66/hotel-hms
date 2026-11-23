@@ -12,24 +12,32 @@ from .models import PropertyExitPass
 MANAGEMENT_ROLES = ("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 
 
-def _hotel_for_user(user):
-    if user.role == "DIRECTOR":
-        raise PermissionDenied("Select a specific hotel context to manage property passes.")
-    if user.role == "GENERAL_MANAGER":
-        hotels = user.assigned_hotels.filter(is_active=True)
-        if hotels.count() != 1:
-            raise PermissionDenied("A General Manager must access a single assigned hotel at a time.")
+def _hotel_for_user(request):
+    user = request.user
+    if user.role in {"DIRECTOR", "ADMIN"}:
+        hotels = Hotel.objects.filter(is_active=True).order_by("name")
+    elif user.role == "GENERAL_MANAGER":
+        hotels = user.assigned_hotels.filter(is_active=True).order_by("name")
+    else:
+        hotel = user.hotel or (user.department.hotel if user.department_id else None)
+        if not hotel:
+            raise PermissionDenied("Your account is not assigned to a hotel.")
+        return hotel
+    selected_id = request.POST.get("hotel") or request.GET.get("hotel")
+    if selected_id:
+        try:
+            return hotels.get(pk=selected_id)
+        except (Hotel.DoesNotExist, ValueError):
+            raise PermissionDenied("You do not have access to that hotel.")
+    if hotels.count() == 1:
         return hotels.first()
-    hotel = user.hotel or (user.department.hotel if user.department_id else None)
-    if not hotel:
-        raise PermissionDenied("Your account is not assigned to a hotel.")
-    return hotel
+    raise PermissionDenied("Choose a hotel using the hotel selector before continuing.")
 
 
 @login_required
 @role_required("SECURITY", *MANAGEMENT_ROLES)
 def security_dashboard(request):
-    hotel = _hotel_for_user(request.user)
+    hotel = _hotel_for_user(request)
     passes = PropertyExitPass.objects.filter(hotel=hotel)
     context = {
         "hotel": hotel,
