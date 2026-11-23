@@ -34,6 +34,7 @@ class User(AbstractUser):
         ("LAUNDRY", "Laundry Staff"),
         ("GYM", "Gym Staff"),
         ("BOUTIQUE", "Boutique Staff"),
+        ("SECURITY", "Security Staff"),
     )
 
     role = models.CharField(
