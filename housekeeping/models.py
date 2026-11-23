@@ -222,7 +222,7 @@ class CleaningMaterialIssue(models.Model):
     class Meta:
         ordering = ("issued_at", "id")
         indexes = [
-            models.Index(fields=("assignment", "product")),
+            models.Index(fields=("assignment", "product"), name="hk_cmi_assign_product_idx"),
         ]
 
     def __str__(self):
@@ -264,7 +264,7 @@ class CleaningMaterialReturn(models.Model):
     class Meta:
         ordering = ("recorded_at", "id")
         indexes = [
-            models.Index(fields=("issue", "status")),
+            models.Index(fields=("issue", "status"), name="hk_cmr_issue_status_idx"),
         ]
 
     def __str__(self):
