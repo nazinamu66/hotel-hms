@@ -1,0 +1,21 @@
+{% extends "base/base.html" %}
+{% block title %}Material Returns · Housekeeping{% endblock %}
+{% block header %}{% endblock %}
+{% block content %}
+<style>
+.hk-returns{max-width:1100px;margin:0 auto;padding:20px 0 40px;color:#1e293b}.hk-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin:15px 0}.hk-table{width:100%;border-collapse:collapse}.hk-table th,.hk-table td{text-align:left;padding:12px;border-bottom:1px solid #e2e8f0}.hk-table th{background:#f8fafc;color:#64748b;font-size:.75rem;text-transform:uppercase}.hk-btn{padding:8px 12px;border:0;border-radius:8px;background:#1d4ed8;color:white;font-weight:700;cursor:pointer}.hk-reject{background:#b91c1c}.hk-muted{color:#64748b}
+</style>
+<div class="hk-returns">
+    <p class="hk-muted">Housekeeping · Inventory control</p><h1>Pending material returns</h1>
+    <section class="hk-card">
+        <div style="overflow-x:auto"><table class="hk-table"><thead><tr><th>Room / Hotel</th><th>Housekeeper</th><th>Product</th><th>Quantity</th><th>Submitted</th><th>Notes / Action</th></tr></thead><tbody>
+        {% for item in pending_returns %}
+        <tr><td>Room {{ item.issue.assignment.room.room_number }}<div class="hk-muted">{{ item.issue.assignment.room.hotel.name }}</div></td><td>{{ item.returned_by }}</td><td>{{ item.issue.product.name }}</td><td>{{ item.quantity }} {{ item.issue.product.base_unit }}</td><td>{{ item.recorded_at|date:"Y-m-d H:i" }}</td><td>
+            <form method="post" style="display:flex;gap:6px;flex-wrap:wrap">{% csrf_token %}<input type="hidden" name="return_id" value="{{ item.id }}"><input name="notes" placeholder="Reason if rejecting"><button class="hk-btn" name="action" value="confirm">Confirm</button><button class="hk-btn hk-reject" name="action" value="reject">Reject</button></form>
+        </td></tr>
+        {% empty %}<tr><td colspan="6" class="hk-muted">There are no pending material returns.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+    <a href="{% url 'housekeeping_stock_workspace' %}">← Back to Housekeeping Stock</a>
+</div>
+{% endblock %}
