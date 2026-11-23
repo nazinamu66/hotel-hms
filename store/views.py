@@ -1235,7 +1235,37 @@ def stock_movement_log(request):
 
 @role_required("STORE", "MANAGER", "ADMIN")
 def transfer_detail(request, pk):
-    transfer = get_object_or_404(StockTransfer, pk=pk)
+    hotels = get_user_hotels(request.user)
+
+    if not hotels.exists():
+        raise PermissionDenied
+
+    transfers = StockTransfer.objects.select_related(
+        "product",
+        "from_department",
+        "from_department__hotel",
+        "to_department",
+        "to_department__hotel",
+        "created_by",
+    )
+
+    if request.user.role == "STORE":
+        store = request.user.department
+        if not store or store.department_type != "STORE":
+            raise PermissionDenied(
+                "You are not assigned to the Store department."
+            )
+        transfers = transfers.filter(
+            models.Q(from_department=store)
+            | models.Q(to_department=store)
+        )
+    else:
+        transfers = transfers.filter(
+            models.Q(from_department__hotel__in=hotels)
+            | models.Q(to_department__hotel__in=hotels)
+        )
+
+    transfer = get_object_or_404(transfers, pk=pk)
 
     return render(
         request,
