@@ -30,8 +30,8 @@
         <tr>
             <td>{{ row.issue.product.name }}<div class="hk-muted">{{ row.issue.issued_at|date:"Y-m-d H:i" }}</div></td>
             <td>{{ row.issue.quantity }} {{ row.issue.product.base_unit }}</td>
-            <td>{{ row.issue.usages.all|length }}</td>
-            <td>{% for returned in row.issue.returns.all %}{% if returned.status == "CONFIRMED" %}{{ returned.quantity }}{% endif %}{% empty %}0{% endfor %}</td>
+            <td>{{ row.consumed }} {{ row.issue.product.base_unit }}</td>
+            <td>{{ row.confirmed_returned }} {{ row.issue.product.base_unit }}</td>
             <td><strong>{{ row.remaining }} {{ row.issue.product.base_unit }}</strong></td>
             <td>
                 {% if is_assignee and row.remaining > 0 %}
