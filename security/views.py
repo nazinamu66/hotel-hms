@@ -58,7 +58,7 @@ def security_dashboard(request):
 @login_required
 @role_required("SECURITY", *MANAGEMENT_ROLES)
 def property_pass_list(request):
-    hotel = _hotel_for_user(request.user)
+    hotel = _hotel_for_user(request)
     passes = PropertyExitPass.objects.filter(hotel=hotel).select_related("authorising_manager", "gate_out_by", "return_confirmed_by", "equipment_asset")
     status = request.GET.get("status", "").strip()
     if status in dict(PropertyExitPass.STATUS_CHOICES):
@@ -69,7 +69,7 @@ def property_pass_list(request):
 @login_required
 @role_required(*MANAGEMENT_ROLES)
 def property_pass_create(request):
-    hotel = _hotel_for_user(request.user)
+    hotel = _hotel_for_user(request)
     form = PropertyExitPassForm(request.POST or None, request.FILES or None, hotel=hotel)
     if request.method == "POST" and form.is_valid():
         record = form.save(commit=False)
@@ -79,7 +79,7 @@ def property_pass_create(request):
         record.full_clean()
         record.save()
         messages.success(request, f"Authorisation {record.pass_number} created. Security can now record the gate exit.")
-        return redirect("security_pass_detail", pass_id=record.pk)
+        return redirect(f"/security/property-passes/{record.pk}/?hotel={hotel.pk}")
     return render(request, "security/pass_form.html", {"form": form, "hotel": hotel, "available_hotels": _accessible_hotels(request.user)})
 
 
@@ -87,7 +87,7 @@ def property_pass_create(request):
 @role_required("SECURITY")
 @transaction.atomic
 def property_pass_gate_out(request, pass_id):
-    hotel = _hotel_for_user(request.user)
+    hotel = _hotel_for_user(request)
     record = get_object_or_404(PropertyExitPass.objects.select_for_update(), pk=pass_id, hotel=hotel)
     if request.method == "POST" and record.status == PropertyExitPass.AUTHORIZED:
         record.status = PropertyExitPass.OUT if record.pass_type == PropertyExitPass.TEMPORARY else PropertyExitPass.RELEASED
@@ -103,7 +103,7 @@ def property_pass_gate_out(request, pass_id):
 @role_required("SECURITY")
 @transaction.atomic
 def property_pass_return(request, pass_id):
-    hotel = _hotel_for_user(request.user)
+    hotel = _hotel_for_user(request)
     record = get_object_or_404(PropertyExitPass.objects.select_for_update(), pk=pass_id, hotel=hotel)
     if request.method == "POST" and record.status == PropertyExitPass.OUT and record.pass_type == PropertyExitPass.TEMPORARY:
         record.status = PropertyExitPass.RETURNED
@@ -119,6 +119,6 @@ def property_pass_return(request, pass_id):
 @login_required
 @role_required("SECURITY", *MANAGEMENT_ROLES)
 def property_pass_detail(request, pass_id):
-    hotel = _hotel_for_user(request.user)
+    hotel = _hotel_for_user(request)
     record = get_object_or_404(PropertyExitPass.objects.select_related("authorising_manager", "gate_out_by", "return_confirmed_by", "equipment_asset", "staff_user"), pk=pass_id, hotel=hotel)
     return render(request, "security/pass_detail.html", {"record": record, "available_hotels": _accessible_hotels(request.user)})
