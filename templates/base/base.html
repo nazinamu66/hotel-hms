@@ -725,27 +725,25 @@
                 My Department Requests
             </a>
 
-            {% if request.user.role == "STORE" %}
             <h5 class="menu-subtoggle">Receiving</h5>
+            {% if request.user.role == "STORE" %}
             <a href="{% url 'inventory:department_incoming_pos' %}">
                 Incoming Deliveries
             </a>
+            {% endif %}
             <a href="{% url 'store_receive_history' %}">
                 Goods Received History
             </a>
-            {% endif %}
 
             <h5 class="menu-subtoggle">Issue History</h5>
             <a href="{% url 'store_issue_history' %}">
                 Stock Issue History
             </a>
 
-            {% if user|has_role:"ADMIN,MANAGER" %}
             <h5 class="menu-subtoggle">Linen Records</h5>
             <a href="{% url 'housekeeping_linen_movements' %}">
                 Linen Custody Register
             </a>
-            {% endif %}
 
         </div>
 
