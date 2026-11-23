@@ -1,0 +1,75 @@
+/* City Center Hotels HMS Design System
+   Additive, reusable UI primitives. Legacy app.css remains untouched.
+   Scope new/refreshed page markup with hms- classes. */
+:root {
+  --hms-ink:#172033; --hms-muted:#64748b; --hms-subtle:#94a3b8;
+  --hms-border:#e2e8f0; --hms-surface:#fff; --hms-page:#f4f7fb;
+  --hms-primary:#2563eb; --hms-primary-hover:#1d4ed8;
+  --hms-success:#15803d; --hms-warning:#b45309; --hms-danger:#b91c1c;
+  --hms-radius-sm:9px; --hms-radius:14px; --hms-radius-lg:18px;
+  --hms-shadow:0 8px 24px rgba(15,23,42,.055);
+}
+.hms-page,.hms-page *{box-sizing:border-box}
+.hms-page{width:100%;max-width:1560px;margin:0 auto;color:var(--hms-ink)}
+.hms-page-header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin:0 0 24px}
+.hms-page-heading{min-width:0}
+.hms-eyebrow{margin:0 0 7px;color:var(--hms-primary);font-size:.7rem;font-weight:850;letter-spacing:.13em;text-transform:uppercase}
+.hms-page-title{margin:0;color:var(--hms-ink);font-size:clamp(1.65rem,2.5vw,2.15rem);line-height:1.15;letter-spacing:-.045em;font-weight:850}
+.hms-page-subtitle{margin:8px 0 0;color:var(--hms-muted);font-size:.9rem;line-height:1.55}
+.hms-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px}
+.hms-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:10px 15px;border:1px solid transparent;border-radius:var(--hms-radius-sm);background:#fff;color:var(--hms-ink);text-decoration:none;font:inherit;font-size:.84rem;font-weight:750;line-height:1.2;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s,transform .15s}
+.hms-btn:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(15,23,42,.10)}
+.hms-btn-primary{background:var(--hms-primary);color:#fff}
+.hms-btn-primary:hover{background:var(--hms-primary-hover);color:#fff}
+.hms-btn-secondary{border-color:var(--hms-border);background:#fff;color:#334155}
+.hms-btn-quiet{border-color:transparent;background:#eff6ff;color:#1d4ed8}
+.hms-card{min-width:0;padding:20px;border:1px solid var(--hms-border);border-radius:var(--hms-radius);background:var(--hms-surface);box-shadow:var(--hms-shadow)}
+.hms-card+.hms-card{margin-top:18px}
+.hms-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin:0 0 16px}
+.hms-card-title{margin:0;color:var(--hms-ink);font-size:1rem;font-weight:820;letter-spacing:-.02em}
+.hms-card-description{margin:5px 0 0;color:var(--hms-muted);font-size:.82rem;line-height:1.5}
+.hms-kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:0 0 22px}
+.hms-kpi{min-width:0;padding:19px 20px;border:1px solid var(--hms-border);border-radius:var(--hms-radius);background:linear-gradient(145deg,#fff 0%,#fbfdff 100%);box-shadow:var(--hms-shadow)}
+.hms-kpi-label{color:var(--hms-muted);font-size:.78rem;font-weight:750}
+.hms-kpi-value{margin-top:10px;color:var(--hms-ink);font-size:clamp(1.7rem,2.4vw,2.15rem);line-height:1;font-weight:850;letter-spacing:-.045em;font-variant-numeric:tabular-nums}
+.hms-kpi-note{margin-top:8px;color:var(--hms-subtle);font-size:.74rem}
+.hms-toolbar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px;margin:0 0 17px;padding:15px;border:1px solid var(--hms-border);border-radius:var(--hms-radius);background:#fff;box-shadow:var(--hms-shadow)}
+.hms-field{display:flex;flex:1 1 180px;flex-direction:column;gap:7px;min-width:0}
+.hms-field label{color:#475569;font-size:.76rem;font-weight:750}
+.hms-field input,.hms-field select,.hms-field textarea{width:100%;min-height:42px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:var(--hms-radius-sm);background:#fff;color:var(--hms-ink);font:inherit;font-size:.86rem}
+.hms-field textarea{min-height:92px;resize:vertical}
+.hms-field input:focus,.hms-field select:focus,.hms-field textarea:focus{outline:3px solid rgba(37,99,235,.13);border-color:#60a5fa}
+.hms-field-help{color:var(--hms-muted);font-size:.73rem;line-height:1.5}
+.hms-field-error{color:var(--hms-danger);font-size:.75rem}
+.hms-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+.hms-form-section+.hms-form-section{margin-top:22px;padding-top:20px;border-top:1px solid var(--hms-border)}
+.hms-form-footer{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px;margin-top:22px;padding-top:18px;border-top:1px solid var(--hms-border)}
+.hms-table-wrap{width:100%;overflow-x:auto;border:1px solid var(--hms-border);border-radius:12px}
+.hms-table{width:100%;min-width:820px;border-collapse:separate;border-spacing:0;background:#fff;font-size:.82rem}
+.hms-table th{padding:12px 14px;background:#f8fafc;color:#64748b;font-size:.68rem;font-weight:850;letter-spacing:.065em;text-align:left;text-transform:uppercase;white-space:nowrap}
+.hms-table td{padding:13px 14px;border-top:1px solid #edf1f6;color:#334155;vertical-align:middle}
+.hms-table tbody tr:hover{background:#f8fbff}
+.hms-table-primary{color:var(--hms-ink);font-weight:750}
+.hms-table-secondary{display:block;margin-top:3px;color:var(--hms-muted);font-size:.74rem}
+.hms-link{color:#1d4ed8;font-weight:750;text-decoration:none}
+.hms-link:hover{text-decoration:underline}
+.hms-status{display:inline-flex;align-items:center;padding:5px 9px;border-radius:99px;background:#f1f5f9;color:#475569;font-size:.69rem;font-weight:850;white-space:nowrap}
+.hms-status-authorized{background:#eff6ff;color:#1d4ed8}
+.hms-status-out{background:#fff7ed;color:#c2410c}
+.hms-status-returned,.hms-status-released{background:#ecfdf5;color:#047857}
+.hms-status-cancelled{background:#fef2f2;color:#b91c1c}
+.hms-empty{padding:34px 18px;text-align:center;color:var(--hms-muted)}
+.hms-empty strong{display:block;margin-bottom:5px;color:var(--hms-ink);font-size:.9rem}
+.hms-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.hms-detail-list{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(0,1.3fr);gap:11px 16px;margin:0}
+.hms-detail-list dt{color:var(--hms-muted);font-size:.78rem}
+.hms-detail-list dd{margin:0;color:#1e293b;font-size:.82rem;font-weight:650;overflow-wrap:anywhere}
+.hms-notice{margin:0 0 18px;padding:13px 15px;border:1px solid #bfdbfe;border-radius:11px;background:#eff6ff;color:#1e40af;font-size:.82rem;line-height:1.55}
+@media(max-width:900px){.hms-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){
+ .hms-page-header{align-items:flex-start;flex-direction:column}.hms-actions{width:100%}
+ .hms-kpi-grid,.hms-detail-grid,.hms-form-grid{grid-template-columns:minmax(0,1fr)}
+ .hms-card{padding:16px}.hms-toolbar{align-items:stretch}.hms-field{flex-basis:100%}
+ .hms-form-footer{flex-direction:column-reverse}.hms-form-footer .hms-btn{width:100%}
+ .hms-detail-list{grid-template-columns:1fr;gap:4px}.hms-detail-list dd{margin-bottom:9px}
+}
