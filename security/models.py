@@ -63,6 +63,8 @@ class PropertyExitPass(models.Model):
             errors["expected_return_date"] = "An expected return date is required for temporary removals."
         if self.pass_type == self.PERMANENT and self.expected_return_date:
             errors["expected_return_date"] = "Permanent releases do not have a return date."
+        if not self.approval_reference and not self.authorisation_note:
+            errors["approval_reference"] = "Record the handwritten note reference or attach a scan/photo of the management authorisation."
         if self.equipment_asset_id:
             if not self.item_is_equipment:
                 errors["equipment_asset"] = "Select 'This item is equipment' to link a registered asset."
