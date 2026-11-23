@@ -337,7 +337,7 @@ class HousekeepingMaterialCustodyWorkflowTests(TestCase):
         confirm_unused_material_return(material_return=returned, confirmed_by=self.head)
         self.assertEqual(issue_remaining(issue), Decimal("1.000"))
 
-    def test_housekeeping_cannot_issue_resale_or_asset_products(self):
+    def test_only_explicitly_approved_resale_products_can_be_issued(self):
         from django.core.exceptions import ValidationError
         from housekeeping.workflows.material_custody import issue_material_to_assignment
 
@@ -351,3 +351,34 @@ class HousekeepingMaterialCustodyWorkflowTests(TestCase):
                 assignment=self.assignment, product=resale,
                 quantity=Decimal("1"), issued_by=self.head,
             )
+
+        resale.housekeeping_issue_eligible = True
+        resale.save(update_fields=["housekeeping_issue_eligible"])
+        Stock.objects.create(
+            product=resale, department=self.department, quantity=Decimal("2.000"),
+        )
+        issue = issue_material_to_assignment(
+            assignment=self.assignment, product=resale,
+            quantity=Decimal("1"), issued_by=self.head,
+        )
+        self.assertEqual(issue.product, resale)
+
+    def test_housekeeping_request_stock_shows_only_opted_in_resale_products(self):
+        approved = Product.objects.create(
+            hotel=self.hotel, name="Approved Room Fanta", sku="HK-FANTA-APPROVED",
+            product_type="DRINK", usage_type="RESALE", base_unit="bottle",
+            housekeeping_issue_eligible=True,
+        )
+        approved.departments.add(self.department)
+        excluded = Product.objects.create(
+            hotel=self.hotel, name="Bar Beer", sku="HK-BAR-BEER",
+            product_type="DRINK", usage_type="RESALE", base_unit="bottle",
+        )
+        excluded.departments.add(self.department)
+
+        self.client.force_login(self.head)
+        response = self.client.get(reverse("housekeeping_request_stock"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Approved Room Fanta")
+        self.assertNotContains(response, "Bar Beer")
