@@ -1,0 +1,49 @@
+{% extends "base/base.html" %}
+{% block title %}Material Custody · Room {{ assignment.room.room_number }}{% endblock %}
+{% block header %}{% endblock %}
+{% block content %}
+<style>
+.hk-custody{max-width:1050px;margin:0 auto;padding:18px 0 40px;color:#1e293b}.hk-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin:16px 0}.hk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.hk-field label{display:block;font-size:.82rem;font-weight:700;margin-bottom:6px}.hk-field input,.hk-field select,.hk-field textarea{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px}.hk-btn{padding:10px 14px;border:0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:700;cursor:pointer}.hk-muted{color:#64748b}.hk-table{width:100%;border-collapse:collapse}.hk-table th,.hk-table td{text-align:left;padding:11px;border-bottom:1px solid #e2e8f0}.hk-table th{font-size:.75rem;text-transform:uppercase;color:#64748b;background:#f8fafc}@media(max-width:700px){.hk-grid{grid-template-columns:1fr}.hk-table-wrap{overflow:auto}}
+</style>
+<div class="hk-custody">
+    <p class="hk-muted">Housekeeping · Room {{ assignment.room.room_number }} · {{ assignment.assigned_to }}</p>
+    <h1>Material custody</h1>
+    <p class="hk-muted">Every issue is tied to this room assignment. Cleaning use and guest room replenishment are recorded separately.</p>
+    {% if can_issue %}
+    <section class="hk-card">
+        <h3>Issue materials to housekeeper</h3>
+        <form method="post">
+            {% csrf_token %}<input type="hidden" name="action" value="issue">
+            <div class="hk-grid">
+                <div class="hk-field"><label for="product_id">Product</label><select id="product_id" name="product_id" required><option value="">Select product</option>{% for product in products %}<option value="{{ product.id }}">{{ product.name }} · {{ product.base_unit }}</option>{% endfor %}</select></div>
+                <div class="hk-field"><label for="quantity">Quantity</label><input id="quantity" name="quantity" type="number" min="0.001" step="0.001" required></div>
+                <div class="hk-field" style="display:flex;align-items:end"><button class="hk-btn" type="submit">Issue to {{ assignment.assigned_to }}</button></div>
+            </div>
+            <p class="hk-muted">Only active INTERNAL and CONSUMABLE products authorized for Housekeeping are available. Issue quantities reserve the department's stock until consumed or returned.</p>
+        </form>
+    </section>
+    {% endif %}
+    <section class="hk-card">
+        <h3>Issued materials and remaining custody</h3>
+        <div class="hk-table-wrap"><table class="hk-table"><thead><tr><th>Product</th><th>Issued</th><th>Consumed</th><th>Confirmed return</th><th>Remaining with staff</th><th>Action</th></tr></thead><tbody>
+        {% for row in issues %}
+        <tr>
+            <td>{{ row.issue.product.name }}<div class="hk-muted">{{ row.issue.issued_at|date:"Y-m-d H:i" }}</div></td>
+            <td>{{ row.issue.quantity }} {{ row.issue.product.base_unit }}</td>
+            <td>{{ row.issue.usages.all|length }}</td>
+            <td>{% for returned in row.issue.returns.all %}{% if returned.status == "CONFIRMED" %}{{ returned.quantity }}{% endif %}{% empty %}0{% endfor %}</td>
+            <td><strong>{{ row.remaining }} {{ row.issue.product.base_unit }}</strong></td>
+            <td>
+                {% if is_assignee and row.remaining > 0 %}
+                <form method="post">{% csrf_token %}<input type="hidden" name="action" value="return"><input type="hidden" name="issue_id" value="{{ row.issue.id }}"><input name="quantity" type="number" min="0.001" max="{{ row.remaining }}" step="0.001" placeholder="Return qty" required style="width:100px"><button class="hk-btn" type="submit">Submit return</button></form>
+                {% endif %}
+                {% for returned in row.pending_returns %}<div class="hk-muted">Return {{ returned.quantity }} pending confirmation</div>{% endfor %}
+            </td>
+        </tr>
+        {% empty %}<tr><td colspan="6" class="hk-muted">No materials have been issued for this assignment.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+    {% if can_issue %}<p><a href="{% url 'housekeeping_material_returns' %}">Review pending material returns →</a></p>{% endif %}
+    <p><a href="{% url 'housekeeping_dashboard' %}">← Back to Housekeeping</a></p>
+</div>
+{% endblock %}
