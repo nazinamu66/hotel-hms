@@ -39,7 +39,7 @@
               <tbody id="ingredient-rows">
                 {% for row in formset %}
                 <tr class="sf-row">
-                  <td>{{ row.ingredient }}</td><td>{{ row.actual_quantity }}</td><td>{{ row.DELETE }} <button type="button" class="sf-remove">Remove</button></td>
+                  <td>{{ row.ingredient }}</td><td>{{ row.actual_quantity }}{{ row.unit }}</td><td>{{ row.DELETE }} <button type="button" class="sf-remove">Remove</button></td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -59,7 +59,7 @@
         <tr>
           <td>{{ item.production_date|date:"d M Y" }}</td><td>{{ item.meal_name|default:"—" }}</td>
           <td>{% if item.status == "PREPARED" %}<span class="sf-pill">Prepared</span>{% else %}<span class="sf-pill no">No meal</span>{% endif %}</td>
-          <td>{{ item.portions_prepared }}</td><td>{{ item.portions_served }}</td><td>{{ item.portions_prepared|add:"-"|add:item.portions_served }}</td>
+          <td>{{ item.portions_prepared }}</td><td>{{ item.portions_served }}</td><td>{{ item.leftovers }}</td>
           <td class="sf-cost">₦{{ item.total_cost|floatformat:2 }}</td><td>{{ item.recorded_by|default:"—" }}</td>
           <td>{% for usage in item.ingredient_usages.all %}{{ usage.ingredient.name }} ({{ usage.actual_quantity }} {{ usage.ingredient.base_unit }}){% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
         </tr>
@@ -71,7 +71,7 @@
 
 <template id="ingredient-row-template">
 <tr class="sf-row">
-  <td>{{ formset.empty_form.ingredient }}</td><td>{{ formset.empty_form.actual_quantity }}</td>
+  <td>{{ formset.empty_form.ingredient }}</td><td>{{ formset.empty_form.actual_quantity }}{{ formset.empty_form.unit }}</td>
   <td>{{ formset.empty_form.DELETE }} <button type="button" class="sf-remove">Remove</button></td>
 </tr>
 </template>
@@ -101,6 +101,7 @@
      const option=document.createElement("option");option.value=item.ingredient_id;option.textContent=item.ingredient+" ("+item.unit+")";select.appendChild(option);select.value=String(item.ingredient_id);
      const qty=row.querySelector('input[name$="-actual_quantity"]');qty.value=Number(item.expected_quantity).toFixed(3);
      qty.dataset.expected=String(item.expected_quantity);
+     const unit=row.querySelector('input[name$="-unit"]');if(unit)unit.value=item.unit||"";
    }
  }
  function syncMode(){
