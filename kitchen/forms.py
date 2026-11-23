@@ -172,3 +172,62 @@ class ProductionBatchForm(forms.Form):
         if event_line and event_line.recipe_id != getattr(recipe, "pk", None):
             self.add_error("event_order_line", "The selected event line must use the selected Kitchen recipe.")
         return cleaned
+
+
+class StaffFoodProductionForm(forms.Form):
+    MODE_CHOICES = (
+        ("RECIPE", "Use an approved recipe"),
+        ("MANUAL", "Enter ingredients manually"),
+        ("NO_MEAL", "No staff meal prepared"),
+    )
+
+    production_date = forms.DateField(
+        widget=forms.DateInput(attrs={"type": "date"}),
+        label="Production date",
+    )
+    meal_name = forms.CharField(max_length=150, required=False, label="Meal / menu")
+    mode = forms.ChoiceField(choices=MODE_CHOICES, initial="MANUAL", label="Production method")
+    recipe = forms.ModelChoiceField(queryset=Recipe.objects.none(), required=False)
+    portions_prepared = forms.IntegerField(min_value=1, required=False, label="Portions prepared")
+    portions_served = forms.IntegerField(min_value=0, required=False, label="Portions served")
+    notes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
+
+    def clean(self):
+        cleaned = super().clean()
+        mode = cleaned.get("mode")
+        recipe = cleaned.get("recipe")
+        prepared = cleaned.get("portions_prepared")
+        served = cleaned.get("portions_served")
+        if mode == "NO_MEAL":
+            if not cleaned.get("notes", "").strip():
+                self.add_error("notes", "Give a reason why no staff meal was prepared.")
+            if recipe or prepared or served:
+                self.add_error("mode", "A no-meal record cannot include a recipe or portions.")
+        else:
+            if not cleaned.get("meal_name", "").strip():
+                self.add_error("meal_name", "Enter the staff meal description.")
+            if not prepared:
+                self.add_error("portions_prepared", "Enter the number of portions prepared.")
+            if served is None:
+                self.add_error("portions_served", "Enter the number of portions served.")
+            elif prepared is not None and served > prepared:
+                self.add_error("portions_served", "Portions served cannot exceed portions prepared.")
+            if mode == "RECIPE" and not recipe:
+                self.add_error("recipe", "Select an approved recipe.")
+            if mode == "MANUAL" and recipe:
+                self.add_error("recipe", "Choose manual entry when not using a recipe.")
+        return cleaned
+
+
+class StaffFoodIngredientForm(forms.Form):
+    ingredient = forms.ModelChoiceField(
+        queryset=Product.objects.none(),
+        label="Ingredient",
+    )
+    actual_quantity = forms.DecimalField(
+        min_value=Decimal("0.001"),
+        max_digits=12,
+        decimal_places=3,
+        label="Actual quantity used",
+    )
+    variance_reason = forms.CharField(required=False, max_length=1000)
