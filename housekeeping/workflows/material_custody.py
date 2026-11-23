@@ -53,6 +53,8 @@ def validate_positive_quantity(quantity):
         raise ValidationError("Enter a valid quantity.") from exc
     if not quantity.is_finite() or quantity <= 0:
         raise ValidationError("Quantity must be greater than zero.")
+    if quantity.as_tuple().exponent < -3:
+        raise ValidationError("Quantity supports a maximum of three decimal places.")
     return quantity
 
 
@@ -75,7 +77,7 @@ def _sum_confirmed_returns(issue):
 
 def issue_remaining(issue):
     """Quantity still held by the assigned housekeeper on this issue line."""
-    return issue.quantity - _sum_usage(issue) - _sum_confirmed_returns(issue)
+    return max(issue.quantity - _sum_usage(issue) - _sum_confirmed_returns(issue), ZERO)
 
 
 @transaction.atomic
@@ -114,7 +116,7 @@ def issue_material_to_assignment(*, assignment, product, quantity, issued_by):
         status="CONFIRMED",
     ).aggregate(total=Sum("quantity"))["total"] or ZERO
 
-    reserved_custody = issued - used - returned
+    reserved_custody = max(issued - used - returned, ZERO)
     available_to_issue = stock.quantity - reserved_custody
     if quantity > available_to_issue:
         raise ValidationError(
