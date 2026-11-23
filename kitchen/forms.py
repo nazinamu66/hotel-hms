@@ -221,6 +221,14 @@ class StaffFoodProductionForm(forms.Form):
 
 
 class StaffFoodIngredientForm(forms.Form):
+    def __init__(self, *args, ingredient_queryset=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if ingredient_queryset is not None:
+            self.fields["ingredient"].queryset = ingredient_queryset
+            self.fields["ingredient"].label_from_instance = (
+                lambda product: f"{product.name} ({product.base_unit})"
+            )
+
     ingredient = forms.ModelChoiceField(
         queryset=Product.objects.none(),
         label="Ingredient",
