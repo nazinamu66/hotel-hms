@@ -473,7 +473,7 @@ class MaintenanceLocationAccountingPostingTests(TestCase):
         record.assert_not_called()
 
 
-class HousekeepingMaterialAccountingPostingTests(SimpleTestCase):
+class HousekeepingMaterialAccountingPostingTests(TestCase):
     @patch("accounting.services.postings.housekeeping.record_transaction")
     @patch("accounting.services.postings.housekeeping.Account.objects.get_or_create")
     def test_cleaning_and_guest_replenishment_use_separate_expense_accounts(
