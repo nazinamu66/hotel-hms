@@ -1154,14 +1154,16 @@ def housekeeping_material_returns(request):
     if request.user.role == "HOUSEKEEPING":
         department = request.user.department
         if not department or department.department_type != "HOUSEKEEPING" or not is_department_head(request.user):
-            raise PermissionDenied("Only the Housekeeping Head can confirm material returns.")
-        pending = CleaningMaterialReturn.objects.filter(
-            issue__assignment__room__hotel=department.hotel, status="PENDING",
+            raise PermissionDenied("Only the Housekeeping Head can review material returns.")
+        scoped_returns = CleaningMaterialReturn.objects.filter(
+            issue__assignment__room__hotel=department.hotel,
         )
     else:
-        pending = CleaningMaterialReturn.objects.filter(
-            issue__assignment__room__hotel__in=hotels, status="PENDING",
+        scoped_returns = CleaningMaterialReturn.objects.filter(
+            issue__assignment__room__hotel__in=hotels,
         )
+
+    pending = scoped_returns.filter(status="PENDING")
     if request.method == "POST":
         material_return = get_object_or_404(
             pending.select_related("issue__assignment__room__hotel"), pk=request.POST.get("return_id")
@@ -1182,10 +1184,30 @@ def housekeeping_material_returns(request):
         except (ValidationError, PermissionDenied) as exc:
             messages.error(request, str(exc))
         return redirect("housekeeping_material_returns")
-    pending = pending.select_related(
-        "issue__product", "issue__assignment__room", "issue__assignment__assigned_to", "returned_by"
-    ).order_by("recorded_at", "id")
-    return render(request, "housekeeping/material_returns.html", {"pending_returns": pending})
+
+    related = (
+        "issue__product", "issue__assignment__room__hotel",
+        "issue__assignment__assigned_to", "returned_by", "confirmed_by",
+    )
+    pending = pending.select_related(*related).order_by("recorded_at", "id")
+    history = scoped_returns.filter(status__in=("CONFIRMED", "REJECTED"))
+    history_status = request.GET.get("status", "ALL").upper()
+    if history_status in ("CONFIRMED", "REJECTED"):
+        history = history.filter(status=history_status)
+    else:
+        history_status = "ALL"
+    history = history.select_related(*related).order_by("-confirmed_at", "-recorded_at", "-id")[:100]
+
+    return render(request, "housekeeping/material_returns.html", {
+        "pending_returns": pending,
+        "history_returns": history,
+        "pending_count": scoped_returns.filter(status="PENDING").count(),
+        "history_count": scoped_returns.filter(status__in=("CONFIRMED", "REJECTED")).count(),
+        "confirmed_count": scoped_returns.filter(status="CONFIRMED").count(),
+        "rejected_count": scoped_returns.filter(status="REJECTED").count(),
+        "return_view": request.GET.get("view", "pending").lower(),
+        "history_status": history_status,
+    })
 
 
 @role_required(
