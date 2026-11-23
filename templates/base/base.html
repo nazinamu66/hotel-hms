@@ -246,6 +246,8 @@
         <h4 class="menu-toggle" onclick="toggleMenu('security_menu', this)"><span class="arrow">▸</span> 🛡️ Security</h4>
         <div id="security_menu" class="menu-section">
             <a href="{% url 'security_dashboard' %}">Security Dashboard</a>
+            <a href="{% url 'security_vehicle_list' %}">Vehicle Register</a>
+            {% if user.role == "SECURITY" %}<a href="{% url 'security_vehicle_entry' %}">Record Vehicle Entry</a>{% endif %}
             <a href="{% url 'security_pass_list' %}">Property Exit &amp; Return Register</a>
             {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}<a href="{% url 'security_pass_create' %}">Create Management Authorisation</a>{% endif %}
         </div>
