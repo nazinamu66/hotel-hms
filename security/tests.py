@@ -14,7 +14,14 @@ class PropertyExitPassTests(TestCase):
     def setUp(self):
         self.org = Organization.objects.create(name="Security Test Org")
         self.hotel = Hotel.objects.create(name="Security Test Hotel", organization=self.org)
-        self.department = Department.objects.create(hotel=self.hotel, code="SEC", name="Security", department_type="SECURITY")
+        self.department, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            name="Security",
+            defaults={
+                "code": "SEC",
+                "department_type": "SECURITY",
+            },
+        )
         self.security = User.objects.create_user(username="security-officer", password="test", role="SECURITY", department=self.department)
         self.manager = User.objects.create_user(username="hotel-manager", password="test", role="MANAGER", hotel=self.hotel)
         self.staff = User.objects.create_user(username="staff-member", password="test", role="FRONTDESK")
