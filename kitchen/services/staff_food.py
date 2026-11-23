@@ -108,9 +108,6 @@ def execute_staff_food_production(*, production, ingredient_entries, user):
                 recipe_unit,
                 ingredient.base_unit,
             )
-        else:
-            submitted_unit = str(row.get("unit") or ingredient.base_unit)
-            actual = convert_quantity(actual, submitted_unit, ingredient.base_unit)
             variance = actual - expected
             variance_percent = abs(variance) / expected * Decimal("100") if expected else Decimal("0")
             absolute_limit = getattr(item, "tolerance_quantity", None)
@@ -122,6 +119,9 @@ def execute_staff_food_production(*, production, ingredient_entries, user):
                 raise ValidationError(f"{ingredient.name}: actual usage exceeds the approved recipe tolerance.")
             if item.control_mode == "FLEXIBLE" and (percentage_exceeded or absolute_exceeded) and not str(row.get("variance_reason", "")).strip():
                 raise ValidationError(f"Provide a variance reason for {ingredient.name}.")
+        else:
+            submitted_unit = str(row.get("unit") or ingredient.base_unit)
+            actual = convert_quantity(actual, submitted_unit, ingredient.base_unit)
         stock = Stock.objects.select_for_update().filter(
             product=ingredient, department=department
         ).first()
