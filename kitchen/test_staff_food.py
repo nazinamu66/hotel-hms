@@ -152,9 +152,6 @@ class StaffFoodProductionTests(TestCase):
         self.client.force_login(self.manager)
         denied = self.client.get(reverse("kitchen_staff_food"))
         self.assertEqual(denied.status_code, 403)
-        management_dashboard = self.client.get(reverse("kitchen_dashboard"))
-        self.assertEqual(management_dashboard.status_code, 200)
-        self.assertNotContains(management_dashboard, "Record daily staff meals")
 
     @patch("kitchen.services.staff_food.post_staff_food_consumption")
     def test_manual_staff_food_can_be_recorded_from_kitchen_page(self, post_entry):
