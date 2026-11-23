@@ -21,9 +21,10 @@ Cleaning Materials — Room {{ assignment.room.room_number }}
 </p>
 
 <p>
-    Record the actual Housekeeping materials used during this cleaning.
+    Record cleaning materials consumed from the supplies issued to you for this assignment.
     Quantities must be entered in the product's base unit.
 </p>
+<p><a href="{% url 'housekeeping_material_custody' assignment.id %}">View issued materials and submit unused returns →</a></p>
 
 <hr>
 
@@ -156,6 +157,9 @@ Cleaning Materials — Room {{ assignment.room.room_number }}
     </td>
 
     <td style="padding:8px;">
+        {{ usage.get_purpose_display }}
+    </td>
+    <td style="padding:8px;">
         {{ usage.quantity }}
     </td>
 
@@ -182,7 +186,7 @@ Cleaning Materials — Room {{ assignment.room.room_number }}
 <tr>
 
     <td
-        colspan="6"
+        colspan="7"
         style="padding:15px;text-align:center;"
     >
         No materials recorded yet.
