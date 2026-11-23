@@ -180,6 +180,7 @@ def store_request_stock(request):
     )
 
 @role_required("STORE")
+@role_required("STORE")
 def store_linen_stock_requests(request):
     store = request.user.department
     if not store or store.department_type != "STORE":
@@ -207,10 +208,17 @@ def store_linen_stock_requests(request):
             Decimal("0"),
         )
 
+    open_count = sum(1 for item in requests if item.remaining_quantity > 0 and item.status != "REJECTED")
+    fulfilled_count = sum(1 for item in requests if item.remaining_quantity <= 0)
+
     return render(
         request,
         "store/linen_stock_requests.html",
-        {"requests": requests},
+        {
+            "requests": requests,
+            "open_count": open_count,
+            "fulfilled_count": fulfilled_count,
+        },
     )
 
 
