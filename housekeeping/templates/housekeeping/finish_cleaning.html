@@ -3,36 +3,90 @@
 {% block header %}{% endblock %}
 {% block content %}
 <style>
-.hk-finish{max-width:900px;margin:0 auto;padding:20px 0 40px;color:#1e293b}.hk-card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;padding:22px;margin:16px 0}.hk-finish h1{margin:0 0 8px;font-size:1.8rem}.hk-muted{color:#64748b}.hk-row{display:grid;grid-template-columns:1fr 180px;gap:14px;align-items:center;padding:13px 0;border-bottom:1px solid #e2e8f0}.hk-row:last-child{border:0}.hk-row small{display:block;color:#64748b;margin-top:4px}.hk-finish input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px}.hk-primary{padding:11px 16px;background:#1d4ed8;color:white;border:0;border-radius:9px;font-weight:700;cursor:pointer}.hk-secondary{color:#1d4ed8;text-decoration:none;font-weight:650}@media(max-width:600px){.hk-row{grid-template-columns:1fr}}
+.hk-finish{max-width:1120px;margin:0 auto;padding:12px 0 42px;color:#172033}
+.hk-finish-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}
+.hk-kicker{margin:0 0 7px;color:#64748b;font-size:.73rem;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.hk-finish h1{margin:0;font-size:clamp(1.65rem,3vw,2.15rem);letter-spacing:-.045em}
+.hk-lead{max-width:760px;margin:8px 0 0;color:#64748b;line-height:1.55}
+.hk-room-pill{padding:8px 12px;border:1px solid #dbeafe;border-radius:99px;background:#eff6ff;color:#1d4ed8;font-size:.82rem;font-weight:800}
+.hk-panel{overflow:hidden;border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 4px 16px rgba(15,23,42,.035)}
+.hk-panel-head{padding:19px 22px;border-bottom:1px solid #edf2f7}
+.hk-panel-head h2{margin:0;font-size:1.05rem}
+.hk-panel-head p{margin:5px 0 0;color:#64748b;font-size:.84rem}
+.hk-material-list{padding:0 22px}
+.hk-material{display:grid;grid-template-columns:minmax(180px,1.1fr) minmax(180px,1fr) minmax(180px,1fr);gap:18px;align-items:center;padding:20px 0;border-bottom:1px solid #edf2f7}
+.hk-material:last-child{border-bottom:0}
+.hk-product-name{font-weight:850;color:#1e293b;font-size:.98rem}
+.hk-product-meta{display:block;margin-top:6px;color:#64748b;font-size:.8rem}
+.hk-balance{display:inline-flex;margin-top:10px;padding:5px 9px;border-radius:8px;background:#f1f5f9;color:#334155;font-size:.76rem;font-weight:750}
+.hk-field label{display:block;margin-bottom:7px;color:#334155;font-size:.8rem;font-weight:800}
+.hk-field input{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#172033;font:inherit;font-variant-numeric:tabular-nums}
+.hk-field input:focus{outline:3px solid #dbeafe;border-color:#60a5fa}
+.hk-field small{display:block;margin-top:5px;color:#94a3b8;font-size:.72rem}
+.hk-guidance{display:flex;gap:11px;margin:18px 22px;padding:13px 15px;border:1px solid #dbeafe;border-radius:11px;background:#f8fbff;color:#475569;font-size:.82rem;line-height:1.5}
+.hk-guidance strong{color:#1e40af}
+.hk-empty{padding:36px 22px;text-align:center;color:#64748b}
+.hk-footer{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-top:18px;padding:18px 20px;border:1px solid #e2e8f0;border-radius:14px;background:#fff}
+.hk-footer p{max-width:650px;margin:0;color:#64748b;font-size:.82rem;line-height:1.5}
+.hk-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.hk-primary,.hk-secondary{display:inline-flex;justify-content:center;align-items:center;padding:11px 16px;border-radius:9px;text-decoration:none;font-size:.84rem;font-weight:850}
+.hk-primary{border:0;background:#1d4ed8;color:#fff;cursor:pointer}
+.hk-secondary{border:1px solid #e2e8f0;background:#fff;color:#475569}
+@media(max-width:760px){.hk-material{grid-template-columns:1fr 1fr;gap:13px}.hk-product{grid-column:1/-1}.hk-material-list{padding:0 16px}.hk-panel-head{padding:17px 16px}.hk-guidance{margin:14px 16px}}
+@media(max-width:480px){.hk-material{grid-template-columns:1fr}.hk-product{grid-column:auto}.hk-footer{align-items:stretch}.hk-actions{width:100%}.hk-actions>*{flex:1}}
 </style>
 <div class="hk-finish">
-    <p class="hk-muted">Housekeeping · Room {{ assignment.room.room_number }}</p>
-    <h1>Finish cleaning</h1>
-    <p class="hk-muted">Select the guest supplies actually placed in the room. Quantities are deducted from the materials issued to you for this assignment.</p>
+    <header class="hk-finish-head">
+        <div>
+            <p class="hk-kicker">Housekeeping · Room completion</p>
+            <h1>Finish cleaning</h1>
+            <p class="hk-lead">Record the guest supplies placed in the room and submit unused supplies for physical return verification. All quantities are reconciled against what was issued to you for this assignment.</p>
+        </div>
+        <span class="hk-room-pill">Room {{ assignment.room.room_number }}</span>
+    </header>
+
     <form method="post">
         {% csrf_token %}
-        <section class="hk-card">
-            <h3>Guest room replenishment</h3>
-            {% for item in replenishment_items %}
-            <div class="hk-row">
-                <div><strong>{{ item.issue.product.name }}</strong><small>Issued balance: {{ item.remaining }} {{ item.issue.product.base_unit }}</small></div>
-                <div>
-                    <label for="replenish_{{ item.issue.id }}">Placed in room</label>
-                    <input id="replenish_{{ item.issue.id }}" type="number" name="replenish_{{ item.issue.id }}" min="0" max="{{ item.remaining }}" step="0.001" placeholder="0">
-                    <label for="return_{{ item.issue.id }}" style="display:block;margin-top:10px;">Unused quantity to return</label>
-                    <input id="return_{{ item.issue.id }}" type="number" name="return_{{ item.issue.id }}" min="0" max="{{ item.remaining }}" step="0.001" placeholder="0">
-                </div>
+        <section class="hk-panel">
+            <div class="hk-panel-head">
+                <h2>Materials issued to you</h2>
+                <p>Enter the actual quantity used for room replenishment and the unused quantity you are physically returning.</p>
             </div>
-            {% empty %}
-            <p class="hk-muted">No issued guest supplies are currently available for this assignment. You can still finish cleaning.</p>
-            {% endfor %}
+            <div class="hk-material-list">
+                {% for item in replenishment_items %}
+                <article class="hk-material">
+                    <div class="hk-product">
+                        <div class="hk-product-name">{{ item.issue.product.name }}</div>
+                        <span class="hk-product-meta">{{ item.issue.product.base_unit|title }} · Assignment issue #{{ item.issue.id }}</span>
+                        <span class="hk-balance">Available in your custody: {{ item.remaining }} {{ item.issue.product.base_unit }}</span>
+                    </div>
+                    <div class="hk-field">
+                        <label for="replenish_{{ item.issue.id }}">Placed in room</label>
+                        <input id="replenish_{{ item.issue.id }}" type="number" name="replenish_{{ item.issue.id }}" min="0" max="{{ item.remaining }}" step="0.001" value="0" inputmode="decimal">
+                        <small>Deducted as room replenishment</small>
+                    </div>
+                    <div class="hk-field">
+                        <label for="return_{{ item.issue.id }}">Unused quantity to return</label>
+                        <input id="return_{{ item.issue.id }}" type="number" name="return_{{ item.issue.id }}" min="0" max="{{ item.remaining }}" step="0.001" value="0" inputmode="decimal">
+                        <small>Pending until Housekeeping Head confirms receipt</small>
+                    </div>
+                </article>
+                {% empty %}
+                <div class="hk-empty"><strong>No issued supplies to reconcile</strong><p>You can still submit the room for inspection after completing the linen checklist.</p></div>
+                {% endfor %}
+            </div>
+            {% if replenishment_items %}
+            <div class="hk-guidance"><span aria-hidden="true">ⓘ</span><div><strong>Important:</strong> The placed-in-room quantity plus the return quantity cannot exceed your available custody. A return does not become available stock again until it is physically verified and confirmed.</div></div>
+            {% endif %}
         </section>
-        <section class="hk-card">
-            <h3>Before submitting</h3>
-            <p class="hk-muted">Make sure you have completed the room's linen checklist. Enter any unused supplies in the return field beside each issued item. Returns remain pending until the Housekeeping Head physically verifies them. The return remains pending until the Housekeeping Head physically verifies and confirms it.</p>
-            <button class="hk-primary" type="submit">Record supplies & finish cleaning</button>
-            <a class="hk-secondary" style="margin-left:14px" href="{% url 'housekeeping_dashboard' %}">Cancel</a>
-        </section>
+
+        <footer class="hk-footer">
+            <p>Before submitting, complete the room's linen checklist. Your room will move to inspection after this submission. Any unused material return will remain pending until verified by Housekeeping management.</p>
+            <div class="hk-actions">
+                <a class="hk-secondary" href="{% url 'housekeeping_dashboard' %}">Cancel</a>
+                <button class="hk-primary" type="submit">Record supplies & finish cleaning</button>
+            </div>
+        </footer>
     </form>
 </div>
 {% endblock %}
