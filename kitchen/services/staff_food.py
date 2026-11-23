@@ -60,8 +60,12 @@ def execute_staff_food_production(*, production, ingredient_entries, user):
     expected_items = {}
     if production.recipe_id:
         version = production.recipe_version
+        if not production.recipe.is_active:
+            raise ValidationError("The selected recipe is inactive.")
         if not version or version.recipe_id != production.recipe_id or version.status != "APPROVED":
             raise ValidationError("Select a recipe with a currently approved version.")
+        if not version.items.exists():
+            raise ValidationError("The approved recipe has no ingredients.")
         if production.recipe.product.hotel_id != department.hotel_id:
             raise ValidationError("The selected recipe belongs to another hotel.")
         for item in version.items.select_related("ingredient"):
