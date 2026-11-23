@@ -1,209 +1,138 @@
 {% extends "base/base.html" %}
-
-{% block title %}
-Cleaning Materials — Room {{ assignment.room.room_number }}
-{% endblock %}
-
+{% block title %}Cleaning Materials · Room {{ assignment.room.room_number }}{% endblock %}
+{% block header %}{% endblock %}
 {% block content %}
+<style>
+.cm-page{max-width:1240px;margin:0 auto;padding:10px 0 42px;color:#172033}
+.cm-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:20px}
+.cm-kicker{margin:0 0 7px;color:#2563eb;font-size:.72rem;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.cm-hero h1{margin:0;font-size:clamp(1.65rem,3vw,2.15rem);letter-spacing:-.045em}
+.cm-lead{max-width:780px;margin:8px 0 0;color:#64748b;line-height:1.55}
+.cm-room{display:inline-flex;align-items:center;padding:8px 13px;border:1px solid #dbeafe;border-radius:99px;background:#eff6ff;color:#1d4ed8;font-size:.82rem;font-weight:850}
+.cm-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.cm-meta-card{padding:14px 16px;border:1px solid #e2e8f0;border-radius:12px;background:#fff}
+.cm-meta-card span{display:block;color:#94a3b8;font-size:.69rem;font-weight:850;letter-spacing:.07em;text-transform:uppercase}
+.cm-meta-card strong{display:block;margin-top:5px;color:#334155;font-size:.9rem}
+.cm-panel{margin-bottom:18px;border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 4px 16px rgba(15,23,42,.04);overflow:hidden}
+.cm-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 20px;border-bottom:1px solid #edf2f7}
+.cm-panel-head h2{margin:0;font-size:1rem;color:#1e293b}
+.cm-panel-head p{margin:5px 0 0;color:#64748b;font-size:.8rem;line-height:1.5}
+.cm-form{padding:20px}
+.cm-fields{display:grid;grid-template-columns:minmax(240px,1.3fr) minmax(160px,.65fr);gap:16px}
+.cm-field label{display:block;margin-bottom:7px;color:#334155;font-size:.79rem;font-weight:850}
+.cm-field select,.cm-field input,.cm-field textarea{display:block;width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#172033;font:inherit;font-size:.88rem}
+.cm-field textarea{min-height:92px;resize:vertical}
+.cm-field select:focus,.cm-field input:focus,.cm-field textarea:focus{outline:3px solid #dbeafe;border-color:#60a5fa}
+.cm-field small{display:block;margin-top:6px;color:#94a3b8;font-size:.72rem}
+.cm-notes{margin-top:15px}
+.cm-form-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid #edf2f7}
+.cm-hint{max-width:600px;color:#64748b;font-size:.78rem;line-height:1.5}
+.cm-btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:10px 15px;border:0;border-radius:9px;background:#1d4ed8;color:#fff;text-decoration:none;font-size:.82rem;font-weight:850;cursor:pointer}
+.cm-btn:hover{background:#1e40af}
+.cm-btn-light{border:1px solid #dbe3ef;background:#f8fafc;color:#334155}
+.cm-table-wrap{overflow-x:auto}
+.cm-table{width:100%;min-width:820px;border-collapse:collapse}
+.cm-table th{padding:12px 13px;background:#f8fafc;color:#64748b;text-align:left;font-size:.67rem;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.cm-table td{padding:13px;border-top:1px solid #edf2f7;color:#475569;font-size:.82rem;vertical-align:top}
+.cm-table td strong{color:#1e293b}
+.cm-tag{display:inline-flex;padding:5px 8px;border-radius:7px;background:#eff6ff;color:#1d4ed8;font-size:.69rem;font-weight:850;white-space:nowrap}
+.cm-empty{padding:30px 18px!important;text-align:center;color:#94a3b8!important}
+.cm-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px}
+.cm-back{color:#475569;font-size:.84rem;font-weight:750;text-decoration:none}
+.cm-back:hover{text-decoration:underline}
+@media(max-width:700px){.cm-meta{grid-template-columns:1fr 1fr}.cm-fields{grid-template-columns:1fr}.cm-form{padding:16px}.cm-panel-head{padding:16px}.cm-form-foot{align-items:stretch}.cm-form-foot .cm-btn{width:100%}}
+@media(max-width:460px){.cm-meta{grid-template-columns:1fr}.cm-hero{gap:10px}}
+</style>
 
-<h2>
-    Cleaning Materials
-</h2>
+<div class="cm-page">
+  <header class="cm-hero">
+    <div>
+      <p class="cm-kicker">Housekeeping · Cleaning operations</p>
+      <h1>Cleaning materials</h1>
+      <p class="cm-lead">Record cleaning supplies actually consumed during this room assignment. Only materials issued to you for this assignment can be recorded here.</p>
+    </div>
+    <span class="cm-room">Room {{ assignment.room.room_number }}</span>
+  </header>
 
-<p>
-    <strong>Room:</strong>
-    {{ assignment.room.room_number }}
-</p>
+  <section class="cm-meta">
+    <div class="cm-meta-card"><span>Hotel</span><strong>{{ assignment.room.hotel.name }}</strong></div>
+    <div class="cm-meta-card"><span>Assigned housekeeper</span><strong>{{ assignment.assigned_to }}</strong></div>
+  </section>
 
-<p>
-    <strong>Assignment:</strong>
-    {{ assignment.assigned_to }}
-</p>
-
-<p>
-    Record cleaning materials consumed from the supplies issued to you for this assignment.
-    Quantities must be entered in the product's base unit.
-</p>
-<p><a href="{% url 'housekeeping_material_custody' assignment.id %}">View issued materials and submit unused returns →</a></p>
-
-<hr>
-
-<h3>Record Material Used</h3>
-
-<form method="post">
-
-    {% csrf_token %}
-
-    <p>
-        <label>
-            Product
-        </label>
-        <br>
-
-        <select name="product_id" required>
-
-            <option value="">
-                Select material
-            </option>
-
+  <section class="cm-panel">
+    <div class="cm-panel-head">
+      <div>
+        <h2>Record material consumed</h2>
+        <p>Enter the quantity used for the cleaning task. The quantity must be in the product's base unit.</p>
+      </div>
+      <a class="cm-btn cm-btn-light" href="{% url 'housekeeping_material_custody' assignment.id %}">View custody & returns</a>
+    </div>
+    <form method="post" class="cm-form">
+      {% csrf_token %}
+      <div class="cm-fields">
+        <div class="cm-field">
+          <label for="product_id">Material / product</label>
+          <select id="product_id" name="product_id" required>
+            <option value="">Choose a material</option>
             {% for product in products %}
-
-                <option value="{{ product.id }}">
-                    {{ product.name }}
-                    — {{ product.base_unit }}
-                </option>
-
+              <option value="{{ product.id }}">{{ product.name }} · {{ product.base_unit }}</option>
             {% empty %}
-
-                <option value="">
-                    No Housekeeping materials available
-                </option>
-
+              <option value="" disabled>No Housekeeping materials available</option>
             {% endfor %}
+          </select>
+          <small>Only products authorized for the Housekeeping department are listed.</small>
+        </div>
+        <div class="cm-field">
+          <label for="quantity">Quantity used</label>
+          <input id="quantity" type="number" name="quantity" min="0.001" step="0.001" placeholder="e.g. 0.500" required inputmode="decimal">
+          <small>Use the selected product's base unit.</small>
+        </div>
+      </div>
+      <div class="cm-field cm-notes">
+        <label for="notes">Usage notes <span style="font-weight:500;color:#94a3b8">(optional)</span></label>
+        <textarea id="notes" name="notes" rows="3" placeholder="Add a note about where or how the material was used…"></textarea>
+      </div>
+      <div class="cm-form-foot">
+        <span class="cm-hint">Recording material consumption updates the assignment's usage history and deducts the quantity from Housekeeping stock using the existing inventory workflow.</span>
+        <button type="submit" class="cm-btn">Record material used</button>
+      </div>
+    </form>
+  </section>
 
-        </select>
-    </p>
+  <section class="cm-panel">
+    <div class="cm-panel-head">
+      <div>
+        <h2>Material usage history</h2>
+        <p>All material consumption recorded against this room assignment.</p>
+      </div>
+      <span class="cm-tag">{{ usages|length }} record{{ usages|length|pluralize }}</span>
+    </div>
+    <div class="cm-table-wrap">
+      <table class="cm-table">
+        <thead><tr>
+          <th>Material</th><th>Purpose</th><th>Quantity</th><th>Recorded by</th><th>Date & time</th><th>Notes</th>
+        </tr></thead>
+        <tbody>
+        {% for usage in usages %}
+          <tr>
+            <td><strong>{{ usage.product.name }}</strong></td>
+            <td><span class="cm-tag">{{ usage.get_purpose_display }}</span></td>
+            <td><strong>{{ usage.quantity }}</strong> {{ usage.product.base_unit }}</td>
+            <td>{{ usage.recorded_by|default:"—" }}</td>
+            <td>{{ usage.recorded_at|date:"d M Y, H:i" }}</td>
+            <td>{{ usage.notes|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" class="cm-empty">No material consumption has been recorded for this assignment yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-    <p>
-        <label>
-            Quantity
-        </label>
-        <br>
-
-        <input
-            type="number"
-            name="quantity"
-            step="0.01"
-            min="0.01"
-            required
-        >
-    </p>
-
-    <p>
-        <label>
-            Notes
-        </label>
-        <br>
-
-        <textarea
-            name="notes"
-            rows="3"
-            cols="50"
-        ></textarea>
-    </p>
-
-    <button
-        type="submit"
-        class="btn btn-primary"
-    >
-        Record Material
-    </button>
-
-</form>
-
-<hr>
-
-<h3>
-    Materials Already Recorded
-</h3>
-
-<table
-    style="
-        width:100%;
-        border-collapse:collapse;
-    "
->
-
-<thead style="background:#eee;">
-
-<tr>
-
-    <th style="padding:8px;">
-        Product
-    </th>
-
-    <th>
-        Quantity
-    </th>
-
-    <th>
-        Unit
-    </th>
-
-    <th>
-        Recorded By
-    </th>
-
-    <th>
-        Date
-    </th>
-
-    <th>
-        Notes
-    </th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-{% for usage in usages %}
-
-<tr style="border-top:1px solid #ddd;">
-
-    <td style="padding:8px;">
-        {{ usage.product.name }}
-    </td>
-
-    <td style="padding:8px;">
-        {{ usage.get_purpose_display }}
-    </td>
-    <td style="padding:8px;">
-        {{ usage.quantity }}
-    </td>
-
-    <td style="padding:8px;">
-        {{ usage.product.base_unit }}
-    </td>
-
-    <td style="padding:8px;">
-        {{ usage.recorded_by }}
-    </td>
-
-    <td style="padding:8px;">
-        {{ usage.recorded_at|date:"Y-m-d H:i" }}
-    </td>
-
-    <td style="padding:8px;">
-        {{ usage.notes|default:"—" }}
-    </td>
-
-</tr>
-
-{% empty %}
-
-<tr>
-
-    <td
-        colspan="7"
-        style="padding:15px;text-align:center;"
-    >
-        No materials recorded yet.
-    </td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
-<br>
-
-<a href="{% url 'housekeeping_dashboard' %}">
-    ← Back to Housekeeping
-</a>
-
+  <div class="cm-bottom">
+    <a class="cm-back" href="{% url 'housekeeping_dashboard' %}">← Back to my housekeeping tasks</a>
+    <a class="cm-btn cm-btn-light" href="{% url 'housekeeping_material_custody' assignment.id %}">Manage issued materials and returns</a>
+  </div>
+</div>
 {% endblock %}
