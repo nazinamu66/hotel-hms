@@ -40,6 +40,7 @@ urlpatterns = [
     path("wifi/",include("wifi.urls"),),
     path("laundry/", include("laundry.urls")),
     path("linen/",include("linen.urls"),),
+    path("security/", include("security.urls")),
     
 
 
