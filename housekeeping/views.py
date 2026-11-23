@@ -262,7 +262,7 @@ def dashboard(request):
             .filter(
                 department=housekeeping_departments,
                 product__is_active=True,
-                product__usage_type="INTERNAL",
+                (Q(product__usage_type__in=("INTERNAL", "CONSUMABLE")) | Q(product__usage_type="RESALE", product__housekeeping_issue_eligible=True)),
             )
             .order_by(
                 "product__name",
@@ -281,7 +281,7 @@ def dashboard(request):
                 department__department_type="HOUSEKEEPING",
                 department__is_active=True,
                 product__is_active=True,
-                product__usage_type="INTERNAL",
+                (Q(product__usage_type__in=("INTERNAL", "CONSUMABLE")) | Q(product__usage_type="RESALE", product__housekeeping_issue_eligible=True)),
             )
             .order_by(
                 "department__hotel__name",
@@ -1131,8 +1131,10 @@ def cleaning_material_custody(request, assignment_id):
             "pending_returns": issue.returns.filter(status="PENDING"),
         })
     products = Product.objects.filter(
-        hotel=assignment.room.hotel, is_active=True,
-        usage_type__in=("INTERNAL", "CONSUMABLE"), departments=department,
+        hotel=assignment.room.hotel, is_active=True, departments=department,
+    ).filter(
+        Q(usage_type__in=("INTERNAL", "CONSUMABLE"))
+        | Q(usage_type="RESALE", housekeeping_issue_eligible=True)
     ).order_by("name").distinct() if can_issue else Product.objects.none()
     return render(request, "housekeeping/material_custody.html", {
         "assignment": assignment, "issues": issues, "products": products,
@@ -1372,8 +1374,11 @@ def cleaning_material_add(request, assignment_id):
         Product.objects
         .filter(
             is_active=True,
-            usage_type__in=("INTERNAL", "CONSUMABLE"),
             departments=housekeeping_department,
+        )
+        .filter(
+            Q(usage_type__in=("INTERNAL", "CONSUMABLE"))
+            | Q(usage_type="RESALE", housekeeping_issue_eligible=True)
         )
         .order_by("name")
         .distinct()
@@ -1817,7 +1822,10 @@ def housekeeping_stock(request):
             hotel__in=accessible_hotels,
             departments__in=housekeeping_departments,
             is_active=True,
-            usage_type__in=("INTERNAL", "CONSUMABLE"),
+        )
+        .filter(
+            Q(usage_type__in=("INTERNAL", "CONSUMABLE"))
+            | Q(usage_type="RESALE", housekeeping_issue_eligible=True)
         )
         .order_by(
             "hotel__name",
