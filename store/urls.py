@@ -6,6 +6,7 @@ from inventory.views import (
 
 urlpatterns = [
     path("", views.store_dashboard, name="store_dashboard"),
+    path("receiving/", views.store_receiving, name="store_receiving"),
     path(
         "stock-requests/",
         views.store_stock_requests,
