@@ -1,5 +1,5 @@
 {% extends "base/base.html" %}
-{% block title %}My Stock Requests — {{ department.name }}{% endblock %}
+{% block title %}Stock Requests — {{ department.name }}{% endblock %}
 {% block content %}
 <style>
 .req-page{max-width:1350px;margin:0 auto;padding:8px 0 42px;color:#1e293b}
@@ -26,7 +26,7 @@
 @media(max-width:650px){.req-head h1{font-size:23px}.req-filter{align-items:stretch}.req-field,.req-field input,.req-btn{width:100%;box-sizing:border-box}}
 </style>
 <div class="req-page">
-  <header class="req-head"><div><p class="req-kicker">Department inventory</p><h1>My Stock Requests</h1><p>Track requests submitted by {{ department.name }} and follow their fulfillment progress.</p></div><span class="req-chip">{{ department.name }}</span></header>
+  <header class="req-head"><div><p class="req-kicker">Department inventory</p><h1>Stock Requests</h1><p>Track requests submitted by {{ department.name }} and follow their fulfillment progress.</p></div><span class="req-chip">{{ department.name }}</span></header>
   <section class="req-card">
     <form method="get" class="req-filter">
       <div class="req-field"><label for="date-from">From</label><input id="date-from" type="date" name="from" value="{{ date_from }}"></div>
