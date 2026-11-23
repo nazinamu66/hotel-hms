@@ -1567,3 +1567,68 @@ class KitchenRestaurantTransfer(models.Model):
 
     def __str__(self):
         return f"Kitchen → Restaurant: {self.product} x {self.quantity} ({self.status})"
+
+
+class StaffFoodProduction(models.Model):
+    STATUS_CHOICES = (
+        ("PREPARED", "Prepared"),
+        ("NOT_PREPARED", "No staff meal prepared"),
+    )
+
+    department = models.ForeignKey(
+        Department, on_delete=models.PROTECT, related_name="staff_food_productions"
+    )
+    production_date = models.DateField(default=timezone.localdate)
+    meal_name = models.CharField(max_length=150, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PREPARED")
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="staff_food_productions",
+    )
+    recipe_version = models.ForeignKey(
+        RecipeVersion, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="staff_food_productions",
+    )
+    portions_prepared = models.PositiveIntegerField(default=0)
+    portions_served = models.PositiveIntegerField(default=0)
+    notes = models.TextField(blank=True)
+    total_cost = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    recorded_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True,
+        related_name="recorded_staff_food_productions",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-production_date", "-created_at"]
+
+    def __str__(self):
+        return f"Staff food {self.production_date} - {self.meal_name or self.get_status_display()}"
+
+
+class StaffFoodIngredientUsage(models.Model):
+    production = models.ForeignKey(
+        StaffFoodProduction, on_delete=models.CASCADE, related_name="ingredient_usages"
+    )
+    ingredient = models.ForeignKey(
+        Product, on_delete=models.PROTECT, related_name="staff_food_usages"
+    )
+    expected_quantity = models.DecimalField(max_digits=12, decimal_places=3, default=Decimal("0.000"))
+    actual_quantity = models.DecimalField(max_digits=12, decimal_places=3)
+    total_cost = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    stock_movement = models.OneToOneField(
+        StockMovement, on_delete=models.PROTECT, related_name="staff_food_usage"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["ingredient__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["production", "ingredient"],
+                name="unique_staff_food_ingredient_per_production",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.ingredient} - {self.actual_quantity} for Staff Food #{self.production_id}"
