@@ -1,17 +1,100 @@
 {% extends "base/base.html" %}
+
+{% block title %}Stock Transfer #{{ transfer.id }} | Hotel HMS{% endblock %}
+
 {% block content %}
+<style>
+    .transfer-page { max-width:1100px; margin:0 auto; padding:4px 0 40px; color:#1e293b; }
+    .transfer-page .tr-hero {
+        padding:22px 24px; margin-bottom:20px; border:1px solid #dbeafe;
+        border-radius:18px; background:linear-gradient(120deg,#fff,#f3f7ff);
+        box-shadow:0 8px 24px rgba(15,23,42,.045);
+    }
+    .transfer-page .tr-eyebrow {
+        display:flex; align-items:center; gap:8px; margin-bottom:8px;
+        color:#2563eb; font-size:.74rem; font-weight:850;
+        letter-spacing:.12em; text-transform:uppercase;
+    }
+    .transfer-page .tr-eyebrow:before {
+        content:""; width:8px; height:8px; border-radius:50%;
+        background:#3b82f6; box-shadow:0 0 0 4px #dbeafe;
+    }
+    .transfer-page h1 { margin:0; color:#172554; font-size:clamp(1.65rem,3vw,2.15rem); font-weight:850; letter-spacing:-.04em; }
+    .transfer-page .tr-subtitle { margin:7px 0 0; color:#64748b; font-size:.9rem; }
+    .transfer-page .tr-panel {
+        overflow:hidden; background:#fff; border:1px solid #e2e8f0;
+        border-radius:15px; box-shadow:0 4px 14px rgba(15,23,42,.045);
+    }
+    .transfer-page .tr-panel-head { padding:16px 20px; border-bottom:1px solid #e2e8f0; }
+    .transfer-page .tr-panel-head h2 { margin:0; color:#172554; font-size:1rem; font-weight:850; }
+    .transfer-page .tr-panel-head p { margin:4px 0 0; color:#64748b; font-size:.78rem; }
+    .transfer-page .tr-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0; }
+    .transfer-page .tr-item { padding:16px 20px; border-bottom:1px solid #f1f5f9; }
+    .transfer-page .tr-label { display:block; margin-bottom:5px; color:#64748b; font-size:.72rem; font-weight:800; }
+    .transfer-page .tr-value { color:#1e293b; font-size:.91rem; font-weight:750; overflow-wrap:anywhere; }
+    .transfer-page .tr-quantity { color:#1d4ed8; font-size:1.25rem; font-weight:850; font-variant-numeric:tabular-nums; }
+    .transfer-page .tr-note { padding:17px 20px; background:#f8fafc; }
+    .transfer-page .tr-note p { margin:6px 0 0; color:#334155; font-size:.88rem; line-height:1.6; white-space:pre-wrap; }
+    .transfer-page .tr-actions { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:18px; }
+    .transfer-page .tr-back {
+        display:inline-flex; align-items:center; gap:8px; padding:10px 14px;
+        border:1px solid #bfdbfe; border-radius:9px; background:#fff;
+        color:#1d4ed8; font-size:.82rem; font-weight:800; text-decoration:none;
+    }
+    .transfer-page .tr-back:hover { background:#eff6ff; }
+    .transfer-page .tr-reference { color:#64748b; font-size:.76rem; font-weight:750; }
+    @media(max-width:600px) { .transfer-page .tr-grid { grid-template-columns:1fr; } .transfer-page .tr-hero { padding:18px; } }
+</style>
 
-<h2>Stock Transfer #{{ transfer.id }}</h2>
+<div class="transfer-page">
+    <header class="tr-hero">
+        <div class="tr-eyebrow">Store Operations · Transfer Record</div>
+        <h1>Stock Transfer #{{ transfer.id }}</h1>
+        <p class="tr-subtitle">Transfer details and audit information for this stock movement.</p>
+    </header>
 
-<p>
-  <strong>Product:</strong> {{ transfer.product.name }}<br>
-  <strong>From:</strong> {{ transfer.from_department }}<br>
-  <strong>To:</strong> {{ transfer.to_department }}<br>
-  <strong>Quantity:</strong> {{ transfer.quantity }}<br>
-  <strong>By:</strong> {{ transfer.created_by }}<br>
-  <strong>Date:</strong> {{ transfer.created_at|date:"Y-m-d H:i" }}
-</p>
+    <section class="tr-panel">
+        <div class="tr-panel-head">
+            <h2>Transfer Details</h2>
+            <p>Recorded information for this transfer.</p>
+        </div>
+        <div class="tr-grid">
+            <div class="tr-item">
+                <span class="tr-label">Product</span>
+                <div class="tr-value">{{ transfer.product.name }}</div>
+            </div>
+            <div class="tr-item">
+                <span class="tr-label">Quantity</span>
+                <div class="tr-quantity">{{ transfer.quantity }} {{ transfer.product.base_unit }}</div>
+            </div>
+            <div class="tr-item">
+                <span class="tr-label">From Department</span>
+                <div class="tr-value">{{ transfer.from_department.name }}</div>
+            </div>
+            <div class="tr-item">
+                <span class="tr-label">To Department</span>
+                <div class="tr-value">{{ transfer.to_department.name }}</div>
+            </div>
+            <div class="tr-item">
+                <span class="tr-label">Recorded By</span>
+                <div class="tr-value">{{ transfer.created_by|default:"System" }}</div>
+            </div>
+            <div class="tr-item">
+                <span class="tr-label">Date &amp; Time</span>
+                <div class="tr-value">{{ transfer.created_at|date:"d M Y, H:i" }}</div>
+            </div>
+        </div>
+        {% if transfer.note %}
+        <div class="tr-note">
+            <span class="tr-label">Transfer Note / Reason</span>
+            <p>{{ transfer.note }}</p>
+        </div>
+        {% endif %}
+    </section>
 
-<a href="{% url 'store_movement_log' %}">⬅ Back to movements</a>
-
+    <div class="tr-actions">
+        <a class="tr-back" href="{% url 'store_movement_log' %}">← Back to Stock Movement Register</a>
+        <span class="tr-reference">Reference: TRANSFER-{{ transfer.id }}</span>
+    </div>
+</div>
 {% endblock %}
