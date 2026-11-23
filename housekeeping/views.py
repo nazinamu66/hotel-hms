@@ -1102,8 +1102,15 @@ def cleaning_material_custody(request, assignment_id):
 
     issues = []
     for issue in assignment.material_issues.select_related("product", "issued_by").prefetch_related("returns").order_by("issued_at", "id"):
+        consumed = issue.usages.aggregate(total=Sum("quantity"))["total"] or Decimal("0")
+        confirmed_returned = issue.returns.filter(status="CONFIRMED").aggregate(
+            total=Sum("quantity")
+        )["total"] or Decimal("0")
         issues.append({
-            "issue": issue, "remaining": issue_remaining(issue),
+            "issue": issue,
+            "remaining": issue_remaining(issue),
+            "consumed": consumed,
+            "confirmed_returned": confirmed_returned,
             "pending_returns": issue.returns.filter(status="PENDING"),
         })
     products = Product.objects.filter(
