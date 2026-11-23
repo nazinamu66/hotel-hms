@@ -16,7 +16,12 @@
             {% for item in replenishment_items %}
             <div class="hk-row">
                 <div><strong>{{ item.issue.product.name }}</strong><small>Issued balance: {{ item.remaining }} {{ item.issue.product.base_unit }}</small></div>
-                <div><label for="replenish_{{ item.issue.id }}">Placed in room</label><input id="replenish_{{ item.issue.id }}" type="number" name="replenish_{{ item.issue.id }}" min="0" max="{{ item.remaining }}" step="0.001" placeholder="0"></div>
+                <div>
+                    <label for="replenish_{{ item.issue.id }}">Placed in room</label>
+                    <input id="replenish_{{ item.issue.id }}" type="number" name="replenish_{{ item.issue.id }}" min="0" max="{{ item.remaining }}" step="0.001" placeholder="0">
+                    <label for="return_{{ item.issue.id }}" style="display:block;margin-top:10px;">Unused quantity to return</label>
+                    <input id="return_{{ item.issue.id }}" type="number" name="return_{{ item.issue.id }}" min="0" max="{{ item.remaining }}" step="0.001" placeholder="0">
+                </div>
             </div>
             {% empty %}
             <p class="hk-muted">No issued guest supplies are currently available for this assignment. You can still finish cleaning.</p>
@@ -24,7 +29,7 @@
         </section>
         <section class="hk-card">
             <h3>Before submitting</h3>
-            <p class="hk-muted">Make sure you have completed the room's linen checklist. Enter any unused supplies in the return field above. The return remains pending until the Housekeeping Head physically verifies and confirms it.</p>
+            <p class="hk-muted">Make sure you have completed the room's linen checklist. Enter any unused supplies in the return field beside each issued item. Returns remain pending until the Housekeeping Head physically verifies them. The return remains pending until the Housekeeping Head physically verifies and confirms it.</p>
             <button class="hk-primary" type="submit">Record supplies & finish cleaning</button>
             <a class="hk-secondary" style="margin-left:14px" href="{% url 'housekeeping_dashboard' %}">Cancel</a>
         </section>
