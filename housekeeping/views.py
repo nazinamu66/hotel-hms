@@ -41,7 +41,6 @@ from accounts.services.access import (
     can_manage_department,
     is_department_head,
 )
-from housekeeping.workflows.materials import consume_cleaning_material
 from housekeeping.workflows.material_custody import (
     consume_assigned_material, confirm_unused_material_return,
     issue_material_to_assignment, issue_remaining,
@@ -1841,41 +1840,45 @@ def housekeeping_stock(request):
     stock_items = []
 
     for product in products:
+        quantity = stock_map.get(product.id, Decimal("0"))
+        issued = CleaningMaterialIssue.objects.filter(
+            product=product,
+            assignment__room__hotel=product.hotel,
+        ).aggregate(total=Sum("quantity"))["total"] or Decimal("0")
+        consumed = CleaningMaterialUsage.objects.filter(
+            issue__product=product,
+            issue__assignment__room__hotel=product.hotel,
+        ).aggregate(total=Sum("quantity"))["total"] or Decimal("0")
+        returned = CleaningMaterialReturn.objects.filter(
+            issue__product=product,
+            issue__assignment__room__hotel=product.hotel,
+            status="CONFIRMED",
+        ).aggregate(total=Sum("quantity"))["total"] or Decimal("0")
+        custody_quantity = max(issued - consumed - returned, Decimal("0"))
+        available_quantity = max(quantity - custody_quantity, Decimal("0"))
+        stock_value = quantity * product.cost_price
 
-        quantity = stock_map.get(
-            product.id,
-            0,
-        )
-
-        stock_value = (
-            quantity
-            * product.cost_price
-        )
-
-        if quantity <= 0:
+        if available_quantity <= 0:
             stock_status = "OUT OF STOCK"
-
-        elif quantity <= product.reorder_level:
+        elif available_quantity <= product.reorder_level:
             stock_status = "LOW STOCK"
-
         else:
             stock_status = "OK"
 
-        stock_items.append(
-            {
-                "product": product,
-                "quantity": quantity,
-                "stock_value": stock_value,
-                "stock_status": stock_status,
-            }
-        )
+        stock_items.append({
+            "product": product,
+            "quantity": quantity,
+            "custody_quantity": custody_quantity,
+            "available_quantity": available_quantity,
+            "stock_value": stock_value,
+            "stock_status": stock_status,
+        })
 
     stock_summary = {
         "total_items": len(stock_items),
-        "total_units": sum(
-            (item["quantity"] for item in stock_items),
-            0,
-        ),
+        "total_units": sum((item["quantity"] for item in stock_items), Decimal("0")),
+        "total_custody_units": sum((item["custody_quantity"] for item in stock_items), Decimal("0")),
+        "total_available_units": sum((item["available_quantity"] for item in stock_items), Decimal("0")),
         "low_stock_items": sum(
             1 for item in stock_items
             if item["stock_status"] == "LOW STOCK"
