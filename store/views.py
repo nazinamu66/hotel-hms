@@ -31,6 +31,63 @@ from inventory.models import (
 # =========================
 
 @role_required("STORE")
+def store_receiving(request):
+    """Unified Store workspace for pending deliveries and completed receipts."""
+    store = request.user.department
+    if not store or store.department_type != "STORE":
+        raise PermissionDenied("This account is not assigned to the Store department.")
+
+    tab = request.GET.get("tab", "pending")
+    if tab not in {"pending", "history"}:
+        tab = "pending"
+
+    pending_pos = (
+        PurchaseOrder.objects
+        .filter(department=store, status__in=("APPROVED", "PARTIALLY_RECEIVED"))
+        .select_related("supplier", "maintenance_direct_request__ticket")
+        .prefetch_related("items__product", "items__receipt_lines")
+        .order_by("approved_at", "id")
+    )
+
+    date_from = request.GET.get("from", "")
+    date_to = request.GET.get("to", "")
+    search = request.GET.get("q", "").strip()
+    sort = request.GET.get("sort", "-date")
+    allowed_sorts = {
+        "date": "created_at", "-date": "-created_at",
+        "product": "product__name", "-product": "-product__name",
+        "quantity": "quantity", "-quantity": "-quantity",
+        "user": "created_by__username", "-user": "-created_by__username",
+        "reference": "reference", "-reference": "-reference",
+    }
+    movements = StockMovement.objects.filter(movement_type="IN", to_department=store)
+    if date_from:
+        movements = movements.filter(created_at__date__gte=date_from)
+    if date_to:
+        movements = movements.filter(created_at__date__lte=date_to)
+    if search:
+        movements = movements.filter(
+            Q(product__name__icontains=search)
+            | Q(reference__icontains=search)
+            | Q(created_by__username__icontains=search)
+        )
+    movements = movements.select_related("product", "created_by").order_by(
+        allowed_sorts.get(sort, "-created_at")
+    )
+
+    return render(request, "store/receiving.html", {
+        "department": store,
+        "tab": tab,
+        "pending_pos": pending_pos,
+        "movements": movements,
+        "date_from": date_from,
+        "date_to": date_to,
+        "search": search,
+        "current_sort": sort,
+    })
+
+
+@role_required("STORE")
 def store_dashboard(request):
     store = request.user.department
 
