@@ -384,7 +384,20 @@ class StoreStockTransferTests(TestCase):
         self.assertEqual(response.status_code, 405)
 
 
-class StoreLaundryLinenRequestPageTests(StoreStockTransferTests):
+class StoreLaundryLinenRequestPageTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        organization = Organization.objects.create(name="Laundry Page Test Org")
+        cls.hotel = Hotel.objects.create(organization=organization, name="Laundry Page Test Hotel")
+        cls.store = Department.objects.create(
+            hotel=cls.hotel, code="LPS", name="Laundry Page Store", department_type="STORE"
+        )
+        User = get_user_model()
+        cls.store_user = User.objects.create_user(
+            username="laundry-page-store", password="test-password",
+            role="STORE", department=cls.store,
+        )
+
     def test_store_user_can_view_laundry_linen_requests_with_fulfillment_totals(self):
         laundry = Department.objects.create(
             hotel=self.hotel,
