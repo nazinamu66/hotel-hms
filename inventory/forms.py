@@ -137,6 +137,7 @@ class ProductForm(forms.ModelForm):
             "supply_source",
             "departments",
             "usage_type",
+            "housekeeping_issue_eligible",
             "reorder_level",
             "price",
             "purchase_cost",
