@@ -2096,6 +2096,14 @@ def department_request_stock(request):
     if department.department_type in ("HOUSEKEEPING", "LAUNDRY"):
         products = products.filter(linen_item__isnull=True)
 
+    # Housekeeping may request its existing INTERNAL/CONSUMABLE supplies,
+    # plus only resale products explicitly approved for Housekeeping.
+    if department.department_type == "HOUSEKEEPING":
+        products = products.filter(
+            Q(usage_type__in=("INTERNAL", "CONSUMABLE"))
+            | Q(usage_type="RESALE", housekeeping_issue_eligible=True)
+        )
+
     stock_map = {
         stock.product_id: stock.quantity
         for stock in Stock.objects.filter(
