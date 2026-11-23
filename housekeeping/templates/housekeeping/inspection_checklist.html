@@ -1,71 +1,128 @@
 {% extends "base/base.html" %}
-{% block title %}Room Inspection{% endblock %}
-{% block header %}<h2>Room Inspection</h2>{% endblock %}
+{% block title %}Room Inspection · {{ room.room_number }}{% endblock %}
+{% block header %}{% endblock %}
 {% block content %}
 <style>
-.inspection-wrap{max-width:1000px;margin:0 auto}
-.inspection-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:24px;margin-bottom:18px;box-shadow:0 2px 8px rgba(15,23,42,.04)}
-.inspection-header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
-.inspection-subtitle{color:#6b7280;margin-top:6px}
-.check-row{display:flex;align-items:flex-start;gap:12px;padding:14px 4px;border-bottom:1px solid #eef0f3}
-.check-row:last-child{border-bottom:0}
-.check-row input{width:18px;height:18px;margin-top:3px}
-.check-label{font-weight:600;color:#1f2937}
-.muted{color:#6b7280;font-size:13px}
-.notes{width:100%;min-height:110px;padding:12px;border:1px solid #d1d5db;border-radius:8px;box-sizing:border-box;font:inherit}
-.actions{display:flex;gap:12px;flex-wrap:wrap}
-.action-btn{border:0;border-radius:8px;padding:12px 18px;font-weight:700;cursor:pointer}
-.pass-btn{background:#15803d;color:white}
-.fail-btn{background:#b91c1c;color:white}
-.back-btn{display:inline-block;padding:12px 16px;border:1px solid #d1d5db;border-radius:8px;text-decoration:none;color:#374151}
-.history-item{border-top:1px solid #e5e7eb;padding:12px 0}
-@media(max-width:600px){.inspection-card{padding:16px}.actions>*{width:100%}}
+.ri-page{max-width:1080px;margin:0 auto;padding:10px 0 42px;color:#172033}
+.ri-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:18px}
+.ri-kicker{margin:0 0 7px;color:#2563eb;font-size:.72rem;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.ri-hero h1{margin:0;font-size:clamp(1.6rem,3vw,2.1rem);letter-spacing:-.045em}
+.ri-hero p{margin:8px 0 0;color:#64748b;line-height:1.5}
+.ri-room{padding:8px 12px;border:1px solid #dbeafe;border-radius:99px;background:#eff6ff;color:#1d4ed8;font-size:.82rem;font-weight:800}
+.ri-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.ri-meta div{padding:14px 16px;border:1px solid #e2e8f0;border-radius:12px;background:#fff}
+.ri-meta span{display:block;color:#94a3b8;font-size:.7rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.ri-meta strong{display:block;margin-top:5px;color:#334155;font-size:.9rem}
+.ri-card{margin-bottom:15px;border:1px solid #e2e8f0;border-radius:15px;background:#fff;box-shadow:0 4px 16px rgba(15,23,42,.035);overflow:hidden}
+.ri-card-head{padding:18px 20px;border-bottom:1px solid #edf2f7}
+.ri-card-head h2{margin:0;font-size:1rem}
+.ri-card-head p{margin:5px 0 0;color:#64748b;font-size:.8rem;line-height:1.5}
+.ri-checks{padding:5px 20px}
+.ri-check{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid #f1f5f9;cursor:pointer}
+.ri-check:last-child{border-bottom:0}
+.ri-check input{width:19px;height:19px;margin:2px 0 0;accent-color:#2563eb;flex:0 0 auto}
+.ri-check strong{display:block;color:#334155;font-size:.87rem}
+.ri-check small{display:block;margin-top:4px;color:#94a3b8;font-size:.75rem}
+.ri-supply{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ri-qty{display:inline-flex;padding:5px 9px;border-radius:8px;background:#eff6ff;color:#1d4ed8;font-size:.76rem;font-weight:850;white-space:nowrap}
+.ri-empty{padding:18px 20px;color:#64748b;font-size:.83rem}
+.ri-textarea{display:block;width:100%;min-height:115px;box-sizing:border-box;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;font-size:.87rem;resize:vertical}
+.ri-textarea:focus{outline:3px solid #dbeafe;border-color:#60a5fa}
+.ri-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
+.ri-btn{display:inline-flex;align-items:center;justify-content:center;min-height:43px;padding:10px 15px;border:0;border-radius:9px;color:#fff;text-decoration:none;font-size:.82rem;font-weight:850;cursor:pointer}
+.ri-pass{background:#15803d}.ri-fail{background:#b91c1c}.ri-back{border:1px solid #e2e8f0;background:#fff;color:#475569}
+.ri-history{padding:0 20px}
+.ri-history-item{padding:14px 0;border-bottom:1px solid #f1f5f9;font-size:.82rem;color:#475569}
+.ri-history-item:last-child{border-bottom:0}
+.ri-history-item p{margin:6px 0 0;color:#64748b;line-height:1.5}
+@media(max-width:600px){.ri-meta{grid-template-columns:1fr}.ri-checks,.ri-history{padding-left:15px;padding-right:15px}.ri-card-head{padding:16px}.ri-actions>*{flex:1 1 100%}}
 </style>
-<div class="inspection-wrap">
-  <section class="inspection-card inspection-header">
+
+<div class="ri-page">
+  <header class="ri-hero">
     <div>
-      <h2 style="margin:0">Room {{ room.room_number }} inspection</h2>
-      <div class="inspection-subtitle">{{ room.hotel.name }} · {{ room.category.name }}</div>
-      <p>Cleaner: <strong>{{ assignment.assigned_to.username }}</strong></p>
+      <p class="ri-kicker">Housekeeping · Quality control</p>
+      <h1>Room inspection</h1>
+      <p>Complete the inspection before approving this room for guest occupancy.</p>
     </div>
-    <div><strong>Waiting for inspection</strong></div>
+    <span class="ri-room">Room {{ room.room_number }}</span>
+  </header>
+
+  <section class="ri-meta">
+    <div><span>Hotel / room category</span><strong>{{ room.hotel.name }} · {{ room.category.name }}</strong></div>
+    <div><span>Assigned housekeeper</span><strong>{{ assignment.assigned_to.username }}</strong></div>
   </section>
 
   <form method="post">
     {% csrf_token %}
-    <section class="inspection-card">
-      <h3 style="margin-top:0">Inspection checklist</h3>
-      <p class="muted">Tick every item that passes. If any item needs attention, leave it unchecked, choose “Fail inspection”, and explain what the cleaner must correct.</p>
-      {% for key,label in checklist_items %}
-      <label class="check-row">
-        <input type="checkbox" name="check_{{ key }}">
-        <span><span class="check-label">{{ label }}</span></span>
-      </label>
-      {% endfor %}
+    <section class="ri-card">
+      <div class="ri-card-head">
+        <h2>Room condition checklist</h2>
+        <p>Verify each item physically. Every item must pass before you can approve the room. If anything needs correction, fail the inspection and explain it below.</p>
+      </div>
+      <div class="ri-checks">
+        {% for key,label in checklist_items %}
+        <label class="ri-check">
+          <input type="checkbox" name="check_{{ key }}">
+          <span><strong>{{ label }}</strong></span>
+        </label>
+        {% endfor %}
+      </div>
     </section>
 
-    <section class="inspection-card">
-      <h3 style="margin-top:0">Inspector's notes</h3>
-      <p class="muted">For a failed inspection, list the defects and corrective action required. Notes are saved to inspection history.</p>
-      <textarea class="notes" name="notes" placeholder="Example: Bathroom mirror has marks; replace stained pillowcase and re-make the bed."></textarea>
+    <section class="ri-card">
+      <div class="ri-card-head">
+        <h2>Complimentary room supplies</h2>
+        <p>These are the guest supplies the housekeeper recorded as placed in this room during this cleaning. Verify that each item is present and correctly replenished.</p>
+      </div>
+      {% if complimentary_items %}
+      <div class="ri-checks">
+        {% for item in complimentary_items %}
+        <label class="ri-check">
+          <input type="checkbox" name="check_complimentary_{{ item.product_id }}">
+          <span class="ri-supply" style="flex:1">
+            <span>
+              <strong>{{ item.product__name }}</strong>
+              <small>Recorded as placed in the room</small>
+            </span>
+            <span class="ri-qty">{{ item.quantity|floatformat:-3 }} {{ item.product__base_unit }}</span>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="ri-empty">No complimentary supplies were recorded for this cleaning assignment. The inspector can continue with the room condition checklist.</div>
+      {% endif %}
     </section>
 
-    <div class="actions">
-      <button class="action-btn pass-btn" type="submit" name="result" value="PASS">Approve Room</button>
-      <button class="action-btn fail-btn" type="submit" name="result" value="FAIL">Fail Inspection & Return to Cleaner</button>
-      <a class="back-btn" href="{% url 'housekeeping_dashboard' %}">Back to Dashboard</a>
+    <section class="ri-card">
+      <div class="ri-card-head">
+        <h2>Inspector's notes</h2>
+        <p>Required when failing an inspection. Describe the defect and the correction expected from the housekeeper.</p>
+      </div>
+      <div style="padding:18px 20px">
+        <textarea class="ri-textarea" name="notes" placeholder="Record defects, missing supplies, or corrective actions required…"></textarea>
+      </div>
+    </section>
+
+    <div class="ri-actions">
+      <button class="ri-btn ri-pass" type="submit" name="result" value="PASS">Approve room</button>
+      <button class="ri-btn ri-fail" type="submit" name="result" value="FAIL">Fail and return to housekeeper</button>
+      <a class="ri-btn ri-back" href="{% url 'housekeeping_dashboard' %}">Back to dashboard</a>
     </div>
   </form>
 
   {% if prior_inspections %}
-  <section class="inspection-card" style="margin-top:20px">
-    <h3 style="margin-top:0">Previous inspection attempts</h3>
-    {% for inspection in prior_inspections %}
-      <div class="history-item">
+  <section class="ri-card" style="margin-top:22px">
+    <div class="ri-card-head"><h2>Previous inspection attempts</h2><p>Audit history for this room assignment.</p></div>
+    <div class="ri-history">
+      {% for inspection in prior_inspections %}
+      <div class="ri-history-item">
         <strong>{{ inspection.get_result_display }}</strong> · {{ inspection.inspected_at|date:"d M Y, H:i" }} · {{ inspection.inspected_by.username }}
         {% if inspection.notes %}<p>{{ inspection.notes|linebreaksbr }}</p>{% endif %}
       </div>
-    {% endfor %}
+      {% endfor %}
+    </div>
   </section>
   {% endif %}
 </div>
