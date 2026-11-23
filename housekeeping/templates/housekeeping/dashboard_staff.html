@@ -20,8 +20,14 @@
     .hk-table td { padding: 14px 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; vertical-align: top; }
     .hk-pill { display: inline-block; border-radius: 999px; padding: 5px 9px; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; }
     .hk-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-    .hk-btn { display: inline-block; padding: 8px 11px; border-radius: 8px; background: #1d4ed8; color: #fff; text-decoration: none; font-weight: 650; font-size: 13px; }
-    .hk-btn-secondary { background: #f1f5f9; color: #334155; }
+    .hk-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; box-sizing: border-box; padding: 9px 13px; border: 1px solid transparent; border-radius: 9px; background: #1d4ed8; color: #fff; text-decoration: none; font-weight: 750; font-size: 13px; line-height: 1.2; white-space: nowrap; }
+    .hk-btn-secondary { background: #f1f5f9; color: #334155; border-color: #e2e8f0; }
+    .hk-task-actions{display:grid;grid-template-columns:repeat(2,minmax(105px,1fr));gap:8px;max-width:310px}
+    .hk-task-actions .hk-btn{width:100%;white-space:normal;text-align:center}
+    .hk-task-actions .hk-btn-finish{background:#0f766e}
+    .hk-task-actions .hk-btn-custody{background:#fff;color:#334155;border-color:#cbd5e1}
+    @media(max-width:900px){.hk-task-actions{max-width:100%;grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:520px){.hk-task-actions{grid-template-columns:1fr 1fr}.hk-task-actions .hk-btn{font-size:12px;padding:9px 7px}}
     .hk-muted { color: #64748b; }
     .hk-empty { padding: 28px !important; text-align: center; color: #64748b; }
 .hk-staff{max-width:1450px!important;padding:4px 0 38px}
@@ -95,13 +101,17 @@
                                 {% if assignment.status == "ASSIGNED" and assignment.assigned_to_id == request.user.id %}
                                     <a class="hk-btn" href="{% url 'housekeeping_start_cleaning' assignment.room.id %}">Start cleaning</a>
                                 {% elif assignment.status == "IN_PROGRESS" and assignment.assigned_to_id == request.user.id %}
-                                    <a class="hk-btn" href="{% url 'housekeeping_cleaning_materials' assignment.id %}">Materials</a>
-                                    <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_material_custody' assignment.id %}">Material custody / returns</a>
-                                    <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_cleaning_linen' assignment.id %}">Linen checklist</a>
-                                    <a class="hk-btn" href="{% url 'housekeeping_finish_cleaning' assignment.room.id %}">Finish cleaning</a>
+                                    <div class="hk-task-actions">
+                                        <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_cleaning_linen' assignment.id %}">Linen</a>
+                                        <a class="hk-btn" href="{% url 'housekeeping_cleaning_materials' assignment.id %}">Materials</a>
+                                        <a class="hk-btn hk-btn-finish" href="{% url 'housekeeping_finish_cleaning' assignment.room.id %}">Finish</a>
+                                        <a class="hk-btn hk-btn-custody" href="{% url 'housekeeping_material_custody' assignment.id %}">Custody</a>
+                                    </div>
                                 {% elif assignment.status == "INSPECTION" %}
                                     <span class="hk-muted">Submitted for inspection</span>
-                                    <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_material_custody' assignment.id %}">Submit unused material return</a>
+                                    <div class="hk-task-actions">
+                                        <a class="hk-btn hk-btn-custody" href="{% url 'housekeeping_material_custody' assignment.id %}">Custody</a>
+                                    </div>
                                 {% endif %}
                             </div>
                         </td>
