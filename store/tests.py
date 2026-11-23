@@ -541,3 +541,117 @@ class StoreReceivingWorkspaceTests(TestCase):
             "/store/receiving/?tab=history",
         )
 
+
+
+class StoreIssueHistoryFilterTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        organization = Organization.objects.create(name="Issue History Test Org")
+        cls.hotel = Hotel.objects.create(
+            organization=organization,
+            name="Issue History Test Hotel",
+        )
+        cls.store = Department.objects.create(
+            hotel=cls.hotel,
+            code="IHS",
+            name="Issue History Store",
+            department_type="STORE",
+        )
+        cls.kitchen = Department.objects.create(
+            hotel=cls.hotel,
+            code="IHK",
+            name="Issue History Kitchen",
+            department_type="KITCHEN",
+        )
+        cls.restaurant = Department.objects.create(
+            hotel=cls.hotel,
+            code="IHR",
+            name="Issue History Restaurant",
+            department_type="RESTAURANT",
+        )
+        cls.product = Product.objects.create(
+            hotel=cls.hotel,
+            name="Issue History Rice",
+            sku="IHS-RICE",
+            product_type="RAW",
+            base_unit="kg",
+            cost_price=Decimal("80.00"),
+        )
+        User = get_user_model()
+        cls.store_user = User.objects.create_user(
+            username="issue-history-store",
+            password="test-password",
+            role="STORE",
+            department=cls.store,
+        )
+        cls.other_user = User.objects.create_user(
+            username="issue-history-other",
+            password="test-password",
+            role="STORE",
+            department=cls.store,
+        )
+
+    def setUp(self):
+        self.kitchen_movement = StockMovement.objects.create(
+            product=self.product,
+            from_department=self.store,
+            to_department=self.kitchen,
+            quantity=Decimal("4.000"),
+            movement_type="TRANSFER",
+            created_by=self.store_user,
+            reference="TRANSFER-IH-KITCHEN",
+        )
+        self.restaurant_movement = StockMovement.objects.create(
+            product=self.product,
+            from_department=self.store,
+            to_department=self.restaurant,
+            quantity=Decimal("2.000"),
+            movement_type="TRANSFER",
+            created_by=self.other_user,
+            reference="TRANSFER-IH-RESTAURANT",
+        )
+
+    def test_issue_history_displays_store_transfers_and_filter_options(self):
+        client = Client()
+        client.force_login(self.store_user)
+
+        response = client.get(reverse("store_issue_history"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Stock Issue History")
+        self.assertContains(response, "Issue History Kitchen")
+        self.assertContains(response, "Issue History Restaurant")
+        self.assertContains(response, "issue-history-store")
+        self.assertContains(response, "issue-history-other")
+        self.assertEqual(response.context["result_count"], 2)
+
+    def test_issue_history_filters_by_department_and_user(self):
+        client = Client()
+        client.force_login(self.store_user)
+
+        response = client.get(
+            reverse("store_issue_history"),
+            {
+                "department": self.kitchen.pk,
+                "user": self.store_user.pk,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["result_count"], 1)
+        self.assertContains(response, "TRANSFER-IH-KITCHEN")
+        self.assertNotContains(response, "TRANSFER-IH-RESTAURANT")
+
+    def test_issue_history_search_and_date_filters_work_independently(self):
+        client = Client()
+        client.force_login(self.store_user)
+
+        response = client.get(
+            reverse("store_issue_history"),
+            {"q": "TRANSFER-IH-RESTAURANT"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["result_count"], 1)
+        self.assertContains(response, "TRANSFER-IH-RESTAURANT")
+        self.assertNotContains(response, "TRANSFER-IH-KITCHEN")
