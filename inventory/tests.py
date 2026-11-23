@@ -64,6 +64,7 @@ class PreparedFoodProductFormTests(TestCase):
             "supply_source": "STORE",
             "departments": [str(self.kitchen.pk)],
             "usage_type": "RESALE",
+            "housekeeping_issue_eligible": "",
             "reorder_level": "0",
             "price": "2500.00",
             "purchase_cost": "0.00",
@@ -114,6 +115,26 @@ class PreparedFoodProductFormTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data["usage_type"], "RESALE")
         self.assertEqual(form.cleaned_data["purchase_cost"], Decimal("0.00"))
+
+    def test_drink_can_be_explicitly_approved_for_housekeeping(self):
+        form = ProductForm(
+            data=self.form_data(
+                name="Guest Fanta",
+                sku="GUEST-FANTA-FORM",
+                product_type="DRINK",
+                base_unit="bottle",
+                purchase_unit="carton",
+                unit_multiplier="12",
+                purchase_cost="6000.00",
+                price="1000.00",
+                housekeeping_issue_eligible="on",
+            ),
+            hotel=self.hotel,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["usage_type"], "RESALE")
+        self.assertTrue(form.cleaned_data["housekeeping_issue_eligible"])
 
     def test_drink_resale_still_requires_purchase_cost(self):
         form = ProductForm(
