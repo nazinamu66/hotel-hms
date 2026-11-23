@@ -213,9 +213,14 @@ class HousekeepingMaterialCustodyWorkflowTests(TestCase):
         User = get_user_model()
         cls.org = Organization.objects.create(name="HK Material Custody Org")
         cls.hotel = Hotel.objects.create(organization=cls.org, name="HK Material Custody Hotel")
-        cls.department = Department.objects.create(
-            hotel=cls.hotel, code="HK", name="Housekeeping",
-            department_type="HOUSEKEEPING", is_active=True,
+        cls.department, _ = Department.objects.get_or_create(
+            hotel=cls.hotel,
+            name="Housekeeping",
+            defaults={
+                "code": "HK",
+                "department_type": "HOUSEKEEPING",
+                "is_active": True,
+            },
         )
         cls.staff = User.objects.create_user(
             username="custody-housekeeper", password="test", role="HOUSEKEEPING",
@@ -225,9 +230,14 @@ class HousekeepingMaterialCustodyWorkflowTests(TestCase):
             username="custody-hk-head", password="test", role="HOUSEKEEPING",
             hotel=cls.hotel, department=cls.department, is_department_head=True,
         )
-        cls.kitchen = Department.objects.create(
-            hotel=cls.hotel, code="KIT", name="Kitchen",
-            department_type="KITCHEN", is_active=True,
+        cls.kitchen, _ = Department.objects.get_or_create(
+            hotel=cls.hotel,
+            name="Kitchen",
+            defaults={
+                "code": "KIT",
+                "department_type": "KITCHEN",
+                "is_active": True,
+            },
         )
         cls.kitchen_head = User.objects.create_user(
             username="custody-kitchen-head", password="test", role="KITCHEN",
