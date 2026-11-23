@@ -245,7 +245,7 @@
     }
 </style>
 
-<div class="production-page">
+<div class="production-page{% if is_management_view %} production-page-management{% else %} production-page-operational{% endif %}">
 
     <div class="page-header">
         <div class="eyebrow">Kitchen Operations</div>
