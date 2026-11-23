@@ -909,30 +909,7 @@
 
 
 
-        <!-- ========================= -->
-        <!-- REPORTS -->
-        <!-- ========================= -->
 
-        {% feature_enabled user "STORE" as store_enabled %}
-        {% feature_enabled user "KITCHEN" as kitchen_enabled %}
-        {% feature_enabled user "RESTAURANT" as restaurant_enabled %}
-
-        {% if user|has_role:"STORE,MANAGER,ADMIN,DIRECTOR" %}
-
-        <h4 class="menu-toggle"
-            onclick="toggleMenu('reports_menu', this)">
-            <span class="arrow">▸</span>
-            Reports
-        </h4>
-
-        <div id="reports_menu" class="menu-section">
-
-            {# Daily Stock Movement is covered by the Stock Movement Register. #}
-            {# Department Consumption belongs in future Kitchen/Management reporting. #}
-
-        </div>
-
-        {% endif %}
 
 
         {% endif %}
@@ -1171,11 +1148,6 @@ document.addEventListener("DOMContentLoaded", function () {
             "/inventory/manager/",
             "/kitchen/management/handover-reconciliations/",
             "/kitchen/ingredient-requests/"
-        ],
-
-        reports_menu: [
-            "/reports/",
-            "/reports/restaurant/"
         ],
 
         setup_menu: [
