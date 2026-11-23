@@ -5,7 +5,10 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.services.access import get_accessible_hotels
-from housekeeping.models import (\n    CleaningAssignment, CleaningLog, LostFoundItem,\n    CleaningMaterialIssue, CleaningMaterialReturn, CleaningMaterialUsage,\n)
+from housekeeping.models import (
+    CleaningAssignment, CleaningLog, LostFoundItem,
+    CleaningMaterialIssue, CleaningMaterialReturn, CleaningMaterialUsage,
+)
 from housekeeping.workflows.lost_found import can_manage_lost_found, claim_item, dispose_item
 from inventory.models import Department, Hotel, Organization, Product, Stock
 from rooms.models import Room, RoomCategory
