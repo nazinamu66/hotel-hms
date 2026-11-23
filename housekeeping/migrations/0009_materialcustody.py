@@ -43,6 +43,11 @@ class Migration(migrations.Migration):
             name="purpose",
             field=models.CharField(choices=[("CLEANING", "Cleaning"), ("ROOM_REPLENISHMENT", "Guest Room Replenishment")], db_index=True, default="CLEANING", max_length=24),
         ),
+        migrations.AlterField(
+            model_name="cleaningmaterialusage",
+            name="quantity",
+            field=models.DecimalField(decimal_places=3, max_digits=12),
+        ),
         migrations.AddField(
             model_name="cleaningmaterialusage",
             name="issue",
