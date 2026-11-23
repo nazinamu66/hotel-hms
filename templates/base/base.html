@@ -241,6 +241,15 @@
 
         <!-- ========================= -->
         <!-- ========================= -->
+        {% if user|has_role:"SECURITY,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
+        <h4 class="menu-toggle" onclick="toggleMenu('security_menu', this)"><span class="arrow">▸</span> 🛡️ Security</h4>
+        <div id="security_menu" class="menu-section">
+            <a href="{% url 'security_dashboard' %}">Security Dashboard</a>
+            <a href="{% url 'security_pass_list' %}">Property Exit &amp; Return Register</a>
+            {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}<a href="{% url 'security_pass_create' %}">Create Management Authorisation</a>{% endif %}
+        </div>
+        {% endif %}
+
         <!-- FRONT DESK -->
         <!-- ========================= -->
 
