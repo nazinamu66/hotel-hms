@@ -15,7 +15,9 @@
     <a class="kb-action" href="{% url 'kitchen_handover_list' %}"><span class="kb-action-icon">⇄</span><span class="kb-action-copy"><strong>Shift handover</strong><small>Review and record shift handovers</small></span><span class="kb-action-arrow">›</span></a>
     <a class="kb-action" href="{% url 'kitchen_stock' %}"><span class="kb-action-icon">📦</span><span class="kb-action-copy"><strong>Kitchen stock</strong><small>View general stock and your permitted balances</small></span><span class="kb-action-arrow">›</span></a>
     
+{% if user.role == "KITCHEN" %}
     <a class="kb-action" href="{% url 'kitchen_staff_food' %}"><span class="kb-action-icon">🍲</span><span class="kb-action-copy"><strong>Staff Food</strong><small>Record daily staff meals and ingredient costs</small></span><span class="kb-action-arrow">›</span></a>
+{% endif %}
   </nav>
   <div class="summary-grid">
     <div class="summary-card"><div class="summary-label">New orders</div><div class="summary-value">{{ new_tickets|length }}</div></div>
