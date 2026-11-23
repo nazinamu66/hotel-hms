@@ -53,7 +53,7 @@ def validate_positive_quantity(quantity):
         raise ValidationError("Enter a valid quantity.") from exc
     if not quantity.is_finite() or quantity <= 0:
         raise ValidationError("Quantity must be greater than zero.")
-    if quantity.as_tuple().exponent < -3:
+    if quantity != quantity.quantize(Decimal("0.001")):
         raise ValidationError("Quantity supports a maximum of three decimal places.")
     return quantity
 
