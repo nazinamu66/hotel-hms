@@ -44,8 +44,9 @@ urlpatterns = [
 
     # Production
     path("produce/quick/", views.kitchen_quick_production, name="kitchen_quick_production"),
+    path("staff-food/", views.kitchen_staff_food, name="kitchen_staff_food"),
     path("events/<int:event_id>/ingredient-plan/", event_views.kitchen_event_ingredient_plan, name="kitchen_event_ingredient_plan"),
-    path("recipe/<int:recipe_id>/ingredients/", views.recipe_ingredients_api),
+    path("recipe/<int:recipe_id>/ingredients/", views.recipe_ingredients_api, name="kitchen_recipe_ingredients_api"),
 
     # Recipes
     path("foods/", views.prepared_food_list, name="kitchen_food_list"),
