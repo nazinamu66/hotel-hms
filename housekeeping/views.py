@@ -1255,6 +1255,23 @@ def inspect_cleaning(request, room_id):
         ("maintenance", "No visible damage or unresolved maintenance issue"),
     ]
 
+    # Inspect only the complimentary supplies the housekeeper actually
+    # recorded as placed in this room during this cleaning assignment.
+    complimentary_items = list(
+        CleaningMaterialUsage.objects
+        .filter(
+            assignment=assignment,
+            purpose="ROOM_REPLENISHMENT",
+        )
+        .values(
+            "product_id",
+            "product__name",
+            "product__base_unit",
+        )
+        .annotate(quantity=Sum("quantity"))
+        .order_by("product__name")
+    )
+
     if request.method == "POST":
         result = request.POST.get("result", "").upper()
         notes = request.POST.get("notes", "").strip()
@@ -1262,6 +1279,10 @@ def inspect_cleaning(request, room_id):
             key: request.POST.get(f"check_{key}") == "on"
             for key, label in checklist_items
         }
+        for item in complimentary_items:
+            checklist[f"complimentary_{item['product_id']}"] = (
+                request.POST.get(f"check_complimentary_{item['product_id']}") == "on"
+            )
 
         if result not in ("PASS", "FAIL"):
             messages.error(request, "Choose approve or fail inspection.")
@@ -1318,6 +1339,7 @@ def inspect_cleaning(request, room_id):
             "room": room,
             "assignment": assignment,
             "checklist_items": checklist_items,
+            "complimentary_items": complimentary_items,
             "prior_inspections": prior_inspections,
         },
     )
