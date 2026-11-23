@@ -1,0 +1,8 @@
+{% extends "base/base.html" %}
+{% block title %}Create Property Authorisation{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Management Property Authorisation</h1><p>{{ hotel.name }} · Create the record before the staff member reaches the gate</p></div></div>
+<div class="card"><form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.non_field_errors }}
+<div class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">{% for field in form %}<div class="form-group"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}</div>
+<p><strong>Important:</strong> Serial number is optional. Tick “This item is equipment” when applicable. You may link an item already in the Equipment Register or simply describe an unregistered item.</p><button class="btn btn-primary" type="submit">Create Authorisation</button> <a class="btn btn-secondary" href="{% url 'security_pass_list' %}">Cancel</a></form></div>
+{% endblock %}
