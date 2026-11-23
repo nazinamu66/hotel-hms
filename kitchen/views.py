@@ -762,9 +762,11 @@ def kitchen_staff_food(request):
     if request.method == "POST":
         form = StaffFoodProductionForm(request.POST)
         form.fields["recipe"].queryset = recipes
-        formset = IngredientFormSet(request.POST, prefix="ingredients")
-        for ingredient_form in list(formset.forms) + [formset.empty_form]:
-            ingredient_form.fields["ingredient"].queryset = ingredients
+        formset = IngredientFormSet(
+            request.POST,
+            prefix="ingredients",
+            form_kwargs={"ingredient_queryset": ingredients},
+        )
 
         if form.is_valid() and formset.is_valid():
             data = form.cleaned_data
@@ -822,9 +824,10 @@ def kitchen_staff_food(request):
             "mode": "MANUAL",
         })
         form.fields["recipe"].queryset = recipes
-        formset = IngredientFormSet(prefix="ingredients")
-        for ingredient_form in list(formset.forms) + [formset.empty_form]:
-            ingredient_form.fields["ingredient"].queryset = ingredients
+        formset = IngredientFormSet(
+            prefix="ingredients",
+            form_kwargs={"ingredient_queryset": ingredients},
+        )
 
     history = (
         StaffFoodProduction.objects.filter(department=kitchen)
