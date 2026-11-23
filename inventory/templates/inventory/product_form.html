@@ -920,6 +920,19 @@
 
             {{ form.departments.errors }}
 
+            <div class="field" id="housekeeping-eligibility-field" style="margin-top:18px;max-width:620px;">
+                <label style="display:flex;align-items:center;gap:9px;">
+                    {{ form.housekeeping_issue_eligible }}
+                    Allow Housekeeping to issue this resale product
+                </label>
+                {{ form.housekeeping_issue_eligible.errors }}
+                <div class="field-help">
+                    Use this only for specific resale products approved for guest-room replenishment,
+                    such as bottled drinks. Housekeeping must also be selected above. Other resale
+                    products remain unavailable to Housekeeping by default.
+                </div>
+            </div>
+
             <div class="info-panel">
                 <strong>Important:</strong>
                 A product may be assigned to more than one department.
@@ -1033,6 +1046,14 @@
 
     const registerAsLinen = document.getElementById(
         "{{ form.register_as_linen.id_for_label }}"
+    );
+
+    const housekeepingEligibilityField = document.getElementById(
+        "housekeeping-eligibility-field"
+    );
+
+    const housekeepingEligibilityCheckbox = document.getElementById(
+        "{{ form.housekeeping_issue_eligible.id_for_label }}"
     );
 
     const pricingHelp = document.getElementById(
@@ -1289,6 +1310,18 @@
         updateUnitCost();
     }
 
+    function updateHousekeepingEligibilityUI() {
+        if (!housekeepingEligibilityField || !housekeepingEligibilityCheckbox) {
+            return;
+        }
+        const isResale = usageSelect && usageSelect.value === "RESALE";
+        housekeepingEligibilityField.classList.toggle("hidden-field", !isResale);
+        if (!isResale) {
+            housekeepingEligibilityCheckbox.checked = false;
+        }
+    }
+
+
     function updateLinenUI() {
         if (!usageSelect || !linenRegistrationField || !linenLevelFields) {
             return;
@@ -1395,7 +1428,10 @@
     });
 
     if (usageSelect) {
-        usageSelect.addEventListener("change", updateLinenUI);
+        usageSelect.addEventListener("change", function () {
+            updateLinenUI();
+            updateHousekeepingEligibilityUI();
+        });
     }
 
     if (registerAsLinen) {
@@ -1434,6 +1470,7 @@
 
     updateProductTypeUI();
     updateLinenUI();
+    updateHousekeepingEligibilityUI();
 
 })();
 </script>
