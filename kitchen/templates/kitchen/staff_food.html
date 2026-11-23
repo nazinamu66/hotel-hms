@@ -54,16 +54,16 @@
   <section class="sf-card">
     <div class="sf-card-head"><h2>Recent staff food history</h2><p>Production records and no-meal days for this Kitchen.</p></div>
     <div class="sf-table-wrap">
-      <table class="sf-table history"><thead><tr><th>Date</th><th>Meal</th><th>Status</th><th>Prepared</th><th>Served</th><th>Leftovers</th><th>FIFO cost</th><th>Recorded by</th><th>Ingredients</th></tr></thead><tbody>
+      <table class="sf-table history"><thead><tr><th>Date</th><th>Meal</th><th>Status</th><th>Prepared</th><th>Served</th><th>Leftovers</th><th>FIFO cost</th><th>Recorded by</th><th>Notes / reason</th><th>Ingredients</th></tr></thead><tbody>
       {% for item in history %}
         <tr>
           <td>{{ item.production_date|date:"d M Y" }}</td><td>{{ item.meal_name|default:"—" }}</td>
           <td>{% if item.status == "PREPARED" %}<span class="sf-pill">Prepared</span>{% else %}<span class="sf-pill no">No meal</span>{% endif %}</td>
           <td>{{ item.portions_prepared }}</td><td>{{ item.portions_served }}</td><td>{{ item.leftovers }}</td>
-          <td class="sf-cost">₦{{ item.total_cost|floatformat:2 }}</td><td>{{ item.recorded_by|default:"—" }}</td>
+          <td class="sf-cost">₦{{ item.total_cost|floatformat:2 }}</td><td>{{ item.recorded_by|default:"—" }}</td><td>{{ item.notes|default:"—" }}</td>
           <td>{% for usage in item.ingredient_usages.all %}{{ usage.ingredient.name }} ({{ usage.actual_quantity }} {{ usage.ingredient.base_unit }}){% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
         </tr>
-      {% empty %}<tr><td colspan="9" class="sf-empty">No staff food records have been entered yet.</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="10" class="sf-empty">No staff food records have been entered yet.</td></tr>{% endfor %}
       </tbody></table>
     </div>
   </section>
