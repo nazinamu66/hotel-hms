@@ -12,6 +12,8 @@ from .models import (
     CleaningAssignment,
     CleaningLog,
     CleaningMaterialUsage,
+    CleaningMaterialIssue,
+    CleaningMaterialReturn,
     LostFoundItem,
 )
 from linen.services.workflows import (
@@ -40,6 +42,11 @@ from accounts.services.access import (
     is_department_head,
 )
 from housekeeping.workflows.materials import consume_cleaning_material
+from housekeeping.workflows.material_custody import (
+    consume_assigned_material, confirm_unused_material_return,
+    issue_material_to_assignment, issue_remaining,
+    reject_unused_material_return, request_unused_material_return,
+)
 from housekeeping.workflows.linen_check import reset_linen_checks_for_retry
 
 def _refresh_cleaning_timer_alerts(assignments):
@@ -1002,56 +1009,152 @@ def start_cleaning(request, room_id):
         "housekeeping_dashboard",
     )
 
-@role_required(
-    "HOUSEKEEPING",
-    "MANAGER",
-    "ADMIN",
-)
+@role_required("HOUSEKEEPING", "MANAGER", "ADMIN")
 def finish_cleaning(request, room_id):
+    from housekeeping.workflows.finish_cleaning import finish_cleaning as finish_cleaning_workflow
 
-    from housekeeping.workflows.finish_cleaning import (
-        finish_cleaning as finish_cleaning_workflow,
+    room = get_object_or_404(Room.objects.select_related("hotel"), id=room_id)
+    if not user_can_access_hotel(request.user, room.hotel):
+        raise PermissionDenied("You do not have access to this hotel's housekeeping operations.")
+    assignment = get_object_or_404(
+        CleaningAssignment.objects.select_related("room__hotel", "assigned_to"),
+        room=room, status="IN_PROGRESS",
     )
+    if assignment.assigned_to_id != request.user.pk:
+        raise PermissionDenied("You can only finish your own cleaning assignment.")
 
-    room = get_object_or_404(
-        Room,
-        id=room_id,
+    if request.method == "POST":
+        try:
+            with transaction.atomic():
+                for issue in assignment.material_issues.select_related("product").order_by("issued_at", "id"):
+                    raw = request.POST.get(f"replenish_{issue.pk}", "").strip()
+                    if not raw:
+                        continue
+                    try:
+                        quantity = Decimal(raw)
+                    except (InvalidOperation, TypeError, ValueError):
+                        raise ValidationError(f"Enter a valid quantity for {issue.product.name}.")
+                    if quantity > 0:
+                        consume_assigned_material(
+                            assignment=assignment, product=issue.product, quantity=quantity,
+                            user=request.user, purpose="ROOM_REPLENISHMENT",
+                            notes="Guest supplies placed in the room during cleaning.",
+                        )
+                finish_cleaning_workflow(room=room, user=request.user)
+        except (ValidationError, PermissionDenied) as exc:
+            messages.error(request, str(exc))
+            return redirect("housekeeping_finish_cleaning", room_id=room.pk)
+        messages.success(request, f"Room {room.room_number} is waiting for inspection.")
+        return redirect("housekeeping_dashboard")
+
+    replenishment_items = []
+    for issue in assignment.material_issues.select_related("product").order_by("product__name", "issued_at", "id"):
+        remaining = issue_remaining(issue)
+        if remaining > 0:
+            replenishment_items.append({"issue": issue, "remaining": remaining})
+    return render(request, "housekeeping/finish_cleaning.html", {
+        "assignment": assignment, "replenishment_items": replenishment_items,
+    })
+
+
+@role_required("HOUSEKEEPING", "MANAGER", "ADMIN", "DIRECTOR")
+def cleaning_material_custody(request, assignment_id):
+    assignment = get_object_or_404(
+        CleaningAssignment.objects.select_related("room__hotel", "assigned_to"), pk=assignment_id
     )
+    if not user_can_access_hotel(request.user, assignment.room.hotel):
+        raise PermissionDenied("You do not have access to this hotel's Housekeeping operations.")
+    department = assignment.room.hotel.departments.filter(
+        department_type="HOUSEKEEPING", is_active=True
+    ).first()
+    if not department:
+        raise PermissionDenied("No active Housekeeping department exists for this hotel.")
+    is_assignee = assignment.assigned_to_id == request.user.pk
+    can_issue = can_manage_department(request.user, department)
+    if not is_assignee and not can_issue:
+        raise PermissionDenied("You cannot access this assignment's material custody.")
 
-    if not user_can_access_hotel(
-        request.user,
-        room.hotel,
-    ):
-        raise PermissionDenied(
-            "You do not have access to this hotel's housekeeping operations."
+    if request.method == "POST":
+        action = request.POST.get("action", "").strip()
+        try:
+            if action == "issue" and can_issue:
+                product = Product.objects.get(pk=request.POST.get("product_id"), hotel=assignment.room.hotel)
+                issue = issue_material_to_assignment(
+                    assignment=assignment, product=product,
+                    quantity=Decimal(request.POST.get("quantity", "")), issued_by=request.user,
+                )
+                messages.success(request, f"Issued {issue.quantity} {issue.product.base_unit} of {issue.product.name}.")
+            elif action == "return" and is_assignee:
+                issue = get_object_or_404(
+                    CleaningMaterialIssue.objects.select_related("assignment", "product"),
+                    pk=request.POST.get("issue_id"), assignment=assignment,
+                )
+                returned = request_unused_material_return(
+                    issue=issue, quantity=Decimal(request.POST.get("quantity", "")),
+                    returned_by=request.user, notes=request.POST.get("notes", "").strip(),
+                )
+                messages.success(request, f"Return of {returned.quantity} {returned.issue.product.name} submitted for confirmation.")
+            else:
+                raise PermissionDenied("You are not authorized to perform this material action.")
+        except (Product.DoesNotExist, InvalidOperation, TypeError, ValueError, ValidationError, PermissionDenied) as exc:
+            messages.error(request, str(exc) or "Please check the material details.")
+        return redirect("housekeeping_material_custody", assignment_id=assignment.pk)
+
+    issues = []
+    for issue in assignment.material_issues.select_related("product", "issued_by").prefetch_related("returns").order_by("issued_at", "id"):
+        issues.append({
+            "issue": issue, "remaining": issue_remaining(issue),
+            "pending_returns": issue.returns.filter(status="PENDING"),
+        })
+    products = Product.objects.filter(
+        hotel=assignment.room.hotel, is_active=True,
+        usage_type__in=("INTERNAL", "CONSUMABLE"), departments=department,
+    ).order_by("name").distinct() if can_issue else Product.objects.none()
+    return render(request, "housekeeping/material_custody.html", {
+        "assignment": assignment, "issues": issues, "products": products,
+        "can_issue": can_issue, "is_assignee": is_assignee,
+    })
+
+
+@role_required("HOUSEKEEPING", "MANAGER", "ADMIN", "DIRECTOR")
+def housekeeping_material_returns(request):
+    hotels = get_accessible_hotels(request.user)
+    if request.user.role == "HOUSEKEEPING":
+        department = request.user.department
+        if not department or department.department_type != "HOUSEKEEPING" or not is_department_head(request.user):
+            raise PermissionDenied("Only the Housekeeping Head can confirm material returns.")
+        pending = CleaningMaterialReturn.objects.filter(
+            issue__assignment__room__hotel=department.hotel, status="PENDING",
         )
-
-    try:
-
-        finish_cleaning_workflow(
-            room=room,
-            user=request.user,
+    else:
+        pending = CleaningMaterialReturn.objects.filter(
+            issue__assignment__room__hotel__in=hotels, status="PENDING",
         )
-
-    except (ValidationError, PermissionDenied) as e:
-
-        messages.error(
-            request,
-            str(e),
+    if request.method == "POST":
+        material_return = get_object_or_404(
+            pending.select_related("issue__assignment__room__hotel"), pk=request.POST.get("return_id")
         )
+        try:
+            action = request.POST.get("action", "")
+            if action == "confirm":
+                confirm_unused_material_return(material_return=material_return, confirmed_by=request.user)
+                messages.success(request, "Unused material return confirmed.")
+            elif action == "reject":
+                reject_unused_material_return(
+                    material_return=material_return, rejected_by=request.user,
+                    notes=request.POST.get("notes", "").strip(),
+                )
+                messages.success(request, "Material return rejected.")
+            else:
+                raise ValidationError("Choose confirm or reject.")
+        except (ValidationError, PermissionDenied) as exc:
+            messages.error(request, str(exc))
+        return redirect("housekeeping_material_returns")
+    pending = pending.select_related(
+        "issue__product", "issue__assignment__room", "issue__assignment__assigned_to", "returned_by"
+    ).order_by("recorded_at", "id")
+    return render(request, "housekeeping/material_returns.html", {"pending_returns": pending})
 
-        return redirect(
-            "housekeeping_dashboard",
-        )
-
-    messages.success(
-        request,
-        f"Room {room.room_number} is waiting for inspection.",
-    )
-
-    return redirect(
-        "housekeeping_dashboard",
-    )
 
 @role_required(
     "HOUSEKEEPING",
