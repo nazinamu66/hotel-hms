@@ -111,7 +111,8 @@
                     <tr>
                         <th>Hotel</th>
                         <th>Product</th>
-                        <th class="hk-number">Department Stock</th>\n                        <th class="hk-number">With Staff</th>\n                        <th class="hk-number">Available to Issue</th>
+                        <th class="hk-number">Department Stock</th>
+                        <th class="hk-number">With Staff</th>\n                        <th class="hk-number">Available to Issue</th>
                         <th>Unit</th>
                         <th class="hk-number">Unit Cost</th>
                         <th class="hk-number">Stock Value</th>
@@ -123,7 +124,8 @@
                     <tr>
                         <td>{{ stock.product.hotel.name }}</td>
                         <td><span class="hk-product">{{ stock.product.name }}</span>{% if stock.product.sku %}<span class="hk-sub">{{ stock.product.sku }}</span>{% endif %}</td>
-                        <td class="hk-number">{{ stock.quantity|floatformat:2 }}</td>\n                        <td class="hk-number">{{ stock.custody_quantity|floatformat:2 }}</td>\n                        <td class="hk-number"><strong>{{ stock.available_quantity|floatformat:2 }}</strong></td>
+                        <td class="hk-number">{{ stock.quantity|floatformat:2 }}</td>
+                        <td class="hk-number">{{ stock.custody_quantity|floatformat:2 }}</td>\n                        <td class="hk-number"><strong>{{ stock.available_quantity|floatformat:2 }}</strong></td>
                         <td>{{ stock.product.base_unit }}</td>
                         <td class="hk-number">{{ stock.product.cost_price|floatformat:2 }}</td>
                         <td class="hk-number">{{ stock.stock_value|floatformat:2 }}</td>
