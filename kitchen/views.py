@@ -804,6 +804,7 @@ def kitchen_staff_food(request):
                             ingredient_entries=entries,
                             user=request.user,
                         )
+                        production.refresh_from_db()
                     if mode == "NO_MEAL":
                         messages.success(request, "No-staff-meal day recorded.")
                     else:
