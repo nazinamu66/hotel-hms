@@ -902,52 +902,8 @@ def store_issue_history(request):
 
 @role_required("STORE")
 def store_receive_history(request):
-    store = request.user.department
-
-    date_from = request.GET.get("from")
-    date_to = request.GET.get("to")
-    sort = request.GET.get("sort", "-date")  # default newest first
-
-    allowed_sorts = {
-        "date": "created_at",
-        "-date": "-created_at",
-        "product": "product__name",
-        "-product": "-product__name",
-        "quantity": "quantity",
-        "-quantity": "-quantity",
-        "user": "created_by__username",
-        "-user": "-created_by__username",
-        "reference": "reference",
-        "-reference": "-reference",
-    }
-
-    order_by = allowed_sorts.get(sort, "-created_at")
-
-    movements = StockMovement.objects.filter(
-        movement_type="IN",
-        to_department=store
-    )
-
-    if date_from and date_to:
-        movements = movements.filter(
-            created_at__date__range=[date_from, date_to]
-        )
-
-    movements = movements.select_related(
-        "product",
-        "created_by"
-    ).order_by(order_by)
-
-    return render(
-        request,
-        "store/receive_history.html",
-        {
-            "movements": movements,
-            "date_from": date_from,
-            "date_to": date_to,
-            "current_sort": sort,
-        }
-    )
+    """Keep old bookmarks working while directing users to unified Receiving."""
+    return redirect("/store/receiving/?tab=history")
 
 
 @role_required("STORE")
