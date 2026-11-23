@@ -389,7 +389,8 @@ class UserCreateForm(forms.ModelForm):
             "LAUNDRY",
             "GYM",
             "BOUTIQUE",
-            "MAINTENANCE"
+            "MAINTENANCE",
+            "SECURITY",
         }
 
         if role in operational_roles:
@@ -535,6 +536,7 @@ class UserCreateForm(forms.ModelForm):
             "GYM",
             "BOUTIQUE",
             "MAINTENANCE",
+            "SECURITY",
         }:
 
             department = (
