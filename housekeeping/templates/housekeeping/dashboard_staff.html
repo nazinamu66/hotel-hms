@@ -96,6 +96,7 @@
                                     <a class="hk-btn" href="{% url 'housekeeping_start_cleaning' assignment.room.id %}">Start cleaning</a>
                                 {% elif assignment.status == "IN_PROGRESS" and assignment.assigned_to_id == request.user.id %}
                                     <a class="hk-btn" href="{% url 'housekeeping_cleaning_materials' assignment.id %}">Materials</a>
+                                    <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_material_custody' assignment.id %}">Material custody / returns</a>
                                     <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_cleaning_linen' assignment.id %}">Linen checklist</a>
                                     <a class="hk-btn" href="{% url 'housekeeping_finish_cleaning' assignment.room.id %}">Finish cleaning</a>
                                 {% elif assignment.status == "INSPECTION" %}
