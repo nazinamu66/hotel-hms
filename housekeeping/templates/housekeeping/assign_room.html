@@ -1,42 +1,94 @@
 {% extends "base/base.html" %}
 
-{% block title %}Assign Room{% endblock %}
+{% block title %}Assign Room {{ room.room_number }} · Housekeeping{% endblock %}
+{% block header %}{% endblock %}
 
 {% block content %}
+<style>
+.hk-assign-page{max-width:1050px;margin:0 auto;padding:14px 0 44px;color:#172033}
+.hk-assign-top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}
+.hk-kicker{margin:0 0 7px;color:#64748b;font-size:.73rem;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.hk-assign-top h1{margin:0;font-size:clamp(1.65rem,3vw,2.15rem);letter-spacing:-.045em}
+.hk-lead{margin:8px 0 0;color:#64748b;line-height:1.55;max-width:680px}
+.hk-room-tag{display:inline-flex;align-items:center;padding:8px 12px;border:1px solid #dbeafe;border-radius:99px;background:#eff6ff;color:#1d4ed8;font-size:.82rem;font-weight:800}
+.hk-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(240px,.65fr);gap:16px;align-items:start}
+.hk-card{border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 4px 16px rgba(15,23,42,.035);overflow:hidden}
+.hk-card-head{padding:20px 22px;border-bottom:1px solid #edf2f7}
+.hk-card-head h2{margin:0;font-size:1.04rem}
+.hk-card-head p{margin:5px 0 0;color:#64748b;font-size:.83rem}
+.hk-form-body{padding:22px}
+.hk-label{display:block;margin-bottom:8px;color:#334155;font-size:.82rem;font-weight:850}
+.hk-select{display:block;width:100%;box-sizing:border-box;padding:13px 42px 13px 13px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#172033;font:inherit;font-size:.92rem}
+.hk-select:focus{outline:3px solid #dbeafe;border-color:#60a5fa}
+.hk-hint{margin:8px 0 0;color:#94a3b8;font-size:.77rem;line-height:1.45}
+.hk-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}
+.hk-primary,.hk-secondary{display:inline-flex;justify-content:center;align-items:center;min-height:42px;padding:10px 15px;border-radius:9px;text-decoration:none;font-size:.84rem;font-weight:850}
+.hk-primary{border:0;background:#1d4ed8;color:#fff;cursor:pointer}
+.hk-primary:hover{background:#1e40af}
+.hk-primary:disabled{background:#94a3b8;cursor:not-allowed}
+.hk-secondary{border:1px solid #e2e8f0;background:#fff;color:#475569}
+.hk-side{padding:20px}
+.hk-side-icon{display:flex;align-items:center;justify-content:center;width:42px;height:42px;margin-bottom:14px;border-radius:12px;background:#eff6ff;color:#2563eb;font-size:20px}
+.hk-side h3{margin:0;font-size:.95rem}
+.hk-side p{margin:8px 0 0;color:#64748b;font-size:.82rem;line-height:1.55}
+.hk-count{display:inline-flex;margin-top:15px;padding:6px 9px;border-radius:8px;background:#f1f5f9;color:#475569;font-size:.75rem;font-weight:800}
+.hk-empty{padding:20px;border:1px dashed #fbbf24;border-radius:11px;background:#fffbeb;color:#92400e;font-size:.84rem;line-height:1.5}
+.hk-empty strong{display:block;margin-bottom:4px}
+@media(max-width:760px){.hk-layout{grid-template-columns:1fr}.hk-form-body{padding:18px}.hk-card-head{padding:18px}}
+</style>
 
-<h2>Assign Room {{ room.room_number }}</h2>
+<div class="hk-assign-page">
+    <header class="hk-assign-top">
+        <div>
+            <p class="hk-kicker">Housekeeping · Work allocation</p>
+            <h1>Assign a room</h1>
+            <p class="hk-lead">Choose an active Housekeeping team member to take responsibility for cleaning this room.</p>
+        </div>
+        <span class="hk-room-tag">Room {{ room.room_number }}</span>
+    </header>
 
-<form method="post">
+    <div class="hk-layout">
+        <section class="hk-card">
+            <div class="hk-card-head">
+                <h2>Choose housekeeper</h2>
+                <p>The selected staff member will receive this room on their housekeeping task list.</p>
+            </div>
+            <div class="hk-form-body">
+                {% if housekeepers %}
+                <form method="post">
+                    {% csrf_token %}
+                    <label class="hk-label" for="housekeeper-user">Housekeeping staff</label>
+                    <select class="hk-select" id="housekeeper-user" name="user" required>
+                        <option value="">Select a housekeeper</option>
+                        {% for staff in housekeepers %}
+                        <option value="{{ staff.id }}">{{ staff.username }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="hk-hint">Only active staff assigned to this hotel's Housekeeping department are listed.</p>
 
-    {% csrf_token %}
+                    <div class="hk-actions">
+                        <button class="hk-primary" type="submit">Assign room to housekeeper</button>
+                        <a class="hk-secondary" href="{% url 'housekeeping_dashboard' %}">Cancel</a>
+                    </div>
+                </form>
+                {% else %}
+                <div class="hk-empty">
+                    <strong>No active housekeepers available</strong>
+                    There are currently no active staff members assigned to this hotel's Housekeeping department. Add or activate a Housekeeping staff account before assigning this room.
+                </div>
+                <div class="hk-actions">
+                    <a class="hk-secondary" href="{% url 'housekeeping_dashboard' %}">Back to dashboard</a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
 
-    <label>Select Housekeeper</label>
-    <br><br>
-
-    <select name="user" required>
-
-        <option value="">-- Select Staff --</option>
-
-        {% for staff in housekeepers %}
-        <option value="{{ staff.id }}">
-            {{ staff.username }}
-        </option>
-        {% endfor %}
-
-    </select>
-
-    <br><br>
-
-    <button type="submit">
-        Assign Room
-    </button>
-
-    <a href="{% url 'housekeeping_dashboard' %}">
-        <button type="button">
-            Cancel
-        </button>
-    </a>
-
-</form>
-
+        <aside class="hk-card hk-side">
+            <div class="hk-side-icon" aria-hidden="true">▣</div>
+            <h3>Assignment details</h3>
+            <p>Room assignments are controlled by the Housekeeping workflow. A room cannot receive another active cleaning assignment while an existing assignment is still open or awaiting inspection.</p>
+            <span class="hk-count">{{ housekeepers|length }} active staff available</span>
+        </aside>
+    </div>
+</div>
 {% endblock %}
