@@ -1348,7 +1348,7 @@ def cleaning_material_add(request, assignment_id):
         Product.objects
         .filter(
             is_active=True,
-            usage_type="INTERNAL",
+            usage_type__in=("INTERNAL", "CONSUMABLE"),
             departments=housekeeping_department,
         )
         .order_by("name")
@@ -1474,11 +1474,12 @@ def cleaning_material_add(request, assignment_id):
 
         try:
 
-            usage = consume_cleaning_material(
+            usages = consume_assigned_material(
                 assignment=assignment,
                 product=product,
                 quantity=quantity,
                 user=request.user,
+                purpose="CLEANING",
                 notes=notes,
             )
 
@@ -1503,10 +1504,8 @@ def cleaning_material_add(request, assignment_id):
         messages.success(
             request,
             (
-                f"{usage.product.name} "
-                f"({usage.quantity} "
-                f"{usage.product.base_unit}) "
-                "recorded successfully."
+                f"{quantity} {product.base_unit} of {product.name} "
+                "recorded successfully against your issued materials."
             ),
         )
 
