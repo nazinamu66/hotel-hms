@@ -97,6 +97,49 @@ class StoreStockTransferTests(TestCase):
         )
         self.assertContains(response, f"PO-{purchase_order.pk}-REC-6")
 
+    def test_manual_stock_issue_saves_reason_note_and_executes_transfer(self):
+        client = Client()
+        client.force_login(self.store_user)
+
+        response = client.post(
+            reverse("store_issue_stock"),
+            {
+                "product_id": str(self.product.pk),
+                "department_id": str(self.kitchen.pk),
+                "quantity": "1.250",
+                "note": "Urgent kitchen replenishment",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        transfer = StockTransfer.objects.get(
+            product=self.product,
+            from_department=self.store,
+            to_department=self.kitchen,
+        )
+        self.assertEqual(transfer.quantity, Decimal("1.250"))
+        self.assertEqual(transfer.note, "Urgent kitchen replenishment")
+        self.assertTrue(
+            StockMovement.objects.filter(
+                reference=f"TRANSFER-{transfer.pk}",
+                movement_type="TRANSFER",
+            ).exists()
+        )
+        self.assertEqual(
+            Stock.objects.get(
+                product=self.product,
+                department=self.store,
+            ).quantity,
+            Decimal("8.750"),
+        )
+        self.assertEqual(
+            Stock.objects.get(
+                product=self.product,
+                department=self.kitchen,
+            ).quantity,
+            Decimal("1.250"),
+        )
+
     def test_stock_transfer_cannot_execute_twice(self):
         transfer = StockTransfer.objects.create(
             product=self.product,
