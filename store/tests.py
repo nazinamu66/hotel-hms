@@ -458,3 +458,86 @@ class StoreLaundryLinenRequestPageTests(TestCase):
         response = client.get(reverse("store_linen_stock_requests"))
 
         self.assertNotEqual(response.status_code, 200)
+
+class StoreReceivingWorkspaceTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        organization = Organization.objects.create(name="Receiving Test Org")
+        cls.hotel = Hotel.objects.create(
+            organization=organization,
+            name="Receiving Test Hotel",
+        )
+        cls.store = Department.objects.create(
+            hotel=cls.hotel,
+            code="RCV",
+            name="Receiving Store",
+            department_type="STORE",
+        )
+        cls.product = Product.objects.create(
+            hotel=cls.hotel,
+            name="Receiving Rice",
+            sku="RCV-RICE",
+            product_type="RAW",
+            base_unit="kg",
+            cost_price=Decimal("50.00"),
+        )
+        User = get_user_model()
+        cls.user = User.objects.create_user(
+            username="receiving-store-user",
+            password="test-password",
+            role="STORE",
+            department=cls.store,
+        )
+
+    def test_receiving_workspace_shows_pending_purchase_orders(self):
+        po = PurchaseOrder.objects.create(
+            department=self.store,
+            created_by=self.user,
+            status="APPROVED",
+        )
+        client = Client()
+        client.force_login(self.user)
+
+        response = client.get(reverse("store_receiving"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Pending Deliveries")
+        self.assertContains(response, f"PO #{po.pk}")
+        self.assertContains(
+            response,
+            reverse("inventory:po_receive", kwargs={"pk": po.pk}),
+        )
+
+    def test_receiving_workspace_shows_filtered_receipt_history(self):
+        StockMovement.objects.create(
+            product=self.product,
+            to_department=self.store,
+            quantity=Decimal("3.000"),
+            movement_type="IN",
+            created_by=self.user,
+            reference="PO-77-REC-1",
+        )
+        client = Client()
+        client.force_login(self.user)
+
+        response = client.get(
+            reverse("store_receiving"),
+            {"tab": "history", "q": "PO-77"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Goods Received History")
+        self.assertContains(response, "PO-77-REC-1")
+        self.assertContains(response, "Receiving Rice")
+
+    def test_legacy_receipt_history_url_redirects_to_unified_workspace(self):
+        client = Client()
+        client.force_login(self.user)
+
+        response = client.get(reverse("store_receive_history"))
+
+        self.assertRedirects(
+            response,
+            "/store/receiving/?tab=history",
+        )
+
