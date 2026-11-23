@@ -14,6 +14,8 @@ from .views import (
     lost_found_claim,
     lost_found_dispose,
     cleaning_material_add,
+    cleaning_material_custody,
+    housekeeping_material_returns,
     housekeeping_stock,
     housekeeping_stock_workspace,
     housekeeping_stock_movements,
@@ -52,6 +54,16 @@ urlpatterns = [
         "cleaning/<int:assignment_id>/materials/",
         cleaning_material_add,
         name="housekeeping_cleaning_materials",
+    ),
+    path(
+        "cleaning/<int:assignment_id>/material-custody/",
+        cleaning_material_custody,
+        name="housekeeping_material_custody",
+    ),
+    path(
+        "stock/material-returns/",
+        housekeeping_material_returns,
+        name="housekeeping_material_returns",
     ),
 
     # Assignment
