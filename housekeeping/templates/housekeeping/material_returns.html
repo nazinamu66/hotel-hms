@@ -3,19 +3,130 @@
 {% block header %}{% endblock %}
 {% block content %}
 <style>
-.hk-returns{max-width:1100px;margin:0 auto;padding:20px 0 40px;color:#1e293b}.hk-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin:15px 0}.hk-table{width:100%;border-collapse:collapse}.hk-table th,.hk-table td{text-align:left;padding:12px;border-bottom:1px solid #e2e8f0}.hk-table th{background:#f8fafc;color:#64748b;font-size:.75rem;text-transform:uppercase}.hk-btn{padding:8px 12px;border:0;border-radius:8px;background:#1d4ed8;color:white;font-weight:700;cursor:pointer}.hk-reject{background:#b91c1c}.hk-muted{color:#64748b}
+.hk-returns{max-width:1320px;margin:0 auto;padding:12px 0 42px;color:#172033}
+.hk-kicker{margin:0 0 7px;color:#64748b;font-size:.73rem;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.hk-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}
+.hk-heading h1{margin:0;font-size:clamp(1.65rem,3vw,2.2rem);letter-spacing:-.045em}
+.hk-heading p{margin:8px 0 0;color:#64748b;max-width:720px;line-height:1.55}
+.hk-back{display:inline-flex;align-items:center;padding:10px 14px;border:1px solid #dbeafe;border-radius:10px;background:#eff6ff;color:#1d4ed8;text-decoration:none;font-weight:750;font-size:.84rem}
+.hk-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:20px}
+.hk-metric{padding:16px 18px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;box-shadow:0 3px 12px rgba(15,23,42,.035)}
+.hk-metric span{display:block;color:#64748b;font-size:.78rem;font-weight:700}
+.hk-metric strong{display:block;margin-top:7px;color:#172554;font-size:1.65rem;font-variant-numeric:tabular-nums}
+.hk-panel{overflow:hidden;border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 4px 16px rgba(15,23,42,.035)}
+.hk-tabs{display:flex;gap:8px;flex-wrap:wrap;padding:15px 18px;border-bottom:1px solid #e2e8f0;background:#fbfdff}
+.hk-tab{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid #e2e8f0;border-radius:9px;color:#475569;text-decoration:none;font-size:.84rem;font-weight:750;background:#fff}
+.hk-tab.active{border-color:#bfdbfe;background:#eff6ff;color:#1d4ed8}
+.hk-tab em{font-style:normal;padding:2px 7px;border-radius:99px;background:#f1f5f9;color:#475569;font-size:.72rem}
+.hk-section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:18px 20px}
+.hk-section-head h2{margin:0;font-size:1.02rem}
+.hk-section-head p{margin:4px 0 0;color:#64748b;font-size:.82rem}
+.hk-filter{display:flex;gap:6px;flex-wrap:wrap}
+.hk-filter a{padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;color:#475569;text-decoration:none;font-size:.77rem;font-weight:750}
+.hk-filter a.active{border-color:#bfdbfe;background:#eff6ff;color:#1d4ed8}
+.hk-table-wrap{overflow-x:auto}
+.hk-table{width:100%;min-width:930px;border-collapse:collapse}
+.hk-table th{padding:12px 14px;background:#f8fafc;color:#64748b;text-align:left;font-size:.69rem;font-weight:850;letter-spacing:.065em;text-transform:uppercase;white-space:nowrap}
+.hk-table td{padding:15px 14px;border-top:1px solid #f1f5f9;color:#334155;font-size:.84rem;vertical-align:middle}
+.hk-table tbody tr:hover{background:#fafcff}
+.hk-primary,.hk-danger{padding:9px 12px;border:0;border-radius:8px;color:#fff;font-size:.78rem;font-weight:800;cursor:pointer}
+.hk-primary{background:#1d4ed8}.hk-danger{background:#b91c1c}
+.hk-input{width:100%;min-width:150px;box-sizing:border-box;padding:9px 10px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;font-size:.8rem}
+.hk-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.hk-muted{color:#64748b}.hk-sub{display:block;margin-top:4px;color:#94a3b8;font-size:.74rem}
+.hk-status{display:inline-flex;padding:5px 9px;border-radius:99px;font-size:.7rem;font-weight:850;white-space:nowrap}
+.hk-status.pending{background:#fff7ed;color:#c2410c}.hk-status.confirmed{background:#ecfdf5;color:#047857}.hk-status.rejected{background:#fef2f2;color:#b91c1c}
+.hk-empty{padding:48px 20px;text-align:center;color:#64748b}
+.hk-empty strong{display:block;color:#334155;font-size:.95rem}
+.hk-empty p{margin:6px 0 0;font-size:.84rem}
+.hk-foot{margin-top:18px}
+@media(max-width:700px){.hk-metrics{grid-template-columns:1fr}.hk-section-head{align-items:flex-start}.hk-table th,.hk-table td{padding:11px}}
 </style>
 <div class="hk-returns">
-    <p class="hk-muted">Housekeeping · Inventory control</p><h1>Pending material returns</h1>
-    <section class="hk-card">
-        <div style="overflow-x:auto"><table class="hk-table"><thead><tr><th>Room / Hotel</th><th>Housekeeper</th><th>Product</th><th>Quantity</th><th>Submitted</th><th>Notes / Action</th></tr></thead><tbody>
-        {% for item in pending_returns %}
-        <tr><td>Room {{ item.issue.assignment.room.room_number }}<div class="hk-muted">{{ item.issue.assignment.room.hotel.name }}</div></td><td>{{ item.returned_by }}</td><td>{{ item.issue.product.name }}</td><td>{{ item.quantity }} {{ item.issue.product.base_unit }}</td><td>{{ item.recorded_at|date:"Y-m-d H:i" }}</td><td>
-            <form method="post" style="display:flex;gap:6px;flex-wrap:wrap">{% csrf_token %}<input type="hidden" name="return_id" value="{{ item.id }}"><input name="notes" placeholder="Reason if rejecting"><button class="hk-btn" name="action" value="confirm">Confirm</button><button class="hk-btn hk-reject" name="action" value="reject">Reject</button></form>
-        </td></tr>
-        {% empty %}<tr><td colspan="6" class="hk-muted">There are no pending material returns.</td></tr>{% endfor %}
-        </tbody></table></div>
+    <header class="hk-heading">
+        <div>
+            <p class="hk-kicker">Housekeeping · Inventory control</p>
+            <h1>Material returns</h1>
+            <p>Verify unused supplies returned by housekeepers and review the complete confirmation history. Only confirmed returns release the staff-custody balance.</p>
+        </div>
+        <a class="hk-back" href="{% url 'housekeeping_stock_workspace' %}">← Stock workspace</a>
+    </header>
+
+    <section class="hk-metrics" aria-label="Material return summary">
+        <article class="hk-metric"><span>Awaiting verification</span><strong>{{ pending_count }}</strong></article>
+        <article class="hk-metric"><span>Confirmed returns</span><strong>{{ confirmed_count }}</strong></article>
+        <article class="hk-metric"><span>Rejected returns</span><strong>{{ rejected_count }}</strong></article>
     </section>
-    <a href="{% url 'housekeeping_stock_workspace' %}">← Back to Housekeeping Stock</a>
+
+    <section class="hk-panel">
+        <nav class="hk-tabs" aria-label="Return views">
+            <a class="hk-tab {% if return_view != 'history' %}active{% endif %}" href="{% url 'housekeeping_material_returns' %}">Pending <em>{{ pending_count }}</em></a>
+            <a class="hk-tab {% if return_view == 'history' %}active{% endif %}" href="{% url 'housekeeping_material_returns' %}?view=history">Return history <em>{{ history_count }}</em></a>
+        </nav>
+
+        {% if return_view == "history" %}
+        <div class="hk-section-head">
+            <div><h2>Processed return records</h2><p>Confirmed and rejected returns, including who processed each decision.</p></div>
+            <div class="hk-filter">
+                <a class="{% if history_status == 'ALL' %}active{% endif %}" href="?view=history">All</a>
+                <a class="{% if history_status == 'CONFIRMED' %}active{% endif %}" href="?view=history&status=CONFIRMED">Confirmed</a>
+                <a class="{% if history_status == 'REJECTED' %}active{% endif %}" href="?view=history&status=REJECTED">Rejected</a>
+            </div>
+        </div>
+        <div class="hk-table-wrap">
+            <table class="hk-table">
+                <thead><tr><th>Room / Hotel</th><th>Housekeeper</th><th>Product</th><th>Quantity</th><th>Submitted</th><th>Decision</th><th>Processed by</th><th>Notes</th></tr></thead>
+                <tbody>
+                {% for item in history_returns %}
+                    <tr>
+                        <td><strong>Room {{ item.issue.assignment.room.room_number }}</strong><span class="hk-sub">{{ item.issue.assignment.room.hotel.name }}</span></td>
+                        <td>{{ item.returned_by }}<span class="hk-sub">Housekeeping</span></td>
+                        <td><strong>{{ item.issue.product.name }}</strong></td>
+                        <td>{{ item.quantity }} {{ item.issue.product.base_unit }}</td>
+                        <td>{{ item.recorded_at|date:"d M Y, H:i" }}</td>
+                        <td><span class="hk-status {% if item.status == 'CONFIRMED' %}confirmed{% else %}rejected{% endif %}">{{ item.get_status_display }}</span><span class="hk-sub">{{ item.confirmed_at|date:"d M Y, H:i"|default:"—" }}</span></td>
+                        <td>{{ item.confirmed_by|default:"—" }}</td>
+                        <td>{{ item.notes|default:"—"|truncatechars:90 }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="8"><div class="hk-empty"><strong>No processed returns yet</strong><p>Confirmed and rejected returns will appear here.</p></div></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="hk-section-head">
+            <div><h2>Pending physical verification</h2><p>Confirm only after the returned quantity has been physically checked.</p></div>
+            <span class="hk-status pending">{{ pending_count }} awaiting action</span>
+        </div>
+        <div class="hk-table-wrap">
+            <table class="hk-table">
+                <thead><tr><th>Room / Hotel</th><th>Housekeeper</th><th>Product</th><th>Quantity</th><th>Submitted</th><th>Notes / Action</th></tr></thead>
+                <tbody>
+                {% for item in pending_returns %}
+                    <tr>
+                        <td><strong>Room {{ item.issue.assignment.room.room_number }}</strong><span class="hk-sub">{{ item.issue.assignment.room.hotel.name }}</span></td>
+                        <td>{{ item.returned_by }}</td>
+                        <td><strong>{{ item.issue.product.name }}</strong></td>
+                        <td>{{ item.quantity }} {{ item.issue.product.base_unit }}</td>
+                        <td>{{ item.recorded_at|date:"d M Y, H:i" }}</td>
+                        <td>
+                            <form method="post" class="hk-actions">{% csrf_token %}
+                                <input type="hidden" name="return_id" value="{{ item.id }}">
+                                <input class="hk-input" name="notes" placeholder="Reason if rejecting" aria-label="Reason if rejecting">
+                                <button class="hk-primary" name="action" value="confirm">Confirm receipt</button>
+                                <button class="hk-danger" name="action" value="reject">Reject</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="6"><div class="hk-empty"><strong>You're all caught up</strong><p>There are no pending material returns to verify.</p></div></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </section>
+    <div class="hk-foot"><a class="hk-back" href="{% url 'housekeeping_stock' %}">View department stock →</a></div>
 </div>
 {% endblock %}
