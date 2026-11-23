@@ -303,7 +303,13 @@ class HousekeepingMaterialCustodyWorkflowTests(TestCase):
             assignment=self.assignment, product=self.product,
             quantity=Decimal("4.000"), issued_by=self.head,
         )
-        with patch("housekeeping.workflows.material_custody.stock_out"):
+        with patch("housekeeping.workflows.material_custody.stock_out") as stock_out, patch(
+            "accounting.services.postings.housekeeping.post_housekeeping_material_consumption"
+        ) as post_consumption:
+            stock_out.return_value = {
+                "movement": type("Movement", (), {"pk": 901})(),
+                "total_cost": Decimal("1250.00"),
+            }
             usages = consume_assigned_material(
                 assignment=self.assignment, product=self.product,
                 quantity=Decimal("2.000"), user=self.staff,
@@ -312,6 +318,12 @@ class HousekeepingMaterialCustodyWorkflowTests(TestCase):
         self.assertEqual(sum((item.quantity for item in usages), Decimal("0")), Decimal("2.000"))
         self.assertEqual(usages[0].purpose, "ROOM_REPLENISHMENT")
         self.assertEqual(issue_remaining(issue), Decimal("2.000"))
+        post_consumption.assert_called_once()
+        self.assertEqual(post_consumption.call_args.kwargs["purpose"], "ROOM_REPLENISHMENT")
+        self.assertEqual(
+            post_consumption.call_args.kwargs["stock_result"]["total_cost"],
+            Decimal("1250.00"),
+        )
         with patch("housekeeping.workflows.material_custody.stock_out"):
             with self.assertRaises(ValidationError):
                 consume_assigned_material(
