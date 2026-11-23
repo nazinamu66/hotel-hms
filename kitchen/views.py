@@ -48,6 +48,7 @@ from .models import (
     KitchenShiftHandoverLine,
     KitchenRestrictedStockRecord,
     KitchenRestrictedStockLayer,
+    StaffFoodProduction,
 )
 
 from .forms import (
@@ -56,7 +57,9 @@ from .forms import (
     RecipeItemForm,
     RecipeForm,
     IngredientRestockRequestForm,
-    IngredientRestockItemFormSet
+    IngredientRestockItemFormSet,
+    StaffFoodProductionForm,
+    StaffFoodIngredientForm,
 )
 
 from django.contrib.auth import get_user_model
@@ -728,6 +731,112 @@ def recipe_ingredients_api(request, recipe_id):
     ]
 
     return JsonResponse(data, safe=False)
+
+
+
+
+@role_required("KITCHEN")
+def kitchen_staff_food(request):
+    """Record internal staff meals without creating saleable finished-food stock."""
+    kitchen = _current_kitchen(request.user)
+    recipes = (
+        Recipe.objects.filter(
+            product__hotel_id=kitchen.hotel_id,
+            is_active=True,
+            active_version__status="APPROVED",
+            active_version__items__isnull=False,
+        )
+        .distinct()
+        .order_by("name")
+    )
+    ingredients = Product.objects.filter(
+        hotel_id=kitchen.hotel_id,
+        product_type="RAW",
+        is_active=True,
+        departments=kitchen,
+    ).order_by("name").distinct()
+
+    IngredientFormSet = formset_factory(
+        StaffFoodIngredientForm, extra=0, can_delete=True
+    )
+    if request.method == "POST":
+        form = StaffFoodProductionForm(request.POST)
+        form.fields["recipe"].queryset = recipes
+        formset = IngredientFormSet(request.POST, prefix="ingredients")
+        for ingredient_form in list(formset.forms) + [formset.empty_form]:
+            ingredient_form.fields["ingredient"].queryset = ingredients
+
+        if form.is_valid() and formset.is_valid():
+            data = form.cleaned_data
+            mode = data["mode"]
+            entries = [
+                {
+                    "ingredient_id": row.cleaned_data["ingredient"].pk,
+                    "actual_quantity": row.cleaned_data["actual_quantity"],
+                    "variance_reason": row.cleaned_data.get("variance_reason", ""),
+                }
+                for row in formset.forms
+                if row.cleaned_data and not row.cleaned_data.get("DELETE")
+            ]
+            if mode != "NO_MEAL" and not entries:
+                form.add_error(None, "Add at least one ingredient used in the staff meal.")
+            else:
+                try:
+                    with transaction.atomic():
+                        recipe = data.get("recipe") if mode == "RECIPE" else None
+                        version = recipe.active_version if recipe else None
+                        production = StaffFoodProduction.objects.create(
+                            department=kitchen,
+                            production_date=data["production_date"],
+                            meal_name=data.get("meal_name", "").strip(),
+                            status="NOT_PREPARED" if mode == "NO_MEAL" else "PREPARED",
+                            recipe=recipe,
+                            recipe_version=version,
+                            portions_prepared=data.get("portions_prepared") or 0,
+                            portions_served=data.get("portions_served") or 0,
+                            notes=data.get("notes", "").strip(),
+                            recorded_by=request.user,
+                        )
+                        from kitchen.services.staff_food import execute_staff_food_production
+                        execute_staff_food_production(
+                            production=production,
+                            ingredient_entries=entries,
+                            user=request.user,
+                        )
+                    if mode == "NO_MEAL":
+                        messages.success(request, "No-staff-meal day recorded.")
+                    else:
+                        messages.success(
+                            request,
+                            f"Staff food recorded. FIFO ingredient cost: ₦{production.total_cost:,.2f}.",
+                        )
+                    return redirect("kitchen_staff_food")
+                except ValidationError as exc:
+                    for message in exc.messages:
+                        form.add_error(None, message)
+    else:
+        form = StaffFoodProductionForm(initial={
+            "production_date": timezone.localdate(),
+            "mode": "MANUAL",
+        })
+        form.fields["recipe"].queryset = recipes
+        formset = IngredientFormSet(prefix="ingredients")
+        for ingredient_form in list(formset.forms) + [formset.empty_form]:
+            ingredient_form.fields["ingredient"].queryset = ingredients
+
+    history = (
+        StaffFoodProduction.objects.filter(department=kitchen)
+        .select_related("recorded_by", "recipe")
+        .prefetch_related("ingredient_usages__ingredient")
+        .order_by("-production_date", "-created_at")[:60]
+    )
+    return render(request, "kitchen/staff_food.html", {
+        "form": form,
+        "formset": formset,
+        "history": history,
+        "recipes": recipes,
+        "ingredients": ingredients,
+    })
 
 
 @role_required("KITCHEN")
