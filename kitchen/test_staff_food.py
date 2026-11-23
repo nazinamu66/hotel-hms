@@ -149,3 +149,32 @@ class StaffFoodProductionTests(TestCase):
         self.client.force_login(self.manager)
         denied = self.client.get(reverse("kitchen_staff_food"))
         self.assertEqual(denied.status_code, 403)
+
+    @patch("kitchen.services.staff_food.record_transaction")
+    def test_manual_staff_food_can_be_recorded_from_kitchen_page(self, post_entry):
+        self.client.force_login(self.cook)
+        response = self.client.post(reverse("kitchen_staff_food"), {
+            "production_date": "2026-11-23",
+            "meal_name": "Rice and stew",
+            "mode": "MANUAL",
+            "portions_prepared": "8",
+            "portions_served": "7",
+            "notes": "",
+            "ingredients-TOTAL_FORMS": "1",
+            "ingredients-INITIAL_FORMS": "0",
+            "ingredients-MIN_NUM_FORMS": "0",
+            "ingredients-MAX_NUM_FORMS": "1000",
+            "ingredients-0-ingredient": str(self.ingredient.pk),
+            "ingredients-0-actual_quantity": "2.000",
+            "ingredients-0-unit": "",
+            "ingredients-0-variance_reason": "",
+            "ingredients-0-DELETE": "",
+        })
+        self.assertEqual(response.status_code, 302)
+        production = StaffFoodProduction.objects.get(
+            department=self.kitchen, meal_name="Rice and stew"
+        )
+        self.assertEqual(production.total_cost, Decimal("100.00"))
+        self.stock.refresh_from_db()
+        self.assertEqual(self.stock.quantity, Decimal("8.000"))
+        post_entry.assert_called_once()
