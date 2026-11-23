@@ -724,10 +724,7 @@
                 <span class="arrow">▸</span> Receiving
             </h5>
             <div id="store_receiving_group" class="menu-section">
-                {% if request.user.role == "STORE" %}
-                <a href="{% url 'inventory:department_incoming_pos' %}">Incoming Deliveries</a>
-                {% endif %}
-                <a href="{% url 'store_receive_history' %}">Goods Received History</a>
+                <a href="{% url 'store_receiving' %}">Receiving</a>
             </div>
 
             <h5 class="menu-subtoggle" onclick="toggleMenu('store_issue_history_group', this)">
