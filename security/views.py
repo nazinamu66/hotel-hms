@@ -12,17 +12,22 @@ from .models import PropertyExitPass
 MANAGEMENT_ROLES = ("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 
 
+def _accessible_hotels(user):
+    if user.role in {"DIRECTOR", "ADMIN"}:
+        return Hotel.objects.filter(is_active=True).order_by("name")
+    if user.role == "GENERAL_MANAGER":
+        return user.assigned_hotels.filter(is_active=True).order_by("name")
+    hotel = user.hotel or (user.department.hotel if user.department_id else None)
+    return Hotel.objects.filter(pk=hotel.pk) if hotel else Hotel.objects.none()
+
+
 def _hotel_for_user(request):
     user = request.user
-    if user.role in {"DIRECTOR", "ADMIN"}:
-        hotels = Hotel.objects.filter(is_active=True).order_by("name")
-    elif user.role == "GENERAL_MANAGER":
-        hotels = user.assigned_hotels.filter(is_active=True).order_by("name")
-    else:
-        hotel = user.hotel or (user.department.hotel if user.department_id else None)
-        if not hotel:
-            raise PermissionDenied("Your account is not assigned to a hotel.")
-        return hotel
+    hotels = _accessible_hotels(user)
+    if not hotels.exists():
+        raise PermissionDenied("Your account is not assigned to an accessible hotel.")
+    if user.role not in {"DIRECTOR", "ADMIN", "GENERAL_MANAGER"}:
+        return hotels.first()
     selected_id = request.POST.get("hotel") or request.GET.get("hotel")
     if selected_id:
         try:
@@ -41,6 +46,7 @@ def security_dashboard(request):
     passes = PropertyExitPass.objects.filter(hotel=hotel)
     context = {
         "hotel": hotel,
+        "available_hotels": _accessible_hotels(request.user),
         "pending": passes.filter(status=PropertyExitPass.AUTHORIZED).count(),
         "currently_out": passes.filter(status=PropertyExitPass.OUT).count(),
         "overdue": passes.filter(status=PropertyExitPass.OUT, pass_type=PropertyExitPass.TEMPORARY, expected_return_date__lt=timezone.localdate()).count(),
@@ -57,7 +63,7 @@ def property_pass_list(request):
     status = request.GET.get("status", "").strip()
     if status in dict(PropertyExitPass.STATUS_CHOICES):
         passes = passes.filter(status=status)
-    return render(request, "security/pass_list.html", {"hotel": hotel, "passes": passes, "status_filter": status, "statuses": PropertyExitPass.STATUS_CHOICES})
+    return render(request, "security/pass_list.html", {"hotel": hotel, "available_hotels": _accessible_hotels(request.user), "passes": passes, "status_filter": status, "statuses": PropertyExitPass.STATUS_CHOICES})
 
 
 @login_required
@@ -74,7 +80,7 @@ def property_pass_create(request):
         record.save()
         messages.success(request, f"Authorisation {record.pass_number} created. Security can now record the gate exit.")
         return redirect("security_pass_detail", pass_id=record.pk)
-    return render(request, "security/pass_form.html", {"form": form, "hotel": hotel})
+    return render(request, "security/pass_form.html", {"form": form, "hotel": hotel, "available_hotels": _accessible_hotels(request.user)})
 
 
 @login_required
@@ -115,4 +121,4 @@ def property_pass_return(request, pass_id):
 def property_pass_detail(request, pass_id):
     hotel = _hotel_for_user(request.user)
     record = get_object_or_404(PropertyExitPass.objects.select_related("authorising_manager", "gate_out_by", "return_confirmed_by", "equipment_asset", "staff_user"), pk=pass_id, hotel=hotel)
-    return render(request, "security/pass_detail.html", {"record": record})
+    return render(request, "security/pass_detail.html", {"record": record, "available_hotels": _accessible_hotels(request.user)})
