@@ -235,3 +235,4 @@ class StaffFoodIngredientForm(forms.Form):
         label="Actual quantity used",
     )
     variance_reason = forms.CharField(required=False, max_length=1000)
+    unit = forms.CharField(required=False, widget=forms.HiddenInput)
