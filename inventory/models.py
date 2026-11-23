@@ -337,6 +337,13 @@ class Product(models.Model):
     # -----------------------------
     reorder_level = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    housekeeping_issue_eligible = models.BooleanField(
+        default=False,
+        help_text=(
+            "Explicitly allow this resale product to be issued by Housekeeping "
+            "for guest-room replenishment or approved operational use."
+        ),
+    )
 
     departments = models.ManyToManyField(
         "inventory.Department",
