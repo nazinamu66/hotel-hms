@@ -774,6 +774,7 @@ def kitchen_staff_food(request):
                     "ingredient_id": row.cleaned_data["ingredient"].pk,
                     "actual_quantity": row.cleaned_data["actual_quantity"],
                     "variance_reason": row.cleaned_data.get("variance_reason", ""),
+                    "unit": row.cleaned_data.get("unit", ""),
                 }
                 for row in formset.forms
                 if row.cleaned_data and not row.cleaned_data.get("DELETE")
