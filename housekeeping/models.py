@@ -169,8 +169,8 @@ class CleaningMaterialUsage(models.Model):
     )
 
     quantity = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=12,
+        decimal_places=3,
     )
 
     notes = models.TextField(
