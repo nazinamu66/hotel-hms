@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from inventory.models import Hotel
@@ -84,3 +85,66 @@ class PropertyExitPass(models.Model):
 
     def __str__(self):
         return f"{self.pass_number or 'New pass'} — {self.item_description}"
+
+
+class VehicleVisit(models.Model):
+    COMMON_MAKES = [
+        ("TOYOTA", "Toyota"), ("HONDA", "Honda"), ("LEXUS", "Lexus"),
+        ("MERCEDES_BENZ", "Mercedes-Benz"), ("NISSAN", "Nissan"),
+        ("HYUNDAI", "Hyundai"), ("KIA", "Kia"), ("FORD", "Ford"),
+        ("VOLKSWAGEN", "Volkswagen"), ("PEUGEOT", "Peugeot"),
+        ("MITSUBISHI", "Mitsubishi"), ("MAZDA", "Mazda"),
+        ("BMW", "BMW"), ("AUDI", "Audi"), ("VOLVO", "Volvo"),
+        ("LAND_ROVER", "Land Rover"), ("RANGE_ROVER", "Range Rover"),
+        ("SUZUKI", "Suzuki"), ("SUBARU", "Subaru"), ("OTHER", "Other"),
+    ]
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="security_vehicle_visits")
+    make = models.CharField(max_length=30, choices=COMMON_MAKES)
+    other_make = models.CharField(max_length=100, blank=True)
+    model = models.CharField(max_length=100, blank=True)
+    plate_number = models.CharField(max_length=30)
+    entered_at = models.DateTimeField(default=timezone.now, editable=False)
+    entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="security_vehicle_entries")
+    entry_note = models.TextField(blank=True)
+    exited_at = models.DateTimeField(null=True, blank=True)
+    exited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="security_vehicle_exits")
+    exit_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-entered_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["hotel", "plate_number"],
+                condition=Q(exited_at__isnull=True),
+                name="uniq_inside_vehicle_plate_per_hotel",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["hotel", "exited_at"]),
+            models.Index(fields=["hotel", "entered_at"]),
+        ]
+
+    def clean(self):
+        if self.make == "OTHER" and not self.other_make.strip():
+            raise ValidationError({"other_make": "Enter the vehicle make when Other is selected."})
+        if self.make != "OTHER" and self.other_make:
+            self.other_make = ""
+
+    def save(self, *args, **kwargs):
+        self.plate_number = " ".join(self.plate_number.upper().split())
+        if self.make != "OTHER":
+            self.other_make = ""
+        super().save(*args, **kwargs)
+
+    @property
+    def display_make(self):
+        return self.other_make if self.make == "OTHER" else self.get_make_display()
+
+    @property
+    def is_inside(self):
+        return self.exited_at is None
+
+    def __str__(self):
+        return f"{self.plate_number} — {self.display_make}"
