@@ -3021,7 +3021,7 @@ def direct_purchase_detail(request, pk):
         },
     )
 
-@role_required("KITCHEN")
+@role_required("KITCHEN", "MANAGER", "ADMIN", "DIRECTOR")
 def production_history(request):
 
     hotels = get_accessible_hotels(request.user)
@@ -3109,6 +3109,7 @@ def production_history(request):
             "users": users,
             "filters": request.GET,
             "ordering": ordering,
+            "is_management_view": request.user.role in {"MANAGER", "ADMIN", "DIRECTOR"},
         }
     )
 
@@ -3533,6 +3534,7 @@ def production_detail(request, pk):
             "variance_cost_estimate": variance_cost_estimate,
             "ingredient_cost_rows": ingredient_cost_rows,
             "has_uncosted_usage": batch.ingredient_usages.filter(uncosted_quantity__gt=0).exists(),
+            "is_management_view": request.user.role in {"MANAGER", "ADMIN", "DIRECTOR"},
         }
     )
 
