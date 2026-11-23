@@ -140,6 +140,65 @@ class StoreStockTransferTests(TestCase):
             Decimal("1.250"),
         )
 
+    def test_store_user_can_view_transfer_in_own_store_hotel(self):
+        transfer = StockTransfer.objects.create(
+            product=self.product,
+            from_department=self.store,
+            to_department=self.kitchen,
+            quantity=Decimal("1.000"),
+            created_by=self.store_user,
+        )
+        client = Client()
+        client.force_login(self.store_user)
+
+        response = client.get(
+            reverse("store_transfer_detail", kwargs={"pk": transfer.pk})
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"Stock Transfer #{transfer.pk}")
+
+    def test_store_user_cannot_view_transfer_from_another_hotel(self):
+        other_hotel = Hotel.objects.create(
+            organization=self.hotel.organization,
+            name="Another Test Hotel",
+        )
+        other_store = Department.objects.create(
+            hotel=other_hotel,
+            code="OST",
+            name="Other Store",
+            department_type="STORE",
+        )
+        other_department = Department.objects.create(
+            hotel=other_hotel,
+            code="OKT",
+            name="Other Kitchen",
+            department_type="KITCHEN",
+        )
+        other_product = Product.objects.create(
+            hotel=other_hotel,
+            name="Other Rice",
+            sku="OTHER-STORE-RICE",
+            product_type="RAW",
+            base_unit="kg",
+            cost_price=Decimal("100.00"),
+        )
+        transfer = StockTransfer.objects.create(
+            product=other_product,
+            from_department=other_store,
+            to_department=other_department,
+            quantity=Decimal("1.000"),
+            created_by=self.store_user,
+        )
+        client = Client()
+        client.force_login(self.store_user)
+
+        response = client.get(
+            reverse("store_transfer_detail", kwargs={"pk": transfer.pk})
+        )
+
+        self.assertEqual(response.status_code, 404)
+
     def test_stock_transfer_cannot_execute_twice(self):
         transfer = StockTransfer.objects.create(
             product=self.product,
