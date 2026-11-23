@@ -902,17 +902,16 @@ def store_issue_history(request):
     ).order_by(allowed_sorts.get(sort, "-created_at"))
 
     # Derive filter options from this Store's own transfer history.
-    departments = Department.objects.filter(
-        hotel=store.hotel,
-        stock_in__movement_type="TRANSFER",
-        stock_out__from_department=store,
-    ).distinct().order_by("name")
-    users = (
-        request.user.__class__.objects.filter(
-            stockmovement__movement_type="TRANSFER",
-            stockmovement__from_department=store,
-        ).distinct().order_by("username")
+    transfer_history = StockMovement.objects.filter(
+        movement_type="TRANSFER", from_department=store
     )
+    departments = Department.objects.filter(
+        pk__in=transfer_history.values("to_department_id"),
+        hotel=store.hotel,
+    ).order_by("name")
+    users = request.user.__class__.objects.filter(
+        pk__in=transfer_history.values("created_by_id")
+    ).order_by("username")
 
     return render(request, "store/issue_history.html", {
         "movements": movements,
