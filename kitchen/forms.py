@@ -138,9 +138,6 @@ class IngredientUsageForm(forms.Form):
         max_digits=10
     )
     variance_reason = forms.CharField(required=False, max_length=1000)
-    unit = forms.CharField(required=False, widget=forms.HiddenInput)
-    unit = forms.CharField(required=False, widget=forms.HiddenInput)
-    unit = forms.CharField(required=False, widget=forms.HiddenInput)
 
 class PreparedFoodForm(forms.ModelForm):
     class Meta:
