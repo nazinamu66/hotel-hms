@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from inventory.models import Product, Stock, stock_out
+from accounting.services.postings.staff_food import post_staff_food_consumption
 from kitchen.models import StaffFoodIngredientUsage, StaffFoodProduction
 from kitchen.unit_conversion import convert_quantity
 
@@ -160,7 +161,6 @@ def execute_staff_food_production(*, production, ingredient_entries, user):
         total_cost += cost
 
     total_cost = total_cost.quantize(MONEY, rounding=ROUND_HALF_UP)
-    from accounting.services.postings.staff_food import post_staff_food_consumption
     post_staff_food_consumption(
         production=production,
         amount=total_cost,
