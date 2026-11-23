@@ -214,6 +214,10 @@
     </td>
 
     <td>
+        {% if request.user.is_department_head or request.user.role == "MANAGER" or request.user.role == "ADMIN" or request.user.role == "DIRECTOR" %}
+            <a href="{% url 'housekeeping_material_custody' assignment.id %}">Issue / custody</a>
+            {% if assignment.status == "INSPECTION" %} | {% else %}<br>{% endif %}
+        {% endif %}
 
         {% if assignment.status == "ASSIGNED" %}
 
