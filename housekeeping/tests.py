@@ -363,6 +363,18 @@ class HousekeepingMaterialCustodyWorkflowTests(TestCase):
         )
         self.assertEqual(issue.product, resale)
 
+        asset = Product.objects.create(
+            hotel=self.hotel, name="Housekeeping Linen Asset", sku="HK-LINEN-ASSET",
+            product_type="HOUSEKEEPING", usage_type="ASSET", base_unit="piece",
+            housekeeping_issue_eligible=True,
+        )
+        asset.departments.add(self.department)
+        with self.assertRaises(ValidationError):
+            issue_material_to_assignment(
+                assignment=self.assignment, product=asset,
+                quantity=Decimal("1"), issued_by=self.head,
+            )
+
     def test_department_stock_shows_only_opted_in_resale_products(self):
         approved = Product.objects.create(
             hotel=self.hotel, name="Department Stock Fanta", sku="HK-STOCK-FANTA",
