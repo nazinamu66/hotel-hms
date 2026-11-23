@@ -1,60 +1,178 @@
 {% extends "base/base.html" %}
+
+{% block title %}Kitchen Ingredient Requests | Hotel HMS{% endblock %}
+
 {% block content %}
+<style>
+    .kitchen-requests { max-width:1500px; margin:0 auto; padding:4px 0 42px; color:#1e293b; }
+    .kitchen-requests * { box-sizing:border-box; }
+    .kitchen-requests .kr-hero {
+        display:flex; justify-content:space-between; align-items:flex-start; gap:18px;
+        flex-wrap:wrap; padding:22px 24px; margin-bottom:22px;
+        border:1px solid #dbeafe; border-radius:18px;
+        background:linear-gradient(120deg,#fff,#f3f7ff);
+        box-shadow:0 8px 24px rgba(15,23,42,.045);
+    }
+    .kitchen-requests .kr-eyebrow {
+        display:flex; align-items:center; gap:8px; margin-bottom:8px;
+        color:#2563eb; font-size:.75rem; font-weight:850;
+        letter-spacing:.12em; text-transform:uppercase;
+    }
+    .kitchen-requests .kr-eyebrow:before {
+        content:""; width:8px; height:8px; border-radius:50%;
+        background:#3b82f6; box-shadow:0 0 0 4px #dbeafe;
+    }
+    .kitchen-requests h1 {
+        margin:0; color:#172554; font-size:clamp(1.65rem,3vw,2.2rem);
+        font-weight:850; letter-spacing:-.04em;
+    }
+    .kitchen-requests .kr-subtitle { margin:7px 0 0; color:#64748b; font-size:.92rem; line-height:1.6; }
+    .kitchen-requests .kr-scope {
+        display:inline-flex; align-items:center; padding:9px 12px;
+        border:1px solid #dbeafe; border-radius:999px;
+        background:#fff; color:#1d4ed8; font-size:.75rem; font-weight:800;
+    }
+    .kitchen-requests .kr-list { display:grid; gap:17px; }
+    .kitchen-requests .kr-card {
+        overflow:hidden; background:#fff; border:1px solid #e2e8f0;
+        border-radius:15px; box-shadow:0 4px 14px rgba(15,23,42,.045);
+    }
+    .kitchen-requests .kr-card-head {
+        display:flex; justify-content:space-between; align-items:flex-start;
+        gap:14px; flex-wrap:wrap; padding:17px 20px;
+        border-bottom:1px solid #e2e8f0;
+    }
+    .kitchen-requests .kr-request-id { color:#172554; font-size:1rem; font-weight:850; }
+    .kitchen-requests .kr-meta {
+        display:flex; gap:8px 18px; flex-wrap:wrap; margin-top:7px;
+        color:#64748b; font-size:.78rem;
+    }
+    .kitchen-requests .kr-meta strong { color:#334155; font-weight:800; }
+    .kitchen-requests .kr-status {
+        display:inline-flex; align-items:center; gap:6px; padding:6px 10px;
+        border-radius:999px; background:#dcfce7; color:#15803d;
+        font-size:.7rem; font-weight:850; white-space:nowrap;
+    }
+    .kitchen-requests .kr-status:before {
+        content:""; width:6px; height:6px; border-radius:50%; background:currentColor;
+    }
+    .kitchen-requests .kr-table-wrap { overflow-x:auto; }
+    .kitchen-requests .kr-table { width:100%; min-width:720px; border-collapse:separate; border-spacing:0; font-size:.82rem; }
+    .kitchen-requests .kr-table th {
+        padding:12px 15px; background:#f8fafc; color:#64748b; text-align:left;
+        font-size:.68rem; font-weight:850; letter-spacing:.055em;
+        text-transform:uppercase; white-space:nowrap;
+    }
+    .kitchen-requests .kr-table td {
+        padding:13px 15px; border-top:1px solid #f1f5f9;
+        color:#334155; vertical-align:middle;
+    }
+    .kitchen-requests .kr-table tbody tr:hover td { background:#f8fbff; }
+    .kitchen-requests .kr-product { color:#1e293b!important; font-weight:800; }
+    .kitchen-requests .kr-number {
+        color:#1e293b!important; font-weight:750;
+        font-variant-numeric:tabular-nums; white-space:nowrap;
+    }
+    .kitchen-requests .kr-remaining { color:#b45309!important; font-weight:850; }
+    .kitchen-requests .kr-complete {
+        display:inline-flex; align-items:center; gap:6px; padding:6px 9px;
+        border-radius:999px; background:#dcfce7; color:#15803d;
+        font-size:.7rem; font-weight:850; white-space:nowrap;
+    }
+    .kitchen-requests .kr-issue {
+        display:inline-flex; justify-content:center; align-items:center;
+        min-height:36px; padding:8px 12px; border:1px solid #2563eb;
+        border-radius:9px; background:#2563eb; color:#fff;
+        font-size:.75rem; font-weight:800; cursor:pointer;
+    }
+    .kitchen-requests .kr-issue:hover { background:#1d4ed8; }
+    .kitchen-requests .kr-empty-line { padding:24px!important; text-align:center; color:#64748b!important; }
+    .kitchen-requests .kr-empty {
+        padding:38px 22px; border:1px dashed #cbd5e1; border-radius:15px;
+        background:#fff; text-align:center;
+    }
+    .kitchen-requests .kr-empty-mark {
+        display:grid; place-items:center; width:42px; height:42px; margin:0 auto 12px;
+        border-radius:13px; background:#eff6ff; color:#2563eb; font-size:1.2rem; font-weight:900;
+    }
+    .kitchen-requests .kr-empty h2 { margin:0; color:#172554; font-size:1rem; font-weight:850; }
+    .kitchen-requests .kr-empty p { margin:6px 0 0; color:#64748b; font-size:.82rem; }
+    @media(max-width:600px) { .kitchen-requests .kr-hero { padding:18px; } .kitchen-requests .kr-card-head { padding:15px; } }
+</style>
 
-<h2>Kitchen Ingredient Requests (Store)</h2>
+<div class="kitchen-requests">
+    <header class="kr-hero">
+        <div>
+            <div class="kr-eyebrow">Store Operations · Kitchen Fulfilment</div>
+            <h1>Kitchen Ingredient Requests</h1>
+            <p class="kr-subtitle">Review approved kitchen requests and issue available store ingredients, including partial fulfilments.</p>
+        </div>
+        <span class="kr-scope">Store · Kitchen Requests</span>
+    </header>
 
-{% if requests %}
-  {% for req in requests %}
-  <div style="border:1px solid #ddd; padding:15px; margin-bottom:25px; border-radius:6px;">
+    {% if requests %}
+        <div class="kr-list">
+            {% for req in requests %}
+                <section class="kr-card">
+                    <div class="kr-card-head">
+                        <div>
+                            <div class="kr-request-id">Request #{{ req.id }}</div>
+                            <div class="kr-meta">
+                                <span><strong>Requested by:</strong> {{ req.requested_by }}</span>
+                                {% if req.requested_by.department %}
+                                    <span><strong>Department:</strong> {{ req.requested_by.department.name }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="kr-status">{{ req.get_status_display|default:req.status }}</span>
+                    </div>
 
-    <h3>Request #{{ req.id }}</h3>
-    <p><strong>Status:</strong> {{ req.status }}</p>
-    <p><strong>Requested By:</strong> {{ req.requested_by }}</p>
-
-    <table border="1" cellpadding="6" width="100%" style="border-collapse: collapse;">
-      <thead>
-        <tr>
-          <th>Ingredient</th>
-          <th>Requested</th>
-          <th>Issued</th>
-          <th>Remaining</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in req.store_items %}
-        <tr>
-          <td>{{ item.ingredient.name }}</td>
-          <td>{{ item.quantity }}</td>
-          <td>{{ item.total_issued }}</td>
-          <td>{{ item.remaining }}</td>
-          <td>
-            {% if item.remaining > 0 %}
-              <form method="post" action="{% url 'issue_request_item' item.id %}">
-                {% csrf_token %}
-                <button type="submit">
-                  Issue Available
-                </button>
-              </form>
-            {% else %}
-              <span style="color:green;">✔ Completed</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="5" style="text-align:center;">
-            No store items in this request.
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-
-  </div>
-  {% endfor %}
-{% else %}
-  <p>No store ingredient requests.</p>
-{% endif %}
-
+                    <div class="kr-table-wrap">
+                        <table class="kr-table">
+                            <thead>
+                                <tr>
+                                    <th>Ingredient</th>
+                                    <th>Requested</th>
+                                    <th>Issued</th>
+                                    <th>Remaining</th>
+                                    <th>Fulfilment</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in req.store_items %}
+                                    <tr>
+                                        <td class="kr-product">{{ item.ingredient.name }}</td>
+                                        <td class="kr-number">{{ item.quantity }} {{ item.ingredient.base_unit }}</td>
+                                        <td class="kr-number">{{ item.total_issued }} {{ item.ingredient.base_unit }}</td>
+                                        <td class="kr-number {% if item.remaining > 0 %}kr-remaining{% endif %}">{{ item.remaining }} {{ item.ingredient.base_unit }}</td>
+                                        <td>
+                                            {% if item.remaining > 0 %}
+                                                <form method="post" action="{% url 'issue_request_item' item.id %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="kr-issue">Issue Available</button>
+                                                </form>
+                                            {% else %}
+                                                <span class="kr-complete">✓ Completed</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="kr-empty-line">No store items in this request.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            {% endfor %}
+        </div>
+    {% else %}
+        <section class="kr-empty">
+            <div class="kr-empty-mark">✓</div>
+            <h2>No approved kitchen requests waiting for Store</h2>
+            <p>New approved requests that require Store fulfilment will appear here.</p>
+        </section>
+    {% endif %}
+</div>
 {% endblock %}
