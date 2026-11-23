@@ -168,3 +168,27 @@ class PropertyExitPassTests(TestCase):
         self.client.force_login(self.manager)
         response = self.client.get(reverse("security_vehicle_entry"))
         self.assertEqual(response.status_code, 403)
+
+    def test_vehicle_register_renders_active_visit_without_exit_officer(self):
+        VehicleVisit.objects.create(
+            hotel=self.hotel, make="TOYOTA", model="Corolla",
+            plate_number="ABC-777XY", entered_by=self.security,
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_vehicle_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ABC-777XY")
+        self.assertContains(response, "Inside")
+        self.assertContains(response, "—")
+
+    def test_vehicle_register_renders_exited_visit_with_exit_officer(self):
+        visit = VehicleVisit.objects.create(
+            hotel=self.hotel, make="HONDA", plate_number="ABC-888XY",
+            entered_by=self.security, exited_at=timezone.now(), exited_by=self.security,
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_vehicle_list") + "?status=EXITED")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ABC-888XY")
+        self.assertContains(response, "Exited")
+        self.assertContains(response, "security-officer")
