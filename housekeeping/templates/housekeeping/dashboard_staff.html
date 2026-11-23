@@ -101,6 +101,7 @@
                                     <a class="hk-btn" href="{% url 'housekeeping_finish_cleaning' assignment.room.id %}">Finish cleaning</a>
                                 {% elif assignment.status == "INSPECTION" %}
                                     <span class="hk-muted">Submitted for inspection</span>
+                                    <a class="hk-btn hk-btn-secondary" href="{% url 'housekeeping_material_custody' assignment.id %}">Submit unused material return</a>
                                 {% endif %}
                             </div>
                         </td>
