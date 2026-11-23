@@ -9,7 +9,10 @@ from django.urls import reverse
 from inventory.models import (
     Department, Hotel, Organization, Product, Stock, StockCostLayer, StockMovement,
 )
-from kitchen.models import StaffFoodProduction, StaffFoodIngredientUsage
+from kitchen.models import (
+    StaffFoodProduction, StaffFoodIngredientUsage,
+    Recipe, RecipeVersion, RecipeVersionItem,
+)
 from kitchen.services.staff_food import execute_staff_food_production
 
 
@@ -177,4 +180,40 @@ class StaffFoodProductionTests(TestCase):
         self.assertEqual(production.total_cost, Decimal("100.00"))
         self.stock.refresh_from_db()
         self.assertEqual(self.stock.quantity, Decimal("8.000"))
+        post_entry.assert_called_once()
+
+    @patch("kitchen.services.staff_food.record_transaction")
+    def test_staff_food_can_use_an_approved_recipe_snapshot(self, post_entry):
+        finished = Product.objects.create(
+            hotel=self.hotel, name="Staff Food Rice Plate", sku="SF-PLATE",
+            product_type="FOOD", base_unit="portion",
+        )
+        recipe = Recipe.objects.create(name="Staff Rice Recipe", product=finished)
+        version = RecipeVersion.objects.create(
+            recipe=recipe, version_number=1, status="APPROVED",
+            created_by=self.cook, approved_by=self.cook,
+        )
+        RecipeVersionItem.objects.create(
+            recipe_version=version, ingredient=self.ingredient,
+            quantity=Decimal("0.250"), unit="kg",
+            control_mode="STRICT", tolerance_percent=Decimal("0.00"),
+        )
+        recipe.active_version = version
+        recipe.save(update_fields=["active_version"])
+        production = self.make_production(recipe=recipe, recipe_version=version)
+
+        execute_staff_food_production(
+            production=production,
+            ingredient_entries=[{
+                "ingredient_id": self.ingredient.pk,
+                "actual_quantity": "2.000",
+                "unit": "kg",
+            }],
+            user=self.cook,
+        )
+
+        usage = StaffFoodIngredientUsage.objects.get(production=production)
+        self.assertEqual(usage.expected_quantity, Decimal("2.000"))
+        self.assertEqual(usage.actual_quantity, Decimal("2.000"))
+        self.assertEqual(usage.total_cost, Decimal("100.00"))
         post_entry.assert_called_once()
