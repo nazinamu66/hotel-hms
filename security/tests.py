@@ -57,6 +57,22 @@ class PropertyExitPassTests(TestCase):
         self.assertEqual(record.status, PropertyExitPass.OUT)
         self.assertEqual(record.gate_out_by, self.security)
 
+    def test_security_can_confirm_temporary_item_return(self):
+        record = self.make_pass()
+        record.status = PropertyExitPass.OUT
+        record.gate_out_by = self.security
+        record.save()
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_pass_return", args=[record.pk]), {
+            "return_condition": "Good condition",
+            "return_note": "Returned after repair",
+        })
+        self.assertEqual(response.status_code, 302)
+        record.refresh_from_db()
+        self.assertEqual(record.status, PropertyExitPass.RETURNED)
+        self.assertEqual(record.return_confirmed_by, self.security)
+        self.assertEqual(record.return_condition, "Good condition")
+
     def test_permanent_release_is_closed_at_gate_exit(self):
         record = self.make_pass(pass_type=PropertyExitPass.PERMANENT, expected_return_date=None)
         self.client.force_login(self.security)
