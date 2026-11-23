@@ -48,4 +48,6 @@ class PropertyExitPassForm(forms.ModelForm):
             self.add_error("expected_return_date", "A permanent release does not require a return date.")
         if not cleaned.get("item_is_equipment") and cleaned.get("equipment_asset"):
             self.add_error("equipment_asset", "Mark the item as equipment before selecting a registered asset.")
+        if not cleaned.get("approval_reference") and not cleaned.get("authorisation_note"):
+            self.add_error("approval_reference", "Enter the handwritten note reference or attach a scan/photo of the management authorisation.")
         return cleaned
