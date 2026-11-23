@@ -96,9 +96,9 @@ class StaffFoodProductionTests(TestCase):
             1,
         )
         post_entry.assert_called_once()
-        self.assertEqual(post_entry.call_args.kwargs["debit_system_key"], "staff_meals_expense")
-        self.assertEqual(post_entry.call_args.kwargs["credit_system_key"], "inventory_asset")
+        self.assertEqual(post_entry.call_args.kwargs["production"].pk, production.pk)
         self.assertEqual(post_entry.call_args.kwargs["amount"], Decimal("100.00"))
+        self.assertEqual(post_entry.call_args.kwargs["user"], self.cook)
         self.assertFalse(
             Stock.objects.filter(
                 product__product_type="FOOD", department=self.kitchen
