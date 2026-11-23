@@ -1602,6 +1602,10 @@ class StaffFoodProduction(models.Model):
     class Meta:
         ordering = ["-production_date", "-created_at"]
 
+    @property
+    def leftovers(self):
+        return max(self.portions_prepared - self.portions_served, 0)
+
     def __str__(self):
         return f"Staff food {self.production_date} - {self.meal_name or self.get_status_display()}"
 
