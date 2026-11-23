@@ -345,10 +345,10 @@
                 {{ movement.reference }}
             </a>
 
-        {% elif movement.movement_type == "IN" and movement.reference|slice:":3" == "PO-" %}
+        {% elif movement.movement_type == "IN" and movement.purchase_order_id %}
 
             <a
-                href="{% url 'inventory:po_detail' movement.reference|cut:'PO-' %}"
+                href="{% url 'inventory:po_detail' movement.purchase_order_id %}"
             >
                 {{ movement.reference }}
             </a>
