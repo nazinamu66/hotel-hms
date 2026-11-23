@@ -37,10 +37,12 @@ def validate_housekeeping_product(product, department):
         raise ValidationError("This product is inactive.")
     if product.hotel_id != department.hotel_id:
         raise ValidationError("This product belongs to another hotel.")
-    if product.usage_type not in ALLOWED_USAGE_TYPES:
+    if product.usage_type not in ALLOWED_USAGE_TYPES and not (
+        product.usage_type == "RESALE" and product.housekeeping_issue_eligible
+    ):
         raise ValidationError(
-            "Housekeeping can only issue INTERNAL or CONSUMABLE products. "
-            "RESALE and ASSET products are not permitted."
+            "Housekeeping can issue INTERNAL and CONSUMABLE products, plus "
+            "RESALE products explicitly approved for Housekeeping. ASSET products are not permitted."
         )
     if not product.departments.filter(pk=department.pk).exists():
         raise PermissionDenied("Housekeeping is not authorized to use this product.")
