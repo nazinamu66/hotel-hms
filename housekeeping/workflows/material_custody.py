@@ -185,7 +185,7 @@ def consume_assigned_material(
 
     # The existing stock_out service deducts physical department stock and consumes
     # the department's FIFO layers atomically. This is deliberately immediate.
-    stock_out(
+    stock_result = stock_out(
         product=product,
         department=department,
         quantity=quantity,
@@ -213,6 +213,20 @@ def consume_assigned_material(
             recorded_by=user,
         ))
         left_to_allocate -= allocated
+
+    # Post the same FIFO cost used by the physical stock deduction. Because
+    # this function is atomic, a failed journal post rolls back stock, cost
+    # layers, movement, and usage records together.
+    from accounting.services.postings.housekeeping import (
+        post_housekeeping_material_consumption,
+    )
+    post_housekeeping_material_consumption(
+        assignment=assignment,
+        product=product,
+        purpose=purpose,
+        stock_result=stock_result,
+        user=user,
+    )
 
     return usages
 
