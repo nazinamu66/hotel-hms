@@ -2478,18 +2478,16 @@ class KitchenManagementReportAccessTests(TestCase):
         response = self.client.get(reverse("kitchen_production_detail", args=[batch.pk]))
         self.assertEqual(response.status_code, 404)
 
-    def test_management_users_can_open_hotel_scoped_production_history(self):
+    def test_management_users_cannot_open_kitchen_production_history(self):
         for user in (self.manager, self.director, self.admin):
             self.client.force_login(user)
             response = self.client.get(reverse("kitchen_production_history"))
-            self.assertEqual(response.status_code, 200)
-            self.assertTrue(response.context["is_management_view"])
+            self.assertEqual(response.status_code, 403)
 
-    def test_kitchen_staff_get_operational_production_history_theme(self):
+    def test_kitchen_staff_can_open_operational_production_history(self):
         self.client.force_login(self.kitchen_head)
         response = self.client.get(reverse("kitchen_production_history"))
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.context["is_management_view"])
 
     def test_kitchen_head_can_open_own_production_history(self):
         self.client.force_login(self.kitchen_head)
