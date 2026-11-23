@@ -43,7 +43,7 @@
         {% empty %}<tr><td colspan="6" class="hk-muted">No materials have been issued for this assignment.</td></tr>{% endfor %}
         </tbody></table></div>
     </section>
-    {% if can_issue %}<p><a href="{% url 'housekeeping_material_returns' %}">Review pending material returns →</a></p>{% endif %}
+    {% if can_manage %}<p><a href="{% url 'housekeeping_material_returns' %}">Review pending material returns →</a></p>{% endif %}
     <p><a href="{% url 'housekeeping_dashboard' %}">← Back to Housekeeping</a></p>
 </div>
 {% endblock %}
