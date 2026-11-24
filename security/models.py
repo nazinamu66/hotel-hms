@@ -1,3 +1,5 @@
+from datetime import time
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -235,9 +237,9 @@ class VisitorVisit(models.Model):
 class SecurityShiftConfiguration(models.Model):
     """Hotel-specific duty pattern; defaults reflect CCH but remain configurable."""
     hotel = models.OneToOneField(Hotel, on_delete=models.CASCADE, related_name="security_shift_configuration")
-    handover_time = models.TimeField(default=timezone.datetime.strptime("08:00", "%H:%M").time)
+    handover_time = models.TimeField(default=time(8, 0))
     officers_per_team = models.PositiveSmallIntegerField(default=2)
-    cso_leaves_at = models.TimeField(default=timezone.datetime.strptime("17:00", "%H:%M").time)
+    cso_leaves_at = models.TimeField(default=time(17, 0))
     cso_daily = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
