@@ -1004,9 +1004,10 @@ def security_occurrence_review(request, report_id):
 def security_patrol_route_list(request):
     hotel = _hotel_for_user(request)
     routes = SecurityPatrolRoute.objects.filter(hotel=hotel).prefetch_related("checkpoints")
+    runs = SecurityPatrolRun.objects.filter(hotel=hotel).select_related("route", "officer")[:50]
     return render(request, "security/patrol_route_list.html", {
         "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
-        "routes": routes,
+        "routes": routes, "runs": runs,
     })
 
 
