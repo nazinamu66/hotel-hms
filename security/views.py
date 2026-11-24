@@ -8,8 +8,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from accounts.decorators import role_required
 from inventory.models import Hotel
-from .forms import PropertyExitPassForm, StaffExitPassForm, VehicleVisitForm, VisitorVisitForm
-from .models import PropertyExitPass, StaffExitPass, VehicleVisit, VisitorVisit, SecurityShiftConfiguration, SecurityShiftHandover, StaffAttendance
+from .forms import PropertyExitPassForm, StaffExitPassForm, VehicleVisitForm, VisitorVisitForm, SecurityIncidentForm, SecurityIncidentReviewForm, SecurityIncidentUpdateForm, SecurityIncidentResolutionForm, SecurityOccurrenceReportForm, SecurityOccurrenceReviewForm
+from .models import PropertyExitPass, StaffExitPass, VehicleVisit, VisitorVisit, SecurityShiftConfiguration, SecurityShiftHandover, StaffAttendance, SecurityIncident, SecurityIncidentEvent, SecurityOccurrenceReport
 from .handover_forms import SecurityShiftHandoverForm, SecurityHandoverAcknowledgementForm, SecurityHandoverCSOReviewForm
 
 MANAGEMENT_ROLES = ("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
@@ -720,3 +720,274 @@ def staff_attendance_departure(request, attendance_id):
         record.save(update_fields=["departed_at", "departure_recorded_by", "departure_note", "updated_at"])
         messages.success(request, f"Final departure recorded for {record.employee.get_full_name() or record.employee.username}.")
     return redirect("security_attendance_list")
+
+
+@login_required
+@role_required("SECURITY")
+def security_incident_create(request):
+    hotel = _hotel_for_user(request)
+    form = SecurityIncidentForm(request.POST or None, request.FILES or None, hotel=hotel)
+    if request.method == "POST" and form.is_valid():
+        incident = form.save(commit=False)
+        incident.hotel = hotel
+        incident.reported_by = request.user
+        incident.reported_at = timezone.now()
+        try:
+            incident.full_clean()
+            incident.save()
+            SecurityIncidentEvent.objects.create(
+                incident=incident, event_type="SUBMITTED",
+                note="Incident report submitted.", actor=request.user,
+            )
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        else:
+            messages.success(request, f"Incident {incident.incident_number} submitted for Security Head review.")
+            return redirect("security_incident_detail", incident_id=incident.pk)
+    return render(request, "security/incident_form.html", {
+        "form": form, "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
+    })
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def security_incident_list(request):
+    hotel = _hotel_for_user(request)
+    incidents = SecurityIncident.objects.filter(hotel=hotel).select_related(
+        "reported_by", "assigned_investigator", "reviewed_by",
+    )
+    status = request.GET.get("status", "OPEN")
+    if status == "OPEN":
+        incidents = incidents.exclude(status__in=["RESOLVED", "CLOSED"])
+    elif status in dict(SecurityIncident.STATUS_CHOICES):
+        incidents = incidents.filter(status=status)
+    else:
+        status = "ALL"
+    severity = request.GET.get("severity", "").strip()
+    if severity in dict(SecurityIncident.SEVERITY_CHOICES):
+        incidents = incidents.filter(severity=severity)
+    else:
+        severity = ""
+    query = request.GET.get("q", "").strip()
+    if query:
+        incidents = incidents.filter(
+            Q(incident_number__icontains=query) | Q(summary__icontains=query)
+            | Q(location__icontains=query) | Q(description__icontains=query)
+        )
+    return render(request, "security/incident_list.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
+        "incidents": incidents, "status_filter": status,
+        "severity_filter": severity, "search_query": query,
+    })
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def security_incident_detail(request, incident_id):
+    hotel = _hotel_for_user(request)
+    incident = get_object_or_404(
+        SecurityIncident.objects.select_related(
+            "reported_by", "assigned_investigator", "reviewed_by",
+            "resolved_by", "closed_by",
+        ).prefetch_related("events__actor"),
+        pk=incident_id, hotel=hotel,
+    )
+    return render(request, "security/incident_detail.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
+        "incident": incident,
+        "can_review": request.user.is_security_head and incident.status == "SUBMITTED",
+        "can_update": request.user.role == "SECURITY" and (
+            request.user.is_security_head or incident.assigned_investigator_id == request.user.pk
+        ) and incident.status not in {"RESOLVED", "CLOSED"},
+        "can_resolve": request.user.is_security_head and incident.status not in {"RESOLVED", "CLOSED"},
+        "review_form": SecurityIncidentReviewForm(hotel=hotel),
+        "update_form": SecurityIncidentUpdateForm(),
+        "resolution_form": SecurityIncidentResolutionForm(),
+    })
+
+
+@login_required
+@security_head_required
+@transaction.atomic
+def security_incident_review(request, incident_id):
+    hotel = _hotel_for_user(request)
+    incident = get_object_or_404(
+        SecurityIncident.objects.select_for_update(), pk=incident_id, hotel=hotel,
+    )
+    form = SecurityIncidentReviewForm(request.POST or None, hotel=hotel)
+    if request.method == "POST" and form.is_valid() and incident.status == "SUBMITTED":
+        decision = form.cleaned_data["decision"]
+        investigator = form.cleaned_data["assigned_investigator"]
+        if decision == "INVESTIGATION" and not investigator:
+            form.add_error("assigned_investigator", "Assign an investigator before opening an investigation.")
+        else:
+            incident.status = decision
+            incident.assigned_investigator = investigator
+            incident.reviewed_by = request.user
+            incident.reviewed_at = timezone.now()
+            incident.full_clean()
+            incident.save()
+            SecurityIncidentEvent.objects.create(
+                incident=incident, event_type="REVIEWED",
+                note=form.cleaned_data["note"], actor=request.user,
+            )
+            messages.success(request, "Security Head review recorded.")
+            return redirect("security_incident_detail", incident_id=incident.pk)
+    return render(request, "security/incident_detail.html", {
+        "hotel": hotel, "incident": incident, "can_review": True,
+        "can_update": False, "can_resolve": False, "review_form": form,
+        "update_form": SecurityIncidentUpdateForm(),
+        "resolution_form": SecurityIncidentResolutionForm(),
+        "available_hotels": _accessible_hotels(request.user),
+    })
+
+
+@login_required
+@role_required("SECURITY")
+@transaction.atomic
+def security_incident_update(request, incident_id):
+    hotel = _hotel_for_user(request)
+    incident = get_object_or_404(
+        SecurityIncident.objects.select_for_update(), pk=incident_id, hotel=hotel,
+    )
+    if (
+        not request.user.is_security_head
+        and incident.assigned_investigator_id != request.user.pk
+    ):
+        raise PermissionDenied("Only the assigned investigator or Security Head can update this case.")
+    if incident.status in {"RESOLVED", "CLOSED"}:
+        raise PermissionDenied("Resolved or closed incidents cannot receive further updates.")
+    form = SecurityIncidentUpdateForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        event_type = form.cleaned_data["event_type"]
+        if event_type == "ESCALATED":
+            incident.status = "ESCALATED"
+            incident.save(update_fields=["status", "updated_at"])
+        elif event_type == "INVESTIGATION":
+            incident.status = "INVESTIGATION"
+            incident.save(update_fields=["status", "updated_at"])
+        SecurityIncidentEvent.objects.create(
+            incident=incident, event_type=event_type,
+            note=form.cleaned_data["note"], actor=request.user,
+        )
+        messages.success(request, "Incident case history updated.")
+    return redirect("security_incident_detail", incident_id=incident.pk)
+
+
+@login_required
+@security_head_required
+@transaction.atomic
+def security_incident_resolve(request, incident_id):
+    hotel = _hotel_for_user(request)
+    incident = get_object_or_404(
+        SecurityIncident.objects.select_for_update(), pk=incident_id, hotel=hotel,
+    )
+    form = SecurityIncidentResolutionForm(request.POST or None)
+    if request.method == "POST" and form.is_valid() and incident.status not in {"RESOLVED", "CLOSED"}:
+        incident.resolution_summary = form.cleaned_data["resolution_summary"]
+        incident.resolved_by = request.user
+        incident.resolved_at = timezone.now()
+        incident.status = "CLOSED" if form.cleaned_data["close_case"] else "RESOLVED"
+        if incident.status == "CLOSED":
+            incident.closed_by = request.user
+            incident.closed_at = timezone.now()
+        incident.full_clean()
+        incident.save()
+        SecurityIncidentEvent.objects.create(
+            incident=incident, event_type=incident.status,
+            note=incident.resolution_summary, actor=request.user,
+        )
+        messages.success(request, "Incident closure recorded." if incident.status == "CLOSED" else "Incident marked as resolved.")
+    return redirect("security_incident_detail", incident_id=incident.pk)
+
+
+def _security_occurrence_snapshot(hotel, duty_date):
+    return {
+        "staff_arrivals": StaffAttendance.objects.filter(hotel=hotel, arrived_at__date=duty_date).count(),
+        "staff_departures": StaffAttendance.objects.filter(hotel=hotel, departed_at__date=duty_date).count(),
+        "visitors_entered": VisitorVisit.objects.filter(hotel=hotel, entered_at__date=duty_date).count(),
+        "visitors_exited": VisitorVisit.objects.filter(hotel=hotel, exited_at__date=duty_date).count(),
+        "vehicles_entered": VehicleVisit.objects.filter(hotel=hotel, entered_at__date=duty_date).count(),
+        "vehicles_exited": VehicleVisit.objects.filter(hotel=hotel, exited_at__date=duty_date).count(),
+        "staff_passes_authorised": StaffExitPass.objects.filter(hotel=hotel, authorised_at__date=duty_date).count(),
+        "staff_passes_gate_out": StaffExitPass.objects.filter(hotel=hotel, gate_out_at__date=duty_date).count(),
+        "staff_passes_gate_in": StaffExitPass.objects.filter(hotel=hotel, gate_in_at__date=duty_date).count(),
+        "property_passes_created": PropertyExitPass.objects.filter(hotel=hotel, created_at__date=duty_date).count(),
+        "incidents_reported": SecurityIncident.objects.filter(hotel=hotel, reported_at__date=duty_date).count(),
+        "incidents_open": SecurityIncident.objects.filter(hotel=hotel).exclude(status__in=["RESOLVED", "CLOSED"]).count(),
+        "visitors_still_inside": VisitorVisit.objects.filter(hotel=hotel, exited_at__isnull=True).count(),
+        "vehicles_still_inside": VehicleVisit.objects.filter(hotel=hotel, exited_at__isnull=True).count(),
+        "staff_outside": StaffExitPass.objects.filter(hotel=hotel, status=StaffExitPass.OUTSIDE).count(),
+        "property_outside": PropertyExitPass.objects.filter(hotel=hotel, status=PropertyExitPass.OUT).count(),
+    }
+
+
+@login_required
+@role_required("SECURITY")
+def security_occurrence_create(request):
+    hotel = _hotel_for_user(request)
+    form = SecurityOccurrenceReportForm(request.POST or None, hotel=hotel)
+    if request.method == "POST" and form.is_valid():
+        report = form.save(commit=False)
+        report.hotel = hotel
+        report.submitted_by = request.user
+        report.submitted_at = timezone.now()
+        report.activity_snapshot = _security_occurrence_snapshot(hotel, report.duty_date)
+        try:
+            report.full_clean()
+            report.save()
+            form.save_m2m()
+        except IntegrityError:
+            form.add_error("duty_date", "A Daily Occurrence Report already exists for this hotel and date.")
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        else:
+            messages.success(request, "Daily Occurrence Report submitted for Security Head review.")
+            return redirect("security_occurrence_detail", report_id=report.pk)
+    return render(request, "security/occurrence_form.html", {
+        "form": form, "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
+    })
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def security_occurrence_list(request):
+    hotel = _hotel_for_user(request)
+    reports = SecurityOccurrenceReport.objects.filter(hotel=hotel).select_related("submitted_by", "reviewed_by")
+    return render(request, "security/occurrence_list.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
+        "reports": reports,
+    })
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def security_occurrence_detail(request, report_id):
+    hotel = _hotel_for_user(request)
+    report = get_object_or_404(
+        SecurityOccurrenceReport.objects.prefetch_related("incidents").select_related("submitted_by", "reviewed_by"),
+        pk=report_id, hotel=hotel,
+    )
+    return render(request, "security/occurrence_detail.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
+        "report": report, "can_review": request.user.is_security_head and not report.reviewed_at,
+        "review_form": SecurityOccurrenceReviewForm(),
+    })
+
+
+@login_required
+@security_head_required
+@transaction.atomic
+def security_occurrence_review(request, report_id):
+    hotel = _hotel_for_user(request)
+    report = get_object_or_404(
+        SecurityOccurrenceReport.objects.select_for_update(), pk=report_id, hotel=hotel,
+    )
+    form = SecurityOccurrenceReviewForm(request.POST or None)
+    if request.method == "POST" and form.is_valid() and not report.reviewed_at:
+        report.reviewed_by = request.user
+        report.reviewed_at = timezone.now()
+        report.review_note = form.cleaned_data["review_note"]
+        report.save(update_fields=["reviewed_by", "reviewed_at", "review_note"])
+        messages.success(request, "Daily Occurrence Report reviewed.")
+    return redirect("security_occurrence_detail", report_id=report.pk)
