@@ -568,6 +568,23 @@ class StaffAttendanceTests(TestCase):
         self.assertEqual(dashboard.context["staff_present"], 1)
         self.assertEqual(dashboard.context["staff_arrivals_today"], 1)
 
+    def test_dashboard_counts_overnight_staff_until_departure(self):
+        from .models import StaffAttendance
+        now = timezone.now()
+        StaffAttendance.objects.create(
+            hotel=self.hotel, employee=self.employee,
+            work_date=timezone.localdate() - timedelta(days=1),
+            arrived_at=now - timedelta(hours=10),
+            scheduled_start_at=now - timedelta(hours=10),
+            scheduled_end_at=now + timedelta(hours=2),
+            scheduled_shift_name="Night Shift",
+            arrival_recorded_by=self.security,
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_dashboard"))
+        self.assertEqual(response.context["staff_present"], 1)
+        self.assertEqual(response.context["staff_arrivals_today"], 0)
+
     def test_duplicate_arrival_for_same_employee_day_is_rejected(self):
         from .models import StaffAttendance
         StaffAttendance.objects.create(hotel=self.hotel, employee=self.employee, arrival_recorded_by=self.security)
