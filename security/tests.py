@@ -1098,7 +1098,7 @@ class SecurityIncidentAndOccurrenceTests(TestCase):
         report = SecurityOccurrenceReport.objects.get()
         self.assertEqual(report.submitted_by, self.officer)
         self.assertEqual(report.activity_snapshot["staff_arrivals"], 1)
-        self.assertIn("visitors_inside", report.activity_snapshot)
+        self.assertIn("visitors_still_inside", report.activity_snapshot)
 
     def test_daily_occurrence_report_is_unique_per_hotel_date(self):
         from .models import SecurityOccurrenceReport
