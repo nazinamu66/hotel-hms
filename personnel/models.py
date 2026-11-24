@@ -105,7 +105,8 @@ class RosterAssignment(models.Model):
             if not self.roster.week_start <= self.work_date <= self.roster.week_end:
                 errors["work_date"] = "Assignment date must fall within the roster week."
         if self.roster_id and self.employee_id:
-            if self.employee.department_id != self.roster.department_id or self.employee.hotel_id != self.roster.hotel_id:
+            employee_hotel_id = self.employee.department.hotel_id if self.employee.department_id else None
+            if self.employee.department_id != self.roster.department_id or employee_hotel_id != self.roster.hotel_id:
                 errors["employee"] = "Employee must be active in this roster's department and hotel."
             if not self.employee.is_active:
                 errors["employee"] = "Inactive employees cannot be rostered."
