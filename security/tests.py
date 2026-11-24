@@ -657,6 +657,28 @@ class StaffAttendanceTests(TestCase):
         self.assertIsNotNone(record.scheduled_start_at)
         self.assertIsNotNone(record.scheduled_end_at)
 
+    def test_arrival_form_lists_active_hotel_staff_without_roster_assignments(self):
+        from .attendance_forms import StaffAttendanceArrivalForm
+        unrostered = User.objects.create_user(
+            username="unrostered-employee", password="test",
+            role="RESTAURANT", department=self.staff_department,
+        )
+        form = StaffAttendanceArrivalForm(hotel=self.hotel)
+        self.assertTrue(form.fields["employee"].queryset.filter(pk=unrostered.pk).exists())
+
+    def test_roster_link_is_optional_but_must_match_selected_employee(self):
+        from .attendance_forms import StaffAttendanceArrivalForm
+        another_employee = User.objects.create_user(
+            username="another-frontdesk-employee", password="test",
+            role="FRONTDESK", department=self.staff_department,
+        )
+        form = StaffAttendanceArrivalForm(
+            data={"employee": another_employee.pk, "assignment": self.assignment.pk},
+            hotel=self.hotel,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("assignment", form.errors)
+
     def test_security_can_record_arrival_even_when_roster_is_not_approved(self):
         self.roster.status = "DRAFT"
         self.roster.save(update_fields=["status"])
