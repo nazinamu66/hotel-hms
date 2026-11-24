@@ -129,6 +129,24 @@ def vehicle_visit_list(request):
 
 @login_required
 @role_required("SECURITY")
+@security_head_required
+def vehicle_movement_history(request):
+    request.GET = request.GET.copy()
+    request.GET["status"] = "EXITED"
+    return vehicle_visit_list(request)
+
+
+@login_required
+@role_required("SECURITY")
+@security_head_required
+def visitor_movement_history(request):
+    request.GET = request.GET.copy()
+    request.GET["status"] = "EXITED"
+    return visitor_visit_list(request)
+
+
+@login_required
+@role_required("SECURITY")
 def vehicle_visit_create(request):
     hotel = _hotel_for_user(request)
     form = VehicleVisitForm(request.POST or None, hotel=hotel)
