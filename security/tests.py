@@ -417,3 +417,110 @@ class VisitorVisitTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["status_filter"], "ALL")
         self.assertContains(response, exited.visitor_name)
+
+
+class SecurityShiftHandoverTests(TestCase):
+    def setUp(self):
+        self.org = Organization.objects.create(name="Handover Test Org")
+        self.hotel = Hotel.objects.create(name="Handover Test Hotel", organization=self.org)
+        self.department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Security",
+            defaults={"code": "SEC", "department_type": "SECURITY"},
+        )
+        self.officers = [
+            User.objects.create_user(
+                username=f"officer-{i}", password="test", role="SECURITY",
+                department=self.department,
+            ) for i in range(1, 5)
+        ]
+        self.cso = User.objects.create_user(
+            username="cso", password="test", role="SECURITY",
+            department=self.department, is_department_head=True,
+        )
+
+    def make_handover(self, **overrides):
+        from .models import SecurityShiftHandover
+        values = {
+            "hotel": self.hotel,
+            "duty_date": timezone.localdate(),
+            "outgoing_officer_1": self.officers[0],
+            "outgoing_officer_2": self.officers[1],
+            "incoming_officer_1": self.officers[2],
+            "incoming_officer_2": self.officers[3],
+            "submitted_by": self.officers[0],
+            "outgoing_notes": "All gates checked.",
+            "outstanding_matters": "One visitor expected to return.",
+            "register_snapshot": {"visitors_inside": 2, "vehicles_inside": 1},
+        }
+        values.update(overrides)
+        return SecurityShiftHandover.objects.create(**values)
+
+    def test_configuration_defaults_to_cch_daily_handover_time(self):
+        from .models import SecurityShiftConfiguration
+        config = SecurityShiftConfiguration.objects.create(hotel=self.hotel)
+        self.assertEqual(config.handover_time.strftime("%H:%M"), "08:00")
+        self.assertEqual(config.officers_per_team, 2)
+        self.assertEqual(config.cso_leaves_at.strftime("%H:%M"), "17:00")
+
+    def test_incoming_acknowledgement_completes_without_cso_approval(self):
+        handover = self.make_handover()
+        self.client.force_login(self.officers[2])
+        response = self.client.post(
+            reverse("security_handover_acknowledge", args=[handover.pk]),
+            {"incoming_notes": "Registers checked and accepted."},
+        )
+        self.assertEqual(response.status_code, 302)
+        handover.refresh_from_db()
+        self.assertTrue(handover.is_complete)
+        self.assertEqual(handover.acknowledged_by, self.officers[2])
+        self.assertIsNotNone(handover.acknowledged_at)
+        self.assertIsNone(handover.cso_reviewed_at)
+
+    def test_only_assigned_incoming_officer_can_acknowledge(self):
+        handover = self.make_handover()
+        self.client.force_login(self.officers[0])
+        response = self.client.post(
+            reverse("security_handover_acknowledge", args=[handover.pk]),
+            {"incoming_notes": ""},
+        )
+        self.assertEqual(response.status_code, 403)
+        handover.refresh_from_db()
+        self.assertFalse(handover.is_complete)
+
+    def test_cso_review_is_optional_and_does_not_change_completion(self):
+        handover = self.make_handover(
+            acknowledged_by=self.officers[2],
+            acknowledged_at=timezone.now(),
+            is_complete=True,
+        )
+        self.client.force_login(self.cso)
+        response = self.client.post(
+            reverse("security_handover_cso_review", args=[handover.pk]),
+            {"cso_review_note": "Reviewed during morning visit."},
+        )
+        self.assertEqual(response.status_code, 302)
+        handover.refresh_from_db()
+        self.assertTrue(handover.is_complete)
+        self.assertEqual(handover.cso_reviewed_by, self.cso)
+        self.assertIn("morning visit", handover.cso_review_note)
+
+    def test_duplicate_daily_handover_is_prevented(self):
+        self.make_handover()
+        from .models import SecurityShiftHandover
+        with self.assertRaises(Exception):
+            SecurityShiftHandover.objects.create(
+                hotel=self.hotel,
+                duty_date=timezone.localdate(),
+                outgoing_officer_1=self.officers[0],
+                outgoing_officer_2=self.officers[1],
+                incoming_officer_1=self.officers[2],
+                incoming_officer_2=self.officers[3],
+                submitted_by=self.officers[0],
+            )
+
+    def test_security_handover_register_is_hotel_scoped(self):
+        handover = self.make_handover()
+        self.client.force_login(self.officers[0])
+        response = self.client.get(reverse("security_handover_detail", args=[handover.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "All gates checked.")
