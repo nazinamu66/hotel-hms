@@ -98,7 +98,7 @@ class PersonnelRosterTests(TestCase):
         self.assertNotEqual(created.role, "MANAGER")
 
     def test_hr_role_uses_existing_department_scope_not_manager_scope(self):
-        self.assertEqual(self.hr_head.hotel, self.hotel)
+        self.assertEqual(self.hr_head.department.hotel, self.hotel)
         self.assertEqual(self.hr_head.department, self.hr_department)
         from accounts.services.access import get_accessible_departments, get_accessible_hotels
         self.assertQuerySetEqual(get_accessible_hotels(self.hr_head), [self.hotel])
