@@ -271,6 +271,8 @@
             <a href="{% url 'security_staff_exit_list' %}">Staff Exit Pass Register</a>
             <a href="{% url 'security_incident_list' %}">Incident Register</a>
             <a href="{% url 'security_occurrence_list' %}">Daily Occurrence Reports</a>
+            <a href="{% url 'security_patrol_route_list' %}">Patrol Routes &amp; Runs</a>
+            {% if user.role == "SECURITY" %}<a href="{% url 'security_patrol_start' %}">Start Patrol</a>{% endif %}
             {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}<a href="{% url 'security_pass_create' %}">Create Management Authorisation</a>{% endif %}
         </div>
         {% endif %}
