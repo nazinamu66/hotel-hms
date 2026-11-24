@@ -489,3 +489,171 @@ class StaffExitPass(models.Model):
 
     def __str__(self):
         return f"{self.pass_number or 'New staff pass'} — {self.employee_name}"
+
+
+class SecurityIncident(models.Model):
+    CATEGORY_CHOICES = [
+        ("THEFT", "Theft / suspected theft"),
+        ("LOSS", "Lost property"),
+        ("DAMAGE", "Damage to hotel property"),
+        ("SAFETY", "Safety hazard / accident"),
+        ("SECURITY_BREACH", "Security breach / unauthorised access"),
+        ("DISTURBANCE", "Disorder / disturbance"),
+        ("FIRE", "Fire / emergency"),
+        ("MEDICAL", "Medical emergency"),
+        ("MISCONDUCT", "Staff / guest misconduct"),
+        ("SUSPICIOUS", "Suspicious observation"),
+        ("OTHER", "Other"),
+    ]
+    SEVERITY_CHOICES = [
+        ("LOW", "Low"),
+        ("MEDIUM", "Medium"),
+        ("HIGH", "High"),
+        ("CRITICAL", "Critical"),
+    ]
+    STATUS_CHOICES = [
+        ("SUBMITTED", "Awaiting Security Head review"),
+        ("UNDER_REVIEW", "Under review"),
+        ("INVESTIGATION", "Under investigation"),
+        ("ESCALATED", "Escalated"),
+        ("RESOLVED", "Resolved"),
+        ("CLOSED", "Closed"),
+    ]
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="security_incidents")
+    incident_number = models.CharField(max_length=32, unique=True, blank=True)
+    category = models.CharField(max_length=24, choices=CATEGORY_CHOICES)
+    severity = models.CharField(max_length=12, choices=SEVERITY_CHOICES, default="MEDIUM")
+    occurred_at = models.DateTimeField()
+    location = models.CharField(max_length=200)
+    summary = models.CharField(max_length=250)
+    description = models.TextField()
+    persons_involved = models.TextField(blank=True)
+    witnesses = models.TextField(blank=True)
+    immediate_action = models.TextField(blank=True)
+    reported_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="security_incidents_reported")
+    reported_at = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default="SUBMITTED")
+    assigned_investigator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="security_incidents_assigned")
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="security_incidents_reviewed")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    resolution_summary = models.TextField(blank=True)
+    resolved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="security_incidents_resolved")
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    closed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="security_incidents_closed")
+    closed_at = models.DateTimeField(null=True, blank=True)
+    evidence = models.FileField(upload_to="security/incidents/%Y/%m/", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-occurred_at", "-pk"]
+        indexes = [
+            models.Index(fields=["hotel", "status", "occurred_at"]),
+            models.Index(fields=["hotel", "severity", "occurred_at"]),
+        ]
+
+    def clean(self):
+        errors = {}
+        if self.reported_by_id:
+            officer = self.reported_by
+            if (
+                officer.role != "SECURITY" or not officer.is_active
+                or not officer.department_id
+                or officer.department.department_type != "SECURITY"
+                or officer.department.hotel_id != self.hotel_id
+            ):
+                errors["reported_by"] = "The incident must be recorded by an active Security officer assigned to this hotel."
+        if self.assigned_investigator_id:
+            officer = self.assigned_investigator
+            if (
+                officer.role != "SECURITY" or not officer.is_active
+                or not officer.department_id
+                or officer.department.department_type != "SECURITY"
+                or officer.department.hotel_id != self.hotel_id
+            ):
+                errors["assigned_investigator"] = "Choose an active Security officer from this hotel's Security department."
+        if self.reviewed_by_id and not self.reviewed_by.is_security_head:
+            errors["reviewed_by"] = "Only the Security Head can review an incident."
+        if self.resolved_by_id and not self.resolved_by.is_security_head:
+            errors["resolved_by"] = "Only the Security Head can resolve an incident."
+        if self.closed_by_id and not self.closed_by.is_security_head:
+            errors["closed_by"] = "Only the Security Head can close an incident."
+        if self.status in {"RESOLVED", "CLOSED"} and not self.resolution_summary.strip():
+            errors["resolution_summary"] = "Record the resolution or closure summary."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        creating = self.pk is None
+        if creating and not self.incident_number:
+            self.incident_number = f"TEMP-{uuid.uuid4().hex[:20]}"
+        super().save(*args, **kwargs)
+        if creating and self.incident_number.startswith("TEMP-"):
+            self.incident_number = f"SI-{self.hotel_id}-{self.pk:07d}"
+            super().save(update_fields=["incident_number"])
+
+    def __str__(self):
+        return f"{self.incident_number or 'New incident'} — {self.summary}"
+
+
+class SecurityIncidentEvent(models.Model):
+    EVENT_CHOICES = [
+        ("SUBMITTED", "Incident submitted"),
+        ("REVIEWED", "Security Head review"),
+        ("INVESTIGATION", "Investigation update"),
+        ("ESCALATED", "Escalated"),
+        ("RESOLVED", "Resolved"),
+        ("CLOSED", "Closed"),
+        ("NOTE", "Case note"),
+    ]
+    incident = models.ForeignKey(SecurityIncident, on_delete=models.CASCADE, related_name="events")
+    event_type = models.CharField(max_length=16, choices=EVENT_CHOICES)
+    note = models.TextField()
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="security_incident_events")
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+
+    def __str__(self):
+        return f"{self.incident.incident_number} · {self.get_event_type_display()}"
+
+
+class SecurityOccurrenceReport(models.Model):
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="security_occurrence_reports")
+    duty_date = models.DateField(default=timezone.localdate)
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="security_occurrence_reports_submitted")
+    submitted_at = models.DateTimeField(default=timezone.now)
+    shift_summary = models.TextField()
+    outstanding_matters = models.TextField(blank=True)
+    activity_snapshot = models.JSONField(default=dict, blank=True)
+    incidents = models.ManyToManyField(SecurityIncident, blank=True, related_name="occurrence_reports")
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="security_occurrence_reports_reviewed")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-duty_date", "-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["hotel", "duty_date"], name="uniq_security_occurrence_hotel_day"),
+        ]
+        indexes = [models.Index(fields=["hotel", "duty_date"])]
+
+    def clean(self):
+        errors = {}
+        if self.submitted_by_id and (
+            self.submitted_by.role != "SECURITY" or not self.submitted_by.is_active
+            or not self.submitted_by.department_id
+            or self.submitted_by.department.department_type != "SECURITY"
+            or self.submitted_by.department.hotel_id != self.hotel_id
+        ):
+            errors["submitted_by"] = "The occurrence report must be submitted by an active Security officer at this hotel."
+        if self.reviewed_by_id and not self.reviewed_by.is_security_head:
+            errors["reviewed_by"] = "Only the Security Head can review the occurrence report."
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f"{self.hotel} · Daily occurrence · {self.duty_date}"
