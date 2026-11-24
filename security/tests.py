@@ -683,10 +683,13 @@ class StaffAttendanceTests(TestCase):
             hotel=self.hotel, code="NIGHT", name="Night Shift",
             start_time=time(20, 0), end_time=time(8, 0), grace_minutes=10,
         )
-        night_roster = WeeklyRoster.objects.create(
+        night_roster, _ = WeeklyRoster.objects.get_or_create(
             hotel=self.hotel, department=self.staff_department,
             week_start=yesterday - timedelta(days=yesterday.weekday()),
-            responsible_hod=self.hod, created_by=self.hod, status=WeeklyRoster.APPROVED,
+            defaults={
+                "responsible_hod": self.hod, "created_by": self.hod,
+                "status": WeeklyRoster.APPROVED,
+            },
         )
         assignment = RosterAssignment.objects.create(
             roster=night_roster, employee=self.employee,
