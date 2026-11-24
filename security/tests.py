@@ -305,23 +305,19 @@ class PropertyExitPassTests(TestCase):
         self.assertContains(response, "ABC-902XY")
 
 
-    def test_security_head_can_open_vehicle_movement_history(self):
+
+    def test_security_head_register_defaults_to_all_vehicle_visits(self):
         self.security.is_department_head = True
         self.security.save()
-        visit = VehicleVisit.objects.create(
-            hotel=self.hotel, make="TOYOTA", plate_number="HISTORY-001",
+        exited = VehicleVisit.objects.create(
+            hotel=self.hotel, make="TOYOTA", plate_number="HEAD-ALL-001",
             entered_by=self.security, exited_at=timezone.now(), exited_by=self.security,
         )
         self.client.force_login(self.security)
-        response = self.client.get(reverse("security_vehicle_history"))
+        response = self.client.get(reverse("security_vehicle_list"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["status_filter"], "EXITED")
-        self.assertEqual(list(response.context["visits"]), [visit])
-
-    def test_ordinary_security_officer_cannot_open_vehicle_movement_history(self):
-        self.client.force_login(self.security)
-        response = self.client.get(reverse("security_vehicle_history"))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.context["status_filter"], "ALL")
+        self.assertContains(response, exited.plate_number)
 
 
 class VisitorVisitTests(TestCase):
@@ -406,22 +402,18 @@ class VisitorVisitTests(TestCase):
         self.assertEqual(list(response.context["visits"]), [guest])
 
 
-    def test_security_head_can_open_visitor_movement_history(self):
+
+    def test_security_head_register_defaults_to_all_visitor_visits(self):
         from .models import VisitorVisit
         self.security.is_department_head = True
         self.security.save()
-        visit = VisitorVisit.objects.create(
-            hotel=self.hotel, visitor_type="GUEST", visitor_name="History Visitor",
-            purpose="Family visit", guest_name="Hotel Guest", entered_by=self.security,
+        exited = VisitorVisit.objects.create(
+            hotel=self.hotel, visitor_type="GUEST", visitor_name="Head History Visitor",
+            purpose="Visit", guest_name="Hotel Guest", entered_by=self.security,
             exited_at=timezone.now(), exited_by=self.security,
         )
         self.client.force_login(self.security)
-        response = self.client.get(reverse("security_visitor_history"))
+        response = self.client.get(reverse("security_visitor_list"))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["status_filter"], "EXITED")
-        self.assertEqual(list(response.context["visits"]), [visit])
-
-    def test_ordinary_security_officer_cannot_open_visitor_movement_history(self):
-        self.client.force_login(self.security)
-        response = self.client.get(reverse("security_visitor_history"))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.context["status_filter"], "ALL")
+        self.assertContains(response, exited.visitor_name)
