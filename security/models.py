@@ -221,8 +221,12 @@ class VisitorVisit(models.Model):
         if self.visitor_type == self.GUEST:
             return f'{self.guest_name} · Room {self.guest_room_number}' if self.guest_room_number else self.guest_name
         if self.visitor_type == self.STAFF:
-            return self.host_staff_name
-        return self.supplier.name if self.supplier_id else (self.work_description or 'Outsourced work')
+            return f'{self.host_staff_name} · {self.host_department}' if self.host_department else self.host_staff_name
+        if self.supplier_id:
+            return self.supplier.name
+        if self.work_description:
+            return self.work_description
+        return self.maintenance_ticket.description[:100] if self.maintenance_ticket_id else 'Outsourced work'
 
     def __str__(self):
         return f'{self.visitor_name} — {self.get_visitor_type_display()}'
