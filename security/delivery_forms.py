@@ -6,6 +6,7 @@ from .delivery_models import SecurityDeliveryVisit
 class SupplierFilteredPurchaseOrderSelect(forms.Select):
     def __init__(self, *args, supplier_by_po=None, **kwargs):
         self.supplier_by_po = supplier_by_po or {}
+        selected_supplier = kwargs.pop("selected_supplier", None)
         super().__init__(*args, **kwargs)
 
     def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
@@ -45,20 +46,19 @@ class SecurityDeliveryVisitForm(forms.ModelForm):
         self.fields["supplier"].queryset = Supplier.objects.filter(
             hotel=hotel, is_active=True, pk__in=supplier_ids
         ).order_by("name") if hotel else Supplier.objects.none()
-        self.fields["supplier"].widget.attrs.update({"class": "form-select", "data-po-filter": "supplier"})
+        self.fields["supplier"].widget.attrs.update({"class": "form-select"})
         eligible_pos = PurchaseOrder.objects.filter(
             pk__in=eligible_po_ids
         ).select_related("supplier", "department").order_by("-created_at") if eligible_po_ids else PurchaseOrder.objects.none()
-        # Keep every eligible PO in the rendered choices. The client filters by supplier;
-        # clean() below independently enforces the supplier/PO relationship on POST.
-        self.fields["purchase_order"].queryset = eligible_pos
+        self.fields["supplier"].initial = selected_supplier or self.initial.get("supplier")
+        self.fields["purchase_order"].queryset = (
+            eligible_pos.filter(supplier_id=selected_supplier)
+            if selected_supplier else PurchaseOrder.objects.none()
+        )
         self.fields["purchase_order"].required = True
         self.fields["purchase_order"].label = "Expected Purchase Order"
         self.fields["purchase_order"].help_text = "Only approved orders with outstanding quantities are listed."
-        self.fields["purchase_order"].widget = SupplierFilteredPurchaseOrderSelect(
-            attrs={"class": "form-select", "data-po-filter": "purchase-order"},
-            supplier_by_po={str(po.pk): po.supplier_id for po in eligible_pos},
-        )
+        self.fields["purchase_order"].widget.attrs.update({"class": "form-select"})
         self.fields["purchase_order"].label_from_instance = lambda po: f"PO #{po.pk} · {po.supplier.name} · {po.department.name}"
         for name in ("delivery_reference", "vehicle_registration", "vehicle_description", "driver_name"):
             self.fields[name].widget.attrs.setdefault("class", "form-control")
