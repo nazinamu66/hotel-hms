@@ -6,8 +6,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from accounts.decorators import role_required
 from inventory.models import Hotel
-from .forms import PropertyExitPassForm, VehicleVisitForm
-from .models import PropertyExitPass, VehicleVisit
+from .forms import PropertyExitPassForm, VehicleVisitForm, VisitorVisitForm
+from .models import PropertyExitPass, VehicleVisit, VisitorVisit
 
 MANAGEMENT_ROLES = ("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 SECURITY_ACCESS_ROLES = ("SECURITY", *MANAGEMENT_ROLES)
@@ -203,3 +203,49 @@ def property_pass_detail(request, pass_id):
     hotel = _hotel_for_user(request)
     record = get_object_or_404(PropertyExitPass.objects.select_related("authorising_manager", "gate_out_by", "return_confirmed_by", "equipment_asset", "staff_user"), pk=pass_id, hotel=hotel)
     return render(request, "security/pass_detail.html", {"record": record, "available_hotels": _accessible_hotels(request.user)})
+
+
+@login_required
+@role_required('SECURITY')
+def visitor_visit_create(request):
+    hotel = _hotel_for_user(request)
+    form = VisitorVisitForm(request.POST or None, hotel=hotel)
+    if request.method == 'POST' and form.is_valid():
+        visit = form.save(commit=False)
+        visit.hotel = hotel
+        visit.entered_by = request.user
+        visit.full_clean()
+        visit.save()
+        messages.success(request, f'Visitor {visit.visitor_name} recorded as entered.')
+        return redirect('security_visitor_list')
+    return render(request, 'security/visitor_form.html', {'form': form, 'hotel': hotel, 'available_hotels': _accessible_hotels(request.user)})
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def visitor_visit_list(request):
+    hotel = _hotel_for_user(request)
+    visits = VisitorVisit.objects.filter(hotel=hotel).select_related('entered_by', 'exited_by', 'host_staff', 'maintenance_ticket', 'supplier')
+    status = request.GET.get('status', 'INSIDE')
+    if status == 'INSIDE':
+        visits = visits.filter(exited_at__isnull=True)
+    elif status == 'EXITED':
+        visits = visits.filter(exited_at__isnull=False)
+    else:
+        status = 'ALL'
+    return render(request, 'security/visitor_list.html', {'hotel': hotel, 'available_hotels': _accessible_hotels(request.user), 'visits': visits, 'status_filter': status})
+
+
+@login_required
+@role_required('SECURITY')
+@transaction.atomic
+def visitor_visit_exit(request, visit_id):
+    hotel = _hotel_for_user(request)
+    visit = get_object_or_404(VisitorVisit.objects.select_for_update(), pk=visit_id, hotel=hotel)
+    if request.method == 'POST' and visit.exited_at is None:
+        visit.exited_at = timezone.now()
+        visit.exited_by = request.user
+        visit.exit_note = request.POST.get('exit_note', '').strip()
+        visit.save(update_fields=['exited_at', 'exited_by', 'exit_note'])
+        messages.success(request, f'Visitor {visit.visitor_name} exit recorded.')
+    return redirect('security_visitor_list')
