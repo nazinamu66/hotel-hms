@@ -1,3 +1,45 @@
 {% extends "base/base.html" %}
 {% block title %}Create Patrol Route{% endblock %}
-{% block content %}<div class="hms-page"><header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Security setup</p><h1 class="hms-page-title">Create patrol route</h1><p class="hms-page-subtitle">{{ hotel.name }}</p></div></header><section class="hms-card"><form method="post">{% csrf_token %}{{ form.as_p }}<div class="hms-actions"><button class="hms-btn hms-btn-primary" type="submit">Create route</button><a class="hms-btn hms-btn-secondary" href="{% url 'security_patrol_route_list' %}">Cancel</a></div></form></section></div>{% endblock %}
+{% block content %}
+<div class="hms-page">
+  <header class="hms-page-header">
+    <div class="hms-page-heading">
+      <p class="hms-eyebrow">Security setup</p>
+      <h1 class="hms-page-title">Create patrol route</h1>
+      <p class="hms-page-subtitle">{{ hotel.name }} · Define a repeatable security patrol around the property.</p>
+    </div>
+    <a class="hms-btn hms-btn-secondary" href="{% url 'security_patrol_route_list' %}">Back to patrols</a>
+  </header>
+
+  <section class="hms-card">
+    <div class="hms-card-heading">
+      <div>
+        <h2 class="hms-card-title">Route details</h2>
+        <p class="hms-card-description">Start with a clear name. You can add checkpoints and their sequence immediately after creating the route.</p>
+      </div>
+    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="hms-notice" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="hms-form-grid">
+        {% for field in form %}
+          <div class="hms-field">
+            {% if field.field.widget.input_type == "checkbox" %}
+              <label style="display:flex;align-items:center;gap:9px;min-height:42px">{{ field }} <span>{{ field.label }}</span></label>
+            {% else %}
+              {{ field.label_tag }}
+              {{ field }}
+            {% endif %}
+            {% if field.help_text %}<span class="hms-field-help">{{ field.help_text }}</span>{% endif %}
+            {% for error in field.errors %}<span class="hms-field-error">{{ error }}</span>{% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+      <div class="hms-form-footer">
+        <a class="hms-btn hms-btn-secondary" href="{% url 'security_patrol_route_list' %}">Cancel</a>
+        <button class="hms-btn hms-btn-primary" type="submit">Create route <span aria-hidden="true">→</span></button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
