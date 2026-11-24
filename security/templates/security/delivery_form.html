@@ -82,40 +82,13 @@
 </div>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  const supplier = document.querySelector('[data-po-filter="supplier"]');
-  const purchaseOrder = document.querySelector('[data-po-filter="purchase-order"]');
-  if (!supplier || !purchaseOrder) return;
-
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Choose an expected Purchase Order";
-  placeholder.disabled = true;
-  placeholder.selected = !purchaseOrder.value;
-  purchaseOrder.insertBefore(placeholder, purchaseOrder.firstChild);
-
-  function filterOrders() {
-    const supplierId = supplier.value;
-    let visibleCount = 0;
-    Array.from(purchaseOrder.options).forEach(function (option) {
-      if (!option.value) return;
-      const matches = option.dataset.supplierId === supplierId;
-      option.hidden = !matches;
-      option.disabled = !matches;
-      if (matches) visibleCount += 1;
-    });
-    const selected = purchaseOrder.selectedOptions[0];
-    if (selected && selected.value && selected.dataset.supplierId !== supplierId) {
-      purchaseOrder.value = "";
-      placeholder.selected = true;
-    }
-    placeholder.textContent = !supplierId
-      ? "Choose a supplier first"
-      : (visibleCount ? "Choose an expected Purchase Order" : "No outstanding POs for this supplier");
-    purchaseOrder.disabled = !supplierId || visibleCount === 0;
-  }
-
-  supplier.addEventListener("change", filterOrders);
-  filterOrders();
+  const supplier = document.getElementById("id_supplier");
+  if (!supplier) return;
+  supplier.addEventListener("change", function () {
+    const params = new URLSearchParams();
+    if (supplier.value) params.set("supplier", supplier.value);
+    window.location.search = params.toString();
+  });
 });
 </script>
 {% endblock %}
