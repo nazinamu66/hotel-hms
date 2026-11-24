@@ -3,6 +3,19 @@ from inventory.models import PurchaseItem, PurchaseOrder, Supplier
 from .delivery_models import SecurityDeliveryVisit
 
 
+class SupplierFilteredPurchaseOrderSelect(forms.Select):
+    def __init__(self, *args, supplier_by_po=None, **kwargs):
+        self.supplier_by_po = supplier_by_po or {}
+        super().__init__(*args, **kwargs)
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        po_id = str(value) if value is not None else ""
+        if po_id in self.supplier_by_po:
+            option["attrs"]["data-supplier-id"] = str(self.supplier_by_po[po_id])
+        return option
+
+
 class SecurityDeliveryVisitForm(forms.ModelForm):
     class Meta:
         model = SecurityDeliveryVisit
@@ -34,13 +47,17 @@ class SecurityDeliveryVisitForm(forms.ModelForm):
             hotel=hotel, is_active=True, pk__in=supplier_ids
         ).order_by("name") if hotel else Supplier.objects.none()
         self.fields["supplier"].widget.attrs.update({"class": "form-select", "data-po-filter": "supplier"})
-        self.fields["purchase_order"].queryset = PurchaseOrder.objects.filter(
-            pk__in=eligible_po_ids, supplier_id=selected_supplier
-        ).select_related("supplier", "department").order_by("-created_at") if selected_supplier else PurchaseOrder.objects.none()
+        eligible_pos = PurchaseOrder.objects.filter(
+            pk__in=eligible_po_ids
+        ).select_related("supplier", "department").order_by("-created_at") if eligible_po_ids else PurchaseOrder.objects.none()
+        self.fields["purchase_order"].queryset = eligible_pos
         self.fields["purchase_order"].required = True
         self.fields["purchase_order"].label = "Expected Purchase Order"
         self.fields["purchase_order"].help_text = "Only approved orders with outstanding quantities are listed."
-        self.fields["purchase_order"].widget.attrs.update({"class": "form-select", "data-po-filter": "purchase-order"})
+        self.fields["purchase_order"].widget = SupplierFilteredPurchaseOrderSelect(
+            attrs={"class": "form-select", "data-po-filter": "purchase-order"},
+            supplier_by_po={str(po.pk): po.supplier_id for po in eligible_pos},
+        )
         self.fields["purchase_order"].label_from_instance = lambda po: f"PO #{po.pk} · {po.supplier.name} · {po.department.name}"
         for name in ("delivery_reference", "vehicle_registration", "vehicle_description", "driver_name"):
             self.fields[name].widget.attrs.setdefault("class", "form-control")
