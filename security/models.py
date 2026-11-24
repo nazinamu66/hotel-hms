@@ -1,4 +1,4 @@
-from datetime import time
+from datetime import time, timedelta
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -321,6 +321,14 @@ class StaffAttendance(models.Model):
     """One daily attendance record; approved short movements are tracked separately."""
     hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="staff_attendance")
     employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="staff_attendance")
+    roster_assignment = models.ForeignKey(
+        "personnel.RosterAssignment", on_delete=models.PROTECT,
+        null=True, blank=True, related_name="attendance_records",
+    )
+    scheduled_start_at = models.DateTimeField(null=True, blank=True)
+    scheduled_end_at = models.DateTimeField(null=True, blank=True)
+    scheduled_shift_name = models.CharField(max_length=80, blank=True)
+    grace_minutes_snapshot = models.PositiveSmallIntegerField(default=0)
     work_date = models.DateField(default=timezone.localdate)
     arrived_at = models.DateTimeField(default=timezone.now, editable=False)
     arrival_recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="staff_attendance_arrivals")
@@ -373,8 +381,32 @@ class StaffAttendance(models.Model):
                 errors["departure_recorded_by"] = "Departure must be recorded by an active Security officer at this hotel."
         if self.departed_at and not self.departure_recorded_by_id:
             errors["departure_recorded_by"] = "Record the Security officer who confirms departure."
+        if self.roster_assignment_id:
+            assignment = self.roster_assignment
+            if assignment.roster.hotel_id != self.hotel_id:
+                errors["roster_assignment"] = "The roster assignment belongs to another hotel."
+            if assignment.employee_id != self.employee_id or assignment.work_date != self.work_date:
+                errors["roster_assignment"] = "The roster assignment must match this employee and work date."
+            if assignment.is_day_off or not assignment.shift_id or assignment.roster.status != "APPROVED":
+                errors["roster_assignment"] = "Attendance must be linked to an approved working shift."
+            if not self.scheduled_start_at or not self.scheduled_end_at:
+                errors["scheduled_start_at"] = "Scheduled shift times must be saved with roster-linked attendance."
         if errors:
             raise ValidationError(errors)
+
+    @property
+    def punctuality_status(self):
+        if not self.roster_assignment_id or not self.scheduled_start_at:
+            return "UNLINKED"
+        deadline = self.scheduled_start_at + timedelta(minutes=self.grace_minutes_snapshot)
+        return "LATE" if self.arrived_at > deadline else "ON_TIME"
+
+    @property
+    def late_minutes_beyond_grace(self):
+        if self.punctuality_status != "LATE":
+            return 0
+        deadline = self.scheduled_start_at + timedelta(minutes=self.grace_minutes_snapshot)
+        return max(0, int((self.arrived_at - deadline).total_seconds() // 60))
 
     @property
     def is_present(self):
