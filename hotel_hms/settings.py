@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "laundry",
     "opening_stock",
     "security",
+    "personnel",
 ]
 
 MIDDLEWARE = [
