@@ -246,6 +246,7 @@
         <h4 class="menu-toggle" onclick="toggleMenu('security_menu', this)"><span class="arrow">▸</span> 🛡️ Security</h4>
         <div id="security_menu" class="menu-section">
             <a href="{% url 'security_dashboard' %}">Security Dashboard</a>
+            {% if user.role == "SECURITY" %}<a href="{% url 'security_handover_list' %}">Shift Handovers</a>{% endif %}
             <a href="{% url 'security_vehicle_list' %}">Vehicle Register</a>
             <a href="{% url 'security_visitor_list' %}">Visitor Register</a>
             {% if user.role == "SECURITY" %}<a href="{% url 'security_visitor_entry' %}">Record Visitor Entry</a>{% endif %}
