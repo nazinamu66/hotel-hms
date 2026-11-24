@@ -1,0 +1,3 @@
+{% extends "base/base.html" %}
+{% block title %}Create roster · Personnel{% endblock %}
+{% block content %}<div style="max-width:650px;margin:0 auto;background:white;border:1px solid #e2e8f0;border-radius:16px;padding:24px"><h1>Create weekly roster</h1><p>Select the department, week commencing Monday and responsible Head of Department.</p><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit">Create roster</button></form></div>{% endblock %}
