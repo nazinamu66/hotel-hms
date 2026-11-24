@@ -26,15 +26,18 @@ def dashboard(request):
         rosters = WeeklyRoster.objects.filter(department_id=request.user.department_id)
     rosters = rosters.select_related("hotel", "department", "responsible_hod", "created_by")
     create_form = WeeklyRosterCreateForm(actor=request.user)
+    can_prepare = is_hr_head(request.user) or bool(request.user.is_department_head and request.user.department_id)
     return render(request, "personnel/dashboard.html", {
         "rosters": rosters, "create_form": create_form,
-        "is_hr_head": is_hr_head(request.user),
+        "is_hr_head": is_hr_head(request.user), "can_prepare": can_prepare,
     })
 
 
 @login_required
 def roster_create(request):
     _require_roster_access(request.user)
+    if not (is_hr_head(request.user) or (request.user.is_department_head and request.user.department_id)):
+        raise PermissionDenied
     form = WeeklyRosterCreateForm(request.POST or None, actor=request.user)
     if request.method == "POST" and form.is_valid():
         roster = form.save(commit=False)
