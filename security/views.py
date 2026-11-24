@@ -477,17 +477,27 @@ def staff_attendance_arrival(request):
     from .attendance_forms import StaffAttendanceArrivalForm
     form = StaffAttendanceArrivalForm(request.POST or None, hotel=hotel)
     if request.method == "POST" and form.is_valid():
-        record = form.save(commit=False)
-        record.hotel = hotel
-        record.work_date = timezone.localdate()
-        record.arrived_at = timezone.now()
-        record.arrival_recorded_by = request.user
+        assignment = form.cleaned_data["assignment"]
+        scheduled_start, scheduled_end = assignment.shift.interval_for(assignment.work_date)
+        record = StaffAttendance(
+            hotel=hotel,
+            employee=assignment.employee,
+            roster_assignment=assignment,
+            work_date=assignment.work_date,
+            arrived_at=timezone.now(),
+            arrival_recorded_by=request.user,
+            arrival_note=form.cleaned_data["arrival_note"],
+            scheduled_start_at=scheduled_start,
+            scheduled_end_at=scheduled_end,
+            scheduled_shift_name=assignment.shift.name,
+            grace_minutes_snapshot=assignment.shift.grace_minutes,
+        )
         try:
             with transaction.atomic():
                 record.full_clean()
                 record.save()
         except IntegrityError:
-            form.add_error("employee", "This employee already has an attendance record for today.")
+            form.add_error("assignment", "Attendance has already been recorded for this employee and roster date.")
         except ValidationError as exc:
             form.add_error(None, exc)
         else:
