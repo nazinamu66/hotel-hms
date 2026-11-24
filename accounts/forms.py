@@ -404,6 +404,9 @@ class UserCreateForm(forms.ModelForm):
 
             else:
 
+                if role == "HR" and department.department_type != "HUMAN_RESOURCES":
+                    self.add_error("department", "HR staff must belong to the Human Resources department.")
+
                 department_hotel = department.hotel
 
                 # Department determines hotel.
