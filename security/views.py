@@ -15,6 +15,18 @@ from .handover_forms import SecurityShiftHandoverForm, SecurityHandoverAcknowled
 MANAGEMENT_ROLES = ("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 SECURITY_ACCESS_ROLES = ("SECURITY", *MANAGEMENT_ROLES)
 
+def staff_exit_pass_access_required(view_func):
+    from functools import wraps
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        user = request.user
+        hr_head = bool(user.is_authenticated and user.is_active and user.role == "HR" and user.department_id and user.department.department_type == "HUMAN_RESOURCES" and user.is_department_head)
+        if not user.is_authenticated or not user.is_active or not (user.role in SECURITY_ACCESS_ROLES or hr_head):
+            raise PermissionDenied
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 def staff_exit_authorizer_required(view_func):
     from functools import wraps
     @wraps(view_func)
@@ -284,7 +296,7 @@ def staff_exit_pass_create(request):
 
 
 @login_required
-@role_required(*SECURITY_ACCESS_ROLES)
+@staff_exit_pass_access_required
 def staff_exit_pass_list(request):
     hotel = _hotel_for_user(request)
     records = StaffExitPass.objects.filter(hotel=hotel).select_related("employee", "authorised_by", "gate_out_by", "gate_in_by")
@@ -298,7 +310,7 @@ def staff_exit_pass_list(request):
 
 
 @login_required
-@role_required(*SECURITY_ACCESS_ROLES)
+@staff_exit_pass_access_required
 def staff_exit_pass_detail(request, pass_id):
     hotel = _hotel_for_user(request)
     record = get_object_or_404(StaffExitPass.objects.select_related("employee", "authorised_by", "gate_out_by", "gate_in_by", "cancelled_by"), pk=pass_id, hotel=hotel)
@@ -353,7 +365,7 @@ def staff_exit_pass_cancel(request, pass_id):
 
 
 @login_required
-@role_required(*SECURITY_ACCESS_ROLES)
+@staff_exit_pass_access_required
 def staff_exit_pass_print(request, pass_id):
     hotel = _hotel_for_user(request)
     record = get_object_or_404(StaffExitPass, pk=pass_id, hotel=hotel)
