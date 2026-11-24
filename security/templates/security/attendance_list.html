@@ -52,7 +52,7 @@
         </select>
     </div>
     <button class="hms-btn hms-btn-primary" type="submit">Apply filters</button>
-    <a class="hms-btn hms-btn-secondary" href="{% url 'security_attendance_list' %}">Clear</a>
+    <a class="hms-btn hms-btn-secondary" href="{% url 'security_attendance_list' %}?hotel={{ hotel.pk }}">Clear</a>
 </form>
 
 <section class="hms-card">
