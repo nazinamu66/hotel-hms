@@ -702,6 +702,11 @@ class StaffAttendanceTests(TestCase):
         record = StaffAttendance.objects.get()
         self.assertEqual(record.employee, self.employee)
         self.assertIsNone(record.roster_assignment_id)
+        from personnel.models import RosterReconciliation
+        reconciliation = RosterReconciliation.objects.get(attendance=record)
+        self.assertEqual(reconciliation.employee, self.employee)
+        self.assertEqual(reconciliation.roster_assignment, self.assignment)
+        self.assertEqual(reconciliation.status, RosterReconciliation.PENDING)
 
     def test_previous_night_roster_assignment_is_available_after_midnight(self):
         from personnel.models import RosterAssignment, ShiftDefinition, WeeklyRoster
