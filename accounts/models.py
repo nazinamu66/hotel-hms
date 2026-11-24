@@ -190,7 +190,6 @@ class User(AbstractUser):
             "GYM",
             "BOUTIQUE",
             "SECURITY",
-            "HR",
         }
 
     @property
