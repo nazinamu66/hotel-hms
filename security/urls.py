@@ -3,6 +3,11 @@ from . import views
 
 urlpatterns = [
     path("", views.security_dashboard, name="security_dashboard"),
+    path("handovers/", views.shift_handover_list, name="security_handover_list"),
+    path("handovers/create/", views.shift_handover_create, name="security_handover_create"),
+    path("handovers/<int:handover_id>/", views.shift_handover_detail, name="security_handover_detail"),
+    path("handovers/<int:handover_id>/acknowledge/", views.shift_handover_acknowledge, name="security_handover_acknowledge"),
+    path("handovers/<int:handover_id>/cso-review/", views.shift_handover_cso_review, name="security_handover_cso_review"),
     path("visitors/", views.visitor_visit_list, name="security_visitor_list"),
     path("visitors/entry/", views.visitor_visit_create, name="security_visitor_entry"),
     path("visitors/<int:visit_id>/exit/", views.visitor_visit_exit, name="security_visitor_exit"),
