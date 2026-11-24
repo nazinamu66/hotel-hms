@@ -13,6 +13,10 @@ class StaffAttendanceArrivalForm(forms.ModelForm):
 
     def __init__(self, *args, hotel=None, **kwargs):
         super().__init__(*args, **kwargs)
+        # The hotel is assigned by the view, but ModelForm validates the model
+        # before the view saves it. Set it here so model validation has context.
+        if hotel:
+            self.instance.hotel = hotel
         self.fields["employee"].queryset = User.objects.filter(hotel=hotel, is_active=True).exclude(
             role__in=["ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT"]
         ).select_related("department").order_by("department__name", "first_name", "last_name", "username")
