@@ -80,6 +80,23 @@ class PersonnelRosterTests(TestCase):
         )
         self.assertFalse(is_hr_head(ordinary_hr))
 
+    def test_existing_user_form_can_create_hr_head_without_manager_role(self):
+        from accounts.forms import UserCreateForm
+        manager = User.objects.create_user(
+            username="hotel-manager", password="test", role="MANAGER", hotel=self.hotel,
+        )
+        form = UserCreateForm(data={
+            "username": "new-hr-head", "email": "", "role": "HR",
+            "organization": "", "hotel": "", "assigned_hotels": "",
+            "department": str(self.hr_department.pk),
+            "is_department_head": "on", "password": "test-password",
+        }, actor=manager)
+        self.assertTrue(form.is_valid(), form.errors)
+        created = form.save()
+        self.assertEqual(created.role, "HR")
+        self.assertTrue(is_hr_head(created))
+        self.assertNotEqual(created.role, "MANAGER")
+
     def test_hr_role_uses_existing_department_scope_not_manager_scope(self):
         self.assertEqual(self.hr_head.hotel, self.hotel)
         self.assertEqual(self.hr_head.department, self.hr_department)
