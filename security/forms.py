@@ -133,6 +133,8 @@ class StaffExitPassForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         from django.db.models import Q
         self.hotel = hotel
+        if hotel:
+            self.instance.hotel = hotel
         self.fields["employee"].queryset = User.objects.filter(is_active=True).exclude(
             role__in=["ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT"]
         ).filter(Q(hotel=hotel) | Q(department__hotel=hotel)).distinct().order_by("first_name", "last_name", "username") if hotel else User.objects.none()
