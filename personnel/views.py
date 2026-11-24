@@ -104,8 +104,15 @@ def roster_detail(request, roster_id):
         (a.employee_id, a.work_date): ("OFF" if a.is_day_off else str(a.shift_id))
         for a in roster.assignments.select_related("shift")
     }
+    grid_rows = [
+        {"employee": employee, "cells": [
+            {"date": day, "value": assignment_map.get((employee.pk, day), "")}
+            for day in dates
+        ]}
+        for employee in employees
+    ]
     return render(request, "personnel/roster_detail.html", {
-        "roster": roster, "employees": employees, "dates": dates,
+        "roster": roster, "employees": employees, "dates": dates, "grid_rows": grid_rows,
         "shifts": ShiftDefinition.objects.filter(hotel=roster.hotel, is_active=True),
         "assignment_map": assignment_map, "editable": editable,
         "events": roster.audit_events.select_related("actor"),
@@ -125,8 +132,9 @@ def _validate_roster_complete(roster):
             raise ValidationError(f"Complete all seven days for {employee.get_full_name() or employee.username}.")
         if sum(1 for a in entries if a.is_day_off) != 1:
             raise ValidationError(f"{employee.get_full_name() or employee.username} must have exactly one day off.")
-        intervals = sorted((a.shift.interval_for(a.work_date), a) for a in entries if a.shift_id)
-        for (start, end), (next_start, next_end) in zip(intervals, intervals[1:]):
+        intervals = [(a.shift.interval_for(a.work_date), a) for a in entries if a.shift_id]
+        intervals.sort(key=lambda item: item[0][0])
+        for ((start, end), _), ((next_start, next_end), _) in zip(intervals, intervals[1:]):
             if next_start < end:
                 raise ValidationError(f"Overlapping shifts found for {employee.get_full_name() or employee.username}.")
     if not employees:
