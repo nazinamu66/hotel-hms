@@ -217,12 +217,9 @@ def shift_list(request):
         raise PermissionDenied
     hotels = get_accessible_hotels(request.user)
     shifts = ShiftDefinition.objects.filter(hotel__in=hotels).select_related("hotel")
-    form = ShiftDefinitionForm(request.POST or None)
+    form = ShiftDefinitionForm(request.POST or None, actor=request.user)
     if request.method == "POST" and form.is_valid():
         shift = form.save(commit=False)
-        shift.hotel = request.user.hotel
-        if not shift.hotel:
-            shift.hotel = request.user.department.hotel
         try:
             shift.full_clean()
             shift.save()
