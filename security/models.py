@@ -340,14 +340,37 @@ class StaffAttendance(models.Model):
         errors = {}
         if self.employee_id:
             employee = self.employee
-            if not employee.is_active or employee.hotel_id != self.hotel_id:
+            employee_hotel_id = employee.hotel_id or (
+                employee.department.hotel_id if employee.department_id else None
+            )
+            if not employee.is_active or employee_hotel_id != self.hotel_id:
                 errors["employee"] = "Select an active employee assigned to this hotel."
             if employee.role in {"ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT"}:
                 errors["employee"] = "This account is not an employee of the selected hotel."
-        if self.arrival_recorded_by_id and (self.arrival_recorded_by.role != "SECURITY" or self.arrival_recorded_by.hotel_id != self.hotel_id or not self.arrival_recorded_by.is_active):
-            errors["arrival_recorded_by"] = "Arrival must be recorded by an active Security officer at this hotel."
-        if self.departure_recorded_by_id and (self.departure_recorded_by.role != "SECURITY" or self.departure_recorded_by.hotel_id != self.hotel_id or not self.departure_recorded_by.is_active):
-            errors["departure_recorded_by"] = "Departure must be recorded by an active Security officer at this hotel."
+        if self.arrival_recorded_by_id:
+            officer = self.arrival_recorded_by
+            officer_hotel_id = officer.hotel_id or (
+                officer.department.hotel_id if officer.department_id else None
+            )
+            if (
+                officer.role != "SECURITY" or not officer.is_active
+                or officer_hotel_id != self.hotel_id
+                or not officer.department_id
+                or officer.department.department_type != "SECURITY"
+            ):
+                errors["arrival_recorded_by"] = "Arrival must be recorded by an active Security officer at this hotel."
+        if self.departure_recorded_by_id:
+            officer = self.departure_recorded_by
+            officer_hotel_id = officer.hotel_id or (
+                officer.department.hotel_id if officer.department_id else None
+            )
+            if (
+                officer.role != "SECURITY" or not officer.is_active
+                or officer_hotel_id != self.hotel_id
+                or not officer.department_id
+                or officer.department.department_type != "SECURITY"
+            ):
+                errors["departure_recorded_by"] = "Departure must be recorded by an active Security officer at this hotel."
         if self.departed_at and not self.departure_recorded_by_id:
             errors["departure_recorded_by"] = "Record the Security officer who confirms departure."
         if errors:
