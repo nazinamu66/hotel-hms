@@ -315,3 +315,51 @@ class SecurityShiftHandover(models.Model):
 
     def __str__(self):
         return f"{self.hotel} security handover — {self.duty_date}"
+
+
+class StaffAttendance(models.Model):
+    """One daily attendance record; approved short movements are tracked separately."""
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="staff_attendance")
+    employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="staff_attendance")
+    work_date = models.DateField(default=timezone.localdate)
+    arrived_at = models.DateTimeField(default=timezone.now, editable=False)
+    arrival_recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="staff_attendance_arrivals")
+    arrival_note = models.TextField(blank=True)
+    departed_at = models.DateTimeField(null=True, blank=True)
+    departure_recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="staff_attendance_departures")
+    departure_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-work_date", "-arrived_at", "-pk"]
+        constraints = [models.UniqueConstraint(fields=["hotel", "employee", "work_date"], name="uniq_staff_attendance_employee_day")]
+        indexes = [models.Index(fields=["hotel", "work_date"]), models.Index(fields=["hotel", "departed_at", "work_date"])]
+
+    def clean(self):
+        errors = {}
+        if self.employee_id:
+            employee = self.employee
+            if not employee.is_active or employee.hotel_id != self.hotel_id:
+                errors["employee"] = "Select an active employee assigned to this hotel."
+            if employee.role in {"ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT"}:
+                errors["employee"] = "This account is not an employee of the selected hotel."
+        if self.arrival_recorded_by_id and (self.arrival_recorded_by.role != "SECURITY" or self.arrival_recorded_by.hotel_id != self.hotel_id or not self.arrival_recorded_by.is_active):
+            errors["arrival_recorded_by"] = "Arrival must be recorded by an active Security officer at this hotel."
+        if self.departure_recorded_by_id and (self.departure_recorded_by.role != "SECURITY" or self.departure_recorded_by.hotel_id != self.hotel_id or not self.departure_recorded_by.is_active):
+            errors["departure_recorded_by"] = "Departure must be recorded by an active Security officer at this hotel."
+        if self.departed_at and not self.departure_recorded_by_id:
+            errors["departure_recorded_by"] = "Record the Security officer who confirms departure."
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def is_present(self):
+        return self.departed_at is None
+
+    @property
+    def duration(self):
+        return self.departed_at - self.arrived_at if self.departed_at else None
+
+    def __str__(self):
+        return f"{self.employee} — {self.work_date}"
