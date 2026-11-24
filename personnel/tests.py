@@ -210,6 +210,22 @@ class PersonnelRosterTests(TestCase):
         self.assertEqual(roster.reviewed_by, self.hr_head)
         self.assertTrue(roster.audit_events.filter(event_type="APPROVED").exists())
 
+    def test_overlapping_overnight_and_following_shift_cannot_be_submitted(self):
+        roster = self.make_roster()
+        self.fill_roster(roster)
+        early = ShiftDefinition.objects.create(
+            hotel=self.hotel, code="EARLY", name="Early",
+            start_time="07:00", end_time="15:00",
+        )
+        for employee in [self.hod, *self.staff]:
+            RosterAssignment.objects.filter(
+                roster=roster, employee=employee, work_date=roster.week_start + timedelta(days=3),
+            ).update(shift=early)
+        self.client.force_login(self.hod)
+        self.client.post(reverse("personnel:roster_submit", args=[roster.pk]))
+        roster.refresh_from_db()
+        self.assertEqual(roster.status, WeeklyRoster.DRAFT)
+
     def test_incomplete_roster_cannot_be_submitted(self):
         roster = self.make_roster()
         self.client.force_login(self.hod)
