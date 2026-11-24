@@ -956,3 +956,181 @@ class StaffAttendanceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["status_filter"], "ALL")
         self.assertIn(departed, list(response.context["records"]))
+
+
+class SecurityIncidentAndOccurrenceTests(TestCase):
+    def setUp(self):
+        self.org = Organization.objects.create(name="Security Incident Test Org")
+        self.hotel = Hotel.objects.create(name="Security Incident Test Hotel", organization=self.org)
+        self.department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Security",
+            defaults={"code": "SEC", "department_type": "SECURITY"},
+        )
+        self.officer = User.objects.create_user(
+            username="incident-officer", password="test", role="SECURITY",
+            department=self.department,
+        )
+        self.investigator = User.objects.create_user(
+            username="incident-investigator", password="test", role="SECURITY",
+            department=self.department,
+        )
+        self.cso = User.objects.create_user(
+            username="incident-cso", password="test", role="SECURITY",
+            department=self.department, is_department_head=True,
+        )
+
+    def make_incident(self, **overrides):
+        from .models import SecurityIncident
+        values = {
+            "hotel": self.hotel,
+            "category": "SUSPICIOUS",
+            "severity": "MEDIUM",
+            "occurred_at": timezone.now() - timedelta(minutes=30),
+            "location": "Main entrance",
+            "summary": "Unidentified person observed",
+            "description": "An unidentified person was observed near the service entrance.",
+            "reported_by": self.officer,
+        }
+        values.update(overrides)
+        return SecurityIncident.objects.create(**values)
+
+    def test_security_officer_can_submit_incident_and_event_is_created(self):
+        from .models import SecurityIncident, SecurityIncidentEvent
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse("security_incident_create"), {
+            "category": "SUSPICIOUS", "severity": "MEDIUM",
+            "occurred_at": timezone.localtime(timezone.now() - timedelta(minutes=20)).strftime("%Y-%m-%dT%H:%M"),
+            "location": "Main entrance", "summary": "Unidentified person",
+            "description": "Observed near the service entrance.",
+            "persons_involved": "", "witnesses": "",
+            "immediate_action": "Officer approached and checked the area.",
+        })
+        self.assertEqual(response.status_code, 302)
+        incident = SecurityIncident.objects.get()
+        self.assertTrue(incident.incident_number.startswith(f"SI-{self.hotel.pk}-"))
+        self.assertEqual(incident.status, "SUBMITTED")
+        self.assertTrue(SecurityIncidentEvent.objects.filter(incident=incident, event_type="SUBMITTED").exists())
+
+    def test_non_security_user_cannot_submit_incident(self):
+        manager = User.objects.create_user(
+            username="incident-manager", password="test", role="MANAGER", hotel=self.hotel,
+        )
+        self.client.force_login(manager)
+        response = self.client.get(reverse("security_incident_create"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_only_security_head_can_review_incident(self):
+        incident = self.make_incident()
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse("security_incident_review", args=[incident.pk]), {
+            "decision": "UNDER_REVIEW", "note": "Reviewed.",
+        })
+        self.assertEqual(response.status_code, 403)
+        self.client.force_login(self.cso)
+        response = self.client.post(reverse("security_incident_review", args=[incident.pk]), {
+            "decision": "INVESTIGATION",
+            "assigned_investigator": self.investigator.pk,
+            "note": "Investigation opened and assigned.",
+        })
+        self.assertEqual(response.status_code, 302)
+        incident.refresh_from_db()
+        self.assertEqual(incident.status, "INVESTIGATION")
+        self.assertEqual(incident.assigned_investigator, self.investigator)
+        self.assertEqual(incident.reviewed_by, self.cso)
+
+    def test_only_assigned_investigator_or_cso_can_add_case_updates(self):
+        incident = self.make_incident(
+            status="INVESTIGATION", assigned_investigator=self.investigator,
+            reviewed_by=self.cso, reviewed_at=timezone.now(),
+        )
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse("security_incident_update", args=[incident.pk]), {
+            "event_type": "INVESTIGATION", "note": "Unassigned officer update.",
+        })
+        self.assertEqual(response.status_code, 403)
+        self.client.force_login(self.investigator)
+        response = self.client.post(reverse("security_incident_update", args=[incident.pk]), {
+            "event_type": "INVESTIGATION", "note": "Witness statement collected.",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(incident.events.filter(event_type="INVESTIGATION", note="Witness statement collected.").exists())
+
+    def test_only_security_head_can_resolve_or_close_incident(self):
+        incident = self.make_incident(status="INVESTIGATION")
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse("security_incident_resolve", args=[incident.pk]), {
+            "resolution_summary": "Issue resolved.", "close_case": "on",
+        })
+        self.assertEqual(response.status_code, 403)
+        self.client.force_login(self.cso)
+        response = self.client.post(reverse("security_incident_resolve", args=[incident.pk]), {
+            "resolution_summary": "Investigation completed; matter closed.",
+            "close_case": "on",
+        })
+        self.assertEqual(response.status_code, 302)
+        incident.refresh_from_db()
+        self.assertEqual(incident.status, "CLOSED")
+        self.assertEqual(incident.closed_by, self.cso)
+        self.assertTrue(incident.events.filter(event_type="CLOSED").exists())
+
+    def test_incident_register_is_hotel_scoped(self):
+        incident = self.make_incident()
+        other_hotel = Hotel.objects.create(name="Other Incident Hotel", organization=self.org)
+        self.client.force_login(self.officer)
+        response = self.client.get(reverse("security_incident_detail", args=[incident.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, incident.incident_number)
+
+    def test_security_officer_can_submit_daily_occurrence_report_with_activity_snapshot(self):
+        from .models import SecurityOccurrenceReport, StaffAttendance, VisitorVisit
+        StaffAttendance.objects.create(
+            hotel=self.hotel, employee=self.officer,
+            arrival_recorded_by=self.officer,
+        )
+        duty_date = timezone.localdate()
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse("security_occurrence_create"), {
+            "duty_date": duty_date.isoformat(),
+            "shift_summary": "All gates monitored. No major disruption.",
+            "outstanding_matters": "One visitor expected to return.",
+        })
+        self.assertEqual(response.status_code, 302)
+        report = SecurityOccurrenceReport.objects.get()
+        self.assertEqual(report.submitted_by, self.officer)
+        self.assertEqual(report.activity_snapshot["staff_arrivals"], 1)
+        self.assertIn("visitors_inside", report.activity_snapshot)
+
+    def test_daily_occurrence_report_is_unique_per_hotel_date(self):
+        from .models import SecurityOccurrenceReport
+        SecurityOccurrenceReport.objects.create(
+            hotel=self.hotel, duty_date=timezone.localdate(),
+            submitted_by=self.officer, shift_summary="Daily report.",
+        )
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse("security_occurrence_create"), {
+            "duty_date": timezone.localdate().isoformat(),
+            "shift_summary": "Duplicate daily report.",
+            "outstanding_matters": "",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(SecurityOccurrenceReport.objects.filter(hotel=self.hotel).count(), 1)
+
+    def test_only_security_head_can_review_daily_occurrence_report(self):
+        from .models import SecurityOccurrenceReport
+        report = SecurityOccurrenceReport.objects.create(
+            hotel=self.hotel, duty_date=timezone.localdate(),
+            submitted_by=self.officer, shift_summary="Daily report.",
+        )
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse("security_occurrence_review", args=[report.pk]), {
+            "review_note": "Reviewed.",
+        })
+        self.assertEqual(response.status_code, 403)
+        self.client.force_login(self.cso)
+        response = self.client.post(reverse("security_occurrence_review", args=[report.pk]), {
+            "review_note": "Reviewed and outstanding matter noted.",
+        })
+        self.assertEqual(response.status_code, 302)
+        report.refresh_from_db()
+        self.assertEqual(report.reviewed_by, self.cso)
+        self.assertIsNotNone(report.reviewed_at)
