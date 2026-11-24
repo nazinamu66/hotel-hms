@@ -279,7 +279,7 @@ def staff_exit_pass_create(request):
             form.add_error(None, exc)
         else:
             messages.success(request, f"Staff exit pass {record.pass_number} authorised.")
-            return redirect("security_staff_exit_detail", pass_id=record.pk)
+            return redirect(f"/security/staff-exit-passes/{record.pk}/?hotel={hotel.pk}")
     return render(request, "security/staff_exit_form.html", {"form": form, "hotel": hotel})
 
 
