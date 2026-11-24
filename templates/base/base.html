@@ -269,6 +269,10 @@
             {% if user.role == "SECURITY" %}<a href="{% url 'security_vehicle_entry' %}">Record Vehicle Entry</a>{% endif %}
             <a href="{% url 'security_pass_list' %}">Property Exit &amp; Return Register</a>
             <a href="{% url 'security_staff_exit_list' %}">Staff Exit Pass Register</a>
+            <a href="{% url 'security_incident_list' %}">Incident Register</a>
+            {% if user.role == "SECURITY" %}<a href="{% url 'security_incident_create' %}">Record Incident</a>{% endif %}
+            <a href="{% url 'security_occurrence_list' %}">Daily Occurrence Reports</a>
+            {% if user.role == "SECURITY" %}<a href="{% url 'security_occurrence_create' %}">Submit Daily Occurrence Report</a>{% endif %}
             {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}<a href="{% url 'security_pass_create' %}">Create Management Authorisation</a>{% endif %}
         </div>
         {% endif %}
