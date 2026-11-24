@@ -1331,16 +1331,12 @@ def security_delivery_acknowledge(request, delivery_id):
     record.department_received_by = request.user
     record.department_received_at = timezone.now()
     record.department_receipt_note = request.POST.get("department_receipt_note", "").strip()
-    try:
-        record.full_clean()
-        record.save(update_fields=[
-            "purchase_receipt", "department_received_by",
-            "department_received_at", "department_receipt_note",
-        ])
-    except (ValidationError, IntegrityError) as exc:
-        messages.error(request, "Delivery acknowledgement was not saved: " + "; ".join(getattr(exc, "messages", [str(exc)])))
-    else:
-        messages.success(request, "Department delivery acknowledgement recorded.")
+    record.full_clean()
+    record.save(update_fields=[
+        "purchase_receipt", "department_received_by",
+        "department_received_at", "department_receipt_note",
+    ])
+    messages.success(request, "Department delivery acknowledgement recorded.")
     return redirect("security_delivery_detail", delivery_id=record.pk)
 
 
