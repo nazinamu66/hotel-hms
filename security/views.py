@@ -509,6 +509,17 @@ def staff_attendance_arrival(request):
             with transaction.atomic():
                 record.full_clean()
                 record.save()
+                if assignment is None:
+                    from personnel.models import RosterAssignment, RosterReconciliation, WeeklyRoster
+                    off_day = RosterAssignment.objects.filter(
+                        roster__hotel=hotel, roster__status=WeeklyRoster.APPROVED,
+                        employee=employee, work_date=record.work_date, is_day_off=True,
+                    ).select_related("roster").first()
+                    if off_day:
+                        RosterReconciliation.objects.get_or_create(
+                            attendance=record,
+                            defaults={"hotel": hotel, "roster_assignment": off_day, "employee": employee},
+                        )
         except IntegrityError:
             form.add_error("employee", "Attendance has already been recorded for this employee and roster date.")
         except ValidationError as exc:
