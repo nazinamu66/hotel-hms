@@ -1,12 +1,156 @@
 {% extends "base/base.html" %}
 {% block title %}{{ incident.incident_number }}{% endblock %}
 {% block content %}
-<div class="hms-page">
-<header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Security incident · {{ hotel.name }}</p><h1 class="hms-page-title">{{ incident.incident_number }}</h1><p class="hms-page-subtitle">{{ incident.summary }} · {{ incident.get_status_display }}</p></div><div class="hms-actions"><a class="hms-btn hms-btn-secondary" href="{% url 'security_incident_list' %}">Incident register</a></div></header>
-<section class="hms-card"><h2 class="hms-card-title">Incident details</h2><div class="hms-form-grid"><div><strong>Category</strong><p>{{ incident.get_category_display }}</p></div><div><strong>Severity</strong><p>{{ incident.get_severity_display }}</p></div><div><strong>Occurred</strong><p>{{ incident.occurred_at|date:"d M Y · g:i a" }}</p></div><div><strong>Location</strong><p>{{ incident.location }}</p></div><div><strong>Reported by</strong><p>{{ incident.reported_by.get_full_name|default:incident.reported_by.username }} · {{ incident.reported_at|date:"d M Y · g:i a" }}</p></div><div><strong>Assigned investigator</strong><p>{{ incident.assigned_investigator|default:"Not assigned" }}</p></div></div><h3>Description</h3><p>{{ incident.description|linebreaksbr }}</p><h3>Persons involved</h3><p>{{ incident.persons_involved|default:"Not recorded"|linebreaksbr }}</p><h3>Witnesses</h3><p>{{ incident.witnesses|default:"Not recorded"|linebreaksbr }}</p><h3>Immediate action taken</h3><p>{{ incident.immediate_action|default:"Not recorded"|linebreaksbr }}</p>{% if incident.evidence %}<p><a class="hms-link" href="{{ incident.evidence.url }}" target="_blank" rel="noopener">Open attached evidence</a></p>{% endif %}</section>
-<section class="hms-card"><h2 class="hms-card-title">Case history</h2><div class="hms-table-wrap"><table class="hms-table"><thead><tr><th>Time</th><th>Event</th><th>Recorded by</th><th>Note</th></tr></thead><tbody>{% for event in incident.events.all %}<tr><td>{{ event.created_at|date:"d M Y · g:i a" }}</td><td>{{ event.get_event_type_display }}</td><td>{{ event.actor.get_full_name|default:event.actor.username }}</td><td>{{ event.note|linebreaksbr }}</td></tr>{% empty %}<tr><td colspan="4">No case history.</td></tr>{% endfor %}</tbody></table></div></section>
-{% if can_review %}<section class="hms-card"><h2 class="hms-card-title">Security Head review</h2><form method="post" action="{% url 'security_incident_review' incident.pk %}">{% csrf_token %}{{ review_form.as_p }}<button class="hms-btn hms-btn-primary" type="submit">Save review</button></form></section>{% endif %}
-{% if can_update %}<section class="hms-card"><h2 class="hms-card-title">Investigation update</h2><form method="post" action="{% url 'security_incident_update' incident.pk %}">{% csrf_token %}{{ update_form.as_p }}<button class="hms-btn hms-btn-secondary" type="submit">Add to case history</button></form></section>{% endif %}
-{% if can_resolve %}<section class="hms-card"><h2 class="hms-card-title">Resolve or close incident</h2><form method="post" action="{% url 'security_incident_resolve' incident.pk %}">{% csrf_token %}{{ resolution_form.as_p }}<button class="hms-btn hms-btn-primary" type="submit">Record resolution</button></form></section>{% endif %}
+<style>
+    .incident-detail { max-width:1240px; margin:0 auto; }
+    .incident-detail .incident-panel { margin-bottom:20px; padding:24px; border:1px solid #e2e8f0; border-radius:17px; background:#fff; box-shadow:0 8px 24px rgba(15,23,42,.04); }
+    .incident-detail .incident-panel:last-child { margin-bottom:0; }
+    .incident-detail .incident-panel-head { margin-bottom:19px; }
+    .incident-detail .incident-panel-head h2 { margin:0; color:#172033; font-size:17px; font-weight:800; }
+    .incident-detail .incident-panel-head p { margin:5px 0 0; color:#64748b; font-size:12px; line-height:1.5; }
+    .incident-detail .incident-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
+    .incident-detail .incident-info { padding:13px 15px; border:1px solid #e8edf3; border-radius:11px; background:#f8fafc; min-width:0; }
+    .incident-detail .incident-info strong { display:block; margin-bottom:5px; color:#64748b; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+    .incident-detail .incident-info p { margin:0; color:#1e293b; font-size:13px; line-height:1.5; overflow-wrap:anywhere; }
+    .incident-detail .incident-copy { margin-top:20px; padding-top:17px; border-top:1px solid #edf1f6; }
+    .incident-detail .incident-copy h3 { margin:0 0 8px; color:#334155; font-size:13px; font-weight:800; }
+    .incident-detail .incident-copy p { margin:0; color:#475569; font-size:13px; line-height:1.7; }
+    .incident-detail .incident-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    .incident-detail .incident-field { min-width:0; }
+    .incident-detail .incident-field.full { grid-column:1/-1; }
+    .incident-detail .incident-field label { display:block; margin-bottom:7px; color:#334155; font-size:12px; font-weight:750; }
+    .incident-detail .incident-field input:not([type=checkbox]), .incident-detail .incident-field select, .incident-detail .incident-field textarea { display:block; width:100%; box-sizing:border-box; padding:11px 13px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#172033; font:inherit; font-size:13px; }
+    .incident-detail .incident-field textarea { min-height:112px; resize:vertical; line-height:1.55; }
+    .incident-detail .incident-field input:focus, .incident-detail .incident-field select:focus, .incident-detail .incident-field textarea:focus { outline:none; border-color:#6095f5; box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+    .incident-detail .incident-field-help { display:block; margin-top:6px; color:#718096; font-size:11px; line-height:1.5; }
+    .incident-detail .incident-error { margin:6px 0 0; color:#b91c1c; font-size:12px; }
+    .incident-detail .incident-form-errors { margin:0 0 16px; padding:11px 14px; border:1px solid #fecaca; border-radius:10px; background:#fef2f2; color:#991b1b; font-size:12px; }
+    .incident-detail .incident-form-footer { display:flex; justify-content:flex-end; margin-top:18px; }
+    .incident-detail .incident-submit { border:0; border-radius:10px; padding:12px 18px; color:#fff; background:#1d4ed8; font-size:13px; font-weight:750; cursor:pointer; }
+    .incident-detail .incident-submit.secondary { color:#1e40af; background:#eff6ff; }
+    .incident-detail .incident-history-wrap { overflow-x:auto; }
+    .incident-detail .incident-history { width:100%; border-collapse:collapse; font-size:12px; }
+    .incident-detail .incident-history th, .incident-detail .incident-history td { padding:12px 13px; border-bottom:1px solid #edf1f6; text-align:left; vertical-align:top; }
+    .incident-detail .incident-history th { color:#64748b; background:#f8fafc; font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+    @media(max-width:700px) { .incident-detail .incident-detail-grid, .incident-detail .incident-form-grid { grid-template-columns:1fr; } .incident-detail .incident-field.full { grid-column:auto; } .incident-detail .incident-panel { padding:18px; } .incident-detail .incident-form-footer { justify-content:stretch; } .incident-detail .incident-submit { width:100%; } }
+</style>
+<div class="hms-page incident-detail">
+    <header class="hms-page-header">
+        <div class="hms-page-heading">
+            <p class="hms-eyebrow">Security incident · {{ hotel.name }}</p>
+            <h1 class="hms-page-title">{{ incident.incident_number }}</h1>
+            <p class="hms-page-subtitle">{{ incident.summary }} · {{ incident.get_status_display }}</p>
+        </div>
+        <div class="hms-actions"><a class="hms-btn hms-btn-secondary" href="{% url 'security_incident_list' %}">Incident register</a></div>
+    </header>
+
+    <section class="incident-panel">
+        <div class="incident-panel-head"><h2>Incident details</h2><p>Reported information and immediate response.</p></div>
+        <div class="incident-detail-grid">
+            <div class="incident-info"><strong>Category</strong><p>{{ incident.get_category_display }}</p></div>
+            <div class="incident-info"><strong>Severity</strong><p>{{ incident.get_severity_display }}</p></div>
+            <div class="incident-info"><strong>Occurred</strong><p>{{ incident.occurred_at|date:"d M Y · g:i a" }}</p></div>
+            <div class="incident-info"><strong>Location</strong><p>{{ incident.location }}</p></div>
+            <div class="incident-info"><strong>Reported by</strong><p>{{ incident.reported_by.get_full_name|default:incident.reported_by.username }} · {{ incident.reported_at|date:"d M Y · g:i a" }}</p></div>
+            <div class="incident-info"><strong>Assigned investigator</strong><p>{{ incident.assigned_investigator|default:"Not assigned" }}</p></div>
+        </div>
+        <div class="incident-copy"><h3>Description</h3><p>{{ incident.description|linebreaksbr }}</p></div>
+        <div class="incident-copy"><h3>Persons involved</h3><p>{{ incident.persons_involved|default:"Not recorded"|linebreaksbr }}</p></div>
+        <div class="incident-copy"><h3>Witnesses</h3><p>{{ incident.witnesses|default:"Not recorded"|linebreaksbr }}</p></div>
+        <div class="incident-copy"><h3>Immediate action taken</h3><p>{{ incident.immediate_action|default:"Not recorded"|linebreaksbr }}</p></div>
+        {% if incident.evidence %}<div class="incident-copy"><a class="hms-link" href="{{ incident.evidence.url }}" target="_blank" rel="noopener">Open attached evidence</a></div>{% endif %}
+    </section>
+
+    <section class="incident-panel">
+        <div class="incident-panel-head"><h2>Case history</h2><p>Chronological record of reviews, investigation notes and decisions.</p></div>
+        <div class="incident-history-wrap">
+            <table class="incident-history">
+                <thead><tr><th>Time</th><th>Event</th><th>Recorded by</th><th>Note</th></tr></thead>
+                <tbody>
+                    {% for event in incident.events.all %}
+                        <tr><td>{{ event.created_at|date:"d M Y · g:i a" }}</td><td>{{ event.get_event_type_display }}</td><td>{{ event.actor.get_full_name|default:event.actor.username }}</td><td>{{ event.note|linebreaksbr }}</td></tr>
+                    {% empty %}
+                        <tr><td colspan="4">No case history.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {% if can_review %}
+    <section class="incident-panel">
+        <div class="incident-panel-head"><h2>Security Head review</h2><p>Assess the report, decide the next action and assign an investigator where required.</p></div>
+        <form method="post" action="{% url 'security_incident_review' incident.pk %}">
+            {% csrf_token %}
+            {% if review_form.non_field_errors %}<div class="incident-form-errors">{{ review_form.non_field_errors }}</div>{% endif %}
+            <div class="incident-form-grid">
+                <div class="incident-field">
+                    <label for="{{ review_form.decision.id_for_label }}">Review decision</label>
+                    {{ review_form.decision }}
+                    {% for error in review_form.decision.errors %}<p class="incident-error">{{ error }}</p>{% endfor %}
+                </div>
+                <div class="incident-field">
+                    <label for="{{ review_form.assigned_investigator.id_for_label }}">Assign investigator <span style="font-weight:500;color:#64748b;">(if required)</span></label>
+                    {{ review_form.assigned_investigator }}
+                    {% for error in review_form.assigned_investigator.errors %}<p class="incident-error">{{ error }}</p>{% endfor %}
+                </div>
+                <div class="incident-field full">
+                    <label for="{{ review_form.note.id_for_label }}">Review / investigation note</label>
+                    {{ review_form.note }}
+                    <small class="incident-field-help">Record the basis for the decision, immediate instructions or investigation scope.</small>
+                    {% for error in review_form.note.errors %}<p class="incident-error">{{ error }}</p>{% endfor %}
+                </div>
+            </div>
+            <div class="incident-form-footer"><button class="incident-submit" type="submit">Save review</button></div>
+        </form>
+    </section>
+    {% endif %}
+
+    {% if can_update %}
+    <section class="incident-panel">
+        <div class="incident-panel-head"><h2>Investigation update</h2><p>Add a dated note to the case history or record an escalation.</p></div>
+        <form method="post" action="{% url 'security_incident_update' incident.pk %}">
+            {% csrf_token %}
+            {% if update_form.non_field_errors %}<div class="incident-form-errors">{{ update_form.non_field_errors }}</div>{% endif %}
+            <div class="incident-form-grid">
+                <div class="incident-field">
+                    <label for="{{ update_form.event_type.id_for_label }}">Update type</label>
+                    {{ update_form.event_type }}
+                    {% for error in update_form.event_type.errors %}<p class="incident-error">{{ error }}</p>{% endfor %}
+                </div>
+                <div class="incident-field full">
+                    <label for="{{ update_form.note.id_for_label }}">Investigation note</label>
+                    {{ update_form.note }}
+                    {% for error in update_form.note.errors %}<p class="incident-error">{{ error }}</p>{% endfor %}
+                </div>
+            </div>
+            <div class="incident-form-footer"><button class="incident-submit secondary" type="submit">Add to case history</button></div>
+        </form>
+    </section>
+    {% endif %}
+
+    {% if can_resolve %}
+    <section class="incident-panel">
+        <div class="incident-panel-head"><h2>Resolve or close incident</h2><p>Document the outcome before marking this case resolved or closed.</p></div>
+        <form method="post" action="{% url 'security_incident_resolve' incident.pk %}">
+            {% csrf_token %}
+            {% if resolution_form.non_field_errors %}<div class="incident-form-errors">{{ resolution_form.non_field_errors }}</div>{% endif %}
+            <div class="incident-form-grid">
+                <div class="incident-field full">
+                    <label for="{{ resolution_form.resolution_summary.id_for_label }}">Resolution / closure summary</label>
+                    {{ resolution_form.resolution_summary }}
+                    {% for error in resolution_form.resolution_summary.errors %}<p class="incident-error">{{ error }}</p>{% endfor %}
+                </div>
+                <div class="incident-field full">
+                    <label for="{{ resolution_form.close_case.id_for_label }}" style="display:flex;align-items:center;gap:9px;">
+                        {{ resolution_form.close_case }} Close this incident after resolution
+                    </label>
+                    {% for error in resolution_form.close_case.errors %}<p class="incident-error">{{ error }}</p>{% endfor %}
+                </div>
+            </div>
+            <div class="incident-form-footer"><button class="incident-submit" type="submit">Record resolution</button></div>
+        </form>
+    </section>
+    {% endif %}
 </div>
 {% endblock %}
