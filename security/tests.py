@@ -674,6 +674,46 @@ class StaffAttendanceTests(TestCase):
         from .models import StaffAttendance
         self.assertFalse(StaffAttendance.objects.exists())
 
+    def test_previous_night_roster_assignment_is_available_after_midnight(self):
+        from personnel.models import RosterAssignment, ShiftDefinition, WeeklyRoster
+        from .attendance_forms import StaffAttendanceArrivalForm
+        today = timezone.localdate()
+        yesterday = today - timedelta(days=1)
+        night_shift = ShiftDefinition.objects.create(
+            hotel=self.hotel, code="NIGHT", name="Night Shift",
+            start_time=time(20, 0), end_time=time(8, 0), grace_minutes=10,
+        )
+        night_roster = WeeklyRoster.objects.create(
+            hotel=self.hotel, department=self.staff_department,
+            week_start=yesterday - timedelta(days=yesterday.weekday()),
+            responsible_hod=self.hod, created_by=self.hod, status=WeeklyRoster.APPROVED,
+        )
+        assignment = RosterAssignment.objects.create(
+            roster=night_roster, employee=self.employee,
+            work_date=yesterday, shift=night_shift,
+        )
+        after_midnight = timezone.make_aware(datetime.combine(today, time(2, 0)))
+        form = StaffAttendanceArrivalForm(hotel=self.hotel, now=after_midnight)
+        self.assertTrue(form.fields["assignment"].queryset.filter(pk=assignment.pk).exists())
+
+    def test_attendance_date_includes_overnight_shift_ending_that_day(self):
+        from .models import StaffAttendance
+        today = timezone.localdate()
+        yesterday = today - timedelta(days=1)
+        start = timezone.make_aware(datetime.combine(yesterday, time(20, 0)))
+        end = timezone.make_aware(datetime.combine(today, time(8, 0)))
+        record = StaffAttendance.objects.create(
+            hotel=self.hotel, employee=self.employee, work_date=yesterday,
+            arrived_at=start, scheduled_start_at=start, scheduled_end_at=end,
+            scheduled_shift_name="Night Shift", arrival_recorded_by=self.security,
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_attendance_list"), {
+            "date": today.isoformat(), "status": "ALL",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(record, list(response.context["records"]))
+
     def test_punctuality_uses_saved_grace_period_snapshot(self):
         from .models import StaffAttendance
         start = timezone.make_aware(datetime.combine(timezone.localdate(), time(8, 0)))
