@@ -58,6 +58,7 @@ class RosterReconciliationForm(forms.ModelForm):
 
     def __init__(self, *args, reconciliation=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["reason"].required = True
         self.fields["covered_employee"].queryset = User.objects.filter(
             is_active=True, department_id=reconciliation.employee.department_id
         ).exclude(pk=reconciliation.employee_id).order_by("first_name", "last_name", "username") if reconciliation else User.objects.none()
