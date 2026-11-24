@@ -570,13 +570,15 @@ class StaffAttendanceTests(TestCase):
 
     def test_dashboard_counts_overnight_staff_until_departure(self):
         from .models import StaffAttendance
-        now = timezone.now()
+        today = timezone.localdate()
+        yesterday = today - timedelta(days=1)
+        overnight_start = timezone.make_aware(datetime.combine(yesterday, time(20, 0)))
+        overnight_end = timezone.make_aware(datetime.combine(today, time(8, 0)))
         StaffAttendance.objects.create(
-            hotel=self.hotel, employee=self.employee,
-            work_date=timezone.localdate() - timedelta(days=1),
-            arrived_at=now - timedelta(hours=10),
-            scheduled_start_at=now - timedelta(hours=10),
-            scheduled_end_at=now + timedelta(hours=2),
+            hotel=self.hotel, employee=self.employee, work_date=yesterday,
+            arrived_at=overnight_start,
+            scheduled_start_at=overnight_start,
+            scheduled_end_at=overnight_end,
             scheduled_shift_name="Night Shift",
             arrival_recorded_by=self.security,
         )
