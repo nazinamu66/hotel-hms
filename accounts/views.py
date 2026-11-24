@@ -797,6 +797,9 @@ def role_redirect(request):
     if role == "SECURITY":
         return redirect("/security/")
 
+    if role == "HR":
+        return redirect("personnel:dashboard")
+
     return redirect("login")
 
 
