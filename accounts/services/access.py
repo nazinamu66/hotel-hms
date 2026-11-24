@@ -211,7 +211,7 @@ def is_department_head(user):
     if not user or not user.is_authenticated:
         return False
 
-    if user.role not in OPERATIONAL_ROLES:
+    if user.role not in OPERATIONAL_ROLES or user.role == "HR":
         return False
 
     return bool(
