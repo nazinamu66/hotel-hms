@@ -230,3 +230,79 @@ class VisitorVisit(models.Model):
 
     def __str__(self):
         return f'{self.visitor_name} — {self.get_visitor_type_display()}'
+
+
+class SecurityShiftConfiguration(models.Model):
+    """Hotel-specific duty pattern; defaults reflect CCH but remain configurable."""
+    hotel = models.OneToOneField(Hotel, on_delete=models.CASCADE, related_name="security_shift_configuration")
+    handover_time = models.TimeField(default=timezone.datetime.strptime("08:00", "%H:%M").time)
+    officers_per_team = models.PositiveSmallIntegerField(default=2)
+    cso_leaves_at = models.TimeField(default=timezone.datetime.strptime("17:00", "%H:%M").time)
+    cso_daily = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.hotel} security duty configuration"
+
+
+class SecurityShiftHandover(models.Model):
+    """Auditable daily handover between outgoing and incoming security teams."""
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="security_shift_handovers")
+    duty_date = models.DateField(default=timezone.localdate)
+    outgoing_officer_1 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="security_handovers_outgoing_1")
+    outgoing_officer_2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="security_handovers_outgoing_2")
+    incoming_officer_1 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="security_handovers_incoming_1")
+    incoming_officer_2 = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="security_handovers_incoming_2")
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="security_handovers_submitted")
+    submitted_at = models.DateTimeField(default=timezone.now)
+    outgoing_notes = models.TextField(blank=True)
+    outstanding_matters = models.TextField(blank=True)
+    register_snapshot = models.JSONField(default=dict, blank=True)
+    acknowledged_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="security_handovers_acknowledged")
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    incoming_notes = models.TextField(blank=True)
+    is_complete = models.BooleanField(default=False)
+    cso_reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="security_handovers_cso_reviewed")
+    cso_reviewed_at = models.DateTimeField(null=True, blank=True)
+    cso_review_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-duty_date", "-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["hotel", "duty_date"], name="uniq_security_handover_hotel_day"),
+        ]
+        indexes = [models.Index(fields=["hotel", "is_complete", "duty_date"])]
+
+    def clean(self):
+        errors = {}
+        officers = [self.outgoing_officer_1, self.outgoing_officer_2, self.incoming_officer_1, self.incoming_officer_2]
+        ids = [officer.pk for officer in officers if officer and officer.pk]
+        if len(ids) != len(set(ids)):
+            errors["incoming_officer_2"] = "Each of the four duty positions must be assigned to a different officer."
+        for field, officer in zip(
+            ("outgoing_officer_1", "outgoing_officer_2", "incoming_officer_1", "incoming_officer_2"), officers
+        ):
+            if officer and (officer.role != "SECURITY" or not officer.is_active or officer.hotel_id != self.hotel_id):
+                errors[field] = "Select an active Security officer assigned to this hotel."
+        if self.submitted_by_id and self.submitted_by_id not in {
+            self.outgoing_officer_1_id, self.outgoing_officer_2_id
+        }:
+            errors["submitted_by"] = "The handover must be submitted by an outgoing officer."
+        if self.acknowledged_by_id and self.acknowledged_by_id not in {
+            self.incoming_officer_1_id, self.incoming_officer_2_id
+        }:
+            errors["acknowledged_by"] = "The handover must be acknowledged by an incoming officer."
+        if self.cso_reviewed_by_id and not self.cso_reviewed_by.is_security_head:
+            errors["cso_reviewed_by"] = "Only the Security Head can record a CSO review."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if self.acknowledged_at and not self.is_complete:
+            self.is_complete = True
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.hotel} security handover — {self.duty_date}"
