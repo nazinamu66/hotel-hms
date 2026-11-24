@@ -239,3 +239,47 @@ class SecurityOccurrenceReviewForm(forms.Form):
         required=False, widget=forms.Textarea(attrs={"rows": 3}),
         label="Security Head review note",
     )
+
+
+from .models import SecurityPatrolRoute, SecurityPatrolCheckpoint, SecurityPatrolRun
+
+
+class SecurityPatrolRouteForm(forms.ModelForm):
+    class Meta:
+        model = SecurityPatrolRoute
+        fields = ["name", "description", "is_active"]
+        widgets = {"description": forms.Textarea(attrs={"rows": 3})}
+
+
+class SecurityPatrolCheckpointForm(forms.ModelForm):
+    class Meta:
+        model = SecurityPatrolCheckpoint
+        fields = ["name", "checkpoint_code", "instructions", "sequence", "is_required", "is_active"]
+        widgets = {"instructions": forms.Textarea(attrs={"rows": 2})}
+
+    def clean_checkpoint_code(self):
+        return self.cleaned_data["checkpoint_code"].strip().upper()
+
+
+class SecurityPatrolStartForm(forms.Form):
+    route = forms.ModelChoiceField(queryset=SecurityPatrolRoute.objects.none())
+    start_note = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
+
+    def __init__(self, *args, hotel=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["route"].queryset = SecurityPatrolRoute.objects.filter(
+            hotel=hotel, is_active=True,
+        ).order_by("name") if hotel else SecurityPatrolRoute.objects.none()
+
+
+class SecurityPatrolVisitForm(forms.Form):
+    checkpoint_code = forms.CharField(max_length=24, label="Checkpoint code")
+    observation = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    issue_found = forms.BooleanField(required=False, label="An issue was observed")
+
+    def clean_checkpoint_code(self):
+        return self.cleaned_data["checkpoint_code"].strip().upper()
+
+
+class SecurityPatrolCompleteForm(forms.Form):
+    completion_note = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
