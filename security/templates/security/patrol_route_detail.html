@@ -1,3 +1,76 @@
 {% extends "base/base.html" %}
 {% block title %}{{ route.name }}{% endblock %}
-{% block content %}<div class="hms-page"><header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Patrol route · {{ hotel.name }}</p><h1 class="hms-page-title">{{ route.name }}</h1><p class="hms-page-subtitle">{{ route.description|default:"No route description" }}</p></div><div class="hms-actions"><a class="hms-btn hms-btn-secondary" href="{% url 'security_patrol_route_list' %}">All routes</a></div></header><section class="hms-card"><h2 class="hms-card-title">Checkpoint sequence</h2><div class="hms-table-wrap"><table class="hms-table"><thead><tr><th>Order</th><th>Checkpoint</th><th>Manual code</th><th>Required</th><th>Status</th></tr></thead><tbody>{% for cp in route.checkpoints.all %}<tr><td>{{ cp.sequence }}</td><td>{{ cp.name }}<br><small>{{ cp.instructions }}</small></td><td><code>{{ cp.checkpoint_code }}</code></td><td>{% if cp.is_required %}Yes{% else %}No{% endif %}</td><td>{% if cp.is_active %}Active{% else %}Inactive{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No checkpoints yet.</td></tr>{% endfor %}</tbody></table></div></section>{% if can_manage %}<section class="hms-card"><h2 class="hms-card-title">Add checkpoint</h2><p class="hms-card-description">Give each physical checkpoint a unique code. Officers will enter this code when they reach the location.</p><form method="post">{% csrf_token %}{{ checkpoint_form.as_p }}<button class="hms-btn hms-btn-primary" type="submit">Add checkpoint</button></form></section>{% endif %}</div>{% endblock %}
+{% block content %}
+<div class="hms-page">
+  <header class="hms-page-header">
+    <div class="hms-page-heading">
+      <p class="hms-eyebrow">Patrol route · {{ hotel.name }}</p>
+      <h1 class="hms-page-title">{{ route.name }}</h1>
+      <p class="hms-page-subtitle">{{ route.description|default:"No route description has been added." }}</p>
+    </div>
+    <div class="hms-actions">
+      <a class="hms-btn hms-btn-secondary" href="{% url 'security_patrol_route_list' %}">All routes</a>
+    </div>
+  </header>
+
+  <section class="hms-card">
+    <div class="hms-card-heading">
+      <div>
+        <h2 class="hms-card-title">Checkpoint sequence</h2>
+        <p class="hms-card-description">Officers visit these locations in sequence and enter the code displayed at each checkpoint.</p>
+      </div>
+      <span class="hms-status">{{ route.checkpoints.count }} checkpoint{{ route.checkpoints.count|pluralize }}</span>
+    </div>
+    <div class="hms-table-wrap">
+      <table class="hms-table">
+        <thead><tr><th>Order</th><th>Checkpoint</th><th>Manual code</th><th>Required</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for cp in route.checkpoints.all %}
+            <tr>
+              <td>{{ cp.sequence }}</td>
+              <td><span class="hms-table-primary">{{ cp.name }}</span>{% if cp.instructions %}<span class="hms-table-secondary">{{ cp.instructions }}</span>{% endif %}</td>
+              <td><code>{{ cp.checkpoint_code }}</code></td>
+              <td>{% if cp.is_required %}<span class="hms-status hms-status-authorized">Required</span>{% else %}<span class="hms-status">Optional</span>{% endif %}</td>
+              <td>{% if cp.is_active %}<span class="hms-status hms-status-returned">Active</span>{% else %}<span class="hms-status hms-status-cancelled">Inactive</span>{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5"><div class="hms-empty"><strong>No checkpoints configured</strong>Add the physical locations an officer must visit during this patrol.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if can_manage %}
+  <section class="hms-card">
+    <div class="hms-card-heading">
+      <div>
+        <h2 class="hms-card-title">Add checkpoint</h2>
+        <p class="hms-card-description">Give each physical checkpoint a unique code. Officers will enter this code when they reach the location.</p>
+      </div>
+    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if checkpoint_form.non_field_errors %}<div class="hms-notice" role="alert">{{ checkpoint_form.non_field_errors }}</div>{% endif %}
+      <div class="hms-form-grid">
+        {% for field in checkpoint_form %}
+          <div class="hms-field">
+            {% if field.field.widget.input_type == "checkbox" %}
+              <label style="display:flex;align-items:center;gap:9px;min-height:42px">{{ field }} <span>{{ field.label }}</span></label>
+            {% else %}
+              {{ field.label_tag }}
+              {{ field }}
+            {% endif %}
+            {% if field.help_text %}<span class="hms-field-help">{{ field.help_text }}</span>{% endif %}
+            {% for error in field.errors %}<span class="hms-field-error">{{ error }}</span>{% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+      <div class="hms-form-footer">
+        <button class="hms-btn hms-btn-primary" type="submit">Add checkpoint <span aria-hidden="true">→</span></button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
