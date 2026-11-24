@@ -583,29 +583,74 @@ def shift_handover_cso_review(request, handover_id):
 @login_required
 @role_required(*SECURITY_ACCESS_ROLES)
 def staff_attendance_list(request):
+    from inventory.models import Department
+
     hotel = _hotel_for_user(request)
-    records = StaffAttendance.objects.filter(hotel=hotel).select_related("employee", "employee__department", "arrival_recorded_by", "departure_recorded_by")
-    status = request.GET.get("status", "PRESENT")
+    records = StaffAttendance.objects.filter(hotel=hotel).select_related(
+        "employee", "employee__department", "arrival_recorded_by", "departure_recorded_by",
+    )
+    status = request.GET.get("status", "ALL")
     if status == "PRESENT":
         records = records.filter(departed_at__isnull=True)
     elif status == "DEPARTED":
         records = records.filter(departed_at__isnull=False)
     else:
         status = "ALL"
+
+    # Keep the legacy single-date parameter working for bookmarked daily views.
     date_value = request.GET.get("date", "").strip()
-    selected_date = parse_date(date_value) if date_value else timezone.localdate()
+    selected_date = parse_date(date_value) if date_value else None
+    date_from_value = request.GET.get("date_from", "").strip()
+    date_to_value = request.GET.get("date_to", "").strip()
+    date_from = parse_date(date_from_value) if date_from_value else None
+    date_to = parse_date(date_to_value) if date_to_value else None
+
     if selected_date:
-        # Include overnight shifts that began on the previous roster date but
-        # are scheduled to finish on the selected calendar date.
         records = records.filter(
             Q(work_date=selected_date) | Q(scheduled_end_at__date=selected_date)
         )
+    else:
+        if date_from:
+            records = records.filter(
+                Q(work_date__gte=date_from) | Q(scheduled_end_at__date__gte=date_from)
+            )
+        if date_to:
+            records = records.filter(
+                Q(work_date__lte=date_to) | Q(scheduled_end_at__date__lte=date_to)
+            )
+
+    department_value = request.GET.get("department", "").strip()
+    departments = Department.objects.filter(hotel=hotel, is_active=True).order_by("name")
+    if department_value:
+        try:
+            department_id = int(department_value)
+        except (TypeError, ValueError):
+            department_id = None
+        if department_id and departments.filter(pk=department_id).exists():
+            records = records.filter(employee__department_id=department_id)
+        else:
+            department_value = ""
+
     search = request.GET.get("q", "").strip()
     if search:
-        records = records.filter(Q(employee__username__icontains=search) | Q(employee__first_name__icontains=search) | Q(employee__last_name__icontains=search) | Q(employee__department__name__icontains=search))
+        records = records.filter(
+            Q(employee__username__icontains=search)
+            | Q(employee__first_name__icontains=search)
+            | Q(employee__last_name__icontains=search)
+            | Q(employee__department__name__icontains=search)
+        )
+
     return render(request, "security/attendance_list.html", {
-        "hotel": hotel, "available_hotels": _accessible_hotels(request.user), "records": records,
-        "status_filter": status, "selected_date": selected_date, "search_query": search,
+        "hotel": hotel,
+        "available_hotels": _accessible_hotels(request.user),
+        "records": records,
+        "status_filter": status,
+        "selected_date": selected_date,
+        "date_from": date_from_value,
+        "date_to": date_to_value,
+        "department_filter": department_value,
+        "departments": departments,
+        "search_query": search,
     })
 
 
