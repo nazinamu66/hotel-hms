@@ -515,6 +515,7 @@ def staff_attendance_arrival(request):
             return redirect("security_attendance_list")
     return render(request, "security/attendance_arrival.html", {
         "hotel": hotel, "available_hotels": _accessible_hotels(request.user), "form": form,
+        "has_eligible_assignments": form.fields["assignment"].queryset.exists(),
     })
 
 
