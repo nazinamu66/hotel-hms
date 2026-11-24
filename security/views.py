@@ -73,8 +73,14 @@ def security_dashboard(request):
     latest_handover = SecurityShiftHandover.objects.filter(hotel=hotel).select_related("submitted_by", "acknowledged_by").first()
     context = {
         "latest_handover": latest_handover,
-        "staff_present": StaffAttendance.objects.filter(hotel=hotel, work_date=today, departed_at__isnull=True).count(),
-        "staff_arrivals_today": StaffAttendance.objects.filter(hotel=hotel, work_date=today).count(),
+        "staff_present": StaffAttendance.objects.filter(
+            hotel=hotel, departed_at__isnull=True,
+        ).filter(
+            Q(work_date=today) | Q(scheduled_end_at__date=today, scheduled_end_at__gt=timezone.now())
+        ).count(),
+        "staff_arrivals_today": StaffAttendance.objects.filter(
+            hotel=hotel, arrived_at__date=today,
+        ).count(),
         "hotel": hotel,
         "available_hotels": _accessible_hotels(request.user),
         "vehicles_inside": visits.filter(exited_at__isnull=True).count(),
