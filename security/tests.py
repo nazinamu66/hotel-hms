@@ -224,6 +224,7 @@ class PropertyExitPassTests(TestCase):
     def test_security_role_model_validation_requires_and_assigns_department(self):
         security_user = User(
             username="security-model-validation",
+            password="test-password",
             role="SECURITY",
             department=self.department,
         )
