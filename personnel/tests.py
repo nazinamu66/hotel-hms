@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from inventory.models import Department, Hotel, Organization
-from .models import RosterAssignment, RosterAuditEvent, ShiftDefinition, WeeklyRoster
+from .models import RosterAssignment, RosterAuditEvent, RosterReconciliation, ShiftDefinition, WeeklyRoster
 from .permissions import is_hr_head
 
 User = get_user_model()
