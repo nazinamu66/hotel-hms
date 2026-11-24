@@ -2,6 +2,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
+from django.db.models import Q
+from django.utils.dateparse import parse_date
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from accounts.decorators import role_required
@@ -90,15 +92,38 @@ def vehicle_visit_list(request):
     hotel = _hotel_for_user(request)
     visits = VehicleVisit.objects.filter(hotel=hotel).select_related("entered_by", "exited_by")
     status = request.GET.get("status", "INSIDE")
+    search = request.GET.get("q", "").strip()
+    date_from = request.GET.get("date_from", "").strip()
+    date_to = request.GET.get("date_to", "").strip()
     if status == "INSIDE":
         visits = visits.filter(exited_at__isnull=True)
     elif status == "EXITED":
         visits = visits.filter(exited_at__isnull=False)
     else:
         status = "ALL"
+    if search:
+        visits = visits.filter(
+            Q(plate_number__icontains=search)
+            | Q(make__icontains=search)
+            | Q(other_make__icontains=search)
+            | Q(model__icontains=search)
+            | Q(entered_by__username__icontains=search)
+            | Q(entered_by__first_name__icontains=search)
+            | Q(entered_by__last_name__icontains=search)
+            | Q(exited_by__username__icontains=search)
+            | Q(exit_note__icontains=search)
+            | Q(entry_note__icontains=search)
+        )
+    parsed_from = parse_date(date_from) if date_from else None
+    parsed_to = parse_date(date_to) if date_to else None
+    if parsed_from:
+        visits = visits.filter(entered_at__date__gte=parsed_from)
+    if parsed_to:
+        visits = visits.filter(entered_at__date__lte=parsed_to)
     return render(request, "security/vehicle_list.html", {
         "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
-        "visits": visits, "status_filter": status,
+        "visits": visits, "status_filter": status, "search_query": search,
+        "date_from": date_from, "date_to": date_to,
     })
 
 
@@ -230,13 +255,52 @@ def visitor_visit_list(request):
     hotel = _hotel_for_user(request)
     visits = VisitorVisit.objects.filter(hotel=hotel).select_related('entered_by', 'exited_by', 'host_staff', 'maintenance_ticket', 'supplier')
     status = request.GET.get('status', 'INSIDE')
+    search = request.GET.get('q', '').strip()
+    visitor_type = request.GET.get('visitor_type', '').strip()
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
     if status == 'INSIDE':
         visits = visits.filter(exited_at__isnull=True)
     elif status == 'EXITED':
         visits = visits.filter(exited_at__isnull=False)
     else:
         status = 'ALL'
-    return render(request, 'security/visitor_list.html', {'hotel': hotel, 'available_hotels': _accessible_hotels(request.user), 'visits': visits, 'status_filter': status})
+    if visitor_type in dict(VisitorVisit.VISITOR_TYPES):
+        visits = visits.filter(visitor_type=visitor_type)
+    else:
+        visitor_type = ''
+    if search:
+        visits = visits.filter(
+            Q(visitor_name__icontains=search)
+            | Q(phone__icontains=search)
+            | Q(id_type__icontains=search)
+            | Q(id_number__icontains=search)
+            | Q(vehicle_plate__icontains=search)
+            | Q(guest_name__icontains=search)
+            | Q(guest_room_number__icontains=search)
+            | Q(host_staff_name__icontains=search)
+            | Q(host_department__icontains=search)
+            | Q(host_staff__username__icontains=search)
+            | Q(supplier__name__icontains=search)
+            | Q(work_description__icontains=search)
+            | Q(maintenance_ticket__description__icontains=search)
+            | Q(purpose__icontains=search)
+            | Q(entered_by__username__icontains=search)
+            | Q(exited_by__username__icontains=search)
+            | Q(exit_note__icontains=search)
+            | Q(entry_note__icontains=search)
+        )
+    parsed_from = parse_date(date_from) if date_from else None
+    parsed_to = parse_date(date_to) if date_to else None
+    if parsed_from:
+        visits = visits.filter(entered_at__date__gte=parsed_from)
+    if parsed_to:
+        visits = visits.filter(entered_at__date__lte=parsed_to)
+    return render(request, 'security/visitor_list.html', {
+        'hotel': hotel, 'available_hotels': _accessible_hotels(request.user),
+        'visits': visits, 'status_filter': status, 'search_query': search,
+        'visitor_type_filter': visitor_type, 'date_from': date_from, 'date_to': date_to,
+    })
 
 
 @login_required
