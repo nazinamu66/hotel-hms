@@ -319,6 +319,9 @@ class User(AbstractUser):
                     "The department must belong to a hotel."
                 )
 
+            if self.role == "HR" and self.department.department_type != "HUMAN_RESOURCES":
+                raise ValidationError("HR staff must be assigned to the Human Resources department.")
+
             self.hotel = self.department.hotel
             self.organization = self.department.hotel.organization
 
