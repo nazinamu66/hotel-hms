@@ -42,7 +42,6 @@ class SecurityDeliveryVisitForm(forms.ModelForm):
             if item.outstanding_quantity > 0 and item.purchase_order.supplier_id:
                 eligible_po_ids.add(item.purchase_order_id)
                 supplier_ids.add(item.purchase_order.supplier_id)
-        selected_supplier = self.data.get("supplier") if self.is_bound else self.initial.get("supplier")
         self.fields["supplier"].queryset = Supplier.objects.filter(
             hotel=hotel, is_active=True, pk__in=supplier_ids
         ).order_by("name") if hotel else Supplier.objects.none()
@@ -50,7 +49,9 @@ class SecurityDeliveryVisitForm(forms.ModelForm):
         eligible_pos = PurchaseOrder.objects.filter(
             pk__in=eligible_po_ids
         ).select_related("supplier", "department").order_by("-created_at") if eligible_po_ids else PurchaseOrder.objects.none()
-        self.fields["purchase_order"].queryset = eligible_pos.filter(supplier_id=selected_supplier) if selected_supplier else eligible_pos
+        # Keep every eligible PO in the rendered choices. The client filters by supplier;
+        # clean() below independently enforces the supplier/PO relationship on POST.
+        self.fields["purchase_order"].queryset = eligible_pos
         self.fields["purchase_order"].required = True
         self.fields["purchase_order"].label = "Expected Purchase Order"
         self.fields["purchase_order"].help_text = "Only approved orders with outstanding quantities are listed."
