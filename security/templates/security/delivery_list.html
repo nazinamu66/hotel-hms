@@ -1,0 +1,21 @@
+{% extends "base/base.html" %}
+{% block title %}Supplier Deliveries{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div><h2>Supplier Deliveries</h2><p class="text-muted mb-0">{{ hotel.name }} · Security gate register</p></div>
+    {% if request.user.role == "SECURITY" %}<a class="btn btn-primary" href="{% url 'security_delivery_create' %}">Record Delivery Arrival</a>{% endif %}
+  </div>
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-5"><input class="form-control" name="q" value="{{ search_query }}" placeholder="Search supplier, reference, vehicle or PO"></div>
+    <div class="col-md-3"><select class="form-select" name="status"><option value="">All statuses</option>{% for value,label in statuses %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><button class="btn btn-outline-primary">Filter</button></div>
+  </form>
+  <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr><th>Arrival</th><th>Delivery Ref.</th><th>Supplier</th><th>Vehicle</th><th>Receiving Dept.</th><th>PO</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for item in records %}
+      <tr><td>{{ item.gate_in_at|date:"d M Y, H:i" }}</td><td>{{ item.delivery_reference }}</td><td>{{ item.supplier.name }}</td><td>{{ item.vehicle_registration }}</td><td>{{ item.department.name }}</td><td>{% if item.purchase_order_id %}#{{ item.purchase_order_id }}{% else %}Non-PO{% endif %}</td><td>{{ item.get_status_display }}</td><td><a href="{% url 'security_delivery_detail' item.pk %}">Open</a></td></tr>
+    {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No supplier deliveries recorded.</td></tr>{% endfor %}</tbody>
+  </table></div></div>
+</div>
+{% endblock %}
