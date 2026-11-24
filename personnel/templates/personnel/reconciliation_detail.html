@@ -1,0 +1,12 @@
+{% extends "base/base.html" %}
+{% block title %}Roster Reconciliation · Personnel{% endblock %}
+{% block content %}
+<div class="hms-page">
+ <header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Personnel · HR control</p><h1 class="hms-page-title">Roster reconciliation</h1><p class="hms-page-subtitle">Review an arrival recorded on an employee's approved day off. The original roster is never rewritten.</p></div><div class="hms-actions"><a class="hms-btn hms-btn-secondary" href="{% url 'personnel:dashboard' %}">Back to Personnel</a></div></header>
+ <section class="hms-card"><div class="hms-card-heading"><div><h2 class="hms-card-title">{{ reconciliation.employee.get_full_name|default:reconciliation.employee.username }}</h2><p class="hms-card-description">{{ reconciliation.hotel.name }} · {{ reconciliation.employee.department.name }} · {{ reconciliation.attendance.work_date|date:"l, d F Y" }}</p></div></div>
+  <div class="hms-notice"><strong>Original roster:</strong> Day off · {{ reconciliation.roster_assignment.roster.week_start|date:"d M Y" }} roster<br><strong>Security arrival:</strong> {{ reconciliation.attendance.arrived_at|date:"d M Y, H:i" }} · Recorded by {{ reconciliation.attendance.arrival_recorded_by.get_full_name|default:reconciliation.attendance.arrival_recorded_by.username }}<br><strong>Departure:</strong> {% if reconciliation.attendance.departed_at %}{{ reconciliation.attendance.departed_at|date:"d M Y, H:i" }}{% else %}Not yet recorded{% endif %}</div>
+  {% if form %}<form method="post">{% csrf_token %}{% if form.non_field_errors %}<div class="hms-notice">{{ form.non_field_errors }}</div>{% endif %}<div class="hms-form-grid">{% for field in form %}<div class="hms-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<span class="hms-field-help">{{ field.help_text }}</span>{% endif %}{% if field.errors %}<div class="hms-field-error">{{ field.errors }}</div>{% endif %}</div>{% endfor %}</div><div class="hms-form-footer"><button class="hms-btn hms-btn-primary" type="submit">Reconcile and sign off</button></div></form>
+  {% else %}<p><strong>Reconciled by:</strong> {{ reconciliation.reconciled_by.get_full_name|default:reconciliation.reconciled_by.username }} · {{ reconciliation.reconciled_at|date:"d M Y, H:i" }}</p><p><strong>Disposition:</strong> {{ reconciliation.get_reason_display }}</p><p>{{ reconciliation.notes|default:"No additional notes." }}</p>{% endif %}
+ </section>
+</div>
+{% endblock %}
