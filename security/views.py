@@ -487,27 +487,30 @@ def staff_attendance_arrival(request):
     from .attendance_forms import StaffAttendanceArrivalForm
     form = StaffAttendanceArrivalForm(request.POST or None, hotel=hotel)
     if request.method == "POST" and form.is_valid():
-        assignment = form.cleaned_data["assignment"]
-        scheduled_start, scheduled_end = assignment.shift.interval_for(assignment.work_date)
+        assignment = form.cleaned_data.get("assignment")
+        employee = form.cleaned_data["employee"]
+        arrived_at = timezone.now()
         record = StaffAttendance(
             hotel=hotel,
-            employee=assignment.employee,
+            employee=employee,
             roster_assignment=assignment,
-            work_date=assignment.work_date,
-            arrived_at=timezone.now(),
+            work_date=assignment.work_date if assignment else timezone.localdate(arrived_at),
+            arrived_at=arrived_at,
             arrival_recorded_by=request.user,
             arrival_note=form.cleaned_data["arrival_note"],
-            scheduled_start_at=scheduled_start,
-            scheduled_end_at=scheduled_end,
-            scheduled_shift_name=assignment.shift.name,
-            grace_minutes_snapshot=assignment.shift.grace_minutes,
         )
+        if assignment:
+            scheduled_start, scheduled_end = assignment.shift.interval_for(assignment.work_date)
+            record.scheduled_start_at = scheduled_start
+            record.scheduled_end_at = scheduled_end
+            record.scheduled_shift_name = assignment.shift.name
+            record.grace_minutes_snapshot = assignment.shift.grace_minutes
         try:
             with transaction.atomic():
                 record.full_clean()
                 record.save()
         except IntegrityError:
-            form.add_error("assignment", "Attendance has already been recorded for this employee and roster date.")
+            form.add_error("employee", "Attendance has already been recorded for this employee and roster date.")
         except ValidationError as exc:
             form.add_error(None, exc)
         else:
