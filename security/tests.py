@@ -396,6 +396,9 @@ class StaffExitPassTests(TestCase):
         record.hotel = other_hotel
         with self.assertRaises(Exception):
             record.full_clean()
+        # Simulate a record stored against another hotel so the detail view's
+        # hotel-scoped lookup is tested independently of model validation.
+        StaffExitPass.objects.filter(pk=record.pk).update(hotel=other_hotel)
         self.client.force_login(self.security)
         self.assertEqual(self.client.get(reverse("security_staff_exit_detail", args=[record.pk])).status_code, 404)
 
