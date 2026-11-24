@@ -1,7 +1,118 @@
 {% extends "base/base.html" %}
 {% block title %}Daily Occurrence Report · {{ report.duty_date }}{% endblock %}
 {% block content %}
-<div class="hms-page"><header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Security operations · {{ hotel.name }}</p><h1 class="hms-page-title">Daily Occurrence Report</h1><p class="hms-page-subtitle">{{ report.duty_date|date:"l, d F Y" }} · Submitted by {{ report.submitted_by }}</p></div><a class="hms-btn hms-btn-secondary" href="{% url 'security_occurrence_list' %}">Report register</a></header>
-<section class="hms-card"><h2 class="hms-card-title">Activity snapshot</h2><div class="hms-kpi-grid">{% for key,value in report.activity_snapshot.items %}<article class="hms-kpi"><div class="hms-kpi-label">{{ key|cut:"_"|title }}</div><div class="hms-kpi-value">{{ value }}</div></article>{% endfor %}</div><h3>Shift summary</h3><p>{{ report.shift_summary|linebreaksbr }}</p><h3>Outstanding matters</h3><p>{{ report.outstanding_matters|default:"None recorded"|linebreaksbr }}</p><h3>Linked incidents</h3><ul>{% for incident in report.incidents.all %}<li><a class="hms-link" href="{% url 'security_incident_detail' incident.pk %}">{{ incident.incident_number }} · {{ incident.summary }}</a></li>{% empty %}<li>No incidents linked.</li>{% endfor %}</ul></section>
-<section class="hms-card"><h2 class="hms-card-title">Security Head review</h2>{% if report.reviewed_at %}<p>Reviewed by {{ report.reviewed_by }} · {{ report.reviewed_at|date:"d M Y · g:i a" }}</p><p>{{ report.review_note|default:"No review note."|linebreaksbr }}</p>{% elif can_review %}<form method="post" action="{% url 'security_occurrence_review' report.pk %}">{% csrf_token %}{{ review_form.as_p }}<button class="hms-btn hms-btn-primary" type="submit">Review daily report</button></form>{% else %}<p>Awaiting Security Head review.</p>{% endif %}</section></div>
+<style>
+    .occ-detail { max-width:1240px; margin:0 auto; }
+    .occ-detail .occ-section { margin-bottom:22px; padding:24px; border:1px solid #e2e8f0; border-radius:17px; background:#fff; box-shadow:0 8px 24px rgba(15,23,42,.04); }
+    .occ-detail .occ-section:last-child { margin-bottom:0; }
+    .occ-detail .occ-section-head { margin:0 0 19px; }
+    .occ-detail .occ-section-head h2 { margin:0; color:#172033; font-size:17px; font-weight:800; }
+    .occ-detail .occ-section-head p { margin:5px 0 0; color:#64748b; font-size:12px; }
+    .occ-detail .occ-kpi-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+    .occ-detail .occ-kpi { min-width:0; padding:18px 20px; border:1px solid #e2e8f0; border-radius:13px; background:linear-gradient(145deg,#fff,#f8fafc); }
+    .occ-detail .occ-kpi-label { margin:0 0 10px; color:#64748b; font-size:12px; line-height:1.4; font-weight:750; }
+    .occ-detail .occ-kpi-value { color:#172033; font-size:30px; line-height:1; font-weight:800; font-variant-numeric:tabular-nums; }
+    .occ-detail .occ-copy-block { margin-top:22px; padding-top:19px; border-top:1px solid #edf1f6; }
+    .occ-detail .occ-copy-block h3 { margin:0 0 9px; color:#334155; font-size:13px; font-weight:800; }
+    .occ-detail .occ-copy-block p { margin:0; color:#475569; font-size:13px; line-height:1.7; }
+    .occ-detail .occ-incident-list { display:grid; gap:9px; padding:0; margin:0; list-style:none; }
+    .occ-detail .occ-incident-list li { padding:12px 14px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; font-size:13px; }
+    .occ-detail .occ-review-meta { color:#64748b; font-size:12px; margin:0 0 12px; }
+    .occ-detail .occ-review-note { color:#334155; font-size:13px; line-height:1.65; }
+    .occ-detail .occ-form-grid { display:grid; grid-template-columns:1fr; gap:15px; }
+    .occ-detail .occ-field label { display:block; margin-bottom:7px; color:#334155; font-size:12px; font-weight:750; }
+    .occ-detail .occ-field textarea, .occ-detail .occ-field input, .occ-detail .occ-field select { width:100%; box-sizing:border-box; padding:11px 13px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#172033; font:inherit; font-size:13px; }
+    .occ-detail .occ-field textarea { min-height:112px; resize:vertical; }
+    .occ-detail .occ-field textarea:focus, .occ-detail .occ-field input:focus, .occ-detail .occ-field select:focus { outline:none; border-color:#6095f5; box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+    .occ-detail .occ-field-error { margin:6px 0 0; color:#b91c1c; font-size:12px; }
+    .occ-detail .occ-submit { margin-top:17px; border:0; border-radius:10px; padding:12px 18px; color:#fff; background:#1d4ed8; font-size:13px; font-weight:750; cursor:pointer; }
+    @media(max-width:850px) { .occ-detail .occ-kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:560px) { .occ-detail .occ-kpi-grid { grid-template-columns:1fr; } .occ-detail .occ-section { padding:18px; } }
+</style>
+<div class="hms-page occ-detail">
+    <header class="hms-page-header">
+        <div class="hms-page-heading">
+            <p class="hms-eyebrow">Security operations · {{ hotel.name }}</p>
+            <h1 class="hms-page-title">Daily Occurrence Report</h1>
+            <p class="hms-page-subtitle">{{ report.duty_date|date:"l, d F Y" }} · Submitted by {{ report.submitted_by }}</p>
+        </div>
+        <a class="hms-btn hms-btn-secondary" href="{% url 'security_occurrence_list' %}">Report register</a>
+    </header>
+
+    <section class="occ-section">
+        <div class="occ-section-head">
+            <h2>Activity snapshot</h2>
+            <p>Recorded operational activity for the selected duty date.</p>
+        </div>
+        <div class="occ-kpi-grid">
+            {% for key,value in report.activity_snapshot.items %}
+                <article class="occ-kpi">
+                    <div class="occ-kpi-label">
+                        {% if key == "staff_arrivals" %}Staff arrivals
+                        {% elif key == "staff_departures" %}Staff departures
+                        {% elif key == "visitors_entered" %}Visitors entered
+                        {% elif key == "visitors_exited" %}Visitors exited
+                        {% elif key == "vehicles_entered" %}Vehicles entered
+                        {% elif key == "vehicles_exited" %}Vehicles exited
+                        {% elif key == "staff_passes_authorised" %}Staff passes authorised
+                        {% elif key == "staff_passes_gate_out" %}Staff passes · gate out
+                        {% elif key == "staff_passes_gate_in" %}Staff passes · gate in
+                        {% elif key == "property_passes_created" %}Property passes created
+                        {% elif key == "incidents_reported" %}Incidents reported
+                        {% elif key == "incidents_open" %}Open incidents · current
+                        {% elif key == "visitors_still_inside" %}Visitors still inside
+                        {% elif key == "vehicles_still_inside" %}Vehicles still inside
+                        {% elif key == "staff_outside" %}Staff currently outside
+                        {% elif key == "property_outside" %}Property items still outside
+                        {% else %}{{ key|title }}{% endif %}
+                    </div>
+                    <div class="occ-kpi-value">{{ value }}</div>
+                </article>
+            {% endfor %}
+        </div>
+        <div class="occ-copy-block">
+            <h3>Shift summary</h3>
+            <p>{{ report.shift_summary|linebreaksbr }}</p>
+        </div>
+        <div class="occ-copy-block">
+            <h3>Outstanding matters</h3>
+            <p>{{ report.outstanding_matters|default:"None recorded"|linebreaksbr }}</p>
+        </div>
+        <div class="occ-copy-block">
+            <h3>Linked incidents</h3>
+            <ul class="occ-incident-list">
+                {% for incident in report.incidents.all %}
+                    <li><a class="hms-link" href="{% url 'security_incident_detail' incident.pk %}">{{ incident.incident_number }} · {{ incident.summary }}</a></li>
+                {% empty %}
+                    <li>No incidents linked to this report.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+
+    <section class="occ-section">
+        <div class="occ-section-head">
+            <h2>Security Head review</h2>
+            {% if report.reviewed_at %}<p>Review completed and recorded.</p>{% else %}<p>Pending review by the Security Head.</p>{% endif %}
+        </div>
+        {% if report.reviewed_at %}
+            <p class="occ-review-meta">Reviewed by {{ report.reviewed_by }} · {{ report.reviewed_at|date:"d M Y · g:i a" }}</p>
+            <div class="occ-review-note">{{ report.review_note|default:"No review note recorded."|linebreaksbr }}</div>
+        {% elif can_review %}
+            <form method="post" action="{% url 'security_occurrence_review' report.pk %}">
+                {% csrf_token %}
+                <div class="occ-form-grid">
+                    <div class="occ-field">
+                        <label for="{{ review_form.review_note.id_for_label }}">Review note <span style="font-weight:500;color:#64748b;">(optional)</span></label>
+                        {{ review_form.review_note }}
+                        {% for error in review_form.review_note.errors %}<p class="occ-field-error">{{ error }}</p>{% endfor %}
+                    </div>
+                </div>
+                <button class="occ-submit" type="submit">Complete review</button>
+            </form>
+        {% else %}
+            <p class="occ-review-meta">Awaiting Security Head review.</p>
+        {% endif %}
+    </section>
+</div>
 {% endblock %}
