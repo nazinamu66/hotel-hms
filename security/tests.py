@@ -278,3 +278,50 @@ class PropertyExitPassTests(TestCase):
         self.assertTrue(user.is_security_head)
         self.assertEqual(user.department, self.department)
         self.assertEqual(user.hotel, self.hotel)
+
+
+class VisitorVisitTests(TestCase):
+    def setUp(self):
+        self.org = Organization.objects.create(name='Visitor Test Org')
+        self.hotel = Hotel.objects.create(name='Visitor Test Hotel', organization=self.org)
+        self.security_department, _ = Department.objects.get_or_create(hotel=self.hotel, name='Security', defaults={'code': 'SEC', 'department_type': 'SECURITY'})
+        self.security = User.objects.create_user(username='visitor-security', password='test', role='SECURITY', department=self.security_department)
+        self.host_department, _ = Department.objects.get_or_create(hotel=self.hotel, name='Front Desk', defaults={'code': 'FD', 'department_type': 'FRONTDESK'})
+        self.staff = User.objects.create_user(username='visitor-host', password='test', role='FRONTDESK', department=self.host_department)
+
+    def test_guest_visitor_entry_and_exit(self):
+        from .models import VisitorVisit
+        self.client.force_login(self.security)
+        response = self.client.post(reverse('security_visitor_entry'), {'visitor_type': 'GUEST', 'visitor_name': 'Amina Bello', 'phone': '08012345678', 'purpose': 'Family visit', 'guest_name': 'Mr Bello', 'guest_room_number': '204'})
+        self.assertEqual(response.status_code, 302)
+        visit = VisitorVisit.objects.get()
+        self.assertEqual(visit.host_display, 'Mr Bello · Room 204')
+        self.assertEqual(visit.entered_by, self.security)
+        self.client.post(reverse('security_visitor_exit', args=[visit.pk]), {'exit_note': 'Departed'})
+        visit.refresh_from_db()
+        self.assertIsNotNone(visit.exited_at)
+        self.assertEqual(visit.exited_by, self.security)
+        response = self.client.get(reverse('security_dashboard'))
+        self.assertEqual(response.context['visitors_inside'], 0)
+
+    def test_staff_visitor_is_linked_to_hotel_staff(self):
+        from .models import VisitorVisit
+        self.client.force_login(self.security)
+        response = self.client.post(reverse('security_visitor_entry'), {'visitor_type': 'STAFF', 'visitor_name': 'Visitor Person', 'purpose': 'Meeting', 'host_staff': str(self.staff.pk)})
+        self.assertEqual(response.status_code, 302)
+        visit = VisitorVisit.objects.get()
+        self.assertEqual(visit.host_staff, self.staff)
+        self.assertEqual(visit.host_staff_name, self.staff.username)
+
+    def test_outsourced_visit_requires_work_description_or_work_order(self):
+        from .models import VisitorVisit
+        self.client.force_login(self.security)
+        response = self.client.post(reverse('security_visitor_entry'), {'visitor_type': 'OUTSOURCED', 'visitor_name': 'Technician', 'purpose': 'Repair'})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(VisitorVisit.objects.exists())
+
+    def test_management_can_view_but_cannot_record_visitor_entry(self):
+        manager = User.objects.create_user(username='visitor-manager', password='test', role='MANAGER', hotel=self.hotel)
+        self.client.force_login(manager)
+        self.assertEqual(self.client.get(reverse('security_visitor_list')).status_code, 200)
+        self.assertEqual(self.client.get(reverse('security_visitor_entry')).status_code, 403)
