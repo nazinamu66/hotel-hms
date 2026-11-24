@@ -14,13 +14,13 @@ class PersonnelRosterTests(TestCase):
     def setUp(self):
         self.org = Organization.objects.create(name="Personnel Test Org")
         self.hotel = Hotel.objects.create(name="Personnel Test Hotel", organization=self.org)
-        self.hr_department = Department.objects.create(
-            hotel=self.hotel, code="HR", name="Human Resources",
-            department_type="HUMAN_RESOURCES",
+        self.hr_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Human Resources",
+            defaults={"code": "HR", "department_type": "HUMAN_RESOURCES"},
         )
-        self.department = Department.objects.create(
-            hotel=self.hotel, code="FD", name="Front Desk",
-            department_type="FRONTDESK",
+        self.department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Front Desk",
+            defaults={"code": "FD", "department_type": "FRONTDESK"},
         )
         self.hr_head = User.objects.create_user(
             username="hr-head", password="test", role="HR",
@@ -169,9 +169,9 @@ class PersonnelRosterTests(TestCase):
 
     def test_other_department_head_cannot_view_roster(self):
         roster = self.make_roster()
-        other_department = Department.objects.create(
-            hotel=self.hotel, code="REST", name="Restaurant",
-            department_type="RESTAURANT",
+        other_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Restaurant",
+            defaults={"code": "REST", "department_type": "RESTAURANT"},
         )
         other_hod = User.objects.create_user(
             username="restaurant-hod", password="test", role="RESTAURANT",
