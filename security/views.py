@@ -9,7 +9,8 @@ from django.utils import timezone
 from accounts.decorators import role_required
 from inventory.models import Hotel
 from .forms import PropertyExitPassForm, VehicleVisitForm, VisitorVisitForm
-from .models import PropertyExitPass, VehicleVisit, VisitorVisit
+from .models import PropertyExitPass, VehicleVisit, VisitorVisit, SecurityShiftConfiguration, SecurityShiftHandover
+from .handover_forms import SecurityShiftHandoverForm, SecurityHandoverAcknowledgementForm, SecurityHandoverCSOReviewForm
 
 MANAGEMENT_ROLES = ("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 SECURITY_ACCESS_ROLES = ("SECURITY", *MANAGEMENT_ROLES)
@@ -316,3 +317,125 @@ def visitor_visit_exit(request, visit_id):
         visit.save(update_fields=['exited_at', 'exited_by', 'exit_note'])
         messages.success(request, f'Visitor {visit.visitor_name} exit recorded.')
     return redirect('security_visitor_list')
+
+
+
+@login_required
+@role_required("SECURITY")
+def shift_handover_list(request):
+    hotel = _hotel_for_user(request)
+    handovers = SecurityShiftHandover.objects.filter(hotel=hotel).select_related(
+        "submitted_by", "acknowledged_by", "outgoing_officer_1", "outgoing_officer_2",
+        "incoming_officer_1", "incoming_officer_2", "cso_reviewed_by",
+    )
+    return render(request, "security/handover_list.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
+        "handovers": handovers,
+        "pending_acknowledgement": handovers.filter(is_complete=False).first(),
+    })
+
+
+@login_required
+@role_required("SECURITY")
+def shift_handover_create(request):
+    hotel = _hotel_for_user(request)
+    config, _ = SecurityShiftConfiguration.objects.get_or_create(hotel=hotel)
+    form = SecurityShiftHandoverForm(request.POST or None, hotel=hotel)
+    if request.method == "POST" and form.is_valid():
+        handover = form.save(commit=False)
+        handover.hotel = hotel
+        handover.submitted_by = request.user
+        if request.user.pk not in {handover.outgoing_officer_1_id, handover.outgoing_officer_2_id}:
+            form.add_error(None, "Only an officer assigned to the outgoing team can submit this handover.")
+        else:
+            from django.db import IntegrityError
+            from django.utils import timezone as django_timezone
+            handover.submitted_at = django_timezone.now()
+            handover.register_snapshot = {
+                "visitors_inside": VisitorVisit.objects.filter(hotel=hotel, exited_at__isnull=True).count(),
+                "vehicles_inside": VehicleVisit.objects.filter(hotel=hotel, exited_at__isnull=True).count(),
+                "property_awaiting_exit": PropertyExitPass.objects.filter(hotel=hotel, status=PropertyExitPass.AUTHORIZED).count(),
+                "property_currently_out": PropertyExitPass.objects.filter(hotel=hotel, status=PropertyExitPass.OUT).count(),
+                "captured_at": handover.submitted_at.isoformat(),
+            }
+            try:
+                handover.full_clean()
+                handover.save()
+            except IntegrityError:
+                form.add_error("duty_date", "A handover has already been recorded for this hotel and duty date.")
+            except Exception as exc:
+                from django.core.exceptions import ValidationError
+                if isinstance(exc, ValidationError):
+                    form.add_error(None, exc)
+                else:
+                    raise
+            else:
+                messages.success(request, "Outgoing shift handover submitted. The incoming team can now acknowledge it.")
+                return redirect("security_handover_list")
+    return render(request, "security/handover_form.html", {
+        "form": form, "hotel": hotel, "config": config,
+        "available_hotels": _accessible_hotels(request.user),
+    })
+
+
+@login_required
+@role_required("SECURITY")
+@transaction.atomic
+def shift_handover_acknowledge(request, handover_id):
+    hotel = _hotel_for_user(request)
+    handover = get_object_or_404(
+        SecurityShiftHandover.objects.select_for_update(), pk=handover_id, hotel=hotel
+    )
+    form = SecurityHandoverAcknowledgementForm(request.POST or None)
+    if request.method == "POST" and not handover.is_complete:
+        if request.user.pk not in {handover.incoming_officer_1_id, handover.incoming_officer_2_id}:
+            raise PermissionDenied("Only an assigned incoming officer can acknowledge this handover.")
+        if form.is_valid():
+            handover.acknowledged_by = request.user
+            handover.acknowledged_at = timezone.now()
+            handover.incoming_notes = form.cleaned_data["incoming_notes"]
+            handover.is_complete = True
+            handover.save(update_fields=["acknowledged_by", "acknowledged_at", "incoming_notes", "is_complete"])
+            messages.success(request, "Handover acknowledged and completed. CSO approval is not required.")
+    return redirect("security_handover_detail", handover_id=handover.pk)
+
+
+@login_required
+@role_required("SECURITY")
+def shift_handover_detail(request, handover_id):
+    hotel = _hotel_for_user(request)
+    handover = get_object_or_404(
+        SecurityShiftHandover.objects.select_related(
+            "submitted_by", "acknowledged_by", "outgoing_officer_1", "outgoing_officer_2",
+            "incoming_officer_1", "incoming_officer_2", "cso_reviewed_by",
+        ), pk=handover_id, hotel=hotel
+    )
+    acknowledgement_form = SecurityHandoverAcknowledgementForm()
+    review_form = SecurityHandoverCSOReviewForm()
+    return render(request, "security/handover_detail.html", {
+        "hotel": hotel, "handover": handover,
+        "acknowledgement_form": acknowledgement_form, "review_form": review_form,
+        "available_hotels": _accessible_hotels(request.user),
+        "can_acknowledge": not handover.is_complete and request.user.pk in {
+            handover.incoming_officer_1_id, handover.incoming_officer_2_id
+        },
+        "can_review": request.user.is_security_head,
+    })
+
+
+@login_required
+@security_head_required
+@transaction.atomic
+def shift_handover_cso_review(request, handover_id):
+    hotel = _hotel_for_user(request)
+    handover = get_object_or_404(
+        SecurityShiftHandover.objects.select_for_update(), pk=handover_id, hotel=hotel
+    )
+    form = SecurityHandoverCSOReviewForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        handover.cso_reviewed_by = request.user
+        handover.cso_reviewed_at = timezone.now()
+        handover.cso_review_note = form.cleaned_data["cso_review_note"]
+        handover.save(update_fields=["cso_reviewed_by", "cso_reviewed_at", "cso_review_note"])
+        messages.success(request, "Optional CSO review recorded. Handover completion is unchanged.")
+    return redirect("security_handover_detail", handover_id=handover.pk)
