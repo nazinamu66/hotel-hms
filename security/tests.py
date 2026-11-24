@@ -601,8 +601,27 @@ class StaffAttendanceTests(TestCase):
             defaults={"code": "FD", "department_type": "FRONTDESK"},
         )
         other_employee = User.objects.create_user(username="other-attendance-employee", password="test", role="FRONTDESK", department=other_department)
+        from personnel.models import RosterAssignment, ShiftDefinition, WeeklyRoster
+        other_hod = User.objects.create_user(
+            username="other-attendance-hod", password="test", role="FRONTDESK",
+            department=other_department, is_department_head=True,
+        )
+        today = timezone.localdate()
+        other_shift = ShiftDefinition.objects.create(
+            hotel=other_hotel, code="DAY", name="Day Shift",
+            start_time=time(0, 1), end_time=time(23, 59),
+        )
+        other_roster = WeeklyRoster.objects.create(
+            hotel=other_hotel, department=other_department,
+            week_start=today - timedelta(days=today.weekday()),
+            responsible_hod=other_hod, created_by=other_hod,
+            status=WeeklyRoster.APPROVED,
+        )
+        other_assignment = RosterAssignment.objects.create(
+            roster=other_roster, employee=other_employee, work_date=today, shift=other_shift,
+        )
         self.client.force_login(self.security)
-        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": self.assignment.pk})
+        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": other_assignment.pk})
         self.assertEqual(response.status_code, 200)
         from .models import StaffAttendance
         self.assertFalse(StaffAttendance.objects.exists())
