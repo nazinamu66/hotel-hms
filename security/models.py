@@ -148,3 +148,81 @@ class VehicleVisit(models.Model):
 
     def __str__(self):
         return f"{self.plate_number} — {self.display_make}"
+
+
+class VisitorVisit(models.Model):
+    GUEST = 'GUEST'
+    STAFF = 'STAFF'
+    OUTSOURCED = 'OUTSOURCED'
+    VISITOR_TYPES = ((GUEST, 'Visiting a hotel guest'), (STAFF, 'Visiting a staff member'), (OUTSOURCED, 'Outsourced labour / contractor'))
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name='security_visitor_visits')
+    visitor_type = models.CharField(max_length=12, choices=VISITOR_TYPES)
+    visitor_name = models.CharField(max_length=160)
+    phone = models.CharField(max_length=30, blank=True)
+    id_type = models.CharField(max_length=50, blank=True)
+    id_number = models.CharField(max_length=100, blank=True)
+    purpose = models.TextField()
+    vehicle_plate = models.CharField(max_length=30, blank=True)
+    guest_name = models.CharField(max_length=160, blank=True)
+    guest_room_number = models.CharField(max_length=20, blank=True)
+    host_staff = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='hosted_security_visits')
+    host_staff_name = models.CharField(max_length=160, blank=True)
+    host_department = models.CharField(max_length=120, blank=True)
+    maintenance_ticket = models.ForeignKey('maintenance.MaintenanceTicket', on_delete=models.PROTECT, null=True, blank=True, related_name='security_visitor_visits')
+    supplier = models.ForeignKey('inventory.Supplier', on_delete=models.PROTECT, null=True, blank=True, related_name='security_visitor_visits')
+    work_description = models.CharField(max_length=250, blank=True)
+    entered_at = models.DateTimeField(default=timezone.now, editable=False)
+    entered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='security_visitor_entries')
+    entry_note = models.TextField(blank=True)
+    exited_at = models.DateTimeField(null=True, blank=True)
+    exited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='security_visitor_exits')
+    exit_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-entered_at', '-pk']
+        indexes = [models.Index(fields=['hotel', 'exited_at']), models.Index(fields=['hotel', 'entered_at'])]
+
+    def clean(self):
+        errors = {}
+        if self.visitor_type == self.GUEST and not self.guest_name.strip():
+            errors['guest_name'] = 'Enter the name of the guest being visited.'
+        if self.visitor_type == self.STAFF:
+            if not self.host_staff_id and not self.host_staff_name.strip():
+                errors['host_staff_name'] = 'Select or enter the staff member being visited.'
+            if self.host_staff_id and self.host_staff.hotel_id != self.hotel_id and not (self.host_staff.department_id and self.host_staff.department.hotel_id == self.hotel_id):
+                errors['host_staff'] = 'The selected staff member belongs to another hotel.'
+        if self.visitor_type == self.OUTSOURCED:
+            if not self.work_description.strip() and not self.maintenance_ticket_id:
+                errors['work_description'] = 'Describe the outsourced work or select a Maintenance work order.'
+            if self.maintenance_ticket_id:
+                ticket_hotel_id = self.maintenance_ticket.room.hotel_id if self.maintenance_ticket.room_id else self.maintenance_ticket.location.hotel_id if self.maintenance_ticket.location_id else None
+                if ticket_hotel_id != self.hotel_id:
+                    errors['maintenance_ticket'] = 'The selected work order belongs to another hotel.'
+            if self.supplier_id and self.supplier.hotel_id != self.hotel_id:
+                errors['supplier'] = 'The selected supplier belongs to another hotel.'
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.vehicle_plate = ' '.join(self.vehicle_plate.upper().split())
+        if self.host_staff_id:
+            self.host_staff_name = self.host_staff.get_full_name() or self.host_staff.username
+            self.host_department = self.host_staff.department.name if self.host_staff.department_id else self.host_department
+        super().save(*args, **kwargs)
+
+    @property
+    def is_inside(self):
+        return self.exited_at is None
+
+    @property
+    def host_display(self):
+        if self.visitor_type == self.GUEST:
+            return f'{self.guest_name} · Room {self.guest_room_number}' if self.guest_room_number else self.guest_name
+        if self.visitor_type == self.STAFF:
+            return self.host_staff_name
+        return self.supplier.name if self.supplier_id else (self.work_description or 'Outsourced work')
+
+    def __str__(self):
+        return f'{self.visitor_name} — {self.get_visitor_type_display()}'
