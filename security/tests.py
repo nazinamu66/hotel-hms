@@ -1,5 +1,8 @@
 from datetime import date, timedelta
 from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
+from django.test import RequestFactory
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
@@ -7,6 +10,7 @@ from django.utils import timezone
 from inventory.models import Organization, Hotel, Department
 from maintenance.models import MaintenanceAsset
 from .models import PropertyExitPass, VehicleVisit
+from .views import security_head_required
 
 User = get_user_model()
 
@@ -192,3 +196,61 @@ class PropertyExitPassTests(TestCase):
         self.assertContains(response, "ABC-888XY")
         self.assertContains(response, "Exited")
         self.assertContains(response, "security-officer")
+
+
+    def test_security_head_uses_existing_department_head_flag(self):
+        self.assertFalse(self.security.is_security_head)
+        self.security.is_department_head = True
+        self.security.save()
+        self.security.refresh_from_db()
+        self.assertTrue(self.security.is_security_head)
+        self.assertTrue(self.security.is_operational_staff)
+
+    def test_security_head_flag_does_not_apply_to_other_departments(self):
+        restaurant_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            name="Restaurant",
+            defaults={"code": "REST", "department_type": "RESTAURANT"},
+        )
+        other_head = User.objects.create_user(
+            username="restaurant-head",
+            password="test",
+            role="RESTAURANT",
+            department=restaurant_department,
+            is_department_head=True,
+        )
+        self.assertFalse(other_head.is_security_head)
+
+    def test_security_role_model_validation_requires_and_assigns_department(self):
+        security_user = User(
+            username="security-model-validation",
+            role="SECURITY",
+            department=self.department,
+        )
+        security_user.full_clean()
+        self.assertEqual(security_user.hotel, self.hotel)
+        self.assertEqual(security_user.organization, self.org)
+        self.assertTrue(security_user.is_operational_staff)
+
+    def test_security_head_guard_allows_only_security_department_head(self):
+        @security_head_required
+        def protected_view(request):
+            return HttpResponse("supervisor access")
+
+        factory = RequestFactory()
+        self.security.is_department_head = True
+        self.security.save()
+        request = factory.get("/security/supervisor/")
+        request.user = self.security
+        response = protected_view(request)
+        self.assertEqual(response.status_code, 200)
+
+        ordinary_officer = self.security
+        ordinary_officer.is_department_head = False
+        request.user = ordinary_officer
+        with self.assertRaises(PermissionDenied):
+            protected_view(request)
+
+        request.user = self.manager
+        with self.assertRaises(PermissionDenied):
+            protected_view(request)
