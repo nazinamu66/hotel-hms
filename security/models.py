@@ -286,8 +286,15 @@ class SecurityShiftHandover(models.Model):
         for field, officer in zip(
             ("outgoing_officer_1", "outgoing_officer_2", "incoming_officer_1", "incoming_officer_2"), officers
         ):
-            if officer and (officer.role != "SECURITY" or not officer.is_active or officer.hotel_id != self.hotel_id):
-                errors[field] = "Select an active Security officer assigned to this hotel."
+            if officer and (
+                officer.role != "SECURITY"
+                or not officer.is_active
+                or officer.hotel_id != self.hotel_id
+                or not officer.department_id
+                or officer.department.department_type != "SECURITY"
+                or officer.department.hotel_id != self.hotel_id
+            ):
+                errors[field] = "Select an active Security officer assigned to this hotel and its Security department."
         if self.submitted_by_id and self.submitted_by_id not in {
             self.outgoing_officer_1_id, self.outgoing_officer_2_id
         }:
