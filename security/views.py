@@ -84,6 +84,9 @@ def security_dashboard(request):
     latest_handover = SecurityShiftHandover.objects.filter(hotel=hotel).select_related("submitted_by", "acknowledged_by").first()
     context = {
         "latest_handover": latest_handover,
+        "staff_exit_pending": StaffExitPass.objects.filter(hotel=hotel, status=StaffExitPass.AUTHORISED).select_related("employee")[:8],
+        "staff_exit_outside": StaffExitPass.objects.filter(hotel=hotel, status=StaffExitPass.OUTSIDE).select_related("employee")[:8],
+        "staff_exit_overdue": StaffExitPass.objects.filter(hotel=hotel, status=StaffExitPass.OUTSIDE, expected_return_at__lt=timezone.now()).count(),
         "staff_present": StaffAttendance.objects.filter(
             hotel=hotel, departed_at__isnull=True,
         ).filter(
