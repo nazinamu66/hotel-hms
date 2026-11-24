@@ -657,3 +657,144 @@ class SecurityOccurrenceReport(models.Model):
 
     def __str__(self):
         return f"{self.hotel} · Daily occurrence · {self.duty_date}"
+
+
+
+class SecurityPatrolRoute(models.Model):
+    """A reusable patrol plan belonging to one hotel."""
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="security_patrol_routes")
+    name = models.CharField(max_length=120)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="security_patrol_routes_created")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name", "pk"]
+        constraints = [
+            models.UniqueConstraint(fields=["hotel", "name"], name="uniq_security_patrol_route_hotel_name"),
+        ]
+
+    def __str__(self):
+        return f"{self.hotel} · {self.name}"
+
+
+class SecurityPatrolCheckpoint(models.Model):
+    route = models.ForeignKey(SecurityPatrolRoute, on_delete=models.CASCADE, related_name="checkpoints")
+    name = models.CharField(max_length=120)
+    checkpoint_code = models.CharField(max_length=24)
+    instructions = models.TextField(blank=True)
+    sequence = models.PositiveSmallIntegerField(default=1)
+    is_required = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["sequence", "pk"]
+        constraints = [
+            models.UniqueConstraint(fields=["route", "name"], name="uniq_patrol_checkpoint_name"),
+            models.UniqueConstraint(fields=["route", "checkpoint_code"], name="uniq_patrol_checkpoint_code"),
+            models.UniqueConstraint(fields=["route", "sequence"], name="uniq_patrol_checkpoint_sequence"),
+        ]
+
+    def clean(self):
+        self.checkpoint_code = (self.checkpoint_code or "").strip().upper()
+        if not self.checkpoint_code:
+            raise ValidationError({"checkpoint_code": "Enter a checkpoint code."})
+
+    def __str__(self):
+        return f"{self.route.name} · {self.name} ({self.checkpoint_code})"
+
+
+class SecurityPatrolRun(models.Model):
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    ABANDONED = "ABANDONED"
+    STATUS_CHOICES = [
+        (IN_PROGRESS, "In progress"),
+        (COMPLETED, "Completed"),
+        (ABANDONED, "Abandoned"),
+    ]
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="security_patrol_runs")
+    route = models.ForeignKey(SecurityPatrolRoute, on_delete=models.PROTECT, related_name="runs")
+    officer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="security_patrol_runs")
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=IN_PROGRESS)
+    started_at = models.DateTimeField(default=timezone.now)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    start_note = models.TextField(blank=True)
+    completion_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-started_at", "-pk"]
+        indexes = [
+            models.Index(fields=["hotel", "status", "started_at"]),
+            models.Index(fields=["hotel", "officer", "started_at"]),
+        ]
+
+    def clean(self):
+        errors = {}
+        if self.route_id and self.hotel_id != self.route.hotel_id:
+            errors["route"] = "The patrol route belongs to another hotel."
+        if self.officer_id:
+            officer = self.officer
+            if (
+                not officer.is_active or officer.role != "SECURITY"
+                or not officer.department_id
+                or officer.department.department_type != "SECURITY"
+                or officer.department.hotel_id != self.hotel_id
+            ):
+                errors["officer"] = "A patrol must be performed by an active Security officer assigned to this hotel."
+        if self.status == self.COMPLETED and not self.completed_at:
+            errors["completed_at"] = "A completion timestamp is required."
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def required_checkpoints(self):
+        return self.route.checkpoints.filter(is_active=True, is_required=True)
+
+    @property
+    def visited_required_count(self):
+        return self.visits.filter(checkpoint__is_required=True).values("checkpoint_id").distinct().count()
+
+    @property
+    def missing_required_count(self):
+        return max(0, self.required_checkpoints.count() - self.visited_required_count)
+
+    def __str__(self):
+        return f"{self.route.name} · {self.officer} · {self.started_at:%Y-%m-%d %H:%M}"
+
+
+class SecurityPatrolVisit(models.Model):
+    run = models.ForeignKey(SecurityPatrolRun, on_delete=models.CASCADE, related_name="visits")
+    checkpoint = models.ForeignKey(SecurityPatrolCheckpoint, on_delete=models.PROTECT, related_name="visits")
+    recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="security_patrol_visits")
+    recorded_at = models.DateTimeField(default=timezone.now, editable=False)
+    observation = models.TextField(blank=True)
+    issue_found = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["recorded_at", "pk"]
+        constraints = [
+            models.UniqueConstraint(fields=["run", "checkpoint"], name="uniq_checkpoint_visit_per_patrol_run"),
+        ]
+        indexes = [models.Index(fields=["run", "recorded_at"])]
+
+    def clean(self):
+        errors = {}
+        if self.run_id and self.checkpoint_id:
+            if self.checkpoint.route_id != self.run.route_id:
+                errors["checkpoint"] = "This checkpoint is not part of the patrol route."
+            if not self.checkpoint.is_active:
+                errors["checkpoint"] = "This checkpoint is inactive."
+            if self.run.status != SecurityPatrolRun.IN_PROGRESS:
+                errors["run"] = "Visits can only be recorded for an in-progress patrol."
+            if self.recorded_by_id != self.run.officer_id:
+                errors["recorded_by"] = "Only the officer assigned to this patrol run can record its checkpoints."
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f"{self.run} · {self.checkpoint.name}"
