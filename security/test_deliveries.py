@@ -12,11 +12,15 @@ class SecurityDeliveryRegisterTests(TestCase):
     def setUp(self):
         org = Organization.objects.create(name="Delivery Test Org")
         self.hotel = Hotel.objects.create(name="Delivery Test Hotel", organization=org)
-        self.security_dept = Department.objects.create(
-            hotel=self.hotel, code="SEC", name="Security", department_type="SECURITY"
+        self.security_dept, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            name="Security",
+            defaults={"code": "SEC", "department_type": "SECURITY"},
         )
-        self.store_dept = Department.objects.create(
-            hotel=self.hotel, code="STR", name="Store", department_type="STORE"
+        self.store_dept, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            name="Store",
+            defaults={"code": "STR", "department_type": "STORE"},
         )
         self.security = User.objects.create_user(
             username="delivery-security", password="test", role="SECURITY",
