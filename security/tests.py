@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
@@ -535,10 +535,28 @@ class StaffAttendanceTests(TestCase):
         self.staff_department, _ = Department.objects.get_or_create(hotel=self.hotel, name="Front Desk", defaults={"code": "FD", "department_type": "FRONTDESK"})
         self.security = User.objects.create_user(username="attendance-security", password="test", role="SECURITY", department=self.security_department)
         self.employee = User.objects.create_user(username="attendance-employee", password="test", role="FRONTDESK", department=self.staff_department)
+        from personnel.models import RosterAssignment, ShiftDefinition, WeeklyRoster
+        self.hod = User.objects.create_user(
+            username="attendance-hod", password="test", role="FRONTDESK",
+            department=self.staff_department, is_department_head=True,
+        )
+        today = timezone.localdate()
+        week_start = today - timedelta(days=today.weekday())
+        self.shift = ShiftDefinition.objects.create(
+            hotel=self.hotel, code="DAY", name="Day Shift",
+            start_time=time(0, 1), end_time=time(23, 59), grace_minutes=15,
+        )
+        self.roster = WeeklyRoster.objects.create(
+            hotel=self.hotel, department=self.staff_department, week_start=week_start,
+            responsible_hod=self.hod, created_by=self.hod, status=WeeklyRoster.APPROVED,
+        )
+        self.assignment = RosterAssignment.objects.create(
+            roster=self.roster, employee=self.employee, work_date=today, shift=self.shift,
+        )
 
     def test_security_records_arrival_and_dashboard_counts_staff(self):
         self.client.force_login(self.security)
-        response = self.client.post(reverse("security_attendance_arrival"), {"employee": self.employee.pk, "arrival_note": ""})
+        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": self.assignment.pk, "arrival_note": ""})
         self.assertEqual(response.status_code, 302)
         from .models import StaffAttendance
         record = StaffAttendance.objects.get()
@@ -554,7 +572,7 @@ class StaffAttendanceTests(TestCase):
         from .models import StaffAttendance
         StaffAttendance.objects.create(hotel=self.hotel, employee=self.employee, arrival_recorded_by=self.security)
         self.client.force_login(self.security)
-        response = self.client.post(reverse("security_attendance_arrival"), {"employee": self.employee.pk})
+        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": self.assignment.pk})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(StaffAttendance.objects.count(), 1)
 
@@ -584,10 +602,55 @@ class StaffAttendanceTests(TestCase):
         )
         other_employee = User.objects.create_user(username="other-attendance-employee", password="test", role="FRONTDESK", department=other_department)
         self.client.force_login(self.security)
-        response = self.client.post(reverse("security_attendance_arrival"), {"employee": other_employee.pk})
+        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": self.assignment.pk})
         self.assertEqual(response.status_code, 200)
         from .models import StaffAttendance
         self.assertFalse(StaffAttendance.objects.exists())
+
+    def test_arrival_saves_approved_roster_and_shift_snapshot(self):
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": self.assignment.pk})
+        self.assertEqual(response.status_code, 302)
+        from .models import StaffAttendance
+        record = StaffAttendance.objects.get()
+        self.assertEqual(record.roster_assignment, self.assignment)
+        self.assertEqual(record.scheduled_shift_name, "Day Shift")
+        self.assertEqual(record.grace_minutes_snapshot, 15)
+        self.assertIsNotNone(record.scheduled_start_at)
+        self.assertIsNotNone(record.scheduled_end_at)
+
+    def test_security_cannot_record_arrival_from_unapproved_roster(self):
+        self.roster.status = "DRAFT"
+        self.roster.save(update_fields=["status"])
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": self.assignment.pk})
+        self.assertEqual(response.status_code, 200)
+        from .models import StaffAttendance
+        self.assertFalse(StaffAttendance.objects.exists())
+
+    def test_security_cannot_record_arrival_on_employee_day_off(self):
+        self.assignment.is_day_off = True
+        self.assignment.shift = None
+        self.assignment.save(update_fields=["is_day_off", "shift"])
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": self.assignment.pk})
+        self.assertEqual(response.status_code, 200)
+        from .models import StaffAttendance
+        self.assertFalse(StaffAttendance.objects.exists())
+
+    def test_punctuality_uses_saved_grace_period_snapshot(self):
+        from .models import StaffAttendance
+        start = timezone.make_aware(datetime.combine(timezone.localdate(), time(8, 0)))
+        arrived = start + timedelta(minutes=24)
+        record = StaffAttendance(
+            hotel=self.hotel, employee=self.employee, arrival_recorded_by=self.security,
+            arrived_at=arrived, roster_assignment=self.assignment,
+            scheduled_start_at=start, scheduled_end_at=start + timedelta(hours=8),
+            scheduled_shift_name="Day Shift", grace_minutes_snapshot=15,
+            work_date=self.assignment.work_date,
+        )
+        self.assertEqual(record.punctuality_status, "LATE")
+        self.assertEqual(record.late_minutes_beyond_grace, 9)
 
     def test_daily_attendance_is_unique_per_employee_and_hotel(self):
         from .models import StaffAttendance
