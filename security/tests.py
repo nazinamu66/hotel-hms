@@ -320,6 +320,116 @@ class PropertyExitPassTests(TestCase):
         self.assertContains(response, exited.plate_number)
 
 
+class StaffExitPassTests(TestCase):
+    def setUp(self):
+        self.org = Organization.objects.create(name="Staff Pass Test Org")
+        self.hotel = Hotel.objects.create(name="Staff Pass Test Hotel", organization=self.org)
+        self.security_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Security",
+            defaults={"code": "SEC", "department_type": "SECURITY"},
+        )
+        self.frontdesk_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Front Desk",
+            defaults={"code": "FD", "department_type": "FRONTDESK"},
+        )
+        self.hr_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Human Resources",
+            defaults={"code": "HR", "department_type": "HUMAN_RESOURCES"},
+        )
+        self.security = User.objects.create_user(username="staff-pass-security", password="test", role="SECURITY", department=self.security_department)
+        self.manager = User.objects.create_user(username="staff-pass-manager", password="test", role="MANAGER", hotel=self.hotel)
+        self.employee = User.objects.create_user(username="staff-pass-employee", password="test", role="FRONTDESK", department=self.frontdesk_department)
+        self.hr_head = User.objects.create_user(username="staff-pass-hr-head", password="test", role="HR", department=self.hr_department, is_department_head=True)
+        self.hr_clerk = User.objects.create_user(username="staff-pass-hr-clerk", password="test", role="HR", department=self.hr_department)
+
+    def create_pass(self, **overrides):
+        from .models import StaffExitPass
+        values = dict(
+            hotel=self.hotel, employee=self.employee, employee_name="Staff Pass Employee",
+            department_name="Front Desk", pass_type=StaffExitPass.PERSONAL,
+            destination="Town", purpose="Personal errand",
+            expected_return_at=timezone.now() + timedelta(hours=2),
+            authorised_by=self.manager, authorised_at=timezone.now(),
+        )
+        values.update(overrides)
+        return StaffExitPass.objects.create(**values)
+
+    def test_authorised_manager_creates_pass_and_security_records_both_movements(self):
+        from .models import StaffExitPass
+        self.client.force_login(self.manager)
+        response = self.client.post(reverse("security_staff_exit_create"), {
+            "employee": self.employee.pk, "pass_type": "PERSONAL",
+            "destination": "Town", "purpose": "Personal errand",
+            "expected_return_at": (timezone.localtime(timezone.now() + timedelta(hours=2))).strftime("%Y-%m-%dT%H:%M"),
+        })
+        self.assertEqual(response.status_code, 302)
+        record = StaffExitPass.objects.get()
+        self.assertEqual(record.authorised_by, self.manager)
+        self.assertTrue(record.pass_number.startswith(f"SP-{self.hotel.pk}-"))
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_staff_exit_gate_out", args=[record.pk]))
+        self.assertEqual(response.status_code, 302)
+        record.refresh_from_db()
+        self.assertEqual(record.status, StaffExitPass.OUTSIDE)
+        self.assertEqual(record.gate_out_by, self.security)
+        response = self.client.post(reverse("security_staff_exit_gate_in", args=[record.pk]))
+        self.assertEqual(response.status_code, 302)
+        record.refresh_from_db()
+        self.assertEqual(record.status, StaffExitPass.RETURNED)
+        self.assertEqual(record.gate_in_by, self.security)
+        self.assertIsNotNone(record.gate_in_at)
+
+    def test_only_admin_director_manager_and_hr_head_can_authorise(self):
+        self.client.force_login(self.security)
+        self.assertEqual(self.client.get(reverse("security_staff_exit_create")).status_code, 403)
+        self.client.force_login(self.hr_clerk)
+        self.assertEqual(self.client.get(reverse("security_staff_exit_create")).status_code, 403)
+        self.client.force_login(self.hr_head)
+        self.assertEqual(self.client.get(reverse("security_staff_exit_create")).status_code, 200)
+
+    def test_pass_is_hotel_scoped_and_employee_must_be_active_hotel_staff(self):
+        from .models import StaffExitPass
+        other_hotel = Hotel.objects.create(name="Other Staff Pass Hotel", organization=self.org)
+        other_department, _ = Department.objects.get_or_create(hotel=other_hotel, name="Other Front Desk", defaults={"code": "OFD", "department_type": "FRONTDESK"})
+        other_employee = User.objects.create_user(username="other-staff-pass-employee", password="test", role="FRONTDESK", department=other_department)
+        record = self.create_pass()
+        record.hotel = other_hotel
+        with self.assertRaises(Exception):
+            record.full_clean()
+        self.client.force_login(self.security)
+        self.assertEqual(self.client.get(reverse("security_staff_exit_detail", args=[record.pk])).status_code, 404)
+
+    def test_overdue_flag_does_not_automatically_close_pass(self):
+        from .models import StaffExitPass
+        record = self.create_pass(expected_return_at=timezone.now() - timedelta(minutes=5))
+        record.status = StaffExitPass.OUTSIDE
+        record.gate_out_by = self.security
+        record.gate_out_at = timezone.now() - timedelta(hours=1)
+        record.save()
+        self.assertTrue(record.is_overdue)
+        self.assertEqual(record.status, StaffExitPass.OUTSIDE)
+
+    def test_returned_pass_cannot_be_used_for_another_departure(self):
+        from .models import StaffExitPass
+        record = self.create_pass(status=StaffExitPass.RETURNED, gate_in_at=timezone.now(), gate_in_by=self.security)
+        self.client.force_login(self.security)
+        self.client.post(reverse("security_staff_exit_gate_out", args=[record.pk]))
+        record.refresh_from_db()
+        self.assertEqual(record.status, StaffExitPass.RETURNED)
+        self.assertIsNone(record.gate_out_at)
+
+    def test_authorised_pass_can_be_printed_without_changing_status(self):
+        from .models import StaffExitPass
+        record = self.create_pass()
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_staff_exit_print", args=[record.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, record.pass_number)
+        record.refresh_from_db()
+        self.assertEqual(record.status, StaffExitPass.AUTHORISED)
+
+
+
 class VisitorVisitTests(TestCase):
     def setUp(self):
         self.org = Organization.objects.create(name='Visitor Test Org')
