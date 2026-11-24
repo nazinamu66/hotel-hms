@@ -117,3 +117,31 @@ class VisitorVisitForm(forms.ModelForm):
         if kind == VisitorVisit.OUTSOURCED and not cleaned.get('maintenance_ticket') and not cleaned.get('work_description', '').strip():
             self.add_error('work_description', 'Describe the outsourced work or select a Maintenance work order.')
         return cleaned
+
+
+class StaffExitPassForm(forms.ModelForm):
+    class Meta:
+        from .models import StaffExitPass
+        model = StaffExitPass
+        fields = ["employee", "pass_type", "destination", "purpose", "expected_return_at"]
+        widgets = {
+            "purpose": forms.Textarea(attrs={"rows": 3}),
+            "expected_return_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+        }
+
+    def __init__(self, *args, hotel=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from django.db.models import Q
+        self.hotel = hotel
+        self.fields["employee"].queryset = User.objects.filter(is_active=True).exclude(
+            role__in=["ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT"]
+        ).filter(Q(hotel=hotel) | Q(department__hotel=hotel)).distinct().order_by("first_name", "last_name", "username") if hotel else User.objects.none()
+
+    def clean(self):
+        cleaned = super().clean()
+        employee = cleaned.get("employee")
+        if employee and self.hotel:
+            employee_hotel = employee.hotel_id or (employee.department.hotel_id if employee.department_id else None)
+            if employee_hotel != self.hotel.pk:
+                self.add_error("employee", "Select an employee assigned to this hotel.")
+        return cleaned
