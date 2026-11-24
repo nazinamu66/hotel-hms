@@ -885,3 +885,70 @@ class StaffAttendanceTests(TestCase):
         duplicate = StaffAttendance(hotel=self.hotel, employee=self.employee, arrival_recorded_by=self.security)
         with self.assertRaises(ValidationError):
             duplicate.full_clean()
+
+
+    def test_attendance_history_filters_by_date_range(self):
+        from .models import StaffAttendance
+        first_day = timezone.localdate() - timedelta(days=3)
+        second_day = timezone.localdate() - timedelta(days=1)
+        older = StaffAttendance.objects.create(
+            hotel=self.hotel, employee=self.employee, work_date=first_day,
+            arrival_recorded_by=self.security,
+        )
+        in_range_employee = User.objects.create_user(
+            username="history-range-employee", password="test",
+            role="FRONTDESK", department=self.staff_department,
+        )
+        in_range = StaffAttendance.objects.create(
+            hotel=self.hotel, employee=in_range_employee, work_date=second_day,
+            arrival_recorded_by=self.security,
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_attendance_list"), {
+            "date_from": (second_day - timedelta(days=1)).isoformat(),
+            "date_to": second_day.isoformat(),
+            "status": "ALL",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(in_range, list(response.context["records"]))
+        self.assertNotIn(older, list(response.context["records"]))
+
+    def test_attendance_history_filters_by_department(self):
+        from .models import StaffAttendance
+        from inventory.models import Department
+        restaurant_department = Department.objects.create(
+            hotel=self.hotel, code="REST", name="Restaurant",
+            department_type="RESTAURANT",
+        )
+        restaurant_employee = User.objects.create_user(
+            username="history-restaurant-employee", password="test",
+            role="RESTAURANT", department=restaurant_department,
+        )
+        frontdesk_record = StaffAttendance.objects.create(
+            hotel=self.hotel, employee=self.employee,
+            arrival_recorded_by=self.security,
+        )
+        restaurant_record = StaffAttendance.objects.create(
+            hotel=self.hotel, employee=restaurant_employee,
+            arrival_recorded_by=self.security,
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_attendance_list"), {
+            "department": str(restaurant_department.pk), "status": "ALL",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(restaurant_record, list(response.context["records"]))
+        self.assertNotIn(frontdesk_record, list(response.context["records"]))
+
+    def test_attendance_history_defaults_to_all_dates_and_statuses(self):
+        from .models import StaffAttendance
+        departed = StaffAttendance.objects.create(
+            hotel=self.hotel, employee=self.employee,
+            arrival_recorded_by=self.security,
+            departed_at=timezone.now(), departure_recorded_by=self.security,
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_attendance_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["status_filter"], "ALL")
+        self.assertIn(departed, list(response.context["records"]))
