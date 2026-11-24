@@ -22,8 +22,14 @@ class SecurityShiftHandoverForm(forms.ModelForm):
     def __init__(self, *args, hotel=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.hotel = hotel
+        # hotel is excluded from this ModelForm, but SecurityShiftHandover.clean()
+        # validates officer hotel assignments during ModelForm's _post_clean().
+        # Set it before validation so the selected officers are checked in context.
+        if hotel:
+            self.instance.hotel = hotel
         officers = User.objects.filter(
-            role="SECURITY", is_active=True, hotel=hotel, is_department_head=False
+            role="SECURITY", is_active=True, hotel=hotel,
+            department__department_type="SECURITY", is_department_head=False
         ).order_by("first_name", "last_name", "username") if hotel else User.objects.none()
         for field in ("outgoing_officer_1", "outgoing_officer_2", "incoming_officer_1", "incoming_officer_2"):
             self.fields[field].queryset = officers
