@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -22,14 +22,22 @@ class ShiftDefinition(models.Model):
     def __str__(self):
         return f"{self.name} ({self.start_time:%H:%M}–{self.end_time:%H:%M})"
 
+    @staticmethod
+    def _as_time(value):
+        # Newly-created model instances may still hold the string supplied to
+        # objects.create(); database-loaded instances return datetime.time.
+        return time.fromisoformat(value) if isinstance(value, str) else value
+
     @property
     def crosses_midnight(self):
-        return self.end_time <= self.start_time
+        return self._as_time(self.end_time) <= self._as_time(self.start_time)
 
     def interval_for(self, work_date):
-        start = timezone.make_aware(datetime.combine(work_date, self.start_time))
-        end_date = work_date + timedelta(days=1) if self.crosses_midnight else work_date
-        end = timezone.make_aware(datetime.combine(end_date, self.end_time))
+        start_time = self._as_time(self.start_time)
+        end_time = self._as_time(self.end_time)
+        start = timezone.make_aware(datetime.combine(work_date, start_time))
+        end_date = work_date + timedelta(days=1) if end_time <= start_time else work_date
+        end = timezone.make_aware(datetime.combine(end_date, end_time))
         return start, end
 
     def clean(self):
