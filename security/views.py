@@ -76,7 +76,7 @@ def security_dashboard(request):
         "staff_present": StaffAttendance.objects.filter(
             hotel=hotel, departed_at__isnull=True,
         ).filter(
-            Q(work_date=today) | Q(scheduled_end_at__date=today, scheduled_end_at__gt=timezone.now())
+            Q(work_date=today) | Q(scheduled_end_at__date=today)
         ).count(),
         "staff_arrivals_today": StaffAttendance.objects.filter(
             hotel=hotel, arrived_at__date=today,
