@@ -97,6 +97,19 @@ class PersonnelRosterTests(TestCase):
         self.assertTrue(is_hr_head(created))
         self.assertNotEqual(created.role, "MANAGER")
 
+    def test_hr_role_cannot_be_assigned_to_another_department(self):
+        from accounts.forms import UserCreateForm
+        manager = User.objects.create_user(
+            username="form-manager", password="test", role="MANAGER", hotel=self.hotel,
+        )
+        form = UserCreateForm(data={
+            "username": "misassigned-hr", "email": "", "role": "HR",
+            "organization": "", "hotel": "", "assigned_hotels": "",
+            "department": str(self.department.pk), "password": "test-password",
+        }, actor=manager)
+        self.assertFalse(form.is_valid())
+        self.assertIn("department", form.errors)
+
     def test_hr_role_uses_existing_department_scope_not_manager_scope(self):
         self.assertEqual(self.hr_head.department.hotel, self.hotel)
         self.assertEqual(self.hr_head.department, self.hr_department)
