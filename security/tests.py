@@ -577,7 +577,11 @@ class StaffAttendanceTests(TestCase):
 
     def test_employee_from_another_hotel_is_not_selectable(self):
         other_hotel = Hotel.objects.create(name="Other Attendance Hotel", organization=self.org)
-        other_department = Department.objects.create(hotel=other_hotel, name="Front Desk", code="FD", department_type="FRONTDESK")
+        other_department, _ = Department.objects.get_or_create(
+            hotel=other_hotel,
+            name="Front Desk",
+            defaults={"code": "FD", "department_type": "FRONTDESK"},
+        )
         other_employee = User.objects.create_user(username="other-attendance-employee", password="test", role="FRONTDESK", department=other_department)
         self.client.force_login(self.security)
         response = self.client.post(reverse("security_attendance_arrival"), {"employee": other_employee.pk})
