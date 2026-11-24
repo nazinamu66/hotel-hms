@@ -222,8 +222,12 @@ def shift_list(request):
         shift.hotel = request.user.hotel
         if not shift.hotel:
             shift.hotel = request.user.department.hotel
-        shift.full_clean()
-        shift.save()
-        messages.success(request, "Shift definition saved.")
-        return redirect("personnel:shifts")
+        try:
+            shift.full_clean()
+            shift.save()
+        except (ValidationError, IntegrityError) as exc:
+            form.add_error(None, exc)
+        else:
+            messages.success(request, "Shift definition saved.")
+            return redirect("personnel:shifts")
     return render(request, "personnel/shifts.html", {"shifts": shifts, "form": form})
