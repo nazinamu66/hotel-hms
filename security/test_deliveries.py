@@ -92,7 +92,7 @@ class SecurityDeliveryRegisterTests(TestCase):
         )
         draft_supplier = Supplier.objects.create(hotel=self.hotel, name="Draft Supplier")
         self.make_po(status="DRAFT", supplier=draft_supplier)
-        form = SecurityDeliveryVisitForm(hotel=self.hotel)
+        form = SecurityDeliveryVisitForm(hotel=self.hotel, selected_supplier=self.supplier.pk)
         self.assertIn(self.supplier, form.fields["supplier"].queryset)
         self.assertNotIn(draft_supplier, form.fields["supplier"].queryset)
         self.assertNotIn(fully_received, form.fields["purchase_order"].queryset)
