@@ -42,6 +42,22 @@ class ShiftDefinitionForm(forms.ModelForm):
         fields = ["code", "name", "start_time", "end_time", "grace_minutes", "is_active"]
         widgets = {"start_time": forms.TimeInput(attrs={"type": "time"}), "end_time": forms.TimeInput(attrs={"type": "time"})}
 
+    def __init__(self, *args, actor=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.actor = actor
+
+    def clean(self):
+        cleaned = super().clean()
+        # hotel is intentionally not user-editable: the shift belongs to the
+        # HR Head's assigned hotel. Set it before ModelForm's model validation.
+        department = getattr(self.actor, "department", None)
+        hotel = getattr(department, "hotel", None)
+        if hotel:
+            self.instance.hotel = hotel
+        else:
+            self.add_error(None, "Your account is not assigned to a hotel through Human Resources.")
+        return cleaned
+
 
 class RosterReconciliationForm(forms.ModelForm):
     class Meta:
