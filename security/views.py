@@ -1175,3 +1175,205 @@ def security_patrol_complete(request, run_id):
             run.save(update_fields=["status", "completed_at", "completion_note"])
             messages.success(request, "Patrol completed successfully.")
     return redirect("security_patrol_run_detail", run_id=run.pk)
+
+
+# =========================
+# SUPPLIER DELIVERIES / GATE REGISTER
+# =========================
+from .delivery_models import SecurityDeliveryReceiver, SecurityDeliveryVisit
+from .delivery_forms import SecurityDeliveryReceiverForm, SecurityDeliveryVisitForm
+from inventory.models import PurchaseReceipt
+
+
+def _can_acknowledge_delivery(user, delivery):
+    if (
+        user.is_active
+        and user.is_department_head
+        and user.department_id == delivery.department_id
+    ):
+        return True
+    return SecurityDeliveryReceiver.objects.filter(
+        hotel=delivery.hotel,
+        department=delivery.department,
+        user=user,
+        is_active=True,
+    ).exists()
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def security_delivery_list(request):
+    hotel = _hotel_for_user(request)
+    records = SecurityDeliveryVisit.objects.filter(hotel=hotel).select_related(
+        "supplier", "department", "purchase_order", "gate_in_by",
+        "gate_out_by", "department_received_by", "purchase_receipt",
+    )
+    status = request.GET.get("status", "").strip()
+    if status in dict(SecurityDeliveryVisit.STATUS_CHOICES):
+        records = records.filter(status=status)
+    query = request.GET.get("q", "").strip()
+    if query:
+        records = records.filter(
+            Q(delivery_reference__icontains=query)
+            | Q(vehicle_registration__icontains=query)
+            | Q(supplier__name__icontains=query)
+            | Q(purchase_order__id__icontains=query)
+        )
+    return render(request, "security/delivery_list.html", {
+        "hotel": hotel,
+        "available_hotels": _accessible_hotels(request.user),
+        "records": records,
+        "statuses": SecurityDeliveryVisit.STATUS_CHOICES,
+        "status_filter": status,
+        "search_query": query,
+    })
+
+
+@login_required
+@role_required("SECURITY")
+def security_delivery_create(request):
+    hotel = _hotel_for_user(request)
+    form = SecurityDeliveryVisitForm(request.POST or None, hotel=hotel)
+    if request.method == "POST" and form.is_valid():
+        record = form.save(commit=False)
+        record.hotel = hotel
+        record.gate_in_by = request.user
+        try:
+            record.full_clean()
+            record.save()
+        except (ValidationError, IntegrityError) as exc:
+            form.add_error(None, exc)
+        else:
+            messages.success(request, f"Delivery {record.delivery_reference} recorded at the gate.")
+            return redirect("security_delivery_detail", delivery_id=record.pk)
+    return render(request, "security/delivery_form.html", {
+        "form": form, "hotel": hotel,
+    })
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def security_delivery_detail(request, delivery_id):
+    hotel = _hotel_for_user(request)
+    record = get_object_or_404(
+        SecurityDeliveryVisit.objects.select_related(
+            "supplier", "department", "purchase_order", "purchase_receipt",
+            "gate_in_by", "gate_out_by", "department_received_by",
+        ),
+        pk=delivery_id, hotel=hotel,
+    )
+    receipts = PurchaseReceipt.objects.none()
+    if record.purchase_order_id:
+        receipts = PurchaseReceipt.objects.filter(
+            purchase_order_id=record.purchase_order_id
+        ).select_related("received_by").prefetch_related("items__purchase_item__product")
+    can_acknowledge = _can_acknowledge_delivery(request.user, record)
+    return render(request, "security/delivery_detail.html", {
+        "record": record,
+        "receipts": receipts,
+        "can_acknowledge": can_acknowledge,
+        "can_gate_out": request.user.role == "SECURITY" and record.status == SecurityDeliveryVisit.ARRIVED,
+        "available_hotels": _accessible_hotels(request.user),
+    })
+
+
+@login_required
+@role_required("SECURITY")
+@transaction.atomic
+def security_delivery_gate_out(request, delivery_id):
+    hotel = _hotel_for_user(request)
+    record = get_object_or_404(
+        SecurityDeliveryVisit.objects.select_for_update(),
+        pk=delivery_id, hotel=hotel,
+    )
+    if request.method == "POST" and record.status == SecurityDeliveryVisit.ARRIVED:
+        record.status = SecurityDeliveryVisit.DEPARTED
+        record.gate_out_at = timezone.now()
+        record.gate_out_by = request.user
+        record.gate_out_note = request.POST.get("gate_out_note", "").strip()
+        record.full_clean()
+        record.save(update_fields=["status", "gate_out_at", "gate_out_by", "gate_out_note"])
+        messages.success(request, f"Gate departure recorded for {record.delivery_reference}.")
+    return redirect("security_delivery_detail", delivery_id=record.pk)
+
+
+@login_required
+@transaction.atomic
+def security_delivery_acknowledge(request, delivery_id):
+    hotel = _hotel_for_user(request)
+    record = get_object_or_404(
+        SecurityDeliveryVisit.objects.select_for_update().select_related("department", "purchase_order"),
+        pk=delivery_id, hotel=hotel,
+    )
+    if request.method != "POST":
+        raise PermissionDenied
+    if not _can_acknowledge_delivery(request.user, record):
+        raise PermissionDenied("Only the receiving department head or an explicitly authorised receiver can acknowledge this delivery.")
+    if record.department_received_at:
+        messages.info(request, "This delivery has already been acknowledged.")
+        return redirect("security_delivery_detail", delivery_id=record.pk)
+
+    receipt = None
+    receipt_id = request.POST.get("purchase_receipt", "").strip()
+    if record.purchase_order_id:
+        if not receipt_id:
+            messages.error(request, "Record the goods through the Purchase Order receipt workflow, then select the resulting receipt here.")
+            return redirect("security_delivery_detail", delivery_id=record.pk)
+        receipt = get_object_or_404(
+            PurchaseReceipt,
+            pk=receipt_id,
+            purchase_order_id=record.purchase_order_id,
+        )
+    elif receipt_id:
+        raise PermissionDenied("A receipt cannot be linked to a delivery without its Purchase Order.")
+
+    record.purchase_receipt = receipt
+    record.department_received_by = request.user
+    record.department_received_at = timezone.now()
+    record.department_receipt_note = request.POST.get("department_receipt_note", "").strip()
+    try:
+        record.full_clean()
+        record.save(update_fields=[
+            "purchase_receipt", "department_received_by",
+            "department_received_at", "department_receipt_note",
+        ])
+    except (ValidationError, IntegrityError) as exc:
+        messages.error(request, "Delivery acknowledgement was not saved: " + "; ".join(getattr(exc, "messages", [str(exc)])))
+    else:
+        messages.success(request, "Department delivery acknowledgement recorded.")
+    return redirect("security_delivery_detail", delivery_id=record.pk)
+
+
+@login_required
+def security_delivery_receiver_manage(request):
+    user = request.user
+    if not user.is_active:
+        raise PermissionDenied
+    hotel = _hotel_for_user(request)
+    own_department_head = bool(
+        user.is_department_head and user.department_id
+        and user.department.hotel_id == hotel.pk
+    )
+    if user.role not in MANAGEMENT_ROLES and not own_department_head:
+        raise PermissionDenied
+    form = SecurityDeliveryReceiverForm(request.POST or None, hotel=hotel)
+    if own_department_head and user.role not in MANAGEMENT_ROLES:
+        form.fields["department"].queryset = form.fields["department"].queryset.filter(pk=user.department_id)
+    if request.method == "POST" and form.is_valid():
+        record = form.save(commit=False)
+        record.hotel = hotel
+        record.authorised_by = user
+        try:
+            record.full_clean()
+            record.save()
+        except (ValidationError, IntegrityError) as exc:
+            form.add_error(None, exc)
+        else:
+            messages.success(request, f"{record.user} is now authorised to acknowledge deliveries for {record.department}.")
+            return redirect("security_delivery_receiver_manage")
+    receivers = SecurityDeliveryReceiver.objects.filter(hotel=hotel, is_active=True).select_related("department", "user", "authorised_by")
+    if own_department_head and user.role not in MANAGEMENT_ROLES:
+        receivers = receivers.filter(department_id=user.department_id)
+    return render(request, "security/delivery_receivers.html", {
+        "hotel": hotel, "form": form, "receivers": receivers,
+    })
