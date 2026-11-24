@@ -247,6 +247,10 @@
         <div id="personnel_menu" class="menu-section">
             <a href="{% url 'personnel:dashboard' %}">Staff Attendance Roster</a>
             {% if user.role == "HR" and user.is_department_head %}<a href="{% url 'personnel:shifts' %}">Shift Definitions</a>{% endif %}
+            {% if user.role == "HR" and user.is_department_head and user.department_id and user.department.department_type == "HUMAN_RESOURCES" %}
+            <a href="{% url 'security_staff_exit_create' %}">Create Staff Exit Pass</a>
+            <a href="{% url 'security_staff_exit_list' %}">Staff Exit Pass Register</a>
+            {% endif %}
         </div>
         {% endif %}
 
@@ -261,6 +265,8 @@
             {% if user.role == "SECURITY" %}<a href="{% url 'security_visitor_entry' %}">Record Visitor Entry</a>{% endif %}
             {% if user.role == "SECURITY" %}<a href="{% url 'security_vehicle_entry' %}">Record Vehicle Entry</a>{% endif %}
             <a href="{% url 'security_pass_list' %}">Property Exit &amp; Return Register</a>
+            <a href="{% url 'security_staff_exit_list' %}">Staff Exit Pass Register</a>
+            {% if user|has_role:"MANAGER,ADMIN,DIRECTOR" %}<a href="{% url 'security_staff_exit_create' %}">Create Staff Exit Pass</a>{% endif %}
             {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}<a href="{% url 'security_pass_create' %}">Create Management Authorisation</a>{% endif %}
         </div>
         {% endif %}
