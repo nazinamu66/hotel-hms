@@ -1,5 +1,24 @@
 {% extends "base/base.html" %}
-{% block title %}Record Supplier Delivery{% endblock %}
+{% block title %}Record Supplier Delivery<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const supplier = document.querySelector('[data-po-filter="supplier"]');
+  const purchaseOrder = document.querySelector('[data-po-filter="purchase-order"]');
+  if (!supplier || !purchaseOrder) return;
+  function filterOrders() {
+    const supplierId = supplier.value;
+    Array.from(purchaseOrder.options).forEach(function (option) {
+      if (!option.value) return;
+      option.hidden = !!supplierId && option.dataset.supplierId !== supplierId;
+      option.disabled = option.hidden;
+    });
+    const selected = purchaseOrder.selectedOptions[0];
+    if (selected && selected.value && selected.dataset.supplierId !== supplierId) purchaseOrder.value = "";
+  }
+  supplier.addEventListener("change", filterOrders);
+  filterOrders();
+});
+</script>
+{% endblock %}
 {% block content %}
 <div class="container-fluid py-4" style="max-width:1120px">
   <a class="text-decoration-none fw-semibold" href="{% url 'security_delivery_list' %}">← Supplier deliveries</a>
