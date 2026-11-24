@@ -1120,26 +1120,28 @@ def security_patrol_record_visit(request, run_id):
     )
     form = SecurityPatrolVisitForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        checkpoint = get_object_or_404(
-            SecurityPatrolCheckpoint.objects.select_related("route"),
+        checkpoint = SecurityPatrolCheckpoint.objects.filter(
             route=run.route, checkpoint_code=form.cleaned_data["checkpoint_code"],
             is_active=True,
-        )
-        visit = SecurityPatrolVisit(
-            run=run, checkpoint=checkpoint, recorded_by=request.user,
-            observation=form.cleaned_data["observation"],
-            issue_found=form.cleaned_data["issue_found"],
-        )
-        try:
-            visit.full_clean()
-            visit.save()
-        except ValidationError as exc:
-            form.add_error(None, exc)
-        except IntegrityError:
+        ).first()
+        if not checkpoint:
+            form.add_error("checkpoint_code", "No active checkpoint with that code exists on this patrol route.")
+        elif SecurityPatrolVisit.objects.filter(run=run, checkpoint=checkpoint).exists():
             form.add_error("checkpoint_code", "This checkpoint has already been recorded for this patrol.")
         else:
-            messages.success(request, f"Checkpoint recorded: {checkpoint.name}.")
-            return redirect("security_patrol_run_detail", run_id=run.pk)
+            visit = SecurityPatrolVisit(
+                run=run, checkpoint=checkpoint, recorded_by=request.user,
+                observation=form.cleaned_data["observation"],
+                issue_found=form.cleaned_data["issue_found"],
+            )
+            try:
+                visit.full_clean()
+                visit.save()
+            except ValidationError as exc:
+                form.add_error(None, exc)
+            else:
+                messages.success(request, f"Checkpoint recorded: {checkpoint.name}.")
+                return redirect("security_patrol_run_detail", run_id=run.pk)
     run_detail = get_object_or_404(SecurityPatrolRun, pk=run_id, hotel=hotel)
     return render(request, "security/patrol_run_detail.html", {
         "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
