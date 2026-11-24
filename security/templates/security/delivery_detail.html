@@ -1,30 +1,61 @@
 {% extends "base/base.html" %}
 {% block title %}Delivery {{ record.delivery_reference }}{% endblock %}
 {% block content %}
-<div class="container py-4" style="max-width:1050px">
-  <a href="{% url 'security_delivery_list' %}">← Supplier Deliveries</a>
-  <div class="d-flex justify-content-between align-items-start mt-3 mb-4"><div><h2>{{ record.delivery_reference }}</h2><p class="text-muted mb-0">{{ record.supplier.name }} · {{ record.department.name }}</p></div><span class="badge bg-secondary">{{ record.get_status_display }}</span></div>
-  <div class="card card-body mb-3"><div class="row g-3">
-    <div class="col-md-4"><small class="text-muted">Vehicle</small><div>{{ record.vehicle_registration }} {{ record.vehicle_description }}</div></div>
-    <div class="col-md-4"><small class="text-muted">Driver</small><div>{{ record.driver_name|default:"—" }}</div></div>
-    <div class="col-md-4"><small class="text-muted">Purchase Order</small><div>{% if record.purchase_order_id %}<a href="{% url 'inventory:po_detail' record.purchase_order_id %}">PO #{{ record.purchase_order_id }}</a>{% else %}Non-PO delivery{% endif %}</div></div>
-    <div class="col-md-4"><small class="text-muted">Gate arrival</small><div>{{ record.gate_in_at|date:"d M Y, H:i" }} · {{ record.gate_in_by }}</div></div>
-    <div class="col-md-4"><small class="text-muted">Gate departure</small><div>{% if record.gate_out_at %}{{ record.gate_out_at|date:"d M Y, H:i" }} · {{ record.gate_out_by }}{% else %}Still on premises{% endif %}</div></div>
-    <div class="col-md-4"><small class="text-muted">Department acknowledgement</small><div>{% if record.department_received_at %}{{ record.department_received_at|date:"d M Y, H:i" }} · {{ record.department_received_by }}{% else %}Pending{% endif %}</div></div>
-    {% if record.delivery_note %}<div class="col-12"><small class="text-muted">Gate note</small><div>{{ record.delivery_note|linebreaksbr }}</div></div>{% endif %}
-    {% if record.department_receipt_note %}<div class="col-12"><small class="text-muted">Receiving note</small><div>{{ record.department_receipt_note|linebreaksbr }}</div></div>{% endif %}
-    {% if record.purchase_receipt_id %}<div class="col-12"><strong>Linked Store receipt:</strong> Receipt #{{ record.purchase_receipt_id }}</div>{% endif %}
-  </div></div>
-  {% if can_acknowledge and not record.department_received_at %}
-  <div class="card card-body mb-3"><h5>Department Receipt Confirmation</h5>
-    {% if record.purchase_order_id %}<p class="text-muted">First record the actual quantities using the existing Purchase Order receiving screen. Then select the resulting receipt below. This confirmation does not post stock.</p>
-    <form method="post" action="{% url 'security_delivery_acknowledge' record.pk %}">{% csrf_token %}
-      <div class="mb-3"><label class="form-label">Recorded PO receipt</label><select class="form-select" name="purchase_receipt" required><option value="">Select receipt</option>{% for receipt in receipts %}<option value="{{ receipt.pk }}">Receipt #{{ receipt.pk }} · {{ receipt.received_at|date:"d M Y H:i" }} · {{ receipt.received_by|default:"—" }}</option>{% endfor %}</select></div>
-      <div class="mb-3"><label class="form-label">Receiving note</label><textarea class="form-control" name="department_receipt_note" rows="2"></textarea></div><button class="btn btn-success">Confirm Department Receipt</button>
+<div class="container-fluid py-4" style="max-width:1180px">
+  <a class="text-decoration-none fw-semibold" href="{% url 'security_delivery_list' %}">← Supplier deliveries</a>
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mt-3 mb-4">
+    <div><div class="small text-uppercase fw-bold text-primary mb-1">Security gate inspection</div><h1 class="h2 fw-bold mb-1">{{ record.delivery_reference }}</h1><p class="text-secondary mb-0">{{ record.supplier.name }} · {{ record.department.name }} · PO #{{ record.purchase_order_id }}</p></div>
+    <span class="badge rounded-pill fs-6 px-3 py-2 {% if record.status == 'ARRIVED' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">{{ record.get_status_display }}</span>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary mb-1">Vehicle</div><div class="fw-bold">{{ record.vehicle_registration }}</div><div class="small text-secondary">{{ record.vehicle_description|default:"No description" }}</div></div></div></div>
+    <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary mb-1">Driver</div><div class="fw-bold">{{ record.driver_name|default:"Not recorded" }}</div><div class="small text-secondary">Gate arrival {{ record.gate_in_at|date:"d M Y · H:i" }}</div></div></div></div>
+    <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary mb-1">Recorded by</div><div class="fw-bold">{{ record.gate_in_by.get_full_name|default:record.gate_in_by.username }}</div><div class="small text-secondary">Receiving department: {{ record.department.name }}</div></div></div></div>
+  </div>
+  <section class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+    <div class="card-body p-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3"><div><h2 class="h5 fw-bold mb-1">Expected goods checklist</h2><p class="small text-secondary mb-0">Compare the goods physically presented at the gate with the remaining quantities on this PO.</p></div><span class="badge text-bg-light fs-6">PO #{{ record.purchase_order_id }}</span></div>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead class="table-light"><tr><th>Item</th><th class="text-end">Ordered</th><th class="text-end">Previously received</th><th class="text-end">Expected now</th></tr></thead>
+          <tbody>
+          {% for line in po_lines %}{% if line.outstanding_quantity > 0 %}
+            <tr><td class="fw-semibold">{{ line.product.name }}</td><td class="text-end">{{ line.purchase_quantity }}</td><td class="text-end">{{ line.received_quantity }}</td><td class="text-end fw-bold text-primary">{{ line.outstanding_quantity }}</td></tr>
+          {% endif %}{% empty %}<tr><td colspan="4" class="text-center text-secondary py-4">No PO lines are available.</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="small text-secondary">Quantities shown are the outstanding PO quantities. The Store's existing receiving workflow remains responsible for recording actual stock received.</div>
+    </div>
+  </section>
+  {% if record.gate_checked_at %}
+  <section class="card border-0 shadow-sm rounded-4 mb-4"><div class="card-body p-4">
+    <div class="d-flex flex-wrap justify-content-between gap-2"><div><h2 class="h5 fw-bold mb-1">Security inspection recorded</h2><div class="small text-secondary">{{ record.gate_checked_by.get_full_name|default:record.gate_checked_by.username }} · {{ record.gate_checked_at|date:"d M Y · H:i" }}</div></div>
+    <span class="badge rounded-pill fs-6 {% if record.gate_check_status == 'COMPLETE' %}text-bg-success{% else %}text-bg-warning{% endif %}">{{ record.get_gate_check_status_display }}</span></div>
+    {% if record.gate_check_note %}<div class="mt-3 p-3 bg-light rounded-3">{{ record.gate_check_note|linebreaksbr }}</div>{% endif %}
+  </div></section>
+  {% elif can_gate_check %}
+  <section class="card border-0 shadow-sm rounded-4 mb-4"><div class="card-body p-4 p-lg-5">
+    <div class="small text-uppercase fw-bold text-primary mb-1">Required gate check</div><h2 class="h4 fw-bold mb-2">Acknowledge goods passing the gate</h2><p class="text-secondary">After checking the items above, select whether the delivery is complete and intact or whether it is incomplete / has a discrepancy.</p>
+    <form method="post" action="{% url 'security_delivery_gate_check' record.pk %}">{% csrf_token %}
+      <div class="row g-3 mb-3">
+        {% for radio in check_form.gate_check_status %}
+        <div class="col-md-6"><label class="d-flex align-items-start gap-3 border rounded-3 p-3 h-100" for="{{ radio.id_for_label }}"><span>{{ radio.tag }}</span><span class="fw-semibold">{{ radio.choice_label }}{% if forloop.first %}<small class="d-block text-secondary fw-normal mt-1">All expected items are present and appear intact.</small>{% else %}<small class="d-block text-secondary fw-normal mt-1">Some items or quantities are missing, damaged or different.</small>{% endif %}</span></label></div>
+        {% endfor %}
+      </div>
+      <label class="form-label fw-semibold" for="{{ check_form.gate_check_note.id_for_label }}">Inspection note <span class="text-secondary fw-normal">(required for incomplete deliveries)</span></label>
+      {{ check_form.gate_check_note }}
+      <div class="form-text mb-3">Mention the affected item and the quantity or condition observed.</div>
+      <button class="btn btn-primary btn-lg px-4" type="submit">Save Security acknowledgement</button>
     </form>
-    {% else %}<p class="text-muted">This is a non-PO delivery. Acknowledgement records departmental receipt only and does not create inventory stock.</p>
-    <form method="post" action="{% url 'security_delivery_acknowledge' record.pk %}">{% csrf_token %}<textarea class="form-control mb-3" name="department_receipt_note" rows="2" placeholder="Receiving note"></textarea><button class="btn btn-success">Acknowledge Delivery</button></form>{% endif %}
-  </div>{% endif %}
-  {% if can_gate_out %}<div class="card card-body"><h5>Record Vehicle Departure</h5><form method="post" action="{% url 'security_delivery_gate_out' record.pk %}">{% csrf_token %}<textarea class="form-control mb-3" name="gate_out_note" rows="2" placeholder="Optional gate-out note"></textarea><button class="btn btn-primary">Record Gate Exit</button></form></div>{% endif %}
+  </div></section>
+  {% endif %}
+  {% if can_gate_out %}
+  <section class="card border-0 shadow-sm rounded-4"><div class="card-body p-4">
+    <h2 class="h5 fw-bold mb-1">Record vehicle departure</h2><p class="text-secondary small">Security inspection has been recorded. Complete the gate exit when the vehicle leaves.</p>
+    <form method="post" action="{% url 'security_delivery_gate_out' record.pk %}">{% csrf_token %}<label class="form-label fw-semibold">Gate-out note <span class="text-secondary fw-normal">(optional)</span></label><textarea class="form-control mb-3" name="gate_out_note" rows="2" placeholder="Optional departure note"></textarea><button class="btn btn-outline-primary">Record gate exit</button></form>
+  </div></section>
+  {% endif %}
+  {% if record.gate_out_at %}<div class="small text-secondary mt-3">Departed {{ record.gate_out_at|date:"d M Y · H:i" }} · recorded by {{ record.gate_out_by }}</div>{% endif %}
 </div>
 {% endblock %}
