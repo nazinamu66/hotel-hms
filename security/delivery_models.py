@@ -59,7 +59,7 @@ class SecurityDeliveryVisit(models.Model):
             po = self.purchase_order
             if po.department.hotel_id != self.hotel_id:
                 errors["purchase_order"] = "The Purchase Order belongs to another hotel."
-            elif po.department_id != self.department_id:
+            elif self.department_id and po.department_id != self.department_id:
                 errors["purchase_order"] = "The Purchase Order is for a different receiving department."
             elif po.supplier_id != self.supplier_id:
                 errors["purchase_order"] = "The supplier does not match the Purchase Order."
