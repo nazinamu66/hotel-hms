@@ -71,8 +71,10 @@ def get_accessible_hotels(user):
     if user.role in OPERATIONAL_ROLES:
 
         hotel_id = user.hotel_id
-        if user.role == "HR" and not hotel_id and user.department_id:
-            hotel_id = user.department.hotel_id
+        if user.role == "HR":
+            if not user.department_id or user.department.department_type != "HUMAN_RESOURCES":
+                return Hotel.objects.none()
+            hotel_id = hotel_id or user.department.hotel_id
         if not hotel_id:
             return Hotel.objects.none()
 
@@ -121,7 +123,9 @@ def user_can_access_hotel(
     if user.role in OPERATIONAL_ROLES:
 
         if user.role == "HR":
-            assigned_hotel_id = user.hotel_id or (user.department.hotel_id if user.department_id else None)
+            if not user.department_id or user.department.department_type != "HUMAN_RESOURCES":
+                return False
+            assigned_hotel_id = user.hotel_id or user.department.hotel_id
             return assigned_hotel_id == hotel.pk
         return user.hotel_id == hotel.pk
 
