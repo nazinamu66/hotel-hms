@@ -117,6 +117,20 @@ class PersonnelRosterTests(TestCase):
         self.assertQuerySetEqual(get_accessible_hotels(self.hr_head), [self.hotel])
         self.assertQuerySetEqual(get_accessible_departments(self.hr_head), [self.hr_department])
 
+    def test_ordinary_hr_staff_can_view_rosters_but_cannot_edit_or_approve(self):
+        ordinary_hr = User.objects.create_user(
+            username="hr-clerk-readonly", password="test", role="HR",
+            department=self.hr_department,
+        )
+        roster = self.make_roster()
+        self.client.force_login(ordinary_hr)
+        self.assertEqual(self.client.get(reverse("personnel:dashboard")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("personnel:roster_detail", args=[roster.pk])).status_code, 200)
+        self.assertEqual(self.client.post(reverse("personnel:roster_detail", args=[roster.pk]), {}).status_code, 403)
+        roster.status = WeeklyRoster.SUBMITTED
+        roster.save()
+        self.assertEqual(self.client.post(reverse("personnel:roster_approve", args=[roster.pk])).status_code, 403)
+
     def test_department_head_can_create_roster_for_own_department(self):
         self.client.force_login(self.hod)
         response = self.client.post(reverse("personnel:roster_create"), {
