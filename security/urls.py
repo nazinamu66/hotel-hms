@@ -3,6 +3,13 @@ from . import views
 
 urlpatterns = [
     path("", views.security_dashboard, name="security_dashboard"),
+    path("patrols/", views.security_patrol_route_list, name="security_patrol_route_list"),
+    path("patrols/routes/create/", views.security_patrol_route_create, name="security_patrol_route_create"),
+    path("patrols/routes/<int:route_id>/", views.security_patrol_route_detail, name="security_patrol_route_detail"),
+    path("patrols/start/", views.security_patrol_start, name="security_patrol_start"),
+    path("patrols/runs/<int:run_id>/", views.security_patrol_run_detail, name="security_patrol_run_detail"),
+    path("patrols/runs/<int:run_id>/visit/", views.security_patrol_record_visit, name="security_patrol_record_visit"),
+    path("patrols/runs/<int:run_id>/complete/", views.security_patrol_complete, name="security_patrol_complete"),
     path("incidents/", views.security_incident_list, name="security_incident_list"),
     path("incidents/create/", views.security_incident_create, name="security_incident_create"),
     path("incidents/<int:incident_id>/", views.security_incident_detail, name="security_incident_detail"),
