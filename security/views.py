@@ -269,6 +269,8 @@ def staff_exit_pass_create(request):
         record.hotel = hotel
         record.authorised_by = request.user
         record.authorised_at = timezone.now()
+        record.employee_name = record.employee.get_full_name() or record.employee.username
+        record.department_name = record.employee.department.name if record.employee.department_id else ""
         record.status = StaffExitPass.AUTHORISED
         try:
             record.full_clean()
