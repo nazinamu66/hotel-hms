@@ -3,6 +3,9 @@ from . import views
 
 urlpatterns = [
     path("", views.security_dashboard, name="security_dashboard"),
+    path("attendance/", views.staff_attendance_list, name="security_attendance_list"),
+    path("attendance/arrival/", views.staff_attendance_arrival, name="security_attendance_arrival"),
+    path("attendance/<int:attendance_id>/departure/", views.staff_attendance_departure, name="security_attendance_departure"),
     path("handovers/", views.shift_handover_list, name="security_handover_list"),
     path("handovers/create/", views.shift_handover_create, name="security_handover_create"),
     path("handovers/<int:handover_id>/", views.shift_handover_detail, name="security_handover_detail"),
