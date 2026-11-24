@@ -1,0 +1,6 @@
+{% extends "base/base.html" %}
+{% block title %}Daily Occurrence Report{% endblock %}
+{% block content %}
+<div class="hms-page"><header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Security operations · {{ hotel.name }}</p><h1 class="hms-page-title">Daily Occurrence Report</h1><p class="hms-page-subtitle">Consolidate the day's operational activity and outstanding matters.</p></div><a class="hms-btn hms-btn-secondary" href="{% url 'security_occurrence_list' %}">Report register</a></header>
+<section class="hms-card"><form method="post">{% csrf_token %}{% if available_hotels.count > 1 %}<input type="hidden" name="hotel" value="{{ hotel.pk }}">{% endif %}{{ form.non_field_errors }}{% for field in form %}<div class="hms-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}<p class="hms-card-description">The system captures a snapshot of attendance, visitors, vehicles, staff and property passes, and incident activity for the selected date.</p><div class="hms-form-footer"><button class="hms-btn hms-btn-primary" type="submit">Submit Daily Occurrence Report</button></div></form></section></div>
+{% endblock %}
