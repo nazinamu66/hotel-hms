@@ -524,3 +524,71 @@ class SecurityShiftHandoverTests(TestCase):
         response = self.client.get(reverse("security_handover_detail", args=[handover.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "All gates checked.")
+
+
+
+class StaffAttendanceTests(TestCase):
+    def setUp(self):
+        self.org = Organization.objects.create(name="Attendance Test Org")
+        self.hotel = Hotel.objects.create(name="Attendance Test Hotel", organization=self.org)
+        self.security_department, _ = Department.objects.get_or_create(hotel=self.hotel, name="Security", defaults={"code": "SEC", "department_type": "SECURITY"})
+        self.staff_department, _ = Department.objects.get_or_create(hotel=self.hotel, name="Front Desk", defaults={"code": "FD", "department_type": "FRONTDESK"})
+        self.security = User.objects.create_user(username="attendance-security", password="test", role="SECURITY", department=self.security_department)
+        self.employee = User.objects.create_user(username="attendance-employee", password="test", role="FRONTDESK", department=self.staff_department)
+
+    def test_security_records_arrival_and_dashboard_counts_staff(self):
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_attendance_arrival"), {"employee": self.employee.pk, "arrival_note": ""})
+        self.assertEqual(response.status_code, 302)
+        from .models import StaffAttendance
+        record = StaffAttendance.objects.get()
+        self.assertEqual(record.employee, self.employee)
+        self.assertEqual(record.arrival_recorded_by, self.security)
+        self.assertEqual(record.work_date, timezone.localdate())
+        self.assertTrue(record.is_present)
+        dashboard = self.client.get(reverse("security_dashboard"))
+        self.assertEqual(dashboard.context["staff_present"], 1)
+        self.assertEqual(dashboard.context["staff_arrivals_today"], 1)
+
+    def test_duplicate_arrival_for_same_employee_day_is_rejected(self):
+        from .models import StaffAttendance
+        StaffAttendance.objects.create(hotel=self.hotel, employee=self.employee, arrival_recorded_by=self.security)
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_attendance_arrival"), {"employee": self.employee.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(StaffAttendance.objects.count(), 1)
+
+    def test_security_records_final_departure(self):
+        from .models import StaffAttendance
+        record = StaffAttendance.objects.create(hotel=self.hotel, employee=self.employee, arrival_recorded_by=self.security)
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_attendance_departure", args=[record.pk]), {"departure_note": "End of shift"})
+        self.assertEqual(response.status_code, 302)
+        record.refresh_from_db()
+        self.assertIsNotNone(record.departed_at)
+        self.assertEqual(record.departure_recorded_by, self.security)
+        self.assertFalse(record.is_present)
+
+    def test_management_can_view_but_cannot_record_attendance(self):
+        manager = User.objects.create_user(username="attendance-manager", password="test", role="MANAGER", hotel=self.hotel)
+        self.client.force_login(manager)
+        self.assertEqual(self.client.get(reverse("security_attendance_list")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("security_attendance_arrival")).status_code, 403)
+
+    def test_employee_from_another_hotel_is_not_selectable(self):
+        other_hotel = Hotel.objects.create(name="Other Attendance Hotel", organization=self.org)
+        other_department = Department.objects.create(hotel=other_hotel, name="Front Desk", code="FD", department_type="FRONTDESK")
+        other_employee = User.objects.create_user(username="other-attendance-employee", password="test", role="FRONTDESK", department=other_department)
+        self.client.force_login(self.security)
+        response = self.client.post(reverse("security_attendance_arrival"), {"employee": other_employee.pk})
+        self.assertEqual(response.status_code, 200)
+        from .models import StaffAttendance
+        self.assertFalse(StaffAttendance.objects.exists())
+
+    def test_daily_attendance_is_unique_per_employee_and_hotel(self):
+        from .models import StaffAttendance
+        from django.core.exceptions import ValidationError
+        StaffAttendance.objects.create(hotel=self.hotel, employee=self.employee, arrival_recorded_by=self.security)
+        duplicate = StaffAttendance(hotel=self.hotel, employee=self.employee, arrival_recorded_by=self.security)
+        with self.assertRaises(ValidationError):
+            duplicate.full_clean()
