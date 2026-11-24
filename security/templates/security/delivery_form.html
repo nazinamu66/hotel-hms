@@ -1,83 +1,121 @@
 {% extends "base/base.html" %}
-{% block title %}Record Supplier Delivery<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const supplier = document.querySelector('[data-po-filter="supplier"]');
-  const purchaseOrder = document.querySelector('[data-po-filter="purchase-order"]');
-  if (!supplier || !purchaseOrder) return;
-  function filterOrders() {
-    const supplierId = supplier.value;
-    Array.from(purchaseOrder.options).forEach(function (option) {
-      if (!option.value) return;
-      option.hidden = !!supplierId && option.dataset.supplierId !== supplierId;
-      option.disabled = option.hidden;
-    });
-    const selected = purchaseOrder.selectedOptions[0];
-    if (selected && selected.value && selected.dataset.supplierId !== supplierId) purchaseOrder.value = "";
-  }
-  supplier.addEventListener("change", filterOrders);
-  filterOrders();
-});
-</script>
-{% endblock %}
+{% block title %}Record Supplier Delivery{% endblock %}
 {% block content %}
-<div class="container-fluid py-4" style="max-width:1120px">
-  <a class="text-decoration-none fw-semibold" href="{% url 'security_delivery_list' %}">← Supplier deliveries</a>
-  <div class="mt-3 mb-4">
-    <div class="text-uppercase small fw-bold text-primary mb-1">Security · Gate control</div>
-    <h1 class="h2 fw-bold mb-2">Record delivery arrival</h1>
-    <p class="text-secondary mb-0">Select an expected delivery and record the vehicle arriving at the gate. Only approved Purchase Orders with outstanding quantities are available.</p>
+<style>
+.delivery-page{max-width:1180px;margin:0 auto;padding:30px 24px 48px}
+.delivery-eyebrow{font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#2563eb}
+.delivery-heading{font-size:clamp(1.7rem,3vw,2.25rem);font-weight:800;letter-spacing:-.04em;color:#172033;margin:.35rem 0}
+.delivery-muted{color:#64748b}
+.delivery-panel{background:#fff;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 10px 30px rgba(15,23,42,.06);overflow:hidden}
+.delivery-panel-head{padding:22px 26px;border-bottom:1px solid #e8edf4;background:linear-gradient(135deg,#f8fafc,#fff)}
+.delivery-panel-body{padding:26px}
+.delivery-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.delivery-field label{display:block;font-weight:700;font-size:.9rem;color:#334155;margin-bottom:8px}
+.delivery-field input,.delivery-field select,.delivery-field textarea{display:block;width:100%;min-height:46px;padding:11px 13px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;box-sizing:border-box}
+.delivery-field textarea{min-height:104px;resize:vertical}
+.delivery-field input:focus,.delivery-field select:focus,.delivery-field textarea:focus{outline:3px solid rgba(37,99,235,.14);border-color:#3b82f6}
+.delivery-help{font-size:.8rem;color:#64748b;margin-top:6px}
+.delivery-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.delivery-primary{border:0;border-radius:10px;padding:12px 20px;background:#1d4ed8;color:#fff;font-weight:750;text-decoration:none;cursor:pointer}
+.delivery-secondary{border:1px solid #cbd5e1;border-radius:10px;padding:12px 20px;color:#334155;background:#fff;font-weight:700;text-decoration:none}
+.delivery-notice{padding:15px 17px;border-radius:12px;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;margin-top:22px}
+.delivery-error{font-size:.82rem;color:#b91c1c;margin-top:5px}
+@media(max-width:700px){.delivery-page{padding:20px 14px 36px}.delivery-panel-body{padding:18px}.delivery-grid{grid-template-columns:1fr}}
+</style>
+<div class="delivery-page">
+  <a href="{% url 'security_delivery_list' %}" class="delivery-secondary" style="display:inline-block;padding:8px 12px;margin-bottom:22px">← Back to supplier deliveries</a>
+  <div style="margin-bottom:24px">
+    <div class="delivery-eyebrow">Security · Gate control</div>
+    <h1 class="delivery-heading">Record delivery arrival</h1>
+    <p class="delivery-muted" style="margin:0">Register the supplier vehicle and compare its goods with an approved Purchase Order that still has quantities outstanding.</p>
   </div>
-  <form method="post" class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <form method="post" class="delivery-panel">
     {% csrf_token %}
-    <div class="p-4 p-lg-5">
-      {% if form.non_field_errors %}<div class="alert alert-danger rounded-3">{{ form.non_field_errors }}</div>{% endif %}
-      <div class="mb-4">
-        <h2 class="h5 fw-bold mb-1">Expected delivery</h2>
-        <p class="small text-secondary">Choose the supplier and the Purchase Order expected at this hotel.</p>
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label fw-semibold" for="{{ form.supplier.id_for_label }}">Supplier</label>
-            {{ form.supplier }}
-            {% for error in form.supplier.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
-            <div class="form-text">Only suppliers with approved orders awaiting delivery appear here.</div>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label fw-semibold" for="{{ form.purchase_order.id_for_label }}">Purchase Order</label>
-            {{ form.purchase_order }}
-            {% for error in form.purchase_order.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
-            <div class="form-text">{{ form.purchase_order.help_text }}</div>
-          </div>
+    <div class="delivery-panel-head">
+      <div class="delivery-eyebrow">Step 1</div>
+      <h2 style="font-size:1.2rem;font-weight:800;margin:5px 0">Expected delivery</h2>
+      <p class="delivery-muted" style="margin:0;font-size:.9rem">Only suppliers and Purchase Orders with outstanding deliveries are available.</p>
+    </div>
+    <div class="delivery-panel-body">
+      {% if form.non_field_errors %}<div class="delivery-notice" style="background:#fef2f2;border-color:#fecaca;color:#991b1b">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="delivery-grid">
+        <div class="delivery-field">
+          <label for="{{ form.supplier.id_for_label }}">Supplier</label>
+          {{ form.supplier }}
+          {% for error in form.supplier.errors %}<div class="delivery-error">{{ error }}</div>{% endfor %}
+          <div class="delivery-help">Suppliers with eligible approved orders only.</div>
+        </div>
+        <div class="delivery-field">
+          <label for="{{ form.purchase_order.id_for_label }}">Expected Purchase Order</label>
+          {{ form.purchase_order }}
+          {% for error in form.purchase_order.errors %}<div class="delivery-error">{{ error }}</div>{% endfor %}
+          <div class="delivery-help">{{ form.purchase_order.help_text }}</div>
         </div>
       </div>
-      <hr class="my-4">
-      <div class="mb-4">
-        <h2 class="h5 fw-bold mb-1">Delivery and vehicle details</h2>
-        <p class="small text-secondary">Record the supplier's delivery reference and the vehicle entering the premises.</p>
-        <div class="row g-3">
-          {% for field in form %}
-            {% if field.name != "supplier" and field.name != "purchase_order" and field.name != "delivery_note" %}
-              <div class="{% if field.name == 'delivery_reference' %}col-md-6{% elif field.name == 'vehicle_registration' %}col-md-6{% else %}col-md-6{% endif %}">
-                <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
-              </div>
-            {% endif %}
-          {% endfor %}
-          <div class="col-12">
-            <label class="form-label fw-semibold" for="{{ form.delivery_note.id_for_label }}">Arrival note <span class="text-secondary fw-normal">(optional)</span></label>
-            {{ form.delivery_note }}
-            {% for error in form.delivery_note.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+      <div style="height:1px;background:#e2e8f0;margin:28px 0"></div>
+      <div class="delivery-eyebrow">Step 2</div>
+      <h2 style="font-size:1.2rem;font-weight:800;margin:5px 0 6px">Vehicle and delivery details</h2>
+      <p class="delivery-muted" style="font-size:.9rem;margin:0 0 20px">Capture the supplier's delivery reference and the vehicle entering the hotel.</p>
+      <div class="delivery-grid">
+        {% for field in form %}
+          {% if field.name != "supplier" and field.name != "purchase_order" and field.name != "delivery_note" %}
+          <div class="delivery-field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% for error in field.errors %}<div class="delivery-error">{{ error }}</div>{% endfor %}
           </div>
+          {% endif %}
+        {% endfor %}
+        <div class="delivery-field" style="grid-column:1/-1">
+          <label for="{{ form.delivery_note.id_for_label }}">Arrival note <span class="delivery-muted" style="font-weight:400">(optional)</span></label>
+          {{ form.delivery_note }}
+          {% for error in form.delivery_note.errors %}<div class="delivery-error">{{ error }}</div>{% endfor %}
         </div>
       </div>
-      <div class="alert alert-info border-0 rounded-3 mb-4">
-        <strong>Security responsibility:</strong> You will inspect the goods against the selected PO after recording arrival. This step does not receive stock or create an inventory transaction.
-      </div>
-      <div class="d-flex flex-wrap gap-2">
-        <button class="btn btn-primary btn-lg px-4" type="submit">Record arrival</button>
-        <a class="btn btn-light btn-lg px-4" href="{% url 'security_delivery_list' %}">Cancel</a>
+      <div class="delivery-notice"><strong>Security's responsibility:</strong> Inspect and acknowledge the goods passing through the gate. This record does not receive stock, create a Purchase Receipt, or update inventory. Store continues to use the existing PO receiving process.</div>
+      <div class="delivery-actions">
+        <button class="delivery-primary" type="submit">Record arrival</button>
+        <a class="delivery-secondary" href="{% url 'security_delivery_list' %}">Cancel</a>
       </div>
     </div>
   </form>
 </div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const supplier = document.querySelector('[data-po-filter="supplier"]');
+  const purchaseOrder = document.querySelector('[data-po-filter="purchase-order"]');
+  if (!supplier || !purchaseOrder) return;
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Choose an expected Purchase Order";
+  placeholder.disabled = true;
+  placeholder.selected = !purchaseOrder.value;
+  purchaseOrder.insertBefore(placeholder, purchaseOrder.firstChild);
+
+  function filterOrders() {
+    const supplierId = supplier.value;
+    let visibleCount = 0;
+    Array.from(purchaseOrder.options).forEach(function (option) {
+      if (!option.value) return;
+      const matches = option.dataset.supplierId === supplierId;
+      option.hidden = !matches;
+      option.disabled = !matches;
+      if (matches) visibleCount += 1;
+    });
+    const selected = purchaseOrder.selectedOptions[0];
+    if (selected && selected.value && selected.dataset.supplierId !== supplierId) {
+      purchaseOrder.value = "";
+      placeholder.selected = true;
+    }
+    placeholder.textContent = !supplierId
+      ? "Choose a supplier first"
+      : (visibleCount ? "Choose an expected Purchase Order" : "No outstanding POs for this supplier");
+    purchaseOrder.disabled = !supplierId || visibleCount === 0;
+  }
+
+  supplier.addEventListener("change", filterOrders);
+  filterOrders();
+});
+</script>
 {% endblock %}
