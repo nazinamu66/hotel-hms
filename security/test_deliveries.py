@@ -61,7 +61,10 @@ class SecurityDeliveryRegisterTests(TestCase):
             "driver_name": "Driver One",
             "delivery_note": "Boxes at gate",
         })
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.status_code, 302,
+            f"Delivery form errors: {response.context['form'].errors if response.context and 'form' in response.context else response.content[:2000]!r}",
+        )
         delivery = SecurityDeliveryVisit.objects.get(delivery_reference="DN-1002")
         self.assertEqual(delivery.gate_in_by, self.security)
         self.assertEqual(delivery.vehicle_registration, "ABC-123-XY")
@@ -146,8 +149,10 @@ class SecurityDeliveryRegisterTests(TestCase):
         self.assertIsNotNone(delivery.gate_out_at)
 
     def test_delivery_cannot_link_purchase_order_from_another_department(self):
-        other_dept = Department.objects.create(
-            hotel=self.hotel, code="HK", name="Housekeeping", department_type="HOUSEKEEPING"
+        other_dept, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            name="Housekeeping",
+            defaults={"code": "HK", "department_type": "HOUSEKEEPING"},
         )
         po = PurchaseOrder.objects.create(
             supplier=self.supplier, department=other_dept,
