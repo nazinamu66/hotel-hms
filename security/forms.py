@@ -147,3 +147,95 @@ class StaffExitPassForm(forms.ModelForm):
             if employee_hotel != self.hotel.pk:
                 self.add_error("employee", "Select an employee assigned to this hotel.")
         return cleaned
+
+
+from .models import SecurityIncident, SecurityOccurrenceReport
+
+
+class SecurityIncidentForm(forms.ModelForm):
+    class Meta:
+        model = SecurityIncident
+        fields = [
+            "category", "severity", "occurred_at", "location", "summary",
+            "description", "persons_involved", "witnesses",
+            "immediate_action", "evidence",
+        ]
+        widgets = {
+            "occurred_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "description": forms.Textarea(attrs={"rows": 5}),
+            "persons_involved": forms.Textarea(attrs={"rows": 2}),
+            "witnesses": forms.Textarea(attrs={"rows": 2}),
+            "immediate_action": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, hotel=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.hotel = hotel
+        if hotel:
+            self.instance.hotel = hotel
+
+
+class SecurityIncidentReviewForm(forms.Form):
+    decision = forms.ChoiceField(choices=[
+        ("UNDER_REVIEW", "Accept for review"),
+        ("INVESTIGATION", "Open investigation"),
+        ("ESCALATED", "Escalate"),
+    ])
+    assigned_investigator = forms.ModelChoiceField(
+        queryset=User.objects.none(), required=False,
+        label="Assign investigator",
+    )
+    note = forms.CharField(widget=forms.Textarea(attrs={"rows": 4}), label="Review / investigation note")
+
+    def __init__(self, *args, hotel=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["assigned_investigator"].queryset = User.objects.filter(
+            role="SECURITY", is_active=True,
+            department__department_type="SECURITY",
+            department__hotel=hotel,
+        ).order_by("first_name", "last_name", "username") if hotel else User.objects.none()
+
+
+class SecurityIncidentUpdateForm(forms.Form):
+    event_type = forms.ChoiceField(choices=[
+        ("INVESTIGATION", "Investigation update"),
+        ("ESCALATED", "Escalation"),
+        ("NOTE", "Case note"),
+    ])
+    note = forms.CharField(widget=forms.Textarea(attrs={"rows": 4}))
+
+
+class SecurityIncidentResolutionForm(forms.Form):
+    resolution_summary = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 4}),
+        label="Resolution / closure summary",
+    )
+    close_case = forms.BooleanField(required=False, label="Close this incident after resolution")
+
+
+class SecurityOccurrenceReportForm(forms.ModelForm):
+    class Meta:
+        model = SecurityOccurrenceReport
+        fields = ["duty_date", "shift_summary", "outstanding_matters", "incidents"]
+        widgets = {
+            "duty_date": forms.DateInput(attrs={"type": "date"}),
+            "shift_summary": forms.Textarea(attrs={"rows": 6}),
+            "outstanding_matters": forms.Textarea(attrs={"rows": 4}),
+        }
+
+    def __init__(self, *args, hotel=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.hotel = hotel
+        if hotel:
+            self.instance.hotel = hotel
+        self.fields["incidents"].queryset = SecurityIncident.objects.filter(
+            hotel=hotel
+        ).exclude(status="CLOSED").order_by("-occurred_at") if hotel else SecurityIncident.objects.none()
+        self.fields["incidents"].required = False
+
+
+class SecurityOccurrenceReviewForm(forms.Form):
+    review_note = forms.CharField(
+        required=False, widget=forms.Textarea(attrs={"rows": 3}),
+        label="Security Head review note",
+    )
