@@ -9,18 +9,18 @@ from accounts.services.access import get_accessible_hotels
 from inventory.models import Department
 from .forms import ShiftDefinitionForm, WeeklyRosterCreateForm
 from .models import RosterAssignment, RosterAuditEvent, ShiftDefinition, WeeklyRoster
-from .permissions import can_view_roster, is_hr_head, manageable_roster_departments
+from .permissions import can_view_roster, is_hr_head, is_hr_staff, is_roster_hod, manageable_roster_departments
 
 
 def _require_roster_access(user):
-    if not user.is_active or not (is_hr_head(user) or (user.is_department_head and user.department_id)):
+    if not user.is_active or not (is_hr_staff(user) or (user.is_department_head and user.department_id)): 
         raise PermissionDenied
 
 
 @login_required
 def dashboard(request):
     _require_roster_access(request.user)
-    if is_hr_head(request.user):
+    if is_hr_staff(request.user):
         rosters = WeeklyRoster.objects.filter(hotel__in=get_accessible_hotels(request.user))
     else:
         rosters = WeeklyRoster.objects.filter(department_id=request.user.department_id)
@@ -66,7 +66,7 @@ def roster_detail(request, roster_id):
     employees = roster.department.users.filter(is_active=True).order_by("first_name", "last_name", "username")
     dates = [roster.week_start + timedelta(days=i) for i in range(7)]
     editable = roster.status in {WeeklyRoster.DRAFT, WeeklyRoster.RETURNED} and (
-        is_hr_head(request.user) or request.user.department_id == roster.department_id
+        is_hr_head(request.user) or is_roster_hod(request.user, roster.department)
     )
     if request.method == "POST":
         if not editable:
@@ -146,7 +146,7 @@ def roster_submit(request, roster_id):
     if request.method != "POST":
         raise PermissionDenied
     roster = get_object_or_404(WeeklyRoster, pk=roster_id)
-    if not can_view_roster(request.user, roster.department):
+    if not (is_hr_head(request.user) or is_roster_hod(request.user, roster.department)):
         raise PermissionDenied
     if roster.status not in {WeeklyRoster.DRAFT, WeeklyRoster.RETURNED}:
         raise PermissionDenied
