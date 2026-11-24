@@ -12,6 +12,26 @@ from .models import PropertyExitPass, VehicleVisit
 MANAGEMENT_ROLES = ("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 SECURITY_ACCESS_ROLES = ("SECURITY", *MANAGEMENT_ROLES)
 
+def security_head_required(view_func):
+    """Restrict supervisory Security workflows to the assigned Security Head."""
+    from functools import wraps
+
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            from django.shortcuts import redirect as auth_redirect
+            return auth_redirect("/accounts/login/")
+        if (
+            not request.user.is_active
+            or not request.user.is_security_head
+        ):
+            raise PermissionDenied
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
+
+
+
 
 def _accessible_hotels(user):
     if user.role in {"DIRECTOR", "ADMIN"}:
