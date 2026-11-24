@@ -1234,6 +1234,9 @@ def security_delivery_list(request):
 def security_delivery_create(request):
     hotel = _hotel_for_user(request)
     form = SecurityDeliveryVisitForm(request.POST or None, hotel=hotel)
+    # Assign the hotel before ModelForm validation because the model's clean()
+    # validates supplier/department ownership against this hotel.
+    form.instance.hotel = hotel
     if request.method == "POST" and form.is_valid():
         record = form.save(commit=False)
         record.hotel = hotel
