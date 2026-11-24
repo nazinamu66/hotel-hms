@@ -70,7 +70,9 @@ def security_dashboard(request):
     passes = PropertyExitPass.objects.filter(hotel=hotel)
     visits = VehicleVisit.objects.filter(hotel=hotel)
     today = timezone.localdate()
+    latest_handover = SecurityShiftHandover.objects.filter(hotel=hotel).select_related("submitted_by", "acknowledged_by").first()
     context = {
+        "latest_handover": latest_handover,
         "hotel": hotel,
         "available_hotels": _accessible_hotels(request.user),
         "vehicles_inside": visits.filter(exited_at__isnull=True).count(),
