@@ -1,4 +1,5 @@
 from datetime import time, timedelta
+import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -476,11 +477,13 @@ class StaffExitPass(models.Model):
 
     def save(self, *args, **kwargs):
         creating = self.pk is None
+        if creating and not self.pass_number:
+            self.pass_number = f"TMP-{uuid.uuid4().hex[:20]}"
         if self.employee_id:
             self.employee_name = self.employee.get_full_name() or self.employee.username
             self.department_name = self.employee.department.name if self.employee.department_id else ""
         super().save(*args, **kwargs)
-        if creating and not self.pass_number:
+        if creating and self.pass_number.startswith("TMP-"):
             self.pass_number = f"SP-{self.hotel_id}-{self.pk:07d}"
             super().save(update_fields=["pass_number"])
 
