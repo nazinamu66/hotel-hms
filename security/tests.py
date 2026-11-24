@@ -1134,3 +1134,110 @@ class SecurityIncidentAndOccurrenceTests(TestCase):
         report.refresh_from_db()
         self.assertEqual(report.reviewed_by, self.cso)
         self.assertIsNotNone(report.reviewed_at)
+
+
+class SecurityPatrolTests(TestCase):
+    def setUp(self):
+        self.org = Organization.objects.create(name="Patrol Test Org")
+        self.hotel = Hotel.objects.create(name="Patrol Test Hotel", organization=self.org)
+        self.department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Security",
+            defaults={"code": "SEC", "department_type": "SECURITY"},
+        )
+        self.officer = User.objects.create_user(
+            username="patrol-officer", password="test", role="SECURITY",
+            department=self.department,
+        )
+        self.cso = User.objects.create_user(
+            username="patrol-cso", password="test", role="SECURITY",
+            department=self.department, is_department_head=True,
+        )
+
+    def make_route(self):
+        from .models import SecurityPatrolRoute, SecurityPatrolCheckpoint
+        route = SecurityPatrolRoute.objects.create(
+            hotel=self.hotel, name="Night perimeter", created_by=self.cso,
+        )
+        first = SecurityPatrolCheckpoint.objects.create(
+            route=route, name="Main gate", checkpoint_code="GATE-01", sequence=1,
+        )
+        second = SecurityPatrolCheckpoint.objects.create(
+            route=route, name="Rear entrance", checkpoint_code="REAR-02", sequence=2,
+        )
+        return route, first, second
+
+    def test_only_security_head_can_create_patrol_route(self):
+        self.client.force_login(self.officer)
+        response = self.client.get(reverse("security_patrol_route_create"))
+        self.assertEqual(response.status_code, 403)
+        self.client.force_login(self.cso)
+        response = self.client.post(reverse("security_patrol_route_create"), {
+            "name": "Night perimeter", "description": "External boundary", "is_active": "on",
+        })
+        self.assertEqual(response.status_code, 302)
+        from .models import SecurityPatrolRoute
+        self.assertTrue(SecurityPatrolRoute.objects.filter(hotel=self.hotel, name="Night perimeter").exists())
+
+    def test_officer_can_start_patrol_and_record_checkpoint(self):
+        from .models import SecurityPatrolRun, SecurityPatrolVisit
+        route, first, second = self.make_route()
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse("security_patrol_start"), {
+            "route": route.pk, "start_note": "Beginning night round",
+        })
+        self.assertEqual(response.status_code, 302)
+        run = SecurityPatrolRun.objects.get()
+        self.assertEqual(run.officer, self.officer)
+        response = self.client.post(reverse("security_patrol_record_visit", args=[run.pk]), {
+            "checkpoint_code": "gate-01", "observation": "Gate secure",
+        })
+        self.assertEqual(response.status_code, 302)
+        visit = SecurityPatrolVisit.objects.get()
+        self.assertEqual(visit.checkpoint, first)
+        self.assertEqual(visit.recorded_by, self.officer)
+        self.assertIsNotNone(visit.recorded_at)
+
+    def test_duplicate_checkpoint_visit_is_rejected(self):
+        from .models import SecurityPatrolRun, SecurityPatrolVisit
+        route, first, second = self.make_route()
+        run = SecurityPatrolRun.objects.create(hotel=self.hotel, route=route, officer=self.officer)
+        SecurityPatrolVisit.objects.create(run=run, checkpoint=first, recorded_by=self.officer)
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse("security_patrol_record_visit", args=[run.pk]), {
+            "checkpoint_code": "GATE-01",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(SecurityPatrolVisit.objects.filter(run=run).count(), 1)
+
+    def test_patrol_cannot_complete_until_required_checkpoints_are_recorded(self):
+        from .models import SecurityPatrolRun, SecurityPatrolVisit
+        route, first, second = self.make_route()
+        run = SecurityPatrolRun.objects.create(hotel=self.hotel, route=route, officer=self.officer)
+        self.client.force_login(self.officer)
+        response = self.client.post(reverse("security_patrol_complete", args=[run.pk]), {
+            "completion_note": "",
+        })
+        self.assertEqual(response.status_code, 302)
+        run.refresh_from_db()
+        self.assertEqual(run.status, SecurityPatrolRun.IN_PROGRESS)
+        SecurityPatrolVisit.objects.create(run=run, checkpoint=first, recorded_by=self.officer)
+        SecurityPatrolVisit.objects.create(run=run, checkpoint=second, recorded_by=self.officer)
+        response = self.client.post(reverse("security_patrol_complete", args=[run.pk]), {
+            "completion_note": "All locations checked",
+        })
+        self.assertEqual(response.status_code, 302)
+        run.refresh_from_db()
+        self.assertEqual(run.status, SecurityPatrolRun.COMPLETED)
+        self.assertIsNotNone(run.completed_at)
+
+    def test_officer_cannot_access_another_officers_patrol_run(self):
+        from .models import SecurityPatrolRun
+        route, first, second = self.make_route()
+        run = SecurityPatrolRun.objects.create(hotel=self.hotel, route=route, officer=self.officer)
+        other = User.objects.create_user(
+            username="other-patrol-officer", password="test", role="SECURITY",
+            department=self.department,
+        )
+        self.client.force_login(other)
+        response = self.client.get(reverse("security_patrol_run_detail", args=[run.pk]))
+        self.assertEqual(response.status_code, 403)
