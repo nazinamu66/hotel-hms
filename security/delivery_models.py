@@ -98,7 +98,7 @@ class SecurityDeliveryVisit(models.Model):
                 errors["purchase_order"] = "The Purchase Order is for a different receiving department."
             elif po.supplier_id != self.supplier_id:
                 errors["purchase_order"] = "The supplier does not match the Purchase Order."
-            elif po.status not in ("APPROVED", "PARTIALLY_RECEIVED", "RECEIVED"):
+            elif po.status not in ("APPROVED", "PARTIALLY_RECEIVED"):
                 errors["purchase_order"] = "Only approved Purchase Orders can be linked to a delivery."
         if self.purchase_receipt_id:
             receipt = self.purchase_receipt
