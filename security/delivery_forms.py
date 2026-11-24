@@ -25,7 +25,7 @@ class SecurityDeliveryVisitForm(forms.ModelForm):
         self.fields["department"].queryset = Department.objects.filter(hotel=hotel, is_active=True).order_by("name") if hotel else Department.objects.none()
         self.fields["purchase_order"].queryset = PurchaseOrder.objects.filter(
             department__hotel=hotel,
-            status__in=("APPROVED", "PARTIALLY_RECEIVED", "RECEIVED"),
+            status__in=("APPROVED", "PARTIALLY_RECEIVED"),
         ).select_related("supplier", "department").order_by("-created_at") if hotel else PurchaseOrder.objects.none()
         self.fields["purchase_order"].required = False
         self.fields["vehicle_description"].required = False
