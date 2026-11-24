@@ -7,7 +7,7 @@
     {% endif %}
     <header class="hms-page-header">
         <div class="hms-page-heading"><p class="hms-eyebrow">Gate control · Vehicle &amp; property custody</p><h1 class="hms-page-title">Security overview</h1><p class="hms-page-subtitle">{{ hotel.name }} · Live vehicle occupancy and staff property movements.</p></div>
-        <div class="hms-actions"><a class="hms-btn hms-btn-primary" href="{% url 'security_vehicle_list' %}">Vehicle register <span aria-hidden="true">→</span></a>{% if user.role == "SECURITY" %}<a class="hms-btn hms-btn-secondary" href="{% url 'security_vehicle_entry' %}">+ Record entry</a>{% endif %}</div>
+        <div class="hms-actions"><a class="hms-btn hms-btn-primary" href="{% url 'security_vehicle_list' %}">Vehicle register <span aria-hidden="true">→</span></a>{% if user.is_security_head %}<a class="hms-btn hms-btn-secondary" href="{% url 'security_vehicle_history' %}">Vehicle movement history</a>{% endif %}{% if user.role == "SECURITY" %}<a class="hms-btn hms-btn-secondary" href="{% url 'security_vehicle_entry' %}">+ Record entry</a>{% endif %}</div>
     </header>
     <section class="hms-kpi-grid" aria-label="Security summary">
         <article class="hms-kpi"><div class="hms-kpi-label">Visitors currently inside</div><div class="hms-kpi-value">{{ visitors_inside }}</div><div class="hms-kpi-note">People not yet checked out</div></article>
@@ -18,7 +18,7 @@
         <article class="hms-kpi"><div class="hms-kpi-label">Property overdue</div><div class="hms-kpi-value">{{ overdue }}</div><div class="hms-kpi-note">Temporary removals past return date</div></article>
     </section>
     <section class="hms-card">
-        <div class="hms-card-heading"><div><h2 class="hms-card-title">Visitors currently inside</h2><p class="hms-card-description">Hotel guests, staff visitors and outsourced workers currently on the premises.</p></div><div class="hms-actions"><a class="hms-link" href="{% url 'security_visitor_list' %}?status=INSIDE">View visitor register</a>{% if user.role == "SECURITY" %}<a class="hms-btn hms-btn-primary" href="{% url 'security_visitor_entry' %}">+ Record visitor</a>{% endif %}</div></div>
+        <div class="hms-card-heading"><div><h2 class="hms-card-title">Visitors currently inside</h2><p class="hms-card-description">Hotel guests, staff visitors and outsourced workers currently on the premises.</p></div><div class="hms-actions"><a class="hms-link" href="{% url 'security_visitor_list' %}?status=INSIDE">View visitor register</a>{% if user.is_security_head %}<a class="hms-link" href="{% url 'security_visitor_history' %}">Visitor movement history</a>{% endif %}{% if user.role == "SECURITY" %}<a class="hms-btn hms-btn-primary" href="{% url 'security_visitor_entry' %}">+ Record visitor</a>{% endif %}</div></div>
         <div class="hms-table-wrap"><table class="hms-table"><thead><tr><th>Visitor</th><th>Visit type</th><th>Host / Work</th><th>Entry time</th><th>Recorded by</th></tr></thead><tbody>
         {% for v in recent_visitors_inside %}<tr><td><span class="hms-table-primary">{{ v.visitor_name }}</span><br><small>{{ v.phone|default:"No phone recorded" }}</small></td><td>{{ v.get_visitor_type_display }}</td><td>{{ v.host_display }}</td><td>{{ v.entered_at|date:"M j, Y · g:i a" }}</td><td>{{ v.entered_by.get_full_name|default:v.entered_by.username }}</td></tr>{% empty %}<tr><td colspan="5"><div class="hms-empty"><strong>No visitors currently inside</strong>New visitor arrivals will appear here.</div></td></tr>{% endfor %}
         </tbody></table></div>
