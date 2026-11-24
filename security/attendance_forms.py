@@ -1,29 +1,49 @@
 from datetime import timedelta
 
 from django import forms
+from django.contrib.auth import get_user_model
+from django.db.models import Q
 from django.utils import timezone
 
 from personnel.models import RosterAssignment, WeeklyRoster
 from .models import StaffAttendance
 
+User = get_user_model()
+
 
 class StaffAttendanceArrivalForm(forms.ModelForm):
+    employee = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        label="Employee",
+        empty_label="Select any active hotel employee",
+    )
     assignment = forms.ModelChoiceField(
         queryset=RosterAssignment.objects.none(),
-        label="Scheduled employee",
-        empty_label="Select employee and approved shift",
-        help_text="Only employees with an approved working shift are listed.",
+        required=False,
+        label="Scheduled shift (optional)",
+        empty_label="Not working the published shift / emergency cover",
+        help_text=(
+            "Link the published shift only when the employee is working that assignment. "
+            "Leave this blank for a shift swap, emergency cover or an unscheduled visit."
+        ),
     )
 
     class Meta:
         model = StaffAttendance
         fields = ["arrival_note"]
-        widgets = {"arrival_note": forms.Textarea(attrs={"rows": 2, "placeholder": "Optional note"})}
+        widgets = {"arrival_note": forms.Textarea(attrs={"rows": 2, "placeholder": "Optional note, e.g. covering another employee"})}
 
     def __init__(self, *args, hotel=None, now=None, **kwargs):
         super().__init__(*args, **kwargs)
         if not hotel:
             return
+
+        employee_hotel = Q(hotel=hotel) | Q(department__hotel=hotel)
+        self.fields["employee"].queryset = User.objects.filter(
+            employee_hotel, is_active=True,
+        ).exclude(
+            role__in={"ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT"}
+        ).distinct().order_by("first_name", "last_name", "username")
 
         now = now or timezone.now()
         today = timezone.localdate(now)
@@ -37,14 +57,9 @@ class StaffAttendanceArrivalForm(forms.ModelForm):
         ).select_related(
             "employee", "employee__department", "shift", "roster", "roster__department",
         )
-
         eligible_ids = []
         for assignment in candidates:
             _start, end = assignment.shift.interval_for(assignment.work_date)
-            # Today's scheduled shifts remain selectable even after their
-            # scheduled end so a very late arrival can still be recorded.
-            # Yesterday's assignment is eligible only when it is an overnight
-            # shift whose scheduled end has not yet passed.
             if assignment.work_date == today or (
                 assignment.shift.crosses_midnight and now <= end
             ):
@@ -63,3 +78,11 @@ class StaffAttendanceArrivalForm(forms.ModelForm):
             f" · {assignment.work_date:%d %b}"
             f" ({assignment.shift.start_time:%H:%M}–{assignment.shift.end_time:%H:%M})"
         )
+
+    def clean(self):
+        cleaned = super().clean()
+        employee = cleaned.get("employee")
+        assignment = cleaned.get("assignment")
+        if assignment and employee and assignment.employee_id != employee.pk:
+            self.add_error("assignment", "Choose a shift assigned to the selected employee, or leave this field blank for emergency cover.")
+        return cleaned
