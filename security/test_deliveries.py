@@ -98,20 +98,22 @@ class SecurityDeliveryRegisterTests(TestCase):
         self.assertNotIn(fully_received, form.fields["purchase_order"].queryset)
         self.assertIn(self.po, form.fields["purchase_order"].queryset)
 
-    def test_arrival_page_renders_eligible_po_option_with_supplier_mapping(self):
+    def test_arrival_page_loads_selected_supplier_purchase_orders_server_side(self):
         self.client.force_login(self.security)
-        response = self.client.get(reverse("security_delivery_create"))
+        response = self.client.get(
+            reverse("security_delivery_create"), {"supplier": self.supplier.pk}
+        )
         self.assertEqual(response.status_code, 200)
         html = response.content.decode()
         self.assertIn(f'value="{self.po.pk}"', html)
-        self.assertIn(f'data-supplier-id="{self.supplier.pk}"', html)
-        self.assertIn("Choose an expected Purchase Order", html)
+        self.assertIn("PO #", html)
 
     def test_po_options_are_limited_to_selected_supplier(self):
         other_supplier = Supplier.objects.create(hotel=self.hotel, name="Other Supplier")
         other_po = self.make_po(supplier=other_supplier)
         form = SecurityDeliveryVisitForm(
             data={"supplier": self.supplier.pk}, hotel=self.hotel,
+            selected_supplier=self.supplier.pk,
         )
         self.assertIn(self.po, form.fields["purchase_order"].queryset)
         self.assertNotIn(other_po, form.fields["purchase_order"].queryset)
