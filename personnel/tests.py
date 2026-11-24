@@ -73,7 +73,10 @@ class PersonnelRosterTests(TestCase):
                     )
 
     def test_hr_head_is_identified_by_role_department_and_department_head_flag(self):
+        from accounts.services.access import is_department_head
         self.assertTrue(is_hr_head(self.hr_head))
+        self.assertFalse(self.hr_head.is_operational_staff)
+        self.assertFalse(is_department_head(self.hr_head))
         ordinary_hr = User.objects.create_user(
             username="hr-clerk", password="test", role="HR",
             department=self.hr_department,
