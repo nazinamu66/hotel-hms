@@ -1,0 +1,11 @@
+{% extends "base/base.html" %}
+{% block title %}Submit Security Handover{% endblock %}
+{% block content %}
+<div class="hms-page">
+<header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Security operations · {{ hotel.name }}</p><h1 class="hms-page-title">Submit shift handover</h1><p class="hms-page-subtitle">Daily team changeover is scheduled for {{ config.handover_time|time:"g:i A" }}. Four different officers form the outgoing and incoming teams.</p></div><a class="hms-btn hms-btn-secondary" href="{% url 'security_handover_list' %}">Handover register</a></header>
+<div class="hms-card"><form method="post">{% csrf_token %}{% if available_hotels.count > 1 %}<input type="hidden" name="hotel" value="{{ hotel.pk }}">{% endif %}{{ form.non_field_errors }}
+<div class="hms-form-grid">{% for field in form %}<div class="hms-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}</div>
+<p class="hms-card-description">The system will capture a read-only snapshot of visitors and vehicles currently inside, plus property passes awaiting exit or currently outside.</p>
+<div class="hms-form-footer"><button class="hms-btn hms-btn-primary" type="submit">Submit outgoing handover</button></div></form></div>
+</div>
+{% endblock %}
