@@ -8,12 +8,23 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from accounts.decorators import role_required
 from inventory.models import Hotel
-from .forms import PropertyExitPassForm, VehicleVisitForm, VisitorVisitForm
-from .models import PropertyExitPass, VehicleVisit, VisitorVisit, SecurityShiftConfiguration, SecurityShiftHandover, StaffAttendance
+from .forms import PropertyExitPassForm, StaffExitPassForm, VehicleVisitForm, VisitorVisitForm
+from .models import PropertyExitPass, StaffExitPass, VehicleVisit, VisitorVisit, SecurityShiftConfiguration, SecurityShiftHandover, StaffAttendance
 from .handover_forms import SecurityShiftHandoverForm, SecurityHandoverAcknowledgementForm, SecurityHandoverCSOReviewForm
 
 MANAGEMENT_ROLES = ("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 SECURITY_ACCESS_ROLES = ("SECURITY", *MANAGEMENT_ROLES)
+
+def staff_exit_authorizer_required(view_func):
+    from functools import wraps
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        user = request.user
+        hr_head = bool(user.is_authenticated and user.is_active and user.role == "HR" and user.department_id and user.department.department_type == "HUMAN_RESOURCES" and user.is_department_head)
+        if not user.is_authenticated or not user.is_active or not (user.role in {"ADMIN", "DIRECTOR", "MANAGER"} or hr_head):
+            raise PermissionDenied
+        return view_func(request, *args, **kwargs)
+    return wrapper
 
 def security_head_required(view_func):
     """Restrict supervisory Security workflows to the assigned Security Head."""
@@ -242,6 +253,107 @@ def property_pass_detail(request, pass_id):
     hotel = _hotel_for_user(request)
     record = get_object_or_404(PropertyExitPass.objects.select_related("authorising_manager", "gate_out_by", "return_confirmed_by", "equipment_asset", "staff_user"), pk=pass_id, hotel=hotel)
     return render(request, "security/pass_detail.html", {"record": record, "available_hotels": _accessible_hotels(request.user)})
+
+
+
+@login_required
+@staff_exit_authorizer_required
+def staff_exit_pass_create(request):
+    hotel = _hotel_for_user(request)
+    form = StaffExitPassForm(request.POST or None, hotel=hotel)
+    if request.method == "POST" and form.is_valid():
+        record = form.save(commit=False)
+        record.hotel = hotel
+        record.authorised_by = request.user
+        record.authorised_at = timezone.now()
+        record.status = StaffExitPass.AUTHORISED
+        try:
+            record.full_clean()
+            record.save()
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        else:
+            messages.success(request, f"Staff exit pass {record.pass_number} authorised.")
+            return redirect("security_staff_exit_detail", pass_id=record.pk)
+    return render(request, "security/staff_exit_form.html", {"form": form, "hotel": hotel})
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def staff_exit_pass_list(request):
+    hotel = _hotel_for_user(request)
+    records = StaffExitPass.objects.filter(hotel=hotel).select_related("employee", "authorised_by", "gate_out_by", "gate_in_by")
+    status = request.GET.get("status", "").strip()
+    if status in dict(StaffExitPass.STATUS_CHOICES):
+        records = records.filter(status=status)
+    query = request.GET.get("q", "").strip()
+    if query:
+        records = records.filter(Q(employee_name__icontains=query) | Q(pass_number__icontains=query) | Q(destination__icontains=query) | Q(department_name__icontains=query))
+    return render(request, "security/staff_exit_list.html", {"hotel": hotel, "records": records, "statuses": StaffExitPass.STATUS_CHOICES, "status_filter": status, "search_query": query})
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def staff_exit_pass_detail(request, pass_id):
+    hotel = _hotel_for_user(request)
+    record = get_object_or_404(StaffExitPass.objects.select_related("employee", "authorised_by", "gate_out_by", "gate_in_by", "cancelled_by"), pk=pass_id, hotel=hotel)
+    return render(request, "security/staff_exit_detail.html", {"record": record, "hotel": hotel})
+
+
+@login_required
+@role_required("SECURITY")
+@transaction.atomic
+def staff_exit_pass_gate_out(request, pass_id):
+    hotel = _hotel_for_user(request)
+    record = get_object_or_404(StaffExitPass.objects.select_for_update(), pk=pass_id, hotel=hotel)
+    if request.method == "POST" and record.status == StaffExitPass.AUTHORISED:
+        record.status = StaffExitPass.OUTSIDE
+        record.gate_out_by = request.user
+        record.gate_out_at = timezone.now()
+        record.gate_out_note = request.POST.get("gate_out_note", "").strip()
+        record.save(update_fields=["status", "gate_out_by", "gate_out_at", "gate_out_note"])
+    return redirect("security_staff_exit_detail", pass_id=record.pk)
+
+
+@login_required
+@role_required("SECURITY")
+@transaction.atomic
+def staff_exit_pass_gate_in(request, pass_id):
+    hotel = _hotel_for_user(request)
+    record = get_object_or_404(StaffExitPass.objects.select_for_update(), pk=pass_id, hotel=hotel)
+    if request.method == "POST" and record.status == StaffExitPass.OUTSIDE:
+        record.status = StaffExitPass.RETURNED
+        record.gate_in_by = request.user
+        record.gate_in_at = timezone.now()
+        record.gate_in_note = request.POST.get("gate_in_note", "").strip()
+        record.save(update_fields=["status", "gate_in_by", "gate_in_at", "gate_in_note"])
+    return redirect("security_staff_exit_detail", pass_id=record.pk)
+
+
+@login_required
+@staff_exit_authorizer_required
+@transaction.atomic
+def staff_exit_pass_cancel(request, pass_id):
+    hotel = _hotel_for_user(request)
+    record = get_object_or_404(StaffExitPass.objects.select_for_update(), pk=pass_id, hotel=hotel)
+    if request.method == "POST" and record.status == StaffExitPass.AUTHORISED:
+        note = request.POST.get("cancellation_note", "").strip()
+        if note:
+            record.status = StaffExitPass.CANCELLED
+            record.cancelled_by = request.user
+            record.cancelled_at = timezone.now()
+            record.cancellation_note = note
+            record.save(update_fields=["status", "cancelled_by", "cancelled_at", "cancellation_note"])
+    return redirect("security_staff_exit_detail", pass_id=record.pk)
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def staff_exit_pass_print(request, pass_id):
+    hotel = _hotel_for_user(request)
+    record = get_object_or_404(StaffExitPass, pk=pass_id, hotel=hotel)
+    return render(request, "security/staff_exit_print.html", {"record": record, "hotel": hotel})
+
 
 
 @login_required
