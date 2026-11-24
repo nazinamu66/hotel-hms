@@ -280,6 +280,31 @@ class PropertyExitPassTests(TestCase):
         self.assertEqual(user.hotel, self.hotel)
 
 
+    def test_vehicle_register_searches_exited_history_by_plate(self):
+        visit = VehicleVisit.objects.create(
+            hotel=self.hotel, make="TOYOTA", model="Corolla",
+            plate_number="ABC-901XY", entered_by=self.security,
+            exited_at=timezone.now(), exited_by=self.security,
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_vehicle_list"), {"status": "EXITED", "q": "901XY"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["visits"]), [visit])
+
+    def test_vehicle_register_filters_by_entry_date(self):
+        visit = VehicleVisit.objects.create(
+            hotel=self.hotel, make="HONDA", plate_number="ABC-902XY",
+            entered_by=self.security,
+        )
+        self.client.force_login(self.security)
+        today = timezone.localdate().isoformat()
+        response = self.client.get(reverse("security_vehicle_list"), {
+            "status": "ALL", "date_from": today, "date_to": today,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ABC-902XY")
+
+
 class VisitorVisitTests(TestCase):
     def setUp(self):
         self.org = Organization.objects.create(name='Visitor Test Org')
@@ -325,3 +350,38 @@ class VisitorVisitTests(TestCase):
         self.client.force_login(manager)
         self.assertEqual(self.client.get(reverse('security_visitor_list')).status_code, 200)
         self.assertEqual(self.client.get(reverse('security_visitor_entry')).status_code, 403)
+
+
+    def test_visitor_register_searches_exited_visitors_by_name_and_id(self):
+        from .models import VisitorVisit
+        visit = VisitorVisit.objects.create(
+            hotel=self.hotel, visitor_type="GUEST", visitor_name="Hauwa Ibrahim",
+            phone="08030000000", id_type="NIN", id_number="NIN-554433",
+            purpose="Family visit", guest_name="Mr Ibrahim", guest_room_number="305",
+            entered_by=self.security, exited_at=timezone.now(), exited_by=self.security,
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_visitor_list"), {
+            "status": "EXITED", "q": "NIN-554433",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["visits"]), [visit])
+
+    def test_visitor_register_filters_by_category_and_entry_date(self):
+        from .models import VisitorVisit
+        guest = VisitorVisit.objects.create(
+            hotel=self.hotel, visitor_type="GUEST", visitor_name="Guest Visitor",
+            purpose="Visit", guest_name="Hotel Guest", entered_by=self.security,
+        )
+        VisitorVisit.objects.create(
+            hotel=self.hotel, visitor_type="STAFF", visitor_name="Staff Visitor",
+            purpose="Meeting", host_staff=self.staff, entered_by=self.security,
+        )
+        self.client.force_login(self.security)
+        today = timezone.localdate().isoformat()
+        response = self.client.get(reverse("security_visitor_list"), {
+            "status": "ALL", "visitor_type": "GUEST",
+            "date_from": today, "date_to": today,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["visits"]), [guest])
