@@ -466,7 +466,11 @@ def staff_attendance_list(request):
     date_value = request.GET.get("date", "").strip()
     selected_date = parse_date(date_value) if date_value else timezone.localdate()
     if selected_date:
-        records = records.filter(work_date=selected_date)
+        # Include overnight shifts that began on the previous roster date but
+        # are scheduled to finish on the selected calendar date.
+        records = records.filter(
+            Q(work_date=selected_date) | Q(scheduled_end_at__date=selected_date)
+        )
     search = request.GET.get("q", "").strip()
     if search:
         records = records.filter(Q(employee__username__icontains=search) | Q(employee__first_name__icontains=search) | Q(employee__last_name__icontains=search) | Q(employee__department__name__icontains=search))
