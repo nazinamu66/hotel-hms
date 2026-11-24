@@ -1,6 +1,130 @@
 {% extends "base/base.html" %}
 {% block title %}Daily Occurrence Report{% endblock %}
 {% block content %}
-<div class="hms-page"><header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Security operations · {{ hotel.name }}</p><h1 class="hms-page-title">Daily Occurrence Report</h1><p class="hms-page-subtitle">Consolidate the day's operational activity and outstanding matters.</p></div><a class="hms-btn hms-btn-secondary" href="{% url 'security_occurrence_list' %}">Report register</a></header>
-<section class="hms-card"><form method="post">{% csrf_token %}{% if available_hotels.count > 1 %}<input type="hidden" name="hotel" value="{{ hotel.pk }}">{% endif %}{{ form.non_field_errors }}{% for field in form %}<div class="hms-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}<p class="hms-card-description">The system captures a snapshot of attendance, visitors, vehicles, staff and property passes, and incident activity for the selected date.</p><div class="hms-form-footer"><button class="hms-btn hms-btn-primary" type="submit">Submit Daily Occurrence Report</button></div></form></section></div>
+<style>
+    .occurrence-page { max-width: 1180px; margin: 0 auto; }
+    .occurrence-hero { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; margin-bottom:24px; }
+    .occurrence-hero-copy { max-width:760px; }
+    .occurrence-kicker { display:flex; align-items:center; gap:8px; color:#2563eb; font-size:11px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; margin:0 0 9px; }
+    .occurrence-title { margin:0; color:#172033; font-size:clamp(27px,3vw,36px); line-height:1.12; font-weight:800; letter-spacing:-.035em; }
+    .occurrence-subtitle { margin:10px 0 0; color:#64748b; font-size:14px; line-height:1.65; }
+    .occurrence-card { background:#fff; border:1px solid #e2e8f0; border-radius:18px; overflow:hidden; box-shadow:0 10px 30px rgba(15,23,42,.045); }
+    .occurrence-card-head { display:flex; align-items:center; gap:13px; padding:20px 24px; border-bottom:1px solid #edf1f6; background:linear-gradient(115deg,#fff 0%,#f8fbff 100%); }
+    .occurrence-icon { width:42px; height:42px; flex:0 0 42px; display:grid; place-items:center; border-radius:13px; color:#1d4ed8; background:#eaf1ff; font-size:19px; font-weight:800; }
+    .occurrence-card-head h2 { margin:0; color:#1e293b; font-size:16px; font-weight:800; }
+    .occurrence-card-head p { margin:4px 0 0; color:#64748b; font-size:12px; }
+    .occurrence-form-body { padding:24px; }
+    .occurrence-section { margin-bottom:24px; }
+    .occurrence-section:last-of-type { margin-bottom:0; }
+    .occurrence-section-title { display:flex; align-items:center; gap:9px; margin:0 0 14px; color:#334155; font-size:13px; font-weight:800; }
+    .occurrence-section-title span { display:grid; place-items:center; width:23px; height:23px; border-radius:7px; background:#f1f5f9; color:#475569; font-size:11px; }
+    .occurrence-date-panel { padding:17px; border:1px solid #dbeafe; border-radius:13px; background:#f8fbff; }
+    .occurrence-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .occurrence-field { min-width:0; }
+    .occurrence-field.full { grid-column:1/-1; }
+    .occurrence-field label { display:block; margin:0 0 7px; color:#334155; font-size:12px; font-weight:750; }
+    .occurrence-field input:not([type=checkbox]), .occurrence-field select, .occurrence-field textarea { display:block; width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#172033; padding:11px 13px; font:inherit; font-size:13px; transition:border-color .15s,box-shadow .15s; }
+    .occurrence-field input:focus, .occurrence-field select:focus, .occurrence-field textarea:focus { outline:none; border-color:#6095f5; box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+    .occurrence-field textarea { min-height:125px; resize:vertical; line-height:1.55; }
+    .occurrence-field select[multiple] { min-height:150px; padding:8px; }
+    .occurrence-field select[multiple] option { padding:7px 9px; border-radius:6px; }
+    .occurrence-help { display:block; margin-top:7px; color:#718096; font-size:11px; line-height:1.5; }
+    .occurrence-error { margin:6px 0 0; color:#b91c1c; font-size:12px; }
+    .occurrence-nonfield-error { padding:12px 14px; margin-bottom:18px; border:1px solid #fecaca; border-radius:10px; color:#991b1b; background:#fef2f2; font-size:13px; }
+    .occurrence-snapshot { display:flex; align-items:flex-start; gap:12px; margin-top:22px; padding:15px 16px; border:1px solid #dbeafe; border-radius:12px; background:#f8fbff; color:#475569; }
+    .occurrence-snapshot-mark { display:grid; place-items:center; width:27px; height:27px; flex:0 0 27px; border-radius:8px; background:#dbeafe; color:#1d4ed8; font-weight:800; }
+    .occurrence-snapshot strong { display:block; margin-bottom:3px; color:#1e40af; font-size:12px; }
+    .occurrence-snapshot p { margin:0; font-size:12px; line-height:1.55; }
+    .occurrence-actions { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:18px 24px; border-top:1px solid #edf1f6; background:#fbfcfe; }
+    .occurrence-actions-note { color:#64748b; font-size:11px; }
+    .occurrence-submit { border:0; border-radius:10px; padding:12px 19px; color:#fff; background:#1d4ed8; font-size:13px; font-weight:750; cursor:pointer; box-shadow:0 5px 12px rgba(29,78,216,.16); }
+    .occurrence-submit:hover { background:#1e40af; }
+    @media(max-width:700px) { .occurrence-hero { flex-direction:column; } .occurrence-grid { grid-template-columns:1fr; } .occurrence-field.full { grid-column:auto; } .occurrence-form-body { padding:17px; } .occurrence-card-head { padding:17px; } .occurrence-actions { align-items:stretch; flex-direction:column; } .occurrence-submit { width:100%; } }
+</style>
+
+<div class="hms-page occurrence-page">
+    <header class="occurrence-hero">
+        <div class="occurrence-hero-copy">
+            <p class="occurrence-kicker">Security operations <span aria-hidden="true">/</span> {{ hotel.name }}</p>
+            <h1 class="occurrence-title">Daily Occurrence Report</h1>
+            <p class="occurrence-subtitle">Prepare a clear handover of the day's security activity, incidents and matters that still need attention.</p>
+        </div>
+        <a class="hms-btn hms-btn-secondary" href="{% url 'security_occurrence_list' %}">Report register</a>
+    </header>
+
+    <section class="occurrence-card">
+        <div class="occurrence-card-head">
+            <div class="occurrence-icon" aria-hidden="true">📋</div>
+            <div>
+                <h2>Duty report</h2>
+                <p>Complete each section before submitting for Security Head review.</p>
+            </div>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            {% if available_hotels.count > 1 %}<input type="hidden" name="hotel" value="{{ hotel.pk }}">{% endif %}
+            <div class="occurrence-form-body">
+                {% if form.non_field_errors %}
+                    <div class="occurrence-nonfield-error">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <section class="occurrence-section">
+                    <h3 class="occurrence-section-title"><span>01</span> Reporting period</h3>
+                    <div class="occurrence-date-panel">
+                        <div class="occurrence-field">
+                            <label for="{{ form.duty_date.id_for_label }}">Duty date</label>
+                            {{ form.duty_date }}
+                            {% if form.duty_date.help_text %}<small class="occurrence-help">{{ form.duty_date.help_text }}</small>{% endif %}
+                            {% for error in form.duty_date.errors %}<p class="occurrence-error">{{ error }}</p>{% endfor %}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="occurrence-section">
+                    <h3 class="occurrence-section-title"><span>02</span> Shift activity</h3>
+                    <div class="occurrence-field">
+                        <label for="{{ form.shift_summary.id_for_label }}">Shift summary</label>
+                        {{ form.shift_summary }}
+                        <small class="occurrence-help">Summarise patrols, access control, guest or staff matters, key activities and notable observations during the duty period.</small>
+                        {% for error in form.shift_summary.errors %}<p class="occurrence-error">{{ error }}</p>{% endfor %}
+                    </div>
+                </section>
+
+                <section class="occurrence-section">
+                    <h3 class="occurrence-section-title"><span>03</span> Outstanding matters</h3>
+                    <div class="occurrence-field">
+                        <label for="{{ form.outstanding_matters.id_for_label }}">Matters requiring follow-up</label>
+                        {{ form.outstanding_matters }}
+                        <small class="occurrence-help">Record unresolved issues, pending investigations, expected follow-ups and anything the incoming shift or management must know.</small>
+                        {% for error in form.outstanding_matters.errors %}<p class="occurrence-error">{{ error }}</p>{% endfor %}
+                    </div>
+                </section>
+
+                <section class="occurrence-section">
+                    <h3 class="occurrence-section-title"><span>04</span> Related incidents</h3>
+                    <div class="occurrence-field">
+                        <label for="{{ form.incidents.id_for_label }}">Link incidents to this report <span style="font-weight:500;color:#64748b;">(optional)</span></label>
+                        {{ form.incidents }}
+                        <small class="occurrence-help">Select any relevant open incidents. Use Ctrl (Windows) or Command (Mac) to select more than one.</small>
+                        {% for error in form.incidents.errors %}<p class="occurrence-error">{{ error }}</p>{% endfor %}
+                    </div>
+                </section>
+
+                <div class="occurrence-snapshot">
+                    <div class="occurrence-snapshot-mark" aria-hidden="true">i</div>
+                    <div>
+                        <strong>Automatic activity snapshot</strong>
+                        <p>When submitted, the system records attendance, visitor and vehicle movements, staff and property passes, and incident activity for the selected duty date. This snapshot is attached to the report for review.</p>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="occurrence-actions">
+                <span class="occurrence-actions-note">Please review your entries before submitting. A report can be created once per hotel per duty date.</span>
+                <button class="occurrence-submit" type="submit">Submit daily report <span aria-hidden="true">→</span></button>
+            </footer>
+        </form>
+    </section>
+</div>
 {% endblock %}
