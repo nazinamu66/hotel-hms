@@ -1,21 +1,66 @@
 {% extends "base/base.html" %}
 {% block title %}Supplier Deliveries{% endblock %}
 {% block content %}
-<div class="container-fluid py-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div><h2>Supplier Deliveries</h2><p class="text-muted mb-0">{{ hotel.name }} · Security gate register</p></div>
-    {% if request.user.role == "SECURITY" %}<a class="btn btn-primary" href="{% url 'security_delivery_create' %}">Record Delivery Arrival</a>{% endif %}
+<style>
+.delivery-register{max-width:1500px;margin:0 auto;padding:30px 24px 48px}
+.dr-eyebrow{font-size:.74rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#2563eb}
+.dr-title{font-size:clamp(1.7rem,3vw,2.2rem);font-weight:850;letter-spacing:-.04em;color:#172033;margin:5px 0}
+.dr-muted{color:#64748b}
+.dr-card{background:#fff;border:1px solid #e2e8f0;border-radius:17px;box-shadow:0 8px 26px rgba(15,23,42,.05);overflow:hidden}
+.dr-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin:22px 0}
+.dr-button{display:inline-flex;align-items:center;justify-content:center;padding:11px 16px;border-radius:10px;background:#1d4ed8;color:#fff;font-weight:750;text-decoration:none;border:0}
+.dr-filters{display:grid;grid-template-columns:minmax(220px,1fr) 220px auto;gap:12px;padding:18px}
+.dr-filters input,.dr-filters select{width:100%;min-height:44px;border:1px solid #cbd5e1;border-radius:10px;padding:9px 12px;background:#fff}
+.dr-table{width:100%;border-collapse:collapse;min-width:900px}
+.dr-table th{background:#f8fafc;color:#64748b;font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;text-align:left;padding:14px 16px;border-bottom:1px solid #e2e8f0}
+.dr-table td{padding:15px 16px;border-bottom:1px solid #edf2f7;color:#334155;font-size:.9rem}
+.dr-table tbody tr:hover{background:#f8fafc}
+.dr-ref{font-weight:800;color:#172033}
+.dr-open{font-weight:750;color:#1d4ed8;text-decoration:none}
+.dr-status{display:inline-flex;padding:5px 10px;border-radius:99px;font-size:.75rem;font-weight:800;background:#fef3c7;color:#92400e}
+.dr-status.departed{background:#e2e8f0;color:#475569}
+.dr-status.cancelled{background:#fee2e2;color:#991b1b}
+@media(max-width:700px){.delivery-register{padding:20px 14px 36px}.dr-filters{grid-template-columns:1fr}}
+</style>
+<div class="delivery-register">
+  <div class="dr-eyebrow">Security operations · Gate control</div>
+  <div class="dr-toolbar" style="margin-top:5px">
+    <div><h1 class="dr-title">Supplier deliveries</h1><p class="dr-muted" style="margin:0">{{ hotel.name }} · Delivery arrival, inspection and departure register</p></div>
+    {% if request.user.role == "SECURITY" %}<a class="dr-button" href="{% url 'security_delivery_create' %}">＋ Record delivery arrival</a>{% endif %}
   </div>
-  <form method="get" class="row g-2 mb-3">
-    <div class="col-md-5"><input class="form-control" name="q" value="{{ search_query }}" placeholder="Search supplier, reference, vehicle or PO"></div>
-    <div class="col-md-3"><select class="form-select" name="status"><option value="">All statuses</option>{% for value,label in statuses %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-    <div class="col-auto"><button class="btn btn-outline-primary">Filter</button></div>
+  <form method="get" class="dr-card dr-filters">
+    <input name="q" value="{{ search_query }}" placeholder="Search supplier, reference, vehicle or PO…" aria-label="Search deliveries">
+    <select name="status" aria-label="Filter by status">
+      <option value="">All statuses</option>
+      {% for value,label in statuses %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <button class="dr-button" type="submit">Apply filters</button>
   </form>
-  <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
-    <thead><tr><th>Arrival</th><th>Delivery Ref.</th><th>Supplier</th><th>Vehicle</th><th>Receiving Dept.</th><th>PO</th><th>Status</th><th></th></tr></thead>
-    <tbody>{% for item in records %}
-      <tr><td>{{ item.gate_in_at|date:"d M Y, H:i" }}</td><td>{{ item.delivery_reference }}</td><td>{{ item.supplier.name }}</td><td>{{ item.vehicle_registration }}</td><td>{{ item.department.name }}</td><td>{% if item.purchase_order_id %}#{{ item.purchase_order_id }}{% else %}Non-PO{% endif %}</td><td>{{ item.get_status_display }}</td><td><a href="{% url 'security_delivery_detail' item.pk %}">Open</a></td></tr>
-    {% empty %}<tr><td colspan="8" class="text-center text-muted py-4">No supplier deliveries recorded.</td></tr>{% endfor %}</tbody>
-  </table></div></div>
+  <div class="dr-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid #e2e8f0">
+      <div><strong style="color:#172033">Gate register</strong><div class="dr-muted" style="font-size:.8rem;margin-top:3px">{{ records|length }} matching record{{ records|length|pluralize }}</div></div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="dr-table">
+        <thead><tr><th>Arrival</th><th>Delivery reference</th><th>Supplier</th><th>Vehicle</th><th>Department</th><th>Purchase order</th><th>Gate status</th><th></th></tr></thead>
+        <tbody>
+          {% for item in records %}
+          <tr>
+            <td>{{ item.gate_in_at|date:"d M Y" }}<div class="dr-muted" style="font-size:.78rem">{{ item.gate_in_at|date:"H:i" }}</div></td>
+            <td><span class="dr-ref">{{ item.delivery_reference }}</span></td>
+            <td>{{ item.supplier.name }}</td>
+            <td>{{ item.vehicle_registration|default:"—" }}</td>
+            <td>{{ item.department.name }}</td>
+            <td><strong>#{{ item.purchase_order_id }}</strong></td>
+            <td><span class="dr-status {% if item.status == 'DEPARTED' %}departed{% elif item.status == 'CANCELLED' %}cancelled{% endif %}">{{ item.get_status_display }}</span></td>
+            <td><a class="dr-open" href="{% url 'security_delivery_detail' item.pk %}">View details →</a></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" style="text-align:center;padding:48px 20px"><div style="font-size:1.05rem;font-weight:800;color:#334155">No supplier deliveries found</div><p class="dr-muted" style="margin:6px 0 0">New gate arrivals will appear here after Security records them.</p></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}
