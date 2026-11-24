@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from .models import StaffAttendance
 
 User = get_user_model()
@@ -17,7 +18,10 @@ class StaffAttendanceArrivalForm(forms.ModelForm):
         # before the view saves it. Set it here so model validation has context.
         if hotel:
             self.instance.hotel = hotel
-        self.fields["employee"].queryset = User.objects.filter(hotel=hotel, is_active=True).exclude(
+        self.fields["employee"].queryset = User.objects.filter(
+            Q(hotel=hotel) | Q(department__hotel=hotel),
+            is_active=True,
+        ).exclude(
             role__in=["ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT"]
         ).select_related("department").order_by("department__name", "first_name", "last_name", "username")
         self.fields["employee"].label_from_instance = lambda user: (
