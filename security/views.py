@@ -1219,7 +1219,10 @@ def security_delivery_list(request):
 @role_required("SECURITY")
 def security_delivery_create(request):
     hotel = _hotel_for_user(request)
-    form = SecurityDeliveryVisitForm(request.POST or None, hotel=hotel)
+    selected_supplier = request.POST.get("supplier") if request.method == "POST" else request.GET.get("supplier")
+    form = SecurityDeliveryVisitForm(
+        request.POST or None, hotel=hotel, selected_supplier=selected_supplier
+    )
     form.instance.hotel = hotel
     if request.method == "POST" and form.is_valid():
         record = form.save(commit=False)
