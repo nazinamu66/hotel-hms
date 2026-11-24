@@ -7,8 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from accounts.services.access import get_accessible_hotels
 from inventory.models import Department
-from .forms import ShiftDefinitionForm, WeeklyRosterCreateForm
-from .models import RosterAssignment, RosterAuditEvent, ShiftDefinition, WeeklyRoster
+from .forms import RosterReconciliationForm, ShiftDefinitionForm, WeeklyRosterCreateForm
+from .models import RosterAssignment, RosterAuditEvent, RosterReconciliation, ShiftDefinition, WeeklyRoster
 from .permissions import can_view_roster, is_hr_head, is_hr_staff, is_roster_hod, manageable_roster_departments
 
 
@@ -30,6 +30,7 @@ def dashboard(request):
     return render(request, "personnel/dashboard.html", {
         "rosters": rosters, "create_form": create_form,
         "is_hr_head": is_hr_head(request.user), "can_prepare": can_prepare,
+        "pending_reconciliations": RosterReconciliation.objects.filter(hotel__in=get_accessible_hotels(request.user), status=RosterReconciliation.PENDING).select_related("employee", "attendance", "roster_assignment__roster", "roster_assignment__roster__department") if is_hr_head(request.user) else RosterReconciliation.objects.none(),
     })
 
 
@@ -231,3 +232,39 @@ def shift_list(request):
             messages.success(request, "Shift definition saved.")
             return redirect("personnel:shifts")
     return render(request, "personnel/shifts.html", {"shifts": shifts, "form": form})
+
+
+@login_required
+def roster_reconciliation_detail(request, reconciliation_id):
+    if not is_hr_head(request.user):
+        raise PermissionDenied
+    reconciliation = get_object_or_404(
+        RosterReconciliation.objects.select_related(
+            "hotel", "employee", "employee__department", "attendance",
+            "attendance__arrival_recorded_by", "attendance__departure_recorded_by",
+            "roster_assignment__roster", "roster_assignment__roster__department", "reconciled_by",
+        ),
+        pk=reconciliation_id, hotel__in=get_accessible_hotels(request.user),
+    )
+    form = None if reconciliation.status != RosterReconciliation.PENDING else RosterReconciliationForm(
+        request.POST or None, instance=reconciliation, reconciliation=reconciliation,
+    )
+    if request.method == "POST":
+        if not form:
+            raise PermissionDenied
+        if form.is_valid():
+            reconciliation = form.save(commit=False)
+            reconciliation.status = RosterReconciliation.RECONCILED
+            reconciliation.reconciled_by = request.user
+            reconciliation.reconciled_at = timezone.now()
+            try:
+                reconciliation.full_clean()
+                reconciliation.save()
+            except ValidationError as exc:
+                form.add_error(None, exc)
+            else:
+                messages.success(request, "Roster discrepancy reconciled and signed off.")
+                return redirect("personnel:dashboard")
+        else:
+            messages.error(request, "Please correct the reconciliation details.")
+    return render(request, "personnel/reconciliation_detail.html", {"reconciliation": reconciliation, "form": form})
