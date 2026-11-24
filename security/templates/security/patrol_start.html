@@ -1,3 +1,42 @@
 {% extends "base/base.html" %}
 {% block title %}Start Security Patrol{% endblock %}
-{% block content %}<div class="hms-page"><header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Security operations</p><h1 class="hms-page-title">Start a patrol</h1><p class="hms-page-subtitle">{{ hotel.name }} · Select the route assigned for your round</p></div></header><section class="hms-card"><form method="post">{% csrf_token %}{{ form.as_p }}<button class="hms-btn hms-btn-primary" type="submit">Start patrol</button></form></section></div>{% endblock %}
+{% block content %}
+<div class="hms-page">
+  <header class="hms-page-header">
+    <div class="hms-page-heading">
+      <p class="hms-eyebrow">Security operations</p>
+      <h1 class="hms-page-title">Start a patrol</h1>
+      <p class="hms-page-subtitle">{{ hotel.name }} · Select the route assigned for your round.</p>
+    </div>
+    <a class="hms-btn hms-btn-secondary" href="{% url 'security_patrol_route_list' %}">View patrol routes</a>
+  </header>
+
+  <section class="hms-card">
+    <div class="hms-card-heading">
+      <div>
+        <h2 class="hms-card-title">Patrol assignment</h2>
+        <p class="hms-card-description">Choose the route you are about to inspect. Your start time and officer account are recorded automatically.</p>
+      </div>
+    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="hms-notice" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="hms-form-grid">
+        {% for field in form %}
+          <div class="hms-field">
+            {{ field.label_tag }}
+            {{ field }}
+            {% if field.help_text %}<span class="hms-field-help">{{ field.help_text }}</span>{% endif %}
+            {% for error in field.errors %}<span class="hms-field-error">{{ error }}</span>{% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+      <div class="hms-notice" style="margin-top:18px;margin-bottom:0">Checkpoint visits are recorded against your signed-in account with a server-generated timestamp. Enter each checkpoint's manual code when you reach it.</div>
+      <div class="hms-form-footer">
+        <a class="hms-btn hms-btn-secondary" href="{% url 'security_dashboard' %}">Cancel</a>
+        <button class="hms-btn hms-btn-primary" type="submit">Start patrol <span aria-hidden="true">→</span></button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
