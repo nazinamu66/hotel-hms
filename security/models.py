@@ -418,3 +418,71 @@ class StaffAttendance(models.Model):
 
     def __str__(self):
         return f"{self.employee} — {self.work_date}"
+
+
+class StaffExitPass(models.Model):
+    PERSONAL = "PERSONAL"
+    OFFICIAL = "OFFICIAL"
+    PASS_TYPES = ((PERSONAL, "Personal errand"), (OFFICIAL, "Official hotel errand"))
+    AUTHORISED = "AUTHORISED"
+    OUTSIDE = "OUTSIDE"
+    RETURNED = "RETURNED"
+    CANCELLED = "CANCELLED"
+    STATUS_CHOICES = ((AUTHORISED, "Authorised — awaiting departure"), (OUTSIDE, "Employee outside"), (RETURNED, "Returned"), (CANCELLED, "Cancelled"))
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="staff_exit_passes")
+    pass_number = models.CharField(max_length=30, unique=True, blank=True)
+    employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="staff_exit_passes")
+    employee_name = models.CharField(max_length=160)
+    department_name = models.CharField(max_length=120, blank=True)
+    pass_type = models.CharField(max_length=12, choices=PASS_TYPES)
+    destination = models.CharField(max_length=200)
+    purpose = models.TextField()
+    expected_return_at = models.DateTimeField()
+    authorised_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="authorised_staff_exit_passes")
+    authorised_at = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=AUTHORISED)
+    gate_out_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="staff_exit_gate_outs")
+    gate_out_at = models.DateTimeField(null=True, blank=True)
+    gate_out_note = models.TextField(blank=True)
+    gate_in_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="staff_exit_gate_ins")
+    gate_in_at = models.DateTimeField(null=True, blank=True)
+    gate_in_note = models.TextField(blank=True)
+    cancelled_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="cancelled_staff_exit_passes")
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancellation_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        indexes = [models.Index(fields=["hotel", "status"]), models.Index(fields=["hotel", "expected_return_at"]), models.Index(fields=["hotel", "employee", "created_at"])]
+
+    def clean(self):
+        errors = {}
+        if self.employee_id:
+            employee_hotel = self.employee.hotel_id or (self.employee.department.hotel_id if self.employee.department_id else None)
+            if not self.employee.is_active or employee_hotel != self.hotel_id:
+                errors["employee"] = "Select an active employee assigned to this hotel."
+            if self.employee.role in {"ADMIN", "DIRECTOR", "GENERAL_MANAGER", "CHIEF_ACCOUNTANT"}:
+                errors["employee"] = "This account is not eligible for staff movement passes."
+        if self.expected_return_at and self.expected_return_at <= self.authorised_at:
+            errors["expected_return_at"] = "Expected return must be after authorisation."
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def is_overdue(self):
+        return self.status == self.OUTSIDE and self.expected_return_at < timezone.now()
+
+    def save(self, *args, **kwargs):
+        creating = self.pk is None
+        if self.employee_id:
+            self.employee_name = self.employee.get_full_name() or self.employee.username
+            self.department_name = self.employee.department.name if self.employee.department_id else ""
+        super().save(*args, **kwargs)
+        if creating and not self.pass_number:
+            self.pass_number = f"SP-{self.hotel_id}-{self.pk:07d}"
+            super().save(update_fields=["pass_number"])
+
+    def __str__(self):
+        return f"{self.pass_number or 'New staff pass'} — {self.employee_name}"
