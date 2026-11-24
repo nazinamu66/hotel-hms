@@ -91,7 +91,7 @@ def security_dashboard(request):
 def vehicle_visit_list(request):
     hotel = _hotel_for_user(request)
     visits = VehicleVisit.objects.filter(hotel=hotel).select_related("entered_by", "exited_by")
-    status = request.GET.get("status", "INSIDE")
+    status = request.GET.get("status", "ALL" if request.user.is_security_head else "INSIDE")
     search = request.GET.get("q", "").strip()
     date_from = request.GET.get("date_from", "").strip()
     date_to = request.GET.get("date_to", "").strip()
@@ -125,24 +125,6 @@ def vehicle_visit_list(request):
         "visits": visits, "status_filter": status, "search_query": search,
         "date_from": date_from, "date_to": date_to,
     })
-
-
-@login_required
-@role_required("SECURITY")
-@security_head_required
-def vehicle_movement_history(request):
-    request.GET = request.GET.copy()
-    request.GET["status"] = "EXITED"
-    return vehicle_visit_list(request)
-
-
-@login_required
-@role_required("SECURITY")
-@security_head_required
-def visitor_movement_history(request):
-    request.GET = request.GET.copy()
-    request.GET["status"] = "EXITED"
-    return visitor_visit_list(request)
 
 
 @login_required
@@ -272,7 +254,7 @@ def visitor_visit_create(request):
 def visitor_visit_list(request):
     hotel = _hotel_for_user(request)
     visits = VisitorVisit.objects.filter(hotel=hotel).select_related('entered_by', 'exited_by', 'host_staff', 'maintenance_ticket', 'supplier')
-    status = request.GET.get('status', 'INSIDE')
+    status = request.GET.get('status', 'ALL' if request.user.is_security_head else 'INSIDE')
     search = request.GET.get('q', '').strip()
     visitor_type = request.GET.get('visitor_type', '').strip()
     date_from = request.GET.get('date_from', '').strip()
