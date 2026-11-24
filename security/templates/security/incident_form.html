@@ -1,0 +1,8 @@
+{% extends "base/base.html" %}
+{% block title %}Record Security Incident{% endblock %}
+{% block content %}
+<div class="hms-page">
+<header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Security operations · {{ hotel.name }}</p><h1 class="hms-page-title">Record an incident</h1><p class="hms-page-subtitle">Record facts promptly. The Security Head will review the report.</p></div><a class="hms-btn hms-btn-secondary" href="{% url 'security_incident_list' %}">Incident register</a></header>
+<section class="hms-card"><form method="post" enctype="multipart/form-data">{% csrf_token %}{% if available_hotels.count > 1 %}<input type="hidden" name="hotel" value="{{ hotel.pk }}">{% endif %}{{ form.non_field_errors }}<div class="hms-form-grid">{% for field in form %}<div class="hms-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}</div><div class="hms-form-footer"><button class="hms-btn hms-btn-primary" type="submit">Submit incident report</button></div></form></section>
+</div>
+{% endblock %}
