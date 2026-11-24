@@ -32,7 +32,7 @@ class SecurityDeliveryVisitForm(forms.ModelForm):
             "delivery_note": forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Optional arrival note"}),
         }
 
-    def __init__(self, *args, hotel=None, **kwargs):
+    def __init__(self, *args, hotel=None, selected_supplier=None, **kwargs):
         super().__init__(*args, **kwargs)
         eligible_items = PurchaseItem.objects.filter(
             purchase_order__department__hotel=hotel,
