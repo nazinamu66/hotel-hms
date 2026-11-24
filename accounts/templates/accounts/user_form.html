@@ -433,7 +433,7 @@
 
                                 <option
                                     value="{{ department.id }}"
-                                    data-hotel="{{ department.hotel_id }}"
+                                    data-hotel="{{ department.hotel_id }}" data-department-type="{{ department.department_type }}"
                                     {% if form.department.value|stringformat:"s" == department.id|stringformat:"s" %}
                                         selected
                                     {% endif %}
@@ -628,6 +628,9 @@ document.addEventListener("DOMContentLoaded", function () {
         const selectedHotel =
             hotelSelect ? hotelSelect.value : "";
 
+        const selectedRole =
+            role ? role.value : "";
+
         const options =
             departmentSelect.querySelectorAll(
                 "option[data-hotel]"
@@ -636,10 +639,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
         options.forEach(function (option) {
 
-            if (
+            const matchesHotel =
                 !selectedHotel ||
-                option.dataset.hotel === selectedHotel
-            ) {
+                option.dataset.hotel === selectedHotel;
+
+            const matchesDepartmentType =
+                selectedRole !== "HR" ||
+                option.dataset.departmentType === "HUMAN_RESOURCES";
+
+            if (matchesHotel && matchesDepartmentType) {
 
                 option.style.display = "";
 
@@ -737,7 +745,8 @@ document.addEventListener("DOMContentLoaded", function () {
             "GYM",
             "BOUTIQUE",
             "MAINTENANCE",
-            "SECURITY"
+            "SECURITY",
+            "HR"
         ];
 
 
