@@ -8,8 +8,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from accounts.decorators import role_required
 from inventory.models import Hotel
-from .forms import PropertyExitPassForm, StaffExitPassForm, VehicleVisitForm, VisitorVisitForm, SecurityIncidentForm, SecurityIncidentReviewForm, SecurityIncidentUpdateForm, SecurityIncidentResolutionForm, SecurityOccurrenceReportForm, SecurityOccurrenceReviewForm
-from .models import PropertyExitPass, StaffExitPass, VehicleVisit, VisitorVisit, SecurityShiftConfiguration, SecurityShiftHandover, StaffAttendance, SecurityIncident, SecurityIncidentEvent, SecurityOccurrenceReport
+from .forms import PropertyExitPassForm, StaffExitPassForm, VehicleVisitForm, VisitorVisitForm, SecurityIncidentForm, SecurityIncidentReviewForm, SecurityIncidentUpdateForm, SecurityIncidentResolutionForm, SecurityOccurrenceReportForm, SecurityOccurrenceReviewForm, SecurityPatrolRouteForm, SecurityPatrolCheckpointForm, SecurityPatrolStartForm, SecurityPatrolVisitForm, SecurityPatrolCompleteForm
+from .models import PropertyExitPass, StaffExitPass, VehicleVisit, VisitorVisit, SecurityShiftConfiguration, SecurityShiftHandover, StaffAttendance, SecurityIncident, SecurityIncidentEvent, SecurityOccurrenceReport, SecurityPatrolRoute, SecurityPatrolCheckpoint, SecurityPatrolRun, SecurityPatrolVisit
 from .handover_forms import SecurityShiftHandoverForm, SecurityHandoverAcknowledgementForm, SecurityHandoverCSOReviewForm
 
 MANAGEMENT_ROLES = ("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
@@ -997,3 +997,178 @@ def security_occurrence_review(request, report_id):
         report.save(update_fields=["reviewed_by", "reviewed_at", "review_note"])
         messages.success(request, "Daily Occurrence Report reviewed.")
     return redirect("security_occurrence_detail", report_id=report.pk)
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def security_patrol_route_list(request):
+    hotel = _hotel_for_user(request)
+    routes = SecurityPatrolRoute.objects.filter(hotel=hotel).prefetch_related("checkpoints")
+    return render(request, "security/patrol_route_list.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
+        "routes": routes,
+    })
+
+
+@login_required
+@security_head_required
+def security_patrol_route_create(request):
+    hotel = _hotel_for_user(request)
+    form = SecurityPatrolRouteForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        route = form.save(commit=False)
+        route.hotel = hotel
+        route.created_by = request.user
+        route.save()
+        messages.success(request, "Patrol route created. Add its checkpoints next.")
+        return redirect("security_patrol_route_detail", route_id=route.pk)
+    return render(request, "security/patrol_route_form.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user), "form": form,
+    })
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def security_patrol_route_detail(request, route_id):
+    hotel = _hotel_for_user(request)
+    route = get_object_or_404(
+        SecurityPatrolRoute.objects.prefetch_related("checkpoints"),
+        pk=route_id, hotel=hotel,
+    )
+    checkpoint_form = SecurityPatrolCheckpointForm()
+    if request.method == "POST":
+        if not request.user.is_security_head:
+            raise PermissionDenied
+        checkpoint_form = SecurityPatrolCheckpointForm(request.POST)
+        if checkpoint_form.is_valid():
+            checkpoint = checkpoint_form.save(commit=False)
+            checkpoint.route = route
+            try:
+                checkpoint.full_clean()
+                checkpoint.save()
+            except ValidationError as exc:
+                checkpoint_form.add_error(None, exc)
+            else:
+                messages.success(request, "Patrol checkpoint added.")
+                return redirect("security_patrol_route_detail", route_id=route.pk)
+    return render(request, "security/patrol_route_detail.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
+        "route": route, "checkpoint_form": checkpoint_form,
+        "can_manage": request.user.is_security_head,
+    })
+
+
+@login_required
+@role_required("SECURITY")
+def security_patrol_start(request):
+    hotel = _hotel_for_user(request)
+    active_run = SecurityPatrolRun.objects.filter(
+        hotel=hotel, officer=request.user, status=SecurityPatrolRun.IN_PROGRESS,
+    ).select_related("route").first()
+    form = SecurityPatrolStartForm(request.POST or None, hotel=hotel)
+    if request.method == "POST" and form.is_valid() and not active_run:
+        run = SecurityPatrolRun(
+            hotel=hotel, route=form.cleaned_data["route"],
+            officer=request.user, start_note=form.cleaned_data["start_note"],
+        )
+        try:
+            run.full_clean()
+            run.save()
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        else:
+            messages.success(request, f"Patrol started: {run.route.name}.")
+            return redirect("security_patrol_run_detail", run_id=run.pk)
+    if active_run:
+        return redirect("security_patrol_run_detail", run_id=active_run.pk)
+    return render(request, "security/patrol_start.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user), "form": form,
+    })
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def security_patrol_run_detail(request, run_id):
+    hotel = _hotel_for_user(request)
+    run = get_object_or_404(
+        SecurityPatrolRun.objects.select_related("route", "officer").prefetch_related("visits__checkpoint"),
+        pk=run_id, hotel=hotel,
+    )
+    if request.user.role == "SECURITY" and not request.user.is_security_head and run.officer_id != request.user.pk:
+        raise PermissionDenied
+    visited_ids = set(run.visits.values_list("checkpoint_id", flat=True))
+    checkpoints = run.route.checkpoints.filter(is_active=True).order_by("sequence")
+    visit_form = SecurityPatrolVisitForm()
+    complete_form = SecurityPatrolCompleteForm()
+    return render(request, "security/patrol_run_detail.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
+        "run": run, "checkpoints": checkpoints, "visited_ids": visited_ids,
+        "visit_form": visit_form, "complete_form": complete_form,
+        "can_record": run.status == SecurityPatrolRun.IN_PROGRESS and run.officer_id == request.user.pk,
+        "can_complete": run.status == SecurityPatrolRun.IN_PROGRESS and run.officer_id == request.user.pk,
+    })
+
+
+@login_required
+@role_required("SECURITY")
+@transaction.atomic
+def security_patrol_record_visit(request, run_id):
+    hotel = _hotel_for_user(request)
+    run = get_object_or_404(
+        SecurityPatrolRun.objects.select_for_update(), pk=run_id, hotel=hotel,
+        officer=request.user, status=SecurityPatrolRun.IN_PROGRESS,
+    )
+    form = SecurityPatrolVisitForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        checkpoint = get_object_or_404(
+            SecurityPatrolCheckpoint.objects.select_related("route"),
+            route=run.route, checkpoint_code=form.cleaned_data["checkpoint_code"],
+            is_active=True,
+        )
+        visit = SecurityPatrolVisit(
+            run=run, checkpoint=checkpoint, recorded_by=request.user,
+            observation=form.cleaned_data["observation"],
+            issue_found=form.cleaned_data["issue_found"],
+        )
+        try:
+            visit.full_clean()
+            visit.save()
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        except IntegrityError:
+            form.add_error("checkpoint_code", "This checkpoint has already been recorded for this patrol.")
+        else:
+            messages.success(request, f"Checkpoint recorded: {checkpoint.name}.")
+            return redirect("security_patrol_run_detail", run_id=run.pk)
+    run_detail = get_object_or_404(SecurityPatrolRun, pk=run_id, hotel=hotel)
+    return render(request, "security/patrol_run_detail.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
+        "run": run_detail, "checkpoints": run.route.checkpoints.filter(is_active=True),
+        "visited_ids": set(run.visits.values_list("checkpoint_id", flat=True)),
+        "visit_form": form, "complete_form": SecurityPatrolCompleteForm(),
+        "can_record": True, "can_complete": True,
+    })
+
+
+@login_required
+@role_required("SECURITY")
+@transaction.atomic
+def security_patrol_complete(request, run_id):
+    hotel = _hotel_for_user(request)
+    run = get_object_or_404(
+        SecurityPatrolRun.objects.select_for_update(), pk=run_id, hotel=hotel,
+        officer=request.user, status=SecurityPatrolRun.IN_PROGRESS,
+    )
+    form = SecurityPatrolCompleteForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        missing = run.missing_required_count
+        if missing:
+            messages.error(request, f"Patrol cannot be completed. {missing} required checkpoint(s) remain.")
+        else:
+            run.status = SecurityPatrolRun.COMPLETED
+            run.completed_at = timezone.now()
+            run.completion_note = form.cleaned_data["completion_note"]
+            run.full_clean()
+            run.save(update_fields=["status", "completed_at", "completion_note"])
+            messages.success(request, "Patrol completed successfully.")
+    return redirect("security_patrol_run_detail", run_id=run.pk)
