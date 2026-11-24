@@ -3,6 +3,9 @@ from . import views
 
 urlpatterns = [
     path("", views.security_dashboard, name="security_dashboard"),
+    path("visitors/", views.visitor_visit_list, name="security_visitor_list"),
+    path("visitors/entry/", views.visitor_visit_create, name="security_visitor_entry"),
+    path("visitors/<int:visit_id>/exit/", views.visitor_visit_exit, name="security_visitor_exit"),
     path("vehicles/", views.vehicle_visit_list, name="security_vehicle_list"),
     path("vehicles/entry/", views.vehicle_visit_create, name="security_vehicle_entry"),
     path("vehicles/<int:visit_id>/exit/", views.vehicle_visit_exit, name="security_vehicle_exit"),
