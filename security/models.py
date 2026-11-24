@@ -801,4 +801,4 @@ class SecurityPatrolVisit(models.Model):
 
 
 # Supplier delivery gate register models.
-from .delivery_models import SecurityDeliveryReceiver, SecurityDeliveryVisit
+from .delivery_models import SecurityDeliveryVisit
