@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from maintenance.models import MaintenanceAsset
-from .models import PropertyExitPass, VehicleVisit
+from .models import PropertyExitPass, VehicleVisit, VisitorVisit
 
 User = get_user_model()
 
@@ -85,3 +85,33 @@ class VehicleVisitForm(forms.ModelForm):
         self.fields["other_make"].required = False
         self.fields["model"].required = False
         self.fields["entry_note"].required = False
+
+
+class VisitorVisitForm(forms.ModelForm):
+    class Meta:
+        model = VisitorVisit
+        fields = ['visitor_type', 'visitor_name', 'phone', 'id_type', 'id_number', 'purpose', 'vehicle_plate', 'guest_name', 'guest_room_number', 'host_staff', 'host_staff_name', 'host_department', 'maintenance_ticket', 'supplier', 'work_description', 'entry_note']
+        widgets = {'purpose': forms.Textarea(attrs={'rows': 3}), 'entry_note': forms.Textarea(attrs={'rows': 2}), 'vehicle_plate': forms.TextInput(attrs={'placeholder': 'Optional registration'})}
+
+    def __init__(self, *args, hotel=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        from django.db.models import Q
+        from maintenance.models import MaintenanceTicket
+        from inventory.models import Supplier
+        self.hotel = hotel
+        self.fields['host_staff'].queryset = User.objects.filter(is_active=True).filter(Q(hotel=hotel) | Q(department__hotel=hotel)).distinct().order_by('first_name', 'last_name', 'username') if hotel else User.objects.none()
+        self.fields['maintenance_ticket'].queryset = MaintenanceTicket.objects.filter(Q(room__hotel=hotel) | Q(location__hotel=hotel)).select_related('room', 'location').order_by('-created_at') if hotel else MaintenanceTicket.objects.none()
+        self.fields['supplier'].queryset = Supplier.objects.filter(hotel=hotel).order_by('name') if hotel else Supplier.objects.none()
+        for name in ['phone', 'id_type', 'id_number', 'vehicle_plate', 'guest_name', 'guest_room_number', 'host_staff', 'host_staff_name', 'host_department', 'maintenance_ticket', 'supplier', 'work_description', 'entry_note']:
+            self.fields[name].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        kind = cleaned.get('visitor_type')
+        if kind == VisitorVisit.GUEST and not cleaned.get('guest_name', '').strip():
+            self.add_error('guest_name', 'Enter the guest being visited.')
+        if kind == VisitorVisit.STAFF and not cleaned.get('host_staff') and not cleaned.get('host_staff_name', '').strip():
+            self.add_error('host_staff_name', 'Select or enter the staff member being visited.')
+        if kind == VisitorVisit.OUTSOURCED and not cleaned.get('maintenance_ticket') and not cleaned.get('work_description', '').strip():
+            self.add_error('work_description', 'Describe the outsourced work or select a Maintenance work order.')
+        return cleaned
