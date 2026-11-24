@@ -391,6 +391,7 @@ class UserCreateForm(forms.ModelForm):
             "BOUTIQUE",
             "MAINTENANCE",
             "SECURITY",
+            "HR",
         }
 
         if role in operational_roles:
@@ -537,6 +538,7 @@ class UserCreateForm(forms.ModelForm):
             "BOUTIQUE",
             "MAINTENANCE",
             "SECURITY",
+            "HR",
         }:
 
             department = (
