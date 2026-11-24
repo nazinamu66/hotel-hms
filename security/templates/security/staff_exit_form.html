@@ -1,0 +1,8 @@
+{% extends "base/base.html" %}
+{% block title %}Create Staff Exit Pass{% endblock %}
+{% block content %}<div class="hms-page">
+<header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Security · Staff movement</p><h1 class="hms-page-title">Create staff exit pass</h1><p class="hms-page-subtitle">{{ hotel.name }} · The pass is authorised immediately by the signed-in officer.</p></div><a class="hms-btn hms-btn-secondary" href="{% url 'security_staff_exit_list' %}">Back to register</a></header>
+<section class="hms-card"><div class="hms-card-heading"><div><h2 class="hms-card-title">Employee movement details</h2><p class="hms-card-description">Create one pass for this departure. A new pass is required for every subsequent departure.</p></div></div>
+{% if form.non_field_errors %}<div class="hms-notice">{{ form.non_field_errors }}</div>{% endif %}
+<form method="post">{% csrf_token %}<div class="hms-form-grid">{% for field in form %}<div class="hms-field"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>{{ field }}{% if field.help_text %}<span class="hms-field-help">{{ field.help_text }}</span>{% endif %}{% if field.errors %}<div class="hms-field-error">{{ field.errors }}</div>{% endif %}</div>{% endfor %}</div>
+<div class="hms-notice">Creating this record authorises the employee to leave. Security must still verify the pass and record the actual gate-out and gate-in.</div><div class="hms-form-footer"><a class="hms-btn hms-btn-secondary" href="{% url 'security_staff_exit_list' %}">Cancel</a><button class="hms-btn hms-btn-primary" type="submit">Create and authorise pass</button></div></form></section></div>{% endblock %}
