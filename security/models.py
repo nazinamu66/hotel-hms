@@ -798,3 +798,7 @@ class SecurityPatrolVisit(models.Model):
 
     def __str__(self):
         return f"{self.run} · {self.checkpoint.name}"
+
+
+# Supplier delivery gate register models.
+from .delivery_models import SecurityDeliveryReceiver, SecurityDeliveryVisit
