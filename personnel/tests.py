@@ -147,6 +147,21 @@ class PersonnelRosterTests(TestCase):
         self.assertEqual(roster.responsible_hod, self.hod)
         self.assertTrue(roster.audit_events.filter(event_type="CREATED").exists())
 
+    def test_hr_head_can_create_shift_definition_for_assigned_hotel(self):
+        self.client.force_login(self.hr_head)
+        response = self.client.post(reverse("personnel:shifts"), {
+            "code": "EVENING",
+            "name": "Evening",
+            "start_time": "15:00",
+            "end_time": "23:00",
+            "grace_minutes": "10",
+            "is_active": "on",
+        })
+        self.assertEqual(response.status_code, 302)
+        shift = ShiftDefinition.objects.get(code="EVENING", hotel=self.hotel)
+        self.assertEqual(shift.name, "Evening")
+        self.assertEqual(shift.grace_minutes, 10)
+
     def test_hr_head_can_create_roster_on_behalf_of_another_hod(self):
         self.client.force_login(self.hr_head)
         response = self.client.post(reverse("personnel:roster_create"), {
