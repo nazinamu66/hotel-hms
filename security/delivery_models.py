@@ -1,3 +1,9 @@
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import models
+from django.utils import timezone
+
+
 class SecurityDeliveryVisit(models.Model):
     """Gate register entry for a supplier delivery; never posts inventory itself."""
     ARRIVED = "ARRIVED"
