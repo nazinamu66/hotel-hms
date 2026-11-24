@@ -242,6 +242,14 @@
 
         <!-- ========================= -->
         <!-- ========================= -->
+        {% if user.role == "HR" or user.is_department_head %}
+        <h4 class="menu-toggle" onclick="toggleMenu('personnel_menu', this)"><span class="arrow">▸</span> 👥 Personnel</h4>
+        <div id="personnel_menu" class="menu-section">
+            <a href="{% url 'personnel:dashboard' %}">Staff Attendance Roster</a>
+            {% if user.role == "HR" and user.is_department_head %}<a href="{% url 'personnel:shifts' %}">Shift Definitions</a>{% endif %}
+        </div>
+        {% endif %}
+
         {% if user|has_role:"SECURITY,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
         <h4 class="menu-toggle" onclick="toggleMenu('security_menu', this)"><span class="arrow">▸</span> 🛡️ Security</h4>
         <div id="security_menu" class="menu-section">
