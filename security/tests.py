@@ -254,3 +254,26 @@ class PropertyExitPassTests(TestCase):
         request.user = self.manager
         with self.assertRaises(PermissionDenied):
             protected_view(request)
+
+    def test_account_form_can_create_security_head_with_existing_checkbox(self):
+        from accounts.forms import UserCreateForm
+
+        form = UserCreateForm(
+            data={
+                "username": "security-head-user",
+                "email": "",
+                "role": "SECURITY",
+                "organization": "",
+                "hotel": "",
+                "department": str(self.department.pk),
+                "is_department_head": "on",
+                "password": "test-password",
+            },
+            actor=self.manager,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        user = form.save()
+        self.assertTrue(user.is_department_head)
+        self.assertTrue(user.is_security_head)
+        self.assertEqual(user.department, self.department)
+        self.assertEqual(user.hotel, self.hotel)
