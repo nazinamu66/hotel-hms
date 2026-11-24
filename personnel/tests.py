@@ -257,3 +257,50 @@ class PersonnelRosterTests(TestCase):
         )
         with self.assertRaises(ValidationError):
             assignment.full_clean()
+
+
+class RosterReconciliationTests(TestCase):
+    def setUp(self):
+        from security.models import StaffAttendance
+        self.org = Organization.objects.create(name="Reconciliation Test Org")
+        self.hotel = Hotel.objects.create(name="Reconciliation Test Hotel", organization=self.org)
+        self.hr_department, _ = Department.objects.get_or_create(hotel=self.hotel, name="Human Resources", defaults={"code": "HR", "department_type": "HUMAN_RESOURCES"})
+        self.department, _ = Department.objects.get_or_create(hotel=self.hotel, name="Front Desk", defaults={"code": "FD", "department_type": "FRONTDESK"})
+        self.security_department, _ = Department.objects.get_or_create(hotel=self.hotel, name="Security", defaults={"code": "SEC", "department_type": "SECURITY"})
+        self.hr_head = User.objects.create_user(username="recon-hr-head", password="test", role="HR", department=self.hr_department, is_department_head=True)
+        self.employee = User.objects.create_user(username="recon-employee", password="test", role="FRONTDESK", department=self.department)
+        self.hod = User.objects.create_user(username="recon-hod", password="test", role="FRONTDESK", department=self.department, is_department_head=True)
+        self.security = User.objects.create_user(username="recon-security", password="test", role="SECURITY", department=self.security_department)
+        self.day_off = date.today() - timedelta(days=date.today().weekday())
+        self.roster = WeeklyRoster.objects.create(hotel=self.hotel, department=self.department, week_start=self.day_off, responsible_hod=self.hod, created_by=self.hod, status=WeeklyRoster.APPROVED)
+        self.assignment = RosterAssignment.objects.create(roster=self.roster, employee=self.employee, work_date=self.day_off, is_day_off=True)
+        self.attendance = StaffAttendance.objects.create(hotel=self.hotel, employee=self.employee, work_date=self.day_off, arrival_recorded_by=self.security)
+        self.reconciliation = RosterReconciliation.objects.create(hotel=self.hotel, attendance=self.attendance, roster_assignment=self.assignment, employee=self.employee)
+
+    def test_hr_head_can_reconcile_and_sign_off_day_off_arrival(self):
+        self.client.force_login(self.hr_head)
+        response = self.client.post(reverse("personnel:reconciliation_detail", args=[self.reconciliation.pk]), {
+            "reason": RosterReconciliation.SHIFT_SWAP, "covered_employee": "",
+            "actual_shift_name": "Morning cover", "notes": "Emergency cover agreed with the department head.",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.reconciliation.refresh_from_db()
+        self.assertEqual(self.reconciliation.status, RosterReconciliation.RECONCILED)
+        self.assertEqual(self.reconciliation.reconciled_by, self.hr_head)
+        self.assertIsNotNone(self.reconciliation.reconciled_at)
+        self.assertEqual(self.reconciliation.reason, RosterReconciliation.SHIFT_SWAP)
+        self.roster.refresh_from_db()
+        self.assertEqual(self.roster.status, WeeklyRoster.APPROVED)
+        self.assertTrue(self.assignment.is_day_off)
+
+    def test_non_hr_head_cannot_reconcile_day_off_arrival(self):
+        self.client.force_login(self.hod)
+        response = self.client.get(reverse("personnel:reconciliation_detail", args=[self.reconciliation.pk]))
+        self.assertEqual(response.status_code, 403)
+
+    def test_hr_dashboard_lists_pending_reconciliation(self):
+        self.client.force_login(self.hr_head)
+        response = self.client.get(reverse("personnel:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Pending roster reconciliations")
+        self.assertContains(response, "recon-employee")
