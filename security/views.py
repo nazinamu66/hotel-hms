@@ -119,6 +119,10 @@ def security_dashboard(request):
         "currently_out": passes.filter(status=PropertyExitPass.OUT).count(),
         "overdue": passes.filter(status=PropertyExitPass.OUT, pass_type=PropertyExitPass.TEMPORARY, expected_return_date__lt=today).count(),
         "recent_passes": passes.select_related("authorising_manager", "gate_out_by")[:8],
+        "incidents_open": SecurityIncident.objects.filter(hotel=hotel).exclude(status__in=["RESOLVED", "CLOSED"]).count(),
+        "incidents_awaiting_review": SecurityIncident.objects.filter(hotel=hotel, status="SUBMITTED").count(),
+        "latest_incidents": SecurityIncident.objects.filter(hotel=hotel).select_related("reported_by")[:5],
+        "occurrence_report_today": SecurityOccurrenceReport.objects.filter(hotel=hotel, duty_date=today).first(),
     }
     return render(request, "security/dashboard.html", context)
 
