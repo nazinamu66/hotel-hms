@@ -41,6 +41,7 @@ class SecurityDeliveryVisitForm(forms.ModelForm):
         self.fields["purchase_order"].label = "Expected Purchase Order"
         self.fields["purchase_order"].help_text = "Only approved orders with outstanding quantities are listed."
         self.fields["purchase_order"].widget.attrs.update({"class": "form-select", "data-po-filter": "purchase-order"})
+        self.fields["purchase_order"].label_from_instance = lambda po: f"PO #{po.pk} · {po.supplier.name} · {po.department.name}"
         for name in ("delivery_reference", "vehicle_registration", "vehicle_description", "driver_name"):
             self.fields[name].widget.attrs.setdefault("class", "form-control")
         self.fields["delivery_note"].required = False
