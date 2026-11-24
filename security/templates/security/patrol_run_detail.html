@@ -1,3 +1,125 @@
 {% extends "base/base.html" %}
 {% block title %}Patrol {{ run.pk }}{% endblock %}
-{% block content %}<div class="hms-page"><header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Patrol run · {{ hotel.name }}</p><h1 class="hms-page-title">{{ run.route.name }}</h1><p class="hms-page-subtitle">{{ run.officer.get_full_name|default:run.officer.username }} · Started {{ run.started_at|date:"M j, Y g:i a" }} · {{ run.get_status_display }}</p></div><a class="hms-btn hms-btn-secondary" href="{% url 'security_patrol_route_list' %}">Patrol routes</a></header><section class="hms-card"><h2 class="hms-card-title">Checkpoint progress</h2><p>{{ run.visited_required_count }} of {{ run.required_checkpoints.count }} required checkpoints recorded</p><div class="hms-table-wrap"><table class="hms-table"><thead><tr><th>Sequence</th><th>Checkpoint</th><th>Code</th><th>Status</th></tr></thead><tbody>{% for cp in checkpoints %}<tr><td>{{ cp.sequence }}</td><td>{{ cp.name }}</td><td><code>{{ cp.checkpoint_code }}</code></td><td>{% if cp.pk in visited_ids %}Recorded{% elif cp.is_required %}Outstanding{% else %}Optional{% endif %}</td></tr>{% endfor %}</tbody></table></div></section>{% if can_record %}<section class="hms-card"><h2 class="hms-card-title">Record checkpoint visit</h2><p class="hms-card-description">Enter the code displayed at the physical checkpoint. The server records the timestamp and your logged-in account.</p><form method="post" action="{% url 'security_patrol_record_visit' run.pk %}">{% csrf_token %}{{ visit_form.as_p }}<button class="hms-btn hms-btn-primary" type="submit">Record visit</button></form></section>{% endif %}{% if can_complete %}<section class="hms-card"><h2 class="hms-card-title">Complete patrol</h2><form method="post" action="{% url 'security_patrol_complete' run.pk %}">{% csrf_token %}{{ complete_form.as_p }}<button class="hms-btn hms-btn-primary" type="submit">Complete patrol</button></form></section>{% endif %}<section class="hms-card"><h2 class="hms-card-title">Visit history</h2><div class="hms-table-wrap"><table class="hms-table"><thead><tr><th>Time</th><th>Checkpoint</th><th>Recorded by</th><th>Observation</th><th>Issue</th></tr></thead><tbody>{% for visit in run.visits.all %}<tr><td>{{ visit.recorded_at|date:"M j, Y g:i:s a" }}</td><td>{{ visit.checkpoint.name }}</td><td>{{ visit.recorded_by.get_full_name|default:visit.recorded_by.username }}</td><td>{{ visit.observation|default:"—" }}</td><td>{% if visit.issue_found %}Yes{% else %}No{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No checkpoint visits recorded.</td></tr>{% endfor %}</tbody></table></div></section></div>{% endblock %}
+{% block content %}
+<div class="hms-page">
+  <header class="hms-page-header">
+    <div class="hms-page-heading">
+      <p class="hms-eyebrow">Patrol run · {{ hotel.name }}</p>
+      <h1 class="hms-page-title">{{ run.route.name }}</h1>
+      <p class="hms-page-subtitle">{{ run.officer.get_full_name|default:run.officer.username }} · Started {{ run.started_at|date:"M j, Y g:i a" }} · {{ run.get_status_display }}</p>
+    </div>
+    <a class="hms-btn hms-btn-secondary" href="{% url 'security_patrol_route_list' %}">Patrol routes</a>
+  </header>
+
+  <section class="hms-card">
+    <div class="hms-card-heading">
+      <div>
+        <h2 class="hms-card-title">Checkpoint progress</h2>
+        <p class="hms-card-description">{{ run.visited_required_count }} of {{ run.required_checkpoints.count }} required checkpoints recorded</p>
+      </div>
+      <span class="hms-status {% if run.status == 'COMPLETED' %}hms-status-returned{% endif %}">{{ run.get_status_display }}</span>
+    </div>
+    <div class="hms-table-wrap">
+      <table class="hms-table">
+        <thead><tr><th>Sequence</th><th>Checkpoint</th><th>Code</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for cp in checkpoints %}
+            <tr>
+              <td>{{ cp.sequence }}</td>
+              <td><span class="hms-table-primary">{{ cp.name }}</span>{% if cp.instructions %}<span class="hms-table-secondary">{{ cp.instructions }}</span>{% endif %}</td>
+              <td><code>{{ cp.checkpoint_code }}</code></td>
+              <td>{% if cp.pk in visited_ids %}<span class="hms-status hms-status-returned">Recorded</span>{% elif cp.is_required %}<span class="hms-status hms-status-out">Outstanding</span>{% else %}<span class="hms-status">Optional</span>{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4"><div class="hms-empty"><strong>No active checkpoints</strong>Contact the Security Head to configure this route.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if can_record %}
+  <section class="hms-card">
+    <div class="hms-card-heading">
+      <div>
+        <h2 class="hms-card-title">Record checkpoint visit</h2>
+        <p class="hms-card-description">Enter the code displayed at the physical checkpoint. The server records the timestamp and your logged-in account.</p>
+      </div>
+    </div>
+    <form method="post" action="{% url 'security_patrol_record_visit' run.pk %}" novalidate>
+      {% csrf_token %}
+      {% if visit_form.non_field_errors %}<div class="hms-notice" role="alert">{{ visit_form.non_field_errors }}</div>{% endif %}
+      <div class="hms-form-grid">
+        {% for field in visit_form %}
+          <div class="hms-field">
+            {% if field.field.widget.input_type == "checkbox" %}
+              <label style="display:flex;align-items:center;gap:9px;min-height:42px">{{ field }} <span>{{ field.label }}</span></label>
+            {% else %}
+              {{ field.label_tag }}
+              {{ field }}
+            {% endif %}
+            {% if field.help_text %}<span class="hms-field-help">{{ field.help_text }}</span>{% endif %}
+            {% for error in field.errors %}<span class="hms-field-error">{{ error }}</span>{% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+      <div class="hms-form-footer">
+        <button class="hms-btn hms-btn-primary" type="submit">Record visit <span aria-hidden="true">→</span></button>
+      </div>
+    </form>
+  </section>
+
+  <section class="hms-card">
+    <div class="hms-card-heading">
+      <div>
+        <h2 class="hms-card-title">Complete patrol</h2>
+        <p class="hms-card-description">You can complete this patrol once every active required checkpoint has been recorded.</p>
+      </div>
+    </div>
+    <form method="post" action="{% url 'security_patrol_complete' run.pk %}" novalidate>
+      {% csrf_token %}
+      {% if complete_form.non_field_errors %}<div class="hms-notice" role="alert">{{ complete_form.non_field_errors }}</div>{% endif %}
+      {% for field in complete_form %}
+        <div class="hms-field">
+          {{ field.label_tag }}
+          {{ field }}
+          {% if field.help_text %}<span class="hms-field-help">{{ field.help_text }}</span>{% endif %}
+          {% for error in field.errors %}<span class="hms-field-error">{{ error }}</span>{% endfor %}
+        </div>
+      {% endfor %}
+      <div class="hms-form-footer">
+        <button class="hms-btn hms-btn-primary" type="submit">Complete patrol</button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+
+  <section class="hms-card">
+    <div class="hms-card-heading">
+      <div>
+        <h2 class="hms-card-title">Visit history</h2>
+        <p class="hms-card-description">Recorded checkpoint visits, timestamps, observations and reported issues.</p>
+      </div>
+      <span class="hms-status">{{ run.visits.count }} visit{{ run.visits.count|pluralize }}</span>
+    </div>
+    <div class="hms-table-wrap">
+      <table class="hms-table">
+        <thead><tr><th>Time</th><th>Checkpoint</th><th>Recorded by</th><th>Observation</th><th>Issue</th></tr></thead>
+        <tbody>
+          {% for visit in run.visits.all %}
+            <tr>
+              <td>{{ visit.recorded_at|date:"M j, Y g:i:s a" }}</td>
+              <td>{{ visit.checkpoint.name }}</td>
+              <td>{{ visit.recorded_by.get_full_name|default:visit.recorded_by.username }}</td>
+              <td>{{ visit.observation|default:"—" }}</td>
+              <td>{% if visit.issue_found %}<span class="hms-status hms-status-out">Yes</span>{% else %}<span class="hms-status">No</span>{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5"><div class="hms-empty"><strong>No visits recorded yet</strong>Checkpoint visits will appear here as they are submitted.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
