@@ -1,0 +1,3 @@
+{% extends "base/base.html" %}
+{% block title %}Create Patrol Route{% endblock %}
+{% block content %}<div class="hms-page"><header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Security setup</p><h1 class="hms-page-title">Create patrol route</h1><p class="hms-page-subtitle">{{ hotel.name }}</p></div></header><section class="hms-card"><form method="post">{% csrf_token %}{{ form.as_p }}<div class="hms-actions"><button class="hms-btn hms-btn-primary" type="submit">Create route</button><a class="hms-btn hms-btn-secondary" href="{% url 'security_patrol_route_list' %}">Cancel</a></div></form></section></div>{% endblock %}
