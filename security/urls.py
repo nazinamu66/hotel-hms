@@ -3,6 +3,16 @@ from . import views
 
 urlpatterns = [
     path("", views.security_dashboard, name="security_dashboard"),
+    path("incidents/", views.security_incident_list, name="security_incident_list"),
+    path("incidents/create/", views.security_incident_create, name="security_incident_create"),
+    path("incidents/<int:incident_id>/", views.security_incident_detail, name="security_incident_detail"),
+    path("incidents/<int:incident_id>/review/", views.security_incident_review, name="security_incident_review"),
+    path("incidents/<int:incident_id>/update/", views.security_incident_update, name="security_incident_update"),
+    path("incidents/<int:incident_id>/resolve/", views.security_incident_resolve, name="security_incident_resolve"),
+    path("occurrence-reports/", views.security_occurrence_list, name="security_occurrence_list"),
+    path("occurrence-reports/create/", views.security_occurrence_create, name="security_occurrence_create"),
+    path("occurrence-reports/<int:report_id>/", views.security_occurrence_detail, name="security_occurrence_detail"),
+    path("occurrence-reports/<int:report_id>/review/", views.security_occurrence_review, name="security_occurrence_review"),
     path("attendance/", views.staff_attendance_list, name="security_attendance_list"),
     path("attendance/arrival/", views.staff_attendance_arrival, name="security_attendance_arrival"),
     path("attendance/<int:attendance_id>/departure/", views.staff_attendance_departure, name="security_attendance_departure"),
