@@ -35,6 +35,7 @@ class User(AbstractUser):
         ("GYM", "Gym Staff"),
         ("BOUTIQUE", "Boutique Staff"),
         ("SECURITY", "Security Staff"),
+        ("HR", "Human Resources Staff"),
     )
 
     role = models.CharField(
@@ -189,6 +190,7 @@ class User(AbstractUser):
             "GYM",
             "BOUTIQUE",
             "SECURITY",
+            "HR",
         }
 
     @property
@@ -304,6 +306,7 @@ class User(AbstractUser):
             "GYM",
             "BOUTIQUE",
             "SECURITY",
+            "HR",
         }:
 
             if not self.department:
