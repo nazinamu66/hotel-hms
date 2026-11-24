@@ -11,4 +11,5 @@ urlpatterns = [
     path("rosters/<int:roster_id>/approve/", views.roster_approve, name="roster_approve"),
     path("rosters/<int:roster_id>/return/", views.roster_return, name="roster_return"),
     path("shifts/", views.shift_list, name="shifts"),
+    path("reconciliations/<int:reconciliation_id>/", views.roster_reconciliation_detail, name="reconciliation_detail"),
 ]
