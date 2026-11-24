@@ -9,7 +9,7 @@ from django.utils import timezone
 from accounts.decorators import role_required
 from inventory.models import Hotel
 from .forms import PropertyExitPassForm, VehicleVisitForm, VisitorVisitForm
-from .models import PropertyExitPass, VehicleVisit, VisitorVisit, SecurityShiftConfiguration, SecurityShiftHandover
+from .models import PropertyExitPass, VehicleVisit, VisitorVisit, SecurityShiftConfiguration, SecurityShiftHandover, StaffAttendance
 from .handover_forms import SecurityShiftHandoverForm, SecurityHandoverAcknowledgementForm, SecurityHandoverCSOReviewForm
 
 MANAGEMENT_ROLES = ("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
@@ -73,6 +73,8 @@ def security_dashboard(request):
     latest_handover = SecurityShiftHandover.objects.filter(hotel=hotel).select_related("submitted_by", "acknowledged_by").first()
     context = {
         "latest_handover": latest_handover,
+        "staff_present": StaffAttendance.objects.filter(hotel=hotel, work_date=today, departed_at__isnull=True).count(),
+        "staff_arrivals_today": StaffAttendance.objects.filter(hotel=hotel, work_date=today).count(),
         "hotel": hotel,
         "available_hotels": _accessible_hotels(request.user),
         "vehicles_inside": visits.filter(exited_at__isnull=True).count(),
@@ -441,3 +443,72 @@ def shift_handover_cso_review(request, handover_id):
         handover.save(update_fields=["cso_reviewed_by", "cso_reviewed_at", "cso_review_note"])
         messages.success(request, "Optional CSO review recorded. Handover completion is unchanged.")
     return redirect("security_handover_detail", handover_id=handover.pk)
+
+
+@login_required
+@role_required(*SECURITY_ACCESS_ROLES)
+def staff_attendance_list(request):
+    hotel = _hotel_for_user(request)
+    records = StaffAttendance.objects.filter(hotel=hotel).select_related("employee", "employee__department", "arrival_recorded_by", "departure_recorded_by")
+    status = request.GET.get("status", "PRESENT")
+    if status == "PRESENT":
+        records = records.filter(departed_at__isnull=True)
+    elif status == "DEPARTED":
+        records = records.filter(departed_at__isnull=False)
+    else:
+        status = "ALL"
+    date_value = request.GET.get("date", "").strip()
+    selected_date = parse_date(date_value) if date_value else timezone.localdate()
+    if selected_date:
+        records = records.filter(work_date=selected_date)
+    search = request.GET.get("q", "").strip()
+    if search:
+        records = records.filter(Q(employee__username__icontains=search) | Q(employee__first_name__icontains=search) | Q(employee__last_name__icontains=search) | Q(employee__department__name__icontains=search))
+    return render(request, "security/attendance_list.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user), "records": records,
+        "status_filter": status, "selected_date": selected_date, "search_query": search,
+    })
+
+
+@login_required
+@role_required("SECURITY")
+def staff_attendance_arrival(request):
+    hotel = _hotel_for_user(request)
+    from .attendance_forms import StaffAttendanceArrivalForm
+    form = StaffAttendanceArrivalForm(request.POST or None, hotel=hotel)
+    if request.method == "POST" and form.is_valid():
+        record = form.save(commit=False)
+        record.hotel = hotel
+        record.work_date = timezone.localdate()
+        record.arrived_at = timezone.now()
+        record.arrival_recorded_by = request.user
+        try:
+            with transaction.atomic():
+                record.full_clean()
+                record.save()
+        except IntegrityError:
+            form.add_error("employee", "This employee already has an attendance record for today.")
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        else:
+            messages.success(request, f"Arrival recorded for {record.employee.get_full_name() or record.employee.username}.")
+            return redirect("security_attendance_list")
+    return render(request, "security/attendance_arrival.html", {
+        "hotel": hotel, "available_hotels": _accessible_hotels(request.user), "form": form,
+    })
+
+
+@login_required
+@role_required("SECURITY")
+@transaction.atomic
+def staff_attendance_departure(request, attendance_id):
+    hotel = _hotel_for_user(request)
+    record = get_object_or_404(StaffAttendance.objects.select_for_update().select_related("employee"), pk=attendance_id, hotel=hotel, departed_at__isnull=True)
+    if request.method == "POST":
+        record.departed_at = timezone.now()
+        record.departure_recorded_by = request.user
+        record.departure_note = request.POST.get("departure_note", "").strip()
+        record.full_clean()
+        record.save(update_fields=["departed_at", "departure_recorded_by", "departure_note", "updated_at"])
+        messages.success(request, f"Final departure recorded for {record.employee.get_full_name() or record.employee.username}.")
+    return redirect("security_attendance_list")
