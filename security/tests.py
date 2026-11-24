@@ -556,7 +556,7 @@ class StaffAttendanceTests(TestCase):
 
     def test_security_records_arrival_and_dashboard_counts_staff(self):
         self.client.force_login(self.security)
-        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": self.assignment.pk, "arrival_note": ""})
+        response = self.client.post(reverse("security_attendance_arrival"), {"employee": self.employee.pk, "assignment": self.assignment.pk, "arrival_note": ""})
         self.assertEqual(response.status_code, 302)
         from .models import StaffAttendance
         record = StaffAttendance.objects.get()
@@ -591,7 +591,7 @@ class StaffAttendanceTests(TestCase):
         from .models import StaffAttendance
         StaffAttendance.objects.create(hotel=self.hotel, employee=self.employee, arrival_recorded_by=self.security)
         self.client.force_login(self.security)
-        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": self.assignment.pk})
+        response = self.client.post(reverse("security_attendance_arrival"), {"employee": self.employee.pk})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(StaffAttendance.objects.count(), 1)
 
@@ -640,14 +640,14 @@ class StaffAttendanceTests(TestCase):
             roster=other_roster, employee=other_employee, work_date=today, shift=other_shift,
         )
         self.client.force_login(self.security)
-        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": other_assignment.pk})
+        response = self.client.post(reverse("security_attendance_arrival"), {"employee": other_employee.pk})
         self.assertEqual(response.status_code, 200)
         from .models import StaffAttendance
         self.assertFalse(StaffAttendance.objects.exists())
 
     def test_arrival_saves_approved_roster_and_shift_snapshot(self):
         self.client.force_login(self.security)
-        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": self.assignment.pk})
+        response = self.client.post(reverse("security_attendance_arrival"), {"employee": self.employee.pk, "assignment": self.assignment.pk})
         self.assertEqual(response.status_code, 302)
         from .models import StaffAttendance
         record = StaffAttendance.objects.get()
@@ -657,24 +657,29 @@ class StaffAttendanceTests(TestCase):
         self.assertIsNotNone(record.scheduled_start_at)
         self.assertIsNotNone(record.scheduled_end_at)
 
-    def test_security_cannot_record_arrival_from_unapproved_roster(self):
+    def test_security_can_record_arrival_even_when_roster_is_not_approved(self):
         self.roster.status = "DRAFT"
         self.roster.save(update_fields=["status"])
         self.client.force_login(self.security)
-        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": self.assignment.pk})
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(reverse("security_attendance_arrival"), {"employee": self.employee.pk})
+        self.assertEqual(response.status_code, 302)
         from .models import StaffAttendance
-        self.assertFalse(StaffAttendance.objects.exists())
+        record = StaffAttendance.objects.get()
+        self.assertEqual(record.employee, self.employee)
+        self.assertIsNone(record.roster_assignment_id)
+        self.assertEqual(record.punctuality_status, "UNLINKED")
 
-    def test_security_cannot_record_arrival_on_employee_day_off(self):
+    def test_security_can_record_arrival_for_employee_on_rostered_day_off(self):
         self.assignment.is_day_off = True
         self.assignment.shift = None
         self.assignment.save(update_fields=["is_day_off", "shift"])
         self.client.force_login(self.security)
-        response = self.client.post(reverse("security_attendance_arrival"), {"assignment": self.assignment.pk})
-        self.assertEqual(response.status_code, 200)
+        response = self.client.post(reverse("security_attendance_arrival"), {"employee": self.employee.pk})
+        self.assertEqual(response.status_code, 302)
         from .models import StaffAttendance
-        self.assertFalse(StaffAttendance.objects.exists())
+        record = StaffAttendance.objects.get()
+        self.assertEqual(record.employee, self.employee)
+        self.assertIsNone(record.roster_assignment_id)
 
     def test_previous_night_roster_assignment_is_available_after_midnight(self):
         from personnel.models import RosterAssignment, ShiftDefinition, WeeklyRoster
