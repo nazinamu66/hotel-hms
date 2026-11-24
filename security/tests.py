@@ -916,9 +916,13 @@ class StaffAttendanceTests(TestCase):
     def test_attendance_history_filters_by_department(self):
         from .models import StaffAttendance
         from inventory.models import Department
-        restaurant_department = Department.objects.create(
-            hotel=self.hotel, code="REST", name="Restaurant",
-            department_type="RESTAURANT",
+        restaurant_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel,
+            code="AHR",
+            defaults={
+                "name": "Attendance History Restaurant",
+                "department_type": "RESTAURANT",
+            },
         )
         restaurant_employee = User.objects.create_user(
             username="history-restaurant-employee", password="test",
