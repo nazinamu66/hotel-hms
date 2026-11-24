@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from inventory.models import Department
-from .models import ShiftDefinition, WeeklyRoster
+from .models import RosterReconciliation, ShiftDefinition, WeeklyRoster
 from .permissions import is_hr_head, manageable_roster_departments
 
 User = get_user_model()
@@ -41,3 +41,23 @@ class ShiftDefinitionForm(forms.ModelForm):
         model = ShiftDefinition
         fields = ["code", "name", "start_time", "end_time", "grace_minutes", "is_active"]
         widgets = {"start_time": forms.TimeInput(attrs={"type": "time"}), "end_time": forms.TimeInput(attrs={"type": "time"})}
+
+
+class RosterReconciliationForm(forms.ModelForm):
+    class Meta:
+        model = RosterReconciliation
+        fields = ["reason", "covered_employee", "actual_shift_name", "notes"]
+        widgets = {
+            "notes": forms.Textarea(attrs={"rows": 4, "placeholder": "Explain the arrangement and any relevant details."}),
+            "actual_shift_name": forms.TextInput(attrs={"placeholder": "e.g. Morning shift (08:00–15:00)"}),
+        }
+        help_texts = {
+            "covered_employee": "For a shift swap or cover, select the employee whose shift was covered.",
+            "actual_shift_name": "Optional; record the shift actually worked if known.",
+        }
+
+    def __init__(self, *args, reconciliation=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["covered_employee"].queryset = User.objects.filter(
+            is_active=True, department_id=reconciliation.employee.department_id
+        ).exclude(pk=reconciliation.employee_id).order_by("first_name", "last_name", "username") if reconciliation else User.objects.none()
