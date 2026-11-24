@@ -1,0 +1,30 @@
+{% extends "base/base.html" %}
+{% block title %}Delivery {{ record.delivery_reference }}{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:1050px">
+  <a href="{% url 'security_delivery_list' %}">← Supplier Deliveries</a>
+  <div class="d-flex justify-content-between align-items-start mt-3 mb-4"><div><h2>{{ record.delivery_reference }}</h2><p class="text-muted mb-0">{{ record.supplier.name }} · {{ record.department.name }}</p></div><span class="badge bg-secondary">{{ record.get_status_display }}</span></div>
+  <div class="card card-body mb-3"><div class="row g-3">
+    <div class="col-md-4"><small class="text-muted">Vehicle</small><div>{{ record.vehicle_registration }} {{ record.vehicle_description }}</div></div>
+    <div class="col-md-4"><small class="text-muted">Driver</small><div>{{ record.driver_name|default:"—" }}</div></div>
+    <div class="col-md-4"><small class="text-muted">Purchase Order</small><div>{% if record.purchase_order_id %}<a href="{% url 'inventory:po_detail' record.purchase_order_id %}">PO #{{ record.purchase_order_id }}</a>{% else %}Non-PO delivery{% endif %}</div></div>
+    <div class="col-md-4"><small class="text-muted">Gate arrival</small><div>{{ record.gate_in_at|date:"d M Y, H:i" }} · {{ record.gate_in_by }}</div></div>
+    <div class="col-md-4"><small class="text-muted">Gate departure</small><div>{% if record.gate_out_at %}{{ record.gate_out_at|date:"d M Y, H:i" }} · {{ record.gate_out_by }}{% else %}Still on premises{% endif %}</div></div>
+    <div class="col-md-4"><small class="text-muted">Department acknowledgement</small><div>{% if record.department_received_at %}{{ record.department_received_at|date:"d M Y, H:i" }} · {{ record.department_received_by }}{% else %}Pending{% endif %}</div></div>
+    {% if record.delivery_note %}<div class="col-12"><small class="text-muted">Gate note</small><div>{{ record.delivery_note|linebreaksbr }}</div></div>{% endif %}
+    {% if record.department_receipt_note %}<div class="col-12"><small class="text-muted">Receiving note</small><div>{{ record.department_receipt_note|linebreaksbr }}</div></div>{% endif %}
+    {% if record.purchase_receipt_id %}<div class="col-12"><strong>Linked Store receipt:</strong> Receipt #{{ record.purchase_receipt_id }}</div>{% endif %}
+  </div></div>
+  {% if can_acknowledge and not record.department_received_at %}
+  <div class="card card-body mb-3"><h5>Department Receipt Confirmation</h5>
+    {% if record.purchase_order_id %}<p class="text-muted">First record the actual quantities using the existing Purchase Order receiving screen. Then select the resulting receipt below. This confirmation does not post stock.</p>
+    <form method="post" action="{% url 'security_delivery_acknowledge' record.pk %}">{% csrf_token %}
+      <div class="mb-3"><label class="form-label">Recorded PO receipt</label><select class="form-select" name="purchase_receipt" required><option value="">Select receipt</option>{% for receipt in receipts %}<option value="{{ receipt.pk }}">Receipt #{{ receipt.pk }} · {{ receipt.received_at|date:"d M Y H:i" }} · {{ receipt.received_by|default:"—" }}</option>{% endfor %}</select></div>
+      <div class="mb-3"><label class="form-label">Receiving note</label><textarea class="form-control" name="department_receipt_note" rows="2"></textarea></div><button class="btn btn-success">Confirm Department Receipt</button>
+    </form>
+    {% else %}<p class="text-muted">This is a non-PO delivery. Acknowledgement records departmental receipt only and does not create inventory stock.</p>
+    <form method="post" action="{% url 'security_delivery_acknowledge' record.pk %}">{% csrf_token %}<textarea class="form-control mb-3" name="department_receipt_note" rows="2" placeholder="Receiving note"></textarea><button class="btn btn-success">Acknowledge Delivery</button></form>{% endif %}
+  </div>{% endif %}
+  {% if can_gate_out %}<div class="card card-body"><h5>Record Vehicle Departure</h5><form method="post" action="{% url 'security_delivery_gate_out' record.pk %}">{% csrf_token %}<textarea class="form-control mb-3" name="gate_out_note" rows="2" placeholder="Optional gate-out note"></textarea><button class="btn btn-primary">Record Gate Exit</button></form></div>{% endif %}
+</div>
+{% endblock %}
