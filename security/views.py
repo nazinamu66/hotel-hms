@@ -778,6 +778,8 @@ def security_incident_list(request):
         "hotel": hotel, "available_hotels": _accessible_hotels(request.user),
         "incidents": incidents, "status_filter": status,
         "severity_filter": severity, "search_query": query,
+        "incident_status_choices": SecurityIncident.STATUS_CHOICES,
+        "severity_choices": SecurityIncident.SEVERITY_CHOICES,
     })
 
 
