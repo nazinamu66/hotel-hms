@@ -188,7 +188,18 @@ class User(AbstractUser):
             "LAUNDRY",
             "GYM",
             "BOUTIQUE",
+            "SECURITY",
         }
+
+    @property
+    def is_security_head(self):
+        """True only for a department head assigned to a Security department."""
+        return bool(
+            self.role == "SECURITY"
+            and self.is_department_head
+            and self.department_id
+            and self.department.department_type == "SECURITY"
+        )
 
     # =========================================================
     # VALIDATION
@@ -292,6 +303,7 @@ class User(AbstractUser):
             "LAUNDRY",
             "GYM",
             "BOUTIQUE",
+            "SECURITY",
         }:
 
             if not self.department:
