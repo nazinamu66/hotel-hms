@@ -55,6 +55,8 @@ class SecurityDeliveryVisit(models.Model):
             errors["supplier"] = "The supplier must belong to this hotel."
         if self.department_id and self.department.hotel_id != self.hotel_id:
             errors["department"] = "The receiving department must belong to this hotel."
+        if not self.purchase_order_id:
+            errors["purchase_order"] = "A supplier delivery must be linked to an expected Purchase Order."
         if self.purchase_order_id:
             po = self.purchase_order
             if po.department.hotel_id != self.hotel_id:
