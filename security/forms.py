@@ -99,6 +99,8 @@ class VisitorVisitForm(forms.ModelForm):
         from maintenance.models import MaintenanceTicket
         from inventory.models import Supplier
         self.hotel = hotel
+        if hotel:
+            self.instance.hotel = hotel
         self.fields['host_staff'].queryset = User.objects.filter(is_active=True).filter(Q(hotel=hotel) | Q(department__hotel=hotel)).distinct().order_by('first_name', 'last_name', 'username') if hotel else User.objects.none()
         self.fields['maintenance_ticket'].queryset = MaintenanceTicket.objects.filter(Q(room__hotel=hotel) | Q(location__hotel=hotel)).select_related('room', 'location').order_by('-created_at') if hotel else MaintenanceTicket.objects.none()
         self.fields['supplier'].queryset = Supplier.objects.filter(hotel=hotel).order_by('name') if hotel else Supplier.objects.none()
