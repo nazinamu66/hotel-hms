@@ -140,3 +140,60 @@ class RosterAuditEvent(models.Model):
 
     def __str__(self):
         return f"{self.roster} · {self.event_type}"
+
+
+class RosterReconciliation(models.Model):
+    """HR disposition of an arrival recorded on an employee's approved day off."""
+    PENDING = "PENDING"
+    RECONCILED = "RECONCILED"
+    STATUS_CHOICES = [(PENDING, "Pending HR review"), (RECONCILED, "Reconciled")]
+    SHIFT_SWAP = "SHIFT_SWAP"
+    EMERGENCY_COVER = "EMERGENCY_COVER"
+    CALLED_IN = "CALLED_IN"
+    OVERTIME = "OVERTIME"
+    OTHER_WORK = "OTHER_WORK"
+    NO_WORK = "NO_WORK"
+    REASON_CHOICES = [
+        (SHIFT_SWAP, "Shift swap"), (EMERGENCY_COVER, "Emergency cover"),
+        (CALLED_IN, "Called in by management"), (OVERTIME, "Additional / overtime work"),
+        (OTHER_WORK, "Other work arrangement"), (NO_WORK, "Visit only — no work performed"),
+    ]
+    hotel = models.ForeignKey("inventory.Hotel", on_delete=models.PROTECT, related_name="roster_reconciliations")
+    attendance = models.OneToOneField("security.StaffAttendance", on_delete=models.PROTECT, related_name="roster_reconciliation")
+    roster_assignment = models.ForeignKey(RosterAssignment, on_delete=models.PROTECT, related_name="reconciliations")
+    employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="roster_reconciliations")
+    reason = models.CharField(max_length=24, choices=REASON_CHOICES, blank=True)
+    covered_employee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="covered_by_reconciliations")
+    actual_shift_name = models.CharField(max_length=80, blank=True)
+    notes = models.TextField(blank=True)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reconciled_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="completed_roster_reconciliations")
+    reconciled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["status", "-attendance__arrived_at", "-pk"]
+        indexes = [models.Index(fields=["hotel", "status"])]
+
+    def clean(self):
+        errors = {}
+        if self.attendance_id:
+            if self.attendance.hotel_id != self.hotel_id:
+                errors["attendance"] = "Attendance must belong to the same hotel."
+            if self.attendance.employee_id != self.employee_id:
+                errors["employee"] = "Reconciliation employee must match the attendance record."
+        if self.roster_assignment_id and self.attendance_id:
+            assignment = self.roster_assignment
+            if (assignment.employee_id != self.employee_id or assignment.work_date != self.attendance.work_date
+                or assignment.roster.hotel_id != self.hotel_id or not assignment.is_day_off
+                or assignment.roster.status != WeeklyRoster.APPROVED):
+                errors["roster_assignment"] = "The linked assignment must be this employee's approved day off."
+        if self.covered_employee_id and self.employee.department_id != self.covered_employee.department_id:
+            errors["covered_employee"] = "The covered employee must belong to the same department."
+        if self.status == self.RECONCILED and (not self.reconciled_by_id or not self.reconciled_at):
+            errors["status"] = "A completed reconciliation must record who signed it off and when."
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f"{self.employee} · {self.attendance.work_date} · {self.get_status_display()}"
