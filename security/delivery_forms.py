@@ -50,7 +50,7 @@ class SecurityDeliveryVisitForm(forms.ModelForm):
         eligible_pos = PurchaseOrder.objects.filter(
             pk__in=eligible_po_ids
         ).select_related("supplier", "department").order_by("-created_at") if eligible_po_ids else PurchaseOrder.objects.none()
-        self.fields["purchase_order"].queryset = eligible_pos
+        self.fields["purchase_order"].queryset = eligible_pos.filter(supplier_id=selected_supplier) if selected_supplier else eligible_pos
         self.fields["purchase_order"].required = True
         self.fields["purchase_order"].label = "Expected Purchase Order"
         self.fields["purchase_order"].help_text = "Only approved orders with outstanding quantities are listed."
