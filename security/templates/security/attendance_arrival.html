@@ -1,0 +1,7 @@
+{% extends "base/base.html" %}
+{% block title %}Record Staff Arrival{% endblock %}
+{% block content %}
+<div class="hms-page"><header class="hms-page-header"><div class="hms-page-heading"><p class="hms-eyebrow">Security · Staff control</p><h1 class="hms-page-title">Record staff arrival</h1><p class="hms-page-subtitle">{{ hotel.name }} · Arrival time is captured automatically when submitted.</p></div><div class="hms-actions"><a class="hms-btn hms-btn-secondary" href="{% url 'security_attendance_list' %}">Back to attendance</a></div></header>
+<section class="hms-card"><div class="hms-card-heading"><div><h2 class="hms-card-title">Employee arrival</h2><p class="hms-card-description">Select an active employee assigned to this hotel. The system records the time and your Security account.</p></div></div>{% if form.non_field_errors %}<div class="hms-notice" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+<form method="post">{% csrf_token %}<div class="hms-form-grid">{% for field in form %}<div class="hms-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<span class="hms-field-help">{{ field.help_text }}</span>{% endif %}{% if field.errors %}<div class="hms-field-error">{{ field.errors }}</div>{% endif %}</div>{% endfor %}</div><div class="hms-form-footer"><a class="hms-btn hms-btn-secondary" href="{% url 'security_attendance_list' %}">Cancel</a><button class="hms-btn hms-btn-primary" type="submit">Confirm arrival</button></div></form></section></div>
+{% endblock %}
