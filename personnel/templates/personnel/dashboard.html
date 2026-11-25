@@ -12,6 +12,7 @@
    {% for item in pending_reconciliations %}<tr><td>{{ item.attendance.work_date|date:"d M Y" }}</td><td>{{ item.employee.get_full_name|default:item.employee.username }}</td><td>{{ item.employee.department.name|default:"—" }}</td><td>{{ item.attendance.arrived_at|date:"d M Y, H:i" }}</td><td><a href="{% url 'personnel:reconciliation_detail' item.pk %}">Review and sign off</a></td></tr>{% endfor %}
   </tbody></table></div>{% else %}<div class="personnel-empty">No pending off-duty arrivals require reconciliation.</div>{% endif %}
  </section>{% endif %}
+ <p><a class="personnel-action" href="/personnel/employees/">Employee Records</a></p>
  <div class="personnel-grid">
   <section class="personnel-panel"><h2>Weekly rosters</h2>
    {% if rosters %}<div style="overflow-x:auto"><table class="personnel-table"><thead><tr><th>Week commencing</th><th>Hotel / Department</th><th>Responsible HOD</th><th>Status</th></tr></thead><tbody>{% for roster in rosters %}<tr><td><a href="{% url 'personnel:roster_detail' roster.pk %}">{{ roster.week_start|date:"d M Y" }}</a></td><td>{{ roster.hotel.name }} · {{ roster.department.name }}</td><td>{{ roster.responsible_hod.get_full_name|default:roster.responsible_hod.username }}</td><td><span class="status {{ roster.status }}">{{ roster.get_status_display }}</span></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="personnel-empty">No weekly rosters yet.</div>{% endif %}
