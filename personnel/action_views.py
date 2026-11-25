@@ -1,12 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from accounts.services.access import get_accessible_hotels
 from .action_forms import PersonnelActionForm
+from .action_services import apply_personnel_action
 from .models import PersonnelAction, PersonnelActionEvent
 from .permissions import is_hr_staff
 
@@ -148,4 +149,13 @@ def action_decide(request, action_id, decision):
         action.save()
         PersonnelActionEvent.objects.create(action=action, event_type=action.status, actor=request.user, note=note)
     messages.success(request, f"Personnel action {action.reference}: {action.get_status_display().lower()}.")
+    if decision == "approve":
+        try:
+            if apply_personnel_action(action.pk):
+                messages.success(request, "The action has also been applied because its effective date has arrived.")
+        except ValidationError as exc:
+            messages.warning(
+                request,
+                "The action is approved but could not be applied automatically: " + "; ".join(exc.messages),
+            )
     return redirect("personnel:action_detail", action_id=action.pk)
