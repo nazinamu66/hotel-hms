@@ -1,12 +1,51 @@
 {% extends "base/base.html" %}
 {% block title %}{{ action.reference }} · Personnel Action{% endblock %}
 {% block content %}
-<div style="max-width:950px;margin:auto"><p><a href="{% url 'personnel:action_list' %}">← Personnel Actions</a></p><h1>{{ action.reference }}</h1><h2>{{ action.title }}</h2>
-<table class="table"><tr><th>Employee</th><td>{{ action.employee.full_name }} · {{ action.employee.employee_number }}</td></tr><tr><th>Action</th><td>{{ action.get_action_type_display }}</td></tr><tr><th>Effective date</th><td>{{ action.effective_date|date:"d M Y" }}</td></tr><tr><th>Status</th><td>{{ action.get_status_display }}</td></tr><tr><th>Reason</th><td>{{ action.reason|linebreaks }}</td></tr><tr><th>Submitted by</th><td>{{ action.submitted_by.get_full_name|default:action.submitted_by.username }}</td></tr>{% if action.decided_by %}<tr><th>Decision</th><td>{{ action.get_status_display }} by {{ action.decided_by.get_full_name|default:action.decided_by.username }} on {{ action.decided_at|date:"d M Y H:i" }}<br>{{ action.decision_note|linebreaks }}</td></tr>{% endif %}</table>
-{% if action.attachment %}<p>Supporting document: attached (private file; download access is not enabled in this first milestone).</p>{% endif %}
-{% if can_submit %}<form method="post" action="{% url 'personnel:action_submit' action.pk %}">{% csrf_token %}<button type="submit">Submit for approval</button></form>{% endif %}
-{% if can_decide %}<h3>Management decision</h3><form method="post" action="{% url 'personnel:action_decide' action.pk 'approve' %}">{% csrf_token %}<textarea name="decision_note" rows="3" placeholder="Optional approval note"></textarea><button type="submit">Approve</button></form>
-<form method="post" action="{% url 'personnel:action_decide' action.pk 'return' %}">{% csrf_token %}<textarea name="decision_note" rows="3" required placeholder="Explain what needs correction"></textarea><button type="submit">Return for correction</button></form>
-<form method="post" action="{% url 'personnel:action_decide' action.pk 'reject' %}">{% csrf_token %}<textarea name="decision_note" rows="3" required placeholder="Reason for rejection"></textarea><button type="submit">Reject</button></form>{% endif %}
-<h3>Audit history</h3><ol>{% for event in events %}<li>{{ event.get_event_type_display|default:event.event_type }} · {{ event.actor.get_full_name|default:event.actor.username }} · {{ event.created_at|date:"d M Y H:i" }}{% if event.note %}<br>{{ event.note }}{% endif %}</li>{% empty %}<li>No events.</li>{% endfor %}</ol></div>
+<style>
+.pa-wrap{max-width:1120px;margin:0 auto;padding:4px 0 34px;color:var(--text,#172033)}
+.pa-back{display:inline-flex;margin-bottom:18px;color:#475569;text-decoration:none;font-size:13px;font-weight:700}.pa-back:hover{color:#1d4ed8}
+.pa-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px}.pa-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#64748b;margin-bottom:7px}.pa-head h1{font-size:27px;margin:0;font-weight:850;letter-spacing:-.03em}.pa-head p{font-size:14px;color:#64748b;margin:7px 0 0}
+.pa-status{display:inline-flex;padding:7px 11px;border-radius:30px;font-size:11px;font-weight:800;background:#f1f5f9;color:#64748b}.pa-submitted{background:#fff7ed;color:#c2410c}.pa-approved{background:#ecfdf5;color:#047857}.pa-rejected{background:#fef2f2;color:#b91c1c}.pa-returned{background:#eff6ff;color:#1d4ed8}
+.pa-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(270px,.85fr);gap:16px;align-items:start}
+.pa-card{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:15px;box-shadow:0 5px 18px rgba(15,23,42,.04);overflow:hidden;margin-bottom:16px}
+.pa-card-head{padding:16px 19px;border-bottom:1px solid #edf1f5}.pa-card-head h2{font-size:15px;margin:0;font-weight:800}.pa-card-body{padding:18px 19px}
+.pa-data{display:grid;grid-template-columns:1fr 1fr;gap:18px 20px}.pa-data-item small{display:block;color:#64748b;text-transform:uppercase;letter-spacing:.07em;font-size:10px;font-weight:800;margin-bottom:5px}.pa-data-item strong{font-size:13px;font-weight:750}.pa-wide{grid-column:1/-1}.pa-reason{font-size:13px;line-height:1.65;color:#334155;white-space:pre-wrap}
+.pa-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 13px;border-radius:9px;border:1px solid transparent;font-size:12px;font-weight:800;cursor:pointer;text-decoration:none}
+.pa-blue{background:#1d4ed8;color:#fff}.pa-green{background:#047857;color:#fff}.pa-red{background:#b91c1c;color:#fff}.pa-neutral{background:#fff;border-color:#cbd5e1;color:#475569}
+.pa-form{margin-top:10px}.pa-form textarea{box-sizing:border-box;width:100%;padding:10px 11px;border:1px solid #cbd5e1;border-radius:9px;font:inherit;font-size:12px;min-height:76px;margin-bottom:8px;background:var(--card,#fff);color:inherit}
+.pa-decision{display:grid;gap:9px}.pa-event{position:relative;padding:0 0 17px 20px;border-left:2px solid #e2e8f0;margin-left:5px}.pa-event:last-child{padding-bottom:0}.pa-event:before{content:"";position:absolute;left:-6px;top:2px;width:10px;height:10px;border-radius:50%;background:#3b82f6;border:2px solid #fff;box-shadow:0 0 0 1px #bfdbfe}.pa-event strong{font-size:12px}.pa-event small{display:block;color:#64748b;font-size:11px;margin-top:3px}.pa-event p{font-size:12px;color:#475569;margin:6px 0 0;line-height:1.5}
+.pa-info{padding:12px 14px;background:#eff6ff;border-radius:10px;color:#1e40af;font-size:12px;line-height:1.5}
+@media(max-width:760px){.pa-grid{grid-template-columns:1fr}.pa-data{grid-template-columns:1fr 1fr}}@media(max-width:420px){.pa-data{grid-template-columns:1fr}}
+</style>
+<div class="pa-wrap">
+ <a class="pa-back" href="{% url 'personnel:action_list' %}">← Personnel Actions</a>
+ <header class="pa-head"><div><div class="pa-eyebrow">Personnel action record</div><h1>{{ action.reference }}</h1><p>{{ action.title }}</p></div><span class="pa-status pa-{{ action.status|lower }}">{{ action.get_status_display }}</span></header>
+ <div class="pa-grid">
+  <main>
+   <section class="pa-card"><div class="pa-card-head"><h2>Action information</h2></div><div class="pa-card-body"><div class="pa-data">
+    <div class="pa-data-item"><small>Employee</small><strong>{{ action.employee.full_name }}</strong><div class="pa-muted">{{ action.employee.employee_number }}</div></div>
+    <div class="pa-data-item"><small>Action type</small><strong>{{ action.get_action_type_display }}</strong></div>
+    <div class="pa-data-item"><small>Effective date</small><strong>{{ action.effective_date|date:"d M Y" }}</strong></div>
+    <div class="pa-data-item"><small>Submitted by</small><strong>{{ action.submitted_by.get_full_name|default:action.submitted_by.username }}</strong></div>
+    {% if action.proposed_job_title %}<div class="pa-data-item"><small>Proposed job title</small><strong>{{ action.proposed_job_title }}</strong></div>{% endif %}
+    {% if action.proposed_department %}<div class="pa-data-item"><small>Proposed department</small><strong>{{ action.proposed_department.name }}</strong></div>{% endif %}
+    <div class="pa-data-item pa-wide"><small>Reason and supporting details</small><div class="pa-reason">{{ action.reason }}</div></div>
+    {% if action.decided_by %}<div class="pa-data-item pa-wide"><small>Management decision</small><strong>{{ action.get_status_display }} · {{ action.decided_by.get_full_name|default:action.decided_by.username }}</strong><div class="pa-muted">{{ action.decided_at|date:"d M Y, H:i" }}</div>{% if action.decision_note %}<div class="pa-reason">{{ action.decision_note }}</div>{% endif %}</div>{% endif %}
+   </div></div></section>
+   {% if action.attachment %}<section class="pa-card"><div class="pa-card-head"><h2>Supporting document</h2></div><div class="pa-card-body"><div class="pa-info">A private attachment is stored with this record. Secure download access will be added as a separate audited feature.</div></div></section>{% endif %}
+   <section class="pa-card"><div class="pa-card-head"><h2>Activity and audit history</h2></div><div class="pa-card-body">
+    {% for event in events %}<div class="pa-event"><strong>{{ event.event_type|title }}</strong><small>{{ event.actor.get_full_name|default:event.actor.username }} · {{ event.created_at|date:"d M Y, H:i" }}</small>{% if event.note %}<p>{{ event.note }}</p>{% endif %}</div>{% empty %}<p class="pa-muted">No activity has been recorded.</p>{% endfor %}
+   </div></section>
+  </main>
+  <aside>
+   {% if can_submit %}<section class="pa-card"><div class="pa-card-head"><h2>HR submission</h2></div><div class="pa-card-body"><p class="pa-muted">Review the details before sending this action to management.</p><form method="post" action="{% url 'personnel:action_submit' action.pk %}">{% csrf_token %}<button class="pa-btn pa-blue" type="submit">Submit for approval</button></form></div></section>{% endif %}
+   {% if can_decide %}<section class="pa-card"><div class="pa-card-head"><h2>Management review</h2></div><div class="pa-card-body"><p class="pa-muted">Record a decision on this submitted action.</p>
+    <form class="pa-form pa-decision" method="post" action="{% url 'personnel:action_decide' action.pk 'approve' %}">{% csrf_token %}<textarea name="decision_note" placeholder="Optional approval note"></textarea><button class="pa-btn pa-green" type="submit">Approve action</button></form>
+    <form class="pa-form pa-decision" method="post" action="{% url 'personnel:action_decide' action.pk 'return' %}">{% csrf_token %}<textarea name="decision_note" required placeholder="Explain what HR needs to correct"></textarea><button class="pa-btn pa-neutral" type="submit">Return for correction</button></form>
+    <form class="pa-form pa-decision" method="post" action="{% url 'personnel:action_decide' action.pk 'reject' %}">{% csrf_token %}<textarea name="decision_note" required placeholder="Reason for rejection"></textarea><button class="pa-btn pa-red" type="submit">Reject action</button></form>
+   </div></section>{% endif %}
+   <div class="pa-info">Approval records the management decision. Employment details are not changed by this first-stage approval workflow.</div>
+  </aside>
+ </div>
+</div>
 {% endblock %}
