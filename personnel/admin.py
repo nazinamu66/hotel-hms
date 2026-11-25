@@ -25,6 +25,17 @@ class EmployeeProfileAdmin(admin.ModelAdmin):
     search_fields = ("employee_number", "first_name", "last_name", "phone", "personal_email")
     readonly_fields = ("employee_number", "created_at", "updated_at")
 
+    # Employee changes must pass through the Personnel workflow so history
+    # events are recorded consistently.
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(EmployeeEmploymentHistory)
 class EmployeeEmploymentHistoryAdmin(admin.ModelAdmin):
