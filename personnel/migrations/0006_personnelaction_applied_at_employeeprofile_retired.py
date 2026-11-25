@@ -26,6 +26,7 @@ class Migration(migrations.Migration):
                     ("TERMINATED", "Terminated"),
                 ],
                 max_length=12,
+                default="ACTIVE",
             ),
         ),
     ]
