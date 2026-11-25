@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from accounts.models import User
 from inventory.models import Department, Hotel, Organization
-from personnel.models import EmployeeProfile
+from personnel.models import EmployeeEmploymentHistory, EmployeeProfile
 
 
 class EmployeeProfileModelTests(TestCase):
@@ -146,6 +146,73 @@ class EmployeeRecordViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         created = EmployeeProfile.objects.get(first_name="Ibrahim")
         self.assertIsNone(created.linked_user_id)
+        hire_event = EmployeeEmploymentHistory.objects.get(employee=created)
+        self.assertEqual(hire_event.event_type, EmployeeEmploymentHistory.HIRED)
+        self.assertEqual(hire_event.effective_date, date(2026, 3, 1))
+
+    def test_employee_edit_records_material_employment_changes(self):
+        self.client.force_login(self.hr_user)
+        response = self.client.post(
+            reverse("personnel:employee_edit", args=[self.employee.pk]),
+            {
+                "hotel": str(self.hotel.pk),
+                "department": str(self.operations_department.pk),
+                "first_name": "Fatima",
+                "middle_name": "",
+                "last_name": "Yusuf",
+                "preferred_name": "",
+                "personal_email": "",
+                "phone": "",
+                "address": "",
+                "job_title": "Senior Cashier",
+                "employment_type": "PERMANENT",
+                "employment_status": "ACTIVE",
+                "hire_date": "2026-02-01",
+                "end_date": "",
+                "hr_notes": "",
+                "effective_date": "2026-11-25",
+                "change_reason": "Promotion after performance review",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        event = EmployeeEmploymentHistory.objects.get(
+            employee=self.employee,
+            event_type="JOB_TITLE_CHANGE",
+        )
+        self.assertEqual(event.previous_values["job_title"], "Cashier")
+        self.assertEqual(event.new_values["job_title"], "Senior Cashier")
+        self.assertEqual(event.reason, "Promotion after performance review")
+
+    def test_confidential_documents_are_restricted_to_hr_head_director_and_admin(self):
+        from django.urls import reverse
+
+        upload_url = reverse(
+            "personnel:employee_document_upload", args=[self.employee.pk],
+        )
+        self.client.force_login(self.hr_user)
+        self.assertEqual(self.client.get(upload_url).status_code, 200)
+
+        hr_staff = User.objects.create_user(
+            username="hr-staff-document-test", password="test-password",
+            role="HR", organization=self.organization, hotel=self.hotel,
+            department=self.hr_department, is_department_head=False,
+        )
+        self.client.force_login(hr_staff)
+        self.assertEqual(self.client.get(upload_url).status_code, 403)
+
+        director = User.objects.create_user(
+            username="director-document-test", password="test-password",
+            role="DIRECTOR", organization=self.organization,
+        )
+        self.client.force_login(director)
+        self.assertEqual(self.client.get(upload_url).status_code, 200)
+
+        admin = User.objects.create_user(
+            username="admin-document-test", password="test-password",
+            role="ADMIN",
+        )
+        self.client.force_login(admin)
+        self.assertEqual(self.client.get(upload_url).status_code, 200)
 
     def test_employee_records_are_not_available_to_operational_user(self):
         operational_user = User.objects.create_user(
