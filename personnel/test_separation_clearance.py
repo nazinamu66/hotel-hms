@@ -23,17 +23,17 @@ class EmployeeSeparationClearanceTests(TestCase):
         self.hotel = Hotel.objects.create(
             name="Separation Test Hotel", organization=self.organization,
         )
-        self.hr_department = Department.objects.create(
-            hotel=self.hotel, name="Human Resources", code="HR",
-            department_type="HUMAN_RESOURCES",
+        self.hr_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Human Resources",
+            defaults={"code": "HR", "department_type": "HUMAN_RESOURCES"},
         )
-        self.department = Department.objects.create(
-            hotel=self.hotel, name="Front Desk", code="FD",
-            department_type="FRONTDESK",
+        self.department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Front Desk",
+            defaults={"code": "FD", "department_type": "FRONTDESK"},
         )
-        self.other_department = Department.objects.create(
-            hotel=self.hotel, name="Restaurant", code="REST",
-            department_type="RESTAURANT",
+        self.other_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Restaurant",
+            defaults={"code": "REST", "department_type": "RESTAURANT"},
         )
         self.hr = User.objects.create_user(
             username="separation-hr", password="test", role="HR",
