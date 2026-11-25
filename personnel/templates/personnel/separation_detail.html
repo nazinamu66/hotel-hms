@@ -1,0 +1,46 @@
+{% extends "base/base.html" %}
+{% block title %}Separation Clearance · Personnel{% endblock %}
+{% block content %}
+<div class="container py-3" style="max-width:1050px">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div><h1 class="h3 mb-1">Employee Separation Clearance</h1><p class="text-muted mb-0">{{ clearance.action.employee.full_name }} · {{ clearance.action.employee.employee_number }}</p></div>
+    <span class="badge text-bg-secondary">{{ clearance.get_status_display }}</span>
+  </div>
+  <div class="card mb-3"><div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-4"><small class="text-muted">Department</small><div>{{ clearance.action.employee.department.name }}</div></div>
+      <div class="col-md-4"><small class="text-muted">Hotel</small><div>{{ clearance.action.employee.hotel.name }}</div></div>
+      <div class="col-md-4"><small class="text-muted">Separation type</small><div>{{ clearance.action.get_action_type_display }}</div></div>
+      <div class="col-md-4"><small class="text-muted">Effective date</small><div>{{ clearance.action.effective_date|date:"d M Y" }}</div></div>
+      <div class="col-md-8"><small class="text-muted">Linked Personnel Action</small><div><a href="{% url 'personnel:action_detail' clearance.action_id %}">{{ clearance.action.reference }} · {{ clearance.action.title }}</a></div></div>
+    </div>
+  </div></div>
+  <div class="card mb-3"><div class="card-header fw-semibold">Department / Personnel verification</div><div class="card-body">
+    <p class="text-muted">Confirm that the employee has no outstanding responsibilities. Equipment and asset clearance are outside this version.</p>
+    <div class="mb-3"><strong>Outstanding matters recorded</strong><div>{{ clearance.outstanding_items|default:"None recorded"|linebreaksbr }}</div></div>
+    <p>Verified by: {{ clearance.verified_by|default:"Not yet verified" }} {% if clearance.verified_at %}· {{ clearance.verified_at|date:"d M Y H:i" }}{% endif %}</p>
+    {% if can_verify %}
+    <form method="post" action="{% url 'personnel:separation_verify' clearance.pk %}" class="border rounded p-3 mb-3">
+      {% csrf_token %}
+      <label class="form-label" for="outstanding_items">Outstanding matters (leave blank only when none remain)</label>
+      <textarea class="form-control mb-3" id="outstanding_items" name="outstanding_items" rows="4">{{ clearance.outstanding_items }}</textarea>
+      <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="no_outstanding_confirmed" name="no_outstanding_confirmed" {% if clearance.no_outstanding_confirmed %}checked{% endif %}><label class="form-check-label" for="no_outstanding_confirmed">I confirm there are no outstanding matters with this employee.</label></div>
+      <button class="btn btn-primary">Save verification</button>
+    </form>
+    {% endif %}
+    {% if can_verify and clearance.no_outstanding_confirmed and not clearance.outstanding_items %}
+    <form method="post" action="{% url 'personnel:separation_submit' clearance.pk %}">{% csrf_token %}<button class="btn btn-success">Submit for final approval</button></form>
+    {% endif %}
+  </div></div>
+  {% if can_approve %}
+  <div class="card mb-3"><div class="card-header fw-semibold">Director / Admin decision</div><div class="card-body">
+    <form method="post" action="{% url 'personnel:separation_decision' clearance.pk 'approve' %}" class="mb-3">{% csrf_token %}<button class="btn btn-success">Approve clearance</button></form>
+    <form method="post" action="{% url 'personnel:separation_decision' clearance.pk 'return' %}">{% csrf_token %}<label class="form-label">Reason for return</label><textarea class="form-control mb-2" name="decision_note" rows="3" required></textarea><button class="btn btn-outline-warning">Return for further action</button></form>
+  </div></div>
+  {% endif %}
+  <div class="card"><div class="card-header fw-semibold">Clearance history</div><div class="list-group list-group-flush">
+    {% for event in events %}<div class="list-group-item"><strong>{{ event.get_event_type_display|default:event.event_type }}</strong> · {{ event.actor }}<div class="small text-muted">{{ event.created_at|date:"d M Y H:i" }}</div>{% if event.note %}<div>{{ event.note|linebreaksbr }}</div>{% endif %}</div>{% empty %}<div class="list-group-item text-muted">No history yet.</div>{% endfor %}
+  </div></div>
+  <a class="btn btn-link mt-3" href="{% url 'personnel:separation_list' %}">← Back to clearances</a>
+</div>
+{% endblock %}
