@@ -129,6 +129,75 @@ class EmployeeSeparationClearanceTests(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
+    def test_department_head_cannot_verify_own_exit_hr_can_fallback(self):
+        # The employee is also the Front Desk Department Head.
+        self.login_user.is_department_head = True
+        self.login_user.save(update_fields=["is_department_head"])
+        _, clearance = self.create_clearance()
+
+        self.client.force_login(self.login_user)
+        response = self.client.post(
+            reverse("personnel:separation_verify", args=[clearance.pk]),
+            {"no_outstanding_confirmed": "on"},
+        )
+        self.assertEqual(response.status_code, 403)
+        clearance.refresh_from_db()
+        self.assertIsNone(clearance.verified_by_id)
+
+        # An independent HR user in the same hotel can perform the fallback verification.
+        self.client.force_login(self.hr)
+        response = self.client.post(
+            reverse("personnel:separation_verify", args=[clearance.pk]),
+            {"no_outstanding_confirmed": "on"},
+        )
+        self.assertEqual(response.status_code, 302)
+        clearance.refresh_from_db()
+        self.assertEqual(clearance.verified_by, self.hr)
+
+    def test_hr_employee_cannot_verify_own_exit_department_head_can_fallback(self):
+        hr_employee = EmployeeProfile.objects.create(
+            hotel=self.hotel, department=self.hr_department,
+            linked_user=self.hr,
+            first_name="Hauwa", last_name="HR",
+            job_title="HR Officer",
+            hire_date=date.today() - timedelta(days=180),
+            created_by=self.director, updated_by=self.director,
+        )
+        action = PersonnelAction.objects.create(
+            employee=hr_employee,
+            action_type=PersonnelAction.RESIGNATION,
+            title="Test HR resignation",
+            reason="HR clearance workflow test",
+            effective_date=timezone.localdate(),
+            submitted_by=self.director,
+            status=PersonnelAction.APPROVED,
+            decided_by=self.director,
+            decided_at=timezone.now(),
+        )
+        self.assertTrue(apply_personnel_action(action.pk))
+        clearance = EmployeeSeparationClearance.objects.get(action=action)
+
+        self.client.force_login(self.hr)
+        response = self.client.post(
+            reverse("personnel:separation_verify", args=[clearance.pk]),
+            {"no_outstanding_confirmed": "on"},
+        )
+        self.assertEqual(response.status_code, 403)
+
+        # The HR department's independent Head of Department can verify.
+        hr_hod = User.objects.create_user(
+            username="separation-hr-hod", password="test", role="HR",
+            department=self.hr_department, is_department_head=True,
+        )
+        self.client.force_login(hr_hod)
+        response = self.client.post(
+            reverse("personnel:separation_verify", args=[clearance.pk]),
+            {"no_outstanding_confirmed": "on"},
+        )
+        self.assertEqual(response.status_code, 302)
+        clearance.refresh_from_db()
+        self.assertEqual(clearance.verified_by, hr_hod)
+
     def test_outstanding_matters_block_submission_until_cleared(self):
         _, clearance = self.create_clearance()
         self.client.force_login(self.hod)
