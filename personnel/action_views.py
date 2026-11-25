@@ -64,7 +64,7 @@ def action_approval_queue(request):
         )
 
     context = {
-        "pending_actions": pending_actions,
+        "personnel_action_items": pending_actions,
         "pending_count": pending_count,
         "effective_count": effective_count,
         "upcoming_count": upcoming_count,
