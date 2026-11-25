@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from accounts.services.access import get_accessible_hotels
 from .action_forms import PersonnelActionForm
@@ -44,12 +45,17 @@ def action_approval_queue(request):
         raise PermissionDenied
 
     today = timezone.localdate()
-    pending_actions = _action_queryset(request.user).filter(
+    pending_actions = list(_action_queryset(request.user).filter(
         status=PersonnelAction.SUBMITTED,
     ).select_related(
         "employee", "employee__hotel", "employee__department",
         "submitted_by",
-    ).order_by("effective_date", "submitted_at", "created_at")
+    ).order_by("effective_date", "submitted_at", "created_at"))
+    for action in pending_actions:
+        action.review_url = reverse(
+            "personnel:action_detail",
+            kwargs={"action_id": action.pk},
+        )
 
     context = {
         "pending_actions": pending_actions,
