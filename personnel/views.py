@@ -3,12 +3,14 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from accounts.services.access import get_accessible_hotels
 from inventory.models import Department
 from .forms import RosterReconciliationForm, ShiftDefinitionForm, WeeklyRosterCreateForm
-from .models import EmployeeProfile, EmployeeSeparationClearance, PersonnelAction, RosterAssignment, RosterAuditEvent, RosterReconciliation, ShiftDefinition, WeeklyRoster
+from .models import EmployeeEmploymentHistory, EmployeeProfile, EmployeeSeparationClearance, PersonnelAction, RosterAssignment, RosterAuditEvent, RosterReconciliation, ShiftDefinition, WeeklyRoster
+from security.models import StaffAttendance
 from .permissions import can_view_roster, is_hr_head, is_hr_staff, is_roster_hod, manageable_roster_departments
 
 
@@ -19,7 +21,7 @@ def _require_roster_access(user):
 
 @login_required
 def dashboard(request):
-    """Human Resources landing page; roster operations live on a separate page."""
+    """Human Resources command centre; roster operations remain on their own page."""
     if not is_hr_staff(request.user):
         if request.user.is_department_head and request.user.department_id:
             return redirect("personnel:roster_dashboard")
@@ -27,6 +29,7 @@ def dashboard(request):
 
     hotels = get_accessible_hotels(request.user)
     employees = EmployeeProfile.objects.filter(hotel__in=hotels)
+    today = timezone.localdate()
     pending_reconciliations = RosterReconciliation.objects.filter(
         hotel__in=hotels,
         status=RosterReconciliation.PENDING,
@@ -35,18 +38,58 @@ def dashboard(request):
         "roster_assignment__roster__department",
     )
     personnel_actions = PersonnelAction.objects.filter(employee__hotel__in=hotels)
-    separation_clearances = EmployeeSeparationClearance.objects.filter(action__employee__hotel__in=hotels)
+    separation_clearances = EmployeeSeparationClearance.objects.filter(
+        action__employee__hotel__in=hotels,
+    )
     if not is_hr_head(request.user):
         personnel_actions = personnel_actions.filter(submitted_by=request.user)
+        pending_reconciliations = RosterReconciliation.objects.none()
+
+    scheduled_assignments = RosterAssignment.objects.filter(
+        roster__hotel__in=hotels,
+        roster__status=WeeklyRoster.APPROVED,
+        work_date=today,
+        is_day_off=False,
+        employee__is_active=True,
+    )
+    scheduled_count = scheduled_assignments.values("employee_id").distinct().count()
+    attended_count = StaffAttendance.objects.filter(
+        hotel__in=hotels,
+        work_date=today,
+        employee_id__in=scheduled_assignments.values("employee_id"),
+    ).values("employee_id").distinct().count()
+    attendance_rate = round(attended_count * 100 / scheduled_count) if scheduled_count else 0
+
+    department_overview = employees.values(
+        "department_id", "department__name",
+    ).annotate(
+        employee_count=Count("pk"),
+        active_count=Count("pk", filter=Q(employment_status=EmployeeProfile.ACTIVE)),
+    ).order_by("-employee_count", "department__name")[:8]
+
+    employment_type_overview = []
+    for code, label in EmployeeProfile.EMPLOYMENT_TYPE_CHOICES:
+        count = employees.filter(employment_type=code).count()
+        if count:
+            employment_type_overview.append({
+                "label": label, "count": count,
+                "percentage": round(count * 100 / employees.count()) if employees.exists() else 0,
+            })
+
     context = {
-        "pending_personnel_action_count": personnel_actions.filter(status=PersonnelAction.SUBMITTED).count(),
-        "pending_separation_clearance_count": separation_clearances.exclude(status=EmployeeSeparationClearance.APPROVED).count(),
-        "returned_personnel_action_count": personnel_actions.filter(status=PersonnelAction.RETURNED).count(),
+        "today": today,
         "hotel_count": hotels.count(),
         "employee_count": employees.count(),
         "active_employee_count": employees.filter(employment_status=EmployeeProfile.ACTIVE).count(),
         "on_leave_count": employees.filter(employment_status=EmployeeProfile.ON_LEAVE).count(),
         "suspended_count": employees.filter(employment_status=EmployeeProfile.SUSPENDED).count(),
+        "attendance_rate": attendance_rate,
+        "attendance_scheduled_count": scheduled_count,
+        "attendance_present_count": attended_count,
+        "pending_approval_count": personnel_actions.filter(status=PersonnelAction.SUBMITTED).count(),
+        "pending_personnel_action_count": personnel_actions.filter(status=PersonnelAction.SUBMITTED).count(),
+        "pending_separation_clearance_count": separation_clearances.exclude(status=EmployeeSeparationClearance.APPROVED).count(),
+        "returned_personnel_action_count": personnel_actions.filter(status=PersonnelAction.RETURNED).count(),
         "pending_roster_count": WeeklyRoster.objects.filter(
             hotel__in=hotels, status=WeeklyRoster.SUBMITTED,
         ).count(),
@@ -55,8 +98,14 @@ def dashboard(request):
             "hotel", "department",
         ).order_by("-created_at")[:6],
         "pending_reconciliations": pending_reconciliations[:6],
+        "department_overview": department_overview,
+        "employment_type_overview": employment_type_overview,
+        "recent_hr_activity": EmployeeEmploymentHistory.objects.filter(
+            employee__hotel__in=hotels,
+        ).select_related("employee", "recorded_by").order_by("-created_at")[:8],
         "is_hr_head": is_hr_head(request.user),
         "can_manage_employees": is_hr_head(request.user),
+        "can_review_attendance": is_hr_head(request.user),
     }
     return render(request, "personnel/dashboard.html", context)
 
