@@ -37,15 +37,15 @@ class PersonnelRosterTests(TestCase):
             ) for i in range(2)
         ]
         self.morning = ShiftDefinition.objects.create(
-            hotel=self.hotel, code="MORNING", name="Morning",
+            hotel=self.hotel, department=self.department, code="MORNING", name="Morning",
             start_time="08:00", end_time="15:00",
         )
         self.afternoon = ShiftDefinition.objects.create(
-            hotel=self.hotel, code="AFTERNOON", name="Afternoon",
+            hotel=self.hotel, department=self.department, code="AFTERNOON", name="Afternoon",
             start_time="15:00", end_time="20:00",
         )
         self.night = ShiftDefinition.objects.create(
-            hotel=self.hotel, code="NIGHT", name="Night",
+            hotel=self.hotel, department=self.department, code="NIGHT", name="Night",
             start_time="20:00", end_time="08:00",
         )
         self.monday = date.today() - timedelta(days=date.today().weekday())
@@ -150,6 +150,7 @@ class PersonnelRosterTests(TestCase):
     def test_hr_head_can_create_shift_definition_for_assigned_hotel(self):
         self.client.force_login(self.hr_head)
         response = self.client.post(reverse("personnel:shifts"), {
+            "department": self.department.pk,
             "code": "EVENING",
             "name": "Evening",
             "start_time": "15:00",
@@ -161,6 +162,64 @@ class PersonnelRosterTests(TestCase):
         shift = ShiftDefinition.objects.get(code="EVENING", hotel=self.hotel)
         self.assertEqual(shift.name, "Evening")
         self.assertEqual(shift.grace_minutes, 10)
+        self.assertEqual(shift.department, self.department)
+
+ 
+    def test_department_shift_configuration_allows_same_code_in_different_departments(self):
+        restaurant, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Restaurant",
+            defaults={"code": "REST", "department_type": "RESTAURANT"},
+        )
+        self.client.force_login(self.hr_head)
+        response = self.client.post(reverse("personnel:shifts"), {
+            "department": self.department.pk, "code": "MORNING", "name": "Front Desk Morning",
+            "start_time": "09:00", "end_time": "17:00", "grace_minutes": "15", "is_active": "on",
+        })
+        self.assertEqual(response.status_code, 302)
+        from .forms import ShiftDefinitionForm
+        form = ShiftDefinitionForm(data={
+            "department": restaurant.pk, "code": "MORNING", "name": "Restaurant Morning",
+            "start_time": "08:00", "end_time": "16:00", "grace_minutes": "10", "is_active": "on",
+        }, actor=self.hr_head)
+        self.assertTrue(form.is_valid(), form.errors)
+        shift = form.save(commit=False)
+        shift.full_clean()
+        shift.save()
+        self.assertEqual(ShiftDefinition.objects.filter(code="MORNING", department=self.department).count(), 1)
+        self.assertEqual(ShiftDefinition.objects.filter(code="MORNING", department=restaurant).count(), 1)
+
+    def test_roster_editor_only_offers_its_own_department_shifts(self):
+        restaurant, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Restaurant",
+            defaults={"code": "REST", "department_type": "RESTAURANT"},
+        )
+        ShiftDefinition.objects.create(
+            hotel=self.hotel, department=restaurant, code="REST-AM", name="Restaurant Morning",
+            start_time="08:00", end_time="16:00",
+        )
+        roster = self.make_roster()
+        self.client.force_login(self.hod)
+        response = self.client.get(reverse("personnel:roster_detail", args=[roster.pk]))
+        self.assertEqual(response.status_code, 200)
+        offered = list(response.context["assignable_shifts"])
+        self.assertTrue(offered)
+        self.assertTrue(all(item.department_id == self.department.pk for item in offered))
+
+    def test_shift_must_belong_to_roster_department(self):
+        restaurant, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Restaurant",
+            defaults={"code": "REST", "department_type": "RESTAURANT"},
+        )
+        other_shift = ShiftDefinition.objects.create(
+            hotel=self.hotel, department=restaurant, code="REST-AM", name="Restaurant Morning",
+            start_time="08:00", end_time="16:00",
+        )
+        assignment = RosterAssignment(
+            roster=self.make_roster(), employee=self.staff[0], work_date=self.monday,
+            shift=other_shift,
+        )
+        with self.assertRaises(ValidationError):
+            assignment.full_clean()
 
     def test_hr_head_can_create_roster_on_behalf_of_another_hod(self):
         self.client.force_login(self.hr_head)
@@ -229,7 +288,7 @@ class PersonnelRosterTests(TestCase):
         roster = self.make_roster()
         self.fill_roster(roster)
         early = ShiftDefinition.objects.create(
-            hotel=self.hotel, code="EARLY", name="Early",
+            hotel=self.hotel, department=self.department, code="EARLY", name="Early",
             start_time="07:00", end_time="15:00",
         )
         for employee in [self.hod, *self.staff]:
