@@ -1,3 +1,16 @@
 {% extends "base/base.html" %}
-{% block title %}Create roster · Personnel{% endblock %}
-{% block content %}<div style="max-width:650px;margin:0 auto;background:white;border:1px solid #e2e8f0;border-radius:16px;padding:24px"><h1>Create weekly roster</h1><p>Select the department, week commencing Monday, weekly rest-day entitlement per employee, and responsible Head of Department. The entitlement applies only to this roster week.</p><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit">Create roster</button></form></div>{% endblock %}
+{% block title %}Create weekly roster · Personnel{% endblock %}
+{% block content %}
+<style>
+.rc-wrap{max-width:850px;margin:0 auto;padding:8px 0 40px}.rc-hero{padding:26px 28px;border-radius:18px;background:linear-gradient(135deg,#172554,#1e40af);color:#fff;margin-bottom:20px}.rc-kicker{font-size:.72rem;text-transform:uppercase;letter-spacing:.13em;font-weight:800;opacity:.75}.rc-hero h1{font-size:1.8rem;margin:8px 0}.rc-hero p{margin:0;color:#dbeafe;max-width:650px}.rc-card{background:#fff;border:1px solid #e2e8f0;border-radius:17px;padding:26px;box-shadow:0 8px 28px rgba(15,23,42,.05)}.rc-card h2{font-size:1.1rem;margin:0 0 6px;color:#172033}.rc-help{color:#64748b;font-size:.9rem;margin:0 0 22px}.rc-form p{margin:0 0 18px}.rc-form label{display:block;font-weight:700;color:#334155;font-size:.86rem;margin-bottom:7px}.rc-form input,.rc-form select{width:100%;min-height:46px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a;box-sizing:border-box}.rc-form .helptext,.rc-form p small{display:block;color:#64748b;margin-top:6px;font-size:.82rem}.rc-form ul.errorlist{color:#b91c1c;margin:6px 0;padding-left:18px}.rc-errors{background:#fff1f2;border:1px solid #fecdd3;color:#9f1239;border-radius:10px;padding:12px 15px;margin-bottom:18px}.rc-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.rc-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 17px;border-radius:10px;text-decoration:none;font-weight:750;border:1px solid #cbd5e1;background:#fff;color:#334155}.rc-primary{background:#1e40af;color:#fff;border-color:#1e40af}@media(max-width:640px){.rc-hero,.rc-card{padding:20px}.rc-hero h1{font-size:1.45rem}}
+</style>
+<div class="rc-wrap">
+ <header class="rc-hero"><div class="rc-kicker">Personnel · Workforce planning</div><h1>Create a weekly roster</h1><p>Set the department and week, then choose each employee’s rest-day entitlement for this roster only. Shift assignments are added after the roster is created.</p></header>
+ <section class="rc-card"><h2>Roster details</h2><p class="rc-help">The week must commence on a Monday. The weekly rest-day setting does not change previous or future rosters.</p>
+ {% if form.non_field_errors %}<div class="rc-errors">{{ form.non_field_errors }}</div>{% endif %}
+ <form class="rc-form" method="post">{% csrf_token %}
+ {% for field in form %}<p><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</p>{% endfor %}
+ <div class="rc-actions"><button class="rc-btn rc-primary" type="submit">Create roster and assign shifts</button><a class="rc-btn" href="{% url 'personnel:roster_dashboard' %}">Cancel</a></div>
+ </form></section>
+</div>
+{% endblock %}
