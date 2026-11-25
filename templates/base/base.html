@@ -248,6 +248,7 @@
             {% if user.role == "HR" and user.department_id and user.department.department_type == "HUMAN_RESOURCES" %}
             <a href="{% url 'personnel:dashboard' %}">Dashboard</a>
             <a href="{% url 'personnel:employee_list' %}">Employee Records</a>
+            <a href="{% url 'personnel:action_list' %}">Personnel Actions</a>
             {% endif %}
             <a href="{% url 'personnel:roster_dashboard' %}">Staff Attendance Roster</a>
             {% if user.role == "HR" and user.is_department_head and user.department_id and user.department.department_type == "HUMAN_RESOURCES" %}
