@@ -1,20 +1,34 @@
 {% extends "base/base.html" %}
-{% block title %}Employee Separation Clearances · Personnel{% endblock %}
+{% block title %}Exit Clearances · Personnel{% endblock %}
 {% block content %}
-<div class="container-fluid py-3">
-  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-    <div><h1 class="h3 mb-1">Employee Separation Clearances</h1><p class="text-muted mb-0">Department and Personnel verification before final management sign-off.</p></div>
-  </div>
-  <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
-    <thead><tr><th>Employee</th><th>Personnel action</th><th>Department</th><th>Effective date</th><th>Status</th><th></th></tr></thead>
-    <tbody>
-    {% for item in clearances %}
-      <tr><td><strong>{{ item.action.employee.full_name }}</strong><br><small>{{ item.action.employee.employee_number }}</small></td>
-      <td>{{ item.action.get_action_type_display }} · {{ item.action.reference }}</td>
-      <td>{{ item.action.employee.department.name }}</td><td>{{ item.action.effective_date|date:"d M Y" }}</td>
-      <td>{{ item.get_status_display }}</td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'personnel:separation_detail' item.pk %}">Open</a></td></tr>
-    {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No separation clearances have been generated.</td></tr>{% endfor %}
-    </tbody>
-  </table></div></div>
+<style>
+.exit-page{max-width:1380px;margin:0 auto}.exit-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;margin-bottom:24px}.exit-eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:#64748b}.exit-head h1{font-size:30px;letter-spacing:-.04em;margin:5px 0}.exit-sub{color:#64748b;margin:0}.exit-count{background:#eaf1ff;color:#1d4ed8;border-radius:14px;padding:12px 16px;font-weight:800}.exit-card{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:18px;box-shadow:0 8px 26px rgba(15,23,42,.045);overflow:hidden}.exit-table-wrap{overflow-x:auto}.exit-table{width:100%;border-collapse:collapse;min-width:850px}.exit-table th{background:#f8fafc;color:#64748b;font-size:10px;letter-spacing:.1em;text-transform:uppercase;text-align:left;padding:15px 18px;white-space:nowrap}.exit-table td{padding:17px 18px;border-top:1px solid #edf1f5;vertical-align:middle}.exit-table tbody tr:hover{background:#fbfdff}.exit-person{font-weight:800;color:#172033}.exit-meta{font-size:12px;color:#64748b;margin-top:4px}.exit-action{font-weight:700;color:#263449}.exit-ref{font-size:11px;color:#64748b;margin-top:4px}.exit-status{display:inline-flex;align-items:center;gap:7px;border-radius:30px;padding:6px 10px;font-size:11px;font-weight:800;white-space:nowrap;background:#f1f5f9;color:#475569}.exit-status:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}.exit-status.pending{background:#fff7ed;color:#c2410c}.exit-status.submitted{background:#eff6ff;color:#1d4ed8}.exit-status.returned{background:#fef2f2;color:#b91c1c}.exit-status.approved{background:#ecfdf5;color:#047857}.exit-open{display:inline-flex;padding:8px 13px;border-radius:9px;border:1px solid #dbe3ed;color:#1d4ed8;text-decoration:none;font-weight:800;font-size:12px}.exit-open:hover{background:#eff6ff;border-color:#bfdbfe}.exit-empty{padding:58px 20px;text-align:center}.exit-empty-icon{width:54px;height:54px;display:grid;place-items:center;border-radius:16px;background:#f1f5f9;color:#64748b;font-size:24px;margin:0 auto 14px}.exit-empty h3{font-size:17px;margin:0 0 6px}.exit-empty p{color:#64748b;margin:0;font-size:13px}
+</style>
+<div class="exit-page">
+ <header class="exit-head">
+  <div><div class="exit-eyebrow">Human Resources · Personnel</div><h1>Exit Clearances</h1><p class="exit-sub">Track staff exits, departmental verification and final management sign-off.</p></div>
+  <div class="exit-count">{{ clearances|length }} record{{ clearances|length|pluralize }}</div>
+ </header>
+ <section class="exit-card">
+  {% if clearances %}
+  <div class="exit-table-wrap"><table class="exit-table">
+   <thead><tr><th>Employee</th><th>Exit action</th><th>Department</th><th>Effective date</th><th>Clearance status</th><th></th></tr></thead>
+   <tbody>
+   {% for item in clearances %}
+    <tr>
+     <td><div class="exit-person">{{ item.action.employee.full_name }}</div><div class="exit-meta">{{ item.action.employee.employee_number }}</div></td>
+     <td><div class="exit-action">{{ item.action.get_action_type_display }}</div><div class="exit-ref">{{ item.action.reference }}</div></td>
+     <td>{{ item.action.employee.department.name|default:"—" }}</td>
+     <td><strong>{{ item.action.effective_date|date:"d M Y" }}</strong></td>
+     <td><span class="exit-status {% if item.status == 'SUBMITTED' %}submitted{% elif item.status == 'RETURNED' %}returned{% elif item.status == 'APPROVED' %}approved{% else %}pending{% endif %}">{{ item.get_status_display }}</span></td>
+     <td><a class="exit-open" href="{% url 'personnel:separation_detail' item.pk %}">Review record →</a></td>
+    </tr>
+   {% endfor %}
+   </tbody>
+  </table></div>
+  {% else %}
+  <div class="exit-empty"><div class="exit-empty-icon">✓</div><h3>No exit clearances yet</h3><p>A clearance record is generated automatically when an approved separation action takes effect.</p></div>
+  {% endif %}
+ </section>
 </div>
 {% endblock %}
