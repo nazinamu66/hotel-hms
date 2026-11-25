@@ -3,6 +3,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+from .storage import private_employee_storage
 
 
 class ShiftDefinition(models.Model):
@@ -383,7 +384,7 @@ class EmployeeDocument(models.Model):
     description = models.TextField(blank=True)
     file = models.FileField(
         upload_to="personnel/employees/%Y/%m/",
-        storage=__import__("personnel.storage", fromlist=["private_employee_storage"]).private_employee_storage,
+        storage=private_employee_storage,
     )
     original_filename = models.CharField(max_length=255, editable=False)
     uploaded_by = models.ForeignKey(
