@@ -1,11 +1,53 @@
 {% extends "base/base.html" %}
-{% block title %}Personnel Actions{% endblock %}
+{% block title %}Personnel Actions · HR{% endblock %}
 {% block content %}
-<div style="max-width:1200px;margin:auto">
- <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h1>Personnel Actions</h1><p>Employment decisions, submissions and approval history.</p></div>{% if can_submit %}<a class="btn btn-primary" href="{% url 'personnel:action_create' %}">＋ New Action</a>{% endif %}</div>
- <form method="get" style="margin:18px 0"><select name="status"><option value="">All statuses</option>{% for value,label in statuses %}<option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button type="submit">Filter</button></form>
- <div style="overflow-x:auto"><table class="table"><thead><tr><th>Reference</th><th>Employee</th><th>Action</th><th>Effective</th><th>Status</th><th>Submitted by</th></tr></thead><tbody>
- {% for item in actions %}<tr><td><a href="{% url 'personnel:action_detail' item.pk %}">{{ item.reference }}</a></td><td>{{ item.employee.full_name }}<br><small>{{ item.employee.employee_number }}</small></td><td>{{ item.get_action_type_display }}</td><td>{{ item.effective_date|date:"d M Y" }}</td><td>{{ item.get_status_display }}</td><td>{{ item.submitted_by.get_full_name|default:item.submitted_by.username }}</td></tr>{% empty %}<tr><td colspan="6">No personnel actions found.</td></tr>{% endfor %}
- </tbody></table></div>
+<style>
+.pa-wrap{max-width:1380px;margin:0 auto;padding:4px 0 32px;color:var(--text,#172033)}
+.pa-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;margin-bottom:22px}
+.pa-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#64748b;margin-bottom:7px}
+.pa-head h1{font-size:29px;line-height:1.15;margin:0;font-weight:800;letter-spacing:-.035em}
+.pa-sub{margin:8px 0 0;color:var(--muted,#64748b);font-size:14px}
+.pa-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:10px;text-decoration:none!important;font-weight:750;border:1px solid transparent;transition:.18s}
+.pa-btn-primary{background:#1d4ed8;color:#fff!important;box-shadow:0 5px 12px #1d4ed826}.pa-btn-primary:hover{background:#1e40af}
+.pa-panel{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;box-shadow:0 5px 18px rgba(15,23,42,.045);overflow:hidden}
+.pa-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:17px 20px;border-bottom:1px solid var(--border,#e2e8f0)}
+.pa-toolbar h2{font-size:15px;margin:0;font-weight:800}.pa-muted{color:var(--muted,#64748b);font-size:12px}
+.pa-filter{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pa-filter select{min-width:180px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;background:var(--card,#fff);color:inherit}
+.pa-filter button{padding:10px 14px;border:0;border-radius:9px;background:#eaf1ff;color:#1d4ed8;font-weight:750;cursor:pointer}
+.pa-table-wrap{overflow-x:auto}.pa-table{width:100%;border-collapse:collapse;min-width:760px}
+.pa-table th{padding:12px 18px;text-align:left;background:#f8fafc;color:#64748b;font-size:10px;letter-spacing:.09em;text-transform:uppercase;font-weight:800;white-space:nowrap}
+.pa-table td{padding:15px 18px;border-top:1px solid #edf1f5;font-size:13px;vertical-align:middle}
+.pa-table tbody tr:hover{background:#fafcff}.pa-ref{font-weight:800;color:#1d4ed8;text-decoration:none}.pa-ref:hover{text-decoration:underline}
+.pa-employee{font-weight:750}.pa-secondary{display:block;color:#64748b;font-size:11px;margin-top:3px}
+.pa-type{display:inline-flex;padding:5px 9px;border-radius:7px;background:#f1f5f9;color:#475569;font-size:11px;font-weight:750}
+.pa-status{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:30px;font-size:11px;font-weight:800;white-space:nowrap}
+.pa-status:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pa-draft{background:#f1f5f9;color:#64748b}.pa-submitted{background:#fff7ed;color:#c2410c}.pa-approved{background:#ecfdf5;color:#047857}.pa-rejected{background:#fef2f2;color:#b91c1c}.pa-returned{background:#eff6ff;color:#1d4ed8}
+.pa-empty{text-align:center;padding:52px 20px!important;color:#64748b}.pa-empty strong{display:block;color:#334155;font-size:14px;margin-bottom:5px}
+@media(max-width:640px){.pa-head h1{font-size:24px}.pa-toolbar{align-items:flex-start}.pa-filter{width:100%}.pa-filter select{flex:1;min-width:0}}
+</style>
+<div class="pa-wrap">
+ <header class="pa-head">
+  <div><div class="pa-eyebrow">Human Resources · Employment administration</div><h1>Personnel Actions</h1><p class="pa-sub">Manage employment decisions, track submissions and review approval history.</p></div>
+  {% if can_submit %}<a class="pa-btn pa-btn-primary" href="{% url 'personnel:action_create' %}"><span aria-hidden="true">＋</span> Create personnel action</a>{% endif %}
+ </header>
+ <section class="pa-panel">
+  <div class="pa-toolbar">
+   <div><h2>Action register</h2><span class="pa-muted">{{ actions.count }} record{{ actions.count|pluralize }} in your access scope</span></div>
+   <form method="get" class="pa-filter">
+    <select name="status" aria-label="Filter by status"><option value="">All statuses</option>{% for value,label in statuses %}<option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <button type="submit">Apply filter</button>{% if request.GET.status %}<a class="pa-muted" href="{% url 'personnel:action_list' %}">Clear</a>{% endif %}
+   </form>
+  </div>
+  <div class="pa-table-wrap"><table class="pa-table"><thead><tr><th>Reference</th><th>Employee</th><th>Action type</th><th>Effective date</th><th>Status</th><th>Submitted by</th></tr></thead><tbody>
+   {% for item in actions %}<tr>
+    <td><a class="pa-ref" href="{% url 'personnel:action_detail' item.pk %}">{{ item.reference }}</a><span class="pa-secondary">Open record →</span></td>
+    <td><span class="pa-employee">{{ item.employee.full_name }}</span><span class="pa-secondary">{{ item.employee.employee_number }}</span></td>
+    <td><span class="pa-type">{{ item.get_action_type_display }}</span></td><td>{{ item.effective_date|date:"d M Y" }}</td>
+    <td><span class="pa-status pa-{{ item.status|lower }}">{{ item.get_status_display }}</span></td>
+    <td>{{ item.submitted_by.get_full_name|default:item.submitted_by.username }}</td>
+   </tr>{% empty %}<tr><td colspan="6" class="pa-empty"><strong>No personnel actions found</strong>New submissions will appear here once HR creates them.</td></tr>{% endfor %}
+  </tbody></table></div>
+ </section>
 </div>
 {% endblock %}
