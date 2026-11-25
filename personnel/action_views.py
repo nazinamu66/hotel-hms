@@ -53,8 +53,12 @@ def action_approval_queue(request):
         "submitted_by",
     )
     pending_count = pending_queryset.count()
-    effective_count = pending_queryset.filter(effective_date__lte=today).count()
-    upcoming_count = pending_queryset.filter(effective_date__gt=today).count()
+    approved_due = _action_queryset(request.user).filter(
+        status=PersonnelAction.APPROVED, applied_at__isnull=True, effective_date__lte=today,
+    ).count()
+    approved_upcoming = _action_queryset(request.user).filter(
+        status=PersonnelAction.APPROVED, applied_at__isnull=True, effective_date__gt=today,
+    ).count()
     pending_actions = list(
         pending_queryset.order_by("effective_date", "submitted_at", "created_at")
     )
@@ -67,8 +71,8 @@ def action_approval_queue(request):
     context = {
         "personnel_action_items": pending_actions,
         "pending_count": pending_count,
-        "effective_count": effective_count,
-        "upcoming_count": upcoming_count,
+        "effective_count": approved_due,
+        "upcoming_count": approved_upcoming,
         "today": today,
     }
     return render(request, "personnel/action_approval_queue.html", context)
