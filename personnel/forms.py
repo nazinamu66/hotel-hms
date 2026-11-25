@@ -39,23 +39,22 @@ class WeeklyRosterCreateForm(forms.ModelForm):
 class ShiftDefinitionForm(forms.ModelForm):
     class Meta:
         model = ShiftDefinition
-        fields = ["code", "name", "start_time", "end_time", "grace_minutes", "is_active"]
+        fields = ["department", "code", "name", "start_time", "end_time", "grace_minutes", "is_active"]
         widgets = {"start_time": forms.TimeInput(attrs={"type": "time"}), "end_time": forms.TimeInput(attrs={"type": "time"})}
 
     def __init__(self, *args, actor=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.actor = actor
+        self.fields["department"].queryset = manageable_roster_departments(actor).select_related("hotel")
+        self.fields["department"].required = True
 
     def clean(self):
         cleaned = super().clean()
-        # hotel is intentionally not user-editable: the shift belongs to the
-        # HR Head's assigned hotel. Set it before ModelForm's model validation.
-        department = getattr(self.actor, "department", None)
-        hotel = getattr(department, "hotel", None)
-        if hotel:
-            self.instance.hotel = hotel
-        else:
-            self.add_error(None, "Your account is not assigned to a hotel through Human Resources.")
+        department = cleaned.get("department")
+        if department:
+            if not manageable_roster_departments(self.actor).filter(pk=department.pk).exists():
+                self.add_error("department", "You cannot configure shifts for this department.")
+            self.instance.hotel = department.hotel
         return cleaned
 
 
