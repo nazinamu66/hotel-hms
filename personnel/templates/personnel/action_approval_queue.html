@@ -20,13 +20,13 @@
  <section class="paq-panel"><div class="paq-panel-head"><h2>Pending management review</h2><p>Actions are ordered by effective date, with the earliest dates first.</p></div>
   <div class="paq-table-wrap"><table class="paq-table"><thead><tr><th>Reference</th><th>Employee</th><th>Action</th><th>Hotel / Department</th><th>Effective date</th><th>Submitted</th><th></th></tr></thead><tbody>
    {% for item in pending_actions %}<tr>
-    <td><a class="paq-ref" href="{% url 'personnel:action_detail' action_id=item.id %}">{{ item.reference }}</a></td>
+    <td><a class="paq-ref" href="{{ item.review_url }}">{{ item.reference }}</a></td>
     <td><span class="paq-employee">{{ item.employee.full_name }}</span><span class="paq-muted">{{ item.employee.employee_number }}</span></td>
     <td><span class="paq-tag">{{ item.get_action_type_display }}</span><span class="paq-muted">{{ item.title }}</span></td>
     <td>{{ item.employee.hotel.name }}<span class="paq-muted">{{ item.employee.department.name }}</span></td>
     <td>{% if item.effective_date <= today %}<span class="paq-date-alert">{{ item.effective_date|date:"d M Y" }} · Due</span>{% else %}{{ item.effective_date|date:"d M Y" }}{% endif %}</td>
     <td>{{ item.submitted_at|date:"d M Y, H:i"|default:"—" }}<span class="paq-muted">{{ item.submitted_by.get_full_name|default:item.submitted_by.username }}</span></td>
-    <td><a class="paq-review" href="{% url 'personnel:action_detail' action_id=item.id %}">Review action</a></td>
+    <td><a class="paq-review" href="{{ item.review_url }}">Review action</a></td>
    </tr>{% empty %}<tr><td colspan="7" class="paq-empty"><strong>No actions awaiting approval</strong>New HR submissions will appear in this inbox.</td></tr>{% endfor %}
   </tbody></table></div>
  </section>
