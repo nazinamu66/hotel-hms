@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -53,12 +54,12 @@ def action_approval_queue(request):
         "submitted_by",
     )
     pending_count = pending_queryset.count()
-    approved_due = _action_queryset(request.user).filter(
-        status=PersonnelAction.APPROVED, applied_at__isnull=True, effective_date__lte=today,
-    ).count()
-    approved_upcoming = _action_queryset(request.user).filter(
-        status=PersonnelAction.APPROVED, applied_at__isnull=True, effective_date__gt=today,
-    ).count()
+    scheduled_actions = _action_queryset(request.user).filter(
+        Q(status=PersonnelAction.SUBMITTED)
+        | Q(status=PersonnelAction.APPROVED, applied_at__isnull=True)
+    )
+    approved_due = scheduled_actions.filter(effective_date__lte=today).count()
+    approved_upcoming = scheduled_actions.filter(effective_date__gt=today).count()
     pending_actions = list(
         pending_queryset.order_by("effective_date", "submitted_at", "created_at")
     )
