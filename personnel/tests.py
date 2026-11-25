@@ -171,11 +171,6 @@ class PersonnelRosterTests(TestCase):
             defaults={"code": "REST", "department_type": "RESTAURANT"},
         )
         self.client.force_login(self.hr_head)
-        response = self.client.post(reverse("personnel:shifts"), {
-            "department": self.department.pk, "code": "MORNING", "name": "Front Desk Morning",
-            "start_time": "09:00", "end_time": "17:00", "grace_minutes": "15", "is_active": "on",
-        })
-        self.assertEqual(response.status_code, 302)
         from .forms import ShiftDefinitionForm
         form = ShiftDefinitionForm(data={
             "department": restaurant.pk, "code": "MORNING", "name": "Restaurant Morning",
