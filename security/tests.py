@@ -31,6 +31,29 @@ class PropertyExitPassTests(TestCase):
         self.manager = User.objects.create_user(username="hotel-manager", password="test", role="MANAGER", hotel=self.hotel)
         self.staff = User.objects.create_user(username="staff-member", password="test", role="FRONTDESK")
 
+    def test_security_dashboard_renders_grouped_navigation_and_operational_panels(self):
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Security work areas")
+        self.assertContains(response, "Items requiring attention")
+        self.assertContains(response, "Recent patrol runs")
+        self.assertContains(response, "Recent supplier deliveries")
+        self.assertContains(response, "Shift control")
+        self.assertIn("staff_exit_pending_count", response.context)
+        self.assertIn("deliveries_awaiting_inspection", response.context)
+        self.assertIn("patrols_with_issues", response.context)
+
+    def test_security_dashboard_keeps_all_top_level_workflows_discoverable(self):
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_dashboard"))
+        for label in (
+            "Staff attendance", "Shift handovers", "Patrols", "Supplier deliveries",
+            "Vehicle register", "Visitor register", "Staff exit passes",
+            "Property exit passes", "Incident register", "Daily occurrence reports",
+        ):
+            self.assertContains(response, label)
+
     def make_pass(self, **overrides):
         values = dict(hotel=self.hotel, pass_type=PropertyExitPass.TEMPORARY, staff_name="Test Staff", item_is_equipment=True, item_description="Office laptop", purpose="Repair", expected_return_date=date.today() + timedelta(days=2), authorising_manager=self.manager)
         values.update(overrides)
