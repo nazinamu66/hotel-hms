@@ -57,7 +57,7 @@
   {% else %}<p class="emp-muted">No employee documents have been uploaded.</p>{% endif %}
  </section>
  {% endif %}
- {% if employee.hr_notes %}<section class="emp-card"><h2>HR notes</h2>{{ employee.hr_notes|linebreaks }}</section>{% endif %}
+ {% if can_view_hr_notes and employee.hr_notes %}<section class="emp-card"><h2>HR notes</h2>{{ employee.hr_notes|linebreaks }}</section>{% endif %}
  <p class="emp-muted" style="font-size:12px">Created {{ employee.created_at|date:"d M Y, H:i" }} · Last updated {{ employee.updated_at|date:"d M Y, H:i" }}</p>
 </div>
 {% endblock %}
