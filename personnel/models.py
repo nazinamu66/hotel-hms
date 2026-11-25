@@ -220,12 +220,14 @@ class EmployeeProfile(models.Model):
     ON_LEAVE = "ON_LEAVE"
     SUSPENDED = "SUSPENDED"
     RESIGNED = "RESIGNED"
+    RETIRED = "RETIRED"
     TERMINATED = "TERMINATED"
     EMPLOYMENT_STATUS_CHOICES = [
         (ACTIVE, "Active"),
         (ON_LEAVE, "On leave"),
         (SUSPENDED, "Suspended"),
         (RESIGNED, "Resigned"),
+        (RETIRED, "Retired"),
         (TERMINATED, "Terminated"),
     ]
 
@@ -480,6 +482,7 @@ class PersonnelAction(models.Model):
     )
     decided_at = models.DateTimeField(null=True, blank=True)
     decision_note = models.TextField(blank=True)
+    applied_at = models.DateTimeField(null=True, blank=True, editable=False)
     attachment = models.FileField(
         upload_to="personnel/actions/%Y/%m/", storage=private_employee_storage,
         blank=True,
