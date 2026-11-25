@@ -10,12 +10,15 @@ User = get_user_model()
 class WeeklyRosterCreateForm(forms.ModelForm):
     class Meta:
         model = WeeklyRoster
-        fields = ["department", "week_start", "responsible_hod"]
-        widgets = {"week_start": forms.DateInput(attrs={"type": "date"})}
+        fields = ["department", "week_start", "rest_days_per_employee", "responsible_hod"]
+        widgets = {"week_start": forms.DateInput(attrs={"type": "date"}), "rest_days_per_employee": forms.NumberInput(attrs={"min": 0, "max": 6})}
 
     def __init__(self, *args, actor=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.actor = actor
+        self.fields["rest_days_per_employee"].min_value = 0
+        self.fields["rest_days_per_employee"].max_value = 6
+        self.fields["rest_days_per_employee"].help_text = "Set the number of OFF days each employee receives for this specific week. This does not change other weeks."
         departments = manageable_roster_departments(actor)
         self.fields["department"].queryset = departments.select_related("hotel")
         self.fields["responsible_hod"].queryset = User.objects.filter(is_active=True, is_department_head=True, department__in=departments).select_related("department").order_by("department__name", "username")
