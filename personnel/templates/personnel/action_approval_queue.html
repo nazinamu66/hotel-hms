@@ -19,7 +19,7 @@
  </section>
  <section class="paq-panel"><div class="paq-panel-head"><h2>Pending management review</h2><p>Actions are ordered by effective date, with the earliest dates first.</p></div>
   <div class="paq-table-wrap"><table class="paq-table"><thead><tr><th>Reference</th><th>Employee</th><th>Action</th><th>Hotel / Department</th><th>Effective date</th><th>Submitted</th><th></th></tr></thead><tbody>
-   {% for item in pending_actions %}<tr>
+   {% for item in personnel_action_items %}<tr>
     <td><a class="paq-ref" href="{{ item.review_url }}">{{ item.reference }}</a></td>
     <td><span class="paq-employee">{{ item.employee.full_name }}</span><span class="paq-muted">{{ item.employee.employee_number }}</span></td>
     <td><span class="paq-tag">{{ item.get_action_type_display }}</span><span class="paq-muted">{{ item.title }}</span></td>
