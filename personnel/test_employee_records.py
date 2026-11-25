@@ -247,6 +247,29 @@ class EmployeeRecordViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Confidential personnel matter")
 
+    def test_hr_dashboard_exposes_command_centre_metrics_and_scopes_attendance_reviews(self):
+        self.client.force_login(self.hr_user)
+        response = self.client.get(reverse("personnel:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["employee_count"], 1)
+        self.assertEqual(response.context["active_employee_count"], 1)
+        self.assertIn("attendance_rate", response.context)
+        self.assertIn("department_overview", response.context)
+        self.assertIn("employment_type_overview", response.context)
+        self.assertIn("recent_hr_activity", response.context)
+        self.assertTrue(response.context["can_review_attendance"])
+
+        ordinary_hr = User.objects.create_user(
+            username="ordinary-hr-dashboard-test", password="test-password",
+            role="HR", organization=self.organization, hotel=self.hotel,
+            department=self.hr_department, is_department_head=False,
+        )
+        self.client.force_login(ordinary_hr)
+        response = self.client.get(reverse("personnel:dashboard"))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["can_review_attendance"])
+        self.assertEqual(response.context["pending_reconciliation_count"], 0)
+
     def test_employee_records_are_not_available_to_operational_user(self):
         operational_user = User.objects.create_user(
             username="operations-view-test", password="test-password",
