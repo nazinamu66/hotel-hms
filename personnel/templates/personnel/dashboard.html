@@ -1,58 +1,169 @@
 {% extends "base/base.html" %}
-{% block title %}Human Resources Dashboard · Personnel{% endblock %}
+{% block title %}HR Overview · Personnel{% endblock %}
 {% block content %}
 <style>
-.hr-wrap{max-width:1320px;margin:0 auto}.hr-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}.hr-head h1{margin:0;font-size:28px}.hr-sub{color:var(--muted,#64748b);margin-top:5px}.hr-actions{display:flex;gap:9px;flex-wrap:wrap}.hr-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 15px;border-radius:10px;background:#172554;color:white;text-decoration:none;font-weight:700}.hr-btn.secondary{background:var(--card,#fff);color:var(--text,#172033);border:1px solid var(--border,#dbe2ea)}.hr-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:18px}.hr-stat,.hr-panel{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:15px;padding:18px;box-shadow:0 4px 14px rgba(15,23,42,.035)}.hr-stat span{display:block;color:var(--muted,#64748b);font-size:12px;font-weight:700;text-transform:uppercase}.hr-stat strong{display:block;font-size:29px;margin-top:7px}.hr-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:16px}.hr-panel{margin-bottom:16px}.hr-panel h2{font-size:17px;margin:0 0 14px}.hr-table{width:100%;border-collapse:collapse}.hr-table th,.hr-table td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--border,#e2e8f0);vertical-align:top}.hr-table th{font-size:11px;text-transform:uppercase;color:var(--muted,#64748b)}.hr-table a{font-weight:700;text-decoration:none}.hr-empty{padding:22px;text-align:center;color:var(--muted,#64748b)}.hr-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hr-shortcut{padding:14px;border:1px solid var(--border,#e2e8f0);border-radius:11px;text-decoration:none;color:inherit}.hr-shortcut strong{display:block}.hr-shortcut span{display:block;color:var(--muted,#64748b);font-size:12px;margin-top:4px}.hr-pill{display:inline-block;border-radius:20px;padding:3px 8px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700}@media(max-width:1050px){.hr-stats{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){.hr-grid{grid-template-columns:1fr}.hr-stats{grid-template-columns:repeat(2,1fr)}.hr-table{font-size:13px}}@media(max-width:420px){.hr-stats{grid-template-columns:1fr 1fr}.hr-stat{padding:13px}.hr-stat strong{font-size:24px}}
+.hr-dashboard{max-width:1480px;margin:0 auto;color:var(--text,#172033)}
+.hr-top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin:4px 0 20px}
+.hr-eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:800;color:var(--muted,#64748b)}
+.hr-title{font-size:30px;line-height:1.15;margin:6px 0 5px;font-weight:800;letter-spacing:-.035em}
+.hr-muted{color:var(--muted,#64748b)}
+.hr-date{font-size:13px;margin-top:7px}
+.hr-actions{display:flex;gap:9px;flex-wrap:wrap}
+.hr-action{display:inline-flex;align-items:center;gap:8px;padding:10px 15px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:750;background:#172554;color:#fff}
+.hr-action.alt{background:var(--card,#fff);color:var(--text,#172033);border:1px solid var(--border,#dbe2ea)}
+.hr-nav{display:flex;gap:5px;overflow:auto;padding:5px;margin:0 0 19px;background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:13px}
+.hr-nav a,.hr-nav span{white-space:nowrap;padding:10px 14px;border-radius:9px;text-decoration:none;color:var(--muted,#64748b);font-size:13px;font-weight:700}
+.hr-nav a.active{background:#172554;color:white}
+.hr-nav span{opacity:.55;cursor:not-allowed}
+.hr-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px;margin-bottom:17px}
+.hr-kpi,.hr-panel{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:15px;box-shadow:0 3px 12px rgba(15,23,42,.035)}
+.hr-kpi{padding:17px 18px;min-height:116px;position:relative;overflow:hidden}
+.hr-kpi-label{font-size:11px;letter-spacing:.055em;text-transform:uppercase;font-weight:800;color:var(--muted,#64748b)}
+.hr-kpi-value{font-size:31px;font-weight:800;letter-spacing:-.04em;margin-top:10px;line-height:1}
+.hr-kpi-note{font-size:11px;color:var(--muted,#64748b);margin-top:9px}
+.hr-kpi-mark{position:absolute;right:16px;top:15px;width:8px;height:8px;border-radius:50%;background:#94a3b8}
+.hr-kpi-mark.green{background:#16a34a}.hr-kpi-mark.blue{background:#3b82f6}.hr-kpi-mark.amber{background:#d97706}
+.hr-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.9fr);gap:16px;align-items:start}
+.hr-panel{padding:19px;margin-bottom:16px;min-width:0}
+.hr-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.hr-panel h2{font-size:16px;margin:0;font-weight:800;letter-spacing:-.01em}
+.hr-panel-head a,.hr-link{font-size:12px;font-weight:750;text-decoration:none;color:#3157a4}
+.hr-dept{margin:0 0 15px}.hr-dept:last-child{margin-bottom:0}
+.hr-dept-top{display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-bottom:7px}
+.hr-dept-name{font-weight:750}.hr-dept-count{color:var(--muted,#64748b)}
+.hr-track{height:8px;border-radius:20px;background:var(--border,#e2e8f0);overflow:hidden}
+.hr-track span{display:block;height:100%;border-radius:20px;background:#4669ad}
+.hr-employment{display:grid;gap:13px}
+.hr-employment-row{display:grid;grid-template-columns:105px 1fr 32px;gap:10px;align-items:center;font-size:12px}
+.hr-employment-row strong{text-align:right}
+.hr-table-wrap{overflow-x:auto}
+.hr-table{width:100%;border-collapse:collapse;font-size:12px}
+.hr-table th{text-align:left;color:var(--muted,#64748b);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:9px 8px;border-bottom:1px solid var(--border,#e2e8f0)}
+.hr-table td{padding:12px 8px;border-bottom:1px solid var(--border,#e2e8f0);vertical-align:middle}
+.hr-table tr:last-child td{border-bottom:0}
+.hr-table a{font-weight:750;color:inherit;text-decoration:none}
+.hr-small{font-size:10px;color:var(--muted,#64748b);display:block;margin-top:3px}
+.hr-pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:800}
+.hr-activity{display:grid;gap:0}
+.hr-activity-item{display:grid;grid-template-columns:11px 1fr;gap:11px;padding:10px 0;border-bottom:1px solid var(--border,#e2e8f0)}
+.hr-activity-item:last-child{border-bottom:0}
+.hr-dot{width:8px;height:8px;border-radius:50%;background:#6685bd;margin-top:5px}
+.hr-activity-title{font-size:12px;font-weight:750}
+.hr-activity-meta{font-size:10px;color:var(--muted,#64748b);margin-top:4px}
+.hr-empty{padding:22px 10px;text-align:center;color:var(--muted,#64748b);font-size:12px}
+.hr-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.hr-shortcut{padding:13px;border:1px solid var(--border,#e2e8f0);border-radius:11px;text-decoration:none;color:inherit}
+.hr-shortcut strong{display:block;font-size:12px}.hr-shortcut span{display:block;color:var(--muted,#64748b);font-size:10px;line-height:1.45;margin-top:5px}
+@media(max-width:1100px){.hr-kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:800px){.hr-layout{grid-template-columns:1fr}.hr-kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:440px){.hr-title{font-size:25px}.hr-kpi{padding:14px;min-height:105px}.hr-kpi-value{font-size:26px}.hr-employment-row{grid-template-columns:88px 1fr 25px}}
 </style>
-<div class="hr-wrap">
- <header class="hr-head">
-  <div><h1>Human Resources Dashboard</h1><div class="hr-sub">People, employment records and workforce administration at a glance.</div></div>
+<div class="hr-dashboard">
+ <header class="hr-top">
+  <div>
+   <div class="hr-eyebrow">People &amp; culture · Overview</div>
+   <h1 class="hr-title">Human Resources</h1>
+   <div class="hr-muted">Your workforce at a glance. Here is what needs attention today.</div>
+   <div class="hr-date">{{ today|date:"l, d F Y" }} · {{ hotel_count }} hotel{{ hotel_count|pluralize }}</div>
+  </div>
   <div class="hr-actions">
-   <a class="hr-btn" href="{% url 'personnel:employee_list' %}">Employee Directory</a>
-   {% if can_manage_employees %}<a class="hr-btn secondary" href="{% url 'personnel:employee_create' %}">＋ Register Employee</a>{% endif %}
+   <a class="hr-action" href="{% url 'personnel:employee_list' %}">Employee directory ↗</a>
+   {% if can_manage_employees %}<a class="hr-action alt" href="{% url 'personnel:employee_create' %}">＋ Add employee</a>{% endif %}
   </div>
  </header>
- <section class="hr-stats">
-  <div class="hr-stat"><span>Total employees</span><strong>{{ employee_count }}</strong></div>
-  <div class="hr-stat"><span>Active employees</span><strong>{{ active_employee_count }}</strong></div>
-  <div class="hr-stat"><span>On leave</span><strong>{{ on_leave_count }}</strong></div>
-  <div class="hr-stat"><span>Pending rosters</span><strong>{{ pending_roster_count }}</strong></div>
-  <div class="hr-stat"><span>Attendance reviews</span><strong>{{ pending_reconciliation_count }}</strong></div>
+
+ <nav class="hr-nav" aria-label="HR sections">
+  <a class="active" href="{% url 'personnel:dashboard' %}">Overview</a>
+  <a href="{% url 'personnel:employee_list' %}">Employee Records</a>
+  <a href="{% url 'personnel:roster_dashboard' %}">Attendance</a>
+  <span title="Recruitment workspace is not implemented yet">Recruitment · Coming soon</span>
+  <span title="Payroll workspace is not implemented yet">Payroll · Coming soon</span>
+ </nav>
+
+ <section class="hr-kpis">
+  <article class="hr-kpi"><i class="hr-kpi-mark blue"></i><div class="hr-kpi-label">Total employees</div><div class="hr-kpi-value">{{ employee_count }}</div><div class="hr-kpi-note">Registered employee records</div></article>
+  <article class="hr-kpi"><i class="hr-kpi-mark green"></i><div class="hr-kpi-label">Active staff</div><div class="hr-kpi-value">{{ active_employee_count }}</div><div class="hr-kpi-note">Currently active employees</div></article>
+  <article class="hr-kpi"><i class="hr-kpi-mark amber"></i><div class="hr-kpi-label">On leave</div><div class="hr-kpi-value">{{ on_leave_count }}</div><div class="hr-kpi-note">Employees recorded on leave</div></article>
+  <article class="hr-kpi"><i class="hr-kpi-mark green"></i><div class="hr-kpi-label">Attendance today</div><div class="hr-kpi-value">{{ attendance_rate }}%</div><div class="hr-kpi-note">{{ attendance_present_count }} present of {{ attendance_scheduled_count }} scheduled</div></article>
+  <article class="hr-kpi"><i class="hr-kpi-mark amber"></i><div class="hr-kpi-label">Pending approvals</div><div class="hr-kpi-value">{{ pending_approval_count }}</div><div class="hr-kpi-note">Personnel actions awaiting decision</div></article>
  </section>
- <div class="hr-grid">
-  <div>
+
+ <div class="hr-layout">
+  <main>
    <section class="hr-panel">
-    <h2>Recently registered employees</h2>
+    <div class="hr-panel-head"><h2>Workforce by department</h2><span class="hr-muted" style="font-size:11px">Top 8 departments</span></div>
+    {% if department_overview %}
+     {% for dept in department_overview %}
+      <div class="hr-dept">
+       <div class="hr-dept-top"><span class="hr-dept-name">{{ dept.department__name|default:"Unassigned" }}</span><span class="hr-dept-count">{{ dept.employee_count }} staff · {{ dept.active_count }} active</span></div>
+       <div class="hr-track"><span style="width:{% widthratio dept.employee_count employee_count 100 %}%"></span></div>
+      </div>
+     {% endfor %}
+    {% else %}<div class="hr-empty">No employee records are available in your access scope.</div>{% endif %}
+   </section>
+
+   <section class="hr-panel">
+    <div class="hr-panel-head"><h2>Recently registered employees</h2><a href="{% url 'personnel:employee_list' %}">View directory →</a></div>
     {% if recent_employees %}
-     <div style="overflow-x:auto"><table class="hr-table"><thead><tr><th>Employee</th><th>Department</th><th>Hotel</th><th>Status</th></tr></thead><tbody>
-      {% for employee in recent_employees %}<tr><td><a href="{% url 'personnel:employee_detail' employee.pk %}">{{ employee.full_name }}</a><br><small>{{ employee.employee_number }}</small></td><td>{{ employee.department.name }}</td><td>{{ employee.hotel.name }}</td><td><span class="hr-pill">{{ employee.get_employment_status_display }}</span></td></tr>{% endfor %}
+     <div class="hr-table-wrap"><table class="hr-table"><thead><tr><th>Employee</th><th>Department</th><th>Status</th></tr></thead><tbody>
+      {% for employee in recent_employees %}<tr><td><a href="{% url 'personnel:employee_detail' employee.pk %}">{{ employee.full_name }}</a><span class="hr-small">{{ employee.employee_number }}</span></td><td>{{ employee.department.name }}</td><td><span class="hr-pill">{{ employee.get_employment_status_display }}</span></td></tr>{% endfor %}
      </tbody></table></div>
     {% else %}<div class="hr-empty">No employee records have been registered yet.</div>{% endif %}
    </section>
+
+   {% if can_review_attendance %}
    <section class="hr-panel">
-    <h2>Pending roster reconciliations</h2>
+    <div class="hr-panel-head"><h2>Attendance reviews</h2><a href="{% url 'personnel:roster_dashboard' %}">Open roster →</a></div>
     {% if pending_reconciliations %}
-     <div style="overflow-x:auto"><table class="hr-table"><thead><tr><th>Date</th><th>Employee</th><th>Department</th><th>Action</th></tr></thead><tbody>
+     <div class="hr-table-wrap"><table class="hr-table"><thead><tr><th>Date</th><th>Employee</th><th>Department</th><th></th></tr></thead><tbody>
       {% for item in pending_reconciliations %}<tr><td>{{ item.attendance.work_date|date:"d M Y" }}</td><td>{{ item.employee.get_full_name|default:item.employee.username }}</td><td>{{ item.employee.department.name|default:"—" }}</td><td><a href="{% url 'personnel:reconciliation_detail' item.pk %}">Review</a></td></tr>{% endfor %}
      </tbody></table></div>
     {% else %}<div class="hr-empty">No pending attendance reconciliation.</div>{% endif %}
    </section>
-  </div>
+   {% endif %}
+  </main>
+
   <aside>
-   <section class="hr-panel"><h2>Personnel action workflow</h2>
-    <p class="hr-sub">Awaiting management approval: <strong>{{ pending_personnel_action_count }}</strong></p>
-    <p class="hr-sub">Returned for correction: <strong>{{ returned_personnel_action_count }}</strong></p>
-    <a class="hr-btn secondary" href="{% url 'personnel:action_list' %}">Open action register</a>
+   <section class="hr-panel">
+    <div class="hr-panel-head"><h2>Employment composition</h2></div>
+    {% if employment_type_overview %}
+     <div class="hr-employment">
+      {% for item in employment_type_overview %}
+       <div><div class="hr-employment-row"><span>{{ item.label }}</span><div class="hr-track"><span style="width:{{ item.percentage }}%"></span></div><strong>{{ item.count }}</strong></div></div>
+      {% endfor %}
+     </div>
+    {% else %}<div class="hr-empty">No employment data yet.</div>{% endif %}
    </section>
-   <section class="hr-panel"><h2>Personnel workspace</h2><div class="hr-shortcuts">
-    <a class="hr-shortcut" href="{% url 'personnel:action_list' %}"><strong>Personnel Actions</strong><span>Promotions, discipline, separation and approvals</span></a>
-    <a class="hr-shortcut" href="{% url 'personnel:separation_list' %}"><strong>Exit Clearances · {{ pending_separation_clearance_count }}</strong><span>Verify outstanding matters and review staff exits</span></a>
-    <a class="hr-shortcut" href="{% url 'personnel:employee_list' %}"><strong>Employee Records</strong><span>Search and manage employee profiles</span></a>
-    {% if can_manage_employees %}<a class="hr-shortcut" href="{% url 'personnel:employee_create' %}"><strong>Register Employee</strong><span>Create a new HR record</span></a>{% endif %}
-    <a class="hr-shortcut" href="{% url 'personnel:roster_dashboard' %}"><strong>Staff Rosters</strong><span>Prepare and review weekly shifts</span></a>
-    {% if is_hr_head %}<a class="hr-shortcut" href="{% url 'personnel:shifts' %}"><strong>Shift Definitions</strong><span>Manage hotel shift patterns</span></a>{% endif %}
-   </div></section>
-   <section class="hr-panel"><h2>Workforce snapshot</h2><p class="hr-sub">Suspended employees: <strong>{{ suspended_count }}</strong></p><p class="hr-sub">Hotels in your access scope: <strong>{{ hotel_count }}</strong></p></section>
+
+   <section class="hr-panel">
+    <div class="hr-panel-head"><h2>Needs attention</h2></div>
+    <div class="hr-activity">
+     <div class="hr-activity-item"><i class="hr-dot"></i><div><div class="hr-activity-title">{{ pending_approval_count }} personnel action{{ pending_approval_count|pluralize }} awaiting approval</div><div class="hr-activity-meta"><a class="hr-link" href="{% url 'personnel:action_list' %}">Open personnel actions</a></div></div></div>
+     <div class="hr-activity-item"><i class="hr-dot"></i><div><div class="hr-activity-title">{{ pending_separation_clearance_count }} exit clearance{{ pending_separation_clearance_count|pluralize }} not yet approved</div><div class="hr-activity-meta"><a class="hr-link" href="{% url 'personnel:separation_list' %}">Review exit clearances</a></div></div></div>
+     {% if can_review_attendance %}<div class="hr-activity-item"><i class="hr-dot"></i><div><div class="hr-activity-title">{{ pending_reconciliation_count }} attendance reconciliation{{ pending_reconciliation_count|pluralize }} pending</div><div class="hr-activity-meta"><a class="hr-link" href="{% url 'personnel:roster_dashboard' %}">Review attendance</a></div></div></div>{% endif %}
+    </div>
+   </section>
+
+   <section class="hr-panel">
+    <div class="hr-panel-head"><h2>Personnel workspace</h2></div>
+    <div class="hr-shortcuts">
+     <a class="hr-shortcut" href="{% url 'personnel:action_list' %}"><strong>Personnel Actions</strong><span>Promotions, discipline and separation</span></a>
+     <a class="hr-shortcut" href="{% url 'personnel:separation_list' %}"><strong>Exit Clearances</strong><span>Verify outstanding matters and approve exits</span></a>
+     <a class="hr-shortcut" href="{% url 'personnel:roster_dashboard' %}"><strong>Staff Rosters</strong><span>Weekly shifts and attendance operations</span></a>
+     {% if is_hr_head %}<a class="hr-shortcut" href="{% url 'personnel:shifts' %}"><strong>Shift Definitions</strong><span>Manage hotel shift patterns</span></a>{% endif %}
+    </div>
+   </section>
+
+   <section class="hr-panel">
+    <div class="hr-panel-head"><h2>HR activity</h2></div>
+    {% if recent_hr_activity %}
+     <div class="hr-activity">
+      {% for event in recent_hr_activity %}
+       <div class="hr-activity-item"><i class="hr-dot"></i><div><div class="hr-activity-title">{{ event.get_event_type_display }} · {{ event.employee.full_name }}</div><div class="hr-activity-meta">{{ event.effective_date|date:"d M Y" }} · {{ event.recorded_by.get_full_name|default:event.recorded_by.username }}</div></div></div>
+      {% endfor %}
+     </div>
+    {% else %}<div class="hr-empty">Employment activity will appear here as records change.</div>{% endif %}
+   </section>
   </aside>
  </div>
 </div>
