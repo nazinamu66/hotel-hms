@@ -1,0 +1,6 @@
+{% extends "base/base.html" %}
+{% block title %}New Personnel Action{% endblock %}
+{% block content %}
+<div style="max-width:850px;margin:auto"><h1>New Personnel Action</h1><p>Save the action as a draft, review it, then submit it for Director/Admin approval.</p>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}<button type="submit" class="btn btn-primary">Save Draft</button> <a href="{% url 'personnel:action_list' %}">Cancel</a></form></div>
+{% endblock %}
