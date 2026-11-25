@@ -39,6 +39,11 @@
    </section>
   </div>
   <aside>
+   <section class="hr-panel"><h2>Personnel action workflow</h2>
+    <p class="hr-sub">Awaiting management approval: <strong>{{ pending_personnel_action_count }}</strong></p>
+    <p class="hr-sub">Returned for correction: <strong>{{ returned_personnel_action_count }}</strong></p>
+    <a class="hr-btn secondary" href="{% url 'personnel:action_list' %}">Open action register</a>
+   </section>
    <section class="hr-panel"><h2>Personnel workspace</h2><div class="hr-shortcuts">
     <a class="hr-shortcut" href="{% url 'personnel:action_list' %}"><strong>Personnel Actions</strong><span>Promotions, discipline, separation and approvals</span></a>
     <a class="hr-shortcut" href="{% url 'personnel:employee_list' %}"><strong>Employee Records</strong><span>Search and manage employee profiles</span></a>
