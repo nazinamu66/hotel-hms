@@ -1,0 +1,20 @@
+{% extends "base/base.html" %}
+{% block title %}Employee Separation Clearances · Personnel{% endblock %}
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div><h1 class="h3 mb-1">Employee Separation Clearances</h1><p class="text-muted mb-0">Department and Personnel verification before final management sign-off.</p></div>
+  </div>
+  <div class="card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr><th>Employee</th><th>Personnel action</th><th>Department</th><th>Effective date</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for item in clearances %}
+      <tr><td><strong>{{ item.action.employee.full_name }}</strong><br><small>{{ item.action.employee.employee_number }}</small></td>
+      <td>{{ item.action.get_action_type_display }} · {{ item.action.reference }}</td>
+      <td>{{ item.action.employee.department.name }}</td><td>{{ item.action.effective_date|date:"d M Y" }}</td>
+      <td>{{ item.get_status_display }}</td><td><a class="btn btn-sm btn-outline-primary" href="{% url 'personnel:separation_detail' item.pk %}">Open</a></td></tr>
+    {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No separation clearances have been generated.</td></tr>{% endfor %}
+    </tbody>
+  </table></div></div>
+</div>
+{% endblock %}
