@@ -8,7 +8,7 @@ from django.utils import timezone
 from accounts.services.access import get_accessible_hotels
 from inventory.models import Department
 from .forms import RosterReconciliationForm, ShiftDefinitionForm, WeeklyRosterCreateForm
-from .models import RosterAssignment, RosterAuditEvent, RosterReconciliation, ShiftDefinition, WeeklyRoster
+from .models import EmployeeProfile, RosterAssignment, RosterAuditEvent, RosterReconciliation, ShiftDefinition, WeeklyRoster
 from .permissions import can_view_roster, is_hr_head, is_hr_staff, is_roster_hod, manageable_roster_departments
 
 
@@ -18,7 +18,7 @@ def _require_roster_access(user):
 
 
 @login_required
-def dashboard(request):
+def roster_dashboard(request):
     _require_roster_access(request.user)
     if is_hr_staff(request.user):
         rosters = WeeklyRoster.objects.filter(hotel__in=get_accessible_hotels(request.user))
@@ -27,7 +27,7 @@ def dashboard(request):
     rosters = rosters.select_related("hotel", "department", "responsible_hod", "created_by")
     create_form = WeeklyRosterCreateForm(actor=request.user)
     can_prepare = is_hr_head(request.user) or bool(request.user.is_department_head and request.user.department_id)
-    return render(request, "personnel/dashboard.html", {
+    return render(request, "personnel/roster_dashboard.html", {
         "rosters": rosters, "create_form": create_form,
         "is_hr_head": is_hr_head(request.user), "can_prepare": can_prepare,
         "pending_reconciliations": RosterReconciliation.objects.filter(hotel__in=get_accessible_hotels(request.user), status=RosterReconciliation.PENDING).select_related("employee", "attendance", "roster_assignment__roster", "roster_assignment__roster__department") if is_hr_head(request.user) else RosterReconciliation.objects.none(),
