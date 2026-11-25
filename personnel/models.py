@@ -419,3 +419,104 @@ class EmployeeDocumentAccess(models.Model):
 
     class Meta:
         ordering = ["-accessed_at", "-pk"]
+
+
+class PersonnelAction(models.Model):
+    """Formal HR action submitted for Director/Admin decision."""
+
+    PROMOTION = "PROMOTION"
+    APPOINTMENT = "APPOINTMENT"
+    TRANSFER = "TRANSFER"
+    QUERY = "QUERY"
+    WARNING = "WARNING"
+    SUSPENSION = "SUSPENSION"
+    REINSTATEMENT = "REINSTATEMENT"
+    RESIGNATION = "RESIGNATION"
+    RETIREMENT = "RETIREMENT"
+    TERMINATION = "TERMINATION"
+    DISMISSAL = "DISMISSAL"
+    COMMENDATION = "COMMENDATION"
+    AWARD = "AWARD"
+    ACTION_TYPE_CHOICES = [
+        (PROMOTION, "Promotion"), (APPOINTMENT, "Appointment"),
+        (TRANSFER, "Transfer"), (QUERY, "Query"),
+        (WARNING, "Warning"), (SUSPENSION, "Suspension"),
+        (REINSTATEMENT, "Reinstatement"), (RESIGNATION, "Resignation"),
+        (RETIREMENT, "Retirement"), (TERMINATION, "Termination"),
+        (DISMISSAL, "Dismissal"), (COMMENDATION, "Commendation"),
+        (AWARD, "Award"),
+    ]
+
+    DRAFT = "DRAFT"
+    SUBMITTED = "SUBMITTED"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    RETURNED = "RETURNED"
+    STATUS_CHOICES = [
+        (DRAFT, "Draft"), (SUBMITTED, "Pending approval"),
+        (APPROVED, "Approved"), (REJECTED, "Rejected"),
+        (RETURNED, "Returned for correction"),
+    ]
+
+    reference = models.CharField(max_length=32, unique=True, editable=False)
+    employee = models.ForeignKey(EmployeeProfile, on_delete=models.PROTECT, related_name="personnel_actions")
+    action_type = models.CharField(max_length=20, choices=ACTION_TYPE_CHOICES)
+    title = models.CharField(max_length=160)
+    reason = models.TextField()
+    effective_date = models.DateField()
+    proposed_job_title = models.CharField(max_length=120, blank=True)
+    proposed_department = models.ForeignKey(
+        "inventory.Department", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="proposed_personnel_actions",
+    )
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=DRAFT)
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="submitted_personnel_actions",
+    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="decided_personnel_actions",
+    )
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.TextField(blank=True)
+    attachment = models.FileField(
+        upload_to="personnel/actions/%Y/%m/", storage=private_employee_storage,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        indexes = [models.Index(fields=["status", "created_at"]), models.Index(fields=["employee", "effective_date"])]
+
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            import uuid
+            self.reference = f"PA-{timezone.now():%Y%m}-{uuid.uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        if self.employee_id and self.proposed_department_id:
+            if self.proposed_department.hotel_id != self.employee.hotel_id:
+                raise ValidationError({"proposed_department": "The proposed department must belong to the employee's hotel."})
+
+    def __str__(self):
+        return f"{self.reference} · {self.employee.full_name}"
+
+
+class PersonnelActionEvent(models.Model):
+    """Append-only audit events for PersonnelAction workflow transitions."""
+
+    action = models.ForeignKey(PersonnelAction, on_delete=models.PROTECT, related_name="events")
+    event_type = models.CharField(max_length=20)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="personnel_action_events")
+    note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+
+    def __str__(self):
+        return f"{self.action.reference} · {self.event_type}"
