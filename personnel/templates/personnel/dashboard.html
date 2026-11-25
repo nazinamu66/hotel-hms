@@ -40,6 +40,7 @@
   </div>
   <aside>
    <section class="hr-panel"><h2>Personnel workspace</h2><div class="hr-shortcuts">
+    <a class="hr-shortcut" href="{% url 'personnel:action_list' %}"><strong>Personnel Actions</strong><span>Promotions, discipline, separation and approvals</span></a>
     <a class="hr-shortcut" href="{% url 'personnel:employee_list' %}"><strong>Employee Records</strong><span>Search and manage employee profiles</span></a>
     {% if can_manage_employees %}<a class="hr-shortcut" href="{% url 'personnel:employee_create' %}"><strong>Register Employee</strong><span>Create a new HR record</span></a>{% endif %}
     <a class="hr-shortcut" href="{% url 'personnel:roster_dashboard' %}"><strong>Staff Rosters</strong><span>Prepare and review weekly shifts</span></a>
