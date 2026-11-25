@@ -27,4 +27,9 @@ class PersonnelActionForm(forms.ModelForm):
         department = cleaned.get("proposed_department")
         if employee and department and department.hotel_id != employee.hotel_id:
             self.add_error("proposed_department", "Choose a department belonging to the employee's hotel.")
+        action_type = cleaned.get("action_type")
+        if action_type in {PersonnelAction.PROMOTION, PersonnelAction.APPOINTMENT} and not cleaned.get("proposed_job_title"):
+            self.add_error("proposed_job_title", "Enter the new job title for this action.")
+        if action_type == PersonnelAction.TRANSFER and not department:
+            self.add_error("proposed_department", "Choose the employee's destination department.")
         return cleaned
