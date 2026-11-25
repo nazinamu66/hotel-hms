@@ -1,0 +1,17 @@
+{% extends "base/base.html" %}
+{% block title %}Upload employee document · Personnel{% endblock %}
+{% block content %}
+<style>
+.doc-wrap{max-width:760px;margin:0 auto}.doc-card{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;padding:24px}.doc-grid p{margin:0 0 16px}.doc-grid label{display:block;font-weight:700;margin-bottom:6px}.doc-grid input,.doc-grid select,.doc-grid textarea{width:100%;padding:10px;border:1px solid var(--border,#cbd5e1);border-radius:9px;background:var(--card,#fff)}.doc-help{font-size:12px;color:var(--muted,#64748b)}.doc-actions{display:flex;gap:12px;align-items:center;margin-top:18px}.doc-btn{padding:10px 16px;border:0;border-radius:9px;background:#172554;color:#fff;font-weight:700;cursor:pointer}.errorlist{color:#b91c1c}
+</style>
+<div class="doc-wrap"><section class="doc-card">
+ <h1>Upload employee document</h1>
+ <p class="doc-help">{{ employee.full_name }} · {{ employee.employee_number }}</p>
+ <p class="doc-help">Accepted: PDF, JPG, PNG, DOC or DOCX. Maximum size: 10 MB. Files are stored privately and are not served from the public media directory.</p>
+ <form method="post" enctype="multipart/form-data">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="errorlist">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="doc-grid">{% for field in form %}<p>{{ field.label_tag }}{{ field }}{% if field.help_text %}<span class="doc-help">{{ field.help_text }}</span>{% endif %}{{ field.errors }}</p>{% endfor %}</div>
+  <div class="doc-actions"><button class="doc-btn" type="submit">Upload securely</button><a href="{% url 'personnel:employee_detail' employee.pk %}">Cancel</a></div>
+ </form>
+</section></div>
+{% endblock %}
