@@ -102,7 +102,8 @@ def separation_submit(request, clearance_id):
         if clearance.status not in {EmployeeSeparationClearance.PENDING, EmployeeSeparationClearance.RETURNED}:
             raise PermissionDenied
         if not clearance.no_outstanding_confirmed or clearance.outstanding_items.strip():
-            raise ValidationError("Resolve all outstanding matters and confirm that nothing remains before submission.")
+            messages.error(request, "Resolve all outstanding matters and confirm that nothing remains before submission.")
+            return redirect("personnel:separation_detail", clearance_id=clearance.pk)
         clearance.status = EmployeeSeparationClearance.SUBMITTED
         clearance.submitted_by = request.user
         clearance.submitted_at = timezone.now()
