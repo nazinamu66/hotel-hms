@@ -20,18 +20,26 @@ class StaffAttendanceArrivalForm(forms.ModelForm):
     assignment = forms.ModelChoiceField(
         queryset=RosterAssignment.objects.none(),
         required=False,
-        label="Scheduled shift (optional)",
+        label="Published roster shift",
         empty_label="Not working the published shift / emergency cover",
         help_text=(
-            "Link the published shift only when the employee is working that assignment. "
-            "Leave this blank for a shift swap, emergency cover or an unscheduled visit."
+            "Select the employee’s approved shift when they are working as rostered. "
+            "If they have a scheduled shift but are covering another shift, leave this blank "
+            "and provide the reason below."
         ),
     )
 
     class Meta:
         model = StaffAttendance
         fields = ["arrival_note"]
-        widgets = {"arrival_note": forms.Textarea(attrs={"rows": 2, "placeholder": "Optional note, e.g. covering another employee"})}
+        labels = {"arrival_note": "Arrival note / exception reason"}
+        help_texts = {
+            "arrival_note": (
+                "Required when an approved shift exists but this arrival is not linked to it. "
+                "State the shift swap or emergency-cover reason."
+            )
+        }
+        widgets = {"arrival_note": forms.Textarea(attrs={"rows": 2, "placeholder": "Explain the shift swap or emergency cover, if applicable"})}
 
     def __init__(self, *args, hotel=None, now=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -85,4 +93,11 @@ class StaffAttendanceArrivalForm(forms.ModelForm):
         assignment = cleaned.get("assignment")
         if assignment and employee and assignment.employee_id != employee.pk:
             self.add_error("assignment", "Choose a shift assigned to the selected employee, or leave this field blank for emergency cover.")
+        elif employee and not assignment:
+            has_scheduled_shift = self.fields["assignment"].queryset.filter(employee=employee).exists()
+            if has_scheduled_shift and not cleaned.get("arrival_note", "").strip():
+                self.add_error(
+                    "arrival_note",
+                    "Explain why this employee is not being recorded against the approved roster shift (for example, shift swap or emergency cover).",
+                )
         return cleaned
