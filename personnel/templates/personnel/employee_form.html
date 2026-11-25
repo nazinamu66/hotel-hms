@@ -1,0 +1,15 @@
+{% extends "base/base.html" %}
+{% block title %}{{ page_title }} · Personnel{% endblock %}
+{% block content %}
+<style>
+.emp-form-wrap{max-width:900px;margin:0 auto}.emp-form-card{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;padding:24px}.emp-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}.emp-form-grid p{margin:0 0 14px}.emp-form-grid label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}.emp-form-grid input,.emp-form-grid select,.emp-form-grid textarea{width:100%;padding:10px;border:1px solid var(--border,#cbd5e1);border-radius:9px;background:var(--card,#fff)}.emp-form-grid .helptext{display:block;font-size:11px;color:var(--muted,#64748b)}.emp-form-actions{display:flex;gap:10px;margin-top:20px}.emp-btn{padding:10px 16px;border:0;border-radius:9px;background:#172554;color:white;font-weight:700;cursor:pointer;text-decoration:none}.emp-cancel{padding:10px 16px;text-decoration:none;color:var(--muted,#64748b)}.errorlist{color:#b91c1c}@media(max-width:650px){.emp-form-grid{grid-template-columns:1fr}}
+</style>
+<div class="emp-form-wrap"><div class="emp-form-card">
+ <h1>{{ page_title }}</h1><p style="color:var(--muted,#64748b)">Create the official HR record. An HMS login account is not required.</p>
+ <form method="post">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="errorlist">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="emp-form-grid">{% for field in form %}<p>{{ field.label_tag }}{{ field }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}{{ field.errors }}</p>{% endfor %}</div>
+  <div class="emp-form-actions"><button class="emp-btn" type="submit">Save employee record</button><a class="emp-cancel" href="{% if employee %}{% url 'personnel:employee_detail' employee.pk %}{% else %}{% url 'personnel:employee_list' %}{% endif %}">Cancel</a></div>
+ </form>
+</div></div>
+{% endblock %}
