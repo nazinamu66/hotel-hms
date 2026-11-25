@@ -197,3 +197,115 @@ class RosterReconciliation(models.Model):
 
     def __str__(self):
         return f"{self.employee} · {self.attendance.work_date} · {self.get_status_display()}"
+
+
+class EmployeeProfile(models.Model):
+    """Authoritative HR record; a login account is optional."""
+
+    PERMANENT = "PERMANENT"
+    CONTRACT = "CONTRACT"
+    TEMPORARY = "TEMPORARY"
+    CASUAL = "CASUAL"
+    INTERN = "INTERN"
+    EMPLOYMENT_TYPE_CHOICES = [
+        (PERMANENT, "Permanent"),
+        (CONTRACT, "Contract"),
+        (TEMPORARY, "Temporary"),
+        (CASUAL, "Casual"),
+        (INTERN, "Intern"),
+    ]
+
+    ACTIVE = "ACTIVE"
+    ON_LEAVE = "ON_LEAVE"
+    SUSPENDED = "SUSPENDED"
+    RESIGNED = "RESIGNED"
+    TERMINATED = "TERMINATED"
+    EMPLOYMENT_STATUS_CHOICES = [
+        (ACTIVE, "Active"),
+        (ON_LEAVE, "On leave"),
+        (SUSPENDED, "Suspended"),
+        (RESIGNED, "Resigned"),
+        (TERMINATED, "Terminated"),
+    ]
+
+    employee_number = models.CharField(max_length=32, unique=True, editable=False)
+    hotel = models.ForeignKey(
+        "inventory.Hotel", on_delete=models.PROTECT,
+        related_name="employee_profiles",
+    )
+    department = models.ForeignKey(
+        "inventory.Department", on_delete=models.PROTECT,
+        related_name="employee_profiles",
+    )
+    linked_user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="employee_profile",
+        help_text="Optional HMS login account. Employees do not need an account to have an HR record.",
+    )
+
+    first_name = models.CharField(max_length=80)
+    middle_name = models.CharField(max_length=80, blank=True)
+    last_name = models.CharField(max_length=80)
+    preferred_name = models.CharField(max_length=80, blank=True)
+    personal_email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    address = models.TextField(blank=True)
+
+    job_title = models.CharField(max_length=120)
+    employment_type = models.CharField(
+        max_length=12, choices=EMPLOYMENT_TYPE_CHOICES, default=PERMANENT,
+    )
+    employment_status = models.CharField(
+        max_length=12, choices=EMPLOYMENT_STATUS_CHOICES, default=ACTIVE,
+    )
+    hire_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    hr_notes = models.TextField(blank=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="created_employee_profiles",
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="updated_employee_profiles",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["last_name", "first_name", "employee_number"]
+        indexes = [
+            models.Index(fields=["hotel", "employment_status"]),
+            models.Index(fields=["hotel", "department"]),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.employee_number:
+            import uuid
+            hotel_code = str(self.hotel_id or "0").zfill(3)
+            self.employee_number = f"EMP-{hotel_code}-{uuid.uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        errors = {}
+        if self.hotel_id and self.department_id:
+            if self.department.hotel_id != self.hotel_id:
+                errors["department"] = "The department must belong to the selected hotel."
+        if self.linked_user_id:
+            user_hotel_id = self.linked_user.hotel_id
+            if not user_hotel_id and self.linked_user.department_id:
+                user_hotel_id = self.linked_user.department.hotel_id
+            if user_hotel_id and user_hotel_id != self.hotel_id:
+                errors["linked_user"] = "The linked login account must belong to the same hotel."
+        if self.end_date and self.hire_date and self.end_date < self.hire_date:
+            errors["end_date"] = "The employment end date cannot be before the hire date."
+        if errors:
+            raise ValidationError(errors)
+
+    @property
+    def full_name(self):
+        return " ".join(part for part in [self.first_name, self.middle_name, self.last_name] if part)
+
+    def __str__(self):
+        return f"{self.employee_number} · {self.full_name}"
