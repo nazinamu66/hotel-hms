@@ -34,6 +34,53 @@ EVENT_TYPES = {
 }
 
 
+
+HISTORY_FIELD_LABELS = {
+    "hotel": "Hotel",
+    "department": "Department",
+    "job_title": "Job title",
+    "employment_type": "Employment type",
+    "employment_status": "Employment status",
+    "hire_date": "Hire date",
+    "end_date": "Employment end date",
+}
+
+
+def _history_display_value(field, value):
+    if isinstance(value, dict):
+        return value.get("name") or "—"
+    if value in (None, ""):
+        return "—"
+    if field == "employment_type":
+        return dict(EmployeeProfile.EMPLOYMENT_TYPE_CHOICES).get(value, value)
+    if field == "employment_status":
+        return dict(EmployeeProfile.EMPLOYMENT_STATUS_CHOICES).get(value, value)
+    if field in {"hire_date", "end_date"}:
+        try:
+            return timezone.datetime.fromisoformat(value).strftime("%d %b %Y")
+        except (TypeError, ValueError):
+            return value
+    return str(value)
+
+
+def _build_history_timeline(events):
+    timeline = []
+    for event in events:
+        values = event.new_values or {}
+        old_values = event.previous_values or {}
+        keys = list(values.keys())
+        changes = []
+        for field in keys:
+            changes.append({
+                "label": HISTORY_FIELD_LABELS.get(field, field.replace("_", " ").title()),
+                "old": _history_display_value(field, old_values.get(field)),
+                "new": _history_display_value(field, values.get(field)),
+                "is_change": field in old_values,
+            })
+        timeline.append({"event": event, "changes": changes})
+    return timeline
+
+
 def can_view_employee_records(user):
     return bool(
         user and user.is_authenticated and user.is_active
@@ -194,7 +241,7 @@ def employee_detail(request, employee_id):
         "can_manage": can_manage_employee_records(request.user),
         "can_access_documents": can_access_documents,
         "documents": employee.documents.all() if can_access_documents else [],
-        "employment_history": employee.employment_history.select_related("recorded_by").all(),
+        "employment_history": _build_history_timeline(employee.employment_history.select_related("recorded_by").all()),
     })
 
 
