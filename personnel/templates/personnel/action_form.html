@@ -1,6 +1,43 @@
 {% extends "base/base.html" %}
-{% block title %}New Personnel Action{% endblock %}
+{% block title %}New Personnel Action · HR{% endblock %}
 {% block content %}
-<div style="max-width:850px;margin:auto"><h1>New Personnel Action</h1><p>Save the action as a draft, review it, then submit it for Director/Admin approval.</p>
-<form method="post" enctype="multipart/form-data">{% csrf_token %}{{ form.as_p }}<button type="submit" class="btn btn-primary">Save Draft</button> <a href="{% url 'personnel:action_list' %}">Cancel</a></form></div>
+<style>
+.pa-wrap{max-width:1040px;margin:0 auto;padding:4px 0 34px;color:var(--text,#172033)}
+.pa-back{display:inline-flex;align-items:center;gap:7px;color:#475569;text-decoration:none;font-size:13px;font-weight:700;margin-bottom:18px}.pa-back:hover{color:#1d4ed8}
+.pa-heading{margin-bottom:20px}.pa-eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#64748b;margin-bottom:7px}.pa-heading h1{font-size:29px;letter-spacing:-.035em;margin:0;font-weight:800}.pa-heading p{color:#64748b;font-size:14px;margin:8px 0 0}
+.pa-card{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;box-shadow:0 5px 18px rgba(15,23,42,.045);overflow:hidden;margin-bottom:16px}
+.pa-card-head{padding:17px 21px;border-bottom:1px solid #edf1f5}.pa-card-head h2{font-size:15px;margin:0;font-weight:800}.pa-card-head p{font-size:12px;color:#64748b;margin:5px 0 0}
+.pa-fields{padding:20px 21px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px 20px}
+.pa-field{min-width:0}.pa-field-wide{grid-column:1/-1}.pa-field label{display:block;font-size:12px;font-weight:750;color:#334155;margin-bottom:7px}
+.pa-field input,.pa-field select,.pa-field textarea{display:block;width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:9px;background:var(--card,#fff);color:var(--text,#172033);font:inherit;font-size:13px;transition:border-color .15s,box-shadow .15s}
+.pa-field input:focus,.pa-field select:focus,.pa-field textarea:focus{outline:0;border-color:#3b82f6;box-shadow:0 0 0 3px #3b82f61c}
+.pa-field textarea{min-height:112px;resize:vertical}.pa-help{font-size:11px;color:#64748b;margin-top:6px}.pa-errors{font-size:12px;color:#b91c1c;margin:5px 0 0}.pa-errors ul{margin:0;padding-left:18px}
+.pa-nonfield{padding:12px 15px;background:#fef2f2;color:#b91c1c;border-radius:9px;margin:16px 21px 0;font-size:13px}
+.pa-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:17px 21px;border-top:1px solid #edf1f5}
+.pa-btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 17px;border-radius:9px;text-decoration:none;font-weight:750;font-size:13px;border:1px solid transparent;cursor:pointer}
+.pa-primary{background:#1d4ed8;color:#fff;border-color:#1d4ed8}.pa-primary:hover{background:#1e40af}.pa-cancel{background:#fff;color:#475569;border-color:#cbd5e1}
+.pa-note{padding:12px 15px;background:#eff6ff;border:1px solid #dbeafe;border-radius:10px;color:#1e40af;font-size:12px;margin-bottom:16px}
+@media(max-width:650px){.pa-heading h1{font-size:24px}.pa-fields{grid-template-columns:1fr;padding:16px}.pa-field-wide{grid-column:auto}.pa-card-head,.pa-actions{padding-left:16px;padding-right:16px}}
+</style>
+<div class="pa-wrap">
+ <a class="pa-back" href="{% url 'personnel:action_list' %}">← Back to Personnel Actions</a>
+ <header class="pa-heading"><div class="pa-eyebrow">Human Resources · New record</div><h1>Create personnel action</h1><p>Prepare an employment action for review and Director/Admin approval.</p></header>
+ <div class="pa-note"><strong>Workflow:</strong> Save this record as a draft, review the details, then submit it for management approval. Saving a draft does not change the employee's employment record.</div>
+ <form method="post" enctype="multipart/form-data" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="pa-nonfield">{{ form.non_field_errors }}</div>{% endif %}
+  <section class="pa-card"><div class="pa-card-head"><h2>Employee and action details</h2><p>Identify the employee and describe the proposed personnel decision.</p></div>
+   <div class="pa-fields">
+    {% for field in form %}
+     <div class="pa-field {% if field.name == 'reason' %}pa-field-wide{% endif %}">
+      <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-label="required">*</span>{% endif %}</label>
+      {{ field }}
+      {% if field.help_text %}<div class="pa-help">{{ field.help_text }}</div>{% endif %}
+      {% if field.errors %}<div class="pa-errors">{{ field.errors }}</div>{% endif %}
+     </div>
+    {% endfor %}
+   </div>
+  </section>
+  <div class="pa-actions"><button type="submit" class="pa-btn pa-primary">Save as draft</button><a class="pa-btn pa-cancel" href="{% url 'personnel:action_list' %}">Cancel</a></div>
+ </form>
+</div>
 {% endblock %}
