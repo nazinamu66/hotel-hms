@@ -38,6 +38,30 @@ def action_list(request):
 
 
 @login_required
+def action_approval_queue(request):
+    """Management inbox for submitted Personnel Actions."""
+    if not _can_decide(request.user):
+        raise PermissionDenied
+
+    today = timezone.localdate()
+    pending_actions = _action_queryset(request.user).filter(
+        status=PersonnelAction.SUBMITTED,
+    ).select_related(
+        "employee", "employee__hotel", "employee__department",
+        "submitted_by",
+    ).order_by("effective_date", "submitted_at", "created_at")
+
+    context = {
+        "pending_actions": pending_actions,
+        "pending_count": pending_actions.count(),
+        "effective_count": pending_actions.filter(effective_date__lte=today).count(),
+        "upcoming_count": pending_actions.filter(effective_date__gt=today).count(),
+        "today": today,
+    }
+    return render(request, "personnel/action_approval_queue.html", context)
+
+
+@login_required
 def action_create(request):
     if not is_hr_staff(request.user):
         raise PermissionDenied
