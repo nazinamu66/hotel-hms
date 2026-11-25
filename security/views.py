@@ -610,10 +610,12 @@ def shift_handover_cso_review(request, handover_id):
 @role_required(*SECURITY_ACCESS_ROLES)
 def staff_attendance_list(request):
     from inventory.models import Department
+    from personnel.models import RosterAssignment, RosterReconciliation, WeeklyRoster
 
     hotel = _hotel_for_user(request)
     records = StaffAttendance.objects.filter(hotel=hotel).select_related(
         "employee", "employee__department", "arrival_recorded_by", "departure_recorded_by",
+        "roster_assignment",
     )
     status = request.GET.get("status", "ALL")
     if status == "PRESENT":
@@ -647,6 +649,7 @@ def staff_attendance_list(request):
 
     department_value = request.GET.get("department", "").strip()
     departments = Department.objects.filter(hotel=hotel, is_active=True).order_by("name")
+    department_id = None
     if department_value:
         try:
             department_id = int(department_value)
@@ -656,6 +659,7 @@ def staff_attendance_list(request):
             records = records.filter(employee__department_id=department_id)
         else:
             department_value = ""
+            department_id = None
 
     search = request.GET.get("q", "").strip()
     if search:
@@ -665,6 +669,89 @@ def staff_attendance_list(request):
             | Q(employee__last_name__icontains=search)
             | Q(employee__department__name__icontains=search)
         )
+
+    # Daily compliance is calculated from approved roster assignments only.
+    compliance_date_value = request.GET.get("compliance_date", "").strip()
+    compliance_date = parse_date(compliance_date_value) if compliance_date_value else None
+    if not compliance_date:
+        compliance_date = selected_date or (date_from if date_from and date_from == date_to else None) or timezone.localdate()
+
+    scheduled_assignments = RosterAssignment.objects.filter(
+        roster__hotel=hotel,
+        roster__status=WeeklyRoster.APPROVED,
+        work_date=compliance_date,
+        is_day_off=False,
+        shift__isnull=False,
+        employee__is_active=True,
+    ).select_related(
+        "employee", "employee__department", "shift", "roster",
+    ).order_by("employee__department__name", "employee__first_name", "employee__last_name")
+    if department_id:
+        scheduled_assignments = scheduled_assignments.filter(employee__department_id=department_id)
+    if search:
+        scheduled_assignments = scheduled_assignments.filter(
+            Q(employee__username__icontains=search)
+            | Q(employee__first_name__icontains=search)
+            | Q(employee__last_name__icontains=search)
+        )
+
+    daily_attendance = StaffAttendance.objects.filter(
+        hotel=hotel, work_date=compliance_date,
+    ).select_related(
+        "employee", "employee__department", "roster_assignment",
+        "arrival_recorded_by", "departure_recorded_by",
+    )
+    if department_id:
+        daily_attendance = daily_attendance.filter(employee__department_id=department_id)
+    if search:
+        daily_attendance = daily_attendance.filter(
+            Q(employee__username__icontains=search)
+            | Q(employee__first_name__icontains=search)
+            | Q(employee__last_name__icontains=search)
+        )
+    attendance_by_employee = {item.employee_id: item for item in daily_attendance}
+
+    compliance_rows = []
+    for assignment in scheduled_assignments:
+        attendance = attendance_by_employee.get(assignment.employee_id)
+        linked = bool(attendance and attendance.roster_assignment_id == assignment.pk)
+        unlinked_exception = bool(attendance and not attendance.roster_assignment_id)
+        if not attendance:
+            attendance_status = "ABSENT"
+        elif linked:
+            attendance_status = "LATE" if attendance.punctuality_status == "LATE" else "ARRIVED"
+        elif unlinked_exception:
+            attendance_status = "EXCEPTION"
+        else:
+            attendance_status = "REVIEW"
+        compliance_rows.append({
+            "assignment": assignment,
+            "attendance": attendance,
+            "status": attendance_status,
+        })
+
+    rest_day_exceptions = RosterReconciliation.objects.filter(
+        hotel=hotel, attendance__work_date=compliance_date,
+    ).select_related(
+        "employee", "employee__department", "attendance", "attendance__arrival_recorded_by",
+        "roster_assignment__roster",
+    )
+    if department_id:
+        rest_day_exceptions = rest_day_exceptions.filter(employee__department_id=department_id)
+    if search:
+        rest_day_exceptions = rest_day_exceptions.filter(
+            Q(employee__username__icontains=search)
+            | Q(employee__first_name__icontains=search)
+            | Q(employee__last_name__icontains=search)
+        )
+
+    scheduled_count = len(compliance_rows)
+    arrived_count = sum(1 for row in compliance_rows if row["attendance"])
+    late_count = sum(1 for row in compliance_rows if row["status"] == "LATE")
+    absent_count = sum(1 for row in compliance_rows if row["status"] == "ABSENT")
+    exception_arrivals_count = sum(1 for row in compliance_rows if row["status"] in {"EXCEPTION", "REVIEW"})
+    rest_day_exception_count = rest_day_exceptions.count()
+    pending_reconciliation_count = rest_day_exceptions.filter(status=RosterReconciliation.PENDING).count()
 
     return render(request, "security/attendance_list.html", {
         "hotel": hotel,
@@ -677,6 +764,16 @@ def staff_attendance_list(request):
         "department_filter": department_value,
         "departments": departments,
         "search_query": search,
+        "compliance_date": compliance_date,
+        "compliance_rows": compliance_rows,
+        "scheduled_count": scheduled_count,
+        "arrived_count": arrived_count,
+        "late_count": late_count,
+        "absent_count": absent_count,
+        "exception_arrivals_count": exception_arrivals_count,
+        "rest_day_exceptions": rest_day_exceptions,
+        "rest_day_exception_count": rest_day_exception_count,
+        "pending_reconciliation_count": pending_reconciliation_count,
     })
 
 
