@@ -8,7 +8,7 @@ from django.utils import timezone
 from accounts.services.access import get_accessible_hotels
 from inventory.models import Department
 from .forms import RosterReconciliationForm, ShiftDefinitionForm, WeeklyRosterCreateForm
-from .models import EmployeeProfile, RosterAssignment, RosterAuditEvent, RosterReconciliation, ShiftDefinition, WeeklyRoster
+from .models import EmployeeProfile, PersonnelAction, RosterAssignment, RosterAuditEvent, RosterReconciliation, ShiftDefinition, WeeklyRoster
 from .permissions import can_view_roster, is_hr_head, is_hr_staff, is_roster_hod, manageable_roster_departments
 
 
@@ -34,7 +34,12 @@ def dashboard(request):
         "employee", "attendance", "roster_assignment__roster",
         "roster_assignment__roster__department",
     )
+    personnel_actions = PersonnelAction.objects.filter(employee__hotel__in=hotels)
+    if not is_hr_head(request.user):
+        personnel_actions = personnel_actions.filter(submitted_by=request.user)
     context = {
+        "pending_personnel_action_count": personnel_actions.filter(status=PersonnelAction.SUBMITTED).count(),
+        "returned_personnel_action_count": personnel_actions.filter(status=PersonnelAction.RETURNED).count(),
         "hotel_count": hotels.count(),
         "employee_count": employees.count(),
         "active_employee_count": employees.filter(employment_status=EmployeeProfile.ACTIVE).count(),
