@@ -295,6 +295,45 @@ class PersonnelRosterTests(TestCase):
         roster.refresh_from_db()
         self.assertEqual(roster.status, WeeklyRoster.DRAFT)
 
+    def test_roster_uses_week_specific_rest_day_entitlement(self):
+        roster = self.make_roster()
+        roster.rest_days_per_employee = 2
+        roster.save(update_fields=["rest_days_per_employee"])
+        for employee in [self.hod, *self.staff]:
+            for offset in range(7):
+                work_date = roster.week_start + timedelta(days=offset)
+                if offset in (5, 6):
+                    RosterAssignment.objects.create(roster=roster, employee=employee, work_date=work_date, is_day_off=True)
+                else:
+                    RosterAssignment.objects.create(roster=roster, employee=employee, work_date=work_date, shift=self.morning)
+        self.client.force_login(self.hod)
+        response = self.client.post(reverse("personnel:roster_submit", args=[roster.pk]))
+        self.assertEqual(response.status_code, 302)
+        roster.refresh_from_db()
+        self.assertEqual(roster.status, WeeklyRoster.SUBMITTED)
+
+    def test_roster_with_wrong_number_of_rest_days_cannot_be_submitted(self):
+        roster = self.make_roster()
+        self.fill_roster(roster)
+        roster.rest_days_per_employee = 2
+        roster.save(update_fields=["rest_days_per_employee"])
+        self.client.force_login(self.hod)
+        self.client.post(reverse("personnel:roster_submit", args=[roster.pk]))
+        roster.refresh_from_db()
+        self.assertEqual(roster.status, WeeklyRoster.DRAFT)
+
+    def test_roster_creation_saves_weekly_rest_day_entitlement(self):
+        self.client.force_login(self.hod)
+        response = self.client.post(reverse("personnel:roster_create"), {
+            "department": self.department.pk,
+            "week_start": self.monday.isoformat(),
+            "rest_days_per_employee": "2",
+            "responsible_hod": self.hod.pk,
+        })
+        self.assertEqual(response.status_code, 302)
+        roster = WeeklyRoster.objects.get()
+        self.assertEqual(roster.rest_days_per_employee, 2)
+
     def test_incomplete_roster_cannot_be_submitted(self):
         roster = self.make_roster()
         self.client.force_login(self.hod)
