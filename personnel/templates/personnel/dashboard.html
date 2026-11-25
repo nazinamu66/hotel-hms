@@ -30,7 +30,7 @@
     {% else %}<div class="hr-empty">No employee records have been registered yet.</div>{% endif %}
    </section>
    <section class="hr-panel">
-    <h2>Attendance reconciliation requiring review</h2>
+    <h2>Pending roster reconciliations</h2>
     {% if pending_reconciliations %}
      <div style="overflow-x:auto"><table class="hr-table"><thead><tr><th>Date</th><th>Employee</th><th>Department</th><th>Action</th></tr></thead><tbody>
       {% for item in pending_reconciliations %}<tr><td>{{ item.attendance.work_date|date:"d M Y" }}</td><td>{{ item.employee.get_full_name|default:item.employee.username }}</td><td>{{ item.employee.department.name|default:"—" }}</td><td><a href="{% url 'personnel:reconciliation_detail' item.pk %}">Review</a></td></tr>{% endfor %}
