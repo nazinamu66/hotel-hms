@@ -402,3 +402,19 @@ class EmployeeDocument(models.Model):
 
     def __str__(self):
         return f"{self.employee.employee_number} · {self.title}"
+
+
+class EmployeeDocumentAccess(models.Model):
+    document = models.ForeignKey(
+        EmployeeDocument, on_delete=models.PROTECT,
+        related_name="access_events",
+    )
+    accessed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="employee_document_access_events",
+    )
+    accessed_at = models.DateTimeField(auto_now_add=True)
+    action = models.CharField(max_length=20, default="DOWNLOAD")
+
+    class Meta:
+        ordering = ["-accessed_at", "-pk"]
