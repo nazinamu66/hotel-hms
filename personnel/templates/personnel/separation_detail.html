@@ -1,46 +1,74 @@
 {% extends "base/base.html" %}
-{% block title %}Separation Clearance · Personnel{% endblock %}
+{% block title %}Exit Clearance · {{ clearance.action.employee.full_name }}{% endblock %}
 {% block content %}
-<div class="container py-3" style="max-width:1050px">
-  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-    <div><h1 class="h3 mb-1">Employee Separation Clearance</h1><p class="text-muted mb-0">{{ clearance.action.employee.full_name }} · {{ clearance.action.employee.employee_number }}</p></div>
-    <span class="badge text-bg-secondary">{{ clearance.get_status_display }}</span>
-  </div>
-  <div class="card mb-3"><div class="card-body">
-    <div class="row g-3">
-      <div class="col-md-4"><small class="text-muted">Department</small><div>{{ clearance.action.employee.department.name }}</div></div>
-      <div class="col-md-4"><small class="text-muted">Hotel</small><div>{{ clearance.action.employee.hotel.name }}</div></div>
-      <div class="col-md-4"><small class="text-muted">Separation type</small><div>{{ clearance.action.get_action_type_display }}</div></div>
-      <div class="col-md-4"><small class="text-muted">Effective date</small><div>{{ clearance.action.effective_date|date:"d M Y" }}</div></div>
-      <div class="col-md-8"><small class="text-muted">Linked Personnel Action</small><div><a href="{% url 'personnel:action_detail' clearance.action_id %}">{{ clearance.action.reference }} · {{ clearance.action.title }}</a></div></div>
+<style>
+.exit-detail{max-width:1180px;margin:0 auto}.exit-back{display:inline-flex;text-decoration:none;color:#64748b;font-size:13px;font-weight:700;margin-bottom:18px}.exit-top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}.exit-kicker{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:#64748b}.exit-top h1{font-size:29px;letter-spacing:-.04em;margin:5px 0}.exit-sub{color:#64748b;margin:0}.exit-badge{border-radius:30px;padding:8px 13px;background:#f1f5f9;color:#475569;font-size:12px;font-weight:800}.exit-badge.submitted{background:#eff6ff;color:#1d4ed8}.exit-badge.returned{background:#fff7ed;color:#c2410c}.exit-badge.approved{background:#ecfdf5;color:#047857}.exit-layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(290px,.85fr);gap:18px;align-items:start}.exit-card{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:17px;box-shadow:0 8px 26px rgba(15,23,42,.04);overflow:hidden;margin-bottom:17px}.exit-card-head{padding:17px 20px;border-bottom:1px solid #edf1f5;display:flex;justify-content:space-between;align-items:center;gap:10px}.exit-card-head h2{font-size:15px;margin:0;font-weight:800}.exit-card-body{padding:20px}.exit-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:19px}.exit-field label{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#64748b;font-weight:800;margin-bottom:5px}.exit-field div{font-weight:700;color:#1e293b;overflow-wrap:anywhere}.exit-field a{color:#1d4ed8;text-decoration:none}.exit-field.full{grid-column:1/-1}.exit-employee{display:flex;align-items:center;gap:13px}.exit-avatar{width:44px;height:44px;display:grid;place-items:center;border-radius:13px;background:#eaf1ff;color:#1d4ed8;font-weight:900;font-size:17px}.exit-employee strong{display:block;font-size:16px}.exit-employee span{font-size:12px;color:#64748b}.exit-callout{padding:13px 15px;border-radius:12px;background:#f8fafc;color:#475569;font-size:13px;line-height:1.6;margin-bottom:17px}.exit-outstanding{border:1px solid #e2e8f0;background:#fbfdff;border-radius:12px;padding:14px;margin-bottom:16px}.exit-outstanding strong{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin-bottom:6px}.exit-outstanding p{margin:0;color:#334155;white-space:pre-line}.exit-confirm{display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:11px;background:#f0fdf4;color:#166534;font-size:13px;margin:14px 0}.exit-confirm input{margin-top:3px}.exit-label{display:block;font-size:12px;font-weight:800;color:#334155;margin-bottom:7px}.exit-textarea{width:100%;border:1px solid #cbd5e1;border-radius:11px;padding:12px;min-height:105px;font:inherit;resize:vertical;box-sizing:border-box}.exit-textarea:focus{outline:3px solid #dbeafe;border-color:#60a5fa}.exit-btn{display:inline-flex;justify-content:center;align-items:center;gap:7px;border:0;border-radius:10px;padding:11px 15px;font-size:13px;font-weight:800;text-decoration:none;cursor:pointer}.exit-btn.primary{background:#1d4ed8;color:white}.exit-btn.success{background:#047857;color:white}.exit-btn.warning{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}.exit-btn:disabled{opacity:.5;cursor:not-allowed}.exit-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}.exit-muted{font-size:12px;color:#64748b}.exit-timeline{position:relative;padding-left:24px}.exit-event{position:relative;padding:0 0 20px 13px;border-left:2px solid #e2e8f0}.exit-event:last-child{border-left-color:transparent;padding-bottom:0}.exit-event:before{content:"";position:absolute;width:10px;height:10px;border-radius:50%;background:#3b82f6;left:-6px;top:3px;box-shadow:0 0 0 4px #eff6ff}.exit-event strong{font-size:13px}.exit-event .meta{font-size:11px;color:#64748b;margin-top:3px}.exit-event p{font-size:12px;color:#475569;margin:7px 0 0;white-space:pre-line}.exit-side-note{font-size:12px;color:#64748b;line-height:1.6}.exit-side-note strong{color:#334155}@media(max-width:850px){.exit-layout{grid-template-columns:1fr}}@media(max-width:560px){.exit-fields{grid-template-columns:1fr}.exit-field.full{grid-column:auto}.exit-card-body{padding:16px}.exit-top h1{font-size:25px}}
+</style>
+<div class="exit-detail">
+ <a class="exit-back" href="{% url 'personnel:separation_list' %}">← Back to Exit Clearances</a>
+ <header class="exit-top">
+  <div><div class="exit-kicker">Personnel · Exit management</div><h1>Staff Exit Clearance</h1><p class="exit-sub">{{ clearance.action.employee.full_name }} · {{ clearance.action.employee.employee_number }}</p></div>
+  <span class="exit-badge {% if clearance.status == 'SUBMITTED' %}submitted{% elif clearance.status == 'RETURNED' %}returned{% elif clearance.status == 'APPROVED' %}approved{% endif %}">{{ clearance.get_status_display }}</span>
+ </header>
+ <div class="exit-layout">
+  <main>
+   <section class="exit-card">
+    <div class="exit-card-head"><h2>Employee and separation details</h2></div>
+    <div class="exit-card-body">
+     <div class="exit-employee" style="margin-bottom:22px"><div class="exit-avatar">{{ clearance.action.employee.full_name|slice:":1"|upper }}</div><div><strong>{{ clearance.action.employee.full_name }}</strong><span>{{ clearance.action.employee.employee_number }}</span></div></div>
+     <div class="exit-fields">
+      <div class="exit-field"><label>Department</label><div>{{ clearance.action.employee.department.name|default:"—" }}</div></div>
+      <div class="exit-field"><label>Hotel</label><div>{{ clearance.action.employee.hotel.name }}</div></div>
+      <div class="exit-field"><label>Exit type</label><div>{{ clearance.action.get_action_type_display }}</div></div>
+      <div class="exit-field"><label>Effective date</label><div>{{ clearance.action.effective_date|date:"d M Y" }}</div></div>
+      <div class="exit-field full"><label>Linked Personnel Action</label><div><a href="{% url 'personnel:action_detail' clearance.action_id %}">{{ clearance.action.reference }} · {{ clearance.action.title }}</a></div></div>
+     </div>
     </div>
-  </div></div>
-  <div class="card mb-3"><div class="card-header fw-semibold">Department / Personnel verification</div><div class="card-body">
-    <p class="text-muted">Confirm that the employee has no outstanding responsibilities. Equipment and asset clearance are outside this version.</p>
-    <div class="mb-3"><strong>Outstanding matters recorded</strong><div>{{ clearance.outstanding_items|default:"None recorded"|linebreaksbr }}</div></div>
-    <p>Verified by: {{ clearance.verified_by|default:"Not yet verified" }} {% if clearance.verified_at %}· {{ clearance.verified_at|date:"d M Y H:i" }}{% endif %}</p>
-    {% if can_verify %}
-    <form method="post" action="{% url 'personnel:separation_verify' clearance.pk %}" class="border rounded p-3 mb-3">
+   </section>
+   <section class="exit-card">
+    <div class="exit-card-head"><h2>Department / Personnel verification</h2><span class="exit-muted">Stage 1 of 2</span></div>
+    <div class="exit-card-body">
+     <div class="exit-callout">Confirm that the employee has no outstanding responsibilities. Equipment and asset clearance are outside this version.</div>
+     <div class="exit-outstanding"><strong>Outstanding matters</strong><p>{{ clearance.outstanding_items|default:"None recorded" }}</p></div>
+     <p class="exit-muted">Verified by: <strong>{{ clearance.verified_by|default:"Not yet verified" }}</strong>{% if clearance.verified_at %} · {{ clearance.verified_at|date:"d M Y, H:i" }}{% endif %}</p>
+     {% if can_verify %}
+     <form method="post" action="{% url 'personnel:separation_verify' clearance.pk %}">
       {% csrf_token %}
-      <label class="form-label" for="outstanding_items">Outstanding matters (leave blank only when none remain)</label>
-      <textarea class="form-control mb-3" id="outstanding_items" name="outstanding_items" rows="4">{{ clearance.outstanding_items }}</textarea>
-      <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="no_outstanding_confirmed" name="no_outstanding_confirmed" {% if clearance.no_outstanding_confirmed %}checked{% endif %}><label class="form-check-label" for="no_outstanding_confirmed">I confirm there are no outstanding matters with this employee.</label></div>
-      <button class="btn btn-primary">Save verification</button>
-    </form>
-    {% endif %}
-    {% if can_verify and clearance.no_outstanding_confirmed and not clearance.outstanding_items %}
-    <form method="post" action="{% url 'personnel:separation_submit' clearance.pk %}">{% csrf_token %}<button class="btn btn-success">Submit for final approval</button></form>
-    {% endif %}
-  </div></div>
-  {% if can_approve %}
-  <div class="card mb-3"><div class="card-header fw-semibold">Director / Admin decision</div><div class="card-body">
-    <form method="post" action="{% url 'personnel:separation_decision' clearance.pk 'approve' %}" class="mb-3">{% csrf_token %}<button class="btn btn-success">Approve clearance</button></form>
-    <form method="post" action="{% url 'personnel:separation_decision' clearance.pk 'return' %}">{% csrf_token %}<label class="form-label">Reason for return</label><textarea class="form-control mb-2" name="decision_note" rows="3" required></textarea><button class="btn btn-outline-warning">Return for further action</button></form>
-  </div></div>
-  {% endif %}
-  <div class="card"><div class="card-header fw-semibold">Clearance history</div><div class="list-group list-group-flush">
-    {% for event in events %}<div class="list-group-item"><strong>{{ event.get_event_type_display|default:event.event_type }}</strong> · {{ event.actor }}<div class="small text-muted">{{ event.created_at|date:"d M Y H:i" }}</div>{% if event.note %}<div>{{ event.note|linebreaksbr }}</div>{% endif %}</div>{% empty %}<div class="list-group-item text-muted">No history yet.</div>{% endfor %}
-  </div></div>
-  <a class="btn btn-link mt-3" href="{% url 'personnel:separation_list' %}">← Back to clearances</a>
+      <label class="exit-label" for="outstanding_items">Record any outstanding matters</label>
+      <textarea class="exit-textarea" id="outstanding_items" name="outstanding_items" placeholder="List unresolved responsibilities, or leave blank if there are none.">{{ clearance.outstanding_items }}</textarea>
+      <label class="exit-confirm"><input type="checkbox" id="no_outstanding_confirmed" name="no_outstanding_confirmed" {% if clearance.no_outstanding_confirmed %}checked{% endif %}><span>I have checked and confirm there are no outstanding matters with this employee.</span></label>
+      <button class="exit-btn primary" type="submit">Save verification</button>
+     </form>
+     {% elif clearance.no_outstanding_confirmed %}
+      <p class="exit-muted">No outstanding matters were confirmed.</p>
+     {% endif %}
+     {% if can_verify and clearance.no_outstanding_confirmed and not clearance.outstanding_items %}
+     <form method="post" action="{% url 'personnel:separation_submit' clearance.pk %}" class="exit-actions">{% csrf_token %}<button class="exit-btn success" type="submit">Forward for final approval →</button></form>
+     {% endif %}
+    </div>
+   </section>
+   {% if can_approve %}
+   <section class="exit-card">
+    <div class="exit-card-head"><h2>Final management decision</h2><span class="exit-muted">Stage 2 of 2</span></div>
+    <div class="exit-card-body">
+     <div class="exit-callout">Review the verification and recorded history before making the final decision.</div>
+     <form method="post" action="{% url 'personnel:separation_decision' clearance.pk 'approve' %}">{% csrf_token %}<button class="exit-btn success" type="submit">Approve exit clearance</button></form>
+     <form method="post" action="{% url 'personnel:separation_decision' clearance.pk 'return' %}" style="margin-top:18px">{% csrf_token %}<label class="exit-label" for="decision_note">Reason for returning</label><textarea class="exit-textarea" id="decision_note" name="decision_note" rows="3" required placeholder="Explain what needs further attention."></textarea><button class="exit-btn warning" type="submit" style="margin-top:10px">Return for further action</button></form>
+    </div>
+   </section>
+   {% endif %}
+  </main>
+  <aside>
+   <section class="exit-card">
+    <div class="exit-card-head"><h2>Clearance history</h2></div>
+    <div class="exit-card-body"><div class="exit-timeline">
+     {% for event in events %}
+      <div class="exit-event"><strong>{{ event.get_event_type_display|default:event.event_type }}</strong><div class="meta">{{ event.actor }} · {{ event.created_at|date:"d M Y, H:i" }}</div>{% if event.note %}<p>{{ event.note }}</p>{% endif %}</div>
+     {% empty %}<p class="exit-muted">No history has been recorded yet.</p>{% endfor %}
+    </div></div>
+   </section>
+   <section class="exit-card"><div class="exit-card-body"><div class="exit-kicker">Process guide</div><p class="exit-side-note"><strong>1. Verify</strong><br>Department Head or Personnel checks outstanding responsibilities.</p><p class="exit-side-note"><strong>2. Submit</strong><br>Once all matters are settled, forward the clearance.</p><p class="exit-side-note" style="margin-bottom:0"><strong>3. Decide</strong><br>Director or Admin gives final approval or returns it for action.</p></div></section>
+  </aside>
+ </div>
 </div>
 {% endblock %}
