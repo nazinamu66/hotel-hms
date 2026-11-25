@@ -242,7 +242,7 @@
 
         <!-- ========================= -->
         <!-- ========================= -->
-        {% if user.role == "HR" or user.is_department_head %}
+        {% if user.role == "HR" or user.is_department_head and user.role != "SECURITY" %}
         <h4 class="menu-toggle" onclick="toggleMenu('personnel_menu', this)"><span class="arrow">▸</span> 👥 Personnel</h4>
         <div id="personnel_menu" class="menu-section">
             <a href="{% url 'personnel:dashboard' %}">Staff Attendance Roster</a>
