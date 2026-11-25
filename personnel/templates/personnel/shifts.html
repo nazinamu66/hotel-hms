@@ -1,3 +1,20 @@
 {% extends "base/base.html" %}
-{% block title %}Shift setup · Personnel{% endblock %}
-{% block content %}<div style="max-width:1000px;margin:auto"><h1>Shift definitions</h1><p>Configure the hotel's standard shifts. If the end time is earlier than or equal to the start time, the shift is treated as crossing midnight.</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:18px"><section style="background:white;padding:20px;border:1px solid #e2e8f0;border-radius:14px"><h2>Add shift</h2><form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit">Save shift</button></form></section><section style="background:white;padding:20px;border:1px solid #e2e8f0;border-radius:14px"><h2>Configured shifts</h2>{% for shift in shifts %}<p><strong>{{ shift.name }}</strong> · {{ shift.start_time|time:"H:i" }}–{{ shift.end_time|time:"H:i" }}{% if shift.crosses_midnight %} <small>(overnight)</small>{% endif %} · {{ shift.hotel.name }}</p>{% empty %}<p>No shifts configured.</p>{% endfor %}</section></div></div>{% endblock %}
+{% block title %}Department shift configuration · Personnel{% endblock %}
+{% block content %}
+<div style="max-width:1180px;margin:auto">
+ <div style="margin-bottom:22px"><h1>Department shift configuration</h1><p style="color:#64748b">HR controls the standard working hours for each department. Department Heads can only roster shifts configured for their own department. Shift times apply every day of the week; overnight shifts are supported.</p></div>
+ <div style="display:grid;grid-template-columns:minmax(280px,.85fr) minmax(0,1.5fr);gap:18px">
+  <section style="background:white;padding:22px;border:1px solid #e2e8f0;border-radius:16px">
+   <h2 style="margin-top:0">Add departmental shift</h2>
+   <form method="post">{% csrf_token %}{{ form.as_p }}<button class="btn btn-primary" type="submit">Save shift</button></form>
+  </section>
+  <section style="background:white;padding:22px;border:1px solid #e2e8f0;border-radius:16px">
+   <h2 style="margin-top:0">Configured shifts</h2>
+   <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+    <thead><tr><th style="text-align:left;padding:10px">Department</th><th style="text-align:left;padding:10px">Shift</th><th style="text-align:left;padding:10px">Hours</th><th style="text-align:left;padding:10px">Grace</th><th style="text-align:left;padding:10px">Status</th></tr></thead>
+    <tbody>{% for shift in shifts %}<tr style="border-top:1px solid #e2e8f0"><td style="padding:10px">{{ shift.department.name }}</td><td style="padding:10px"><strong>{{ shift.name }}</strong><br><small>{{ shift.code }}</small></td><td style="padding:10px">{{ shift.start_time|time:"H:i" }}–{{ shift.end_time|time:"H:i" }}{% if shift.crosses_midnight %}<small> · Overnight</small>{% endif %}</td><td style="padding:10px">{{ shift.grace_minutes }} min</td><td style="padding:10px">{% if shift.is_active %}<span style="color:#15803d">Active</span>{% else %}<span style="color:#64748b">Inactive</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="5" style="padding:20px;color:#64748b">No departmental shifts configured yet. Add the first shift using the form.</td></tr>{% endfor %}</tbody>
+   </table></div>
+  </section>
+ </div>
+</div>
+{% endblock %}
