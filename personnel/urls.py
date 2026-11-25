@@ -1,14 +1,14 @@
 from django.urls import path
-from . import views
+from . import views, employee_records
 
 app_name = "personnel"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
-    path("employees/", __import__("personnel.employee_records", fromlist=["employee_list"]).employee_list, name="employee_list"),
-    path("employees/create/", __import__("personnel.employee_records", fromlist=["employee_create"]).employee_create, name="employee_create"),
-    path("employees/<int:employee_id>/", __import__("personnel.employee_records", fromlist=["employee_detail"]).employee_detail, name="employee_detail"),
-    path("employees/<int:employee_id>/edit/", __import__("personnel.employee_records", fromlist=["employee_edit"]).employee_edit, name="employee_edit"),
+    path("employees/", employee_records.employee_list, name="employee_list"),
+    path("employees/create/", employee_records.employee_create, name="employee_create"),
+    path("employees/<int:employee_id>/", employee_records.employee_detail, name="employee_detail"),
+    path("employees/<int:employee_id>/edit/", employee_records.employee_edit, name="employee_edit"),
     path("rosters/create/", views.roster_create, name="roster_create"),
     path("rosters/<int:roster_id>/", views.roster_detail, name="roster_detail"),
     path("rosters/<int:roster_id>/submit/", views.roster_submit, name="roster_submit"),
