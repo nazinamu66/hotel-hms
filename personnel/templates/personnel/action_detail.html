@@ -31,6 +31,7 @@
     {% if action.proposed_department %}<div class="pa-data-item"><small>Proposed department</small><strong>{{ action.proposed_department.name }}</strong></div>{% endif %}
     <div class="pa-data-item pa-wide"><small>Reason and supporting details</small><div class="pa-reason">{{ action.reason }}</div></div>
     {% if action.decided_by %}<div class="pa-data-item pa-wide"><small>Management decision</small><strong>{{ action.get_status_display }} · {{ action.decided_by.get_full_name|default:action.decided_by.username }}</strong><div class="pa-muted">{{ action.decided_at|date:"d M Y, H:i" }}</div>{% if action.decision_note %}<div class="pa-reason">{{ action.decision_note }}</div>{% endif %}</div>{% endif %}
+    {% if action.applied_at %}<div class="pa-data-item pa-wide"><small>Effective-date processing</small><strong>Applied to employee record</strong><div class="pa-muted">Processed {{ action.applied_at|date:"d M Y, H:i" }}</div></div>{% elif action.status == "APPROVED" %}<div class="pa-data-item pa-wide"><small>Effective-date processing</small><strong>Approved · awaiting effective date</strong><div class="pa-muted">The employee record will be updated on {{ action.effective_date|date:"d M Y" }}.</div></div>{% endif %}
    </div></div></section>
    {% if action.attachment %}<section class="pa-card"><div class="pa-card-head"><h2>Supporting document</h2></div><div class="pa-card-body"><div class="pa-info">A private attachment is stored with this record. Secure download access will be added as a separate audited feature.</div></div></section>{% endif %}
    <section class="pa-card"><div class="pa-card-head"><h2>Activity and audit history</h2></div><div class="pa-card-body">
@@ -44,7 +45,7 @@
     <form class="pa-form pa-decision" method="post" action="{% url 'personnel:action_decide' action.pk 'return' %}">{% csrf_token %}<textarea name="decision_note" required placeholder="Explain what HR needs to correct"></textarea><button class="pa-btn pa-neutral" type="submit">Return for correction</button></form>
     <form class="pa-form pa-decision" method="post" action="{% url 'personnel:action_decide' action.pk 'reject' %}">{% csrf_token %}<textarea name="decision_note" required placeholder="Reason for rejection"></textarea><button class="pa-btn pa-red" type="submit">Reject action</button></form>
    </div></section>{% endif %}
-   <div class="pa-info">Approval records the management decision. Employment details are not changed by this first-stage approval workflow.</div>
+{% if action.applied_at %}<div class="pa-info">This action has been applied to the employee record. The change is also recorded in employment history.</div>{% elif action.status == "APPROVED" %}<div class="pa-info">This action is approved. The employee record remains unchanged until its effective date is reached and the daily processor runs.</div>{% else %}<div class="pa-info">Approval records the management decision. Employment details change only when the approved effective date is reached.</div>{% endif %}
   </aside>
  </div>
 </div>
