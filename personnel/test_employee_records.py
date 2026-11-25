@@ -224,6 +224,29 @@ class EmployeeRecordViewTests(TestCase):
         self.client.force_login(admin)
         self.assertEqual(self.client.get(upload_url).status_code, 200)
 
+    def test_hr_notes_are_hidden_from_ordinary_hr_staff(self):
+        self.employee.hr_notes = "Confidential personnel matter"
+        self.employee.save(update_fields=["hr_notes"])
+
+        hr_staff = User.objects.create_user(
+            username="hr-notes-restricted-test", password="test-password",
+            role="HR", organization=self.organization, hotel=self.hotel,
+            department=self.hr_department, is_department_head=False,
+        )
+        self.client.force_login(hr_staff)
+        response = self.client.get(reverse(
+            "personnel:employee_detail", args=[self.employee.pk],
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Confidential personnel matter")
+
+        self.client.force_login(self.hr_user)
+        response = self.client.get(reverse(
+            "personnel:employee_detail", args=[self.employee.pk],
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Confidential personnel matter")
+
     def test_employee_records_are_not_available_to_operational_user(self):
         operational_user = User.objects.create_user(
             username="operations-view-test", password="test-password",
