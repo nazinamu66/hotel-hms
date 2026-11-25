@@ -9,7 +9,7 @@ from django.utils import timezone
 from accounts.decorators import role_required
 from inventory.models import Hotel
 from .forms import PropertyExitPassForm, StaffExitPassForm, VehicleVisitForm, VisitorVisitForm, SecurityIncidentForm, SecurityIncidentReviewForm, SecurityIncidentUpdateForm, SecurityIncidentResolutionForm, SecurityOccurrenceReportForm, SecurityOccurrenceReviewForm, SecurityPatrolRouteForm, SecurityPatrolCheckpointForm, SecurityPatrolStartForm, SecurityPatrolVisitForm, SecurityPatrolCompleteForm
-from .models import PropertyExitPass, StaffExitPass, VehicleVisit, VisitorVisit, SecurityShiftConfiguration, SecurityShiftHandover, StaffAttendance, SecurityIncident, SecurityIncidentEvent, SecurityOccurrenceReport, SecurityPatrolRoute, SecurityPatrolCheckpoint, SecurityPatrolRun, SecurityPatrolVisit
+from .models import PropertyExitPass, StaffExitPass, VehicleVisit, VisitorVisit, SecurityShiftConfiguration, SecurityShiftHandover, StaffAttendance, SecurityIncident, SecurityIncidentEvent, SecurityOccurrenceReport, SecurityPatrolRoute, SecurityPatrolCheckpoint, SecurityPatrolRun, SecurityPatrolVisit, SecurityDeliveryVisit
 from .handover_forms import SecurityShiftHandoverForm, SecurityHandoverAcknowledgementForm, SecurityHandoverCSOReviewForm
 
 MANAGEMENT_ROLES = ("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
@@ -90,39 +90,61 @@ def _hotel_for_user(request):
 @role_required(*SECURITY_ACCESS_ROLES)
 def security_dashboard(request):
     hotel = _hotel_for_user(request)
+    today = timezone.localdate()
+    now = timezone.now()
     passes = PropertyExitPass.objects.filter(hotel=hotel)
     visits = VehicleVisit.objects.filter(hotel=hotel)
-    today = timezone.localdate()
-    latest_handover = SecurityShiftHandover.objects.filter(hotel=hotel).select_related("submitted_by", "acknowledged_by").first()
+    visitors = VisitorVisit.objects.filter(hotel=hotel)
+    staff_passes = StaffExitPass.objects.filter(hotel=hotel)
+    incidents = SecurityIncident.objects.filter(hotel=hotel)
+    patrol_runs = SecurityPatrolRun.objects.filter(hotel=hotel).select_related("route", "officer")
+    deliveries = SecurityDeliveryVisit.objects.filter(hotel=hotel).select_related("supplier", "department", "purchase_order", "gate_in_by")
+    latest_handover = SecurityShiftHandover.objects.filter(hotel=hotel).select_related(
+        "submitted_by", "acknowledged_by", "cso_reviewed_by"
+    ).first()
+    staff_pending_qs = staff_passes.filter(status=StaffExitPass.AUTHORISED).select_related("employee")
+    staff_outside_qs = staff_passes.filter(status=StaffExitPass.OUTSIDE).select_related("employee")
+    active_patrols = patrol_runs.filter(status=SecurityPatrolRun.IN_PROGRESS)
+    delivery_inside = deliveries.filter(status=SecurityDeliveryVisit.ARRIVED)
     context = {
-        "latest_handover": latest_handover,
-        "staff_exit_pending": StaffExitPass.objects.filter(hotel=hotel, status=StaffExitPass.AUTHORISED).select_related("employee")[:8],
-        "staff_exit_outside": StaffExitPass.objects.filter(hotel=hotel, status=StaffExitPass.OUTSIDE).select_related("employee")[:8],
-        "staff_exit_overdue": StaffExitPass.objects.filter(hotel=hotel, status=StaffExitPass.OUTSIDE, expected_return_at__lt=timezone.now()).count(),
-        "staff_present": StaffAttendance.objects.filter(
-            hotel=hotel, departed_at__isnull=True,
-        ).filter(
-            Q(work_date=today) | Q(scheduled_end_at__date=today)
-        ).count(),
-        "staff_arrivals_today": StaffAttendance.objects.filter(
-            hotel=hotel, arrived_at__date=today,
-        ).count(),
         "hotel": hotel,
         "available_hotels": _accessible_hotels(request.user),
+        "today": today,
+        "latest_handover": latest_handover,
+        "handover_pending": bool(latest_handover and not latest_handover.is_complete),
+        "staff_exit_pending": staff_pending_qs[:8],
+        "staff_exit_pending_count": staff_pending_qs.count(),
+        "staff_exit_outside": staff_outside_qs[:8],
+        "staff_exit_outside_count": staff_outside_qs.count(),
+        "staff_exit_overdue": staff_outside_qs.filter(expected_return_at__lt=now).count(),
+        "staff_present": StaffAttendance.objects.filter(
+            hotel=hotel, departed_at__isnull=True,
+        ).filter(Q(work_date=today) | Q(scheduled_end_at__date=today)).count(),
+        "staff_arrivals_today": StaffAttendance.objects.filter(hotel=hotel, arrived_at__date=today).count(),
         "vehicles_inside": visits.filter(exited_at__isnull=True).count(),
-        "visitors_inside": VisitorVisit.objects.filter(hotel=hotel, exited_at__isnull=True).count(),
-        "visitors_entered_today": VisitorVisit.objects.filter(hotel=hotel, entered_at__date=today).count(),
-        "recent_visitors_inside": VisitorVisit.objects.filter(hotel=hotel, exited_at__isnull=True).select_related("entered_by", "host_staff", "supplier")[:8],
+        "visitors_inside": visitors.filter(exited_at__isnull=True).count(),
+        "visitors_entered_today": visitors.filter(entered_at__date=today).count(),
+        "recent_visitors_inside": visitors.filter(exited_at__isnull=True).select_related("entered_by", "host_staff", "supplier")[:8],
         "vehicles_entered_today": visits.filter(entered_at__date=today).count(),
         "recent_vehicle_visits": visits.filter(exited_at__isnull=True).select_related("entered_by")[:8],
         "pending": passes.filter(status=PropertyExitPass.AUTHORIZED).count(),
         "currently_out": passes.filter(status=PropertyExitPass.OUT).count(),
         "overdue": passes.filter(status=PropertyExitPass.OUT, pass_type=PropertyExitPass.TEMPORARY, expected_return_date__lt=today).count(),
         "recent_passes": passes.select_related("authorising_manager", "gate_out_by")[:8],
-        "incidents_open": SecurityIncident.objects.filter(hotel=hotel).exclude(status__in=["RESOLVED", "CLOSED"]).count(),
-        "incidents_awaiting_review": SecurityIncident.objects.filter(hotel=hotel, status="SUBMITTED").count(),
-        "latest_incidents": SecurityIncident.objects.filter(hotel=hotel).select_related("reported_by")[:5],
+        "incidents_open": incidents.exclude(status__in=["RESOLVED", "CLOSED"]).count(),
+        "incidents_awaiting_review": incidents.filter(status="SUBMITTED").count(),
+        "critical_incidents_open": incidents.filter(severity="CRITICAL").exclude(status__in=["RESOLVED", "CLOSED"]).count(),
+        "latest_incidents": incidents.select_related("reported_by")[:5],
         "occurrence_report_today": SecurityOccurrenceReport.objects.filter(hotel=hotel, duty_date=today).first(),
+        "patrols_active": active_patrols.count(),
+        "patrols_with_issues": SecurityPatrolVisit.objects.filter(
+            run__hotel=hotel, run__status=SecurityPatrolRun.IN_PROGRESS, issue_found=True,
+        ).count(),
+        "recent_patrol_runs": patrol_runs[:6],
+        "deliveries_inside": delivery_inside.count(),
+        "deliveries_awaiting_inspection": delivery_inside.filter(gate_checked_at__isnull=True).count(),
+        "recent_deliveries": deliveries[:6],
+        "latest_handover": latest_handover,
     }
     return render(request, "security/dashboard.html", context)
 
