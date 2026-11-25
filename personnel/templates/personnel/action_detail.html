@@ -1,0 +1,12 @@
+{% extends "base/base.html" %}
+{% block title %}{{ action.reference }} · Personnel Action{% endblock %}
+{% block content %}
+<div style="max-width:950px;margin:auto"><p><a href="{% url 'personnel:action_list' %}">← Personnel Actions</a></p><h1>{{ action.reference }}</h1><h2>{{ action.title }}</h2>
+<table class="table"><tr><th>Employee</th><td>{{ action.employee.full_name }} · {{ action.employee.employee_number }}</td></tr><tr><th>Action</th><td>{{ action.get_action_type_display }}</td></tr><tr><th>Effective date</th><td>{{ action.effective_date|date:"d M Y" }}</td></tr><tr><th>Status</th><td>{{ action.get_status_display }}</td></tr><tr><th>Reason</th><td>{{ action.reason|linebreaks }}</td></tr><tr><th>Submitted by</th><td>{{ action.submitted_by.get_full_name|default:action.submitted_by.username }}</td></tr>{% if action.decided_by %}<tr><th>Decision</th><td>{{ action.get_status_display }} by {{ action.decided_by.get_full_name|default:action.decided_by.username }} on {{ action.decided_at|date:"d M Y H:i" }}<br>{{ action.decision_note|linebreaks }}</td></tr>{% endif %}</table>
+{% if action.attachment %}<p>Supporting document: attached (private file; download access is not enabled in this first milestone).</p>{% endif %}
+{% if can_submit %}<form method="post" action="{% url 'personnel:action_submit' action.pk %}">{% csrf_token %}<button type="submit">Submit for approval</button></form>{% endif %}
+{% if can_decide %}<h3>Management decision</h3><form method="post" action="{% url 'personnel:action_decide' action.pk 'approve' %}">{% csrf_token %}<textarea name="decision_note" rows="3" placeholder="Optional approval note"></textarea><button type="submit">Approve</button></form>
+<form method="post" action="{% url 'personnel:action_decide' action.pk 'return' %}">{% csrf_token %}<textarea name="decision_note" rows="3" required placeholder="Explain what needs correction"></textarea><button type="submit">Return for correction</button></form>
+<form method="post" action="{% url 'personnel:action_decide' action.pk 'reject' %}">{% csrf_token %}<textarea name="decision_note" rows="3" required placeholder="Reason for rejection"></textarea><button type="submit">Reject</button></form>{% endif %}
+<h3>Audit history</h3><ol>{% for event in events %}<li>{{ event.get_event_type_display|default:event.event_type }} · {{ event.actor.get_full_name|default:event.actor.username }} · {{ event.created_at|date:"d M Y H:i" }}{% if event.note %}<br>{{ event.note }}{% endif %}</li>{% empty %}<li>No events.</li>{% endfor %}</ol></div>
+{% endblock %}
