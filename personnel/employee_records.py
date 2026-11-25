@@ -240,6 +240,7 @@ def employee_detail(request, employee_id):
         "employee": employee,
         "can_manage": can_manage_employee_records(request.user),
         "can_access_documents": can_access_documents,
+        "can_view_hr_notes": can_manage_employee_records(request.user),
         "documents": employee.documents.all() if can_access_documents else [],
         "employment_history": _build_history_timeline(employee.employment_history.select_related("recorded_by").all()),
     })
