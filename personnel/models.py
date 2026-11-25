@@ -309,3 +309,96 @@ class EmployeeProfile(models.Model):
 
     def __str__(self):
         return f"{self.employee_number} · {self.full_name}"
+
+
+class EmployeeEmploymentHistory(models.Model):
+    """Append-only audit trail of material employment changes."""
+
+    HIRED = "HIRED"
+    PROFILE_UPDATED = "PROFILE_UPDATED"
+    EVENT_TYPE_CHOICES = [
+        (HIRED, "Hired"),
+        ("DEPARTMENT_TRANSFER", "Department transfer"),
+        ("HOTEL_TRANSFER", "Hotel transfer"),
+        ("JOB_TITLE_CHANGE", "Job title / promotion"),
+        ("EMPLOYMENT_TYPE_CHANGE", "Employment type change"),
+        ("STATUS_CHANGE", "Employment status change"),
+        ("END_DATE_CHANGE", "Employment end date change"),
+        (PROFILE_UPDATED, "Other employment details updated"),
+    ]
+
+    employee = models.ForeignKey(
+        EmployeeProfile, on_delete=models.PROTECT,
+        related_name="employment_history",
+    )
+    event_type = models.CharField(max_length=32, choices=EVENT_TYPE_CHOICES)
+    effective_date = models.DateField()
+    previous_values = models.JSONField(default=dict, blank=True)
+    new_values = models.JSONField(default=dict, blank=True)
+    reason = models.TextField(blank=True)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="recorded_employee_history",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-effective_date", "-created_at", "-pk"]
+        indexes = [
+            models.Index(fields=["employee", "effective_date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.employee.employee_number} · {self.get_event_type_display()}"
+
+
+class EmployeeDocument(models.Model):
+    """Private employee document; never expose its storage URL."""
+
+    IDENTITY = "IDENTITY"
+    CONTRACT = "CONTRACT"
+    QUALIFICATION = "QUALIFICATION"
+    APPOINTMENT = "APPOINTMENT"
+    PROMOTION = "PROMOTION"
+    DISCIPLINARY = "DISCIPLINARY"
+    CORRESPONDENCE = "CORRESPONDENCE"
+    OTHER = "OTHER"
+    CATEGORY_CHOICES = [
+        (IDENTITY, "Identity document"),
+        (CONTRACT, "Employment contract"),
+        (QUALIFICATION, "Qualification / certificate"),
+        (APPOINTMENT, "Appointment letter"),
+        (PROMOTION, "Promotion / transfer letter"),
+        (DISCIPLINARY, "Disciplinary record"),
+        (CORRESPONDENCE, "HR correspondence"),
+        (OTHER, "Other"),
+    ]
+
+    employee = models.ForeignKey(
+        EmployeeProfile, on_delete=models.PROTECT,
+        related_name="documents",
+    )
+    title = models.CharField(max_length=160)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    description = models.TextField(blank=True)
+    file = models.FileField(
+        upload_to="personnel/employees/%Y/%m/",
+        storage=__import__("personnel.storage", fromlist=["private_employee_storage"]).private_employee_storage,
+    )
+    original_filename = models.CharField(max_length=255, editable=False)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="uploaded_employee_documents",
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-uploaded_at", "-pk"]
+
+    def save(self, *args, **kwargs):
+        if self.file and not self.original_filename:
+            self.original_filename = self.file.name.rsplit("/", 1)[-1][:255]
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.employee.employee_number} · {self.title}"
