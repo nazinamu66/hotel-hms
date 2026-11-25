@@ -97,6 +97,8 @@ class WeeklyRoster(models.Model):
         errors = {}
         if self.week_start and self.week_start.weekday() != 0:
             errors["week_start"] = "Roster week must start on a Monday."
+        if self.rest_days_per_employee is not None and not 0 <= self.rest_days_per_employee <= 6:
+            errors["rest_days_per_employee"] = "Rest days per employee must be between 0 and 6."
         if self.department_id and self.hotel_id and self.department.hotel_id != self.hotel_id:
             errors["department"] = "Department must belong to the selected hotel."
         if self.responsible_hod_id and self.department_id:
