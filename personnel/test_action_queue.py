@@ -14,13 +14,13 @@ class PersonnelActionApprovalQueueTests(TestCase):
     def setUp(self):
         self.organization = Organization.objects.create(name="Action Queue Test Org")
         self.hotel = Hotel.objects.create(name="Action Queue Test Hotel", organization=self.organization)
-        self.hr_department = Department.objects.create(
-            hotel=self.hotel, name="Human Resources", code="HR",
-            department_type="HUMAN_RESOURCES",
+        self.hr_department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Human Resources",
+            defaults={"code": "HR", "department_type": "HUMAN_RESOURCES"},
         )
-        self.department = Department.objects.create(
-            hotel=self.hotel, name="Front Desk", code="FD",
-            department_type="FRONTDESK",
+        self.department, _ = Department.objects.get_or_create(
+            hotel=self.hotel, name="Front Desk",
+            defaults={"code": "FD", "department_type": "FRONTDESK"},
         )
         self.hr = User.objects.create_user(
             username="queue-hr", password="test", role="HR",
