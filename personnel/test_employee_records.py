@@ -16,13 +16,15 @@ class EmployeeProfileModelTests(TestCase):
         cls.hotel = Hotel.objects.create(
             organization=cls.organization, name="Employee Records Test Hotel",
         )
-        cls.hr_department = Department.objects.create(
-            hotel=cls.hotel, code="HR", name="Human Resources",
-            department_type="HUMAN_RESOURCES",
+        cls.hr_department, _ = Department.objects.get_or_create(
+            hotel=cls.hotel,
+            name="Human Resources",
+            defaults={"code": "HR", "department_type": "HUMAN_RESOURCES"},
         )
-        cls.operations_department = Department.objects.create(
-            hotel=cls.hotel, code="OPS", name="Operations",
-            department_type="ADMINISTRATION",
+        cls.operations_department, _ = Department.objects.get_or_create(
+            hotel=cls.hotel,
+            name="Operations",
+            defaults={"code": "OPS", "department_type": "ADMINISTRATION"},
         )
         cls.hr_user = User.objects.create_user(
             username="hr-records-test", password="test-password",
@@ -89,13 +91,15 @@ class EmployeeRecordViewTests(TestCase):
         cls.hotel = Hotel.objects.create(
             organization=cls.organization, name="Employee View Test Hotel",
         )
-        cls.hr_department = Department.objects.create(
-            hotel=cls.hotel, code="HR", name="Human Resources",
-            department_type="HUMAN_RESOURCES",
+        cls.hr_department, _ = Department.objects.get_or_create(
+            hotel=cls.hotel,
+            name="Human Resources",
+            defaults={"code": "HR", "department_type": "HUMAN_RESOURCES"},
         )
-        cls.operations_department = Department.objects.create(
-            hotel=cls.hotel, code="OPS", name="Operations",
-            department_type="ADMINISTRATION",
+        cls.operations_department, _ = Department.objects.get_or_create(
+            hotel=cls.hotel,
+            name="Operations",
+            defaults={"code": "OPS", "department_type": "ADMINISTRATION"},
         )
         cls.hr_user = User.objects.create_user(
             username="hr-view-test", password="test-password",
