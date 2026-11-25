@@ -2,44 +2,64 @@
 {% block title %}Security Operations Dashboard{% endblock %}
 {% block content %}
 <style>
-.sec-dashboard{max-width:1500px;margin:0 auto;padding:28px 24px 52px}
-.sec-eyebrow{font-size:.73rem;font-weight:850;letter-spacing:.13em;text-transform:uppercase;color:#2563eb}
-.sec-heading{font-size:clamp(1.8rem,3vw,2.35rem);font-weight:850;letter-spacing:-.045em;color:#172033;margin:5px 0}
+.sec-dashboard{width:100%;max-width:1540px;margin:0 auto;padding:clamp(18px,2.4vw,34px) clamp(14px,2.2vw,30px) 56px;box-sizing:border-box}
+.sec-dashboard *{box-sizing:border-box}
+.sec-eyebrow{font-size:.7rem;font-weight:850;letter-spacing:.13em;text-transform:uppercase;color:#2563eb}
+.sec-heading{font-size:clamp(1.65rem,2.8vw,2.4rem);font-weight:850;letter-spacing:-.045em;color:#172033;margin:5px 0}
 .sec-muted{color:#64748b}
-.sec-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:22px}
+.sec-top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px}
 .sec-top-actions{display:flex;gap:9px;flex-wrap:wrap}
-.sec-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#334155;text-decoration:none;font-weight:750;font-size:.86rem}
+.sec-btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:10px 14px;border-radius:11px;border:1px solid #cbd5e1;background:#fff;color:#334155;text-decoration:none;font-weight:750;font-size:.86rem;transition:transform .15s ease,box-shadow .15s ease}
+.sec-btn:hover,.sec-link-card:hover,.sec-alert:hover{transform:translateY(-2px);box-shadow:0 9px 22px rgba(15,23,42,.08)}
 .sec-btn-primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
-.sec-section{margin-top:22px}
-.sec-section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:12px}
-.sec-section-title{font-size:1.12rem;font-weight:850;color:#172033;margin:0}
+.sec-section{margin-top:clamp(20px,2.5vw,30px)}
+.sec-section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:13px}
+.sec-section-title{font-size:clamp(1.02rem,1.4vw,1.2rem);font-weight:850;color:#172033;margin:0}
 .sec-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .sec-grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-.sec-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 7px 22px rgba(15,23,42,.045);padding:18px}
+.sec-card{min-width:0;background:#fff;border:1px solid #e2e8f0;border-radius:17px;box-shadow:0 7px 22px rgba(15,23,42,.045);padding:18px}
 .sec-kpi-label{font-size:.8rem;font-weight:750;color:#64748b}
-.sec-kpi-value{font-size:2rem;font-weight:850;letter-spacing:-.04em;color:#172033;line-height:1.2;margin:8px 0 3px}
+.sec-kpi-value{font-size:clamp(1.65rem,2.5vw,2.1rem);font-weight:850;letter-spacing:-.04em;color:#172033;line-height:1.2;margin:8px 0 3px}
 .sec-kpi-note{font-size:.78rem;color:#94a3b8}
-.sec-link-card{display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;color:#172033;min-height:72px}
+.sec-link-card{display:flex;justify-content:space-between;align-items:center;gap:12px;text-decoration:none;color:#172033;min-height:92px;transition:transform .15s ease,box-shadow .15s ease}
 .sec-link-card strong{display:block;font-size:.92rem}
-.sec-link-card small{display:block;color:#64748b;margin-top:4px}
-.sec-arrow{font-size:1.2rem;color:#2563eb}
-.sec-table-wrap{overflow-x:auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px}
-.sec-table{width:100%;border-collapse:collapse;min-width:720px}
-.sec-table th{padding:13px 16px;text-align:left;background:#f8fafc;color:#64748b;font-size:.7rem;letter-spacing:.07em;text-transform:uppercase;border-bottom:1px solid #e2e8f0}
-.sec-table td{padding:14px 16px;border-bottom:1px solid #edf2f7;color:#334155;font-size:.86rem}
+.sec-link-card small{display:block;color:#64748b;margin-top:5px;line-height:1.4}
+.sec-arrow{flex:0 0 auto;font-size:1.2rem;color:#2563eb}
+.sec-table-wrap{min-width:0;overflow:hidden;background:#fff;border:1px solid #e2e8f0;border-radius:16px}
+.sec-table-heading{padding:15px 17px;border-bottom:1px solid #e2e8f0;font-weight:850;color:#172033}
+.sec-table{width:100%;border-collapse:collapse;table-layout:auto}
+.sec-table th{padding:12px 14px;text-align:left;background:#f8fafc;color:#64748b;font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;border-bottom:1px solid #e2e8f0}
+.sec-table td{padding:13px 14px;border-bottom:1px solid #edf2f7;color:#334155;font-size:.84rem;overflow-wrap:anywhere}
 .sec-table tr:last-child td{border-bottom:0}
 .sec-table a{color:#1d4ed8;text-decoration:none;font-weight:750}
 .sec-pill{display:inline-flex;border-radius:99px;padding:5px 9px;background:#e2e8f0;color:#475569;font-size:.72rem;font-weight:800}
 .sec-pill-warn{background:#fef3c7;color:#92400e}
 .sec-pill-danger{background:#fee2e2;color:#991b1b}
 .sec-pill-good{background:#dcfce7;color:#166534}
-.sec-alerts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.sec-alert{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-radius:13px;border:1px solid #e2e8f0;background:#fff;text-decoration:none;color:#334155}
-.sec-alert strong{font-size:1.25rem;color:#172033}
-.sec-alert span{font-size:.82rem;font-weight:700}
-.sec-empty{padding:26px;text-align:center;color:#64748b}
-@media(max-width:950px){.sec-grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}.sec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:620px){.sec-dashboard{padding:20px 14px 36px}.sec-grid,.sec-grid-4,.sec-alerts{grid-template-columns:1fr}.sec-top-actions{width:100%}.sec-btn{flex:1}}
+.sec-alerts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.sec-alert{display:flex;justify-content:space-between;align-items:center;gap:12px;min-width:0;min-height:58px;padding:13px 15px;border-radius:13px;border:1px solid #e2e8f0;background:#fff;text-decoration:none;color:#334155;transition:transform .15s ease,box-shadow .15s ease}
+.sec-alert span{font-size:.82rem;font-weight:700;line-height:1.35}
+.sec-alert strong{flex:0 0 auto;font-size:1.15rem;color:#172033}
+.sec-empty{padding:24px!important;text-align:center;color:#64748b}
+.sec-dashboard select{max-width:100%}
+@media(max-width:1150px){.sec-grid-4,.sec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sec-alerts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){
+.sec-dashboard{padding:18px 14px 38px}.sec-top{gap:14px}.sec-top-actions{width:100%}.sec-top-actions .sec-btn{flex:1}
+.sec-grid,.sec-grid-4{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.sec-alerts{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.sec-card{padding:14px;border-radius:14px}.sec-link-card{min-height:82px}
+.sec-table-wrap{overflow:visible}.sec-table,.sec-table tbody{display:block;width:100%}.sec-table thead{display:none}
+.sec-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 12px;padding:12px 14px;border-bottom:1px solid #edf2f7}
+.sec-table tr:last-child{border-bottom:0}.sec-table td{display:block;min-width:0;padding:0;border:0;font-size:.8rem}
+.sec-table td:before{content:attr(data-label);display:block;margin-bottom:3px;color:#94a3b8;font-size:.62rem;font-weight:850;letter-spacing:.06em;text-transform:uppercase}
+.sec-table td[colspan]{grid-column:1/-1;text-align:center;padding:12px}.sec-table td[colspan]:before{content:none}
+}
+@media(max-width:420px){
+.sec-dashboard{padding-left:11px;padding-right:11px}.sec-grid,.sec-grid-4{gap:8px}.sec-card{padding:12px}
+.sec-kpi-label{font-size:.72rem}.sec-kpi-note{font-size:.69rem;line-height:1.35}.sec-alert{padding:11px 10px;min-height:56px}
+.sec-alert span{font-size:.74rem}.sec-alert strong{font-size:1rem}.sec-link-card strong{font-size:.84rem}.sec-link-card small{font-size:.72rem}
+.sec-top-actions .sec-btn{font-size:.78rem;padding:9px 8px}
+}
+@media(prefers-reduced-motion:reduce){.sec-btn,.sec-link-card,.sec-alert{transition:none}}
 </style>
 <div class="sec-dashboard">
   {% if available_hotels.count > 1 %}
@@ -101,15 +121,15 @@
     <div class="sec-section-head"><div><div class="sec-eyebrow">Recent activity</div><h2 class="sec-section-title">Patrols and supplier deliveries</h2></div></div>
     <div class="sec-grid" style="align-items:start">
       <div class="sec-table-wrap">
-        <div style="padding:16px 18px;border-bottom:1px solid #e2e8f0;font-weight:850;color:#172033">Recent patrol runs</div>
+        <div class="sec-table-heading">Recent patrol runs</div>
         <table class="sec-table"><thead><tr><th>Route</th><th>Officer</th><th>Started</th><th>Status</th></tr></thead><tbody>
-        {% for run in recent_patrol_runs %}<tr><td><a href="{% url 'security_patrol_run_detail' run.pk %}">{{ run.route.name }}</a></td><td>{{ run.officer.get_full_name|default:run.officer.username }}</td><td>{{ run.started_at|date:"d M · H:i" }}</td><td>{{ run.get_status_display }}</td></tr>{% empty %}<tr><td colspan="4" class="sec-empty">No patrol runs recorded yet.</td></tr>{% endfor %}
+        {% for run in recent_patrol_runs %}<tr><td data-label="Route"><a href="{% url 'security_patrol_run_detail' run.pk %}">{{ run.route.name }}</a></td><td data-label="Officer">{{ run.officer.get_full_name|default:run.officer.username }}</td><td data-label="Started">{{ run.started_at|date:"d M · H:i" }}</td><td data-label="Status">{{ run.get_status_display }}</td></tr>{% empty %}<tr><td colspan="4" class="sec-empty">No patrol runs recorded yet.</td></tr>{% endfor %}
         </tbody></table>
       </div>
       <div class="sec-table-wrap">
-        <div style="padding:16px 18px;border-bottom:1px solid #e2e8f0;font-weight:850;color:#172033">Recent supplier deliveries</div>
+        <div class="sec-table-heading">Recent supplier deliveries</div>
         <table class="sec-table"><thead><tr><th>Reference</th><th>Supplier</th><th>PO</th><th>Status</th></tr></thead><tbody>
-        {% for item in recent_deliveries %}<tr><td><a href="{% url 'security_delivery_detail' item.pk %}">{{ item.delivery_reference }}</a></td><td>{{ item.supplier.name }}</td><td>#{{ item.purchase_order_id }}</td><td>{% if item.status == "ARRIVED" and not item.gate_checked_at %}<span class="sec-pill sec-pill-warn">Awaiting inspection</span>{% else %}{{ item.get_status_display }}{% endif %}</td></tr>{% empty %}<tr><td colspan="4" class="sec-empty">No supplier deliveries recorded yet.</td></tr>{% endfor %}
+        {% for item in recent_deliveries %}<tr><td data-label="Reference"><a href="{% url 'security_delivery_detail' item.pk %}">{{ item.delivery_reference }}</a></td><td data-label="Supplier">{{ item.supplier.name }}</td><td data-label="PO">#{{ item.purchase_order_id }}</td><td data-label="Status">{% if item.status == "ARRIVED" and not item.gate_checked_at %}<span class="sec-pill sec-pill-warn">Awaiting inspection</span>{% else %}{{ item.get_status_display }}{% endif %}</td></tr>{% empty %}<tr><td colspan="4" class="sec-empty">No supplier deliveries recorded yet.</td></tr>{% endfor %}
         </tbody></table>
       </div>
     </div>
@@ -121,15 +141,15 @@
       <div class="sec-table-wrap">
         <div style="padding:16px 18px;border-bottom:1px solid #e2e8f0;font-weight:850;color:#172033">Staff exit passes <span class="sec-muted">· {{ staff_exit_pending_count }} awaiting departure / {{ staff_exit_outside_count }} outside</span></div>
         <table class="sec-table"><thead><tr><th>Pass</th><th>Employee</th><th>Expected return</th><th>Status</th></tr></thead><tbody>
-        {% for p in staff_exit_pending %}<tr><td><a href="{% url 'security_staff_exit_detail' p.pk %}">{{ p.pass_number }}</a></td><td>{{ p.employee_name }}</td><td>{{ p.expected_return_at|date:"d M · H:i" }}</td><td><span class="sec-pill sec-pill-warn">Awaiting departure</span></td></tr>{% endfor %}
+        {% for p in staff_exit_pending %}<tr><td data-label="Pass"><a href="{% url 'security_staff_exit_detail' p.pk %}">{{ p.pass_number }}</a></td><td data-label="Employee">{{ p.employee_name }}</td><td data-label="Expected return">{{ p.expected_return_at|date:"d M · H:i" }}</td><td data-label="Status"><span class="sec-pill sec-pill-warn">Awaiting departure</span></td></tr>{% endfor %}
         {% for p in staff_exit_outside %}<tr><td><a href="{% url 'security_staff_exit_detail' p.pk %}">{{ p.pass_number }}</a></td><td>{{ p.employee_name }}</td><td>{{ p.expected_return_at|date:"d M · H:i" }}</td><td>{% if p.is_overdue %}<span class="sec-pill sec-pill-danger">Overdue</span>{% else %}<span class="sec-pill">Outside</span>{% endif %}</td></tr>{% endfor %}
         {% if not staff_exit_pending and not staff_exit_outside %}<tr><td colspan="4" class="sec-empty">No active staff exit passes.</td></tr>{% endif %}
         </tbody></table>
       </div>
       <div class="sec-table-wrap">
-        <div style="padding:16px 18px;border-bottom:1px solid #e2e8f0;font-weight:850;color:#172033">Recent property authorisations</div>
+        <div class="sec-table-heading">Recent property authorisations</div>
         <table class="sec-table"><thead><tr><th>Pass</th><th>Staff</th><th>Property</th><th>Status</th></tr></thead><tbody>
-        {% for p in recent_passes %}<tr><td><a href="{% url 'security_pass_detail' p.pk %}?hotel={{ hotel.pk }}">{{ p.pass_number }}</a></td><td>{{ p.staff_name }}</td><td>{{ p.item_description }}</td><td>{{ p.get_status_display }}</td></tr>{% empty %}<tr><td colspan="4" class="sec-empty">No property passes recorded.</td></tr>{% endfor %}
+        {% for p in recent_passes %}<tr><td data-label="Pass"><a href="{% url 'security_pass_detail' p.pk %}?hotel={{ hotel.pk }}">{{ p.pass_number }}</a></td><td data-label="Staff">{{ p.staff_name }}</td><td data-label="Property">{{ p.item_description }}</td><td data-label="Status">{{ p.get_status_display }}</td></tr>{% empty %}<tr><td colspan="4" class="sec-empty">No property passes recorded.</td></tr>{% endfor %}
         </tbody></table>
       </div>
     </div>
@@ -139,9 +159,9 @@
     <div class="sec-section-head"><div><div class="sec-eyebrow">Case management</div><h2 class="sec-section-title">Incidents and daily reporting</h2></div></div>
     <div class="sec-grid" style="align-items:start">
       <div class="sec-table-wrap">
-        <div style="padding:16px 18px;border-bottom:1px solid #e2e8f0;font-weight:850;color:#172033">Latest incidents · {{ incidents_open }} open · {{ critical_incidents_open }} critical</div>
+        <div class="sec-table-heading">Latest incidents · {{ incidents_open }} open · {{ critical_incidents_open }} critical</div>
         <table class="sec-table"><thead><tr><th>Incident</th><th>Severity</th><th>Status</th></tr></thead><tbody>
-        {% for incident in latest_incidents %}<tr><td><a href="{% url 'security_incident_detail' incident.pk %}">{{ incident.incident_number }} · {{ incident.summary }}</a></td><td>{% if incident.severity == "CRITICAL" %}<span class="sec-pill sec-pill-danger">{{ incident.get_severity_display }}</span>{% else %}{{ incident.get_severity_display }}{% endif %}</td><td>{{ incident.get_status_display }}</td></tr>{% empty %}<tr><td colspan="3" class="sec-empty">No incidents recorded.</td></tr>{% endfor %}
+        {% for incident in latest_incidents %}<tr><td data-label="Incident"><a href="{% url 'security_incident_detail' incident.pk %}">{{ incident.incident_number }} · {{ incident.summary }}</a></td><td data-label="Severity">{% if incident.severity == "CRITICAL" %}<span class="sec-pill sec-pill-danger">{{ incident.get_severity_display }}</span>{% else %}{{ incident.get_severity_display }}{% endif %}</td><td data-label="Status">{{ incident.get_status_display }}</td></tr>{% empty %}<tr><td colspan="3" class="sec-empty">No incidents recorded.</td></tr>{% endfor %}
         </tbody></table>
       </div>
       <div class="sec-card">
