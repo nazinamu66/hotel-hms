@@ -123,6 +123,12 @@ class EmployeeRecordViewTests(TestCase):
         ))
         self.assertEqual(detail.status_code, 200)
         self.assertContains(detail, "Fatima Yusuf")
+        dashboard = self.client.get(reverse("personnel:dashboard"))
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertContains(dashboard, "Human Resources Dashboard")
+        roster_dashboard = self.client.get(reverse("personnel:roster_dashboard"))
+        self.assertEqual(roster_dashboard.status_code, 200)
+        self.assertContains(roster_dashboard, "Staff Attendance Roster")
 
     def test_hr_head_can_register_employee_without_login(self):
         self.client.force_login(self.hr_user)
@@ -182,6 +188,10 @@ class EmployeeRecordViewTests(TestCase):
         self.assertEqual(event.previous_values["job_title"], "Cashier")
         self.assertEqual(event.new_values["job_title"], "Senior Cashier")
         self.assertEqual(event.reason, "Promotion after performance review")
+        detail = self.client.get(reverse("personnel:employee_detail", args=[self.employee.pk]))
+        self.assertContains(detail, "Cashier")
+        self.assertContains(detail, "Senior Cashier")
+        self.assertNotContains(detail, "{'job_title'")
 
     def test_confidential_documents_are_restricted_to_hr_head_director_and_admin(self):
         from django.urls import reverse
