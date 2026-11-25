@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import EmployeeDocument, EmployeeDocumentAccess, EmployeeEmploymentHistory, EmployeeProfile, PersonnelAction, PersonnelActionEvent, RosterAssignment, RosterAuditEvent, ShiftDefinition, WeeklyRoster
+from .models import EmployeeDocument, EmployeeDocumentAccess, EmployeeEmploymentHistory, EmployeeProfile, PersonnelAction, PersonnelActionEvent, EmployeeSeparationClearance, EmployeeSeparationClearanceEvent, RosterAssignment, RosterAuditEvent, ShiftDefinition, WeeklyRoster
 
 
 class RosterAssignmentInline(admin.TabularInline):
@@ -78,3 +78,22 @@ class EmployeeDocumentAccessAdmin(admin.ModelAdmin):
 
 admin.site.register(PersonnelAction)
 admin.site.register(PersonnelActionEvent)
+
+
+@admin.register(EmployeeSeparationClearance)
+class EmployeeSeparationClearanceAdmin(admin.ModelAdmin):
+    list_display = ("action", "status", "verified_by", "submitted_by", "decided_by", "updated_at")
+    list_filter = ("status",)
+    readonly_fields = ("action", "status", "outstanding_items", "no_outstanding_confirmed", "verified_by", "verified_at", "submitted_by", "submitted_at", "decided_by", "decided_at", "decision_note", "created_at", "updated_at")
+    def has_add_permission(self, request): return False
+    def has_change_permission(self, request, obj=None): return False
+    def has_delete_permission(self, request, obj=None): return False
+
+
+@admin.register(EmployeeSeparationClearanceEvent)
+class EmployeeSeparationClearanceEventAdmin(admin.ModelAdmin):
+    list_display = ("clearance", "event_type", "actor", "created_at")
+    readonly_fields = ("clearance", "event_type", "actor", "note", "created_at")
+    def has_add_permission(self, request): return False
+    def has_change_permission(self, request, obj=None): return False
+    def has_delete_permission(self, request, obj=None): return False
