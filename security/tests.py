@@ -1015,6 +1015,123 @@ class StaffAttendanceTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
 
 
+    def test_daily_compliance_counts_scheduled_arrival_late_and_absence(self):
+        from .models import StaffAttendance
+
+        second = User.objects.create_user(
+            username="attendance-absent", password="test",
+            role="FRONTDESK", department=self.staff_department,
+        )
+        from personnel.models import RosterAssignment
+        RosterAssignment.objects.create(
+            roster=self.roster, employee=second,
+            work_date=self.assignment.work_date, shift=self.shift,
+        )
+        start, end = self.shift.interval_for(self.assignment.work_date)
+        attendance = StaffAttendance(
+            hotel=self.hotel, employee=self.employee,
+            roster_assignment=self.assignment, work_date=self.assignment.work_date,
+            scheduled_start_at=start, scheduled_end_at=end,
+            scheduled_shift_name=self.shift.name,
+            grace_minutes_snapshot=self.shift.grace_minutes,
+            arrived_at=start + timedelta(minutes=25),
+            arrival_recorded_by=self.security,
+        )
+        attendance.save()
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_attendance_list"), {
+            "compliance_date": self.assignment.work_date.isoformat(),
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["scheduled_count"], 2)
+        self.assertEqual(response.context["arrived_count"], 1)
+        self.assertEqual(response.context["late_count"], 1)
+        self.assertEqual(response.context["absent_count"], 1)
+        self.assertEqual(response.context["exception_arrivals_count"], 0)
+
+    def test_unlinked_scheduled_arrival_is_exception_not_absence(self):
+        from .models import StaffAttendance
+
+        attendance = StaffAttendance.objects.create(
+            hotel=self.hotel, employee=self.employee,
+            work_date=self.assignment.work_date,
+            arrival_recorded_by=self.security,
+            arrival_note="Covering another shift after a shift swap.",
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_attendance_list"), {
+            "compliance_date": self.assignment.work_date.isoformat(),
+        })
+        self.assertEqual(response.context["scheduled_count"], 1)
+        self.assertEqual(response.context["arrived_count"], 1)
+        self.assertEqual(response.context["absent_count"], 0)
+        self.assertEqual(response.context["exception_arrivals_count"], 1)
+        self.assertEqual(response.context["compliance_rows"][0]["status"], "EXCEPTION")
+
+    def test_rest_day_arrivals_are_counted_as_reconciliation_exceptions(self):
+        from .models import StaffAttendance
+        from personnel.models import RosterAssignment, RosterReconciliation
+
+        rest_employee = User.objects.create_user(
+            username="attendance-rest-day", password="test",
+            role="FRONTDESK", department=self.staff_department,
+        )
+        off_assignment = RosterAssignment.objects.create(
+            roster=self.roster, employee=rest_employee,
+            work_date=self.assignment.work_date, is_day_off=True,
+        )
+        attendance = StaffAttendance.objects.create(
+            hotel=self.hotel, employee=rest_employee,
+            work_date=self.assignment.work_date, arrival_recorded_by=self.security,
+        )
+        RosterReconciliation.objects.create(
+            hotel=self.hotel, attendance=attendance,
+            roster_assignment=off_assignment, employee=rest_employee,
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_attendance_list"), {
+            "compliance_date": self.assignment.work_date.isoformat(),
+        })
+        self.assertEqual(response.context["rest_day_exception_count"], 1)
+        self.assertEqual(response.context["pending_reconciliation_count"], 1)
+        self.assertEqual(response.context["scheduled_count"], 1)
+
+    def test_daily_compliance_respects_department_filter(self):
+        from .models import StaffAttendance
+        from inventory.models import Department
+        restaurant, _ = Department.objects.get_or_create(
+            hotel=self.hotel, code="ACR", defaults={
+                "name": "Attendance Compliance Restaurant",
+                "department_type": "RESTAURANT",
+            },
+        )
+        restaurant_employee = User.objects.create_user(
+            username="attendance-compliance-restaurant", password="test",
+            role="RESTAURANT", department=restaurant,
+        )
+        from personnel.models import RosterAssignment, WeeklyRoster
+        restaurant_hod = User.objects.create_user(
+            username="attendance-compliance-hod", password="test",
+            role="RESTAURANT", department=restaurant, is_department_head=True,
+        )
+        roster = WeeklyRoster.objects.create(
+            hotel=self.hotel, department=restaurant,
+            week_start=self.roster.week_start, responsible_hod=restaurant_hod,
+            created_by=restaurant_hod, status=WeeklyRoster.APPROVED,
+        )
+        RosterAssignment.objects.create(
+            roster=roster, employee=restaurant_employee,
+            work_date=self.assignment.work_date, shift=self.shift,
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse("security_attendance_list"), {
+            "compliance_date": self.assignment.work_date.isoformat(),
+            "department": str(restaurant.pk),
+        })
+        self.assertEqual(response.context["scheduled_count"], 1)
+        self.assertEqual(response.context["compliance_rows"][0]["assignment"].employee, restaurant_employee)
+
+
 class SecurityIncidentAndOccurrenceTests(TestCase):
     def setUp(self):
         self.org = Organization.objects.create(name="Security Incident Test Org")
