@@ -1,23 +1,52 @@
 {% extends "base/base.html" %}
-{% block title %}Personnel · Staff Rosters{% endblock %}
+{% block title %}Human Resources Dashboard · Personnel{% endblock %}
 {% block content %}
 <style>
-.personnel-wrap{max-width:1200px;margin:0 auto}.personnel-head{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:22px}.personnel-head h1{margin:0;font-size:27px}.personnel-sub{color:var(--muted,#64748b);margin-top:5px}.personnel-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,1fr);gap:18px}.personnel-panel{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;padding:20px;box-shadow:0 5px 18px rgba(15,23,42,.04)}.personnel-panel h2{font-size:17px;margin:0 0 15px}.personnel-table{width:100%;border-collapse:collapse}.personnel-table th,.personnel-table td{padding:12px 10px;border-bottom:1px solid var(--border,#e2e8f0);text-align:left}.personnel-table th{font-size:12px;color:var(--muted,#64748b);text-transform:uppercase}.personnel-table a{font-weight:600;text-decoration:none}.status{display:inline-block;padding:4px 9px;border-radius:20px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:700}.status.APPROVED{background:#dcfce7;color:#166534}.status.RETURNED{background:#fef3c7;color:#92400e}.status.SUBMITTED{background:#dbeafe;color:#1d4ed8}.personnel-form p{margin:0 0 12px}.personnel-form input,.personnel-form select{width:100%;padding:10px;border:1px solid var(--border,#cbd5e1);border-radius:9px}.personnel-form button,.personnel-action{display:inline-block;border:0;border-radius:9px;background:#172554;color:white;padding:10px 15px;font-weight:700;text-decoration:none;cursor:pointer}.personnel-empty{padding:24px;text-align:center;color:var(--muted,#64748b)}@media(max-width:850px){.personnel-grid{grid-template-columns:1fr}.personnel-table{font-size:13px}}
+.hr-wrap{max-width:1320px;margin:0 auto}.hr-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}.hr-head h1{margin:0;font-size:28px}.hr-sub{color:var(--muted,#64748b);margin-top:5px}.hr-actions{display:flex;gap:9px;flex-wrap:wrap}.hr-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 15px;border-radius:10px;background:#172554;color:white;text-decoration:none;font-weight:700}.hr-btn.secondary{background:var(--card,#fff);color:var(--text,#172033);border:1px solid var(--border,#dbe2ea)}.hr-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:18px}.hr-stat,.hr-panel{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:15px;padding:18px;box-shadow:0 4px 14px rgba(15,23,42,.035)}.hr-stat span{display:block;color:var(--muted,#64748b);font-size:12px;font-weight:700;text-transform:uppercase}.hr-stat strong{display:block;font-size:29px;margin-top:7px}.hr-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:16px}.hr-panel{margin-bottom:16px}.hr-panel h2{font-size:17px;margin:0 0 14px}.hr-table{width:100%;border-collapse:collapse}.hr-table th,.hr-table td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--border,#e2e8f0);vertical-align:top}.hr-table th{font-size:11px;text-transform:uppercase;color:var(--muted,#64748b)}.hr-table a{font-weight:700;text-decoration:none}.hr-empty{padding:22px;text-align:center;color:var(--muted,#64748b)}.hr-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hr-shortcut{padding:14px;border:1px solid var(--border,#e2e8f0);border-radius:11px;text-decoration:none;color:inherit}.hr-shortcut strong{display:block}.hr-shortcut span{display:block;color:var(--muted,#64748b);font-size:12px;margin-top:4px}.hr-pill{display:inline-block;border-radius:20px;padding:3px 8px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700}@media(max-width:1050px){.hr-stats{grid-template-columns:repeat(3,1fr)}}@media(max-width:760px){.hr-grid{grid-template-columns:1fr}.hr-stats{grid-template-columns:repeat(2,1fr)}.hr-table{font-size:13px}}@media(max-width:420px){.hr-stats{grid-template-columns:1fr 1fr}.hr-stat{padding:13px}.hr-stat strong{font-size:24px}}
 </style>
-<div class="personnel-wrap">
- <div class="personnel-head"><div><h1>Staff Attendance Roster</h1><div class="personnel-sub">Prepare weekly departmental shifts and submit them for HR approval.</div></div>{% if is_hr_head %}<a class="personnel-action" href="{% url 'personnel:shifts' %}">Manage shifts</a>{% endif %}</div>
- {% if is_hr_head %}
- <section class="personnel-panel" style="margin-bottom:18px"><h2>Pending roster reconciliations <span class="status SUBMITTED">{{ pending_reconciliations|length }}</span></h2>
-  {% if pending_reconciliations %}<div style="overflow-x:auto"><table class="personnel-table"><thead><tr><th>Arrival date</th><th>Employee</th><th>Department</th><th>Security arrival</th><th>Action</th></tr></thead><tbody>
-   {% for item in pending_reconciliations %}<tr><td>{{ item.attendance.work_date|date:"d M Y" }}</td><td>{{ item.employee.get_full_name|default:item.employee.username }}</td><td>{{ item.employee.department.name|default:"—" }}</td><td>{{ item.attendance.arrived_at|date:"d M Y, H:i" }}</td><td><a href="{% url 'personnel:reconciliation_detail' item.pk %}">Review and sign off</a></td></tr>{% endfor %}
-  </tbody></table></div>{% else %}<div class="personnel-empty">No pending off-duty arrivals require reconciliation.</div>{% endif %}
- </section>{% endif %}
- <p><a class="personnel-action" href="/personnel/employees/">Employee Records</a></p>
- <div class="personnel-grid">
-  <section class="personnel-panel"><h2>Weekly rosters</h2>
-   {% if rosters %}<div style="overflow-x:auto"><table class="personnel-table"><thead><tr><th>Week commencing</th><th>Hotel / Department</th><th>Responsible HOD</th><th>Status</th></tr></thead><tbody>{% for roster in rosters %}<tr><td><a href="{% url 'personnel:roster_detail' roster.pk %}">{{ roster.week_start|date:"d M Y" }}</a></td><td>{{ roster.hotel.name }} · {{ roster.department.name }}</td><td>{{ roster.responsible_hod.get_full_name|default:roster.responsible_hod.username }}</td><td><span class="status {{ roster.status }}">{{ roster.get_status_display }}</span></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="personnel-empty">No weekly rosters yet.</div>{% endif %}
-  </section>
-  {% if can_prepare %}<section class="personnel-panel"><h2>Create a roster</h2><form class="personnel-form" method="post" action="{% url 'personnel:roster_create' %}">{% csrf_token %}{{ create_form.as_p }}<button type="submit">Create weekly roster</button></form><p class="personnel-sub" style="font-size:12px;margin-top:12px">The department Head prepares the roster. HR Head can create one on behalf of another department.</p></section>{% endif %}
+<div class="hr-wrap">
+ <header class="hr-head">
+  <div><h1>Human Resources Dashboard</h1><div class="hr-sub">People, employment records and workforce administration at a glance.</div></div>
+  <div class="hr-actions">
+   <a class="hr-btn" href="{% url 'personnel:employee_list' %}">Employee Directory</a>
+   {% if can_manage_employees %}<a class="hr-btn secondary" href="{% url 'personnel:employee_create' %}">＋ Register Employee</a>{% endif %}
+  </div>
+ </header>
+ <section class="hr-stats">
+  <div class="hr-stat"><span>Total employees</span><strong>{{ employee_count }}</strong></div>
+  <div class="hr-stat"><span>Active employees</span><strong>{{ active_employee_count }}</strong></div>
+  <div class="hr-stat"><span>On leave</span><strong>{{ on_leave_count }}</strong></div>
+  <div class="hr-stat"><span>Pending rosters</span><strong>{{ pending_roster_count }}</strong></div>
+  <div class="hr-stat"><span>Attendance reviews</span><strong>{{ pending_reconciliation_count }}</strong></div>
+ </section>
+ <div class="hr-grid">
+  <div>
+   <section class="hr-panel">
+    <h2>Recently registered employees</h2>
+    {% if recent_employees %}
+     <div style="overflow-x:auto"><table class="hr-table"><thead><tr><th>Employee</th><th>Department</th><th>Hotel</th><th>Status</th></tr></thead><tbody>
+      {% for employee in recent_employees %}<tr><td><a href="{% url 'personnel:employee_detail' employee.pk %}">{{ employee.full_name }}</a><br><small>{{ employee.employee_number }}</small></td><td>{{ employee.department.name }}</td><td>{{ employee.hotel.name }}</td><td><span class="hr-pill">{{ employee.get_employment_status_display }}</span></td></tr>{% endfor %}
+     </tbody></table></div>
+    {% else %}<div class="hr-empty">No employee records have been registered yet.</div>{% endif %}
+   </section>
+   <section class="hr-panel">
+    <h2>Attendance reconciliation requiring review</h2>
+    {% if pending_reconciliations %}
+     <div style="overflow-x:auto"><table class="hr-table"><thead><tr><th>Date</th><th>Employee</th><th>Department</th><th>Action</th></tr></thead><tbody>
+      {% for item in pending_reconciliations %}<tr><td>{{ item.attendance.work_date|date:"d M Y" }}</td><td>{{ item.employee.get_full_name|default:item.employee.username }}</td><td>{{ item.employee.department.name|default:"—" }}</td><td><a href="{% url 'personnel:reconciliation_detail' item.pk %}">Review</a></td></tr>{% endfor %}
+     </tbody></table></div>
+    {% else %}<div class="hr-empty">No pending attendance reconciliation.</div>{% endif %}
+   </section>
+  </div>
+  <aside>
+   <section class="hr-panel"><h2>Personnel workspace</h2><div class="hr-shortcuts">
+    <a class="hr-shortcut" href="{% url 'personnel:employee_list' %}"><strong>Employee Records</strong><span>Search and manage employee profiles</span></a>
+    {% if can_manage_employees %}<a class="hr-shortcut" href="{% url 'personnel:employee_create' %}"><strong>Register Employee</strong><span>Create a new HR record</span></a>{% endif %}
+    <a class="hr-shortcut" href="{% url 'personnel:roster_dashboard' %}"><strong>Staff Rosters</strong><span>Prepare and review weekly shifts</span></a>
+    {% if is_hr_head %}<a class="hr-shortcut" href="{% url 'personnel:shifts' %}"><strong>Shift Definitions</strong><span>Manage hotel shift patterns</span></a>{% endif %}
+   </div></section>
+   <section class="hr-panel"><h2>Workforce snapshot</h2><p class="hr-sub">Suspended employees: <strong>{{ suspended_count }}</strong></p><p class="hr-sub">Hotels in your access scope: <strong>{{ hotel_count }}</strong></p></section>
+  </aside>
  </div>
 </div>
 {% endblock %}
