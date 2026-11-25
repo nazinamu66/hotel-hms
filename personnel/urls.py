@@ -1,9 +1,14 @@
 from django.urls import path
-from . import views, employee_records, action_views
+from . import views, employee_records, action_views, separation_views
 
 app_name = "personnel"
 
 urlpatterns = [
+    path("separations/", separation_views.separation_list, name="separation_list"),
+    path("separations/<int:clearance_id>/", separation_views.separation_detail, name="separation_detail"),
+    path("separations/<int:clearance_id>/verify/", separation_views.separation_verify, name="separation_verify"),
+    path("separations/<int:clearance_id>/submit/", separation_views.separation_submit, name="separation_submit"),
+    path("separations/<int:clearance_id>/decision/<str:decision>/", separation_views.separation_decision, name="separation_decision"),
     path("actions/", action_views.action_list, name="action_list"),
     path("actions/review/", action_views.action_approval_queue, name="action_approval_queue"),
     path("actions/create/", action_views.action_create, name="action_create"),
