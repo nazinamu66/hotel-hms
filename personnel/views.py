@@ -210,7 +210,7 @@ def roster_detail(request, roster_id):
     ]
     return render(request, "personnel/roster_detail.html", {
         "roster": roster, "employees": employees, "dates": dates, "grid_rows": grid_rows,
-        "shifts": ShiftDefinition.objects.filter(hotel=roster.hotel, department=roster.department),
+        "shifts": ShiftDefinition.objects.filter(hotel=roster.hotel).filter(Q(department=roster.department) | Q(department__isnull=True)),
         "assignable_shifts": ShiftDefinition.objects.filter(hotel=roster.hotel, department=roster.department, is_active=True),
         "assignment_map": assignment_map, "editable": editable,
         "events": roster.audit_events.select_related("actor"),
@@ -233,7 +233,7 @@ def _validate_roster_complete(roster):
         for assignment in entries:
             if assignment.shift_id and (
                 not assignment.shift.is_active
-                or assignment.shift.department_id != roster.department_id
+                or assignment.shift.department_id not in (None, roster.department_id)
                 or assignment.shift.hotel_id != roster.hotel_id
             ):
                 raise ValidationError(
