@@ -14,8 +14,8 @@
  <header class="paq-head"><div><div class="paq-eyebrow">Management workspace · Human Resources</div><h1>Personnel Action Approvals</h1><p>Review HR submissions and record management decisions.</p></div></header>
  <section class="paq-stats">
   <div class="paq-stat"><span>Awaiting decision</span><strong>{{ pending_count }}</strong><small>Submitted personnel actions</small></div>
-  <div class="paq-stat"><span>Effective date reached</span><strong>{{ effective_count }}</strong><small>Approved decision still pending review or action</small></div>
-  <div class="paq-stat"><span>Future effective date</span><strong>{{ upcoming_count }}</strong><small>Submissions with a later effective date</small></div>
+  <div class="paq-stat"><span>Approved and due for processing</span><strong>{{ effective_count }}</strong><small>Approved actions awaiting effective-date processing</small></div>
+  <div class="paq-stat"><span>Approved, future effective date</span><strong>{{ upcoming_count }}</strong><small>Approved actions scheduled for a later date</small></div>
  </section>
  <section class="paq-panel"><div class="paq-panel-head"><h2>Pending management review</h2><p>Actions are ordered by effective date, with the earliest dates first.</p></div>
   <div class="paq-table-wrap"><table class="paq-table"><thead><tr><th>Reference</th><th>Employee</th><th>Action</th><th>Hotel / Department</th><th>Effective date</th><th>Submitted</th><th></th></tr></thead><tbody>
