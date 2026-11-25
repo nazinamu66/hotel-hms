@@ -1,10 +1,22 @@
 from django import forms
+from django.utils import timezone
 from accounts.services.access import get_accessible_hotels
 from inventory.models import Department
 from .models import EmployeeProfile
 
 
 class EmployeeProfileForm(forms.ModelForm):
+    effective_date = forms.DateField(
+        required=False,
+        initial=timezone.localdate,
+        widget=forms.DateInput(attrs={"type": "date"}),
+        help_text="Date the recorded employment changes take effect.",
+    )
+    change_reason = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Reason for the employment changes (optional).",
+    )
     class Meta:
         model = EmployeeProfile
         fields = [
