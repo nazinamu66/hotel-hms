@@ -8,7 +8,7 @@ User = get_user_model()
 
 
 class WeeklyRosterCreateForm(forms.ModelForm):
-    rest_days_per_employee = forms.IntegerField(min_value=0, max_value=6, initial=1, help_text="Set the number of OFF days each employee receives for this specific week. This does not change other weeks.")
+    rest_days_per_employee = forms.IntegerField(min_value=0, max_value=6, initial=1, required=False, help_text="Set the number of OFF days each employee receives for this specific week. This does not change other weeks.")
     class Meta:
         model = WeeklyRoster
         fields = ["department", "week_start", "rest_days_per_employee", "responsible_hod"]
@@ -25,6 +25,9 @@ class WeeklyRosterCreateForm(forms.ModelForm):
             self.fields["department"].widget = forms.HiddenInput()
             self.fields["responsible_hod"].queryset = self.fields["responsible_hod"].queryset.filter(pk=actor.pk)
             self.initial.setdefault("responsible_hod", actor.pk)
+
+    def clean_rest_days_per_employee(self):
+        return self.cleaned_data.get("rest_days_per_employee") if self.cleaned_data.get("rest_days_per_employee") is not None else 1
 
     def clean(self):
         cleaned = super().clean()
