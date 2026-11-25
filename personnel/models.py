@@ -523,3 +523,65 @@ class PersonnelActionEvent(models.Model):
 
     def __str__(self):
         return f"{self.action.reference} · {self.event_type}"
+
+
+class EmployeeSeparationClearance(models.Model):
+    """Department/Personnel verification and management sign-off for separation."""
+    PENDING = "PENDING"
+    SUBMITTED = "SUBMITTED"
+    APPROVED = "APPROVED"
+    RETURNED = "RETURNED"
+    STATUS_CHOICES = [
+        (PENDING, "Pending department / Personnel verification"),
+        (SUBMITTED, "Submitted for final approval"),
+        (APPROVED, "Approved"),
+        (RETURNED, "Returned for further action"),
+    ]
+    action = models.OneToOneField(PersonnelAction, on_delete=models.PROTECT, related_name="separation_clearance")
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=PENDING)
+    outstanding_items = models.TextField(blank=True)
+    no_outstanding_confirmed = models.BooleanField(default=False)
+    verified_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="verified_separation_clearances")
+    verified_at = models.DateTimeField(null=True, blank=True)
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="submitted_separation_clearances")
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="decided_separation_clearances")
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decision_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["status", "-created_at", "-pk"]
+        indexes = [models.Index(fields=["status", "created_at"])]
+
+    def clean(self):
+        if self.action_id and self.action.action_type not in {
+            PersonnelAction.RESIGNATION, PersonnelAction.RETIREMENT,
+            PersonnelAction.TERMINATION, PersonnelAction.DISMISSAL,
+        }:
+            raise ValidationError({"action": "A separation clearance must be linked to a separation Personnel Action."})
+        if self.status == self.SUBMITTED and (
+            not self.no_outstanding_confirmed or self.outstanding_items.strip()
+            or not self.verified_by_id or not self.submitted_by_id
+        ):
+            raise ValidationError("A submitted clearance must have a completed no-outstanding verification.")
+        if self.status == self.APPROVED and (not self.decided_by_id or not self.decided_at):
+            raise ValidationError("An approved clearance must record its final approver and decision time.")
+
+    def __str__(self):
+        return f"{self.action.reference} · {self.get_status_display()}"
+
+
+class EmployeeSeparationClearanceEvent(models.Model):
+    clearance = models.ForeignKey(EmployeeSeparationClearance, on_delete=models.PROTECT, related_name="events")
+    event_type = models.CharField(max_length=20)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="separation_clearance_events")
+    note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+
+    def __str__(self):
+        return f"{self.clearance.action.reference} · {self.event_type}"
