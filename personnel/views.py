@@ -18,6 +18,41 @@ def _require_roster_access(user):
 
 
 @login_required
+def dashboard(request):
+    """Human Resources landing page; roster operations live on a separate page."""
+    if not is_hr_staff(request.user):
+        return redirect("personnel:roster_dashboard")
+
+    hotels = get_accessible_hotels(request.user)
+    employees = EmployeeProfile.objects.filter(hotel__in=hotels)
+    pending_reconciliations = RosterReconciliation.objects.filter(
+        hotel__in=hotels,
+        status=RosterReconciliation.PENDING,
+    ).select_related(
+        "employee", "attendance", "roster_assignment__roster",
+        "roster_assignment__roster__department",
+    )
+    context = {
+        "hotel_count": hotels.count(),
+        "employee_count": employees.count(),
+        "active_employee_count": employees.filter(employment_status=EmployeeProfile.ACTIVE).count(),
+        "on_leave_count": employees.filter(employment_status=EmployeeProfile.ON_LEAVE).count(),
+        "suspended_count": employees.filter(employment_status=EmployeeProfile.SUSPENDED).count(),
+        "pending_roster_count": WeeklyRoster.objects.filter(
+            hotel__in=hotels, status=WeeklyRoster.SUBMITTED,
+        ).count(),
+        "pending_reconciliation_count": pending_reconciliations.count(),
+        "recent_employees": employees.select_related(
+            "hotel", "department",
+        ).order_by("-created_at")[:6],
+        "pending_reconciliations": pending_reconciliations[:6],
+        "is_hr_head": is_hr_head(request.user),
+        "can_manage_employees": is_hr_head(request.user),
+    }
+    return render(request, "personnel/dashboard.html", context)
+
+
+@login_required
 def roster_dashboard(request):
     _require_roster_access(request.user)
     if is_hr_staff(request.user):
