@@ -7,7 +7,13 @@ from .storage import private_employee_storage
 
 
 class ShiftDefinition(models.Model):
+    # Nullable only for legacy hotel-wide definitions retained for historical
+    # roster references. All newly configured shifts must belong to a department.
     hotel = models.ForeignKey("inventory.Hotel", on_delete=models.CASCADE, related_name="personnel_shifts")
+    department = models.ForeignKey(
+        "inventory.Department", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="personnel_shift_definitions",
+    )
     code = models.CharField(max_length=20)
     name = models.CharField(max_length=80)
     start_time = models.TimeField()
@@ -18,7 +24,7 @@ class ShiftDefinition(models.Model):
 
     class Meta:
         ordering = ["start_time", "name"]
-        constraints = [models.UniqueConstraint(fields=["hotel", "code"], name="uniq_personnel_shift_code_hotel")]
+        constraints = [models.UniqueConstraint(fields=["department", "code"], name="uniq_personnel_shift_department_code")]
 
     def __str__(self):
         return f"{self.name} ({self.start_time:%H:%M}–{self.end_time:%H:%M})"
@@ -42,8 +48,13 @@ class ShiftDefinition(models.Model):
         return start, end
 
     def clean(self):
+        errors = {}
         if self.hotel_id is None:
-            raise ValidationError({"hotel": "A shift must belong to a hotel."})
+            errors["hotel"] = "A shift must belong to a hotel."
+        if self.department_id and self.hotel_id and self.department.hotel_id != self.hotel_id:
+            errors["department"] = "The shift department must belong to the selected hotel."
+        if errors:
+            raise ValidationError(errors)
 
 
 class WeeklyRoster(models.Model):
@@ -123,8 +134,11 @@ class RosterAssignment(models.Model):
             errors["shift"] = "A day-off entry cannot also have a shift."
         if not self.is_day_off and not self.shift_id:
             errors["shift"] = "Choose a shift or mark the employee as off."
-        if self.shift_id and self.roster_id and self.shift.hotel_id != self.roster.hotel_id:
-            errors["shift"] = "Shift must belong to the roster hotel."
+        if self.shift_id and self.roster_id:
+            if self.shift.hotel_id != self.roster.hotel_id:
+                errors["shift"] = "Shift must belong to the roster hotel."
+            if self.shift.department_id and self.shift.department_id != self.roster.department_id:
+                errors["shift"] = "Shift must be configured for the roster department."
         if errors:
             raise ValidationError(errors)
 
