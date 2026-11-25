@@ -242,13 +242,16 @@
 
         <!-- ========================= -->
         <!-- ========================= -->
-        {% if user.role == "HR" or user.is_department_head and user.role != "SECURITY" %}
+        {% if user|has_role:"HR,ADMIN,DIRECTOR" or user.is_department_head and user.role != "SECURITY" %}
         <h4 class="menu-toggle" onclick="toggleMenu('personnel_menu', this)"><span class="arrow">▸</span> 👥 Personnel</h4>
         <div id="personnel_menu" class="menu-section">
             {% if user.role == "HR" and user.department_id and user.department.department_type == "HUMAN_RESOURCES" %}
             <a href="{% url 'personnel:dashboard' %}">Dashboard</a>
             <a href="{% url 'personnel:employee_list' %}">Employee Records</a>
             <a href="{% url 'personnel:action_list' %}">Personnel Actions</a>
+            {% endif %}
+            {% if user|has_role:"ADMIN,DIRECTOR" %}
+            <a href="{% url 'personnel:action_approval_queue' %}">Personnel Action Approvals</a>
             {% endif %}
             <a href="{% url 'personnel:roster_dashboard' %}">Staff Attendance Roster</a>
             {% if user.role == "HR" and user.is_department_head and user.department_id and user.department.department_type == "HUMAN_RESOURCES" %}
