@@ -23,7 +23,7 @@ class EmployeeProfileForm(forms.ModelForm):
             "hotel", "department", "first_name", "middle_name", "last_name",
             "preferred_name", "personal_email", "phone", "address",
             "job_title", "employment_type", "employment_status",
-            "hire_date", "end_date", "hr_notes",
+            "hire_date", "end_date", "hr_notes", "effective_date", "change_reason",
         ]
         widgets = {
             "hire_date": forms.DateInput(attrs={"type": "date"}),
