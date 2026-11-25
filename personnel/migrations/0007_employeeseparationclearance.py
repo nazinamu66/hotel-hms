@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "ordering": ["status", "-created_at", "-pk"],
-                "indexes": [models.Index(fields=["status", "created_at"], name="personnel_es_status_created_idx")],
+                "indexes": [models.Index(fields=["status", "created_at"], name="pers_es_status_created")],
             },
         ),
         migrations.CreateModel(
