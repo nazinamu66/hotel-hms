@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from .models import EmployeeEmploymentHistory, EmployeeProfile, PersonnelAction, PersonnelActionEvent
+from .models import (EmployeeEmploymentHistory, EmployeeProfile, PersonnelAction, PersonnelActionEvent, EmployeeSeparationClearance, EmployeeSeparationClearanceEvent)
 
 
 def _history_value(employee, field):
@@ -124,6 +124,16 @@ def apply_personnel_action(action_id, *, today=None):
 
     action.applied_at = timezone.now()
     action.save(update_fields=["applied_at", "updated_at"])
+
+    separation_types = {PersonnelAction.RESIGNATION, PersonnelAction.RETIREMENT, PersonnelAction.TERMINATION, PersonnelAction.DISMISSAL}
+    if action.action_type in separation_types:
+        clearance, created = EmployeeSeparationClearance.objects.get_or_create(action=action)
+        if created:
+            EmployeeSeparationClearanceEvent.objects.create(
+                clearance=clearance, event_type="CREATED", actor=action.decided_by,
+                note="Automatically created when the separation Personnel Action became effective.",
+            )
+
     PersonnelActionEvent.objects.create(
         action=action,
         event_type="APPLIED",
