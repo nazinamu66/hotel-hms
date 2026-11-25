@@ -1,0 +1,26 @@
+{% extends "base/base.html" %}
+{% block title %}{{ employee.full_name }} · Employee Record{% endblock %}
+{% block content %}
+<style>
+.emp-detail{max-width:1000px;margin:0 auto}.emp-detail-head{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:18px}.emp-card{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;padding:22px;margin-bottom:16px}.emp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.emp-field small{display:block;color:var(--muted,#64748b);font-size:11px;text-transform:uppercase;margin-bottom:4px}.emp-field strong{font-size:15px}.emp-btn{display:inline-block;padding:10px 15px;border-radius:9px;background:#172554;color:white;text-decoration:none;font-weight:700}.emp-muted{color:var(--muted,#64748b)}@media(max-width:600px){.emp-grid{grid-template-columns:1fr}}
+</style>
+<div class="emp-detail">
+ <div class="emp-detail-head"><div><div class="emp-muted">Employee number · {{ employee.employee_number }}</div><h1 style="margin:4px 0">{{ employee.full_name }}</h1><div class="emp-muted">{{ employee.job_title }} · {{ employee.hotel.name }}</div></div>{% if can_manage %}<a class="emp-btn" href="{% url 'personnel:employee_edit' employee.pk %}">Edit record</a>{% endif %}</div>
+ <section class="emp-card"><h2>Employment details</h2><div class="emp-grid">
+  <div class="emp-field"><small>Department</small><strong>{{ employee.department.name }}</strong></div>
+  <div class="emp-field"><small>Employment type</small><strong>{{ employee.get_employment_type_display }}</strong></div>
+  <div class="emp-field"><small>Status</small><strong>{{ employee.get_employment_status_display }}</strong></div>
+  <div class="emp-field"><small>Hire date</small><strong>{{ employee.hire_date|date:"d M Y" }}</strong></div>
+  <div class="emp-field"><small>End date</small><strong>{{ employee.end_date|date:"d M Y"|default:"—" }}</strong></div>
+  <div class="emp-field"><small>HMS login</small><strong>{% if employee.linked_user %}{{ employee.linked_user.username }}{% else %}No login account linked{% endif %}</strong></div>
+ </div></section>
+ <section class="emp-card"><h2>Personal and contact details</h2><div class="emp-grid">
+  <div class="emp-field"><small>Preferred name</small><strong>{{ employee.preferred_name|default:"—" }}</strong></div>
+  <div class="emp-field"><small>Phone</small><strong>{{ employee.phone|default:"—" }}</strong></div>
+  <div class="emp-field"><small>Email</small><strong>{{ employee.personal_email|default:"—" }}</strong></div>
+  <div class="emp-field"><small>Address</small><strong>{{ employee.address|default:"—"|linebreaksbr }}</strong></div>
+ </div></section>
+ {% if employee.hr_notes %}<section class="emp-card"><h2>HR notes</h2>{{ employee.hr_notes|linebreaks }}</section>{% endif %}
+ <p class="emp-muted" style="font-size:12px">Created {{ employee.created_at|date:"d M Y, H:i" }} · Last updated {{ employee.updated_at|date:"d M Y, H:i" }}</p>
+</div>
+{% endblock %}
