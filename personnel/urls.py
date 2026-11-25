@@ -5,6 +5,7 @@ app_name = "personnel"
 
 urlpatterns = [
     path("actions/", action_views.action_list, name="action_list"),
+    path("actions/review/", action_views.action_approval_queue, name="action_approval_queue"),
     path("actions/create/", action_views.action_create, name="action_create"),
     path("actions/<int:action_id>/", action_views.action_detail, name="action_detail"),
     path("actions/<int:action_id>/submit/", action_views.action_submit, name="action_submit"),
