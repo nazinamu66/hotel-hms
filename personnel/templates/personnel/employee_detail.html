@@ -2,7 +2,7 @@
 {% block title %}{{ employee.full_name }} · Employee Record{% endblock %}
 {% block content %}
 <style>
-.emp-detail{max-width:1000px;margin:0 auto}.emp-detail-head{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:18px}.emp-card{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;padding:22px;margin-bottom:16px}.emp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.emp-field small{display:block;color:var(--muted,#64748b);font-size:11px;text-transform:uppercase;margin-bottom:4px}.emp-field strong{font-size:15px}.emp-btn{display:inline-block;padding:10px 15px;border-radius:9px;background:#172554;color:white;text-decoration:none;font-weight:700}.emp-muted{color:var(--muted,#64748b)}@media(max-width:600px){.emp-grid{grid-template-columns:1fr}}
+.emp-detail{max-width:1050px;margin:0 auto}.emp-detail-head{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:18px}.emp-card{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;padding:22px;margin-bottom:16px}.emp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.emp-field small{display:block;color:var(--muted,#64748b);font-size:11px;text-transform:uppercase;margin-bottom:4px}.emp-field strong{font-size:15px}.emp-btn{display:inline-block;padding:10px 15px;border-radius:9px;background:#172554;color:white;text-decoration:none;font-weight:700}.emp-muted{color:var(--muted,#64748b)}.emp-table{width:100%;border-collapse:collapse}.emp-table th,.emp-table td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--border,#e2e8f0);vertical-align:top}.emp-table th{font-size:11px;text-transform:uppercase;color:var(--muted,#64748b)}.emp-list{display:grid;gap:12px}.emp-list-item{padding:12px;border:1px solid var(--border,#e2e8f0);border-radius:10px}.emp-list-item p{margin:5px 0 0;color:var(--muted,#64748b);font-size:13px}@media(max-width:600px){.emp-grid{grid-template-columns:1fr}.emp-table{font-size:13px}}
 </style>
 <div class="emp-detail">
  <div class="emp-detail-head"><div><div class="emp-muted">Employee number · {{ employee.employee_number }}</div><h1 style="margin:4px 0">{{ employee.full_name }}</h1><div class="emp-muted">{{ employee.job_title }} · {{ employee.hotel.name }}</div></div>{% if can_manage %}<a class="emp-btn" href="{% url 'personnel:employee_edit' employee.pk %}">Edit record</a>{% endif %}</div>
@@ -20,6 +20,39 @@
   <div class="emp-field"><small>Email</small><strong>{{ employee.personal_email|default:"—" }}</strong></div>
   <div class="emp-field"><small>Address</small><strong>{{ employee.address|default:"—"|linebreaksbr }}</strong></div>
  </div></section>
+
+ <section class="emp-card">
+  <h2>Employment history</h2>
+  {% if employment_history %}
+   <div class="emp-list">
+    {% for event in employment_history %}
+     <div class="emp-list-item">
+      <strong>{{ event.get_event_type_display }}</strong>
+      <span class="emp-muted"> · Effective {{ event.effective_date|date:"d M Y" }}</span>
+      {% if event.reason %}<p>{{ event.reason }}</p>{% endif %}
+      <p>Recorded by {{ event.recorded_by.get_full_name|default:event.recorded_by.username }} on {{ event.created_at|date:"d M Y, H:i" }}</p>
+      {% if event.previous_values or event.new_values %}
+       <p>Previous: {{ event.previous_values }}</p>
+       <p>New: {{ event.new_values }}</p>
+      {% endif %}
+     </div>
+    {% endfor %}
+   </div>
+  {% else %}<p class="emp-muted">No employment history has been recorded yet.</p>{% endif %}
+ </section>
+
+ {% if can_access_documents %}
+ <section class="emp-card">
+  <div class="emp-detail-head"><div><h2 style="margin:0">Confidential employee documents</h2><p class="emp-muted">Private files · Access restricted to HR Head, Director and Admin</p></div><a class="emp-btn" href="{% url 'personnel:employee_document_upload' employee.pk %}">Upload document</a></div>
+  {% if documents %}
+   <table class="emp-table"><thead><tr><th>Document</th><th>Category</th><th>Uploaded</th><th>Action</th></tr></thead><tbody>
+    {% for document in documents %}
+     <tr><td><strong>{{ document.title }}</strong>{% if document.description %}<br><span class="emp-muted">{{ document.description }}</span>{% endif %}</td><td>{{ document.get_category_display }}</td><td>{{ document.uploaded_at|date:"d M Y" }}<br><span class="emp-muted">{{ document.uploaded_by.get_full_name|default:document.uploaded_by.username }}</span></td><td><a href="{% url 'personnel:employee_document_download' document.pk %}">Download</a></td></tr>
+    {% endfor %}
+   </tbody></table>
+  {% else %}<p class="emp-muted">No employee documents have been uploaded.</p>{% endif %}
+ </section>
+ {% endif %}
  {% if employee.hr_notes %}<section class="emp-card"><h2>HR notes</h2>{{ employee.hr_notes|linebreaks }}</section>{% endif %}
  <p class="emp-muted" style="font-size:12px">Created {{ employee.created_at|date:"d M Y, H:i" }} · Last updated {{ employee.updated_at|date:"d M Y, H:i" }}</p>
 </div>
