@@ -70,6 +70,7 @@ class WeeklyRoster(models.Model):
     hotel = models.ForeignKey("inventory.Hotel", on_delete=models.PROTECT, related_name="weekly_rosters")
     department = models.ForeignKey("inventory.Department", on_delete=models.PROTECT, related_name="weekly_rosters")
     week_start = models.DateField(help_text="Monday of the roster week")
+    rest_days_per_employee = models.PositiveSmallIntegerField(default=1, help_text="Number of rest days allocated to each employee for this roster week.")
     responsible_hod = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="responsible_rosters")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="created_rosters")
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default=DRAFT)
