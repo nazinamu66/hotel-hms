@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import EmployeeDocument, EmployeeDocumentAccess, EmployeeEmploymentHistory, EmployeeProfile, RosterAssignment, RosterAuditEvent, ShiftDefinition, WeeklyRoster
+from .models import EmployeeDocument, EmployeeDocumentAccess, EmployeeEmploymentHistory, EmployeeProfile, PersonnelAction, PersonnelActionEvent, RosterAssignment, RosterAuditEvent, ShiftDefinition, WeeklyRoster
 
 
 class RosterAssignmentInline(admin.TabularInline):
@@ -74,3 +74,7 @@ class EmployeeDocumentAccessAdmin(admin.ModelAdmin):
         return False
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+admin.site.register(PersonnelAction)
+admin.site.register(PersonnelActionEvent)
