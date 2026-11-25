@@ -45,12 +45,18 @@ def action_approval_queue(request):
         raise PermissionDenied
 
     today = timezone.localdate()
-    pending_actions = list(_action_queryset(request.user).filter(
+    pending_queryset = _action_queryset(request.user).filter(
         status=PersonnelAction.SUBMITTED,
     ).select_related(
         "employee", "employee__hotel", "employee__department",
         "submitted_by",
-    ).order_by("effective_date", "submitted_at", "created_at"))
+    )
+    pending_count = pending_queryset.count()
+    effective_count = pending_queryset.filter(effective_date__lte=today).count()
+    upcoming_count = pending_queryset.filter(effective_date__gt=today).count()
+    pending_actions = list(
+        pending_queryset.order_by("effective_date", "submitted_at", "created_at")
+    )
     for action in pending_actions:
         action.review_url = reverse(
             "personnel:action_detail",
@@ -59,9 +65,9 @@ def action_approval_queue(request):
 
     context = {
         "pending_actions": pending_actions,
-        "pending_count": pending_actions.count(),
-        "effective_count": pending_actions.filter(effective_date__lte=today).count(),
-        "upcoming_count": pending_actions.filter(effective_date__gt=today).count(),
+        "pending_count": pending_count,
+        "effective_count": effective_count,
+        "upcoming_count": upcoming_count,
         "today": today,
     }
     return render(request, "personnel/action_approval_queue.html", context)
