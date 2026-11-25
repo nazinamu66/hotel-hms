@@ -62,7 +62,7 @@
  <header class="hr-top">
   <div>
    <div class="hr-eyebrow">People &amp; culture · Overview</div>
-   <h1 class="hr-title">Human Resources</h1>
+   <h1 class="hr-title">Human Resources Dashboard</h1>
    <div class="hr-muted">Your workforce at a glance. Here is what needs attention today.</div>
    <div class="hr-date">{{ today|date:"l, d F Y" }} · {{ hotel_count }} hotel{{ hotel_count|pluralize }}</div>
   </div>
@@ -113,7 +113,7 @@
 
    {% if can_review_attendance %}
    <section class="hr-panel">
-    <div class="hr-panel-head"><h2>Attendance reviews</h2><a href="{% url 'personnel:roster_dashboard' %}">Open roster →</a></div>
+    <div class="hr-panel-head"><h2>Pending roster reconciliations</h2><a href="{% url 'personnel:roster_dashboard' %}">Open roster →</a></div>
     {% if pending_reconciliations %}
      <div class="hr-table-wrap"><table class="hr-table"><thead><tr><th>Date</th><th>Employee</th><th>Department</th><th></th></tr></thead><tbody>
       {% for item in pending_reconciliations %}<tr><td>{{ item.attendance.work_date|date:"d M Y" }}</td><td>{{ item.employee.get_full_name|default:item.employee.username }}</td><td>{{ item.employee.department.name|default:"—" }}</td><td><a href="{% url 'personnel:reconciliation_detail' item.pk %}">Review</a></td></tr>{% endfor %}
