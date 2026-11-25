@@ -553,7 +553,7 @@ class EmployeeSeparationClearance(models.Model):
 
     class Meta:
         ordering = ["status", "-created_at", "-pk"]
-        indexes = [models.Index(fields=["status", "created_at"], name="personnel_es_status_created_idx")]
+        indexes = [models.Index(fields=["status", "created_at"], name="pers_es_status_created")]
 
     def clean(self):
         if self.action_id and self.action.action_type not in {
