@@ -16,8 +16,17 @@ def _is_final_approver(user):
 
 def _can_verify(user, clearance):
     employee = clearance.action.employee
+
+    # A staff member must never verify their own exit, even if they are
+    # also a Department Head or an HR employee.
+    if employee.linked_user_id and employee.linked_user_id == user.pk:
+        return False
+
+    # HR provides the independent fallback when the employee leaving is
+    # their own Department Head.
     if is_hr_staff(user):
         return get_accessible_hotels(user).filter(pk=employee.hotel_id).exists()
+
     return is_roster_hod(user, employee.department)
 
 
