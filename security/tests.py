@@ -981,6 +981,40 @@ class StaffAttendanceTests(TestCase):
         self.assertIn(departed, list(response.context["records"]))
 
 
+    def test_unlinked_arrival_with_approved_working_shift_requires_exception_reason(self):
+        from .attendance_forms import StaffAttendanceArrivalForm
+
+        missing_reason = StaffAttendanceArrivalForm(
+            data={"employee": self.employee.pk, "assignment": "", "arrival_note": ""},
+            hotel=self.hotel,
+        )
+        self.assertFalse(missing_reason.is_valid())
+        self.assertIn("arrival_note", missing_reason.errors)
+
+        explained_exception = StaffAttendanceArrivalForm(
+            data={
+                "employee": self.employee.pk,
+                "assignment": "",
+                "arrival_note": "Covering the evening shift after an approved shift swap.",
+            },
+            hotel=self.hotel,
+        )
+        self.assertTrue(explained_exception.is_valid(), explained_exception.errors)
+
+    def test_unrostered_employee_can_be_recorded_without_exception_reason(self):
+        from .attendance_forms import StaffAttendanceArrivalForm
+
+        unrostered = User.objects.create_user(
+            username="attendance-unrostered-no-reason", password="test",
+            role="FRONTDESK", department=self.staff_department,
+        )
+        form = StaffAttendanceArrivalForm(
+            data={"employee": unrostered.pk, "assignment": "", "arrival_note": ""},
+            hotel=self.hotel,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+
+
 class SecurityIncidentAndOccurrenceTests(TestCase):
     def setUp(self):
         self.org = Organization.objects.create(name="Security Incident Test Org")
