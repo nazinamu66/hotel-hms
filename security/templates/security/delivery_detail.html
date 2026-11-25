@@ -1,61 +1,120 @@
 {% extends "base/base.html" %}
 {% block title %}Delivery {{ record.delivery_reference }}{% endblock %}
 {% block content %}
-<div class="container-fluid py-4" style="max-width:1180px">
-  <a class="text-decoration-none fw-semibold" href="{% url 'security_delivery_list' %}">← Supplier deliveries</a>
-  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mt-3 mb-4">
-    <div><div class="small text-uppercase fw-bold text-primary mb-1">Security gate inspection</div><h1 class="h2 fw-bold mb-1">{{ record.delivery_reference }}</h1><p class="text-secondary mb-0">{{ record.supplier.name }} · {{ record.department.name }} · PO #{{ record.purchase_order_id }}</p></div>
-    <span class="badge rounded-pill fs-6 px-3 py-2 {% if record.status == 'ARRIVED' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">{{ record.get_status_display }}</span>
+<style>
+.gate-page{max-width:1280px;margin:0 auto;padding:30px 24px 52px}
+.gate-eyebrow{font-size:.74rem;font-weight:850;letter-spacing:.13em;text-transform:uppercase;color:#2563eb}
+.gate-title{font-size:clamp(1.8rem,3vw,2.35rem);font-weight:850;letter-spacing:-.045em;color:#172033;margin:5px 0}
+.gate-muted{color:#64748b}
+.gate-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 9px 28px rgba(15,23,42,.055);overflow:hidden}
+.gate-card-head{padding:21px 25px;border-bottom:1px solid #e8edf4;background:linear-gradient(135deg,#f8fafc,#fff)}
+.gate-card-body{padding:24px}
+.gate-meta-label{font-size:.72rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#64748b;margin-bottom:5px}
+.gate-meta-value{font-size:1rem;font-weight:750;color:#172033}
+.gate-pill{display:inline-flex;align-items:center;border-radius:999px;padding:7px 12px;font-size:.78rem;font-weight:800;background:#fef3c7;color:#92400e}
+.gate-pill.done{background:#dcfce7;color:#166534}
+.gate-pill.closed{background:#e2e8f0;color:#475569}
+.gate-table{width:100%;border-collapse:collapse;min-width:620px}
+.gate-table th{padding:12px 14px;background:#f8fafc;text-align:left;color:#64748b;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e2e8f0}
+.gate-table td{padding:14px;border-bottom:1px solid #edf2f7;color:#334155}
+.gate-radio-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0}
+.gate-choice{position:relative;display:flex;align-items:flex-start;gap:13px;padding:18px;border:1px solid #cbd5e1;border-radius:14px;background:#fff;cursor:pointer;transition:border-color .15s,background .15s}
+.gate-choice:has(input:checked){border-color:#2563eb;background:#eff6ff;box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+.gate-choice input{margin-top:4px;width:18px;height:18px;accent-color:#2563eb;flex:0 0 auto}
+.gate-choice-title{font-weight:800;color:#172033}
+.gate-choice-copy{font-size:.84rem;color:#64748b;margin-top:5px;line-height:1.45}
+.gate-field-label{display:block;font-size:.88rem;font-weight:750;color:#334155;margin-bottom:8px}
+.gate-textarea{width:100%;min-height:108px;border:1px solid #cbd5e1;border-radius:11px;padding:12px 14px;box-sizing:border-box;resize:vertical}
+.gate-textarea:focus{outline:3px solid rgba(37,99,235,.13);border-color:#3b82f6}
+.gate-button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:10px;padding:12px 18px;background:#1d4ed8;color:#fff;font-weight:800;cursor:pointer}
+.gate-button-outline{background:#fff;color:#1d4ed8;border:1px solid #93c5fd}
+.gate-note{padding:14px 16px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:12px;font-size:.88rem}
+@media(max-width:720px){.gate-page{padding:20px 14px 38px}.gate-card-body{padding:18px}.gate-radio-grid{grid-template-columns:1fr}}
+</style>
+<div class="gate-page">
+  <a href="{% url 'security_delivery_list' %}" class="gate-muted" style="display:inline-block;text-decoration:none;font-weight:750;margin-bottom:22px">← Supplier deliveries</a>
+  <div class="gate-eyebrow">Security operations · Gate control</div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:22px">
+    <div>
+      <h1 class="gate-title">{{ record.delivery_reference }}</h1>
+      <p class="gate-muted" style="margin:0">{{ record.supplier.name }} · {{ record.department.name }} · Purchase Order #{{ record.purchase_order_id }}</p>
+    </div>
+    <span class="gate-pill {% if record.status == 'DEPARTED' %}closed{% endif %}">{% if record.status == 'DEPARTED' %}Departed{% else %}{{ record.get_status_display }}{% endif %}</span>
   </div>
-  <div class="row g-3 mb-4">
-    <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary mb-1">Vehicle</div><div class="fw-bold">{{ record.vehicle_registration }}</div><div class="small text-secondary">{{ record.vehicle_description|default:"No description" }}</div></div></div></div>
-    <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary mb-1">Driver</div><div class="fw-bold">{{ record.driver_name|default:"Not recorded" }}</div><div class="small text-secondary">Gate arrival {{ record.gate_in_at|date:"d M Y · H:i" }}</div></div></div></div>
-    <div class="col-md-4"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="small text-secondary mb-1">Recorded by</div><div class="fw-bold">{{ record.gate_in_by.get_full_name|default:record.gate_in_by.username }}</div><div class="small text-secondary">Receiving department: {{ record.department.name }}</div></div></div></div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:22px">
+    <div class="gate-card"><div class="gate-card-body"><div class="gate-meta-label">Vehicle</div><div class="gate-meta-value">{{ record.vehicle_registration|default:"Not recorded" }}</div><div class="gate-muted" style="font-size:.85rem;margin-top:4px">{{ record.vehicle_description|default:"No description" }}</div></div></div>
+    <div class="gate-card"><div class="gate-card-body"><div class="gate-meta-label">Driver and arrival</div><div class="gate-meta-value">{{ record.driver_name|default:"Not recorded" }}</div><div class="gate-muted" style="font-size:.85rem;margin-top:4px">{{ record.gate_in_at|date:"d M Y · H:i" }}</div></div></div>
+    <div class="gate-card"><div class="gate-card-body"><div class="gate-meta-label">Gate officer</div><div class="gate-meta-value">{{ record.gate_in_by.get_full_name|default:record.gate_in_by.username }}</div><div class="gate-muted" style="font-size:.85rem;margin-top:4px">Receiving: {{ record.department.name }}</div></div></div>
   </div>
-  <section class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
-    <div class="card-body p-4">
-      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3"><div><h2 class="h5 fw-bold mb-1">Expected goods checklist</h2><p class="small text-secondary mb-0">Compare the goods physically presented at the gate with the remaining quantities on this PO.</p></div><span class="badge text-bg-light fs-6">PO #{{ record.purchase_order_id }}</span></div>
-      <div class="table-responsive">
-        <table class="table align-middle">
-          <thead class="table-light"><tr><th>Item</th><th class="text-end">Ordered</th><th class="text-end">Previously received</th><th class="text-end">Expected now</th></tr></thead>
+
+  <section class="gate-card" style="margin-bottom:20px">
+    <div class="gate-card-head"><div class="gate-eyebrow">Purchase order #{{ record.purchase_order_id }}</div><h2 style="font-size:1.2rem;font-weight:850;color:#172033;margin:5px 0">Expected goods checklist</h2><p class="gate-muted" style="font-size:.88rem;margin:0">Compare the goods physically presented at the gate with the remaining quantities on this Purchase Order.</p></div>
+    <div class="gate-card-body">
+      <div style="overflow-x:auto">
+        <table class="gate-table">
+          <thead><tr><th>Item</th><th style="text-align:right">Ordered</th><th style="text-align:right">Previously received</th><th style="text-align:right">Expected now</th></tr></thead>
           <tbody>
           {% for line in po_lines %}{% if line.outstanding_quantity > 0 %}
-            <tr><td class="fw-semibold">{{ line.product.name }}</td><td class="text-end">{{ line.purchase_quantity }}</td><td class="text-end">{{ line.received_quantity }}</td><td class="text-end fw-bold text-primary">{{ line.outstanding_quantity }}</td></tr>
-          {% endif %}{% empty %}<tr><td colspan="4" class="text-center text-secondary py-4">No PO lines are available.</td></tr>{% endfor %}
+            <tr><td style="font-weight:750">{{ line.product.name }}</td><td style="text-align:right">{{ line.purchase_quantity }}</td><td style="text-align:right">{{ line.received_quantity }}</td><td style="text-align:right;font-weight:850;color:#1d4ed8">{{ line.outstanding_quantity }}</td></tr>
+          {% endif %}{% empty %}<tr><td colspan="4" style="text-align:center;padding:28px;color:#64748b">No PO lines are available.</td></tr>{% endfor %}
           </tbody>
         </table>
       </div>
-      <div class="small text-secondary">Quantities shown are the outstanding PO quantities. The Store's existing receiving workflow remains responsible for recording actual stock received.</div>
+      <p class="gate-muted" style="font-size:.8rem;margin:15px 0 0">These are outstanding PO quantities, not a stock receipt. Store must record actual quantities received through its existing receiving workflow.</p>
     </div>
   </section>
+
   {% if record.gate_checked_at %}
-  <section class="card border-0 shadow-sm rounded-4 mb-4"><div class="card-body p-4">
-    <div class="d-flex flex-wrap justify-content-between gap-2"><div><h2 class="h5 fw-bold mb-1">Security inspection recorded</h2><div class="small text-secondary">{{ record.gate_checked_by.get_full_name|default:record.gate_checked_by.username }} · {{ record.gate_checked_at|date:"d M Y · H:i" }}</div></div>
-    <span class="badge rounded-pill fs-6 {% if record.gate_check_status == 'COMPLETE' %}text-bg-success{% else %}text-bg-warning{% endif %}">{{ record.get_gate_check_status_display }}</span></div>
-    {% if record.gate_check_note %}<div class="mt-3 p-3 bg-light rounded-3">{{ record.gate_check_note|linebreaksbr }}</div>{% endif %}
-  </div></section>
-  {% elif can_gate_check %}
-  <section class="card border-0 shadow-sm rounded-4 mb-4"><div class="card-body p-4 p-lg-5">
-    <div class="small text-uppercase fw-bold text-primary mb-1">Required gate check</div><h2 class="h4 fw-bold mb-2">Acknowledge goods passing the gate</h2><p class="text-secondary">After checking the items above, select whether the delivery is complete and intact or whether it is incomplete / has a discrepancy.</p>
-    <form method="post" action="{% url 'security_delivery_gate_check' record.pk %}">{% csrf_token %}
-      <div class="row g-3 mb-3">
-        {% for radio in check_form.gate_check_status %}
-        <div class="col-md-6"><label class="d-flex align-items-start gap-3 border rounded-3 p-3 h-100" for="{{ radio.id_for_label }}"><span>{{ radio.tag }}</span><span class="fw-semibold">{{ radio.choice_label }}{% if forloop.first %}<small class="d-block text-secondary fw-normal mt-1">All expected items are present and appear intact.</small>{% else %}<small class="d-block text-secondary fw-normal mt-1">Some items or quantities are missing, damaged or different.</small>{% endif %}</span></label></div>
-        {% endfor %}
+  <section class="gate-card" style="margin-bottom:20px">
+    <div class="gate-card-body">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div><div class="gate-eyebrow">Inspection completed</div><h2 style="font-size:1.15rem;font-weight:850;color:#172033;margin:5px 0">Security acknowledgement</h2><p class="gate-muted" style="font-size:.85rem;margin:0">{{ record.gate_checked_by.get_full_name|default:record.gate_checked_by.username }} · {{ record.gate_checked_at|date:"d M Y · H:i" }}</p></div>
+        <span class="gate-pill {% if record.gate_check_status == 'COMPLETE' %}done{% endif %}">{{ record.get_gate_check_status_display }}</span>
       </div>
-      <label class="form-label fw-semibold" for="{{ check_form.gate_check_note.id_for_label }}">Inspection note <span class="text-secondary fw-normal">(required for incomplete deliveries)</span></label>
-      {{ check_form.gate_check_note }}
-      <div class="form-text mb-3">Mention the affected item and the quantity or condition observed.</div>
-      <button class="btn btn-primary btn-lg px-4" type="submit">Save Security acknowledgement</button>
-    </form>
-  </div></section>
+      {% if record.gate_check_note %}<div style="margin-top:16px;padding:15px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0"><div class="gate-meta-label">Inspection note</div>{{ record.gate_check_note|linebreaksbr }}</div>{% endif %}
+    </div>
+  </section>
+  {% elif can_gate_check %}
+  <section class="gate-card" style="margin-bottom:20px">
+    <div class="gate-card-head"><div class="gate-eyebrow">Action required · Step 1 of 2</div><h2 style="font-size:1.25rem;font-weight:850;color:#172033;margin:5px 0">Inspect and acknowledge delivery</h2><p class="gate-muted" style="font-size:.9rem;margin:0">Check the goods above against what the supplier has physically brought to the gate.</p></div>
+    <div class="gate-card-body">
+      <form method="post" action="{% url 'security_delivery_gate_check' record.pk %}">
+        {% csrf_token %}
+        <div class="gate-radio-grid">
+          {% for radio in check_form.gate_check_status %}
+          <label class="gate-choice" for="{{ radio.id_for_label }}">
+            {{ radio.tag }}
+            <span><span class="gate-choice-title">{{ radio.choice_label }}</span>
+              {% if forloop.first %}<span class="gate-choice-copy" style="display:block">All expected goods are present and appear intact.</span>
+              {% else %}<span class="gate-choice-copy" style="display:block">Some items or quantities are missing, damaged or different from the PO.</span>{% endif %}
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+        <div style="margin-top:18px">
+          <label class="gate-field-label" for="{{ check_form.gate_check_note.id_for_label }}">Inspection note <span class="gate-muted" style="font-weight:500">(required for incomplete deliveries)</span></label>
+          {{ check_form.gate_check_note }}
+          <div class="gate-muted" style="font-size:.8rem;margin-top:7px">Identify the affected item and the quantity or condition observed. For a complete delivery, this note is optional.</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:22px"><button class="gate-button" type="submit">Save gate acknowledgement</button></div>
+      </form>
+    </div>
+  </section>
   {% endif %}
+
   {% if can_gate_out %}
-  <section class="card border-0 shadow-sm rounded-4"><div class="card-body p-4">
-    <h2 class="h5 fw-bold mb-1">Record vehicle departure</h2><p class="text-secondary small">Security inspection has been recorded. Complete the gate exit when the vehicle leaves.</p>
-    <form method="post" action="{% url 'security_delivery_gate_out' record.pk %}">{% csrf_token %}<label class="form-label fw-semibold">Gate-out note <span class="text-secondary fw-normal">(optional)</span></label><textarea class="form-control mb-3" name="gate_out_note" rows="2" placeholder="Optional departure note"></textarea><button class="btn btn-outline-primary">Record gate exit</button></form>
-  </div></section>
+  <section class="gate-card">
+    <div class="gate-card-head"><div class="gate-eyebrow">Action required · Step 2 of 2</div><h2 style="font-size:1.2rem;font-weight:850;color:#172033;margin:5px 0">Record vehicle departure</h2><p class="gate-muted" style="font-size:.88rem;margin:0">The inspection is complete. Record the vehicle leaving the hotel premises.</p></div>
+    <div class="gate-card-body">
+      <form method="post" action="{% url 'security_delivery_gate_out' record.pk %}">{% csrf_token %}
+        <label class="gate-field-label" for="gate-out-note">Departure note <span class="gate-muted" style="font-weight:500">(optional)</span></label>
+        <textarea id="gate-out-note" class="gate-textarea" name="gate_out_note" rows="3" placeholder="Optional departure note"></textarea>
+        <div style="margin-top:18px"><button class="gate-button gate-button-outline" type="submit">Record gate departure</button></div>
+      </form>
+    </div>
+  </section>
   {% endif %}
-  {% if record.gate_out_at %}<div class="small text-secondary mt-3">Departed {{ record.gate_out_at|date:"d M Y · H:i" }} · recorded by {{ record.gate_out_by }}</div>{% endif %}
+  {% if record.gate_out_at %}<p class="gate-muted" style="font-size:.82rem;margin-top:16px">Departed {{ record.gate_out_at|date:"d M Y · H:i" }} · recorded by {{ record.gate_out_by }}</p>{% endif %}
 </div>
 {% endblock %}
