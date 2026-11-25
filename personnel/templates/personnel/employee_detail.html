@@ -2,7 +2,7 @@
 {% block title %}{{ employee.full_name }} · Employee Record{% endblock %}
 {% block content %}
 <style>
-.emp-detail{max-width:1050px;margin:0 auto}.emp-detail-head{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:18px}.emp-card{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;padding:22px;margin-bottom:16px}.emp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.emp-field small{display:block;color:var(--muted,#64748b);font-size:11px;text-transform:uppercase;margin-bottom:4px}.emp-field strong{font-size:15px}.emp-btn{display:inline-block;padding:10px 15px;border-radius:9px;background:#172554;color:white;text-decoration:none;font-weight:700}.emp-muted{color:var(--muted,#64748b)}.emp-table{width:100%;border-collapse:collapse}.emp-table th,.emp-table td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--border,#e2e8f0);vertical-align:top}.emp-table th{font-size:11px;text-transform:uppercase;color:var(--muted,#64748b)}.emp-list{display:grid;gap:12px}.emp-list-item{padding:12px;border:1px solid var(--border,#e2e8f0);border-radius:10px}.emp-list-item p{margin:5px 0 0;color:var(--muted,#64748b);font-size:13px}@media(max-width:600px){.emp-grid{grid-template-columns:1fr}.emp-table{font-size:13px}}
+.emp-detail{max-width:1050px;margin:0 auto}.emp-detail-head{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:18px}.emp-card{background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;padding:22px;margin-bottom:16px}.emp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.emp-field small{display:block;color:var(--muted,#64748b);font-size:11px;text-transform:uppercase;margin-bottom:4px}.emp-field strong{font-size:15px}.emp-btn{display:inline-block;padding:10px 15px;border-radius:9px;background:#172554;color:white;text-decoration:none;font-weight:700}.emp-muted{color:var(--muted,#64748b)}.emp-table{width:100%;border-collapse:collapse}.emp-table th,.emp-table td{text-align:left;padding:11px 8px;border-bottom:1px solid var(--border,#e2e8f0);vertical-align:top}.emp-table th{font-size:11px;text-transform:uppercase;color:var(--muted,#64748b)}.emp-list{display:grid;gap:12px}.emp-list-item{padding:12px;border:1px solid var(--border,#e2e8f0);border-radius:10px}.emp-list-item p{margin:5px 0 0;color:var(--muted,#64748b);font-size:13px}.emp-history-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.emp-history-reason{margin:8px 0!important}.emp-history-changes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.emp-history-change{padding:9px 11px;background:var(--surface,#f8fafc);border-radius:8px}.emp-history-change span{display:block;color:var(--muted,#64748b);font-size:11px;text-transform:uppercase;font-weight:700;margin-bottom:4px}.emp-history-change strong{font-size:13px}.emp-history-arrow{color:var(--muted,#64748b);padding:0 4px}.emp-history-meta{padding-top:9px;border-top:1px solid var(--border,#e2e8f0);margin-top:12px!important}@media(max-width:600px){.emp-grid,.emp-history-changes{grid-template-columns:1fr}.emp-table{font-size:13px}}
 </style>
 <div class="emp-detail">
  <div class="emp-detail-head"><div><div class="emp-muted">Employee number · {{ employee.employee_number }}</div><h1 style="margin:4px 0">{{ employee.full_name }}</h1><div class="emp-muted">{{ employee.job_title }} · {{ employee.hotel.name }}</div></div>{% if can_manage %}<a class="emp-btn" href="{% url 'personnel:employee_edit' employee.pk %}">Edit record</a>{% endif %}</div>
@@ -25,17 +25,21 @@
   <h2>Employment history</h2>
   {% if employment_history %}
    <div class="emp-list">
-    {% for event in employment_history %}
-     <div class="emp-list-item">
-      <strong>{{ event.get_event_type_display }}</strong>
-      <span class="emp-muted"> · Effective {{ event.effective_date|date:"d M Y" }}</span>
-      {% if event.reason %}<p>{{ event.reason }}</p>{% endif %}
-      <p>Recorded by {{ event.recorded_by.get_full_name|default:event.recorded_by.username }} on {{ event.created_at|date:"d M Y, H:i" }}</p>
-      {% if event.previous_values or event.new_values %}
-       <p>Previous: {{ event.previous_values }}</p>
-       <p>New: {{ event.new_values }}</p>
-      {% endif %}
-     </div>
+    {% for item in employment_history %}
+     <article class="emp-list-item">
+      <div class="emp-history-head"><strong>{{ item.event.get_event_type_display }}</strong><span class="emp-muted">Effective {{ item.event.effective_date|date:"d M Y" }}</span></div>
+      {% if item.event.reason %}<p class="emp-history-reason">{{ item.event.reason }}</p>{% endif %}
+      <div class="emp-history-changes">
+       {% for change in item.changes %}
+        <div class="emp-history-change">
+         <span>{{ change.label }}</span>
+         {% if change.is_change %}<strong>{{ change.old }} <span class="emp-history-arrow">→</span> {{ change.new }}</strong>
+         {% else %}<strong>{{ change.new }}</strong>{% endif %}
+        </div>
+       {% endfor %}
+      </div>
+      <p class="emp-history-meta">Recorded by {{ item.event.recorded_by.get_full_name|default:item.event.recorded_by.username }} · {{ item.event.created_at|date:"d M Y, H:i" }}</p>
+     </article>
     {% endfor %}
    </div>
   {% else %}<p class="emp-muted">No employment history has been recorded yet.</p>{% endif %}
