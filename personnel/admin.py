@@ -49,6 +49,9 @@ class EmployeeDocumentAdmin(admin.ModelAdmin):
     readonly_fields = ("uploaded_by", "uploaded_at", "original_filename")
     exclude = ("file",)
 
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(EmployeeDocumentAccess)
 class EmployeeDocumentAccessAdmin(admin.ModelAdmin):
