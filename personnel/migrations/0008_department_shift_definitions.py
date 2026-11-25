@@ -4,7 +4,6 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("inventory", "__first__"),
         ("personnel", "0007_employeeseparationclearance"),
     ]
 
