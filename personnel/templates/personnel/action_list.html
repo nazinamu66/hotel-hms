@@ -1,0 +1,11 @@
+{% extends "base/base.html" %}
+{% block title %}Personnel Actions{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:auto">
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h1>Personnel Actions</h1><p>Employment decisions, submissions and approval history.</p></div>{% if can_submit %}<a class="btn btn-primary" href="{% url 'personnel:action_create' %}">＋ New Action</a>{% endif %}</div>
+ <form method="get" style="margin:18px 0"><select name="status"><option value="">All statuses</option>{% for value,label in statuses %}<option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button type="submit">Filter</button></form>
+ <div style="overflow-x:auto"><table class="table"><thead><tr><th>Reference</th><th>Employee</th><th>Action</th><th>Effective</th><th>Status</th><th>Submitted by</th></tr></thead><tbody>
+ {% for item in actions %}<tr><td><a href="{% url 'personnel:action_detail' item.pk %}">{{ item.reference }}</a></td><td>{{ item.employee.full_name }}<br><small>{{ item.employee.employee_number }}</small></td><td>{{ item.get_action_type_display }}</td><td>{{ item.effective_date|date:"d M Y" }}</td><td>{{ item.get_status_display }}</td><td>{{ item.submitted_by.get_full_name|default:item.submitted_by.username }}</td></tr>{% empty %}<tr><td colspan="6">No personnel actions found.</td></tr>{% endfor %}
+ </tbody></table></div>
+</div>
+{% endblock %}
