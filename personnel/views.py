@@ -168,7 +168,7 @@ def roster_detail(request, roster_id):
     if request.method == "POST":
         if not editable:
             raise PermissionDenied
-        shifts = {str(s.pk): s for s in ShiftDefinition.objects.filter(hotel=roster.hotel, is_active=True)}
+        shifts = {str(s.pk): s for s in ShiftDefinition.objects.filter(hotel=roster.hotel, department=roster.department, is_active=True)}
         try:
             with transaction.atomic():
                 for employee in employees:
@@ -210,7 +210,8 @@ def roster_detail(request, roster_id):
     ]
     return render(request, "personnel/roster_detail.html", {
         "roster": roster, "employees": employees, "dates": dates, "grid_rows": grid_rows,
-        "shifts": ShiftDefinition.objects.filter(hotel=roster.hotel, is_active=True),
+        "shifts": ShiftDefinition.objects.filter(hotel=roster.hotel, department=roster.department),
+        "assignable_shifts": ShiftDefinition.objects.filter(hotel=roster.hotel, department=roster.department, is_active=True),
         "assignment_map": assignment_map, "editable": editable,
         "events": roster.audit_events.select_related("actor"),
         "is_hr_head": is_hr_head(request.user),
@@ -229,6 +230,16 @@ def _validate_roster_complete(roster):
             raise ValidationError(f"Complete all seven days for {employee.get_full_name() or employee.username}.")
         if sum(1 for a in entries if a.is_day_off) != 1:
             raise ValidationError(f"{employee.get_full_name() or employee.username} must have exactly one day off.")
+        for assignment in entries:
+            if assignment.shift_id and (
+                not assignment.shift.is_active
+                or assignment.shift.department_id != roster.department_id
+                or assignment.shift.hotel_id != roster.hotel_id
+            ):
+                raise ValidationError(
+                    f"{assignment.shift.name} is no longer an active shift for {roster.department.name}. "
+                    "Ask HR to configure a valid departmental shift before submitting."
+                )
         intervals = [(a.shift.interval_for(a.work_date), a) for a in entries if a.shift_id]
         intervals.sort(key=lambda item: item[0][0])
         for ((start, end), _), ((next_start, next_end), _) in zip(intervals, intervals[1:]):
@@ -309,7 +320,7 @@ def shift_list(request):
     if not is_hr_head(request.user):
         raise PermissionDenied
     hotels = get_accessible_hotels(request.user)
-    shifts = ShiftDefinition.objects.filter(hotel__in=hotels).select_related("hotel")
+    shifts = ShiftDefinition.objects.filter(hotel__in=hotels, department__isnull=False).select_related("hotel", "department")
     form = ShiftDefinitionForm(request.POST or None, actor=request.user)
     if request.method == "POST" and form.is_valid():
         shift = form.save(commit=False)
