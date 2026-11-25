@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from accounts.services.access import get_accessible_hotels
 from inventory.models import Department, Hotel
-from .forms import EmployeeProfileForm
+from .employee_forms import EmployeeProfileForm
 from .models import EmployeeProfile
 from .permissions import is_hr_head, is_hr_staff
 
@@ -90,7 +90,6 @@ def employee_create(request):
                 employee = form.save(commit=False)
                 employee.created_by = request.user
                 employee.updated_by = request.user
-                employee.full_clean()
                 employee.save()
         except (IntegrityError, ValueError) as exc:
             form.add_error(None, str(exc))
@@ -126,7 +125,6 @@ def employee_edit(request, employee_id):
             with transaction.atomic():
                 employee = form.save(commit=False)
                 employee.updated_by = request.user
-                employee.full_clean()
                 employee.save()
         except (IntegrityError, ValueError) as exc:
             form.add_error(None, str(exc))
