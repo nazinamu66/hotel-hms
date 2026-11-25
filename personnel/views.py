@@ -228,8 +228,13 @@ def _validate_roster_complete(roster):
         entries = by_employee.get(employee.pk, [])
         if len(entries) != 7 or {a.work_date for a in entries} != {roster.week_start + timedelta(days=i) for i in range(7)}:
             raise ValidationError(f"Complete all seven days for {employee.get_full_name() or employee.username}.")
-        if sum(1 for a in entries if a.is_day_off) != 1:
-            raise ValidationError(f"{employee.get_full_name() or employee.username} must have exactly one day off.")
+        expected_rest_days = roster.rest_days_per_employee
+        actual_rest_days = sum(1 for a in entries if a.is_day_off)
+        if actual_rest_days != expected_rest_days:
+            raise ValidationError(
+                f"{employee.get_full_name() or employee.username} must have exactly "
+                f"{expected_rest_days} rest day(s) for this roster week."
+            )
         for assignment in entries:
             if assignment.shift_id and (
                 not assignment.shift.is_active
