@@ -21,7 +21,9 @@ def _require_roster_access(user):
 def dashboard(request):
     """Human Resources landing page; roster operations live on a separate page."""
     if not is_hr_staff(request.user):
-        return redirect("personnel:roster_dashboard")
+        if request.user.is_department_head and request.user.department_id:
+            return redirect("personnel:roster_dashboard")
+        raise PermissionDenied
 
     hotels = get_accessible_hotels(request.user)
     employees = EmployeeProfile.objects.filter(hotel__in=hotels)
