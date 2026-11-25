@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import RosterAssignment, RosterAuditEvent, ShiftDefinition, WeeklyRoster
+from .models import EmployeeProfile, RosterAssignment, RosterAuditEvent, ShiftDefinition, WeeklyRoster
 
 
 class RosterAssignmentInline(admin.TabularInline):
@@ -16,3 +16,11 @@ class WeeklyRosterAdmin(admin.ModelAdmin):
 
 admin.site.register(ShiftDefinition)
 admin.site.register(RosterAuditEvent)
+
+
+@admin.register(EmployeeProfile)
+class EmployeeProfileAdmin(admin.ModelAdmin):
+    list_display = ("employee_number", "first_name", "last_name", "hotel", "department", "job_title", "employment_status")
+    list_filter = ("hotel", "department", "employment_status", "employment_type")
+    search_fields = ("employee_number", "first_name", "last_name", "phone", "personal_email")
+    readonly_fields = ("employee_number", "created_at", "updated_at")
