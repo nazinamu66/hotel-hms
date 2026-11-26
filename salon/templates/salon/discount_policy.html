@@ -3,6 +3,10 @@
 {% block content %}
 <style>
 .salon-mgmt{max-width:1000px;margin:-18px auto 0;padding:26px;color:#f8fafc;background:#101d35;border-radius:18px;min-height:calc(100vh - 150px)}.mgmt-sub{color:#aebdd5}.mgmt-card{background:#192a46;border:1px solid #304361;border-radius:14px;padding:22px;max-width:650px}.mgmt-input{width:100%;box-sizing:border-box;background:#1d2d49;color:#fff;border:1px solid #425575;padding:11px;border-radius:8px}.mgmt-btn{background:#315a91;color:#fff;border:0;border-radius:8px;padding:12px 17px;font-weight:700;cursor:pointer;margin-top:16px}.mgmt-label{display:block;color:#c6d2e4;font-size:13px;margin:16px 0 6px}
+
+/* Keep headings readable against the Salon management navy theme. */
+.salon-mgmt h1,.salon-mgmt h2,.salon-mgmt h3,.salon-mgmt h4,.salon-mgmt h5,.salon-mgmt h6{color:#f8fafc!important;}
+.salon-mgmt .mgmt-card h1,.salon-mgmt .mgmt-card h2,.salon-mgmt .mgmt-card h3,.salon-mgmt .mgmt-table h1,.salon-mgmt .mgmt-table h2{color:#f8fafc!important;}
 </style>
 <div class="salon-mgmt"><h1 style="margin-top:0">Employee Discount Policy</h1><p class="mgmt-sub">{{ hotel.name }} · Applies across the linked CCH organization</p>
  {% for message in messages %}<p>{{ message }}</p>{% endfor %}
