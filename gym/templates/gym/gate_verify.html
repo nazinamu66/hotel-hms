@@ -1,5 +1,68 @@
 {% extends "base/base.html" %}
+{% block title %}Gym Gate Verification{% endblock %}
 {% block content %}
-<style>.gym-gate{max-width:760px;margin:40px auto;padding:26px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;color:#172033}.gym-gate h1{font-size:24px;margin:0 0 8px}.gym-gate p{color:#64748b;line-height:1.6}</style>
-<section class="gym-gate"><h1>Gym Gate Verification</h1><p>{{ hotel.name }}</p><p>Security verification will allow officers to look up a membership pass, confirm its validity and record member entry and exit. This screen is the foundation placeholder; verification actions are not enabled yet.</p></section>
+<style>
+.gym-gate{max-width:1080px;margin:28px auto;padding:0 18px 36px;color:#172033}
+.gym-gate-panel{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 2px 8px #0f172a08}
+.gym-gate-head{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.gym-gate h1{font-size:25px;margin:0}.gym-muted{color:#64748b}.gym-gate-form{display:flex;gap:10px;flex-wrap:wrap}
+.gym-gate input[type=text]{flex:1;min-width:240px;padding:12px 14px;border:1px solid #cbd5e1;border-radius:9px;font-size:15px}
+.gym-gate button{border:0;border-radius:9px;padding:11px 16px;background:#0f766e;color:#fff;font-weight:700;cursor:pointer}
+.gym-gate button.secondary{background:#334155}.gym-gate .danger{color:#b91c1c}.gym-gate .success{color:#047857}
+.gym-gate-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
+.gym-gate-label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b;font-weight:700}
+.gym-gate-value{font-weight:700;margin-top:4px;overflow-wrap:anywhere}
+.gym-gate-table{width:100%;border-collapse:collapse}.gym-gate-table th,.gym-gate-table td{text-align:left;padding:11px 9px;border-bottom:1px solid #edf0f4;font-size:13px}
+.gym-gate-table th{color:#64748b;font-size:11px;text-transform:uppercase}
+@media(max-width:650px){.gym-gate-grid{grid-template-columns:1fr}.gym-gate-table{display:block;overflow-x:auto}}
+</style>
+<div class="gym-gate">
+ <header class="gym-gate-head">
+  <div><h1>Gym Gate Verification</h1><p class="gym-muted">{{ hotel.name }} · Security access</p></div>
+  <a href="{% url 'gym_home' %}" class="gym-muted">Membership desk</a>
+ </header>
+ <section class="gym-gate-panel">
+  <h2 style="margin-top:0">Verify membership pass</h2>
+  <p class="gym-muted">Scan the member's pass token or enter their Gym member number. Only memberships registered at this hotel can be found.</p>
+  <form method="post" class="gym-gate-form">
+   {% csrf_token %}<input type="hidden" name="action" value="lookup">{{ form.code }}
+   <button type="submit">Verify pass</button>
+  </form>
+ </section>
+ {% if error_message %}<section class="gym-gate-panel"><p class="danger" style="margin:0;font-weight:700">{{ error_message }}</p></section>{% endif %}
+ {% if membership %}
+ <section class="gym-gate-panel">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+   <div><h2 style="margin:0">{{ membership.member.full_name }}</h2><p class="gym-muted" style="margin:5px 0 0">{{ membership.member.member_number }}</p></div>
+   {% if error_message %}<strong class="danger">NOT VALID</strong>{% elif open_visit %}<strong class="success">CURRENTLY INSIDE</strong>{% else %}<strong class="success">VALID MEMBERSHIP</strong>{% endif %}
+  </div>
+  <div class="gym-gate-grid">
+   <div><div class="gym-gate-label">Package</div><div class="gym-gate-value">{{ membership.plan_name_snapshot }}</div></div>
+   <div><div class="gym-gate-label">Membership status</div><div class="gym-gate-value">{{ membership.get_status_display }}</div></div>
+   <div><div class="gym-gate-label">Valid from</div><div class="gym-gate-value">{{ membership.start_date|date:"d M Y" }}</div></div>
+   <div><div class="gym-gate-label">Valid until</div><div class="gym-gate-value">{{ membership.end_date|date:"d M Y" }}</div></div>
+  </div>
+  {% if open_visit %}
+   <p class="gym-muted">Entry recorded {{ open_visit.entered_at|date:"d M Y, H:i" }} by {{ open_visit.checked_in_by.get_full_name|default:open_visit.checked_in_by.username }}.</p>
+   <form method="post">{% csrf_token %}<input type="hidden" name="action" value="check_out"><input type="hidden" name="visit_id" value="{{ open_visit.pk }}"><button type="submit" class="secondary">Record exit</button></form>
+  {% elif not error_message and membership.member.is_active %}
+   <form method="post">{% csrf_token %}<input type="hidden" name="action" value="check_in"><input type="hidden" name="membership_id" value="{{ membership.pk }}"><button type="submit">Record entry</button></form>
+  {% endif %}
+ </section>
+ {% endif %}
+ <section class="gym-gate-panel">
+  <h2 style="margin-top:0">Recent gate activity</h2>
+  <div style="overflow-x:auto"><table class="gym-gate-table">
+   <thead><tr><th>Member</th><th>Entry</th><th>Exit</th><th>Checked in by</th><th>Status</th></tr></thead>
+   <tbody>
+   {% for visit in recent_visits %}<tr>
+    <td><strong>{{ visit.membership.member.full_name }}</strong><br><span class="gym-muted">{{ visit.membership.member.member_number }}</span></td>
+    <td>{{ visit.entered_at|date:"d M Y H:i" }}</td><td>{{ visit.exited_at|date:"d M Y H:i"|default:"—" }}</td>
+    <td>{{ visit.checked_in_by.get_full_name|default:visit.checked_in_by.username }}</td>
+    <td>{% if visit.exited_at %}Completed{% else %}<strong class="success">Inside</strong>{% endif %}</td>
+   </tr>{% empty %}<tr><td colspan="5" class="gym-muted">No gate visits recorded yet.</td></tr>{% endfor %}
+   </tbody>
+  </table></div>
+ </section>
+</div>
 {% endblock %}
