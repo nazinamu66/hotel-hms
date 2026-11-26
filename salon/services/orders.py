@@ -64,7 +64,7 @@ def _validate_employee(employee, hotel):
 @transaction.atomic
 def create_salon_order(*, user, customer_type, items, guest_id=None,
                        employee_id=None, walkin_name="", walkin_phone="",
-                       room_id=None):
+                       room_id=None, shift=None):
     """Create a priced Salon order using server-side service prices and HR eligibility."""
     department = _salon_department(user)
     hotel = department.hotel
@@ -107,6 +107,7 @@ def create_salon_order(*, user, customer_type, items, guest_id=None,
 
     order = SalonOrder.objects.create(
         department=department,
+        shift=shift,
         folio=folio,
         customer_type=customer_type,
         guest=guest,
@@ -238,6 +239,7 @@ def settle_salon_order(*, order_id, user, payment_method=None, bank_account_id=N
         method=payment_method,
         account=account,
         collected_by=user,
+        salon_shift=order.shift,
         reference=reference,
         note=f"Salon order #{order.pk}",
     )
