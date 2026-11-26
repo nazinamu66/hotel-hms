@@ -389,7 +389,6 @@
         <div id="salon_operations_menu" class="menu-section {% if request.resolver_match.url_name in 'salon_operations_dashboard salon_pos salon_checkout salon_receipt' %}open{% endif %}">
             <a href="{% url 'salon_operations_dashboard' %}">Operations Dashboard</a>
             <a href="{% url 'salon_pos' %}">Salon POS</a>
-            <a href="{% url 'salon_pos' %}">Sales &amp; Transactions</a>
         </div>
         {% endif %}
 
