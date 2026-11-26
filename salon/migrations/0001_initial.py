@@ -5,11 +5,11 @@ from django.db import migrations, models
 
 
 def create_default_employee_discount_policies(apps, schema_editor):
-    Hotel = apps.get_model("inventory", "Hotel")
+    Organization = apps.get_model("inventory", "Organization")
     SalonDiscountPolicy = apps.get_model("salon", "SalonDiscountPolicy")
-    for hotel in Hotel.objects.all().iterator():
+    for organization in Organization.objects.all().iterator():
         SalonDiscountPolicy.objects.get_or_create(
-            hotel_id=hotel.pk,
+            organization_id=organization.pk,
             defaults={"employee_discount_percent": decimal.Decimal("50.00"), "is_active": True},
         )
 
@@ -33,7 +33,7 @@ class Migration(migrations.Migration):
                 ("employee_discount_percent", models.DecimalField(decimal_places=2, default=decimal.Decimal("50.00"), max_digits=5)),
                 ("is_active", models.BooleanField(default=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
-                ("hotel", models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name="salon_discount_policy", to="inventory.hotel")),
+                ("organization", models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name="salon_discount_policy", to="inventory.organization")),
                 ("updated_by", models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name="updated_salon_discount_policies", to=settings.AUTH_USER_MODEL)),
             ],
             options={
@@ -104,8 +104,8 @@ class Migration(migrations.Migration):
             options={
                 "ordering": ["-created_at", "-pk"],
                 "indexes": [
-                    models.Index(fields=["department", "created_at"], name="salon_salonor_departm_8c2c16_idx"),
-                    models.Index(fields=["customer_type", "status"], name="salon_salonor_custome_4e8d63_idx"),
+                    models.Index(fields=["department", "created_at"], name="salon_ord_dept_created_idx"),
+                    models.Index(fields=["customer_type", "status"], name="salon_ord_customer_status_idx"),
                 ],
                 "constraints": [
                     models.CheckConstraint(condition=models.Q(("subtotal__gte", 0), ("discount_total__gte", 0), ("total_amount__gte", 0)), name="salon_order_totals_nonnegative"),
