@@ -1,0 +1,25 @@
+{% extends "base/base.html" %}
+{% block title %}Salon Order SAL-{{ order.pk }}{% endblock %}
+{% block content %}
+<style>
+.salon-workspace{box-sizing:border-box;margin:calc(-1 * clamp(18px,2.5vw,34px));min-height:calc(100vh - 80px);padding:clamp(18px,2.5vw,34px);color:#edf4ff;background:radial-gradient(ellipse at 85% 0%,rgba(37,99,235,.17),transparent 34%),#0d1728}.s-panel{background:#172943;border:1px solid #304563;border-radius:16px;padding:clamp(16px,2vw,24px);margin-bottom:18px}.s-muted{color:#9fb0c8}.s-btn{display:inline-block;background:#2563eb;color:#fff!important;text-decoration:none;border-radius:9px;padding:11px 16px;font-weight:750}.s-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}.s-line{display:flex;justify-content:space-between;gap:15px;padding:13px 0;border-bottom:1px solid #304563}.s-meta{display:grid;grid-template-columns:1fr 1fr;gap:16px}.s-meta small{display:block;color:#9fb0c8;margin-bottom:4px}.s-total{font-size:25px;font-weight:850;color:#bfdbfe}@media(max-width:760px){.s-grid,.s-meta{grid-template-columns:1fr}}
+</style>
+<div class="salon-workspace">
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px"><div><div class="s-muted">SALON · ORDER DETAILS</div><h1 style="margin:5px 0">SAL-{{ order.pk }}</h1><div class="s-muted">{{ hotel.name }} · {{ order.created_at|date:"d M Y, H:i" }}</div></div><a class="s-btn" href="{% url 'salon_order_list' %}">← Previous orders</a></div>
+ <div class="s-grid">
+  <section class="s-panel"><h2 style="margin-top:0">Services provided</h2>{% for item in order.items.all %}<div class="s-line"><div><strong>{{ item.service_name_snapshot }}</strong><div class="s-muted">{{ item.category_name_snapshot }} · {{ item.quantity }} × ₦{{ item.unit_price|floatformat:2 }}</div><div class="s-muted">Performed by {{ item.performed_by.get_full_name|default:item.performed_by.username }}</div>{% if item.discount_amount %}<div class="s-muted">Discount {{ item.discount_percentage }}% · −₦{{ item.discount_amount|floatformat:2 }}</div>{% endif %}</div><strong>₦{{ item.line_total|floatformat:2 }}</strong></div>{% endfor %}
+   <div class="s-line"><span>Subtotal</span><strong>₦{{ order.subtotal|floatformat:2 }}</strong></div><div class="s-line"><span>Discount</span><strong>−₦{{ order.discount_total|floatformat:2 }}</strong></div><div class="s-line" style="font-size:20px"><strong>Total</strong><strong class="s-total">₦{{ order.total_amount|floatformat:2 }}</strong></div>
+  </section>
+  <section class="s-panel"><h2 style="margin-top:0">Customer & settlement</h2><div class="s-meta">
+   <div><small>Customer</small><strong>{{ customer_name }}</strong></div><div><small>Customer type</small><strong>{{ order.get_customer_type_display }}</strong></div>
+   <div><small>Order status</small><strong>{{ order.get_status_display }}</strong></div><div><small>Cashier</small><strong>{{ order.created_by.get_full_name|default:order.created_by.username }}</strong></div>
+   <div><small>Settlement</small><strong>{% if order.status == "CHARGED" %}Room folio charge{% elif payment %}{{ payment.get_method_display }}{% else %}Not settled{% endif %}</strong></div>
+   <div><small>Payment reference</small><strong>{{ payment.reference|default:"—" }}</strong></div>
+   {% if order.folio.folio_type == "ROOM" %}<div><small>Room</small><strong>{{ order.folio.room.room_number }}</strong></div><div><small>Folio</small><strong>#{{ order.folio.pk }}</strong></div>{% endif %}
+   {% if payment %}<div><small>Collected by</small><strong>{{ payment.collected_by.get_full_name|default:payment.collected_by.username }}</strong></div><div><small>Collected at</small><strong>{{ payment.collected_at|date:"d M Y H:i" }}</strong></div>{% endif %}
+  </div>
+  <div style="margin-top:22px;display:flex;gap:10px;flex-wrap:wrap"><a class="s-btn" href="{% url 'salon_receipt' order.pk %}">View / print receipt</a></div>
+  </section>
+ </div>
+</div>
+{% endblock %}
