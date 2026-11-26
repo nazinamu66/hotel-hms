@@ -121,6 +121,10 @@ class SalonOrder(models.Model):
     department = models.ForeignKey(
         Department, on_delete=models.PROTECT, related_name="salon_orders"
     )
+    shift = models.ForeignKey(
+        "salon.SalonShift", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="orders",
+    )
     folio = models.ForeignKey(
         Folio, on_delete=models.PROTECT, related_name="salon_orders"
     )
