@@ -1,0 +1,9 @@
+{% extends "base/base.html" %}
+{% block title %}Register Gym Member{% endblock %}
+{% block content %}
+<style>.gym-form-wrap{max-width:1000px;margin:auto;color:#172033}.gym-form-card{background:#fff;border:1px solid #e5e9f0;border-radius:16px;padding:24px;box-shadow:0 4px 16px #0f172a08}.gym-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.gym-form-grid p{margin:0}.gym-form-grid label{display:block;font-size:13px;font-weight:700;color:#475569;margin-bottom:6px}.gym-form-grid input,.gym-form-grid select,.gym-form-grid textarea{box-sizing:border-box;width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px}.gym-form-grid input[type=checkbox]{width:auto}.gym-submit{background:#1d4ed8;color:white;border:0;border-radius:9px;padding:12px 18px;font-weight:700;margin-top:20px;cursor:pointer}@media(max-width:650px){.gym-form-grid{grid-template-columns:1fr}}</style>
+<div class="gym-form-wrap"><p><a href="{% url 'gym_home' %}">← Gym Memberships</a></p><section class="gym-form-card"><h1 style="margin-top:0">Register a Gym member</h1><p style="color:#64748b">{{ hotel.name }} · Member number is generated automatically</p>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}{% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+<div class="gym-form-grid">{% for field in form %}<p><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small style="color:#b91c1c">{{ error }}</small>{% endfor %}</p>{% endfor %}</div>
+<button class="gym-submit">Save member</button></form></section></div>
+{% endblock %}
