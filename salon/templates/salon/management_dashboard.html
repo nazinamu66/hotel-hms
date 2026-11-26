@@ -23,10 +23,10 @@
  <section class="mgmt-links">
   <a class="mgmt-link" href="{% url 'salon_service_catalogue' %}?hotel={{ hotel.pk }}"><strong>Service Catalogue</strong><span class="mgmt-sub">Manage categories, services, prices and availability</span></a>
   <a class="mgmt-link" href="{% url 'salon_discount_policy' %}?hotel={{ hotel.pk }}"><strong>Employee Discount Policy</strong><span class="mgmt-sub">Configure the organization-wide employee discount</span></a>
-  <div class="mgmt-link"><strong>Performance &amp; Reports</strong><span class="mgmt-sub">Staff productivity and service performance reporting will be added next</span></div>
+  <a class="mgmt-link" href="{% url 'salon_reports' %}?hotel={{ hotel.pk }}"><strong>Performance &amp; Reports</strong><span class="mgmt-sub">Sales trends, payment channels, popular services and staff productivity</span></a>
  </section>
- <section class="mgmt-table"><h2 style="margin-top:0">Recent Salon activity</h2><table><thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Status</th><th>Total</th></tr></thead><tbody>
- {% for order in recent_orders %}<tr><td>SAL-{{ order.pk }}</td><td>{{ order.guest|default:order.employee|default:order.walkin_name|default:"Customer" }}</td><td>{{ order.created_at|date:"d M Y H:i" }}</td><td>{{ order.get_status_display }}</td><td>₦{{ order.total_amount|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="5">No Salon transactions yet.</td></tr>{% endfor %}
+ <section class="mgmt-table"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2 style="margin-top:0">Recent Salon activity</h2><a href="{% url 'salon_order_list' %}?hotel={{ hotel.pk }}" style="color:#93c5fd;text-decoration:none;font-weight:750">View all orders →</a></div><table><thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Status</th><th>Total</th></tr></thead><tbody>
+ {% for order in recent_orders %}<tr><td><a href="{% url 'salon_order_detail' order.pk %}" style="color:#93c5fd;text-decoration:none;font-weight:700">SAL-{{ order.pk }}</a></td><td>{{ order.guest|default:order.employee|default:order.walkin_name|default:"Customer" }}</td><td>{{ order.created_at|date:"d M Y H:i" }}</td><td>{{ order.get_status_display }}</td><td>₦{{ order.total_amount|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="5">No Salon transactions yet.</td></tr>{% endfor %}
  </tbody></table></section>
 </div>
 {% endblock %}
