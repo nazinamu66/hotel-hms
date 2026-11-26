@@ -752,6 +752,7 @@ def cash_handover_list(request):
             "department",
             "hotel",
             "shift",
+            "salon_shift",
         )
         .filter(
             to_user=request.user,
@@ -783,6 +784,7 @@ def cash_handover_accept(request, handover_id):
             "department",
             "hotel",
             "shift",
+            "salon_shift",
         ),
         id=handover_id,
         to_user=request.user,
@@ -875,6 +877,20 @@ def cash_handover_accept(request, handover_id):
             return redirect(
                 "cash_handover_list"
             )
+
+        if handover.salon_shift_id and handover.custody_type == "CUSTODY":
+            messages.success(
+                request,
+                f"Salon cash handover #{handover.id} accepted. Salon Shift #{handover.salon_shift_id} is closed.",
+            )
+            return redirect("salon_shift_detail", shift_id=handover.salon_shift_id)
+
+        if handover.salon_shift_id and handover.custody_type == "PARTIAL":
+            messages.success(
+                request,
+                f"Salon partial cash handover #{handover.id} accepted. Salon Shift #{handover.salon_shift_id} remains open.",
+            )
+            return redirect("cash_custody_detail", handover_id=handover.id)
 
         if handover.custody_type == "SHIFT":
             messages.success(
