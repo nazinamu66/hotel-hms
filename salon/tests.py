@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from inventory.models import Department, Hotel, Organization
+from inventory.models import Hotel, Organization
 from .models import SalonDiscountPolicy, SalonService, SalonServiceCategory
 
 
@@ -11,12 +11,6 @@ class SalonFoundationModelTests(TestCase):
     def setUp(self):
         self.organization = Organization.objects.create(name="Salon Foundation Group")
         self.hotel = Hotel.objects.create(name="Salon Foundation Hotel", organization=self.organization)
-        self.department = Department.objects.create(
-            hotel=self.hotel,
-            code="SAL",
-            name="Salon",
-            department_type="SALON",
-        )
         self.category = SalonServiceCategory.objects.create(
             hotel=self.hotel,
             name="Hair",
