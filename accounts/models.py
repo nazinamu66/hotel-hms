@@ -33,6 +33,7 @@ class User(AbstractUser):
         ("HOUSEKEEPING", "Housekeeping"),
         ("LAUNDRY", "Laundry Staff"),
         ("GYM", "Gym Staff"),
+        ("SALON", "Salon Staff"),
         ("BOUTIQUE", "Boutique Staff"),
         ("SECURITY", "Security Staff"),
         ("HR", "Human Resources Staff"),
@@ -155,6 +156,10 @@ class User(AbstractUser):
     def is_gym(self):
         return self.role == "GYM"
     @property
+    def is_salon(self):
+        return self.role == "SALON"
+
+    @property
     def is_boutique(self):
         return self.role == "BOUTIQUE"
 
@@ -188,6 +193,7 @@ class User(AbstractUser):
             "HOUSEKEEPING",
             "LAUNDRY",
             "GYM",
+            "SALON",
             "BOUTIQUE",
             "SECURITY",
         }
@@ -303,6 +309,7 @@ class User(AbstractUser):
             "MAINTENANCE",
             "LAUNDRY",
             "GYM",
+            "SALON",
             "BOUTIQUE",
             "SECURITY",
             "HR",
