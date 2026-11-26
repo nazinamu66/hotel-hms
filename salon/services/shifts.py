@@ -6,6 +6,8 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from billing.models import Payment
+from django.db.models import Count
+from salon.models import SalonOrder
 from core.models import CashHandover
 from core.services.cash.handover import create_handover
 from salon.models import SalonShift
@@ -24,10 +26,18 @@ def salon_shift_cash_summary(shift):
         status__in=["PENDING", "ACCEPTED", "RESOLVED"],
     ).aggregate(total=Sum("sender_count"))["total"] or Decimal("0.00")
     expected = shift.opening_cash + cash_sales - partial_handover
+    order_summary = SalonOrder.objects.filter(
+        shift=shift, status__in=[SalonOrder.PAID, SalonOrder.CHARGED]
+    ).aggregate(sales=Sum("total_amount"), count=Count("id"))
     return {
         "cash_sales": cash_sales,
         "partial_handover": partial_handover,
         "expected_cash": expected,
+        "sales_total": order_summary["sales"] or Decimal("0.00"),
+        "completed_orders": order_summary["count"] or 0,
+        "closing_variance": (
+            shift.closing_cash - expected if shift.closing_cash is not None else None
+        ),
     }
 
 
@@ -75,6 +85,8 @@ def request_salon_cash_handover(*, shift, user, recipient, amount, partial=True)
     if shift.user_id != user.id or shift.status != SalonShift.OPEN:
         raise ValidationError("You can only hand over cash from your own open Salon shift.")
     summary = salon_shift_cash_summary(shift)
+    if CashHandover.objects.filter(salon_shift=shift, custody_type="PARTIAL", status="PENDING").exists():
+        raise ValidationError("A previous cash handover is still awaiting recipient confirmation.")
     amount = Decimal(amount)
     if amount <= 0 or amount > summary["expected_cash"]:
         raise ValidationError("Enter a positive amount not exceeding the expected till cash.")
