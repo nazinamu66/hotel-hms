@@ -386,10 +386,11 @@
             onclick="toggleMenu('salon_operations_menu', this)">
             <span class="arrow">▸</span> ✂️ Salon
         </h4>
-        <div id="salon_operations_menu" class="menu-section {% if request.resolver_match.url_name in 'salon_operations_dashboard salon_pos salon_checkout salon_receipt salon_order_list salon_order_detail' %}open{% endif %}">
+        <div id="salon_operations_menu" class="menu-section {% if request.resolver_match.url_name in 'salon_operations_dashboard salon_pos salon_checkout salon_receipt salon_order_list salon_order_detail salon_shift_list salon_shift_open salon_shift_detail salon_partial_cash_handover' %}open{% endif %}">
             <a href="{% url 'salon_operations_dashboard' %}">Operations Dashboard</a>
             <a href="{% url 'salon_pos' %}">Salon POS</a>
             <a href="{% url 'salon_order_list' %}">Previous Orders</a>
+            <a href="{% url 'salon_shift_list' %}">Cashier Shifts</a>
         </div>
         {% endif %}
 
