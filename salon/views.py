@@ -473,7 +473,7 @@ def salon_reports(request):
     ).values("method").annotate(total=Sum("amount"), count=Count("pk")).order_by("method")
     payment_labels = dict(Payment.METHOD_CHOICES)
     payment_breakdown = [
-        {"label": payment_labels.get(row["method"], row["method"]),
+        {"method": row["method"], "label": payment_labels.get(row["method"], row["method"]),
          "total": row["total"], "count": row["count"]}
         for row in payment_rows
     ]
