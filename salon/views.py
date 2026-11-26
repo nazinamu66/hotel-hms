@@ -21,7 +21,8 @@ from inventory.models import HotelFeature, Hotel
 from core.utils import get_user_hotels
 from personnel.models import EmployeeProfile
 from rooms.models import Room
-from salon.models import SalonDiscountPolicy, SalonOrder, SalonOrderItem, SalonService, SalonServiceCategory
+from salon.models import SalonDiscountPolicy, SalonOrder, SalonOrderItem, SalonService, SalonServiceCategory, SalonShift
+from salon.services.shifts import active_salon_shift, salon_shift_cash_summary, open_salon_shift, close_salon_shift, request_salon_cash_handover
 from salon.services.orders import create_salon_order, settle_salon_order
 
 
@@ -43,6 +44,10 @@ def _salon_access(user):
 def salon_pos(request):
     department = _salon_access(request.user)
     hotel = department.hotel
+    shift = active_salon_shift(department)
+    if not shift:
+        messages.info(request, "Open your Salon shift before using the POS.")
+        return redirect("salon_shift_open")
     categories = SalonServiceCategory.objects.filter(
         hotel=hotel, is_active=True,
         services__is_active=True,
@@ -77,6 +82,7 @@ def salon_order_create(request):
             walkin_name=request.POST.get("walkin_name", ""),
             walkin_phone=request.POST.get("walkin_phone", ""),
             room_id=request.POST.get("room_id") or None,
+            shift=active_salon_shift(request.user.department),
         )
     except (ValueError, TypeError, json.JSONDecodeError, ValidationError) as exc:
         messages.error(request, str(exc))
@@ -205,9 +211,13 @@ def _management_hotel(request):
 def salon_operations_dashboard(request):
     department = _salon_access(request.user)
     orders = SalonOrder.objects.filter(department=department)
+    shift = active_salon_shift(department)
+    shift_summary = salon_shift_cash_summary(shift) if shift else None
     today = timezone.localdate()
     return render(request, "salon/operations_dashboard.html", {
         "hotel": department.hotel,
+        "active_shift": shift,
+        "shift_summary": shift_summary,
         "today_orders": orders.filter(created_at__date=today).count(),
         "today_revenue": orders.filter(created_at__date=today, status__in=["PAID", "CHARGED"]).aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00"),
         "open_orders": orders.filter(status="OPEN").count(),
@@ -530,4 +540,79 @@ def salon_reports(request):
         "recent_orders": recent_orders,
         "open_orders": orders.filter(status=SalonOrder.OPEN).count(),
         "cancelled_orders": orders.filter(status=SalonOrder.CANCELLED).count(),
+    })
+
+
+@role_required("SALON")
+def salon_shift_open(request):
+    department = _salon_access(request.user)
+    existing = active_salon_shift(department)
+    if existing:
+        return redirect("salon_shift_detail", shift_id=existing.pk)
+    if request.method == "POST":
+        try:
+            amount = Decimal(request.POST.get("opening_cash", "0"))
+            shift = open_salon_shift(
+                user=request.user, department=department, opening_cash=amount,
+                notes=request.POST.get("notes", ""),
+            )
+            messages.success(request, "Salon shift opened successfully.")
+            return redirect("salon_shift_detail", shift_id=shift.pk)
+        except (ValueError, InvalidOperation, ValidationError) as exc:
+            messages.error(request, str(exc))
+    return render(request, "salon/shift_open.html", {"hotel": department.hotel})
+
+
+@role_required("SALON")
+def salon_shift_list(request):
+    department = _salon_access(request.user)
+    shifts = SalonShift.objects.filter(department=department).select_related("user").order_by("-opened_at")
+    return render(request, "salon/shift_list.html", {"shifts": shifts, "active_shift": active_salon_shift(department)})
+
+
+@role_required("SALON")
+def salon_shift_detail(request, shift_id):
+    department = _salon_access(request.user)
+    shift = get_object_or_404(SalonShift, pk=shift_id, department=department)
+    summary = salon_shift_cash_summary(shift)
+    handovers = shift.cash_handovers.select_related("from_user", "to_user").order_by("-created_at")
+    if request.method == "POST" and request.POST.get("action") == "close":
+        try:
+            close_salon_shift(
+                shift=shift, user=request.user,
+                closing_cash=Decimal(request.POST.get("closing_cash", "")),
+                notes=request.POST.get("notes", ""),
+            )
+            messages.success(request, "Salon shift closed and cash reconciliation recorded.")
+            return redirect("salon_shift_detail", shift_id=shift.pk)
+        except (ValueError, InvalidOperation, ValidationError) as exc:
+            messages.error(request, str(exc))
+    return render(request, "salon/shift_detail.html", {
+        "shift": shift, "summary": summary, "handovers": handovers,
+    })
+
+
+@role_required("SALON")
+def salon_partial_cash_handover(request, shift_id):
+    department = _salon_access(request.user)
+    shift = get_object_or_404(SalonShift, pk=shift_id, department=department, status="OPEN", user=request.user)
+    from accounts.models import User
+    recipients = User.objects.filter(
+        role__in=["MANAGER", "ACCOUNTANT"], is_active=True,
+    ).order_by("first_name", "last_name", "username")
+    if request.method == "POST":
+        try:
+            recipient = get_object_or_404(recipients, pk=request.POST.get("recipient_id"))
+            handover = request_salon_cash_handover(
+                shift=shift, user=request.user, recipient=recipient,
+                amount=Decimal(request.POST.get("amount", "")),
+                partial=request.POST.get("handover_type", "PARTIAL") == "PARTIAL",
+            )
+            messages.success(request, f"Cash handover #{handover.pk} sent for independent confirmation.")
+            return redirect("salon_shift_detail", shift_id=shift.pk)
+        except (ValueError, InvalidOperation, ValidationError) as exc:
+            messages.error(request, str(exc))
+    return render(request, "salon/cash_handover_form.html", {
+        "shift": shift, "recipients": recipients,
+        "summary": salon_shift_cash_summary(shift),
     })
