@@ -1,11 +1,32 @@
 {% extends "base/base.html" %}
 {% block title %}Open Salon Shift{% endblock %}
 {% block content %}
-<div style="max-width:680px;margin:35px auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:28px;color:#172033">
-<h1>Open Salon Shift</h1><p style="color:#64748b">{{ hotel.name }} · Record the cash float before starting sales.</p>
-<form method="post">{% csrf_token %}
-<label>Opening cash (₦)</label><input name="opening_cash" type="number" min="0" step="0.01" value="0.00" required style="display:block;width:100%;padding:12px;margin:8px 0 18px;border:1px solid #cbd5e1;border-radius:8px">
-<label>Notes (optional)</label><textarea name="notes" rows="3" style="display:block;width:100%;padding:12px;margin:8px 0 18px;border:1px solid #cbd5e1;border-radius:8px"></textarea>
-<button style="background:#1d4ed8;color:white;padding:12px 18px;border:0;border-radius:8px;font-weight:700">Open Shift</button>
-<a href="{% url 'salon_operations_dashboard' %}" style="margin-left:12px">Cancel</a></form></div>
+{% include "salon/_shift_styles.html" %}
+<div class="salon-shift-page" style="max-width:850px">
+  <div class="page-heading">
+    <div><div class="eyebrow">Salon operations · Cash control</div><h1>Open a cashier shift</h1><div class="muted">{{ hotel.name }} · Record the starting cash float before accepting payments.</div></div>
+    <a class="btn btn-secondary" href="{% url 'salon_operations_dashboard' %}">Back to dashboard</a>
+  </div>
+  <section class="panel">
+    <h2>Opening details</h2>
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="field">
+          <label for="opening_cash">Opening cash float (₦)</label>
+          <input id="opening_cash" name="opening_cash" type="number" min="0" step="0.01" value="0.00" required>
+          <span class="muted" style="font-size:.8rem">Enter the physical cash placed in the Salon till at the start of this shift.</span>
+        </div>
+        <div class="field">
+          <label for="opening_notes">Opening notes <span class="muted">(optional)</span></label>
+          <textarea id="opening_notes" name="notes" rows="3" placeholder="Record any relevant opening information..."></textarea>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:22px">
+        <button class="btn btn-primary" type="submit">Open shift</button>
+        <a class="btn btn-secondary" href="{% url 'salon_operations_dashboard' %}">Cancel</a>
+      </div>
+    </form>
+  </section>
+</div>
 {% endblock %}
