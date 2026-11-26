@@ -53,14 +53,15 @@
  <section class="gym-gate-panel">
   <h2 style="margin-top:0">Recent gate activity</h2>
   <div style="overflow-x:auto"><table class="gym-gate-table">
-   <thead><tr><th>Member</th><th>Entry</th><th>Exit</th><th>Checked in by</th><th>Status</th></tr></thead>
+   <thead><tr><th>Member</th><th>Entry</th><th>Exit</th><th>Checked in by</th><th>Checked out by</th><th>Status</th></tr></thead>
    <tbody>
    {% for visit in recent_visits %}<tr>
     <td><strong>{{ visit.membership.member.full_name }}</strong><br><span class="gym-muted">{{ visit.membership.member.member_number }}</span></td>
     <td>{{ visit.entered_at|date:"d M Y H:i" }}</td><td>{{ visit.exited_at|date:"d M Y H:i"|default:"—" }}</td>
     <td>{{ visit.checked_in_by.get_full_name|default:visit.checked_in_by.username }}</td>
+    <td>{% if visit.checked_out_by %}{{ visit.checked_out_by.get_full_name|default:visit.checked_out_by.username }}{% else %}—{% endif %}</td>
     <td>{% if visit.exited_at %}Completed{% else %}<strong class="success">Inside</strong>{% endif %}</td>
-   </tr>{% empty %}<tr><td colspan="5" class="gym-muted">No gate visits recorded yet.</td></tr>{% endfor %}
+   </tr>{% empty %}<tr><td colspan="6" class="gym-muted">No gate visits recorded yet.</td></tr>{% endfor %}
    </tbody>
   </table></div>
  </section>
