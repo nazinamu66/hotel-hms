@@ -21,6 +21,9 @@
 <h2 style="margin-top:0">Membership history</h2>
 {% for membership in member.memberships.all %}
 <div class="gym-membership"><div><strong>{{ membership.plan_name_snapshot }}</strong><div style="color:#64748b;font-size:13px">{{ membership.start_date|date:"d M Y" }} – {{ membership.end_date|date:"d M Y" }} · ₦{{ membership.amount_snapshot|floatformat:2 }}</div><div style="font-size:13px;margin-top:4px">{{ membership.get_status_display }}</div></div>{% if membership.billing_payment_id %}<a href="{% url 'gym_membership_receipt' membership.pk %}">View receipt</a>{% endif %}</div>
+{% for visit in membership.visits.all %}
+<div style="font-size:12px;color:#64748b;margin:5px 0 10px 12px">Gate: {{ visit.entered_at|date:"d M Y H:i" }}{% if visit.exited_at %} – {{ visit.exited_at|date:"H:i" }}{% else %} · Still inside{% endif %}</div>
+{% endfor %}
 {% empty %}<p style="color:#64748b">No membership has been issued yet.</p>{% endfor %}
 </section>
 </div>
