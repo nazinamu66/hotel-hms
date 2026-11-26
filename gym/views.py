@@ -68,6 +68,64 @@ def gym_home(request):
     })
 
 
+
+@role_required(*FRONT_DESK_ROLES)
+def gym_membership_checkout(request, member_id):
+    from .forms import GymMembershipCheckoutForm
+    from .services.memberships import create_paid_membership
+
+    hotel = _hotel_for_gym(request.user)
+    member = get_object_or_404(GymMember, pk=member_id, hotel=hotel, is_active=True)
+    if request.method == "POST":
+        form = GymMembershipCheckoutForm(request.POST, hotel=hotel)
+        if form.is_valid():
+            try:
+                membership = create_paid_membership(
+                    member_id=member.pk,
+                    plan_id=form.cleaned_data["plan"].pk,
+                    hotel=hotel,
+                    user=request.user,
+                    payment_method=form.cleaned_data["payment_method"],
+                    bank_account_id=(
+                        form.cleaned_data["bank_account"].pk
+                        if form.cleaned_data["bank_account"] else None
+                    ),
+                    start_date=form.cleaned_data["start_date"],
+                )
+            except Exception as exc:
+                from django.core.exceptions import ValidationError
+                if isinstance(exc, ValidationError):
+                    form.add_error(None, exc)
+                else:
+                    raise
+            else:
+                payment = membership.billing_payment
+                if form.cleaned_data.get("payment_reference"):
+                    payment.reference = form.cleaned_data["payment_reference"].strip()
+                    payment.save(update_fields=["reference"])
+                messages.success(request, "Payment received and membership activated.")
+                return redirect("gym_membership_receipt", membership_id=membership.pk)
+    else:
+        form = GymMembershipCheckoutForm(hotel=hotel)
+    return render(request, "gym/membership_checkout.html", {
+        "hotel": hotel, "member": member, "form": form,
+    })
+
+
+@role_required(*FRONT_DESK_ROLES)
+def gym_membership_receipt(request, membership_id):
+    hotel = _hotel_for_gym(request.user)
+    membership = get_object_or_404(
+        GymMembership.objects.select_related(
+            "member", "plan", "billing_payment__account"
+        ).filter(hotel=hotel),
+        pk=membership_id,
+    )
+    return render(request, "gym/membership_receipt.html", {
+        "hotel": hotel, "membership": membership,
+        "payment": membership.billing_payment,
+    })
+
 @role_required(*FRONT_DESK_ROLES)
 def gym_member_create(request):
     hotel = _hotel_for_gym(request.user)
