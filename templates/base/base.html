@@ -212,7 +212,6 @@
                 <span class="arrow">▸</span> 🏋️ Gym
             </h5>
             <div id="setup_gym_menu" class="menu-section {% if request.resolver_match.url_name == 'gym_plan_setup' %}open{% endif %}">
-                <a href="{% url 'gym_home' %}">Gym Operations</a>
                 <a href="{% url 'gym_plan_setup' %}">Membership Packages</a>
             </div>
             {% endif %}
@@ -288,10 +287,8 @@
         </h4>
         <div id="security_menu" class="menu-section {% if request.resolver_match.namespace == 'security' %}open{% endif %}">
             <a href="{% url 'security_dashboard' %}">Operations Dashboard</a>
-            {% if gym_enabled or user.role == "DIRECTOR" %}
-            {% if user|has_role:"SECURITY,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
+            {% if gym_enabled and user|has_role:"SECURITY,MANAGER,GENERAL_MANAGER,ADMIN" %}
             <a href="{% url 'gym_gate_verify' %}">🏋️ Gym Gate Verification</a>
-            {% endif %}
             {% endif %}
         </div>
         {% endif %}
@@ -438,18 +435,6 @@
         <!-- ========================= -->
         <!-- KITCHEN -->
         <!-- ========================= -->
-
-        {% feature_enabled user "GYM" as gym_enabled %}
-        {% if gym_enabled and user|has_role:"FRONTDESK,GYM,SECURITY,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
-        <h4 class="menu-toggle {% if request.resolver_match.namespace == 'gym' %}active-menu{% endif %}" onclick="toggleMenu('gym_menu', this)">
-            <span class="arrow">▸</span> 🏋️ Gym
-        </h4>
-        <div id="gym_menu" class="menu-section {% if request.resolver_match.namespace == 'gym' %}open{% endif %}">
-            {% if user|has_role:"FRONTDESK,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}<a href="{% url 'gym_home' %}">Membership Register</a>{% endif %}
-            {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}<a href="{% url 'gym_plan_setup' %}">Membership Packages</a>{% endif %}
-            {% if user|has_role:"SECURITY,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}<a href="{% url 'gym_gate_verify' %}">Gate Verification</a>{% endif %}
-        </div>
-        {% endif %}
 
         {% feature_enabled user "KITCHEN" as kitchen_enabled %}
 
