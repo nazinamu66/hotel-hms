@@ -421,6 +421,14 @@ class Payment(models.Model):
         on_delete=models.PROTECT,
         null=True,
         blank=True,
+    )
+
+    salon_shift = models.ForeignKey(
+        "salon.SalonShift",
+        related_name="payments",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
     )    
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     allocation_tracking_enabled = models.BooleanField(
