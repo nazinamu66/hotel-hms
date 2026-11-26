@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.db.models import Q, Sum, Value
 from django.db.models.functions import Concat
+from django.db.models import Prefetch
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -158,13 +159,19 @@ def salon_customer_lookup(request):
             | Q(last_name__icontains=q) | Q(phone__icontains=q)
         ).select_related("hotel", "department").order_by("last_name", "first_name")[:15])
     elif len(q) >= 2 and kind == "ROOM":
+        active_folios = Folio.objects.filter(
+            hotel=department.hotel, folio_type="ROOM", is_closed=False
+        ).select_related("guest", "room").order_by("-created_at")
         results = list(Room.objects.filter(
             hotel=department.hotel,
             folio__folio_type="ROOM", folio__is_closed=False,
         ).filter(
-            Q(room_number__icontains=q) | Q(folio__guest__first_name__icontains=q)
+            Q(room_number__icontains=q)
+            | Q(folio__guest__first_name__icontains=q)
             | Q(folio__guest__last_name__icontains=q)
-        ).distinct()[:15])
+        ).distinct().prefetch_related(
+            Prefetch("folio_set", queryset=active_folios, to_attr="active_salon_folios")
+        )[:15])
     return render(request, "salon/customer_results.html", {
         "kind": kind, "results": results,
     })
