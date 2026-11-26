@@ -149,8 +149,8 @@ class SalonOrder(models.Model):
     class Meta:
         ordering = ["-created_at", "-pk"]
         indexes = [
-            models.Index(fields=["department", "created_at"]),
-            models.Index(fields=["customer_type", "status"]),
+            models.Index(fields=["department", "created_at"], name="salon_salonor_departm_8c2c16_idx"),
+            models.Index(fields=["customer_type", "status"], name="salon_salonor_custome_4e8d63_idx"),
         ]
         constraints = [
             models.CheckConstraint(
