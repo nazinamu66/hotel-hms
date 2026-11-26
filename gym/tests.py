@@ -254,7 +254,16 @@ class GymGateVerificationTests(TestCase):
             "action": "check_in", "membership_id": membership.pk,
         })
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(membership.visits.filter(exited_at__isnull=True).exists())
+        visit = membership.visits.get(exited_at__isnull=True)
+        self.assertEqual(visit.checked_in_by, self.security)
+
+        response = self.client.post("/gym/gate/", {
+            "action": "check_out", "visit_id": visit.pk,
+        })
+        self.assertEqual(response.status_code, 302)
+        visit.refresh_from_db()
+        self.assertIsNotNone(visit.exited_at)
+        self.assertEqual(visit.checked_out_by, self.security)
 
     def test_membership_from_another_hotel_cannot_be_checked_in(self):
         from django.core.exceptions import ValidationError
