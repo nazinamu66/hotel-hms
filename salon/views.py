@@ -68,7 +68,11 @@ def salon_pos(request):
 @role_required("SALON")
 @require_POST
 def salon_order_create(request):
-    _salon_access(request.user)
+    department = _salon_access(request.user)
+    shift = active_salon_shift(department)
+    if not shift:
+        messages.error(request, "Open your Salon shift before creating an order.")
+        return redirect("salon_shift_open")
     try:
         raw_items = json.loads(request.POST.get("items_json", "[]"))
         if not isinstance(raw_items, list):
@@ -82,7 +86,7 @@ def salon_order_create(request):
             walkin_name=request.POST.get("walkin_name", ""),
             walkin_phone=request.POST.get("walkin_phone", ""),
             room_id=request.POST.get("room_id") or None,
-            shift=active_salon_shift(request.user.department),
+            shift=shift,
         )
     except (ValueError, TypeError, json.JSONDecodeError, ValidationError) as exc:
         messages.error(request, str(exc))
