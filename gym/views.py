@@ -10,6 +10,7 @@ from django.views.decorators.http import require_GET, require_POST
 from accounts.decorators import role_required
 from inventory.models import HotelFeature
 from core.utils import get_user_hotel
+from accounts.services.access import get_accessible_hotels
 
 from .forms import GymMemberForm, GymMembershipPlanForm, GymMembershipCheckoutForm
 from .models import GymMember, GymMembership, GymMembershipPlan, GymVisit
@@ -151,29 +152,55 @@ def gym_member_detail(request, member_id):
     return render(request, "gym/member_detail.html", {"hotel": hotel, "member": member})
 
 
+def _gym_setup_hotels(user):
+    return get_accessible_hotels(user).filter(
+        is_active=True,
+        features__feature="GYM",
+        features__is_active=True,
+    ).distinct().order_by("name")
+
+
+def _selected_gym_setup_hotel(request):
+    hotels = _gym_setup_hotels(request.user)
+    hotel_id = (
+        request.POST.get("hotel")
+        if request.method == "POST"
+        else request.GET.get("hotel")
+    )
+    if hotel_id:
+        return hotels.filter(pk=hotel_id).first(), hotels
+    if hotels.count() == 1:
+        return hotels.first(), hotels
+    return None, hotels
+
+
 @role_required("MANAGER", "ADMIN", "DIRECTOR", "GENERAL_MANAGER")
 def gym_plan_setup(request):
-    hotel = _hotel_for_gym(request.user)
-    if request.method == "POST":
+    hotel, hotels = _selected_gym_setup_hotel(request)
+    if request.method == "POST" and not hotel:
+        messages.error(request, "Select a hotel with Gym enabled before saving membership packages.")
+    if request.method == "POST" and hotel:
         form = GymMembershipPlanForm(request.POST)
         if form.is_valid():
             plan = form.save(commit=False)
             plan.hotel = hotel
             plan.save()
-            messages.success(request, f"{plan.get_package_display()} package saved.")
-            return redirect("gym_plan_setup")
+            messages.success(request, f"{plan.get_package_display()} package saved for {hotel.name}.")
+            return redirect(f"{request.path}?hotel={hotel.pk}")
     else:
         form = GymMembershipPlanForm()
     return render(request, "gym/plan_setup.html", {
-        "hotel": hotel, "form": form,
-        "plans": GymMembershipPlan.objects.filter(hotel=hotel),
+        "hotel": hotel, "hotels": hotels, "form": form,
+        "plans": GymMembershipPlan.objects.filter(hotel=hotel) if hotel else GymMembershipPlan.objects.none(),
     })
 
 
 @role_required("MANAGER", "ADMIN", "DIRECTOR", "GENERAL_MANAGER")
 @require_POST
 def gym_plan_update(request, plan_id):
-    hotel = _hotel_for_gym(request.user)
+    hotel, hotels = _selected_gym_setup_hotel(request)
+    if not hotel:
+        raise PermissionDenied("Select an accessible hotel with Gym enabled.")
     plan = get_object_or_404(GymMembershipPlan, pk=plan_id, hotel=hotel)
     form = GymMembershipPlanForm(request.POST, instance=plan)
     if form.is_valid():
@@ -181,7 +208,7 @@ def gym_plan_update(request, plan_id):
         messages.success(request, "Membership package updated.")
     else:
         messages.error(request, "Please check the package details; no changes were saved.")
-    return redirect("gym_plan_setup")
+    return redirect(f"/gym/plans/?hotel={hotel.pk}")
 
 
 @role_required("SECURITY", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
