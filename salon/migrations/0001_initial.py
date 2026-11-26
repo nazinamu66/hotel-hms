@@ -4,6 +4,16 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def create_default_employee_discount_policies(apps, schema_editor):
+    Hotel = apps.get_model("inventory", "Hotel")
+    SalonDiscountPolicy = apps.get_model("salon", "SalonDiscountPolicy")
+    for hotel in Hotel.objects.all().iterator():
+        SalonDiscountPolicy.objects.get_or_create(
+            hotel_id=hotel.pk,
+            defaults={"employee_discount_percent": decimal.Decimal("50.00"), "is_active": True},
+        )
+
+
 class Migration(migrations.Migration):
     initial = True
 
@@ -128,4 +138,5 @@ class Migration(migrations.Migration):
                 ],
             },
         ),
+        migrations.RunPython(create_default_employee_discount_policies, migrations.RunPython.noop),
     ]
