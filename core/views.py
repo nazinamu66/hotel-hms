@@ -951,6 +951,7 @@ def cash_custody_dashboard(request):
             "department",
             "hotel",
             "shift",
+            "salon_shift",
         )
         .filter(hotel__in=hotels)
         .order_by("-created_at")
