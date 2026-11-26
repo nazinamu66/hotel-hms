@@ -12,6 +12,7 @@
 <div class="receipt-grid">
 <div><div class="receipt-label">Member</div><div class="receipt-value">{{ membership.member.full_name }}</div><div class="receipt-muted">{{ membership.member.member_number }}</div></div>
 <div><div class="receipt-label">Package</div><div class="receipt-value">{{ membership.plan_name_snapshot }}</div></div>
+<div style="grid-column:1/-1"><div class="receipt-label">Gate pass token</div><div class="receipt-value" style="font-family:monospace;overflow-wrap:anywhere">{{ membership.pass_token }}</div><div class="receipt-muted">Present this token at the Gym entrance for verification.</div></div>
 <div><div class="receipt-label">Membership period</div><div class="receipt-value">{{ membership.start_date|date:"d M Y" }} – {{ membership.end_date|date:"d M Y" }}</div></div>
 <div><div class="receipt-label">Payment date</div><div class="receipt-value">{{ payment.collected_at|date:"d M Y, H:i" }}</div></div>
 <div><div class="receipt-label">Payment method</div><div class="receipt-value">{{ payment.get_method_display }}</div></div>
