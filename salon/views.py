@@ -124,7 +124,11 @@ def salon_receipt(request, order_id):
         ),
         pk=order_id, department=department,
     )
-    return render(request, "salon/receipt.html", {\n        "order": order,\n        "hotel": department.hotel,\n        "organization": department.hotel.organization,\n    })
+    return render(request, "salon/receipt.html", {
+        "order": order,
+        "hotel": department.hotel,
+        "organization": department.hotel.organization,
+    })
 
 
 @role_required("SALON")
