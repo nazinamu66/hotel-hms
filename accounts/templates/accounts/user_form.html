@@ -643,9 +643,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 !selectedHotel ||
                 option.dataset.hotel === selectedHotel;
 
+            const requiredDepartmentTypes = {
+                "HR": "HUMAN_RESOURCES",
+                "GYM": "GYM",
+                "SALON": "SALON"
+            };
+            const requiredType = requiredDepartmentTypes[selectedRole];
             const matchesDepartmentType =
-                selectedRole !== "HR" ||
-                option.dataset.departmentType === "HUMAN_RESOURCES";
+                !requiredType || option.dataset.departmentType === requiredType;
 
             if (matchesHotel && matchesDepartmentType) {
 
@@ -743,6 +748,7 @@ document.addEventListener("DOMContentLoaded", function () {
             "HOUSEKEEPING",
             "LAUNDRY",
             "GYM",
+            "SALON",
             "BOUTIQUE",
             "MAINTENANCE",
             "SECURITY",
