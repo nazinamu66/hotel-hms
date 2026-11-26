@@ -205,17 +205,20 @@ def gym_gate_verify(request):
         action = form.cleaned_data.get("action") or "lookup"
         if action == "lookup":
             code = form.cleaned_data["code"].strip()
+            if not code:
+                error_message = "Scan a pass or enter a member number."
             memberships = GymMembership.objects.filter(
                 hotel=hotel, member__hotel=hotel
             ).select_related("member", "plan").order_by("-start_date", "-created_at")
-            try:
-                token = UUID(code)
-            except (ValueError, TypeError, AttributeError):
-                token = None
-            if token:
-                membership = memberships.filter(pass_token=token).first()
-            else:
-                membership = memberships.filter(member__member_number__iexact=code).first()
+            if code:
+                try:
+                    token = UUID(code)
+                except (ValueError, TypeError, AttributeError):
+                    token = None
+                if token:
+                    membership = memberships.filter(pass_token=token).first()
+                else:
+                    membership = memberships.filter(member__member_number__iexact=code).first()
 
             if membership:
                 open_visit = GymVisit.objects.filter(
@@ -243,6 +246,10 @@ def gym_gate_verify(request):
                 membership = GymMembership.objects.filter(
                     pk=membership_id, hotel=hotel, member__hotel=hotel
                 ).select_related("member", "plan").first()
+                if membership:
+                    open_visit = GymVisit.objects.filter(
+                        membership=membership, hotel=hotel, exited_at__isnull=True
+                    ).first()
             else:
                 messages.success(request, f"{visit.membership.member.full_name} checked in successfully.")
                 return redirect("gym_gate_verify")
