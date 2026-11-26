@@ -78,6 +78,8 @@ def request_salon_cash_handover(*, shift, user, recipient, amount, partial=True)
     amount = Decimal(amount)
     if amount <= 0 or amount > summary["expected_cash"]:
         raise ValidationError("Enter a positive amount not exceeding the expected till cash.")
+    if not partial and amount != summary["expected_cash"]:
+        raise ValidationError("A full cash handover must equal the complete expected till cash.")
     return create_handover(
         from_user=user, to_user=recipient, department=shift.department,
         expected_amount=amount, sender_count=amount,
