@@ -1,0 +1,25 @@
+{% extends "base/base.html" %}
+{% block title %}Salon Management{% endblock %}
+{% block content %}
+<style>
+.salon-mgmt{max-width:1450px;margin:-18px auto 0;padding:26px;color:#f8fafc;background:#101d35;border-radius:18px;min-height:calc(100vh - 150px)}.mgmt-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}.mgmt-sub{color:#aebdd5}.mgmt-select{background:#1d2d49;color:white;border:1px solid #425575;padding:10px;border-radius:9px}.mgmt-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.mgmt-card{background:#192a46;border:1px solid #304361;border-radius:14px;padding:20px}.mgmt-card small{color:#b8c6dc}.mgmt-value{font-size:29px;font-weight:800;margin-top:9px}.mgmt-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0}.mgmt-link{display:block;text-decoration:none;color:#fff;background:#213654;border:1px solid #405575;border-radius:12px;padding:18px}.mgmt-link strong{display:block;margin-bottom:6px}.mgmt-table{background:#192a46;border:1px solid #304361;border-radius:14px;padding:20px;overflow:auto}.mgmt-table table{width:100%;border-collapse:collapse}.mgmt-table td,.mgmt-table th{padding:12px 8px;text-align:left;border-bottom:1px solid #304361}.mgmt-table th{color:#b8c6dc}@media(max-width:900px){.mgmt-grid{grid-template-columns:repeat(2,1fr)}.mgmt-links{grid-template-columns:1fr}}@media(max-width:560px){.mgmt-grid{grid-template-columns:1fr}.mgmt-head{align-items:flex-start;flex-direction:column}}
+</style>
+<div class="salon-mgmt">
+ <header class="mgmt-head"><div><h1 style="margin:0 0 6px">Salon Management</h1><div class="mgmt-sub">{{ hotel.name }} · Department performance and configuration</div></div>
+ <form method="get"><select class="mgmt-select" name="hotel" onchange="this.form.submit()">{% for item in hotels %}<option value="{{ item.pk }}" {% if item.pk == hotel.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></form></header>
+ <section class="mgmt-grid">
+  <div class="mgmt-card"><small>Today's orders</small><div class="mgmt-value">{{ today_orders }}</div></div>
+  <div class="mgmt-card"><small>Today's recognized sales</small><div class="mgmt-value">₦{{ today_revenue|floatformat:2 }}</div></div>
+  <div class="mgmt-card"><small>Active services</small><div class="mgmt-value">{{ active_services }}</div></div>
+  <div class="mgmt-card"><small>Open orders</small><div class="mgmt-value">{{ open_orders }}</div></div>
+ </section>
+ <section class="mgmt-links">
+  <a class="mgmt-link" href="{% url 'salon_service_catalogue' %}?hotel={{ hotel.pk }}"><strong>Service Catalogue</strong><span class="mgmt-sub">Manage categories, services, prices and availability</span></a>
+  <a class="mgmt-link" href="{% url 'salon_discount_policy' %}?hotel={{ hotel.pk }}"><strong>Employee Discount Policy</strong><span class="mgmt-sub">Configure the organization-wide employee discount</span></a>
+  <div class="mgmt-link"><strong>Performance &amp; Reports</strong><span class="mgmt-sub">Staff productivity and service performance reporting will be added next</span></div>
+ </section>
+ <section class="mgmt-table"><h2 style="margin-top:0">Recent Salon activity</h2><table><thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Status</th><th>Total</th></tr></thead><tbody>
+ {% for order in recent_orders %}<tr><td>SAL-{{ order.pk }}</td><td>{{ order.guest|default:order.employee|default:order.walkin_name|default:"Customer" }}</td><td>{{ order.created_at|date:"d M Y H:i" }}</td><td>{{ order.get_status_display }}</td><td>₦{{ order.total_amount|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="5">No Salon transactions yet.</td></tr>{% endfor %}
+ </tbody></table></section>
+</div>
+{% endblock %}
