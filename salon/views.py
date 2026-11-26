@@ -349,6 +349,8 @@ def salon_order_list(request):
         orders = orders.filter(created_at__date__lte=date_to)
 
     search = request.GET.get("q", "").strip()
+    if search.upper().startswith("SAL-"):
+        search = search[4:].strip()
     status = request.GET.get("status", "").strip()
     customer_type = request.GET.get("customer_type", "").strip()
     payment_method = request.GET.get("payment_method", "").strip()
@@ -357,29 +359,19 @@ def salon_order_list(request):
     cashier = request.GET.get("cashier", "").strip()
 
     if search:
+        search_query = (
+            Q(guest__first_name__icontains=search)
+            | Q(guest__last_name__icontains=search)
+            | Q(guest__phone__icontains=search)
+            | Q(employee__first_name__icontains=search)
+            | Q(employee__last_name__icontains=search)
+            | Q(employee__phone__icontains=search)
+            | Q(walkin_name__icontains=search)
+            | Q(walkin_phone__icontains=search)
+        )
         if search.isdigit():
-            orders = SalonOrder.objects.filter(department__hotel=hotel).filter(
-                Q(pk=int(search))
-                | Q(guest__first_name__icontains=search)
-                | Q(guest__last_name__icontains=search)
-                | Q(employee__first_name__icontains=search)
-                | Q(employee__last_name__icontains=search)
-                | Q(walkin_name__icontains=search)
-                | Q(walkin_phone__icontains=search)
-            ).select_related("guest", "employee", "created_by", "folio", "folio__room").prefetch_related("items__performed_by")
-            if date_from:
-                orders = orders.filter(created_at__date__gte=date_from)
-            if date_to:
-                orders = orders.filter(created_at__date__lte=date_to)
-        else:
-            orders = orders.filter(
-                Q(guest__first_name__icontains=search)
-                | Q(guest__last_name__icontains=search)
-                | Q(employee__first_name__icontains=search)
-                | Q(employee__last_name__icontains=search)
-                | Q(walkin_name__icontains=search)
-                | Q(walkin_phone__icontains=search)
-            )
+            search_query |= Q(pk=int(search))
+        orders = orders.filter(search_query)
     if status in dict(SalonOrder.STATUS_CHOICES):
         orders = orders.filter(status=status)
     if customer_type in dict(SalonOrder.CUSTOMER_TYPE_CHOICES):
