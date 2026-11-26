@@ -1,32 +1,82 @@
 {% extends "base/base.html" %}
 {% block title %}Salon Checkout{% endblock %}
 {% block content %}
-<style>.checkout{max-width:850px;margin:25px auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:26px}.checkout table{width:100%;border-collapse:collapse}.checkout th,.checkout td{padding:11px 7px;border-bottom:1px solid #e5e7eb;text-align:left}.checkout .amount{text-align:right}.checkout label{display:block;margin:10px 0;padding:12px;border:1px solid #e2e8f0;border-radius:9px}.checkout select{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:9px}.checkout button{width:100%;padding:14px;background:#1d4ed8;color:white;border:0;border-radius:10px;font-weight:800;margin-top:18px;cursor:pointer}</style>
-<div class="checkout">
-<h1>Salon Checkout · SAL-{{ order.pk }}</h1>
-<p>{{ order.get_customer_type_display }} · {% if order.guest %}{{ order.guest.full_name }}{% elif order.employee %}{{ order.employee.full_name }}{% else %}{{ order.walkin_name }}{% endif %}</p>
-<table><thead><tr><th>Service</th><th>Qty</th><th class="amount">Price</th><th class="amount">Discount</th><th class="amount">Total</th></tr></thead><tbody>
-{% for item in order.items.all %}<tr><td>{{ item.service_name_snapshot }}<br><small>{{ item.performed_by.get_full_name|default:item.performed_by.username }}</small></td><td>{{ item.quantity }}</td><td class="amount">₦{{ item.unit_price|floatformat:2 }}</td><td class="amount">{{ item.discount_percentage }}%<br>₦{{ item.discount_amount|floatformat:2 }}</td><td class="amount">₦{{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}
-</tbody></table>
-<p style="text-align:right">Subtotal: ₦{{ order.subtotal|floatformat:2 }}<br>Discount: ₦{{ order.discount_total|floatformat:2 }}</p>
-<h2 style="text-align:right">Total: ₦{{ order.total_amount|floatformat:2 }}</h2>
-<form method="post" action="{% url 'salon_order_settle' order.pk %}">{% csrf_token %}
-{% if order.customer_type == "HOTEL_GUEST" %}
-<label><input type="radio" name="settlement" value="ROOM"> Charge active guest room folio</label>
-{% endif %}
-<label><input type="radio" name="settlement" value="DIRECT" checked> Pay directly</label>
-<div id="direct-payment"><h3>Payment method</h3>
-<label><input type="radio" name="payment_method" value="CASH" checked> Cash</label>
-<label><input type="radio" name="payment_method" value="POS"> POS</label>
-<label><input type="radio" name="payment_method" value="TRANSFER"> Bank Transfer</label>
-<div id="bank-select" hidden><p>Receiving bank account</p><select name="bank_account_id"><option value="">Select bank account</option>{% for bank in bank_accounts %}<option value="{{ bank.pk }}">{{ bank.bank_name }} · {{ bank.account_name }} · {{ bank.account_number }}</option>{% endfor %}</select></div>
-</div>
-<button type="submit">Confirm and settle order</button>
-</form>
-<a href="{% url 'salon_pos' %}">Return to Salon POS</a>
+<style>
+.salon-checkout{max-width:1120px;margin:28px auto;color:#172033}
+.checkout-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}
+.checkout-heading h1{font-size:clamp(1.5rem,2.5vw,2rem);letter-spacing:-.04em;margin:0}
+.checkout-subtitle{color:#64748b;margin-top:6px}
+.checkout-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(290px,.8fr);gap:18px;align-items:start}
+.checkout-panel{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:22px;box-shadow:0 8px 24px rgba(15,23,42,.055)}
+.checkout-panel h2{font-size:17px;margin:0 0 16px;letter-spacing:-.02em}
+.checkout-customer{display:flex;align-items:center;gap:12px;padding:14px;border-radius:13px;background:#eff6ff;border:1px solid #dbeafe;margin-bottom:18px}
+.checkout-avatar{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:#dbeafe;font-size:21px}
+.checkout-customer strong,.checkout-customer small{display:block}.checkout-customer small{color:#64748b;margin-top:3px}
+.checkout-items{display:grid;gap:10px}
+.checkout-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:13px;border:1px solid #edf0f5;border-radius:12px;background:#fcfdff}
+.checkout-item strong{display:block;font-size:14px}.checkout-item small{display:block;color:#64748b;margin-top:4px}
+.checkout-item-amount{text-align:right;font-weight:800;white-space:nowrap}
+.checkout-item-amount small{font-weight:500}
+.checkout-summary{border-top:1px solid #e8edf4;margin-top:16px;padding-top:14px;display:grid;gap:9px}
+.checkout-summary-row{display:flex;justify-content:space-between;gap:12px;color:#475569;font-size:14px}
+.checkout-grand-total{display:flex;justify-content:space-between;align-items:center;padding:15px;margin-top:13px;border-radius:13px;background:#eff6ff;color:#1e40af;font-size:19px;font-weight:900}
+.settlement-option,.payment-option{display:flex;align-items:center;gap:10px;padding:13px;border:1px solid #e2e8f0;border-radius:12px;margin:9px 0;cursor:pointer;transition:border-color .15s,background .15s}
+.settlement-option:has(input:checked),.payment-option:has(input:checked){border-color:#60a5fa;background:#eff6ff}
+.settlement-option input,.payment-option input{accent-color:#2563eb;width:17px;height:17px}
+.checkout-label{font-weight:800;font-size:14px;margin:18px 0 9px}
+.checkout-select{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;background:white}
+.checkout-submit{width:100%;padding:15px;border:0;border-radius:12px;background:linear-gradient(110deg,#2563eb,#1d4ed8);color:white;font-size:15px;font-weight:850;margin-top:16px;cursor:pointer;box-shadow:0 6px 14px rgba(37,99,235,.2)}
+.checkout-submit:hover{filter:brightness(1.06)}
+.checkout-back{display:inline-block;margin-top:14px;color:#1d4ed8;font-weight:700;text-decoration:none}
+.checkout-note{font-size:12px;color:#64748b;line-height:1.5;margin:10px 0 0}
+@media(max-width:850px){.checkout-layout{grid-template-columns:1fr}.salon-checkout{margin:16px auto}.checkout-heading{align-items:flex-start;flex-direction:column}}
+@media(max-width:520px){.checkout-panel{padding:16px}.checkout-item{grid-template-columns:minmax(0,1fr) auto}.checkout-grand-total{font-size:17px}}
+</style>
+<div class="salon-checkout">
+ <div class="checkout-heading"><div><h1>Complete Salon Checkout</h1><div class="checkout-subtitle">Order SAL-{{ order.pk }} · Review services and confirm settlement</div></div><a class="checkout-back" href="{% url 'salon_pos' %}">← Back to Salon POS</a></div>
+ <div class="checkout-layout">
+  <section class="checkout-panel">
+   <h2>Order summary</h2>
+   <div class="checkout-customer"><span class="checkout-avatar">{% if order.customer_type == "HOTEL_GUEST" %}🛎️{% elif order.customer_type == "EMPLOYEE" %}🪪{% else %}🧍{% endif %}</span><span><strong>{% if order.guest %}{{ order.guest.full_name }}{% elif order.employee %}{{ order.employee.full_name }}{% else %}{{ order.walkin_name }}{% endif %}</strong><small>{{ order.get_customer_type_display }}{% if order.folio.room %} · Room {{ order.folio.room.room_number }}{% endif %}</small></span></div>
+   <div class="checkout-items">
+    {% for item in order.items.all %}
+     <div class="checkout-item"><div><strong>{{ item.service_name_snapshot }}</strong><small>{{ item.quantity }} × ₦{{ item.unit_price|floatformat:2 }} · Performed by {{ item.performed_by.get_full_name|default:item.performed_by.username }}</small>{% if item.discount_percentage %}<small>Employee discount: {{ item.discount_percentage }}%</small>{% endif %}</div><div class="checkout-item-amount">₦{{ item.line_total|floatformat:2 }}<small>{% if item.discount_amount %}−₦{{ item.discount_amount|floatformat:2 }}{% endif %}</small></div></div>
+    {% endfor %}
+   </div>
+   <div class="checkout-summary">
+    <div class="checkout-summary-row"><span>Subtotal</span><strong>₦{{ order.subtotal|floatformat:2 }}</strong></div>
+    <div class="checkout-summary-row"><span>Discount</span><strong>−₦{{ order.discount_total|floatformat:2 }}</strong></div>
+   </div>
+   <div class="checkout-grand-total"><span>Amount due</span><span>₦{{ order.total_amount|floatformat:2 }}</span></div>
+  </section>
+  <section class="checkout-panel">
+   <h2>Settlement method</h2>
+   <form method="post" action="{% url 'salon_order_settle' order.pk %}">{% csrf_token %}
+    {% if order.customer_type == "HOTEL_GUEST" %}
+     <label class="settlement-option"><input type="radio" name="settlement" value="ROOM"><span><strong>Charge guest room</strong><small class="checkout-note">Post this Salon bill to the guest's active room folio</small></span></label>
+    {% endif %}
+    <label class="settlement-option"><input type="radio" name="settlement" value="DIRECT" checked><span><strong>Pay directly</strong><small class="checkout-note">Collect payment now</small></span></label>
+    <div id="direct-payment">
+     <div class="checkout-label">Payment method</div>
+     <label class="payment-option"><input type="radio" name="payment_method" value="CASH" checked><span>💵 Cash</span></label>
+     <label class="payment-option"><input type="radio" name="payment_method" value="POS"><span>💳 POS terminal</span></label>
+     <label class="payment-option"><input type="radio" name="payment_method" value="TRANSFER"><span>🏦 Bank transfer</span></label>
+     <div id="bank-select" hidden><div class="checkout-label">Receiving bank account</div><select class="checkout-select" name="bank_account_id"><option value="">Select bank account</option>{% for bank in bank_accounts %}<option value="{{ bank.pk }}">{{ bank.bank_name }} · {{ bank.account_name }} · {{ bank.account_number }}</option>{% endfor %}</select></div>
+    </div>
+    <button class="checkout-submit" type="submit">Confirm and settle · ₦{{ order.total_amount|floatformat:2 }}</button>
+   </form>
+   <p class="checkout-note">Please confirm the customer, services, quantities and amount before completing settlement.</p>
+  </section>
+ </div>
 </div>
 <script>
-const methods=document.querySelectorAll('[name="payment_method"]');const bank=document.getElementById("bank-select");function paymentFields(){const m=document.querySelector('[name="payment_method"]:checked')?.value;bank.hidden=m==="CASH";}methods.forEach(x=>x.addEventListener("change",paymentFields));paymentFields();
-document.querySelectorAll('[name="settlement"]').forEach(x=>x.addEventListener("change",()=>{document.getElementById("direct-payment").hidden=document.querySelector('[name="settlement"]:checked').value==="ROOM"}));
+const methods=document.querySelectorAll('[name="payment_method"]');
+const bank=document.getElementById("bank-select");
+function paymentFields(){const method=document.querySelector('[name="payment_method"]:checked')?.value;bank.hidden=method==="CASH";}
+methods.forEach(input=>input.addEventListener("change",paymentFields));paymentFields();
+document.querySelectorAll('[name="settlement"]').forEach(input=>input.addEventListener("change",()=>{
+ const room=document.querySelector('[name="settlement"]:checked')?.value==="ROOM";
+ document.getElementById("direct-payment").hidden=room;
+}));
 </script>
 {% endblock %}
