@@ -1,12 +1,82 @@
 {% extends "base/base.html" %}
 {% block title %}Salon Shift #{{ shift.pk }}{% endblock %}
 {% block content %}
-<div style="max-width:1100px;margin:25px auto;color:#172033"><h1>Salon Shift #{{ shift.pk }}</h1><p style="color:#64748b">{{ shift.user.get_full_name|default:shift.user.username }} · {{ shift.opened_at|date:"d M Y H:i" }} · {{ shift.get_status_display }}</p>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px">
-{% for label,value in summary.items %}<div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:18px"><div style="color:#64748b">{{ label|title }}</div><strong style="font-size:22px">₦{{ value|floatformat:2 }}</strong></div>{% endfor %}
-<div style="background:white;border:1px solid #e2e8f0;border-radius:12px;padding:18px"><div style="color:#64748b">Opening Float</div><strong style="font-size:22px">₦{{ shift.opening_cash|floatformat:2 }}</strong></div></div>
-{% if shift.status == "OPEN" and shift.user_id == request.user.id %}
-<div style="display:flex;gap:10px;flex-wrap:wrap;margin:18px 0"><a href="{% url 'salon_partial_cash_handover' shift.pk %}" style="background:#334155;color:white;padding:11px 15px;border-radius:8px;text-decoration:none">Hand Over Cash</a></div>
-<form method="post" style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:20px">{% csrf_token %}<input type="hidden" name="action" value="close"><h2>Close Shift</h2><label>Physical cash counted (₦)</label><input name="closing_cash" type="number" min="0" step="0.01" required style="display:block;width:100%;max-width:360px;padding:12px;margin:8px 0 14px;border:1px solid #cbd5e1;border-radius:8px"><label>Closing notes</label><textarea name="notes" rows="2" style="display:block;width:100%;max-width:600px;padding:10px;margin:8px 0 14px;border:1px solid #cbd5e1;border-radius:8px"></textarea><button style="background:#b91c1c;color:white;padding:11px 16px;border:0;border-radius:8px">Close Shift</button></form>{% endif %}
-<section style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-top:18px"><h2>Cash handover history</h2>{% for h in handovers %}<p style="border-top:1px solid #e2e8f0;padding-top:10px">#{{ h.pk }} · {{ h.get_custody_type_display }} · ₦{{ h.sender_count|floatformat:2 }} · {{ h.get_status_display }} · {{ h.to_user }}</p>{% empty %}<p style="color:#64748b">No handovers recorded for this shift.</p>{% endfor %}</section></div>
+{% include "salon/_shift_styles.html" %}
+<div class="salon-shift-page">
+  {% if messages %}{% for message in messages %}<div class="alert">{{ message }}</div>{% endfor %}{% endif %}
+  <div class="page-heading">
+    <div>
+      <div class="eyebrow">Salon operations · Cashier shift</div>
+      <h1>Shift #{{ shift.pk }}</h1>
+      <div class="muted">{{ shift.user.get_full_name|default:shift.user.username }} <span aria-hidden="true">·</span> Opened {{ shift.opened_at|date:"d M Y, H:i" }}</div>
+    </div>
+    <div class="actions">
+      {% if shift.status == "OPEN" %}<span class="status-pill status-open">Open shift</span>{% else %}<span class="status-pill status-closed">Closed shift</span>{% endif %}
+      <a class="btn btn-secondary" href="{% url 'salon_shift_list' %}">All shifts</a>
+    </div>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">Cash sales</div><div class="metric-value">₦{{ summary.cash_sales|floatformat:2 }}</div></div>
+    <div class="metric"><div class="metric-label">Partial handovers</div><div class="metric-value">₦{{ summary.partial_handover|floatformat:2 }}</div></div>
+    <div class="metric"><div class="metric-label">Expected till cash</div><div class="metric-value">₦{{ summary.expected_cash|floatformat:2 }}</div></div>
+    <div class="metric"><div class="metric-label">Total sales</div><div class="metric-value">₦{{ summary.sales_total|floatformat:2 }}</div></div>
+    <div class="metric"><div class="metric-label">Completed orders</div><div class="metric-value">{{ summary.completed_orders }}</div></div>
+    <div class="metric"><div class="metric-label">Closing variance</div><div class="metric-value">{% if summary.closing_variance != None %}₦{{ summary.closing_variance|floatformat:2 }}{% else %}<span class="muted">Pending close</span>{% endif %}</div></div>
+    <div class="metric"><div class="metric-label">Opening float</div><div class="metric-value">₦{{ shift.opening_cash|floatformat:2 }}</div></div>
+  </div>
+
+  {% if shift.status == "OPEN" and shift.user_id == request.user.id %}
+    <div class="actions section-gap" style="margin-bottom:18px">
+      <a class="btn btn-primary" href="{% url 'salon_partial_cash_handover' shift.pk %}">Hand over cash</a>
+    </div>
+    <section class="panel">
+      <div class="eyebrow">End of shift</div>
+      <h2>Close shift & reconcile cash</h2>
+      <p class="muted" style="margin:-7px 0 18px">Count the physical cash in the till and record any closing notes. All open orders and pending partial handovers must be resolved first.</p>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="close">
+        <div class="form-grid">
+          <div class="field">
+            <label for="closing_cash">Physical cash counted (₦)</label>
+            <input id="closing_cash" name="closing_cash" type="number" min="0" step="0.01" required placeholder="0.00">
+          </div>
+          <div class="field">
+            <label for="closing_notes">Closing notes <span class="muted">(optional)</span></label>
+            <textarea id="closing_notes" name="notes" rows="2" placeholder="Add a note about the cash count or shift..."></textarea>
+          </div>
+        </div>
+        <div class="actions" style="margin-top:18px">
+          <button class="btn btn-danger" type="submit">Close shift</button>
+        </div>
+      </form>
+    </section>
+  {% endif %}
+
+  <section class="panel section-gap">
+    <div class="page-heading" style="margin-bottom:8px">
+      <div><div class="eyebrow">Cash custody</div><h2 style="margin-bottom:0">Handover history</h2></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Reference</th><th>Type</th><th>Recipient</th><th>Amount</th><th>Submitted</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for h in handovers %}
+            <tr>
+              <td>#{{ h.pk }}</td>
+              <td>{{ h.get_custody_type_display }}</td>
+              <td>{{ h.to_user.get_full_name|default:h.to_user.username }}</td>
+              <td>₦{{ h.sender_count|floatformat:2 }}</td>
+              <td>{{ h.created_at|date:"d M Y, H:i" }}</td>
+              <td>{{ h.get_status_display }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6"><div class="empty-state">No cash handovers have been submitted for this shift.</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
 {% endblock %}
