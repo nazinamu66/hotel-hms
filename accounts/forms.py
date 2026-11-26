@@ -545,6 +545,7 @@ class UserCreateForm(forms.ModelForm):
             "HOUSEKEEPING",
             "LAUNDRY",
             "GYM",
+            "SALON",
             "BOUTIQUE",
             "MAINTENANCE",
             "SECURITY",
