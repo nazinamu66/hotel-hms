@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     "opening_stock",
     "security",
     "personnel",
+    "salon.apps.SalonConfig",
 ]
 
 MIDDLEWARE = [
