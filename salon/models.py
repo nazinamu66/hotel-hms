@@ -6,7 +6,7 @@ from django.db import models
 from django.db.models import Q
 
 from billing.models import Folio, Guest
-from inventory.models import Department, Hotel
+from inventory.models import Department, Hotel, Organization
 from personnel.models import EmployeeProfile
 
 
@@ -65,8 +65,8 @@ class SalonService(models.Model):
 class SalonDiscountPolicy(models.Model):
     """Hotel-level CCH employee discount policy; current default is 50%."""
 
-    hotel = models.OneToOneField(
-        Hotel, on_delete=models.CASCADE, related_name="salon_discount_policy"
+    organization = models.OneToOneField(
+        Organization, on_delete=models.CASCADE, related_name="salon_discount_policy"
     )
     employee_discount_percent = models.DecimalField(
         max_digits=5, decimal_places=2, default=Decimal("50.00")
@@ -94,7 +94,7 @@ class SalonDiscountPolicy(models.Model):
             })
 
     def __str__(self):
-        return f"{self.hotel} · {self.employee_discount_percent}% employee discount"
+        return f"{self.organization} · {self.employee_discount_percent}% employee discount"
 
 
 class SalonOrder(models.Model):
@@ -149,8 +149,8 @@ class SalonOrder(models.Model):
     class Meta:
         ordering = ["-created_at", "-pk"]
         indexes = [
-            models.Index(fields=["department", "created_at"], name="salon_salonor_departm_8c2c16_idx"),
-            models.Index(fields=["customer_type", "status"], name="salon_salonor_custome_4e8d63_idx"),
+            models.Index(fields=["department", "created_at"], name="salon_ord_dept_created_idx"),
+            models.Index(fields=["customer_type", "status"], name="salon_ord_customer_status_idx"),
         ]
         constraints = [
             models.CheckConstraint(
@@ -183,8 +183,14 @@ class SalonOrder(models.Model):
                 errors["employee"] = "Select the CCH employee receiving the service."
             if self.guest_id or self.walkin_name:
                 errors["customer_type"] = "An employee order cannot also identify a guest or walk-in customer."
-            if self.employee_id and self.department_id and self.employee.hotel_id != self.department.hotel_id:
-                errors["employee"] = "The employee must belong to the Salon's hotel."
+            if self.employee_id and self.department_id:
+                salon_organization_id = self.department.hotel.organization_id
+                employee_organization_id = self.employee.hotel.organization_id
+                if salon_organization_id:
+                    if employee_organization_id != salon_organization_id:
+                        errors["employee"] = "The employee must belong to the same CCH organization."
+                elif self.employee.hotel_id != self.department.hotel_id:
+                    errors["employee"] = "The employee must belong to the Salon's hotel."
             if self.employee_id and self.employee.employment_status != EmployeeProfile.ACTIVE:
                 errors["employee"] = "Only active employees qualify for the CCH employee discount."
             if self.folio_id and self.folio.folio_type == "ROOM":
