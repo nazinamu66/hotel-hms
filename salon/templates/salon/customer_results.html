@@ -1,0 +1,7 @@
+{% for item in results %}
+<button type="button" class="lookup-result" data-select-kind="{{ kind }}" data-id="{{ item.pk }}" data-label="{% if kind == 'GUEST' %}{{ item.full_name|escape }} · {{ item.phone|default:'No phone'|escape }}{% elif kind == 'EMPLOYEE' %}{{ item.full_name|escape }} · {{ item.employee_number|escape }} · {{ item.hotel.name|escape }}{% else %}Room {{ item.room_number|escape }}{% with folio=item.folios.all|first %}{% if folio %} · {{ folio.guest.full_name|escape }}{% endif %}{% endwith %}{% endif %}">
+{% if kind == "GUEST" %}{{ item.full_name }} · {{ item.phone|default:"No phone" }}
+{% elif kind == "EMPLOYEE" %}{{ item.full_name }} · {{ item.employee_number }} · {{ item.hotel.name }}
+{% else %}Room {{ item.room_number }}{% with folio=item.folios.all|first %}{% if folio %} · {{ folio.guest.full_name }}{% endif %}{% endwith %}{% endif %}
+</button>
+{% empty %}<p class="muted">No matching records found.</p>{% endfor %}
