@@ -63,7 +63,7 @@ class SalonService(models.Model):
 
 
 class SalonDiscountPolicy(models.Model):
-    """Hotel-level CCH employee discount policy; current default is 50%."""
+    """Organization-wide CCH employee discount policy; current default is 50%."""
 
     organization = models.OneToOneField(
         Organization, on_delete=models.CASCADE, related_name="salon_discount_policy"
