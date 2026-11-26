@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "security",
     "personnel",
     "salon.apps.SalonConfig",
+    "gym.apps.GymConfig",
 ]
 
 MIDDLEWARE = [
