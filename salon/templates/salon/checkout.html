@@ -1,0 +1,32 @@
+{% extends "base/base.html" %}
+{% block title %}Salon Checkout{% endblock %}
+{% block content %}
+<style>.checkout{max-width:850px;margin:25px auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:26px}.checkout table{width:100%;border-collapse:collapse}.checkout th,.checkout td{padding:11px 7px;border-bottom:1px solid #e5e7eb;text-align:left}.checkout .amount{text-align:right}.checkout label{display:block;margin:10px 0;padding:12px;border:1px solid #e2e8f0;border-radius:9px}.checkout select{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:9px}.checkout button{width:100%;padding:14px;background:#1d4ed8;color:white;border:0;border-radius:10px;font-weight:800;margin-top:18px;cursor:pointer}</style>
+<div class="checkout">
+<h1>Salon Checkout · SAL-{{ order.pk }}</h1>
+<p>{{ order.get_customer_type_display }} · {% if order.guest %}{{ order.guest.full_name }}{% elif order.employee %}{{ order.employee.full_name }}{% else %}{{ order.walkin_name }}{% endif %}</p>
+<table><thead><tr><th>Service</th><th>Qty</th><th class="amount">Price</th><th class="amount">Discount</th><th class="amount">Total</th></tr></thead><tbody>
+{% for item in order.items.all %}<tr><td>{{ item.service_name_snapshot }}<br><small>{{ item.performed_by.get_full_name|default:item.performed_by.username }}</small></td><td>{{ item.quantity }}</td><td class="amount">₦{{ item.unit_price|floatformat:2 }}</td><td class="amount">{{ item.discount_percentage }}%<br>₦{{ item.discount_amount|floatformat:2 }}</td><td class="amount">₦{{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}
+</tbody></table>
+<p style="text-align:right">Subtotal: ₦{{ order.subtotal|floatformat:2 }}<br>Discount: ₦{{ order.discount_total|floatformat:2 }}</p>
+<h2 style="text-align:right">Total: ₦{{ order.total_amount|floatformat:2 }}</h2>
+<form method="post" action="{% url 'salon_order_settle' order.pk %}">{% csrf_token %}
+{% if order.customer_type == "HOTEL_GUEST" %}
+<label><input type="radio" name="settlement" value="ROOM"> Charge active guest room folio</label>
+{% endif %}
+<label><input type="radio" name="settlement" value="DIRECT" checked> Pay directly</label>
+<div id="direct-payment"><h3>Payment method</h3>
+<label><input type="radio" name="payment_method" value="CASH" checked> Cash</label>
+<label><input type="radio" name="payment_method" value="POS"> POS</label>
+<label><input type="radio" name="payment_method" value="TRANSFER"> Bank Transfer</label>
+<div id="bank-select" hidden><p>Receiving bank account</p><select name="bank_account_id"><option value="">Select bank account</option>{% for bank in bank_accounts %}<option value="{{ bank.pk }}">{{ bank.bank_name }} · {{ bank.account_name }} · {{ bank.account_number }}</option>{% endfor %}</select></div>
+</div>
+<button type="submit">Confirm and settle order</button>
+</form>
+<a href="{% url 'salon_pos' %}">Return to Salon POS</a>
+</div>
+<script>
+const methods=document.querySelectorAll('[name="payment_method"]');const bank=document.getElementById("bank-select");function paymentFields(){const m=document.querySelector('[name="payment_method"]:checked')?.value;bank.hidden=m==="CASH";}methods.forEach(x=>x.addEventListener("change",paymentFields));paymentFields();
+document.querySelectorAll('[name="settlement"]').forEach(x=>x.addEventListener("change",()=>{document.getElementById("direct-payment").hidden=document.querySelector('[name="settlement"]:checked').value==="ROOM"}));
+</script>
+{% endblock %}
