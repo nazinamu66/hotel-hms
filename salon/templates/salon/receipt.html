@@ -47,7 +47,11 @@ body{font-size:12px;line-height:1.4}
 </div>
 <main class="receipt">
 <header class="center">
-<div class="brand">{{ order.department.hotel.name }}</div>
+{% if organization and organization.logo %}
+<img class="logo" src="{{ organization.logo.url }}" alt="{{ organization.name }} logo">
+{% endif %}
+<div class="brand">{% if organization %}{{ organization.name }}{% else %}{{ order.department.hotel.name }}{% endif %}</div>
+<div class="hotel">{{ order.department.hotel.name }}</div>
 <div class="hotel">SALON SERVICES</div>
 <div class="heading">SERVICE RECEIPT</div>
 <div class="order-no">SAL-{{ order.pk }}</div>
