@@ -2,17 +2,21 @@ import json
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db.models import Q
+from decimal import Decimal, InvalidOperation
+
+from django.db.models import Q, Sum
+from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from accounts.decorators import role_required
 from accounting.models import BankAccount
 from billing.models import Guest, Folio
-from inventory.models import HotelFeature
+from inventory.models import HotelFeature, Hotel
+from core.utils import get_user_hotels
 from personnel.models import EmployeeProfile
 from rooms.models import Room
-from salon.models import SalonOrder, SalonService, SalonServiceCategory
+from salon.models import SalonDiscountPolicy, SalonOrder, SalonService, SalonServiceCategory
 from salon.services.orders import create_salon_order, settle_salon_order
 
 
@@ -151,4 +155,121 @@ def salon_customer_lookup(request):
         ).distinct()[:15])
     return render(request, "salon/customer_results.html", {
         "kind": kind, "results": results,
+    })
+
+
+
+def _management_hotel(request):
+    if request.user.role not in {"ADMIN", "DIRECTOR"}:
+        raise PermissionDenied
+    hotels = get_user_hotels(request.user).filter(is_active=True).order_by("name")
+    hotel_id = request.GET.get("hotel") or request.POST.get("hotel")
+    if hotel_id:
+        hotel = get_object_or_404(hotels, pk=hotel_id)
+    else:
+        hotel = hotels.first()
+    if not hotel:
+        raise PermissionDenied("No active hotel is assigned to your organization.")
+    if not HotelFeature.objects.filter(hotel=hotel, feature="SALON", is_active=True).exists():
+        raise PermissionDenied("Salon is not enabled for this hotel.")
+    return hotels, hotel
+
+
+@role_required("SALON")
+def salon_operations_dashboard(request):
+    department = _salon_access(request.user)
+    orders = SalonOrder.objects.filter(department=department)
+    today = timezone.localdate()
+    return render(request, "salon/operations_dashboard.html", {
+        "hotel": department.hotel,
+        "today_orders": orders.filter(created_at__date=today).count(),
+        "today_revenue": orders.filter(created_at__date=today, status__in=["PAID", "CHARGED"]).aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00"),
+        "open_orders": orders.filter(status="OPEN").count(),
+        "recent_orders": orders.select_related("guest", "employee").order_by("-created_at")[:10],
+    })
+
+
+@role_required("ADMIN", "DIRECTOR")
+def salon_management_dashboard(request):
+    hotels, hotel = _management_hotel(request)
+    orders = SalonOrder.objects.filter(department__hotel=hotel)
+    today = timezone.localdate()
+    return render(request, "salon/management_dashboard.html", {
+        "hotels": hotels,
+        "hotel": hotel,
+        "today_orders": orders.filter(created_at__date=today).count(),
+        "today_revenue": orders.filter(created_at__date=today, status__in=["PAID", "CHARGED"]).aggregate(total=Sum("total_amount"))["total"] or Decimal("0.00"),
+        "open_orders": orders.filter(status="OPEN").count(),
+        "active_services": SalonService.objects.filter(hotel=hotel, is_active=True).count(),
+        "active_categories": SalonServiceCategory.objects.filter(hotel=hotel, is_active=True).count(),
+        "recent_orders": orders.select_related("guest", "employee").order_by("-created_at")[:10],
+    })
+
+
+@role_required("ADMIN", "DIRECTOR")
+def salon_service_catalogue(request):
+    hotels, hotel = _management_hotel(request)
+    if request.method == "POST":
+        action = request.POST.get("action")
+        try:
+            if action == "category":
+                name = request.POST.get("category_name", "").strip()
+                if not name:
+                    raise ValidationError("Enter a category name.")
+                SalonServiceCategory.objects.create(
+                    hotel=hotel, name=name,
+                    description=request.POST.get("category_description", "").strip(),
+                    display_order=int(request.POST.get("display_order") or 0),
+                )
+                messages.success(request, "Salon service category created.")
+            elif action == "service":
+                category = get_object_or_404(SalonServiceCategory, pk=request.POST.get("category_id"), hotel=hotel)
+                name = request.POST.get("service_name", "").strip()
+                price = Decimal(request.POST.get("price", "").strip())
+                duration = int(request.POST.get("duration_minutes") or 30)
+                if not name or price < 0 or duration < 1:
+                    raise ValidationError("Enter a valid service name, non-negative price and duration.")
+                SalonService.objects.create(
+                    hotel=hotel, category=category, name=name,
+                    description=request.POST.get("service_description", "").strip(),
+                    price=price, duration_minutes=duration,
+                )
+                messages.success(request, "Salon service created.")
+            elif action == "toggle":
+                service = get_object_or_404(SalonService, pk=request.POST.get("service_id"), hotel=hotel)
+                service.is_active = not service.is_active
+                service.save(update_fields=["is_active", "updated_at"])
+                messages.success(request, "Service status updated.")
+        except (ValueError, InvalidOperation, ValidationError) as exc:
+            messages.error(request, str(exc) or "Please check the submitted values.")
+        return redirect(f"{request.path}?hotel={hotel.pk}")
+    categories = SalonServiceCategory.objects.filter(hotel=hotel).prefetch_related("services")
+    services = SalonService.objects.filter(hotel=hotel).select_related("category").order_by("category__display_order", "category__name", "name")
+    return render(request, "salon/service_catalogue.html", {
+        "hotels": hotels, "hotel": hotel, "categories": categories, "services": services,
+    })
+
+
+@role_required("ADMIN", "DIRECTOR")
+def salon_discount_policy(request):
+    hotels, hotel = _management_hotel(request)
+    organization = hotel.organization
+    if not organization:
+        raise PermissionDenied("This hotel is not linked to an organization.")
+    policy, _ = SalonDiscountPolicy.objects.get_or_create(organization=organization)
+    if request.method == "POST":
+        try:
+            percent = Decimal(request.POST.get("employee_discount_percent", "").strip())
+            if percent < 0 or percent > 100:
+                raise ValidationError("Discount must be between 0 and 100 percent.")
+            policy.employee_discount_percent = percent
+            policy.is_active = request.POST.get("is_active") == "on"
+            policy.updated_by = request.user
+            policy.save()
+            messages.success(request, "Organization-wide Salon employee discount policy updated.")
+        except (ValueError, InvalidOperation, ValidationError) as exc:
+            messages.error(request, str(exc) or "Enter a valid discount percentage.")
+        return redirect(f"{request.path}?hotel={hotel.pk}")
+    return render(request, "salon/discount_policy.html", {
+        "hotels": hotels, "hotel": hotel, "policy": policy,
     })
