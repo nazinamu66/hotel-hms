@@ -7,7 +7,6 @@
     <div><div class="eyebrow">Salon operations · Cash custody</div><h1>Hand over cash</h1><div class="muted">Shift #{{ shift.pk }} · Submit cash for independent confirmation.</div></div>
     <a class="btn btn-secondary" href="{% url 'salon_shift_detail' shift.pk %}">Back to shift</a>
   </div>
-  {% if messages %}{% for message in messages %}<div class="alert">{{ message }}</div>{% endfor %}{% endif %}
   <div class="metric-grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">
     <div class="metric"><div class="metric-label">Expected till cash</div><div class="metric-value">₦{{ summary.expected_cash|floatformat:2 }}</div></div>
     <div class="metric"><div class="metric-label">Cash sales</div><div class="metric-value">₦{{ summary.cash_sales|floatformat:2 }}</div></div>
@@ -29,7 +28,7 @@
           <label for="handover_type">Handover type</label>
           <select id="handover_type" name="handover_type" required>
             <option value="PARTIAL">Partial handover · shift remains open</option>
-            <option value="CUSTODY">Full cash handover · close the till after confirmation</option>
+            <option value="CUSTODY">Full cash handover · shift remains open until you close it separately</option>
           </select>
         </div>
         <div class="field">
