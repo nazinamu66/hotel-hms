@@ -186,6 +186,78 @@ def gym_plan_update(request, plan_id):
 
 @role_required("SECURITY", "MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR")
 def gym_gate_verify(request):
+    from uuid import UUID
+
+    from .forms import GymGateLookupForm
+    from .services.gate import check_in_member, check_out_member
+
     _security_or_management(request.user)
     hotel = _hotel_for_gym(request.user)
-    return render(request, "gym/gate_verify.html", {"hotel": hotel})
+    form = GymGateLookupForm(request.POST or None)
+    membership = None
+    open_visit = None
+    recent_visits = GymVisit.objects.filter(hotel=hotel).select_related(
+        "membership__member", "membership__plan"
+    )[:10]
+    error_message = None
+
+    if request.method == "POST" and form.is_valid():
+        action = form.cleaned_data.get("action") or "lookup"
+        if action == "lookup":
+            code = form.cleaned_data["code"].strip()
+            memberships = GymMembership.objects.filter(
+                hotel=hotel, member__hotel=hotel
+            ).select_related("member", "plan").order_by("-start_date", "-created_at")
+            try:
+                token = UUID(code)
+            except (ValueError, TypeError, AttributeError):
+                token = None
+            if token:
+                membership = memberships.filter(pass_token=token).first()
+            else:
+                membership = memberships.filter(member__member_number__iexact=code).first()
+
+            if membership:
+                open_visit = GymVisit.objects.filter(
+                    membership=membership, hotel=hotel, exited_at__isnull=True
+                ).first()
+                if membership.status != GymMembership.ACTIVE:
+                    error_message = f"Membership is {membership.get_status_display().lower()}."
+                elif not membership.member.is_active:
+                    error_message = "This member record is inactive."
+                elif membership.start_date > timezone.localdate():
+                    error_message = "This membership has not started yet."
+                elif membership.end_date < timezone.localdate():
+                    error_message = "This membership has expired."
+            else:
+                error_message = "No membership was found for that pass or member number."
+        elif action == "check_in":
+            membership_id = request.POST.get("membership_id")
+            try:
+                visit = check_in_member(
+                    membership_id=membership_id, hotel=hotel, user=request.user,
+                    note=request.POST.get("gate_note", ""),
+                )
+            except (ValidationError, ValueError, TypeError) as exc:
+                error_message = "; ".join(exc.messages) if isinstance(exc, ValidationError) else "Invalid membership."
+                membership = GymMembership.objects.filter(
+                    pk=membership_id, hotel=hotel, member__hotel=hotel
+                ).select_related("member", "plan").first()
+            else:
+                messages.success(request, f"{visit.membership.member.full_name} checked in successfully.")
+                return redirect("gym_gate_verify")
+        elif action == "check_out":
+            visit_id = request.POST.get("visit_id")
+            try:
+                visit = check_out_member(visit_id=visit_id, hotel=hotel, user=request.user)
+            except (ValidationError, ValueError, TypeError) as exc:
+                error_message = "; ".join(exc.messages) if isinstance(exc, ValidationError) else "Invalid visit."
+            else:
+                messages.success(request, f"{visit.membership.member.full_name} checked out successfully.")
+                return redirect("gym_gate_verify")
+
+    return render(request, "gym/gate_verify.html", {
+        "hotel": hotel, "form": form, "membership": membership,
+        "open_visit": open_visit, "recent_visits": recent_visits,
+        "error_message": error_message,
+    })
