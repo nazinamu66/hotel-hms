@@ -564,7 +564,7 @@
             <span class="arrow">▸</span>
             Housekeeping Reports
         </h4>
-        <div id="housekeeping_management_menu" class="menu-section {% if request.resolver_match.url_name == 'housekeeping_management_overview' or request.resolver_match.url_name == 'housekeeping_staff_productivity' or request.resolver_match.url_name == 'housekeeping_inspection_quality' or request.resolver_match.url_name == 'salon_management_dashboard' or request.resolver_match.url_name == 'salon_service_catalogue' or request.resolver_match.url_name == 'salon_discount_policy' %}open{% endif %}">
+        <div id="housekeeping_management_menu" class="menu-section {% if request.resolver_match.url_name == 'housekeeping_management_overview' or request.resolver_match.url_name == 'housekeeping_staff_productivity' or request.resolver_match.url_name == 'housekeeping_inspection_quality' or request.resolver_match.url_name == 'salon_management_dashboard' or request.resolver_match.url_name == 'salon_service_catalogue' or request.resolver_match.url_name == 'salon_discount_policy' or request.resolver_match.url_name == 'salon_reports' or request.resolver_match.url_name == 'salon_order_list' or request.resolver_match.url_name == 'salon_order_detail' %}open{% endif %}">
             <a href="{% url 'housekeeping_management_overview' %}">Management Overview</a>
             <a href="{% url 'housekeeping_staff_productivity' %}">Staff Productivity</a>
             <a href="{% url 'housekeeping_inspection_quality' %}">Inspection &amp; Quality</a>
