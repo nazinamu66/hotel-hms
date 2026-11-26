@@ -43,6 +43,7 @@ urlpatterns = [
     path("security/", include("security.urls")),
     path("personnel/", include("personnel.urls")),
     path("salon/", include("salon.urls")),
+    path("gym/", include("gym.urls")),
     
 
 
