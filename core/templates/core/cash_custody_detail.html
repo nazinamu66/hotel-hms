@@ -50,6 +50,15 @@
             </div>
 
             <div>
+                <div style="color:#777;">Linked Shift</div>
+                <strong>
+                    {% if handover.salon_shift %}Salon Shift #{{ handover.salon_shift_id }}
+                    {% elif handover.shift %}Restaurant Shift #{{ handover.shift_id }}
+                    {% else %}Not linked{% endif %}
+                </strong>
+            </div>
+
+            <div>
                 <div style="color:#777;">Created</div>
                 <strong>{{ handover.created_at|date:"d M Y, H:i" }}</strong>
             </div>
