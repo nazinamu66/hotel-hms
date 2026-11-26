@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from django.test import SimpleTestCase
 from django.core.exceptions import ValidationError
@@ -90,13 +91,13 @@ class GymMembershipPaymentTests(TestCase):
         )
 
         self.assertEqual(membership.status, "ACTIVE")
-        self.assertEqual(membership.amount_snapshot, self.plan.price)
+        self.assertEqual(membership.amount_snapshot, Decimal("15000.00"))
         self.assertEqual(membership.end_date, date(2026, 12, 26))
         self.assertIsNotNone(membership.billing_payment_id)
 
         payment = membership.billing_payment
         self.assertEqual(payment.method, "CASH")
-        self.assertEqual(payment.amount, self.plan.price)
+        self.assertEqual(payment.amount, Decimal("15000.00"))
         self.assertEqual(
             ChargePaymentAllocation.objects.filter(payment=payment).count(), 1
         )
