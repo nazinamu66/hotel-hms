@@ -388,6 +388,7 @@ class UserCreateForm(forms.ModelForm):
             "HOUSEKEEPING",
             "LAUNDRY",
             "GYM",
+            "SALON",
             "BOUTIQUE",
             "MAINTENANCE",
             "SECURITY",
@@ -403,6 +404,12 @@ class UserCreateForm(forms.ModelForm):
                 )
 
             else:
+
+                if role == "SALON" and department.department_type != "SALON":
+                    self.add_error("department", "Salon staff must belong to the Salon department.")
+
+                if role == "GYM" and department.department_type != "GYM":
+                    self.add_error("department", "Gym staff must belong to the Gym department.")
 
                 if role == "HR" and department.department_type != "HUMAN_RESOURCES":
                     self.add_error("department", "HR staff must belong to the Human Resources department.")
