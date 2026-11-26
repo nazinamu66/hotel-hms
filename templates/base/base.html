@@ -206,13 +206,16 @@
             </div>
             {% endif %}
 
-            {% if gym_enabled and user|has_role:"ADMIN,DIRECTOR,GENERAL_MANAGER,MANAGER" %}
+            {% if gym_enabled or user.role == "DIRECTOR" %}
+            {% if user|has_role:"ADMIN,DIRECTOR,GENERAL_MANAGER,MANAGER" %}
             <h5 class="menu-subtoggle {% if request.resolver_match.url_name == 'gym_plan_setup' %}active-menu{% endif %}" onclick="toggleMenu('setup_gym_menu', this)">
                 <span class="arrow">▸</span> 🏋️ Gym
             </h5>
             <div id="setup_gym_menu" class="menu-section {% if request.resolver_match.url_name == 'gym_plan_setup' %}open{% endif %}">
+                <a href="{% url 'gym_home' %}">Gym Operations</a>
                 <a href="{% url 'gym_plan_setup' %}">Membership Packages</a>
             </div>
+            {% endif %}
             {% endif %}
 
             {% if user.role == "ADMIN" %}
@@ -285,7 +288,7 @@
         </h4>
         <div id="security_menu" class="menu-section {% if request.resolver_match.namespace == 'security' %}open{% endif %}">
             <a href="{% url 'security_dashboard' %}">Operations Dashboard</a>
-            {% if gym_enabled and user|has_role:"SECURITY,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
+            {% if (gym_enabled or user.role == "DIRECTOR") and user|has_role:"SECURITY,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
             <a href="{% url 'gym_gate_verify' %}">🏋️ Gym Gate Verification</a>
             {% endif %}
         </div>
