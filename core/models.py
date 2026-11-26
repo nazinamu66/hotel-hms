@@ -84,6 +84,14 @@ class CashHandover(models.Model):
         related_name="cash_handovers",
     )
 
+    salon_shift = models.ForeignKey(
+        "salon.SalonShift",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="cash_handovers",
+    )
+
     custody_type = models.CharField(
         max_length=20,
         choices=CUSTODY_TYPES,
