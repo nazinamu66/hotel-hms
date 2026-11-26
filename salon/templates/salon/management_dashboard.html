@@ -3,6 +3,10 @@
 {% block content %}
 <style>
 .salon-mgmt{max-width:1450px;margin:-18px auto 0;padding:26px;color:#f8fafc;background:#101d35;border-radius:18px;min-height:calc(100vh - 150px)}.mgmt-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}.mgmt-sub{color:#aebdd5}.mgmt-select{background:#1d2d49;color:white;border:1px solid #425575;padding:10px;border-radius:9px}.mgmt-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.mgmt-card{background:#192a46;border:1px solid #304361;border-radius:14px;padding:20px}.mgmt-card small{color:#b8c6dc}.mgmt-value{font-size:29px;font-weight:800;margin-top:9px}.mgmt-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0}.mgmt-link{display:block;text-decoration:none;color:#fff;background:#213654;border:1px solid #405575;border-radius:12px;padding:18px}.mgmt-link strong{display:block;margin-bottom:6px}.mgmt-table{background:#192a46;border:1px solid #304361;border-radius:14px;padding:20px;overflow:auto}.mgmt-table table{width:100%;border-collapse:collapse}.mgmt-table td,.mgmt-table th{padding:12px 8px;text-align:left;border-bottom:1px solid #304361}.mgmt-table th{color:#b8c6dc}@media(max-width:900px){.mgmt-grid{grid-template-columns:repeat(2,1fr)}.mgmt-links{grid-template-columns:1fr}}@media(max-width:560px){.mgmt-grid{grid-template-columns:1fr}.mgmt-head{align-items:flex-start;flex-direction:column}}
+
+/* Keep headings readable against the Salon management navy theme. */
+.salon-mgmt h1,.salon-mgmt h2,.salon-mgmt h3,.salon-mgmt h4,.salon-mgmt h5,.salon-mgmt h6{color:#f8fafc!important;}
+.salon-mgmt .mgmt-card h1,.salon-mgmt .mgmt-card h2,.salon-mgmt .mgmt-card h3,.salon-mgmt .mgmt-table h1,.salon-mgmt .mgmt-table h2{color:#f8fafc!important;}
 </style>
 <div class="salon-mgmt">
  <header class="mgmt-head"><div><h1 style="margin:0 0 6px">Salon Management</h1><div class="mgmt-sub">{{ hotel.name }} · Department performance and configuration</div></div>
