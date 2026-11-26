@@ -1,0 +1,7 @@
+{% extends "base/base.html" %}
+{% block title %}Salon Shifts{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:25px auto;color:#172033"><div style="display:flex;justify-content:space-between;align-items:center"><h1>Salon Shifts</h1>{% if not active_shift %}<a href="{% url 'salon_shift_open' %}" style="background:#1d4ed8;color:white;padding:11px 16px;border-radius:8px;text-decoration:none">Open Shift</a>{% endif %}</div>
+<div style="background:white;border:1px solid #e2e8f0;border-radius:14px;padding:18px;overflow:auto"><table style="width:100%;border-collapse:collapse"><tr><th align="left">Shift</th><th align="left">Cashier</th><th align="left">Opened</th><th align="left">Closed</th><th align="right">Opening</th><th align="left">Status</th></tr>
+{% for shift in shifts %}<tr style="border-top:1px solid #e2e8f0"><td style="padding:12px"><a href="{% url 'salon_shift_detail' shift.pk %}">#{{ shift.pk }}</a></td><td>{{ shift.user.get_full_name|default:shift.user.username }}</td><td>{{ shift.opened_at|date:"d M Y H:i" }}</td><td>{{ shift.closed_at|date:"d M Y H:i"|default:"—" }}</td><td align="right">₦{{ shift.opening_cash|floatformat:2 }}</td><td>{{ shift.get_status_display }}</td></tr>{% empty %}<tr><td colspan="6" style="padding:20px;color:#64748b">No Salon shifts recorded.</td></tr>{% endfor %}</table></div></div>
+{% endblock %}
