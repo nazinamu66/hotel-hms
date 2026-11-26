@@ -61,6 +61,8 @@ RESTAURANT_REVENUE = "restaurant_revenue"
 
 SALON_REVENUE = "salon_revenue"
 
+GYM_REVENUE = "gym_revenue"
+
 OTHER_REVENUE = "other_revenue"
 
 COST_OF_GOODS_SOLD = "cost_of_goods_sold"
@@ -348,6 +350,16 @@ DEFAULT_ACCOUNTS = [
         "code": "4310",
         "name": "Salon Revenue",
         "system_key": SALON_REVENUE,
+        "type": INCOME,
+        "is_system": True,
+        "allow_posting": True,
+        "allow_manual_entries": False,
+    },
+
+    {
+        "code": "4320",
+        "name": "Gym Revenue",
+        "system_key": GYM_REVENUE,
         "type": INCOME,
         "is_system": True,
         "allow_posting": True,
