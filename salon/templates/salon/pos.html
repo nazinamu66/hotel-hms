@@ -1,0 +1,65 @@
+{% extends "base/base.html" %}
+{% block title %}Salon POS{% endblock %}
+{% block content %}
+<style>
+.salon-wrap{max-width:1500px;margin:auto;color:#172033}.salon-head,.salon-panel{background:#fff;border:1px solid #e5e9f0;border-radius:16px;padding:20px;margin-bottom:18px;box-shadow:0 4px 16px #0f172a08}.salon-head{display:flex;justify-content:space-between;align-items:center}.salon-grid{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:18px;align-items:start}.salon-categories{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}.salon-service{border:1px solid #e2e8f0;background:#fff;border-radius:12px;padding:15px;text-align:left;cursor:pointer;min-height:110px}.salon-service:hover{border-color:#2563eb;box-shadow:0 5px 16px #2563eb18}.salon-service strong,.salon-service span{display:block}.salon-service span{color:#2563eb;font-weight:800;margin-top:10px}.salon-side{position:sticky;top:15px}.salon-field{margin:10px 0}.salon-field label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:5px}.salon-field input,.salon-field select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:9px;box-sizing:border-box}.salon-line{padding:12px 0;border-bottom:1px solid #e5e7eb}.salon-line select{width:100%;margin-top:8px;padding:8px;border:1px solid #cbd5e1;border-radius:8px}.salon-total{display:flex;justify-content:space-between;padding:16px 0;font-size:20px;font-weight:800}.salon-submit{width:100%;border:0;border-radius:10px;background:#1d4ed8;color:#fff;padding:13px;font-weight:800;cursor:pointer}.lookup-result{display:block;width:100%;text-align:left;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:9px;margin:5px 0;cursor:pointer}.muted{color:#64748b;font-size:13px}@media(max-width:950px){.salon-grid{grid-template-columns:1fr}.salon-side{position:static}.salon-head{align-items:flex-start;gap:12px;flex-direction:column}}
+</style>
+<div class="salon-wrap">
+ <div class="salon-head"><div><h1 style="margin:0 0 5px">Salon Point of Sale</h1><div class="muted">{{ hotel.name }} · Services and customer checkout</div></div><div><strong>{{ request.user.get_full_name|default:request.user.username }}</strong><div class="muted">Salon staff</div></div></div>
+ {% if messages %}{% for message in messages %}<div class="salon-panel">{{ message }}</div>{% endfor %}{% endif %}
+ <form method="post" action="{% url 'salon_order_create' %}" id="salon-order-form">
+ {% csrf_token %}<input type="hidden" name="items_json" id="items-json">
+ <div class="salon-grid">
+  <section class="salon-panel">
+   <h2 style="margin-top:0">Service catalogue</h2>
+   {% for category in categories %}
+    <h3 style="margin:22px 0 10px">{{ category.name }}</h3>
+    <div class="salon-categories">
+     {% for service in category.services.all %}
+      {% if service.is_active %}<button class="salon-service" type="button" onclick="addService({{ service.id }},'{{ service.name|escapejs }}','{{ service.price }}')"><strong>{{ service.name }}</strong><small class="muted">{{ service.duration_minutes }} minutes</small><span>₦{{ service.price|floatformat:2 }}</span></button>{% endif %}
+     {% endfor %}
+    </div>
+   {% empty %}<p class="muted">No active Salon services configured yet. Ask management to set up the service catalogue.</p>{% endfor %}
+  </section>
+  <aside class="salon-panel salon-side">
+   <h2 style="margin-top:0">Customer</h2>
+   <div class="salon-field"><label>Customer type</label><select id="customer-type" name="customer_type"><option value="HOTEL_GUEST">Hotel Guest</option><option value="WALK_IN">Walk-in</option><option value="EMPLOYEE">CCH Employee (50% discount)</option></select></div>
+   <div id="guest-fields">
+    <div class="salon-field"><label>Find guest by name or phone</label><input id="guest-search" autocomplete="off" placeholder="Type at least 2 characters"><div id="guest-results"></div><input type="hidden" name="guest_id" id="guest-id"></div>
+    <div class="salon-field"><label>Room number (leave blank for direct payment)</label><input id="room-search" autocomplete="off" placeholder="Search room number or guest"><div id="room-results"></div><input type="hidden" name="room_id" id="room-id"></div>
+    <div id="selected-guest" class="muted">No guest selected</div>
+   </div>
+   <div id="walkin-fields" hidden>
+    <div class="salon-field"><label>Customer name</label><input name="walkin_name" id="walkin-name"></div>
+    <div class="salon-field"><label>Phone (optional)</label><input name="walkin_phone"></div>
+   </div>
+   <div id="employee-fields" hidden>
+    <div class="salon-field"><label>Find active employee by name, number or phone</label><input id="employee-search" autocomplete="off" placeholder="Search employee"><div id="employee-results"></div><input type="hidden" name="employee_id" id="employee-id"></div>
+    <div id="selected-employee" class="muted">No employee selected</div>
+    <p class="muted">The discount is verified against the HR employee record. The employee receiving the service is not the Salon stylist.</p>
+   </div>
+   <hr style="border:0;border-top:1px solid #e5e7eb;margin:20px 0">
+   <h2>Service cart <span class="muted" id="cart-count">(0)</span></h2>
+   <div id="cart-lines"><p class="muted">Choose services to begin.</p></div>
+   <div class="salon-total"><span>Total</span><span id="cart-total">₦0.00</span></div>
+   <p class="muted">Employee discount, where eligible, is calculated by the server at order creation.</p>
+   <button class="salon-submit" type="submit">Continue to checkout</button>
+  </aside>
+ </div>
+ </form>
+</div>
+<script>
+const stylists=[{% for staff in salon_staff %}{id:{{ staff.id }},name:"{{ staff.get_full_name|default:staff.username|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}];
+const cart=[];
+const fmt=n=>"₦"+Number(n).toLocaleString("en-NG",{minimumFractionDigits:2,maximumFractionDigits:2});
+function addService(id,name,price){const found=cart.find(x=>x.id===id);if(found)found.qty++;else cart.push({id,name,price:Number(price),qty:1,performer:stylists[0]?.id||""});drawCart();}
+function drawCart(){const root=document.getElementById("cart-lines");root.innerHTML="";let total=0;cart.forEach((x,i)=>{total+=x.price*x.qty;const line=document.createElement("div");line.className="salon-line";line.innerHTML='<div style="display:flex;justify-content:space-between;gap:8px"><strong></strong><b></b></div><div style="display:flex;align-items:center;gap:8px;margin-top:8px"><button type="button" aria-label="Decrease">−</button><span></span><button type="button" aria-label="Increase">+</button><button type="button" style="margin-left:auto;color:#b91c1c">Remove</button></div><select aria-label="Service provider"></select>';line.querySelector("strong").textContent=x.name;line.querySelector("b").textContent=fmt(x.price*x.qty);const buttons=line.querySelectorAll("button");buttons[0].onclick=()=>{x.qty=Math.max(1,x.qty-1);drawCart()};buttons[1].onclick=()=>{x.qty++;drawCart()};buttons[2].onclick=()=>{cart.splice(i,1);drawCart()};line.querySelector("span").textContent=x.qty;const select=line.querySelector("select");select.innerHTML='<option value="">Select stylist</option>'+stylists.map(s=>'<option value="'+s.id+'">'+s.name.replace(/</g,"&lt;")+'</option>').join("");select.value=x.performer;select.onchange=()=>x.performer=select.value;root.appendChild(line)});if(!cart.length)root.innerHTML='<p class="muted">Choose services to begin.</p>';document.getElementById("cart-total").textContent=fmt(total);document.getElementById("cart-count").textContent="("+cart.reduce((n,x)=>n+x.qty,0)+")";}
+const type=document.getElementById("customer-type");function customerFields(){const v=type.value;document.getElementById("guest-fields").hidden=v!=="HOTEL_GUEST";document.getElementById("walkin-fields").hidden=v!=="WALK_IN";document.getElementById("employee-fields").hidden=v!=="EMPLOYEE";}type.onchange=customerFields;customerFields();
+async function lookup(kind,q,target){if(q.length<2){target.innerHTML="";return}const url="{% url 'salon_customer_lookup' %}?type="+kind+"&q="+encodeURIComponent(q);const html=await fetch(url,{headers:{"X-Requested-With":"XMLHttpRequest"}}).then(r=>r.text());target.innerHTML=html;}
+document.getElementById("guest-search").oninput=e=>lookup("GUEST",e.target.value,document.getElementById("guest-results"));
+document.getElementById("employee-search").oninput=e=>lookup("EMPLOYEE",e.target.value,document.getElementById("employee-results"));
+document.getElementById("room-search").oninput=e=>lookup("ROOM",e.target.value,document.getElementById("room-results"));
+document.addEventListener("click",e=>{const b=e.target.closest("[data-select-kind]");if(!b)return;const kind=b.dataset.selectKind,id=b.dataset.id,label=b.dataset.label;if(kind==="GUEST"){document.getElementById("guest-id").value=id;document.getElementById("selected-guest").textContent=label;document.getElementById("guest-results").innerHTML="";}if(kind==="EMPLOYEE"){document.getElementById("employee-id").value=id;document.getElementById("selected-employee").textContent=label;document.getElementById("employee-results").innerHTML="";}if(kind==="ROOM"){document.getElementById("room-id").value=id;document.getElementById("room-results").innerHTML="";document.getElementById("room-search").value=label;}});
+document.getElementById("salon-order-form").onsubmit=e=>{if(!cart.length){e.preventDefault();alert("Add at least one service.");return}if(cart.some(x=>!x.performer)){e.preventDefault();alert("Assign a Salon staff member to every service.");return}const v=type.value;if(v==="HOTEL_GUEST"&&!document.getElementById("guest-id").value){e.preventDefault();alert("Select the hotel guest.");return}if(v==="EMPLOYEE"&&!document.getElementById("employee-id").value){e.preventDefault();alert("Select the employee.");return}if(v==="WALK_IN"&&!document.getElementById("walkin-name").value.trim()){e.preventDefault();alert("Enter the walk-in customer's name.");return}document.getElementById("items-json").value=JSON.stringify(cart.map(x=>({service_id:x.id,quantity:x.qty,performed_by_id:x.performer})));};
+</script>
+{% endblock %}
