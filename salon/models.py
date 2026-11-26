@@ -274,3 +274,53 @@ class SalonOrderItem(models.Model):
 
     def __str__(self):
         return f"{self.service_name_snapshot} × {self.quantity}"
+
+
+class SalonShift(models.Model):
+    """Independent Salon cashier shift and physical-cash reconciliation."""
+
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
+    STATUS_CHOICES = ((OPEN, "Open"), (CLOSED, "Closed"))
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="salon_shifts",
+    )
+    department = models.ForeignKey(
+        Department, on_delete=models.PROTECT, related_name="salon_shifts",
+    )
+    opened_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    opening_cash = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    closing_cash = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=OPEN)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-opened_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["department"], condition=Q(status="OPEN"),
+                name="uniq_open_salon_shift_department",
+            ),
+            models.CheckConstraint(
+                condition=Q(opening_cash__gte=0),
+                name="salon_shift_opening_cash_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=Q(closing_cash__isnull=True) | Q(closing_cash__gte=0),
+                name="salon_shift_closing_cash_nonnegative",
+            ),
+        ]
+
+    def clean(self):
+        if self.department_id and self.department.department_type != "SALON":
+            raise ValidationError({"department": "Salon shifts must belong to a Salon department."})
+        if self.user_id and self.user.role != "SALON":
+            raise ValidationError({"user": "Only Salon staff can open a Salon shift."})
+        if self.user_id and self.department_id and self.user.department_id != self.department_id:
+            raise ValidationError({"user": "The cashier must belong to this Salon department."})
+
+    def __str__(self):
+        return f"Salon Shift #{self.pk or 'NEW'} · {self.user}"
