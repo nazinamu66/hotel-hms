@@ -411,6 +411,17 @@
         <!-- KITCHEN -->
         <!-- ========================= -->
 
+        {% feature_enabled user "GYM" as gym_enabled %}
+        {% if gym_enabled and user|has_role:"GYM,SECURITY,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
+        <h4 class="menu-toggle {% if request.resolver_match.namespace == 'gym' %}active-menu{% endif %}" onclick="toggleMenu('gym_menu', this)">
+            <span class="arrow">▸</span> 🏋️ Gym
+        </h4>
+        <div id="gym_menu" class="menu-section {% if request.resolver_match.namespace == 'gym' %}open{% endif %}">
+            {% if user|has_role:"GYM" %}<a href="{% url 'gym_home' %}">Gym Operations</a>{% endif %}
+            {% if user|has_role:"SECURITY,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}<a href="{% url 'gym_home' %}">Gate Verification</a>{% endif %}
+        </div>
+        {% endif %}
+
         {% feature_enabled user "KITCHEN" as kitchen_enabled %}
 
         {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" or kitchen_enabled and user|has_role:"KITCHEN" %}
