@@ -101,8 +101,11 @@ def gym_membership_checkout(request, member_id):
             else:
                 payment = membership.billing_payment
                 if form.cleaned_data.get("payment_reference"):
-                    payment.reference = form.cleaned_data["payment_reference"].strip()
-                    payment.save(update_fields=["reference"])
+                    payment.note = (
+                        f"{payment.note}\nExternal payment reference: "
+                        f"{form.cleaned_data['payment_reference'].strip()}"
+                    )
+                    payment.save(update_fields=["note"])
                 messages.success(request, "Payment received and membership activated.")
                 return redirect("gym_membership_receipt", membership_id=membership.pk)
     else:
