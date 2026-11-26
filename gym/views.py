@@ -232,7 +232,7 @@ def gym_gate_verify(request):
                     error_message = "This membership has not started yet."
                 elif membership.end_date < timezone.localdate():
                     error_message = "This membership has expired."
-            else:
+            elif code:
                 error_message = "No membership was found for that pass or member number."
         elif action == "check_in":
             membership_id = request.POST.get("membership_id")
