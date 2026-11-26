@@ -68,6 +68,9 @@ def close_salon_shift(*, shift, user, closing_cash, notes=""):
     pending_partial = CashHandover.objects.filter(
         salon_shift=shift, custody_type="PARTIAL", status="PENDING"
     ).exists()
+    open_orders = SalonOrder.objects.filter(shift=shift, status=SalonOrder.OPEN).exists()
+    if open_orders:
+        raise ValidationError("Settle or cancel all open Salon orders before closing the shift.")
     if pending_partial:
         raise ValidationError("A partial cash handover is awaiting recipient confirmation.")
     shift.closing_cash = closing_cash
@@ -92,6 +95,8 @@ def request_salon_cash_handover(*, shift, user, recipient, amount, partial=True)
         raise ValidationError("Enter a positive amount not exceeding the expected till cash.")
     if not partial and amount != summary["expected_cash"]:
         raise ValidationError("A full cash handover must equal the complete expected till cash.")
+    if not partial and SalonOrder.objects.filter(shift=shift, status=SalonOrder.OPEN).exists():
+        raise ValidationError("Settle or cancel all open Salon orders before handing over the full till.")
     return create_handover(
         from_user=user, to_user=recipient, department=shift.department,
         expected_amount=amount, sender_count=amount,
