@@ -134,7 +134,7 @@ def salon_customer_lookup(request):
         ).order_by("first_name", "last_name")[:15])
     elif len(q) >= 2 and kind == "EMPLOYEE":
         results = list(EmployeeProfile.objects.filter(
-            hotel__organization=department.hotel.organization,
+            hotel__organization_id=department.hotel.organization_id,
             employment_status=EmployeeProfile.ACTIVE,
         ).filter(
             Q(employee_number__icontains=q) | Q(first_name__icontains=q)
@@ -143,11 +143,11 @@ def salon_customer_lookup(request):
     elif len(q) >= 2 and kind == "ROOM":
         results = list(Room.objects.filter(
             hotel=department.hotel,
-            folios__folio_type="ROOM", folios__is_closed=False,
+            folio__folio_type="ROOM", folio__is_closed=False,
         ).filter(
-            Q(room_number__icontains=q) | Q(folios__guest__first_name__icontains=q)
-            | Q(folios__guest__last_name__icontains=q)
-        ).select_related().distinct()[:15])
+            Q(room_number__icontains=q) | Q(folio__guest__first_name__icontains=q)
+            | Q(folio__guest__last_name__icontains=q)
+        ).distinct()[:15])
     return render(request, "salon/customer_results.html", {
         "kind": kind, "results": results,
     })
