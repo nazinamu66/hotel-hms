@@ -153,7 +153,10 @@ class SalonOrderServiceTests(TestCase):
         self.assertEqual(item.line_total, Decimal("20000.00"))
 
 
-class SalonOrderHistoryViewTests(SalonOrderServiceTests):
+class SalonOrderHistoryViewTests(TestCase):
+    def setUp(self):
+        SalonOrderServiceTests.setUp(self)
+
     def _create_order(self):
         HotelFeature.objects.update_or_create(
             hotel=self.hotel, feature="SALON", defaults={"is_active": True}
