@@ -49,7 +49,7 @@ from django.test import TestCase
 
 from accounting.models import Account
 from billing.models import Charge, ChargePaymentAllocation, Payment
-from inventory.models import Department, Hotel
+from inventory.models import Department, Hotel, HotelFeature
 from gym.models import GymMember, GymMembershipPlan
 from gym.services.memberships import create_paid_membership
 
@@ -58,6 +58,9 @@ class GymMembershipPaymentTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.hotel = Hotel.objects.create(name="Gym Payment Test Hotel")
+        HotelFeature.objects.get_or_create(
+            hotel=cls.hotel, feature="GYM", defaults={"is_active": True}
+        )
         cls.department = Department.objects.get(
             hotel=cls.hotel, department_type="GYM"
         )
@@ -113,6 +116,35 @@ class GymMembershipPaymentTests(TestCase):
                 hotel=self.hotel, system_key="gym_revenue", is_system=True
             ).exists()
         )
+
+    def test_front_desk_can_open_checkout_and_complete_cash_membership(self):
+        self.client.force_login(self.user)
+
+        checkout_url = f"/gym/members/{self.member.pk}/membership/new/"
+        response = self.client.get(checkout_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "New membership")
+
+        response = self.client.post(checkout_url, {
+            "plan": self.plan.pk,
+            "start_date": "2026-11-27",
+            "payment_method": "CASH",
+            "bank_account": "",
+            "payment_reference": "",
+        })
+        self.assertEqual(response.status_code, 302)
+        membership = GymMembership.objects.get(member=self.member)
+        self.assertEqual(response.url, f"/gym/memberships/{membership.pk}/receipt/")
+
+        receipt = self.client.get(response.url)
+        self.assertEqual(receipt.status_code, 200)
+        self.assertContains(receipt, "Gym Membership Payment Receipt")
+        self.assertContains(receipt, "15,000.00")
+
+        detail = self.client.get(f"/gym/members/{self.member.pk}/")
+        self.assertEqual(detail.status_code, 200)
+        self.assertContains(detail, "Membership history")
+        self.assertContains(detail, "View receipt")
 
     def test_invalid_payment_method_does_not_create_membership(self):
         with self.assertRaises(ValidationError):
