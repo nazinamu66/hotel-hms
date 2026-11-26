@@ -120,6 +120,8 @@
         </div>
         {% endif %}
 
+        {% feature_enabled user "GYM" as gym_enabled %}
+
         <!-- ========================= -->
         <!-- SETUP -->
         <!-- ========================= -->
@@ -204,6 +206,15 @@
             </div>
             {% endif %}
 
+            {% if gym_enabled and user|has_role:"ADMIN,DIRECTOR,GENERAL_MANAGER,MANAGER" %}
+            <h5 class="menu-subtoggle {% if request.resolver_match.url_name == 'gym_plan_setup' %}active-menu{% endif %}" onclick="toggleMenu('setup_gym_menu', this)">
+                <span class="arrow">▸</span> 🏋️ Gym
+            </h5>
+            <div id="setup_gym_menu" class="menu-section {% if request.resolver_match.url_name == 'gym_plan_setup' %}open{% endif %}">
+                <a href="{% url 'gym_plan_setup' %}">Membership Packages</a>
+            </div>
+            {% endif %}
+
             {% if user.role == "ADMIN" %}
             <h5 class="menu-subtoggle" onclick="toggleMenu('setup_system_menu', this)">
                 <span class="arrow">▸</span> 🔐 System
@@ -274,6 +285,9 @@
         </h4>
         <div id="security_menu" class="menu-section {% if request.resolver_match.namespace == 'security' %}open{% endif %}">
             <a href="{% url 'security_dashboard' %}">Operations Dashboard</a>
+            {% if gym_enabled and user|has_role:"SECURITY,MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
+            <a href="{% url 'gym_gate_verify' %}">🏋️ Gym Gate Verification</a>
+            {% endif %}
         </div>
         {% endif %}
 
@@ -325,6 +339,15 @@
             <div id="frontdesk_daily_menu" class="menu-section">
                 <a href="{% url 'frontdesk_today_board' %}">Arrivals &amp; Departures</a>
             </div>
+
+            {% if gym_enabled and user|has_role:"FRONTDESK,MANAGER,ADMIN,DIRECTOR,GENERAL_MANAGER" %}
+            <h5 class="menu-subtoggle {% if request.resolver_match.url_name == 'gym_home' %}active-menu{% endif %}" onclick="toggleMenu('frontdesk_gym_menu', this)">
+                <span class="arrow">▸</span> 🏋️ Gym
+            </h5>
+            <div id="frontdesk_gym_menu" class="menu-section {% if request.resolver_match.url_name in 'gym_home gym_member_create gym_member_detail gym_membership_checkout gym_membership_receipt' %}open{% endif %}">
+                <a href="{% url 'gym_home' %}">Gym Operations</a>
+            </div>
+            {% endif %}
 
         </div>
 
@@ -1150,6 +1173,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const menuRules = {
         personnel_menu: ["/personnel/"],
+        setup_gym_menu: ["/gym/plans/"],
+        frontdesk_gym_menu: ["/gym/"],
+        security_menu: ["/security/", "/gym/gate/"],
 
         management_menu: [
             "/management/"
