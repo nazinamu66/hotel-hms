@@ -1,7 +1,26 @@
 {% for item in results %}
-<button type="button" class="lookup-result" data-select-kind="{{ kind }}" data-id="{{ item.pk }}" data-label="{% if kind == 'GUEST' %}{{ item.full_name|escape }} · {{ item.phone|default:'No phone'|escape }}{% elif kind == 'EMPLOYEE' %}{{ item.full_name|escape }} · {{ item.employee_number|escape }} · {{ item.hotel.name|escape }}{% else %}Room {{ item.room_number|escape }}{% with folio=item.folio_set.all|first %}{% if folio %} · {{ folio.guest.full_name|escape }}{% endif %}{% endwith %}{% endif %}">
-{% if kind == "GUEST" %}{{ item.full_name }} · {{ item.phone|default:"No phone" }}
-{% elif kind == "EMPLOYEE" %}{{ item.full_name }} · {{ item.employee_number }} · {{ item.hotel.name }}
-{% else %}Room {{ item.room_number }}{% with folio=item.folios.all|first %}{% if folio %} · {{ folio.guest.full_name }}{% endif %}{% endwith %}{% endif %}
+<button type="button"
+        class="lookup-result"
+        data-select-kind="{{ kind }}"
+        data-id="{{ item.pk }}"
+        {% if kind == "ROOM" and item.active_salon_folios %}
+          data-guest-id="{{ item.active_salon_folios.0.guest_id }}"
+          data-guest-name="{{ item.active_salon_folios.0.guest.full_name|escape }}"
+          data-label="Room {{ item.room_number|escape }}"
+        {% elif kind == "ROOM" %}
+          data-label="Room {{ item.room_number|escape }}"
+        {% elif kind == "GUEST" %}
+          data-label="{{ item.full_name|escape }} · {{ item.phone|default:'No phone'|escape }}"
+        {% else %}
+          data-label="{{ item.full_name|escape }} · {{ item.employee_number|escape }} · {{ item.hotel.name|escape }}"
+        {% endif %}>
+  {% if kind == "GUEST" %}
+    <span aria-hidden="true">👤</span><span><strong>{{ item.full_name }}</strong><small>{{ item.phone|default:"No phone" }}</small></span>
+  {% elif kind == "EMPLOYEE" %}
+    <span aria-hidden="true">🪪</span><span><strong>{{ item.full_name }}</strong><small>{{ item.employee_number }} · {{ item.hotel.name }}</small></span>
+  {% else %}
+    <span aria-hidden="true">🛏️</span><span><strong>Room {{ item.room_number }}</strong>
+    <small>{% if item.active_salon_folios %}Registered guest: {{ item.active_salon_folios.0.guest.full_name }}{% else %}No active guest folio{% endif %}</small></span>
+  {% endif %}
 </button>
 {% empty %}<p class="muted">No matching records found.</p>{% endfor %}
