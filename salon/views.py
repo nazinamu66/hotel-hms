@@ -1,7 +1,6 @@
 import json
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -133,10 +132,12 @@ def salon_customer_lookup(request):
             Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(phone__icontains=q)
         ).order_by("first_name", "last_name")[:15])
     elif len(q) >= 2 and kind == "EMPLOYEE":
-        results = list(EmployeeProfile.objects.filter(
-            hotel__organization_id=department.hotel.organization_id,
-            employment_status=EmployeeProfile.ACTIVE,
-        ).filter(
+        employee_scope = EmployeeProfile.objects.filter(employment_status=EmployeeProfile.ACTIVE)
+        if department.hotel.organization_id:
+            employee_scope = employee_scope.filter(hotel__organization_id=department.hotel.organization_id)
+        else:
+            employee_scope = employee_scope.filter(hotel=department.hotel)
+        results = list(employee_scope.filter(
             Q(employee_number__icontains=q) | Q(first_name__icontains=q)
             | Q(last_name__icontains=q) | Q(phone__icontains=q)
         ).select_related("hotel", "department").order_by("last_name", "first_name")[:15])
