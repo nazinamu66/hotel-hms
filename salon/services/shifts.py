@@ -23,7 +23,7 @@ def salon_shift_cash_summary(shift):
     ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
     partial_handover = CashHandover.objects.filter(
         salon_shift=shift, custody_type="PARTIAL",
-        status__in=["PENDING", "ACCEPTED", "RESOLVED"],
+        status__in=["PENDING", "VARIANCE", "ACCEPTED", "RESOLVED"],
     ).aggregate(total=Sum("sender_count"))["total"] or Decimal("0.00")
     expected = shift.opening_cash + cash_sales - partial_handover
     order_summary = SalonOrder.objects.filter(
