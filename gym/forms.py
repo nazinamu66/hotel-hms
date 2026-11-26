@@ -68,3 +68,16 @@ class GymMembershipCheckoutForm(forms.Form):
         if cleaned.get("payment_method") in {"POS", "TRANSFER"} and not cleaned.get("bank_account"):
             self.add_error("bank_account", "Select the bank account receiving this payment.")
         return cleaned
+
+
+class GymGateLookupForm(forms.Form):
+    code = forms.CharField(
+        max_length=80,
+        required=False,
+        label="Member number or pass token",
+        widget=forms.TextInput(attrs={
+            "placeholder": "Scan or enter membership pass / member number",
+            "autocomplete": "off",
+            "autofocus": True,
+        }),
+    )
