@@ -883,7 +883,7 @@ def cash_handover_accept(request, handover_id):
                 request,
                 f"Salon cash handover #{handover.id} accepted. Salon Shift #{handover.salon_shift_id} is closed.",
             )
-            return redirect("salon_shift_detail", shift_id=handover.salon_shift_id)
+            return redirect("cash_custody_detail", handover_id=handover.id)
 
         if handover.salon_shift_id and handover.custody_type == "PARTIAL":
             messages.success(
