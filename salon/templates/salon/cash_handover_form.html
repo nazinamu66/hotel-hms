@@ -1,9 +1,48 @@
 {% extends "base/base.html" %}
 {% block title %}Salon Cash Handover{% endblock %}
 {% block content %}
-<div style="max-width:700px;margin:30px auto;background:white;border:1px solid #e2e8f0;border-radius:16px;padding:26px;color:#172033"><h1>Salon Cash Handover</h1><p>Shift #{{ shift.pk }} · Expected cash: <strong>₦{{ summary.expected_cash|floatformat:2 }}</strong></p>
-<form method="post">{% csrf_token %}<label>Recipient (Manager / Accountant)</label><select name="recipient_id" required style="display:block;width:100%;padding:12px;margin:8px 0 18px;border:1px solid #cbd5e1;border-radius:8px">{% for person in recipients %}<option value="{{ person.pk }}">{{ person.get_full_name|default:person.username }} · {{ person.get_role_display|default:person.role }}</option>{% endfor %}</select>
-<label>Handover type</label><select name="handover_type" style="display:block;width:100%;padding:12px;margin:8px 0 18px;border:1px solid #cbd5e1;border-radius:8px"><option value="PARTIAL">Partial handover (shift remains open)</option><option value="CUSTODY">Full handover (close shift)</option></select>
-<label>Cash amount (₦)</label><input name="amount" type="number" min="0.01" max="{{ summary.expected_cash }}" step="0.01" required style="display:block;width:100%;padding:12px;margin:8px 0 18px;border:1px solid #cbd5e1;border-radius:8px">
-<button style="background:#1d4ed8;color:white;padding:12px 18px;border:0;border-radius:8px">Submit for Independent Count</button></form></div>
+{% include "salon/_shift_styles.html" %}
+<div class="salon-shift-page" style="max-width:900px">
+  <div class="page-heading">
+    <div><div class="eyebrow">Salon operations · Cash custody</div><h1>Hand over cash</h1><div class="muted">Shift #{{ shift.pk }} · Submit cash for independent confirmation.</div></div>
+    <a class="btn btn-secondary" href="{% url 'salon_shift_detail' shift.pk %}">Back to shift</a>
+  </div>
+  {% if messages %}{% for message in messages %}<div class="alert">{{ message }}</div>{% endfor %}{% endif %}
+  <div class="metric-grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">
+    <div class="metric"><div class="metric-label">Expected till cash</div><div class="metric-value">₦{{ summary.expected_cash|floatformat:2 }}</div></div>
+    <div class="metric"><div class="metric-label">Cash sales</div><div class="metric-value">₦{{ summary.cash_sales|floatformat:2 }}</div></div>
+    <div class="metric"><div class="metric-label">Already handed over</div><div class="metric-value">₦{{ summary.partial_handover|floatformat:2 }}</div></div>
+  </div>
+  <section class="panel">
+    <h2>Handover details</h2>
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-grid">
+        <div class="field">
+          <label for="recipient_id">Recipient</label>
+          <select id="recipient_id" name="recipient_id" required>
+            <option value="">Select receiving officer</option>
+            {% for person in recipients %}<option value="{{ person.pk }}">{{ person.get_full_name|default:person.username }} · {{ person.get_role_display|default:person.role }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="handover_type">Handover type</label>
+          <select id="handover_type" name="handover_type" required>
+            <option value="PARTIAL">Partial handover · shift remains open</option>
+            <option value="CUSTODY">Full cash handover · close the till after confirmation</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="amount">Cash amount (₦)</label>
+          <input id="amount" name="amount" type="number" min="0.01" max="{{ summary.expected_cash }}" step="0.01" required placeholder="0.00">
+          <span class="muted" style="font-size:.8rem">Maximum available till cash: ₦{{ summary.expected_cash|floatformat:2 }}</span>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:22px">
+        <button class="btn btn-primary" type="submit">Submit for independent count</button>
+        <a class="btn btn-secondary" href="{% url 'salon_shift_detail' shift.pk %}">Cancel</a>
+      </div>
+    </form>
+  </section>
+</div>
 {% endblock %}
