@@ -1,0 +1,10 @@
+{% extends "base/base.html" %}
+{% block title %}Salon Receipt{% endblock %}
+{% block content %}
+<style>.receipt{max-width:520px;margin:25px auto;background:#fff;border:1px solid #e5e7eb;padding:24px;border-radius:12px;color:#111827}.receipt h1,.receipt p{text-align:center}.receipt table{width:100%;border-collapse:collapse}.receipt td{padding:8px 0;border-bottom:1px dashed #cbd5e1}.receipt .right{text-align:right}.print{margin:15px auto;display:block;padding:11px 22px;background:#1d4ed8;color:#fff;border:0;border-radius:8px;cursor:pointer}@media print{.sidebar,.navbar,.print{display:none!important}.receipt{border:0;margin:0;max-width:none}}</style>
+<div class="receipt"><h1>{{ order.department.hotel.name }}</h1><p><strong>SALON SERVICE RECEIPT</strong><br>SAL-{{ order.pk }}<br>{{ order.created_at|date:"d M Y H:i" }}</p><hr>
+<p>Customer: {% if order.guest %}{{ order.guest.full_name }}{% elif order.employee %}{{ order.employee.full_name }} ({{ order.employee.employee_number }}){% else %}{{ order.walkin_name }}{% endif %}<br>Status: {{ order.get_status_display }}</p>
+<table>{% for item in order.items.all %}<tr><td>{{ item.service_name_snapshot }} × {{ item.quantity }}<br><small>Served by: {{ item.performed_by.get_full_name|default:item.performed_by.username }}</small></td><td class="right">₦{{ item.line_total|floatformat:2 }}</td></tr>{% endfor %}</table>
+<p style="text-align:right">Subtotal: ₦{{ order.subtotal|floatformat:2 }}<br>Discount: ₦{{ order.discount_total|floatformat:2 }}<br><strong>Total: ₦{{ order.total_amount|floatformat:2 }}</strong></p>
+<p>Thank you. We appreciate your patronage.</p></div><button class="print" onclick="window.print()">Print receipt</button>
+{% endblock %}
