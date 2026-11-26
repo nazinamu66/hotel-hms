@@ -1,7 +1,8 @@
 from django.core.exceptions import PermissionDenied
-from django.db.models import Count
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
+from django.utils import timezone
+from datetime import timedelta
 
 from inventory.models import HotelFeature
 
@@ -33,12 +34,12 @@ def gym_home(request):
         department = _gym_department(request.user)
         hotel = department.hotel
         memberships = GymMembership.objects.filter(hotel=hotel)
-        today = __import__("django.utils.timezone", fromlist=["localdate"]).localdate()
+        today = timezone.localdate()
         return render(request, "gym/dashboard.html", {
             "hotel": hotel,
             "member_count": GymMember.objects.filter(hotel=hotel, is_active=True).count(),
             "active_memberships": memberships.filter(status="ACTIVE", start_date__lte=today, end_date__gte=today).count(),
-            "expiring_memberships": memberships.filter(status="ACTIVE", end_date__range=(today, today.replace(day=today.day))).count(),
+            "expiring_memberships": memberships.filter(status="ACTIVE", end_date__range=(today, today + timedelta(days=7))).count(),
             "today_visits": GymVisit.objects.filter(hotel=hotel, entered_at__date=today).count(),
             "plans": GymMembershipPlan.objects.filter(hotel=hotel, is_active=True),
         })
