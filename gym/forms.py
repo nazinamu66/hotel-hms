@@ -71,6 +71,7 @@ class GymMembershipCheckoutForm(forms.Form):
 
 
 class GymGateLookupForm(forms.Form):
+    action = forms.CharField(required=False, widget=forms.HiddenInput())
     code = forms.CharField(
         max_length=80,
         required=False,
