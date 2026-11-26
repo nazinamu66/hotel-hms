@@ -3,13 +3,14 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from inventory.models import Department, Hotel
+from inventory.models import Department, Hotel, Organization
 from .models import SalonDiscountPolicy, SalonService, SalonServiceCategory
 
 
 class SalonFoundationModelTests(TestCase):
     def setUp(self):
-        self.hotel = Hotel.objects.create(name="Salon Foundation Hotel")
+        self.organization = Organization.objects.create(name="Salon Foundation Group")
+        self.hotel = Hotel.objects.create(name="Salon Foundation Hotel", organization=self.organization)
         self.department = Department.objects.create(
             hotel=self.hotel,
             code="SAL",
@@ -22,12 +23,12 @@ class SalonFoundationModelTests(TestCase):
         )
 
     def test_employee_discount_policy_defaults_to_current_cch_rate(self):
-        policy = SalonDiscountPolicy.objects.create(hotel=self.hotel)
+        policy = SalonDiscountPolicy.objects.create(organization=self.organization)
         self.assertEqual(policy.employee_discount_percent, Decimal("50.00"))
         self.assertTrue(policy.is_active)
 
     def test_service_category_is_hotel_scoped(self):
-        another_hotel = Hotel.objects.create(name="Another Salon Hotel")
+        another_hotel = Hotel.objects.create(name="Another Salon Hotel", organization=self.organization)
         with self.assertRaises(ValidationError):
             SalonService(
                 hotel=another_hotel,
