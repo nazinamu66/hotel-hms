@@ -21,7 +21,7 @@ from inventory.models import HotelFeature, Hotel
 from core.utils import get_user_hotels
 from personnel.models import EmployeeProfile
 from rooms.models import Room
-from salon.models import SalonDiscountPolicy, SalonOrder, SalonService, SalonServiceCategory
+from salon.models import SalonDiscountPolicy, SalonOrder, SalonOrderItem, SalonService, SalonServiceCategory
 from salon.services.orders import create_salon_order, settle_salon_order
 
 
@@ -357,9 +357,6 @@ def salon_order_list(request):
     cashier = request.GET.get("cashier", "").strip()
 
     if search:
-        orders = orders.filter(
-            Q(pk__icontains=search) if search.isdigit() else Q(pk__isnull=True)
-        ) if search.isdigit() else orders
         if search.isdigit():
             orders = SalonOrder.objects.filter(department__hotel=hotel).filter(
                 Q(pk=int(search))
