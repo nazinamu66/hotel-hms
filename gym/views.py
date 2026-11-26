@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -11,7 +11,7 @@ from accounts.decorators import role_required
 from inventory.models import HotelFeature
 from core.utils import get_user_hotel
 
-from .forms import GymMemberForm, GymMembershipPlanForm
+from .forms import GymMemberForm, GymMembershipPlanForm, GymMembershipCheckoutForm
 from .models import GymMember, GymMembership, GymMembershipPlan, GymVisit
 
 
@@ -71,7 +71,6 @@ def gym_home(request):
 
 @role_required(*FRONT_DESK_ROLES)
 def gym_membership_checkout(request, member_id):
-    from .forms import GymMembershipCheckoutForm
     from .services.memberships import create_paid_membership
 
     hotel = _hotel_for_gym(request.user)
@@ -92,12 +91,8 @@ def gym_membership_checkout(request, member_id):
                     ),
                     start_date=form.cleaned_data["start_date"],
                 )
-            except Exception as exc:
-                from django.core.exceptions import ValidationError
-                if isinstance(exc, ValidationError):
-                    form.add_error(None, exc)
-                else:
-                    raise
+            except ValidationError as exc:
+                form.add_error(None, exc)
             else:
                 payment = membership.billing_payment
                 if form.cleaned_data.get("payment_reference"):
