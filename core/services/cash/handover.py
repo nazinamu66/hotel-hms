@@ -420,6 +420,20 @@ def resolve_cash_variance(
             status="OPEN",
         )
 
+    elif handover.salon_shift_id and handover.custody_type == "CUSTODY":
+        from salon.models import SalonShift
+
+        salon_shift = (
+            SalonShift.objects.select_for_update()
+            .get(pk=handover.salon_shift_id)
+        )
+        if salon_shift.status != "OPEN":
+            raise ValidationError("The source Salon shift is no longer open.")
+        salon_shift.closing_cash = handover.expected_amount
+        salon_shift.closed_at = timezone.now()
+        salon_shift.status = "CLOSED"
+        salon_shift.save(update_fields=["closing_cash", "closed_at", "status"])
+
     return handover
 
     
