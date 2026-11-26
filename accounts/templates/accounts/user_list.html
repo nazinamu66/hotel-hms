@@ -2,7 +2,10 @@
 {% block title %}Staff Users | Hotel HMS{% endblock %}
 {% block content %}
 <style>
-.staff-page{max-width:1400px;margin:0 auto;padding:30px 24px 48px} .staff-head{padding:22px 24px;background:linear-gradient(135deg,#172554,#1e40af);border-radius:17px;color:#fff}.staff-head h1{color:#fff}.staff-head p{color:#dbeafe}.staff-kicker{color:#bfdbfe}.staff-filter,.staff-table-card{border-radius:17px;box-shadow:0 8px 28px rgba(15,23,42,.055)}
+.staff-page{max-width:1400px;margin:0 auto;padding:28px 24px 48px}
+.staff-head{padding:22px 24px;background:#fff;border:1px solid #e2e8f0;border-radius:15px;color:#172033;box-shadow:0 5px 18px rgba(15,23,42,.04)}
+.staff-head h1{color:#172033}.staff-head p{color:#64748b}.staff-kicker{color:#64748b}
+.staff-filter,.staff-table-card{border-radius:15px;box-shadow:0 5px 18px rgba(15,23,42,.04)}
 .staff-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px}
 .staff-kicker{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
 .staff-head h1{font-size:1.85rem;font-weight:760;color:#172033;margin:4px 0 7px}
@@ -19,11 +22,11 @@
 .staff-section-head h2{font-size:1.03rem;font-weight:700;color:#1e293b;margin:0 0 4px}
 .staff-section-head p{font-size:.88rem;color:#64748b;margin:0}
 .staff-filter-body{padding:20px 22px}
-.staff-filter-grid{display:grid;grid-template-columns:minmax(190px,2fr) repeat(4,minmax(125px,1fr)) auto;gap:13px;align-items:end}
+.staff-filter-grid{display:grid;grid-template-columns:minmax(180px,1.6fr) repeat(4,minmax(125px,1fr));gap:13px;align-items:end}
 .staff-field{min-width:0}
 .staff-field label{display:block;font-size:.82rem;font-weight:650;color:#475569;margin-bottom:7px}
 .staff-field input,.staff-field select{display:block;width:100%;min-height:43px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:9px 11px;background:#fff;color:#0f172a;font:inherit}
-.staff-filter-actions{display:flex;gap:8px}
+.staff-filter-actions{display:flex;gap:8px;grid-column:1/-1;justify-content:flex-end;padding-top:4px}
 .staff-table-wrap{overflow-x:auto}
 .staff-table{width:100%;border-collapse:separate;border-spacing:0;min-width:900px}
 .staff-table th{padding:14px 17px;text-align:left;background:#f8fafc;color:#64748b;font-size:.73rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e8edf3}
@@ -37,7 +40,7 @@
 .staff-chip.inactive{background:#fee2e2;color:#991b1b}
 .staff-actions{display:flex;gap:7px;flex-wrap:wrap}
 .staff-empty{text-align:center;padding:40px 20px;color:#64748b}
-@media(max-width:1150px){.staff-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.staff-filter-actions{grid-column:1/-1}}
+@media(max-width:1150px){.staff-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:700px){.staff-page{padding:22px 14px 32px}.staff-head h1{font-size:1.55rem}.staff-filter-grid{grid-template-columns:1fr}.staff-filter-actions{grid-column:auto}.staff-filter-actions .staff-btn{flex:1}.staff-section-head,.staff-filter-body{padding:17px}}
 </style>
 <div class="staff-page">
