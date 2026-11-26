@@ -172,10 +172,12 @@ class SalonOrder(models.Model):
                 errors["customer_type"] = "A hotel guest order cannot also identify an employee or walk-in customer."
             if self.guest_id and self.department_id and self.guest.hotel_id != self.department.hotel_id:
                 errors["guest"] = "The guest must belong to the Salon's hotel."
-            if self.folio_id and self.folio.folio_type != "ROOM":
-                errors["folio"] = "Hotel guest Salon orders must use a room folio."
-            if self.folio_id and self.guest_id and self.folio.guest_id != self.guest_id:
-                errors["folio"] = "The selected folio must belong to the selected guest."
+            if self.folio_id and self.folio.folio_type == "ROOM" and self.folio.guest_id != self.guest_id:
+                errors["folio"] = "The selected room folio must belong to the selected guest."
+            if self.folio_id and self.folio.folio_type not in {"ROOM", "WALKIN"}:
+                errors["folio"] = "Select a valid guest or direct-payment folio."
+            if self.folio_id and self.folio.folio_type == "WALKIN" and self.folio.guest_id not in (None, self.guest_id):
+                errors["folio"] = "The direct-payment folio is linked to another guest."
         elif self.customer_type == self.EMPLOYEE:
             if not self.employee_id:
                 errors["employee"] = "Select the CCH employee receiving the service."
