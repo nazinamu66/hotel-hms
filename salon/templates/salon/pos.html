@@ -3,6 +3,35 @@
 {% block content %}
 <style>
 .salon-wrap{max-width:1600px;margin:0 auto;color:#172033}.salon-head,.salon-panel{background:#fff;border:1px solid #e5e9f0;border-radius:18px;padding:22px;margin-bottom:18px;box-shadow:0 5px 20px rgba(15,23,42,.055)}.salon-head{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(115deg,#fff 0%,#f5f8ff 100%);border-top:4px solid #2563eb}.salon-head h1{font-size:clamp(1.45rem,2vw,2rem);letter-spacing:-.035em;color:#172033}.salon-grid{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:18px;align-items:start}.salon-categories{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));grid-auto-rows:1fr;gap:14px}.salon-category-title{display:flex;align-items:center;gap:10px;margin:24px 0 12px;padding-bottom:10px;border-bottom:1px solid #edf0f5;color:#172033;font-size:1.12rem;font-weight:800}.salon-category-title:first-of-type{margin-top:14px}.salon-service{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:7px;width:100%;height:176px;min-height:176px;box-sizing:border-box;overflow:hidden;border:1px solid #e2e8f0;background:linear-gradient(145deg,#fff,#fbfcff);border-radius:15px;padding:16px;text-align:left;cursor:pointer;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}.salon-service:hover{transform:translateY(-3px);border-color:#7aa7ff;box-shadow:0 9px 22px rgba(37,99,235,.12)}.salon-service:focus-visible{outline:3px solid #93c5fd;outline-offset:2px}.salon-service-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#eaf2ff;color:#2563eb;font-size:20px;margin-bottom:3px}.salon-service:nth-child(4n+2) .salon-service-icon{background:#f3eaff;color:#8b5cf6}.salon-service:nth-child(4n+3) .salon-service-icon{background:#e6faf3;color:#059669}.salon-service:nth-child(4n+4) .salon-service-icon{background:#fff3e8;color:#ea580c}.salon-service strong{display:-webkit-box;width:100%;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.25;min-height:2.5em;color:#172033;font-size:15px}.salon-service .salon-duration{color:#64748b;font-size:12px}.salon-service .salon-price{color:#1d4ed8;font-size:16px;font-weight:850;margin-top:auto}.salon-side{position:sticky;top:15px}.salon-side h2{display:flex;align-items:center;gap:9px;color:#172033}.salon-field{margin:12px 0}.salon-field label{display:block;font-size:12px;font-weight:750;color:#475569;margin-bottom:6px}.salon-field input,.salon-field select{width:100%;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;box-sizing:border-box;background:#fff}.salon-field input:focus,.salon-field select:focus,.salon-line select:focus{outline:3px solid #dbeafe;border-color:#60a5fa}.salon-line{padding:13px 0;border-bottom:1px solid #e5e7eb}.salon-line select{width:100%;margin-top:9px;padding:9px;border:1px solid #cbd5e1;border-radius:9px;background:#fff}.salon-total{display:flex;justify-content:space-between;padding:17px 0;font-size:21px;font-weight:850;color:#172033}.salon-submit{width:100%;border:0;border-radius:11px;background:linear-gradient(110deg,#2563eb,#1d4ed8);color:#fff;padding:14px;font-weight:800;cursor:pointer;box-shadow:0 5px 12px rgba(37,99,235,.2)}.salon-submit:hover{filter:brightness(1.06)}.lookup-result{display:block;width:100%;text-align:left;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px;margin:5px 0;cursor:pointer}.muted{color:#64748b;font-size:13px}.salon-section-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:#eef4ff;font-size:17px}@media(max-width:1050px){.salon-grid{grid-template-columns:minmax(0,1fr) 360px}.salon-categories{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}}@media(max-width:850px){.salon-grid{grid-template-columns:1fr}.salon-side{position:static}.salon-head{align-items:flex-start;gap:12px;flex-direction:column}.salon-categories{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}}@media(max-width:480px){.salon-categories{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.salon-service{height:166px;min-height:166px;padding:12px}.salon-panel{padding:15px}}
+
+/* Refined Salon cart and live customer lookup */
+.salon-side{border:1px solid #dbe3ef;box-shadow:0 12px 32px rgba(15,23,42,.08)}
+.salon-side>h2{font-size:21px;letter-spacing:-.025em}
+#guest-results,#employee-results,#room-results{margin-top:7px;display:grid;gap:6px}
+.lookup-result{display:flex;align-items:center;gap:9px;padding:11px 12px;background:#f8fbff;border:1px solid #dce6f3;border-radius:11px;color:#172033;font-weight:650;transition:background .15s,border-color .15s}
+.lookup-result:before{content:"👤";display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:9px;background:#e8f1ff}
+.lookup-result:hover{background:#edf5ff;border-color:#8bb7fa}
+.lookup-feedback{padding:10px 12px;border-radius:10px;background:#f1f5f9;color:#64748b;font-size:13px}
+.salon-cart-empty{display:grid;place-items:center;text-align:center;padding:24px 12px;border:1px dashed #cbd5e1;border-radius:14px;background:#f8fafc;color:#64748b}
+.salon-cart-empty span{font-size:27px;margin-bottom:7px}
+.salon-line{display:grid;gap:12px;padding:15px;margin:11px 0;border:1px solid #e2e8f0;border-radius:14px;background:linear-gradient(145deg,#fff,#f9fbff);box-shadow:0 3px 10px rgba(15,23,42,.035)}
+.salon-line-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.salon-line-name{font-weight:800;color:#172033;font-size:14px;line-height:1.35}
+.salon-line-price{font-weight:850;color:#1d4ed8;white-space:nowrap;font-size:14px}
+.salon-line-actions{display:flex;align-items:center;gap:8px}
+.salon-qty{display:inline-flex;align-items:center;gap:0;border:1px solid #dbe3ef;border-radius:10px;overflow:hidden;background:#fff}
+.salon-qty button{width:34px;height:33px;border:0;background:#f1f5f9;color:#1e40af;font-size:19px;font-weight:800;cursor:pointer}
+.salon-qty button:hover{background:#dbeafe}
+.salon-qty span{min-width:30px;text-align:center;font-size:13px;font-weight:800;color:#172033}
+.salon-remove{margin-left:auto;border:1px solid #fecaca;background:#fff7f7;color:#b91c1c;border-radius:9px;padding:8px 10px;font-size:12px;font-weight:750;cursor:pointer}
+.salon-remove:hover{background:#fee2e2}
+.salon-line select{margin-top:0;padding:10px 11px;background:#f8fafc;border-color:#dbe3ef;color:#334155}
+.salon-cart-summary{margin-top:14px;padding:15px;border-radius:14px;background:#f1f6ff;border:1px solid #dbeafe}
+.salon-total{padding:4px 0 13px;margin:0;border-bottom:1px solid #d7e4f7;font-size:21px}
+.salon-submit{margin-top:12px;display:flex;align-items:center;justify-content:center;gap:9px;font-size:15px}
+.salon-submit:before{content:"🧾"}
+@media(max-width:850px){.salon-side{position:static}}
+
 </style>
 <div class="salon-wrap">
  <div class="salon-head"><div><h1 style="margin:0 0 5px">Salon Point of Sale</h1><div class="muted">{{ hotel.name }} · Services and customer checkout</div></div><div><strong>{{ request.user.get_full_name|default:request.user.username }}</strong><div class="muted">Salon staff</div></div></div>
@@ -56,12 +85,77 @@ document.querySelectorAll("[data-category-icon]").forEach(el=>el.textContent=sal
 document.querySelectorAll(".salon-service").forEach(el=>{const icon=el.querySelector(".salon-service-icon");if(icon)icon.textContent=salonIcon(el.dataset.category);});
 const fmt=n=>"₦"+Number(n).toLocaleString("en-NG",{minimumFractionDigits:2,maximumFractionDigits:2});
 function addService(id,name,price){const found=cart.find(x=>x.id===id);if(found)found.qty++;else cart.push({id,name,price:Number(price),qty:1,performer:stylists[0]?.id||""});drawCart();}
-function drawCart(){const root=document.getElementById("cart-lines");root.innerHTML="";let total=0;cart.forEach((x,i)=>{total+=x.price*x.qty;const line=document.createElement("div");line.className="salon-line";line.innerHTML='<div style="display:flex;justify-content:space-between;gap:8px"><strong></strong><b></b></div><div style="display:flex;align-items:center;gap:8px;margin-top:8px"><button type="button" aria-label="Decrease">−</button><span></span><button type="button" aria-label="Increase">+</button><button type="button" style="margin-left:auto;color:#b91c1c">Remove</button></div><select aria-label="Service provider"></select>';line.querySelector("strong").textContent=x.name;line.querySelector("b").textContent=fmt(x.price*x.qty);const buttons=line.querySelectorAll("button");buttons[0].onclick=()=>{x.qty=Math.max(1,x.qty-1);drawCart()};buttons[1].onclick=()=>{x.qty++;drawCart()};buttons[2].onclick=()=>{cart.splice(i,1);drawCart()};line.querySelector("span").textContent=x.qty;const select=line.querySelector("select");select.innerHTML='<option value="">Select stylist</option>'+stylists.map(s=>'<option value="'+s.id+'">'+s.name.replace(/</g,"&lt;")+'</option>').join("");select.value=x.performer;select.onchange=()=>x.performer=select.value;root.appendChild(line)});if(!cart.length)root.innerHTML='<p class="muted">Choose services to begin.</p>';document.getElementById("cart-total").textContent=fmt(total);document.getElementById("cart-count").textContent="("+cart.reduce((n,x)=>n+x.qty,0)+")";}
+function drawCart(){
+ const root=document.getElementById("cart-lines");
+ root.innerHTML="";
+ let total=0;
+ cart.forEach((x,i)=>{
+  total+=x.price*x.qty;
+  const line=document.createElement("div");
+  line.className="salon-line";
+  const top=document.createElement("div");top.className="salon-line-top";
+  const name=document.createElement("div");name.className="salon-line-name";name.textContent=x.name;
+  const price=document.createElement("div");price.className="salon-line-price";price.textContent=fmt(x.price*x.qty);
+  top.append(name,price);
+  const actions=document.createElement("div");actions.className="salon-line-actions";
+  const stepper=document.createElement("div");stepper.className="salon-qty";
+  const minus=document.createElement("button");minus.type="button";minus.textContent="−";minus.setAttribute("aria-label","Decrease quantity");
+  const quantity=document.createElement("span");quantity.textContent=x.qty;
+  const plus=document.createElement("button");plus.type="button";plus.textContent="+";
+  plus.setAttribute("aria-label","Increase quantity");
+  minus.onclick=()=>{x.qty=Math.max(1,x.qty-1);drawCart()};
+  plus.onclick=()=>{x.qty++;drawCart()};
+  stepper.append(minus,quantity,plus);
+  const remove=document.createElement("button");remove.type="button";remove.className="salon-remove";remove.textContent="Remove";
+  remove.onclick=()=>{cart.splice(i,1);drawCart()};
+  actions.append(stepper,remove);
+  const select=document.createElement("select");select.setAttribute("aria-label","Assign service provider");
+  const placeholder=document.createElement("option");placeholder.value="";placeholder.textContent="Assign stylist";
+  select.appendChild(placeholder);
+  stylists.forEach(staff=>{const option=document.createElement("option");option.value=staff.id;option.textContent=staff.name;select.appendChild(option)});
+  select.value=x.performer;select.onchange=()=>x.performer=select.value;
+  line.append(top,actions,select);root.appendChild(line);
+ });
+ if(!cart.length){const empty=document.createElement("div");empty.className="salon-cart-empty";empty.innerHTML="<span>🛍️</span><strong>Your cart is empty</strong><small>Select a service to add it here</small>";root.appendChild(empty);}
+ document.getElementById("cart-total").textContent=fmt(total);
+ document.getElementById("cart-count").textContent="("+cart.reduce((n,x)=>n+x.qty,0)+")";
+}
 const type=document.getElementById("customer-type");function customerFields(){const v=type.value;document.getElementById("guest-fields").hidden=v!=="HOTEL_GUEST";document.getElementById("walkin-fields").hidden=v!=="WALK_IN";document.getElementById("employee-fields").hidden=v!=="EMPLOYEE";}type.onchange=customerFields;customerFields();
-async function lookup(kind,q,target){if(q.length<2){target.innerHTML="";return}const url="{% url 'salon_customer_lookup' %}?type="+kind+"&q="+encodeURIComponent(q);const html=await fetch(url,{headers:{"X-Requested-With":"XMLHttpRequest"}}).then(r=>r.text());target.innerHTML=html;}
-document.getElementById("guest-search").oninput=e=>lookup("GUEST",e.target.value,document.getElementById("guest-results"));
-document.getElementById("employee-search").oninput=e=>lookup("EMPLOYEE",e.target.value,document.getElementById("employee-results"));
-document.getElementById("room-search").oninput=e=>lookup("ROOM",e.target.value,document.getElementById("room-results"));
+const lookupTimers=new WeakMap();
+const lookupVersions=new WeakMap();
+async function lookup(kind,q,target){
+ const input=kind==="GUEST"?"guest-search":kind==="EMPLOYEE"?"employee-search":"room-search";
+ const search=document.getElementById(input);
+ if(q.length<2){target.innerHTML="";return}
+ target.innerHTML='<div class="lookup-feedback">Searching…</div>';
+ const version=(lookupVersions.get(target)||0)+1;lookupVersions.set(target,version);
+ try{
+  const url="{% url 'salon_customer_lookup' %}?type="+kind+"&q="+encodeURIComponent(q);
+  const response=await fetch(url,{headers:{"X-Requested-With":"XMLHttpRequest","Accept":"text/html"}});
+  if(!response.ok)throw new Error("Search request failed ("+response.status+").");
+  const html=await response.text();
+  if(lookupVersions.get(target)!==version||search.value.trim()!==q.trim())return;
+  target.innerHTML=html;
+  if(!html.trim())target.innerHTML='<div class="lookup-feedback">No matching records found.</div>';
+ }catch(error){
+  if(lookupVersions.get(target)===version)target.innerHTML='<div class="lookup-feedback">Unable to search right now. Please try again.</div>';
+  console.error("Salon customer lookup:",error);
+ }
+}
+function bindLookup(inputId,kind,targetId,clearSelection){
+ const input=document.getElementById(inputId),target=document.getElementById(targetId);
+ input.addEventListener("input",()=>{
+  clearSelection();
+  const previous=lookupTimers.get(input);if(previous)clearTimeout(previous);
+  const q=input.value.trim();
+  if(q.length<2){target.innerHTML=q?"<div class='lookup-feedback'>Type at least 2 characters.</div>":"";return}
+  const timer=setTimeout(()=>lookup(kind,q,target),250);lookupTimers.set(input,timer);
+ });
+}
+
+bindLookup("guest-search","GUEST","guest-results",()=>{document.getElementById("guest-id").value="";document.getElementById("selected-guest").textContent="No guest selected";});
+bindLookup("employee-search","EMPLOYEE","employee-results",()=>{document.getElementById("employee-id").value="";document.getElementById("selected-employee").textContent="No employee selected";});
+bindLookup("room-search","ROOM","room-results",()=>{document.getElementById("room-id").value="";});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-select-kind]");if(!b)return;const kind=b.dataset.selectKind,id=b.dataset.id,label=b.dataset.label;if(kind==="GUEST"){document.getElementById("guest-id").value=id;document.getElementById("selected-guest").textContent=label;document.getElementById("guest-results").innerHTML="";}if(kind==="EMPLOYEE"){document.getElementById("employee-id").value=id;document.getElementById("selected-employee").textContent=label;document.getElementById("employee-results").innerHTML="";}if(kind==="ROOM"){document.getElementById("room-id").value=id;document.getElementById("room-results").innerHTML="";document.getElementById("room-search").value=label;}});
 document.getElementById("salon-order-form").onsubmit=e=>{if(!cart.length){e.preventDefault();alert("Add at least one service.");return}if(cart.some(x=>!x.performer)){e.preventDefault();alert("Assign a Salon staff member to every service.");return}const v=type.value;if(v==="HOTEL_GUEST"&&!document.getElementById("guest-id").value){e.preventDefault();alert("Select the hotel guest.");return}if(v==="EMPLOYEE"&&!document.getElementById("employee-id").value){e.preventDefault();alert("Select the employee.");return}if(v==="WALK_IN"&&!document.getElementById("walkin-name").value.trim()){e.preventDefault();alert("Enter the walk-in customer's name.");return}document.getElementById("items-json").value=JSON.stringify(cart.map(x=>({service_id:x.id,quantity:x.qty,performed_by_id:x.performer})));};
 </script>
