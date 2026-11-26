@@ -496,6 +496,10 @@ def salon_reports(request):
         .annotate(quantity=Sum("quantity"), revenue=Sum("line_total"))
         .order_by("-quantity", "-revenue")[:8]
     )
+    max_service_qty = max([row["quantity"] or 0 for row in service_rows], default=0)
+    for row in service_rows:
+        row["bar_width"] = round((row["quantity"] or 0) * 100 / max_service_qty) if max_service_qty else 0
+
     performer_rows = list(
         SalonOrderItem.objects.filter(order_id__in=settled_ids)
         .values("performed_by__first_name", "performed_by__last_name", "performed_by__username")
@@ -508,10 +512,18 @@ def salon_reports(request):
         ) or row.pop("performed_by__username")
         row.pop("performed_by__username", None)
 
+    max_performer_revenue = max([row["revenue"] or Decimal("0.00") for row in performer_rows], default=Decimal("0.00"))
+    for row in performer_rows:
+        row["bar_width"] = round((row["revenue"] or Decimal("0.00")) * 100 / max_performer_revenue) if max_performer_revenue else 0
+
     daily_rows = list(
         settled.values("created_at__date").annotate(total=Sum("total_amount"), orders=Count("pk"))
         .order_by("created_at__date")
     )
+    max_daily_sales = max([row["total"] or Decimal("0.00") for row in daily_rows], default=Decimal("0.00"))
+    for row in daily_rows:
+        row["bar_width"] = round((row["total"] or Decimal("0.00")) * 100 / max_daily_sales) if max_daily_sales else 0
+
     recent_orders = settled.select_related("guest", "employee").order_by("-created_at")[:8]
     for order in recent_orders:
         order.report_customer = (
