@@ -5,6 +5,9 @@ from . import views
 urlpatterns = [
     path("operations/", views.salon_operations_dashboard, name="salon_operations_dashboard"),
     path("management/", views.salon_management_dashboard, name="salon_management_dashboard"),
+    path("management/reports/", views.salon_reports, name="salon_reports"),
+    path("orders/", views.salon_order_list, name="salon_order_list"),
+    path("orders/<int:order_id>/", views.salon_order_detail, name="salon_order_detail"),
     path("management/services/", views.salon_service_catalogue, name="salon_service_catalogue"),
     path("management/discount-policy/", views.salon_discount_policy, name="salon_discount_policy"),
     path("", views.salon_pos, name="salon_pos"),
