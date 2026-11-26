@@ -2,10 +2,11 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from inventory.models import Department
+from inventory.models import Department, HotelFeature
 from personnel.models import EmployeeProfile
 from .services.orders import create_salon_order
 
@@ -150,3 +151,44 @@ class SalonOrderServiceTests(TestCase):
         item.refresh_from_db()
         self.assertEqual(item.unit_price, Decimal("10000.00"))
         self.assertEqual(item.line_total, Decimal("20000.00"))
+
+
+class SalonOrderHistoryViewTests(SalonOrderServiceTests):
+    def _create_order(self):
+        HotelFeature.objects.update_or_create(
+            hotel=self.hotel, feature="SALON", defaults={"is_active": True}
+        )
+        return create_salon_order(
+            user=self.salon_user,
+            customer_type=SalonOrder.WALK_IN,
+            walkin_name="Test Walk-in",
+            walkin_phone="08012345678",
+            items=[{
+                "service_id": self.service.pk,
+                "quantity": 1,
+                "performed_by_id": self.salon_user.pk,
+            }],
+        )
+
+    def test_salon_staff_can_view_hotel_order_register(self):
+        self._create_order()
+        self.client.force_login(self.salon_user)
+        response = self.client.get(reverse("salon_order_list"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Previous Orders")
+        self.assertContains(response, "Test Walk-in")
+
+    def test_salon_staff_can_open_order_detail_for_own_hotel(self):
+        order = self._create_order()
+        self.client.force_login(self.salon_user)
+        response = self.client.get(reverse("salon_order_detail", args=[order.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"SAL-{order.pk}")
+        self.assertContains(response, "Hair Treatment")
+
+    def test_order_register_searches_walkin_phone(self):
+        self._create_order()
+        self.client.force_login(self.salon_user)
+        response = self.client.get(reverse("salon_order_list"), {"q": "08012345678"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Test Walk-in")
