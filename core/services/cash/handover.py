@@ -213,129 +213,52 @@ def cancel_handover(*, handover_id, user):
     return handover
 
 @transaction.atomic
-def accept_handover_and_transition(
-    *,
-    handover_id,
-    recipient,
-    recipient_count,
-    variance_note="",
-):
-    """
-    Accept a cash handover.
-
-    For a matching SHIFT handover:
-        - close the sender's shift
-        - open a new shift for the recipient
-        - carry accepted cash into opening_cash
-
-    For a matching CUSTODY handover linked to a shift:
-        - close the sender's shift
-        - recipient takes physical cash custody
-        - recipient does not get a restaurant shift
-
-    For a PARTIAL handover linked to a shift:
-        - transfer only the declared amount
-        - keep the sender's shift open
-
-    For a general CUSTODY handover without a shift:
-        - record custody only
-        - no shift is opened or closed
-
-    Variances are recorded but do not transition the shift.
-    """
-
+def accept_handover_and_transition(*, handover_id, recipient, recipient_count, variance_note=""):
+    """Accept a cash count and apply the appropriate Restaurant or Salon shift transition."""
     handover = (
-        CashHandover.objects
-        .select_for_update()
-        .select_related(
-            "hotel",
-            "department",
-            "from_user",
-            "to_user",
-            "shift",
-        )
+        CashHandover.objects.select_for_update()
+        .select_related("hotel", "department", "from_user", "to_user", "shift", "salon_shift")
         .get(id=handover_id)
     )
-
-    # Use the existing acceptance rules.
     handover = accept_handover(
-        handover_id=handover.id,
-        recipient=recipient,
-        recipient_count=recipient_count,
-        variance_note=variance_note,
+        handover_id=handover.id, recipient=recipient,
+        recipient_count=recipient_count, variance_note=variance_note,
     )
-
-    # A variance is not a completed custody transition.
     if handover.status != "ACCEPTED":
         return handover, None
 
-    # A partial cash handover transfers only the declared cash amount.
-    # The cashier keeps the same active shift and continues from the
-    # remaining till balance.
+    linked_shift = handover.shift or handover.salon_shift
     if handover.custody_type == "PARTIAL":
-        if not handover.shift_id or handover.shift.status != "OPEN":
-            raise ValidationError(
-                "The linked shift must remain open for a partial cash handover."
-            )
+        if linked_shift is None or linked_shift.status != "OPEN":
+            raise ValidationError("The linked shift must remain open for a partial cash handover.")
+        return handover, None
+    if linked_shift is None:
+        return handover, None
+    if linked_shift.status != "OPEN":
+        raise ValidationError("The source shift is no longer open.")
+
+    linked_shift.closing_cash = handover.sender_count
+    linked_shift.closed_at = timezone.now()
+    linked_shift.status = "CLOSED"
+    linked_shift.save(update_fields=["closing_cash", "closed_at", "status"])
+
+    # Salon currently has one cashier: custody is transferred to management,
+    # and the Salon shift closes. No cashier-to-cashier Salon transfer is offered.
+    if handover.salon_shift_id or handover.custody_type == "CUSTODY":
         return handover, None
 
-    # General custody with no source shift does not affect shifts.
-    if handover.shift is None:
-        return handover, None
-
-    shift = handover.shift
-
-    if shift.status != "OPEN":
-        raise ValidationError(
-            "The source shift is no longer open."
-        )
-
-    # Close the sender's shift using the sender's physical count.
-    shift.closing_cash = handover.sender_count
-    shift.closed_at = timezone.now()
-    shift.status = "CLOSED"
-    shift.save(
-        update_fields=[
-            "closing_cash",
-            "closed_at",
-            "status",
-        ]
-    )
-
-    # Cashier-to-manager/accountant:
-    # custody changes, but the recipient does not open a restaurant shift.
-    if handover.custody_type == "CUSTODY":
-        return handover, None
-
-    # SHIFT handover:
-    # recipient must not already have another open shift.
     from restaurant.models import Shift
-
-    existing_shift = (
-        Shift.objects
-        .select_for_update()
-        .filter(
-            user=recipient,
-            department=handover.department,
-            status="OPEN",
-        )
-        .first()
-    )
-
+    existing_shift = Shift.objects.select_for_update().filter(
+        user=recipient, department=handover.department, status="OPEN"
+    ).first()
     if existing_shift:
-        raise ValidationError(
-            "The recipient already has an open shift in this department."
-        )
-
-    # Start the recipient's new cashier shift.
+        raise ValidationError("The recipient already has an open shift in this department.")
     new_shift = Shift.objects.create(
-        user=recipient,
-        department=handover.department,
-        opening_cash=handover.recipient_count,
-        status="OPEN",
+        user=recipient, department=handover.department,
+        opening_cash=handover.recipient_count, status="OPEN",
     )
-
     return handover, new_shift
+
 
 @transaction.atomic
 def resolve_cash_variance(
