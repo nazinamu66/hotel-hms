@@ -169,3 +169,100 @@ class GymMembershipPaymentTests(TestCase):
                 payment_method="CASH",
             )
         self.assertEqual(self.member.memberships.count(), 0)
+
+
+class GymGateVerificationTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.hotel = Hotel.objects.create(name="Gym Gate Test Hotel")
+        HotelFeature.objects.get_or_create(
+            hotel=cls.hotel, feature="GYM", defaults={"is_active": True}
+        )
+        cls.department = Department.objects.get(
+            hotel=cls.hotel, department_type="GYM"
+        )
+        User = get_user_model()
+        cls.security = User.objects.create_user(
+            username="gym-gate-security", password="test-password",
+            role="SECURITY", department=cls.department,
+        )
+        cls.frontdesk = User.objects.create_user(
+            username="gym-gate-frontdesk", password="test-password",
+            role="FRONTDESK", department=cls.department,
+        )
+        cls.member = GymMember.objects.create(
+            hotel=cls.hotel, first_name="Gate", last_name="Member",
+            phone="08011111111", created_by=cls.frontdesk,
+        )
+        cls.plan = GymMembershipPlan.objects.create(
+            hotel=cls.hotel, package=GymMembershipPlan.MONTHLY, price="12000.00",
+        )
+
+    def create_membership(self, start_date=None):
+        return create_paid_membership(
+            member_id=self.member.pk, plan_id=self.plan.pk,
+            hotel=self.hotel, user=self.frontdesk, payment_method="CASH",
+            start_date=start_date or date(2026, 11, 27),
+        )
+
+    def test_security_can_check_member_in_and_out(self):
+        from gym.models import GymVisit
+        from gym.services.gate import check_in_member, check_out_member
+
+        membership = self.create_membership()
+        visit = check_in_member(
+            membership_id=membership.pk, hotel=self.hotel, user=self.security
+        )
+        self.assertIsNone(visit.exited_at)
+        self.assertEqual(visit.checked_in_by, self.security)
+
+        closed = check_out_member(
+            visit_id=visit.pk, hotel=self.hotel, user=self.security
+        )
+        self.assertIsNotNone(closed.exited_at)
+        self.assertEqual(closed.checked_out_by, self.security)
+        self.assertEqual(GymVisit.objects.filter(membership=membership).count(), 1)
+
+    def test_duplicate_open_visit_is_rejected(self):
+        from django.core.exceptions import ValidationError
+        from gym.services.gate import check_in_member
+
+        membership = self.create_membership()
+        check_in_member(membership_id=membership.pk, hotel=self.hotel, user=self.security)
+        with self.assertRaises(ValidationError):
+            check_in_member(membership_id=membership.pk, hotel=self.hotel, user=self.security)
+
+    def test_expired_membership_cannot_check_in(self):
+        from django.core.exceptions import ValidationError
+        from gym.services.gate import check_in_member
+
+        membership = self.create_membership(start_date=date(2026, 10, 1))
+        with self.assertRaises(ValidationError):
+            check_in_member(membership_id=membership.pk, hotel=self.hotel, user=self.security)
+
+    def test_gate_lookup_and_entry_are_available_to_security(self):
+        membership = self.create_membership()
+        self.client.force_login(self.security)
+        response = self.client.post("/gym/gate/", {
+            "action": "lookup", "code": membership.member.member_number,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, membership.member.full_name)
+        self.assertContains(response, "Record entry")
+
+        response = self.client.post("/gym/gate/", {
+            "action": "check_in", "membership_id": membership.pk,
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(membership.visits.filter(exited_at__isnull=True).exists())
+
+    def test_membership_from_another_hotel_cannot_be_checked_in(self):
+        from django.core.exceptions import ValidationError
+        from gym.services.gate import check_in_member
+
+        membership = self.create_membership()
+        other_hotel = Hotel.objects.create(name="Different Gym Hotel")
+        with self.assertRaises(ValidationError):
+            check_in_member(
+                membership_id=membership.pk, hotel=other_hotel, user=self.security
+            )
