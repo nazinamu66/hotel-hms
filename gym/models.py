@@ -79,13 +79,11 @@ class GymMember(models.Model):
         return f"{self.first_name} {self.last_name}".strip()
 
     def save(self, *args, **kwargs):
-        if not self.member_number and self.pk:
-            self.member_number = f"GYM-{self.hotel_id:03d}-{self.pk:06d}"
-            kwargs["update_fields"] = None if kwargs.get("update_fields") is None else set(kwargs["update_fields"]) | {"member_number"}
-        super().save(*args, **kwargs)
         if not self.member_number:
-            self.member_number = f"GYM-{self.hotel_id:03d}-{self.pk:06d}"
-            super().save(update_fields=["member_number"])
+            # Generate the identifier before the first INSERT so the hotel's
+            # unique constraint never sees multiple temporary blank values.
+            self.member_number = f"GYM-{self.hotel_id:03d}-{uuid.uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.member_number or 'New member'} · {self.full_name}"
