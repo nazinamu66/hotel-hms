@@ -114,6 +114,7 @@ class HotelFeature(models.Model):
         ("HOUSEKEEPING", "Housekeeping"),
         ("LAUNDRY", "Laundry"),
         ("GYM", "Gym"),
+        ("SALON", "Salon"),
         ("POOL", "Swimming Pool"),
         ("SPA", "Spa"),
         ("BOUTIQUE", "Boutique Shop"),
