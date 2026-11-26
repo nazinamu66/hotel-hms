@@ -157,6 +157,7 @@ class Department(models.Model):
         ("STORE", "Store"),
         ("LAUNDRY", "Laundry"),
         ("GYM", "Gym"),
+        ("SALON", "Salon"),
 
         # ---------------- Administration ----------------
 
