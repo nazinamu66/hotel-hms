@@ -1,0 +1,9 @@
+{% extends "base/base.html" %}
+{% block title %}Salon Cash Handover{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:30px auto;background:white;border:1px solid #e2e8f0;border-radius:16px;padding:26px;color:#172033"><h1>Salon Cash Handover</h1><p>Shift #{{ shift.pk }} · Expected cash: <strong>₦{{ summary.expected_cash|floatformat:2 }}</strong></p>
+<form method="post">{% csrf_token %}<label>Recipient (Manager / Accountant)</label><select name="recipient_id" required style="display:block;width:100%;padding:12px;margin:8px 0 18px;border:1px solid #cbd5e1;border-radius:8px">{% for person in recipients %}<option value="{{ person.pk }}">{{ person.get_full_name|default:person.username }} · {{ person.get_role_display|default:person.role }}</option>{% endfor %}</select>
+<label>Handover type</label><select name="handover_type" style="display:block;width:100%;padding:12px;margin:8px 0 18px;border:1px solid #cbd5e1;border-radius:8px"><option value="PARTIAL">Partial handover (shift remains open)</option><option value="CUSTODY">Full handover (close shift)</option></select>
+<label>Cash amount (₦)</label><input name="amount" type="number" min="0.01" max="{{ summary.expected_cash }}" step="0.01" required style="display:block;width:100%;padding:12px;margin:8px 0 18px;border:1px solid #cbd5e1;border-radius:8px">
+<button style="background:#1d4ed8;color:white;padding:12px 18px;border:0;border-radius:8px">Submit for Independent Count</button></form></div>
+{% endblock %}
