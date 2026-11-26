@@ -378,6 +378,19 @@
 
 
         <!-- ========================= -->
+        <!-- SALON -->
+        <!-- ========================= -->
+        {% feature_enabled user "SALON" as salon_enabled %}
+        {% if salon_enabled and user|has_role:"SALON" %}
+        <h4 class="menu-toggle" onclick="toggleMenu('salon_menu', this)">
+            <span class="arrow">▸</span> Salon
+        </h4>
+        <div id="salon_menu" class="menu-section">
+            <a href="{% url 'salon_pos' %}">Salon POS</a>
+        </div>
+        {% endif %}
+
+        <!-- ========================= -->
         <!-- KITCHEN -->
         <!-- ========================= -->
 
