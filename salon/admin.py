@@ -25,8 +25,10 @@ class SalonServiceAdmin(admin.ModelAdmin):
 
 @admin.register(SalonDiscountPolicy)
 class SalonDiscountPolicyAdmin(admin.ModelAdmin):
-    list_display = ("hotel", "employee_discount_percent", "is_active", "updated_at")
-    list_filter = ("hotel", "is_active")
+    # Discount policy is organization-wide, not hotel-specific.
+    list_display = ("organization", "employee_discount_percent", "is_active", "updated_at")
+    list_filter = ("organization", "is_active")
+    search_fields = ("organization__name",)
 
 
 class SalonOrderItemInline(admin.TabularInline):
