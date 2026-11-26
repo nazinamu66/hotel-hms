@@ -400,7 +400,6 @@ def salon_order_list(request):
         )
     orders = orders.distinct().order_by("-created_at", "-pk")
 
-    payment_map = _salon_order_payment_map(list(orders[:500]))
     if payment_method:
         if payment_method == "ROOM":
             orders = orders.filter(status=SalonOrder.CHARGED, folio__folio_type="ROOM")
