@@ -386,19 +386,22 @@
             onclick="toggleMenu('salon_operations_menu', this)">
             <span class="arrow">▸</span> ✂️ Salon
         </h4>
-        <div id="salon_operations_menu" class="menu-section {% if request.resolver_match.url_name in 'salon_operations_dashboard salon_pos salon_checkout salon_receipt' %}open{% endif %}">
+        <div id="salon_operations_menu" class="menu-section {% if request.resolver_match.url_name in 'salon_operations_dashboard salon_pos salon_checkout salon_receipt salon_order_list salon_order_detail' %}open{% endif %}">
             <a href="{% url 'salon_operations_dashboard' %}">Operations Dashboard</a>
             <a href="{% url 'salon_pos' %}">Salon POS</a>
+            <a href="{% url 'salon_order_list' %}">Previous Orders</a>
         </div>
         {% endif %}
 
         {% if user|has_role:"ADMIN,DIRECTOR" %}
-        <h4 class="menu-toggle {% if request.resolver_match.url_name in 'salon_management_dashboard salon_service_catalogue salon_discount_policy' %}active-menu{% endif %}"
+        <h4 class="menu-toggle {% if request.resolver_match.url_name in 'salon_management_dashboard salon_service_catalogue salon_discount_policy salon_reports salon_order_list salon_order_detail' %}active-menu{% endif %}"
             onclick="toggleMenu('salon_management_menu', this)">
             <span class="arrow">▸</span> ✂️ Salon
         </h4>
-        <div id="salon_management_menu" class="menu-section {% if request.resolver_match.url_name in 'salon_management_dashboard salon_service_catalogue salon_discount_policy' %}open{% endif %}">
+        <div id="salon_management_menu" class="menu-section {% if request.resolver_match.url_name in 'salon_management_dashboard salon_service_catalogue salon_discount_policy salon_reports salon_order_list salon_order_detail' %}open{% endif %}">
             <a href="{% url 'salon_management_dashboard' %}">Management Dashboard</a>
+            <a href="{% url 'salon_order_list' %}">Previous Orders</a>
+            <a href="{% url 'salon_reports' %}">Performance &amp; Reports</a>
             <a href="{% url 'salon_service_catalogue' %}">Service Catalogue</a>
             <a href="{% url 'salon_discount_policy' %}">Employee Discount Policy</a>
         </div>
