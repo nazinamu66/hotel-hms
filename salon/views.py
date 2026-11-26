@@ -3,17 +3,20 @@ import json
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from decimal import Decimal, InvalidOperation
+from datetime import timedelta
 
-from django.db.models import Q, Sum, Value
+from django.db.models import Q, Sum, Value, Count
 from django.db.models.functions import Concat
 from django.db.models import Prefetch
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
+from django.core.paginator import Paginator
+from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
 from accounts.decorators import role_required
 from accounting.models import BankAccount
-from billing.models import Guest, Folio
+from billing.models import Guest, Folio, Payment
 from inventory.models import HotelFeature, Hotel
 from core.utils import get_user_hotels
 from personnel.models import EmployeeProfile
@@ -295,4 +298,236 @@ def salon_discount_policy(request):
         return redirect(f"{request.path}?hotel={hotel.pk}")
     return render(request, "salon/discount_policy.html", {
         "hotels": hotels, "hotel": hotel, "policy": policy,
+    })
+
+
+
+def _salon_reporting_scope(request):
+    """Return the authorized hotel queryset and selected hotel for Salon history/reports."""
+    if request.user.role == "SALON":
+        department = _salon_access(request.user)
+        hotels = Hotel.objects.filter(pk=department.hotel_id, is_active=True)
+        return hotels, department.hotel
+    if request.user.role in {"ADMIN", "DIRECTOR"}:
+        return _management_hotel(request)
+    raise PermissionDenied
+
+
+def _salon_date_filters(request, default_days=None):
+    today = timezone.localdate()
+    raw_from = request.GET.get("from_date", "").strip()
+    raw_to = request.GET.get("to_date", "").strip()
+    date_from = parse_date(raw_from) if raw_from else None
+    date_to = parse_date(raw_to) if raw_to else None
+    if default_days and not raw_from and not raw_to:
+        date_from = today - timedelta(days=default_days - 1)
+        date_to = today
+    if date_from and date_to and date_from > date_to:
+        date_from, date_to = date_to, date_from
+    return date_from, date_to
+
+
+def _salon_order_payment_map(orders):
+    """Payment records use the stable SALON-{order id} billing reference."""
+    order_ids = [order.pk for order in orders]
+    refs = [f"SALON-{pk}" for pk in order_ids]
+    payments = Payment.objects.filter(reference__in=refs).select_related("account").order_by("collected_at", "pk")
+    return {payment.reference: payment for payment in payments}
+
+
+@role_required("SALON", "ADMIN", "DIRECTOR")
+def salon_order_list(request):
+    hotels, hotel = _salon_reporting_scope(request)
+    orders = SalonOrder.objects.filter(department__hotel=hotel).select_related(
+        "guest", "employee", "created_by", "folio", "folio__room"
+    ).prefetch_related("items__performed_by")
+
+    date_from, date_to = _salon_date_filters(request)
+    if date_from:
+        orders = orders.filter(created_at__date__gte=date_from)
+    if date_to:
+        orders = orders.filter(created_at__date__lte=date_to)
+
+    search = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip()
+    customer_type = request.GET.get("customer_type", "").strip()
+    payment_method = request.GET.get("payment_method", "").strip()
+    service = request.GET.get("service", "").strip()
+    performer = request.GET.get("performer", "").strip()
+    cashier = request.GET.get("cashier", "").strip()
+
+    if search:
+        orders = orders.filter(
+            Q(pk__icontains=search) if search.isdigit() else Q(pk__isnull=True)
+        ) if search.isdigit() else orders
+        if search.isdigit():
+            orders = SalonOrder.objects.filter(department__hotel=hotel).filter(
+                Q(pk=int(search))
+                | Q(guest__first_name__icontains=search)
+                | Q(guest__last_name__icontains=search)
+                | Q(employee__first_name__icontains=search)
+                | Q(employee__last_name__icontains=search)
+                | Q(walkin_name__icontains=search)
+                | Q(walkin_phone__icontains=search)
+            ).select_related("guest", "employee", "created_by", "folio", "folio__room").prefetch_related("items__performed_by")
+            if date_from:
+                orders = orders.filter(created_at__date__gte=date_from)
+            if date_to:
+                orders = orders.filter(created_at__date__lte=date_to)
+        else:
+            orders = orders.filter(
+                Q(guest__first_name__icontains=search)
+                | Q(guest__last_name__icontains=search)
+                | Q(employee__first_name__icontains=search)
+                | Q(employee__last_name__icontains=search)
+                | Q(walkin_name__icontains=search)
+                | Q(walkin_phone__icontains=search)
+            )
+    if status in dict(SalonOrder.STATUS_CHOICES):
+        orders = orders.filter(status=status)
+    if customer_type in dict(SalonOrder.CUSTOMER_TYPE_CHOICES):
+        orders = orders.filter(customer_type=customer_type)
+    if service:
+        orders = orders.filter(items__service_name_snapshot__icontains=service)
+    if performer:
+        orders = orders.filter(
+            Q(items__performed_by__first_name__icontains=performer)
+            | Q(items__performed_by__last_name__icontains=performer)
+            | Q(items__performed_by__username__icontains=performer)
+        )
+    if cashier:
+        orders = orders.filter(
+            Q(created_by__first_name__icontains=cashier)
+            | Q(created_by__last_name__icontains=cashier)
+            | Q(created_by__username__icontains=cashier)
+        )
+    orders = orders.distinct().order_by("-created_at", "-pk")
+
+    payment_map = _salon_order_payment_map(list(orders[:500]))
+    if payment_method:
+        if payment_method == "ROOM":
+            orders = orders.filter(status=SalonOrder.CHARGED, folio__folio_type="ROOM")
+        elif payment_method in {"CASH", "POS", "TRANSFER"}:
+            matched_refs = Payment.objects.filter(
+                method=payment_method, reference__startswith="SALON-"
+            ).values_list("reference", flat=True)
+            matched_ids = [int(ref.split("-", 1)[1]) for ref in matched_refs if ref.split("-", 1)[1].isdigit()]
+            orders = orders.filter(pk__in=matched_ids, status=SalonOrder.PAID)
+
+    paginator = Paginator(orders, 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    page_orders = list(page_obj.object_list)
+    page_payment_map = _salon_order_payment_map(page_orders)
+    for order in page_orders:
+        order.report_payment = page_payment_map.get(f"SALON-{order.pk}")
+        order.report_customer = (
+            order.guest.full_name if order.guest_id else
+            order.employee.full_name if order.employee_id else
+            order.walkin_name or "Walk-in customer"
+        )
+
+    return render(request, "salon/order_list.html", {
+        "hotels": hotels, "hotel": hotel, "page_obj": page_obj,
+        "orders": page_orders, "date_from": date_from, "date_to": date_to,
+        "filters": {
+            "q": search, "status": status, "customer_type": customer_type,
+            "payment_method": payment_method, "service": service,
+            "performer": performer, "cashier": cashier,
+        },
+        "status_choices": SalonOrder.STATUS_CHOICES,
+        "customer_type_choices": SalonOrder.CUSTOMER_TYPE_CHOICES,
+    })
+
+
+@role_required("SALON", "ADMIN", "DIRECTOR")
+def salon_order_detail(request, order_id):
+    hotels, hotel = _salon_reporting_scope(request)
+    order = get_object_or_404(
+        SalonOrder.objects.filter(department__hotel=hotel).select_related(
+            "guest", "employee", "created_by", "folio", "folio__room", "department"
+        ).prefetch_related("items__performed_by", "folio__payments__account"),
+        pk=order_id,
+    )
+    payment = _salon_order_payment_map([order]).get(f"SALON-{order.pk}")
+    return render(request, "salon/order_detail.html", {
+        "hotel": hotel, "order": order, "payment": payment,
+        "customer_name": (
+            order.guest.full_name if order.guest_id else
+            order.employee.full_name if order.employee_id else
+            order.walkin_name or "Walk-in customer"
+        ),
+    })
+
+
+@role_required("ADMIN", "DIRECTOR")
+def salon_reports(request):
+    hotels, hotel = _management_hotel(request)
+    date_from, date_to = _salon_date_filters(request, default_days=30)
+    orders = SalonOrder.objects.filter(department__hotel=hotel)
+    if date_from:
+        orders = orders.filter(created_at__date__gte=date_from)
+    if date_to:
+        orders = orders.filter(created_at__date__lte=date_to)
+
+    settled = orders.filter(status__in=[SalonOrder.PAID, SalonOrder.CHARGED])
+    summary = settled.aggregate(
+        sales=Sum("total_amount"), subtotal=Sum("subtotal"),
+        discounts=Sum("discount_total"), order_count=Count("pk"),
+    )
+    summary = {key: value or Decimal("0.00") for key, value in summary.items()}
+    summary["average_order"] = (
+        summary["sales"] / summary["order_count"] if summary["order_count"] else Decimal("0.00")
+    )
+
+    settled_ids = list(settled.values_list("pk", flat=True))
+    payment_rows = Payment.objects.filter(
+        reference__in=[f"SALON-{pk}" for pk in settled_ids]
+    ).values("method").annotate(total=Sum("amount"), count=Count("pk")).order_by("method")
+    payment_labels = dict(Payment.METHOD_CHOICES)
+    payment_breakdown = [
+        {"label": payment_labels.get(row["method"], row["method"]),
+         "total": row["total"], "count": row["count"]}
+        for row in payment_rows
+    ]
+    room_charges = settled.filter(status=SalonOrder.CHARGED).aggregate(
+        total=Sum("total_amount"), count=Count("pk")
+    )
+
+    service_rows = list(
+        SalonOrderItem.objects.filter(order_id__in=settled_ids)
+        .values("service_name_snapshot")
+        .annotate(quantity=Sum("quantity"), revenue=Sum("line_total"))
+        .order_by("-quantity", "-revenue")[:8]
+    )
+    performer_rows = list(
+        SalonOrderItem.objects.filter(order_id__in=settled_ids)
+        .values("performed_by__first_name", "performed_by__last_name", "performed_by__username")
+        .annotate(quantity=Sum("quantity"), revenue=Sum("line_total"), order_count=Count("order_id", distinct=True))
+        .order_by("-revenue", "-quantity")[:10]
+    )
+    for row in performer_rows:
+        row["name"] = " ".join(
+            part for part in [row.pop("performed_by__first_name"), row.pop("performed_by__last_name")] if part
+        ) or row.pop("performed_by__username")
+        row.pop("performed_by__username", None)
+
+    daily_rows = list(
+        settled.values("created_at__date").annotate(total=Sum("total_amount"), orders=Count("pk"))
+        .order_by("created_at__date")
+    )
+    recent_orders = settled.select_related("guest", "employee").order_by("-created_at")[:8]
+    for order in recent_orders:
+        order.report_customer = (
+            order.guest.full_name if order.guest_id else
+            order.employee.full_name if order.employee_id else order.walkin_name or "Walk-in customer"
+        )
+
+    return render(request, "salon/reports.html", {
+        "hotels": hotels, "hotel": hotel, "date_from": date_from, "date_to": date_to,
+        "summary": summary, "payment_breakdown": payment_breakdown,
+        "room_charges": room_charges, "service_rows": service_rows,
+        "performer_rows": performer_rows, "daily_rows": daily_rows,
+        "recent_orders": recent_orders,
+        "open_orders": orders.filter(status=SalonOrder.OPEN).count(),
+        "cancelled_orders": orders.filter(status=SalonOrder.CANCELLED).count(),
     })
