@@ -6,6 +6,7 @@ DEFAULT_DEPARTMENTS = [
     ("STR","Store","STORE"),
     ("LDY","Laundry","LAUNDRY"),
     ("GYM","Gym","GYM"),
+    ("SAL","Salon","SALON"),
     ("ACC","Accounting","ACCOUNTING"),
     ("ADM","Administration","ADMINISTRATION"),
     ("HR","Human Resources","HUMAN_RESOURCES"),
