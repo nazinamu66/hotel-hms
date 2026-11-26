@@ -39,102 +39,55 @@ def _validate_same_scope(from_user, to_user, department):
 
 @transaction.atomic
 def create_handover(
-    *,
-    from_user,
-    to_user,
-    department,
-    expected_amount,
-    sender_count,
-    shift=None,
-    custody_type="CUSTODY",
+    *, from_user, to_user, department, expected_amount, sender_count,
+    shift=None, salon_shift=None, custody_type="CUSTODY",
 ):
-    """
-    Create a pending physical-cash handover.
-
-    This records custody only. It does not create any accounting entry.
-    """
-
+    """Create an audited physical-cash handover without posting accounting entries."""
     _validate_same_scope(from_user, to_user, department)
-
     if custody_type not in {"SHIFT", "CUSTODY", "PARTIAL"}:
         raise ValidationError("Invalid custody type.")
+    if shift is not None and salon_shift is not None:
+        raise ValidationError("A handover cannot be linked to two shifts.")
 
     expected_amount = Decimal(expected_amount)
     sender_count = Decimal(sender_count)
+    if expected_amount < 0 or sender_count < 0:
+        raise ValidationError("Cash amounts cannot be negative.")
 
-    if expected_amount < 0:
-        raise ValidationError("Expected cash cannot be negative.")
-
-    if sender_count < 0:
-        raise ValidationError("Sender count cannot be negative.")
-
+    linked_shift = shift or salon_shift
     if custody_type == "SHIFT":
-        if from_user.role != "RESTAURANT":
-            raise ValidationError(
-                "A shift handover must be initiated by a cashier."
-            )
+        if from_user.role != "RESTAURANT" or to_user.role != "RESTAURANT" or shift is None:
+            raise ValidationError("A shift transfer is only available between Restaurant cashiers.")
+    elif linked_shift is not None:
+        expected_role = "SALON" if salon_shift is not None else "RESTAURANT"
+        if from_user.role != expected_role:
+            raise ValidationError("The linked shift does not match the sender's department role.")
 
-        if to_user.role != "RESTAURANT":
-            raise ValidationError(
-                "A shift handover recipient must be another cashier."
-            )
-
-        if shift is None:
-            raise ValidationError("A shift handover must be linked to an open shift.")
-
-        if shift.user_id != from_user.id:
+    if linked_shift is not None:
+        if linked_shift.user_id != from_user.id:
             raise ValidationError("The shift does not belong to the sender.")
-
-        if shift.department_id != department.id:
+        if linked_shift.department_id != department.id:
             raise ValidationError("The shift department does not match the handover.")
-
-        if shift.status != "OPEN":
+        if linked_shift.status != "OPEN":
             raise ValidationError("Only an open shift can be handed over.")
 
-    if custody_type in {"CUSTODY", "PARTIAL"} and shift is not None:
-        if from_user.role != "RESTAURANT":
-            raise ValidationError(
-                "A custody handover linked to a shift must be initiated by a cashier."
-            )
-
-        if shift.user_id != from_user.id:
-            raise ValidationError(
-                "The shift does not belong to the sender."
-            )
-
-        if shift.department_id != department.id:
-            raise ValidationError(
-                "The shift department does not match the handover."
-            )
-
-        if shift.status != "OPEN":
-            raise ValidationError(
-                "Only an open shift can be handed over."
-            )
-
     if custody_type == "PARTIAL":
-        if shift is None:
+        if linked_shift is None:
             raise ValidationError("A partial cash handover must be linked to an open shift.")
         if to_user.role not in {"MANAGER", "ACCOUNTANT"}:
-            raise ValidationError(
-                "Partial cash can only be handed to a Manager or Accountant."
-            )
-        if expected_amount <= 0 or sender_count <= 0:
-            raise ValidationError("A partial cash handover amount must be greater than zero.")
-        if expected_amount != sender_count:
-            raise ValidationError(
-                "The partial handover amount must match the sender's declared cash count."
-            )
+            raise ValidationError("Partial cash can only be handed to a Manager or Accountant.")
+        if expected_amount <= 0 or sender_count <= 0 or expected_amount != sender_count:
+            raise ValidationError("The partial handover must be positive and match the sender's cash count.")
+
+    if custody_type == "SHIFT" and shift is None:
+        raise ValidationError("A shift handover must be linked to an open shift.")
 
     return CashHandover.objects.create(
-        hotel=department.hotel,
-        department=department,
-        from_user=from_user,
-        to_user=to_user,
-        shift=shift,
+        hotel=department.hotel, department=department,
+        from_user=from_user, to_user=to_user,
+        shift=shift, salon_shift=salon_shift,
         custody_type=custody_type,
-        expected_amount=expected_amount,
-        sender_count=sender_count,
+        expected_amount=expected_amount, sender_count=sender_count,
         status="PENDING",
     )
 
@@ -160,6 +113,7 @@ def accept_handover(*, handover_id, recipient, recipient_count, variance_note=""
             "from_user",
             "to_user",
             "shift",
+            "salon_shift",
         )
         .get(id=handover_id)
     )
