@@ -1,0 +1,17 @@
+{% extends "base/base.html" %}
+{% block content %}
+<style>
+.gym-page{max-width:1200px;margin:0 auto;padding:24px;color:#172033}.gym-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}.gym-head h1{margin:0;font-size:26px;font-weight:800}.gym-sub{color:#64748b;margin-top:5px}.gym-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.gym-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px;box-shadow:0 2px 8px #0f172a08}.gym-card small{display:block;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.gym-card strong{display:block;font-size:28px;margin-top:10px}.gym-section{margin-top:24px}.gym-section h2{font-size:17px;margin-bottom:12px}.gym-plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.gym-plan{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:15px}.gym-plan b{display:block}.gym-plan span{display:block;color:#64748b;margin-top:7px}
+</style>
+<div class="gym-page">
+ <header class="gym-head"><div><h1>Gym Operations</h1><div class="gym-sub">{{ hotel.name }} · Membership desk</div></div></header>
+ <section class="gym-grid">
+  <article class="gym-card"><small>Registered members</small><strong>{{ member_count }}</strong></article>
+  <article class="gym-card"><small>Currently valid memberships</small><strong>{{ active_memberships }}</strong></article>
+  <article class="gym-card"><small>Expiring in 7 days</small><strong>{{ expiring_memberships }}</strong></article>
+  <article class="gym-card"><small>Today's gate visits</small><strong>{{ today_visits }}</strong></article>
+ </section>
+ <section class="gym-section"><h2>Membership packages</h2><div class="gym-plans">{% for plan in plans %}<article class="gym-plan"><b>{{ plan.get_package_display }}</b><span>₦{{ plan.price|floatformat:2 }}</span></article>{% empty %}<article class="gym-card">No membership packages have been configured yet.</article>{% endfor %}</div></section>
+ <section class="gym-section"><p class="gym-sub">Registration, member search, receipts, membership passes and gate verification will be added in the next implementation stage.</p></section>
+</div>
+{% endblock %}
