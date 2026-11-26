@@ -32,7 +32,7 @@
 .salon-submit:before{content:"🧾"}
 @media(max-width:850px){.salon-side{position:static}}
 
-</style>
+.guest-verification{display:flex;align-items:flex-start;gap:11px;padding:13px;border-radius:12px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;margin-top:10px}.guest-verification-icon{font-size:21px}.guest-verification strong,.guest-verification small{display:block}.guest-verification small{margin-top:3px;line-height:1.45;color:#475569}.guest-verification-empty{background:#f8fafc;border-color:#e2e8f0;color:#475569}.lookup-result span{display:flex;flex-direction:column;gap:3px}.lookup-result small{font-size:12px;font-weight:500;color:#64748b}</style>
 <div class="salon-wrap">
  <div class="salon-head"><div><h1 style="margin:0 0 5px">Salon Point of Sale</h1><div class="muted">{{ hotel.name }} · Services and customer checkout</div></div><div><strong>{{ request.user.get_full_name|default:request.user.username }}</strong><div class="muted">Salon staff</div></div></div>
  {% if messages %}{% for message in messages %}<div class="salon-panel">{{ message }}</div>{% endfor %}{% endif %}
@@ -54,9 +54,9 @@
    <h2 style="margin-top:0">Customer</h2>
    <div class="salon-field"><label>Customer type</label><select id="customer-type" name="customer_type"><option value="HOTEL_GUEST">Hotel Guest</option><option value="WALK_IN">Walk-in</option><option value="EMPLOYEE">CCH Employee (50% discount)</option></select></div>
    <div id="guest-fields">
-    <div class="salon-field"><label>Find guest by name or phone</label><input id="guest-search" autocomplete="off" placeholder="Type at least 2 characters"><div id="guest-results"></div><input type="hidden" name="guest_id" id="guest-id"></div>
-    <div class="salon-field"><label>Room number (leave blank for direct payment)</label><input id="room-search" autocomplete="off" placeholder="Search room number or guest"><div id="room-results"></div><input type="hidden" name="room_id" id="room-id"></div>
-    <div id="selected-guest" class="muted">No guest selected</div>
+    <div class="salon-field"><label>Guest's stated name</label><input id="guest-search" autocomplete="off" placeholder="Enter guest name or phone"><div id="guest-results"></div><input type="hidden" name="guest_id" id="guest-id"></div>
+    <div class="salon-field"><label>Room number <span class="muted">(for room verification or room charge)</span></label><input id="room-search" autocomplete="off" placeholder="Search occupied room number"><div id="room-results"></div><input type="hidden" name="room_id" id="room-id"></div>
+    <div id="selected-guest" class="guest-verification guest-verification-empty"><span class="guest-verification-icon">🔎</span><span><strong>Guest not verified</strong><small>Enter the guest's name and select their occupied room to verify the active folio.</small></span></div>
    </div>
    <div id="walkin-fields" hidden>
     <div class="salon-field"><label>Customer name</label><input name="walkin_name" id="walkin-name"></div>
@@ -156,7 +156,35 @@ function bindLookup(inputId,kind,targetId,clearSelection){
 bindLookup("guest-search","GUEST","guest-results",()=>{document.getElementById("guest-id").value="";document.getElementById("selected-guest").textContent="No guest selected";});
 bindLookup("employee-search","EMPLOYEE","employee-results",()=>{document.getElementById("employee-id").value="";document.getElementById("selected-employee").textContent="No employee selected";});
 bindLookup("room-search","ROOM","room-results",()=>{document.getElementById("room-id").value="";});
-document.addEventListener("click",e=>{const b=e.target.closest("[data-select-kind]");if(!b)return;const kind=b.dataset.selectKind,id=b.dataset.id,label=b.dataset.label;if(kind==="GUEST"){document.getElementById("guest-id").value=id;document.getElementById("selected-guest").textContent=label;document.getElementById("guest-results").innerHTML="";}if(kind==="EMPLOYEE"){document.getElementById("employee-id").value=id;document.getElementById("selected-employee").textContent=label;document.getElementById("employee-results").innerHTML="";}if(kind==="ROOM"){document.getElementById("room-id").value=id;document.getElementById("room-results").innerHTML="";document.getElementById("room-search").value=label;}});
+document.addEventListener("click",e=>{
+ const b=e.target.closest("[data-select-kind]");if(!b)return;
+ const kind=b.dataset.selectKind,id=b.dataset.id,label=b.dataset.label;
+ if(kind==="GUEST"){
+  document.getElementById("guest-id").value=id;
+  document.getElementById("selected-guest").innerHTML="<span class='guest-verification-icon'>👤</span><span><strong>Guest selected for direct payment</strong><small></small></span>";
+  document.querySelector("#selected-guest small").textContent=label;
+  document.getElementById("guest-results").innerHTML="";
+ }
+ if(kind==="EMPLOYEE"){document.getElementById("employee-id").value=id;document.getElementById("selected-employee").textContent=label;document.getElementById("employee-results").innerHTML="";}
+ if(kind==="ROOM"){
+  const guestId=b.dataset.guestId,guestName=b.dataset.guestName;
+  document.getElementById("room-id").value=id;
+  document.getElementById("room-results").innerHTML="";
+  document.getElementById("room-search").value=label;
+  if(guestId){
+   document.getElementById("guest-id").value=guestId;
+   document.getElementById("guest-search").value=guestName;
+   document.getElementById("guest-results").innerHTML="";
+   document.getElementById("selected-guest").className="guest-verification";
+   document.getElementById("selected-guest").innerHTML="<span class='guest-verification-icon'>✅</span><span><strong>Active folio verified</strong><small></small></span>";
+   document.querySelector("#selected-guest small").textContent="Room "+b.querySelector("strong").textContent.replace("Room ","")+" is registered to "+guestName+". Confirm that this matches the guest.";
+  }else{
+   document.getElementById("room-id").value="";
+   document.getElementById("selected-guest").className="guest-verification guest-verification-empty";
+   document.getElementById("selected-guest").innerHTML="<span class='guest-verification-icon'>⚠️</span><span><strong>No active guest folio</strong><small>This room cannot be used to verify a guest or accept a room charge.</small></span>";
+  }
+ }
+});
 document.getElementById("salon-order-form").onsubmit=e=>{if(!cart.length){e.preventDefault();alert("Add at least one service.");return}if(cart.some(x=>!x.performer)){e.preventDefault();alert("Assign a Salon staff member to every service.");return}const v=type.value;if(v==="HOTEL_GUEST"&&!document.getElementById("guest-id").value){e.preventDefault();alert("Select the hotel guest.");return}if(v==="EMPLOYEE"&&!document.getElementById("employee-id").value){e.preventDefault();alert("Select the employee.");return}if(v==="WALK_IN"&&!document.getElementById("walkin-name").value.trim()){e.preventDefault();alert("Enter the walk-in customer's name.");return}document.getElementById("items-json").value=JSON.stringify(cart.map(x=>({service_id:x.id,quantity:x.qty,performed_by_id:x.performer})));};
 </script>
 {% endblock %}
