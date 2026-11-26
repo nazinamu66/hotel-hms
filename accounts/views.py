@@ -800,6 +800,9 @@ def role_redirect(request):
     if role == "HR":
         return redirect("personnel:dashboard")
 
+    if role == "SALON":
+        return redirect("/salon/")
+
     return redirect("login")
 
 
