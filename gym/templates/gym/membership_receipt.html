@@ -1,4 +1,5 @@
 {% extends "base/base.html" %}
+{% load humanize %}
 {% block title %}Gym Membership Receipt{% endblock %}
 {% block content %}
 <style>
@@ -16,7 +17,7 @@
 <div><div class="receipt-label">Payment method</div><div class="receipt-value">{{ payment.get_method_display }}</div></div>
 <div><div class="receipt-label">Collected by</div><div class="receipt-value">{{ payment.collected_by.get_full_name|default:payment.collected_by.username }}</div></div>
 </div>
-<div class="receipt-total"><span>Amount paid</span><span>₦{{ payment.amount|floatformat:2 }}</span></div>
+<div class="receipt-total"><span>Amount paid</span><span>₦{{ payment.amount|floatformat:2|intcomma }}</span></div>
 <p class="receipt-muted" style="margin-top:22px">Thank you. Please present your membership details at the Gym entrance.</p>
 </section>
 </div>
