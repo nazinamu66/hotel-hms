@@ -4,7 +4,8 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from decimal import Decimal, InvalidOperation
 
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Value
+from django.db.models.functions import Concat
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -132,8 +133,19 @@ def salon_customer_lookup(request):
     q = request.GET.get("q", "").strip()
     results = []
     if len(q) >= 2 and kind == "GUEST":
-        results = list(Guest.objects.filter(hotel=department.hotel).filter(
-            Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(phone__icontains=q)
+        guest_scope = Guest.objects.filter(hotel=department.hotel).annotate(
+            searchable_full_name=Concat("first_name", Value(" "), "last_name")
+        )
+        terms = [term for term in q.split() if term]
+        name_query = Q()
+        for term in terms:
+            name_query &= (Q(first_name__icontains=term) | Q(last_name__icontains=term))
+        results = list(guest_scope.filter(
+            Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+            | Q(phone__icontains=q)
+            | Q(searchable_full_name__icontains=q)
+            | name_query
         ).order_by("first_name", "last_name")[:15])
     elif len(q) >= 2 and kind == "EMPLOYEE":
         employee_scope = EmployeeProfile.objects.filter(employment_status=EmployeeProfile.ACTIVE)
