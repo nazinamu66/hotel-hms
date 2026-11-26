@@ -1,67 +1,136 @@
-Milestone 2
+Phase 1 — Security and reliability [P0]
+- Enforce hotel and department data isolation on every view, API, form and service.
+- Centralize role permissions and approval boundaries.
+- Make state-changing operations POST-only and validate state transitions.
+- Use atomic transactions and row locks for stock, payment and production operations.
+- Add automated tests for permissions, duplicate submissions and rollback behaviour.
+- Remove dead code and reconcile model, form, view and status definitions.
 
-Aug 18th 2026
+Phase 2 — Kitchen and inventory [P0]
+- Complete ingredient request and approval lifecycle.
+- Complete direct purchasing, goods receipt and partial fulfilment.
+- Unify stock movements and FIFO costing.
+- Enforce recipe control modes, version history and unit conversions.
+- Add production variance, waste, yield and batch-cost snapshots.
+- Improve kitchen ticket transitions, timing and kitchen display.
 
-☑ Front Desk Review
+Phase 3 — Restaurant and Front Desk [P0]
+- Validate POS charge, payment, room charge and refund workflows.
+- Make order posting, stock deduction, folio charges and COGS idempotent.
+- Complete reservation, walk-in, check-in and check-out flows.
+- Validate room availability and prevent overlapping active reservations.
+- Reconcile guest folios, deposits, payments, invoices and refunds.
+- Test room charges from restaurant and other enabled hotel outlets.
 
-☑ Workflow Standardization
+Phase 4 — Housekeeping, Laundry and Linen [P1]
+- Room cleaning queues, assignments, inspections and room-ready workflow.
+- Linen issue, return, loss, damage, laundry cycles and stock reconciliation.
+- Departmental supplies requests and consumption tracking.
+- Prevent room status conflicts between Front Desk, Housekeeping and Maintenance.
 
-☑ Shared Helpers
+Phase 5 — Maintenance and assets [P1]
+- Work orders, assignment, priority, SLA and completion records.
+- Preventive maintenance schedules and overdue alerts.
+- Equipment register, warranty, service history and lifecycle costs.
+- Spare parts consumption linked to inventory and accounting.
 
-⬜ Workflow Tests
+Phase 6 — Finance and management [P0]
+- Supplier statements and accounts-payable ageing.
+- Cashier shift reconciliation, cash handovers and variance approvals.
+- Bank reconciliation and payment-reference controls.
+- Inventory valuation and general-ledger reconciliation.
+- Daily revenue, occupancy, department profitability and exception reports.
+- Period closing, locked accounting periods and audit trails.
 
-⬜ Housekeeping Integration
+Phase 7 — Platform and deployment [P0]
+- Move production data to PostgreSQL and configure environment-based settings.
+- Move secrets out of source code; set DEBUG=False and configure allowed hosts.
+- Configure HTTPS, secure cookies, CSRF, backups and restore testing.
+- Set up logging, error monitoring, health checks and alerting.
+- Automate migrations, tests, static assets and deployment through CI/CD.
+- Document user roles, operational procedures, recovery and release rollback.
 
-The new roadmap is structured as:
+Phase 8 — Advanced capabilities [P2]
+- Supplier purchase planning, lead times and price history.
+- Demand forecasting and ingredient usage trends.
+- Menu engineering, recipe profitability and food-cost alerts.
+- Multi-branch consolidated reporting and organization-level controls.
+- Audit exports, scheduled reports and management dashboards.
+- Optional integrations for accounting exports, POS hardware and guest messaging.
 
-Phase 1 — Core Foundation
 
-Day 1: Baseline & architecture lock
-Day 2: Accounts, roles & access control
-Day 3: Rooms/property configuration
-Day 4: Reservations / Front Desk
-Day 5: Billing & folio
-Day 6: Check-in → stay → checkout
+The next Kitchen features
 
-Phase 2 — Department Integration
 
-Day 7: Housekeeping integration
-Day 8: Maintenance
-Day 9: Inventory / Store
-Day 10: Restaurant / POS
-Day 11: Kitchen
-Day 12: Wi-Fi
-Day 13: Accounting
-Day 14: Reports & dashboards
 
-Phase 3 — Hardening
 
-Day 15: Navigation/UI consistency
-Day 16: Security & multi-hotel isolation
-Day 17: Workflow tests
-Day 18: Model/data-integrity tests
-Day 19: End-to-end integration tests
-Day 20: UI/UX & error handling
-Day 21: Demo data & fresh installation
 
-Phase 4 — Release
 
-Day 22: Performance/reliability
-Day 23: Deployment build
-Day 24: Full UAT
-Day 25: Bug fix / release candidate
-Day 26: V1 release
 
-GUEST LAUNDRY
 
-1. Cost / Price List                    ← NEXT
-2. Payment at Laundry
-3. Payment at Frontdesk
-4. Order Detail / Transaction History
-5. Cancellation
-6. Receipt / billing visibility
-7. Permissions & audit verification
-8. Full Room Guest E2E
-9. Full Walk-in E2E
-10. Dashboard/report polish
-11. Mark Laundry COMPLETE
+
+Feature 1 — Complete ingredient requests and purchasing
+Next priority
+- Track requested, approved, issued, and outstanding quantities.
+- Support partial deliveries for direct purchases.
+- Support partial store transfers and prevent over-issuing.
+- Update request statuses automatically.
+- Keep stock, FIFO costs, and accounting in sync.
+
+
+
+
+
+Feature 2 — Recipe control and version history
+- Enforce STRICT, TOLERANCE, and FLEXIBLE recipe controls during production.
+- Record recipe changes as versions so past batches retain their original recipe context.
+- Validate units and conversions to avoid stock calculation errors.
+
+
+
+
+Feature 3 — Production costing, yield and waste
+- Save an auditable cost snapshot for each production batch.
+- Compare expected versus actual ingredient usage.
+- Record spoilage, waste, and yield.
+- Report cost per portion and production variances.
+
+
+
+
+Feature 4 — Kitchen order and ticket management
+- Enforce valid transitions: New → Preparing → Ready → Served.
+- Record acceptance, preparation times, and delays.
+- Improve the kitchen display for pending and overdue orders.
+- Prevent duplicate serving and incorrect status changes.
+
+
+
+Feature 5 — Kitchen reporting and controls
+- Ingredient usage and replenishment reports.
+- Food production and cost-per-portion reports.
+- Waste, yield, and variance reports.
+- Role-based permissions and regression tests across the workflows.
+
+
+
+
+3. Implementation order
+1. Foundation and access control
+   
+   Consolidated hotel selection, organization scoping and date filters.
+2. Financial overview
+   
+   Revenue, expenses, COGS, profitability and receivables, reconciled to accounting.
+3. Hotel performance
+   
+   Occupancy, arrivals, departures and hotel-by-hotel comparisons.
+4. Corporate accounts
+   
+   Company invoices, outstanding balances and deposits.
+5. Operational overview
+   
+   Housekeeping, maintenance, kitchen, restaurant and inventory.
+6. Management alerts
+   
+   Pending approvals, overdue work, low stock and unresolved cash variances.
