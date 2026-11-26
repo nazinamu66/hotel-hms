@@ -26,6 +26,7 @@ OPERATIONAL_ROLES = {
     "MAINTENANCE",
     "LAUNDRY",
     "GYM",
+    "SALON",
     "BOUTIQUE",
     "HR",
 }
