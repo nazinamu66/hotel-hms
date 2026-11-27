@@ -51,7 +51,9 @@
     </div>
     <div class="pnl-actions no-print">
       <a class="pnl-btn" href="{% url 'accounting:chart' %}">Chart of accounts</a>
-      <button class="pnl-btn" type="button" onclick="window.print()">Print statement</button>
+      <a class="pnl-btn" href="{% url 'accounting:pnl_export_pdf' %}?start_date={{ start_date|date:'Y-m-d' }}&amp;end_date={{ end_date|date:'Y-m-d' }}{% if show_hotel_selector %}&amp;hotel={{ hotel.id }}{% endif %}">Download PDF</a>
+      <a class="pnl-btn" href="{% url 'accounting:pnl_export_xlsx' %}?start_date={{ start_date|date:'Y-m-d' }}&amp;end_date={{ end_date|date:'Y-m-d' }}{% if show_hotel_selector %}&amp;hotel={{ hotel.id }}{% endif %}">Download Excel</a>
+      <button class="pnl-btn" type="button" onclick="window.print()">Print</button>
     </div>
   </div>
 
