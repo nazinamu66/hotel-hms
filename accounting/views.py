@@ -1509,6 +1509,7 @@ def supplier_payments(request):
     from django.db.models import Sum
     from django.db.models.functions import TruncMonth
 
+    all_obligations = list(obligations)
     query = (request.GET.get("q") or "").strip()
     source_filter = (request.GET.get("source") or "").strip().upper()
     status_filter = (request.GET.get("status") or "OPEN").strip().upper()
@@ -1535,9 +1536,9 @@ def supplier_payments(request):
     all_open_obligations = []
     # Rebuild the unfiltered open totals from the same trusted obligation list
     # before the display filters are applied.
-    open_total = sum((item["outstanding"] for item in obligations), Decimal("0.00"))
-    open_count = len(obligations)
-    supplier_count = len({item["supplier"].pk for item in obligations})
+    open_total = sum((item["outstanding"] for item in all_obligations), Decimal("0.00"))
+    open_count = len(all_obligations)
+    supplier_count = len({item["supplier"].pk for item in all_obligations})
 
     payment_history_qs = SupplierPayment.objects.filter(hotel=hotel).select_related(
         "supplier", "payment_account", "created_by", "journal_entry"
@@ -1586,7 +1587,7 @@ def supplier_payments(request):
         cursor = (cursor.replace(day=28) + timedelta(days=4)).replace(day=1)
 
     supplier_exposure = {}
-    for item in obligations:
+    for item in all_obligations:
         supplier_id = item["supplier"].pk
         row = supplier_exposure.setdefault(supplier_id, {"name": item["supplier"].name, "amount": Decimal("0.00")})
         row["amount"] += item["outstanding"]
