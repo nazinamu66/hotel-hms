@@ -1,0 +1,98 @@
+{% extends "base/base.html" %}
+{% load accounting_extras %}
+{% block title %}Accounting Dashboard | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.acct-home{max-width:1500px;margin:0 auto;padding:4px 0 30px;color:#172033}
+.acct-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}
+.acct-eyebrow{font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#64748b;margin:0 0 7px}
+.acct-head h1{font-size:clamp(1.7rem,2.5vw,2.35rem);margin:0;line-height:1.15}
+.acct-sub{color:#64748b;margin:8px 0 0}
+.acct-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:20px;box-shadow:0 6px 22px rgba(15,23,42,.04);margin-bottom:18px}
+.acct-filter{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.acct-filter label{display:block;font-size:.78rem;font-weight:800;color:#475569;margin-bottom:6px}
+.acct-filter select{min-width:260px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font:inherit}
+.acct-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px}
+.acct-metric{background:#fff;border:1px solid #e2e8f0;border-radius:15px;padding:18px;min-width:0}
+.acct-metric span{display:block;color:#64748b;font-size:.82rem;font-weight:700}
+.acct-metric strong{display:block;font-size:clamp(1.25rem,2vw,1.7rem);margin-top:9px;overflow-wrap:anywhere}
+.acct-metric small{display:block;color:#94a3b8;margin-top:5px}
+.acct-section-title{font-size:1.05rem;font-weight:850;margin:0 0 15px}
+.acct-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:11px}
+.acct-link{display:flex;flex-direction:column;gap:5px;padding:15px;border:1px solid #e2e8f0;border-radius:12px;text-decoration:none;color:#172033;background:#fff;transition:border-color .15s,transform .15s}
+.acct-link:hover{border-color:#93c5fd;transform:translateY(-1px)}
+.acct-link strong{font-size:.94rem}
+.acct-link span{font-size:.8rem;color:#64748b;line-height:1.4}
+.acct-table-wrap{overflow-x:auto}
+.acct-table{width:100%;border-collapse:collapse;min-width:650px}
+.acct-table th{text-align:left;background:#f8fafc;color:#64748b;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;padding:11px}
+.acct-table td{padding:13px 11px;border-top:1px solid #eef2f7;font-size:.88rem}
+.acct-table a{color:#1d4ed8;text-decoration:none;font-weight:750}
+.acct-empty{padding:24px;text-align:center;color:#64748b;border:1px dashed #cbd5e1;border-radius:12px}
+@media(max-width:640px){.acct-card{padding:15px}.acct-filter,.acct-filter select{width:100%;min-width:0}}
+</style>
+<div class="acct-home">
+  <header class="acct-head">
+    <div>
+      <p class="acct-eyebrow">Finance &amp; controls</p>
+      <h1>Accounting Dashboard</h1>
+      <p class="acct-sub">{{ hotel.name }} · Overview as at {{ today|date:"d M Y" }}</p>
+    </div>
+  </header>
+
+  {% if user.role == "DIRECTOR" and hotels|length > 1 %}
+  <section class="acct-card">
+    <form method="get" class="acct-filter">
+      <div><label for="hotel">Hotel</label>
+        <select id="hotel" name="hotel" onchange="this.form.submit()">
+          {% for item in hotels %}<option value="{{ item.pk }}" {% if item.pk == hotel.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <noscript><button type="submit">Switch hotel</button></noscript>
+    </form>
+  </section>
+  {% endif %}
+
+  <section class="acct-metrics">
+    <article class="acct-metric"><span>Cash on hand</span><strong>₦{{ cash_balance|floatformat:2 }}</strong><small>Current ledger balance</small></article>
+    <article class="acct-metric"><span>Bank balances</span><strong>₦{{ bank_balance|floatformat:2 }}</strong><small>All active bank accounts</small></article>
+    <article class="acct-metric"><span>Revenue this month</span><strong>₦{{ revenue_month|floatformat:2 }}</strong><small>Posted journal activity</small></article>
+    <article class="acct-metric"><span>Expenses this month</span><strong>₦{{ expenses_month|floatformat:2 }}</strong><small>Posted journal activity</small></article>
+    <article class="acct-metric"><span>Accounts payable</span><strong>₦{{ payables_balance|floatformat:2 }}</strong><small>Supplier liability balance</small></article>
+    <article class="acct-metric"><span>Pending reimbursements</span><strong>{{ pending_reimbursements }}</strong><small>Claims awaiting review</small></article>
+  </section>
+
+  <section class="acct-card">
+    <h2 class="acct-section-title">Accounting operations</h2>
+    <div class="acct-links">
+      <a class="acct-link" href="{% url 'accounting:chart' %}"><strong>Chart of Accounts</strong><span>Account structure, balances and account ledgers</span></a>
+      <a class="acct-link" href="{% url 'accounting:journal' %}"><strong>Journal</strong><span>Review posted transactions and journal lines</span></a>
+      <a class="acct-link" href="{% url 'accounting:supplier_payments' %}"><strong>Supplier Payments</strong><span>Settle full or partial supplier obligations</span></a>
+      <a class="acct-link" href="{% url 'accounting:staff_reimbursements' %}"><strong>Staff Reimbursements</strong><span>Review and pay approved staff claims</span></a>
+      <a class="acct-link" href="{% url 'accounting:cash_deposit' %}"><strong>Cash Deposit</strong><span>Record cash deposited into a bank account</span></a>
+      <a class="acct-link" href="{% url 'accounting:bank_transfer' %}"><strong>Bank Transfer</strong><span>Record transfers between bank accounts</span></a>
+    </div>
+  </section>
+
+  <section class="acct-card">
+    <h2 class="acct-section-title">Financial reports</h2>
+    <div class="acct-links">
+      <a class="acct-link" href="{% url 'accounting:pnl' %}"><strong>Profit &amp; Loss</strong><span>Revenue, cost of sales and operating expenses</span></a>
+      <a class="acct-link" href="{% url 'accounting:balance_sheet' %}"><strong>Balance Sheet</strong><span>Assets, liabilities and equity</span></a>
+      <a class="acct-link" href="{% url 'accounting:trial_balance' %}"><strong>Trial Balance</strong><span>Debit and credit balances</span></a>
+    </div>
+  </section>
+
+  <section class="acct-card">
+    <h2 class="acct-section-title">Recent journal activity</h2>
+    {% if recent_entries %}
+    <div class="acct-table-wrap"><table class="acct-table">
+      <thead><tr><th>Date</th><th>Description</th><th>Reference</th><th>Type</th><th>Recorded by</th><th></th></tr></thead>
+      <tbody>{% for entry in recent_entries %}
+        <tr><td>{{ entry.date|date:"d M Y" }}</td><td><strong>{{ entry.description }}</strong></td><td>{{ entry.reference|default:"—" }}</td><td>{{ entry.get_entry_type_display }}</td><td>{{ entry.created_by|default:"System" }}</td><td><a href="{% url 'accounting:journal_detail' entry.pk %}">View</a></td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    {% else %}<div class="acct-empty">No journal entries have been posted for this hotel yet.</div>{% endif %}
+  </section>
+</div>
+{% endblock %}
