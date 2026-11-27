@@ -910,88 +910,133 @@ def account_ledger_export_pdf(request, account_id):
 
 
 
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def profit_and_loss(request):
+    """Dynamic, hotel-scoped P&L based on posted journal activity for the period."""
+    from datetime import date
+    from django.utils import timezone
+    from django.utils.dateparse import parse_date
+    from django.db.models import Sum
+    from core.utils import get_user_hotels
 
-    # 🔹 Get hotel safely
-    if request.user.department:
-        hotel = request.user.hotel
+    hotels = get_user_hotels(request.user)
+    if request.user.role != "DIRECTOR" and getattr(request.user, "hotel_id", None):
+        hotels = hotels.filter(pk=request.user.hotel_id)
+
+    selected_hotel_id = (request.GET.get("hotel") or "").strip()
+    if request.user.role == "DIRECTOR" and selected_hotel_id:
+        hotel = hotels.filter(pk=selected_hotel_id).first()
     else:
-        hotel = Hotel.objects.first()
+        hotel = hotels.first()
 
-    # 🔹 Get filters
-    start_date = request.GET.get("start_date")
-    end_date = request.GET.get("end_date")
+    if not hotel:
+        raise PermissionDenied("No accessible hotel is available for the Profit & Loss report.")
 
-    # 🔹 Base queryset (EXCLUDE closing entries)
-    base_filter = {
-        "account__hotel": hotel
+    today = timezone.localdate()
+    raw_start = (request.GET.get("start_date") or "").strip()
+    raw_end = (request.GET.get("end_date") or "").strip()
+    start_date = parse_date(raw_start) if raw_start else today.replace(day=1)
+    end_date = parse_date(raw_end) if raw_end else today
+    date_error = ""
+    if not start_date or not end_date:
+        start_date, end_date = today.replace(day=1), today
+        date_error = "Please enter valid dates."
+    elif start_date > end_date:
+        start_date, end_date = today.replace(day=1), today
+        date_error = "The start date must be on or before the end date."
+    elif end_date > today:
+        end_date = today
+        date_error = "Future dates are not included; the end date was set to today."
+
+    # Aggregate only posted journal activity in the selected period. Closing
+    # entries are excluded so period reporting does not double-count them.
+    activity = (
+        JournalLine.objects.filter(
+            journal__hotel=hotel,
+            journal__date__gte=start_date,
+            journal__date__lte=end_date,
+            account__is_active=True,
+            account__account_type__in=tuple(INCOME_TYPES) + tuple(EXPENSE_TYPES),
+        )
+        .exclude(journal__entry_type="CLOSING")
+        .values("account_id")
+        .annotate(debit_total=Sum("debit"), credit_total=Sum("credit"))
+    )
+    activity_by_account = {
+        row["account_id"]: (
+            row["debit_total"] or Decimal("0.00"),
+            row["credit_total"] or Decimal("0.00"),
+        )
+        for row in activity
     }
 
-    # 🔹 Date filtering (BUSINESS DAY)
-    if start_date:
-        base_filter["journal__business_day__date__gte"] = start_date
+    accounts = Account.objects.filter(
+        hotel=hotel,
+        is_active=True,
+        account_type__in=tuple(INCOME_TYPES) + tuple(EXPENSE_TYPES),
+    ).order_by("display_order", "code", "name")
 
-    if end_date:
-        base_filter["journal__business_day__date__lte"] = end_date
+    revenue_data, other_income_data, cogs_data = [], [], []
+    operating_expense_data, other_expense_data = [], []
+    revenue_total = Decimal("0.00")
+    other_income_total = Decimal("0.00")
+    cogs_total = Decimal("0.00")
+    operating_expense_total = Decimal("0.00")
+    other_expense_total = Decimal("0.00")
 
-    # 🔥 Fetch ALL lines once (important optimization)
-    lines = (
-        JournalLine.objects
-        .filter(**base_filter)
-        .exclude(journal__entry_type="CLOSING")
-        .select_related("account")
-    )
+    for account in accounts:
+        debit, credit = activity_by_account.get(
+            account.pk, (Decimal("0.00"), Decimal("0.00"))
+        )
+        if account.account_type in INCOME_TYPES:
+            amount = credit - debit
+            row = {"account": account, "amount": amount}
+            if account.account_type == "other_income":
+                other_income_data.append(row)
+                other_income_total += amount
+            else:
+                revenue_data.append(row)
+                revenue_total += amount
+        else:
+            amount = debit - credit
+            row = {"account": account, "amount": amount}
+            if account.account_type == "cogs":
+                cogs_data.append(row)
+                cogs_total += amount
+            elif account.account_type == "other_expense":
+                other_expense_data.append(row)
+                other_expense_total += amount
+            else:
+                operating_expense_data.append(row)
+                operating_expense_total += amount
 
-    # 🔹 Group balances
-    account_data = {}
-
-    for line in lines:
-        acc = line.account
-
-        if acc.id not in account_data:
-            account_data[acc.id] = {
-                "name": acc.name,
-                "type": acc.account_type,
-                "debit": 0,
-                "credit": 0,
-            }
-
-        account_data[acc.id]["debit"] += line.debit
-        account_data[acc.id]["credit"] += line.credit
-
-    # 🔹 Separate revenue & expenses
-    revenue_data = []
-    expense_data = []
-
-    revenue_total = 0
-    expense_total = 0
-
-    for acc in account_data.values():
-
-        if acc["type"] in INCOME_TYPES:
-            balance = acc["credit"] - acc["debit"]
-            revenue_total += balance
-            revenue_data.append({
-                "name": acc["name"],
-                "amount": balance
-            })
-
-        elif acc["type"] in EXPENSE_TYPES:
-            balance = acc["debit"] - acc["credit"]
-            expense_total += balance
-            expense_data.append({
-                "name": acc["name"],
-                "amount": balance
-            })
+    gross_profit = revenue_total - cogs_total
+    total_income = revenue_total + other_income_total
+    total_expenses = cogs_total + operating_expense_total + other_expense_total
+    net_profit = total_income - total_expenses
 
     return render(request, "accounting/profit_and_loss.html", {
-        "revenue_data": revenue_data,
-        "expense_data": expense_data,
-        "revenue_total": revenue_total,
-        "expense_total": expense_total,
-        "net_profit": revenue_total - expense_total,
+        "hotel": hotel,
+        "hotels": hotels,
+        "show_hotel_selector": request.user.role == "DIRECTOR" and hotels.count() > 1,
         "start_date": start_date,
         "end_date": end_date,
+        "date_error": date_error,
+        "revenue_data": revenue_data,
+        "other_income_data": other_income_data,
+        "cogs_data": cogs_data,
+        "operating_expense_data": operating_expense_data,
+        "other_expense_data": other_expense_data,
+        "revenue_total": revenue_total,
+        "other_income_total": other_income_total,
+        "cogs_total": cogs_total,
+        "gross_profit": gross_profit,
+        "operating_expense_total": operating_expense_total,
+        "other_expense_total": other_expense_total,
+        "total_income": total_income,
+        "total_expenses": total_expenses,
+        "net_profit": net_profit,
+        "is_profitable": net_profit >= 0,
     })
 
 def balance_sheet(request):
