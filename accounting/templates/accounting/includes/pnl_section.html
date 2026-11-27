@@ -1,0 +1,24 @@
+{% load humanize %}
+<section class="pnl-panel pnl-section">
+  <div class="pnl-section-head">
+    <h2>{{ title }}</h2>
+    <div class="pnl-section-total">₦{{ total|floatformat:2|intcomma }}</div>
+  </div>
+  <table class="pnl-table">
+    <thead><tr><th>Account</th><th class="amount">Period amount</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>
+          <span class="pnl-code">{{ row.account.code }}</span>
+          <a class="pnl-account" href="{% url 'accounting:ledger' row.account.id %}">{{ row.account.name }}</a>
+        </td>
+        <td class="amount">₦{{ row.amount|floatformat:2|intcomma }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="2" class="pnl-empty">No account activity in this section for the selected period.</td></tr>
+      {% endfor %}
+      <tr class="pnl-subtotal"><td>Total {{ title }}</td><td class="amount">₦{{ total|floatformat:2|intcomma }}</td></tr>
+    </tbody>
+  </table>
+</section>
