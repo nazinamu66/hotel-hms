@@ -129,8 +129,8 @@
           <div class="acct-donut-center"><strong>₦{{ expenses_month|floatformat:0 }}</strong>Expenses</div>
         </div>
         <div class="acct-key">
-          {% for item in expense_breakdown %}
-          <div class="acct-key-row"><i class="acct-key-dot" style="background:{{ item.color }}"></i><span title="{{ item.name }}">{{ item.name }}</span><strong>{{ item.pct|floatformat:0 }}%</strong></div>
+          {% for item in expense_composition %}
+          <div class="acct-key-row"><i class="acct-key-dot" style="background:{{ item.color }}"></i><span title="{{ item.name }}">{{ item.name }}</span><strong>{{ item.share_pct|floatformat:0 }}%</strong></div>
           {% endfor %}
         </div>
       </div>
