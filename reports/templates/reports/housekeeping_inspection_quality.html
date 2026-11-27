@@ -4,6 +4,64 @@
 <style>
 .hk-quality{box-sizing:border-box;min-height:100%;margin:calc(-1 * clamp(18px,2.5vw,34px));padding:clamp(18px,2.5vw,34px);background:radial-gradient(ellipse at 85% 0%,rgba(37,99,235,.16),transparent 34%),#0d1728;color:#e8eef8}.hk-quality *{box-sizing:border-box}.hk-quality h1{font-size:27px;color:#f8fafc;margin:5px 0}.hk-quality h2{font-size:16px;color:#f8fafc;margin:0 0 14px}.hk-q-muted{color:#9aabc1;font-size:13px;line-height:1.5}.hk-q-panel{background:#172b43;border:1px solid #29415e;border-radius:14px;padding:18px;margin:16px 0}.hk-q-filters{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr)) auto;gap:12px;align-items:end}.hk-quality label{display:block;color:#b8c7da;font-size:12px;font-weight:750;margin-bottom:5px}.hk-quality input,.hk-quality select{width:100%;min-height:40px;border:1px solid #3b5573;border-radius:8px;background:#102239;color:#f8fafc;padding:8px}.hk-q-btn{min-height:40px;padding:9px 14px;border-radius:8px;background:#2563eb;color:#fff;border:0;font-weight:750;cursor:pointer}.hk-q-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.hk-q-kpi{background:#172b43;border:1px solid #29415e;border-radius:13px;padding:17px;min-width:0}.hk-q-kpi span{display:block;color:#9aabc1;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}.hk-q-kpi strong{display:block;color:#f8fafc;font-size:25px;margin:7px 0 3px}.hk-q-wrap{overflow-x:auto}.hk-quality table{width:100%;border-collapse:collapse;min-width:620px}.hk-quality th{background:#102239;color:#aebfd4;text-transform:uppercase;font-size:10px;letter-spacing:.06em;text-align:left;padding:11px;white-space:nowrap}.hk-quality td{padding:12px 11px;border-bottom:1px solid #29415e;font-size:13px}.hk-q-empty{text-align:center;color:#9aabc1;padding:22px!important}.hk-q-pill{display:inline-block;padding:4px 8px;border-radius:20px;font-size:10px;font-weight:800;background:#164e3a;color:#bbf7d0}.hk-q-fail{background:#7f1d1d;color:#fecaca}.hk-q-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
 .hk-q-chart-legend{display:flex;gap:18px;color:#b8c7da;font-size:12px;margin:10px 0 16px}.hk-q-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}.hk-q-pass{background:#34d399}.hk-q-fail-bg{background:#f87171}.hk-q-trend{height:210px;display:flex;align-items:stretch;gap:5px;padding:12px 4px 0;border-bottom:1px solid #3b5573;overflow-x:auto}.hk-q-trend-col{flex:1;min-width:22px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;position:relative}.hk-q-trend-value{font-size:10px;color:#b8c7da;margin-bottom:5px}.hk-q-trend-bars{height:145px;width:min(100%,24px);display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;border-radius:5px 5px 0 0;background:#102239}.hk-q-trend-pass{background:#34d399;min-height:0}.hk-q-trend-fail{background:#f87171;min-height:0}.hk-q-trend-label{font-size:9px;color:#9aabc1;white-space:nowrap;margin-top:7px;transform:rotate(-35deg);transform-origin:top center}.hk-q-bar-row,.hk-q-hotel-row{margin:17px 0}.hk-q-bar-label{display:flex;justify-content:space-between;gap:12px;color:#dbe7f5;font-size:12px;margin-bottom:7px}.hk-q-bar-label strong{color:#f8fafc;white-space:nowrap}.hk-q-track,.hk-q-stack{height:11px;width:100%;background:#0e2035;border-radius:20px;overflow:hidden;display:flex}.hk-q-bar{height:100%;border-radius:20px}.hk-q-bar-defect{background:linear-gradient(90deg,#f59e0b,#ef4444)}.hk-q-bar-staff{background:linear-gradient(90deg,#60a5fa,#34d399)}.hk-q-stack-pass{height:100%;background:#34d399}.hk-q-stack-fail{height:100%;background:#f87171}.hk-q-first-pass{display:flex;gap:12px;margin:18px 0}.hk-q-first-pass>div{flex:1;background:#102239;border-radius:10px;padding:16px}.hk-q-first-pass strong{display:block;font-size:26px;color:#f8fafc}.hk-q-first-pass span{font-size:11px;color:#9aabc1}@media(max-width:900px){.hk-q-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.hk-q-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.hk-q-kpis,.hk-q-filters,.hk-q-grid{grid-template-columns:1fr}}
+
+/* CCH unified gold / ivory report skin */
+body:has(.hk-report),body:has(.hk-productivity),body:has(.hk-quality){background:#faf8f4!important}
+body:has(.hk-report) .layout,body:has(.hk-productivity) .layout,body:has(.hk-quality) .layout,
+body:has(.hk-report) .main,body:has(.hk-productivity) .main,body:has(.hk-quality) .main,
+body:has(.hk-report) .content,body:has(.hk-productivity) .content,body:has(.hk-quality) .content{
+ background:#faf8f4!important;color:#302316!important
+}
+body:has(.hk-report) .topbar,body:has(.hk-productivity) .topbar,body:has(.hk-quality) .topbar{
+ background:#fff!important;color:#302316!important;border-bottom:1px solid #e7ddce!important
+}
+body:has(.hk-report) .topbar a,body:has(.hk-productivity) .topbar a,body:has(.hk-quality) .topbar a{color:#87551f!important}
+.hk-report,.hk-productivity,.hk-quality{
+ background:#faf8f4!important;color:#302316!important
+}
+.hk-report h1,.hk-report h2,.hk-productivity h1,.hk-productivity h2,.hk-quality h1,.hk-quality h2{color:#302316!important}
+.hk-muted,.hk-p-muted,.hk-q-muted{color:#6f6253!important}
+.hk-panel,.hk-p-panel,.hk-q-panel,.hk-kpi,.hk-p-kpi,.hk-q-kpi{
+ background:#fff!important;border:1px solid #e7ddce!important;color:#302316!important;
+ box-shadow:0 6px 20px rgba(74,49,21,.055)!important
+}
+.hk-report label,.hk-productivity label,.hk-quality label{color:#594733!important}
+.hk-report input,.hk-report select,.hk-productivity input,.hk-productivity select,.hk-quality input,.hk-quality select{
+ background:#fff!important;color:#302316!important;border:1px solid #d8cbb8!important;color-scheme:light
+}
+.hk-btn,.hk-p-btn,.hk-q-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important;border:0!important}
+.hk-kpi span,.hk-p-kpi span,.hk-q-kpi span{color:#6f6253!important}
+.hk-kpi strong,.hk-p-kpi strong,.hk-q-kpi strong{color:#302316!important}
+.hk-report table,.hk-productivity table,.hk-quality table{color:#302316!important}
+.hk-report th,.hk-productivity th,.hk-quality th{background:#f2eadc!important;color:#594733!important;border-color:#e7ddce!important}
+.hk-report td,.hk-productivity td,.hk-quality td{color:#302316!important;border-color:#eee5d8!important}
+.hk-empty,.hk-p-empty,.hk-q-empty{color:#6f6253!important}
+.hk-pill{background:#f3eadb!important;color:#704719!important}
+.hk-warn,.hk-p-warn{background:#fff0d9!important;color:#80531f!important}
+.hk-danger,.hk-q-fail{background:#fbe8e6!important;color:#963d32!important}
+.hk-good,.hk-p-pill,.hk-q-pill{background:#e8f1e9!important;color:#28613c!important}
+.hk-p-legend,.hk-q-chart-legend{color:#594733!important}
+.hk-p-trend{border-color:#d8cbb8!important}
+.hk-p-trend-bars,.hk-q-trend-bars{background:#f3eadb!important}
+.hk-p-trend-label,.hk-p-trend-count,.hk-q-trend-label,.hk-q-trend-value{color:#6f6253!important}
+.hk-p-bar-label,.hk-q-bar-label{color:#594733!important}
+.hk-p-bar-label strong,.hk-q-bar-label strong{color:#302316!important}
+.hk-p-track,.hk-q-track,.hk-q-stack{background:#eee5d8!important}
+.hk-p-bar-blue{background:linear-gradient(90deg,#986126,#c99a4e)!important}
+.hk-p-bar-green{background:linear-gradient(90deg,#52785d,#82a17a)!important}
+.hk-p-bar-amber{background:linear-gradient(90deg,#b9853c,#d9b36c)!important}
+.hk-p-assigned,.hk-p-trend-assigned{background:#c99a4e!important}
+.hk-p-released,.hk-p-trend-released{background:#64856a!important}
+.hk-q-chart-legend{color:#594733!important}
+.hk-q-trend{border-color:#d8cbb8!important}
+.hk-q-trend-pass,.hk-q-stack-pass{background:#64856a!important}
+.hk-q-trend-fail,.hk-q-stack-fail{background:#c86b5b!important}
+.hk-q-first-pass>div{background:#fbf8f2!important;border:1px solid #e7ddce!important}
+.hk-q-first-pass strong{color:#302316!important}
+.hk-q-first-pass span{color:#6f6253!important}
+.hk-q-bar-defect{background:linear-gradient(90deg,#c99a4e,#c86b5b)!important}
+.hk-q-bar-staff{background:linear-gradient(90deg,#986126,#64856a)!important}
+
 </style>
 <div class="hk-quality">
 <header><div class="hk-q-muted">ROOM STANDARDS · INSPECTION · REWORK</div><h1>Housekeeping Inspection &amp; Quality</h1><p class="hk-q-muted">Understand inspection outcomes, recurring checklist defects, room-level rework and inspector activity.</p></header>
