@@ -19,6 +19,74 @@ from accounting.services.journal import record_transaction, get_system_account
 
 
 
+
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def accounting_dashboard(request):
+    """Hotel-scoped accounting overview; no figures are combined across hotels."""
+    from datetime import date
+    from django.db.models import Sum
+    from django.utils import timezone
+    from core.utils import get_user_hotels
+    from accounting.models import StaffReimbursement
+
+    hotels = get_user_hotels(request.user)
+    if request.user.role != "DIRECTOR" and getattr(request.user, "hotel_id", None):
+        hotels = hotels.filter(pk=request.user.hotel_id)
+
+    selected_hotel_id = (request.GET.get("hotel") or "").strip()
+    hotel = hotels.filter(pk=selected_hotel_id).first() if selected_hotel_id else hotels.first()
+    if not hotel:
+        messages.error(request, "No accessible hotel is available for Accounting.")
+        return redirect("home")
+
+    today = timezone.localdate()
+    month_start = today.replace(day=1)
+    accounts = Account.objects.filter(hotel=hotel, is_active=True)
+
+    cash_balance = Decimal("0.00")
+    bank_balance = Decimal("0.00")
+    revenue_month = Decimal("0.00")
+    expenses_month = Decimal("0.00")
+    for account in accounts:
+        balance = account.get_balance()
+        if account.account_type == "cash":
+            cash_balance += balance
+        elif account.account_type == "bank":
+            bank_balance += balance
+        if account.account_type in INCOME_TYPES:
+            totals = JournalLine.objects.filter(
+                account=account, journal__hotel=hotel,
+                journal__date__gte=month_start, journal__date__lte=today,
+            ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
+            revenue_month += (totals["credit"] or Decimal("0.00")) - (totals["debit"] or Decimal("0.00"))
+        elif account.account_type in EXPENSE_TYPES:
+            totals = JournalLine.objects.filter(
+                account=account, journal__hotel=hotel,
+                journal__date__gte=month_start, journal__date__lte=today,
+            ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
+            expenses_month += (totals["debit"] or Decimal("0.00")) - (totals["credit"] or Decimal("0.00"))
+
+    pending_reimbursements = StaffReimbursement.objects.filter(
+        hotel=hotel, status="PENDING"
+    ).count()
+    recent_entries = (
+        JournalEntry.objects.filter(hotel=hotel)
+        .select_related("created_by")
+        .prefetch_related("lines__account")
+        .order_by("-date", "-id")[:8]
+    )
+    return render(request, "accounting/dashboard.html", {
+        "hotel": hotel,
+        "hotels": hotels,
+        "today": today,
+        "cash_balance": cash_balance,
+        "bank_balance": bank_balance,
+        "revenue_month": revenue_month,
+        "expenses_month": expenses_month,
+        "pending_reimbursements": pending_reimbursements,
+        "recent_entries": recent_entries,
+    })
+
 def trial_balance(request):
 
     hotel = request.user.hotel
