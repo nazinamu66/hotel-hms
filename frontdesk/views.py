@@ -718,6 +718,53 @@ def folio_invoice(request, folio_id):
     )
 
 
+@role_required("FRONTDESK", "MANAGER", "ADMIN", "DIRECTOR", "SECURITY")
+def police_guest_register(request):
+    """Printable, hotel-scoped snapshot of guests with active room stays."""
+    from django.utils import timezone
+
+    hotel = request.user.department.hotel
+    generated_at = timezone.localtime()
+    today = timezone.localdate()
+
+    active_stays = (
+        Folio.objects.filter(
+            hotel=hotel,
+            folio_type="ROOM",
+            is_closed=False,
+        )
+        .select_related("guest", "room")
+        .order_by("room__room_number", "guest__last_name", "guest__first_name")
+    )
+
+    rows = []
+    missing_identity_count = 0
+    for folio in active_stays:
+        guest = folio.guest
+        if guest is None:
+            missing_identity_count += 1
+        rows.append({
+            "guest": guest,
+            "room": folio.room,
+            "check_in_at": folio.check_in_at,
+            "expected_departure": folio.check_out_at,
+            "missing_identity": not bool(guest and guest.id_number),
+        })
+
+    return render(
+        request,
+        "frontdesk/police_guest_register.html",
+        {
+            "hotel": hotel,
+            "report_date": today,
+            "generated_at": generated_at,
+            "rows": rows,
+            "guest_count": len(rows),
+            "missing_identity_count": missing_identity_count,
+        },
+    )
+
+
 @role_required("FRONTDESK", "MANAGER")
 def room_board(request):
 
