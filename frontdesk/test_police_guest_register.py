@@ -78,7 +78,7 @@ class PoliceGuestRegisterTests(TestCase):
         self.assertContains(response, "08030000000")
         self.assertContains(response, "PGR-01")
         self.assertContains(response, "Expected departure")
-        self.assertContains(response, "Print / Save as PDF")
+        self.assertContains(response, "Generate PDF Report")
 
     def test_register_excludes_checked_out_stays(self):
         closed_guest = Guest.objects.create(
