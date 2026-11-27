@@ -558,21 +558,21 @@ class FinancialOpeningBalancePageTests(TestCase):
         )
         self.bank = Account.objects.create(
             hotel=self.hotel,
-            code="5185",
-            name="Test Bank",
+            code="TST5185",
+            name="Opening Test Bank",
             account_type="bank",
             opening_balance=Decimal("1000000.00"),
         )
         self.payables = Account.objects.create(
             hotel=self.hotel,
-            code="2000",
-            name="Accounts Payable",
+            code="TST2000",
+            name="Opening Test Payables",
             account_type="current_liability",
         )
         self.opening_equity = Account.objects.create(
             hotel=self.hotel,
-            code="3002",
-            name="Opening Balance Equity",
+            code="TST3002",
+            name="Opening Test Equity",
             account_type="equity",
             system_key="opening_balance_equity",
             is_system=True,
@@ -653,11 +653,11 @@ class FinancialOpeningBalanceAdjustmentTests(TestCase):
             role="CHIEF_ACCOUNTANT", hotel=self.hotel,
         )
         self.bank = Account.objects.create(
-            hotel=self.hotel, code="5100", name="Access Bank",
+            hotel=self.hotel, code="TST5100", name="Adjustment Test Bank",
             account_type="bank",
         )
         self.equity = Account.objects.create(
-            hotel=self.hotel, code="3002", name="Opening Balance Equity",
+            hotel=self.hotel, code="TST3003", name="Adjustment Test Equity",
             account_type="equity", system_key="opening_balance_equity",
             is_system=True, allow_manual_entries=False,
         )
