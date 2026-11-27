@@ -2688,7 +2688,7 @@ def expense_management(request):
     )
     return render(request, "accounting/expense_management.html", {
         "hotels": hotels, "hotel": hotel, "show_hotel_selector": hotels.count() > 1,
-        "expense_accounts": expense_accounts, "payment_accounts": payment_accounts,
+        "operations_active": "expenses", "expense_accounts": expense_accounts, "payment_accounts": payment_accounts,
         "rows": rows, "can_create": can_create, "can_review": can_review,
         "can_pay": can_pay, "today": timezone.localdate(),
         "pending_total": totals["pending"] or Decimal("0.00"),
