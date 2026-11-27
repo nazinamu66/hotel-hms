@@ -29,7 +29,7 @@
 <div class="account-form-page">
   <div class="account-form-head">
     <div><div class="account-form-kicker">Accounting · Chart of accounts</div><h1 class="account-form-title">Edit account</h1><p class="account-form-sub">Update this account's ledger details and posting controls.</p></div>
-    <a class="account-form-secondary" href="{% url 'accounting:chart' %}">← Back to chart</a>
+    <a class="account-form-secondary" href="{% url 'accounting:chart' %}?hotel={{ hotel.id }}">← Back to chart</a>
   </div>
   <form method="post" novalidate>
     {% csrf_token %}
