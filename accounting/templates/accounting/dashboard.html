@@ -18,7 +18,26 @@
 .acct-metric strong{display:block;font-size:clamp(1.25rem,2vw,1.7rem);margin-top:9px;overflow-wrap:anywhere}
 .acct-metric small{display:block;color:#94a3b8;margin-top:5px}
 .acct-section-title{font-size:1.05rem;font-weight:850;margin:0 0 15px}
-.acct-chart-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:18px;margin-bottom:18px}
+.acct-chart-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr);gap:18px;margin-bottom:18px}
+.acct-chart-grid.equal{grid-template-columns:repeat(2,minmax(0,1fr))}
+.acct-donut-layout{display:grid;grid-template-columns:145px 1fr;gap:18px;align-items:center}
+.acct-donut{width:140px;height:140px;border-radius:50%;position:relative;display:grid;place-items:center;flex-shrink:0}
+.acct-donut:after{content:"";position:absolute;inset:24px;background:#fff;border-radius:50%}
+.acct-donut-center{position:relative;z-index:1;text-align:center;font-size:.72rem;color:#64748b}
+.acct-donut-center strong{display:block;color:#172033;font-size:1rem}
+.acct-key{display:grid;gap:9px}
+.acct-key-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:.78rem}
+.acct-key-dot{width:9px;height:9px;border-radius:3px}
+.acct-key-row span:nth-child(2){color:#475569;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct-key-row strong{white-space:nowrap}
+.acct-flow-row{display:grid;grid-template-columns:48px minmax(0,1fr) 110px;gap:10px;align-items:center;margin:15px 0}
+.acct-flow-track{height:13px;border-radius:99px;background:#f1f5f9;overflow:hidden}
+.acct-flow-fill{height:100%;border-radius:99px}
+.acct-flow-positive{background:#0f766e}.acct-flow-negative{background:#e11d48}
+.acct-net-note{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 15px;border-radius:11px;background:#f8fafc;margin-top:16px;font-size:.84rem}
+.acct-net-note strong{font-size:1rem}
+.acct-trend-value{font-size:.72rem;color:#64748b;margin-left:84px;margin-top:-8px}
+@media(max-width:850px){.acct-chart-grid,.acct-chart-grid.equal{grid-template-columns:1fr}.acct-donut-layout{grid-template-columns:110px 1fr}.acct-donut{width:105px;height:105px}.acct-donut:after{inset:18px}}
 .acct-legend{display:flex;gap:16px;flex-wrap:wrap;color:#64748b;font-size:.78rem;font-weight:700;margin:-4px 0 18px}
 .acct-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px}
 .acct-month{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:center;margin:13px 0}
@@ -76,6 +95,7 @@
     <article class="acct-metric"><span>Bank balances</span><strong>₦{{ bank_balance|floatformat:2 }}</strong><small>All active bank accounts</small></article>
     <article class="acct-metric"><span>Revenue this month</span><strong>₦{{ revenue_month|floatformat:2 }}</strong><small>Posted journal activity</small></article>
     <article class="acct-metric"><span>Expenses this month</span><strong>₦{{ expenses_month|floatformat:2 }}</strong><small>Posted journal activity</small></article>
+    <article class="acct-metric"><span>Net operating result</span><strong>₦{{ net_profit_month|floatformat:2 }}</strong><small>{{ profit_margin|floatformat:1 }}% margin on revenue</small></article>
     <article class="acct-metric"><span>Accounts payable</span><strong>₦{{ payables_balance|floatformat:2 }}</strong><small>Supplier liability balance</small></article>
     <article class="acct-metric"><span>Pending reimbursements</span><strong>{{ pending_reimbursements }}</strong><small>Claims awaiting review</small></article>
   </section>
@@ -83,7 +103,7 @@
   <section class="acct-chart-grid">
     <article class="acct-card">
       <h2 class="acct-section-title">Revenue vs expenses</h2>
-      <p class="acct-sub" style="margin:-7px 0 17px">Monthly posted journal activity · Last six months</p>
+      <p class="acct-sub" style="margin:-7px 0 17px">Monthly income and expense movement · Last six months</p>
       <div class="acct-legend"><span><i style="background:#2563eb"></i>Revenue</span><span><i style="background:#f59e0b"></i>Expenses</span></div>
       {% if monthly_chart %}
         {% for month in monthly_chart %}
@@ -94,23 +114,65 @@
             <div class="acct-bar-track"><div class="acct-bar acct-expense" style="width:{{ month.expenses_pct }}%"></div></div>
           </div>
         </div>
+        <div class="acct-trend-value">Revenue ₦{{ month.revenue|floatformat:0 }} · Expenses ₦{{ month.expenses|floatformat:0 }}</div>
         {% endfor %}
-        <p class="acct-sub" style="font-size:.76rem;margin:15px 0 0">Amounts are based on posted journal lines for this hotel only.</p>
       {% else %}<div class="acct-chart-empty">No financial activity is available for this period.</div>{% endif %}
+      <div class="acct-net-note"><span>Net result this month</span><strong>₦{{ net_profit_month|floatformat:2 }}</strong></div>
+      <p class="acct-sub" style="font-size:.74rem">Based on income and expense journal lines for this hotel. This is not a cash-flow figure.</p>
     </article>
     <article class="acct-card">
-      <h2 class="acct-section-title">Expense breakdown</h2>
-      <p class="acct-sub" style="margin:-7px 0 20px">Top expense accounts · This month</p>
+      <h2 class="acct-section-title">Expense composition</h2>
+      <p class="acct-sub" style="margin:-7px 0 20px">Largest expense accounts · This month</p>
       {% if expense_breakdown %}
-      <div class="acct-breakdown">
+      <div class="acct-donut-layout">
+        <div class="acct-donut" style="background:{{ expense_donut_style }}">
+          <div class="acct-donut-center"><strong>₦{{ expenses_month|floatformat:0 }}</strong>Expenses</div>
+        </div>
+        <div class="acct-key">
+          {% for item in expense_breakdown %}
+          <div class="acct-key-row"><i class="acct-key-dot" style="background:{{ item.color }}"></i><span title="{{ item.name }}">{{ item.name }}</span><strong>{{ item.pct|floatformat:0 }}%</strong></div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="acct-breakdown" style="margin-top:20px">
         {% for item in expense_breakdown %}
         <div class="acct-breakdown-row">
           <div class="acct-breakdown-head"><span>{{ item.name }}</span><strong>₦{{ item.amount|floatformat:2 }}</strong></div>
-          <div class="acct-expense-track"><div class="acct-expense-fill" style="width:{{ item.pct }}%"></div></div>
+          <div class="acct-expense-track"><div class="acct-expense-fill" style="width:{{ item.pct }}%;background:{{ item.color }}"></div></div>
         </div>
         {% endfor %}
       </div>
       {% else %}<div class="acct-chart-empty">No expenses have been posted this month.</div>{% endif %}
+    </article>
+  </section>
+
+  <section class="acct-chart-grid equal">
+    <article class="acct-card">
+      <h2 class="acct-section-title">Cash and bank movement</h2>
+      <p class="acct-sub" style="margin:-7px 0 17px">Net ledger movement · Last six months</p>
+      <div class="acct-legend"><span><i style="background:#0f766e"></i>Net inflow</span><span><i style="background:#e11d48"></i>Net outflow</span></div>
+      {% if cash_flow_chart %}
+        {% for month in cash_flow_chart %}
+        <div class="acct-flow-row">
+          <span class="acct-month-label">{{ month.label }}</span>
+          <div class="acct-flow-track"><div class="acct-flow-fill {% if month.positive %}acct-flow-positive{% else %}acct-flow-negative{% endif %}" style="width:{{ month.pct }}%"></div></div>
+          <strong style="font-size:.78rem;text-align:right;white-space:nowrap">₦{{ month.amount|floatformat:0 }}</strong>
+        </div>
+        {% endfor %}
+      {% else %}<div class="acct-chart-empty">No cash or bank movements found.</div>{% endif %}
+      <p class="acct-sub" style="font-size:.74rem">Calculated from debit and credit movements in cash and bank accounts. Transfers between these accounts may offset in the combined total.</p>
+    </article>
+    <article class="acct-card">
+      <h2 class="acct-section-title">Financial position</h2>
+      <p class="acct-sub" style="margin:-7px 0 17px">Current balances and outstanding items</p>
+      <div class="acct-breakdown">
+        <div class="acct-breakdown-row"><div class="acct-breakdown-head"><span>Cash on hand</span><strong>₦{{ cash_balance|floatformat:2 }}</strong></div></div>
+        <div class="acct-breakdown-row"><div class="acct-breakdown-head"><span>Bank balances</span><strong>₦{{ bank_balance|floatformat:2 }}</strong></div></div>
+        <div class="acct-breakdown-row"><div class="acct-breakdown-head"><span>Accounts payable</span><strong>₦{{ payables_balance|floatformat:2 }}</strong></div></div>
+        <div class="acct-breakdown-row"><div class="acct-breakdown-head"><span>Pending reimbursements</span><strong>{{ pending_reimbursements }}</strong></div></div>
+      </div>
+      <div class="acct-net-note"><span>Combined cash and bank</span><strong>₦{{ cash_balance|add:bank_balance|floatformat:2 }}</strong></div>
+      <a class="acct-link" style="margin-top:14px" href="{% url 'accounting:balance_sheet' %}"><strong>Open Balance Sheet</strong><span>Review assets, liabilities and equity</span></a>
     </article>
   </section>
 
