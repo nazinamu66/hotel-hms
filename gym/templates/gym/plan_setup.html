@@ -2,80 +2,52 @@
 {% block title %}Gym Package Setup{% endblock %}
 {% block content %}
 <style>
-.gym-setup{max-width:1100px;margin:auto;color:#172033}
-.gym-panel{background:#fff;border:1px solid #e5e9f0;border-radius:16px;padding:22px;margin-bottom:16px}
-.gym-fields{display:flex;gap:14px;align-items:end;flex-wrap:wrap}
-.gym-fields p{margin:0;min-width:170px}
-.gym-fields label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
-.gym-fields input,.gym-fields select{padding:10px;border:1px solid #cbd5e1;border-radius:8px}
-.gym-btn{background:#1d4ed8;color:white;border:0;border-radius:8px;padding:11px 16px;font-weight:700;cursor:pointer}
-.gym-panel table{width:100%;border-collapse:collapse}.gym-fields input,.gym-fields select{min-width:150px}.gym-panel form input[type=number]{width:125px}.gym-panel form{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.gym-panel form label{white-space:nowrap}.gym-panel form button{white-space:nowrap}.gym-panel h1{font-size:30px;letter-spacing:-.03em}.gym-panel h2{font-size:23px}
-.gym-panel td,.gym-panel th{text-align:left;padding:11px 8px;border-bottom:1px solid #e5e7eb}
+.gym-setup{max-width:1240px;margin:24px auto;padding:0 18px 40px;color:#172033}
+.gym-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.gym-eyebrow{font-size:12px;font-weight:800;letter-spacing:.08em;color:#64748b;text-transform:uppercase}
+.gym-title{font-size:30px;letter-spacing:-.04em;margin:5px 0}.gym-subtitle{color:#64748b;margin:0}
+.gym-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:24px;margin-bottom:18px;box-shadow:0 5px 20px #0f172a08}
+.gym-hotel-select{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:20px 0 8px}
+.gym-setup select,.gym-setup input[type=number]{min-height:44px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font:inherit}
+.gym-setup select:focus,.gym-setup input:focus{outline:3px solid #dbeafe;border-color:#3b82f6}
+.gym-form-grid{display:grid;grid-template-columns:1.1fr 1fr auto auto;gap:16px;align-items:end;margin-top:18px}
+.gym-field label{display:block;font-size:13px;font-weight:750;color:#475569;margin-bottom:7px}
+.gym-field select,.gym-field input{width:100%;box-sizing:border-box}
+.gym-check{display:flex;align-items:center;gap:8px;min-height:44px;font-weight:700}
+.gym-btn{border:0;border-radius:10px;padding:12px 18px;background:#1d4ed8;color:#fff;font-weight:750;cursor:pointer;min-height:44px}
+.gym-btn:hover{background:#1e40af}
+.gym-package-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.gym-package{border:1px solid #e2e8f0;border-radius:14px;padding:16px;background:#fbfdff}
+.gym-package strong{font-size:15px}.gym-package-price{font-size:22px;font-weight:850;margin:8px 0}
+.gym-status{display:inline-flex;padding:4px 9px;border-radius:20px;font-size:11px;font-weight:800;background:#dcfce7;color:#166534}
+.gym-status.off{background:#f1f5f9;color:#475569}
+.gym-edit{display:grid;grid-template-columns:minmax(90px,1fr) auto auto;gap:8px;align-items:center;margin-top:14px}
+.gym-edit input[type=number]{min-width:0;width:100%;box-sizing:border-box}
+.gym-table-wrap{overflow-x:auto}.gym-table{width:100%;border-collapse:collapse;min-width:600px}
+.gym-table th{text-align:left;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:12px;border-bottom:1px solid #e2e8f0}
+.gym-table td{padding:14px 12px;border-bottom:1px solid #edf2f7}
+.gym-muted{color:#64748b}
+@media(max-width:720px){.gym-form-grid{grid-template-columns:1fr 1fr}.gym-form-grid .gym-btn{grid-column:1/-1}}
+@media(max-width:480px){.gym-form-grid{grid-template-columns:1fr}.gym-card{padding:18px}}
 </style>
 <div class="gym-setup">
-    <section class="gym-panel">
-        <h1 style="margin-top:0">Membership packages</h1>
-        <p style="color:#64748b">Configure Gym membership prices for each hotel where Gym is enabled.</p>
-        <form method="get" style="margin-bottom:18px">
-            <label for="gym-hotel" style="display:block;font-weight:700;margin-bottom:6px">Hotel</label>
-            <select id="gym-hotel" name="hotel" onchange="this.form.submit()" style="padding:10px;border:1px solid #cbd5e1;border-radius:8px;min-width:260px">
-                <option value="">Select a hotel</option>
-                {% for item in hotels %}
-                <option value="{{ item.pk }}" {% if hotel and item.pk == hotel.pk %}selected{% endif %}>{{ item.name }}</option>
-                {% endfor %}
-            </select>
-        </form>
-        {% if hotel %}
-        <p style="color:#64748b">{{ hotel.name }} · Configure package prices for this hotel</p>
-        <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="hotel" value="{{ hotel.pk }}">
-            <div class="gym-fields">
-                {% for field in form %}
-                <p>
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% for error in field.errors %}<small style="color:#b91c1c">{{ error }}</small>{% endfor %}
-                </p>
-                {% endfor %}
-                <button class="gym-btn">Save package</button>
-            </div>
-            {% for error in form.non_field_errors %}<p style="color:#b91c1c">{{ error }}</p>{% endfor %}
-        </form>
-        {% else %}
-        <p style="color:#64748b">Choose a hotel above to view and manage its Gym membership packages. Only hotels with Gym enabled are listed.</p>
-        {% endif %}
-    </section>
-    {% if hotel %}
-    <section class="gym-panel">
-        <h2 style="margin-top:0">Configured packages</h2>
-        <div style="overflow-x:auto">
-            <table>
-                <thead><tr><th>Package</th><th>Price</th><th>Status</th><th>Update</th></tr></thead>
-                <tbody>
-                    {% for plan in plans %}
-                    <tr>
-                        <td>{{ plan.get_package_display }}</td>
-                        <td>₦{{ plan.price|floatformat:2 }}</td>
-                        <td>{{ plan.is_active|yesno:"Active,Inactive" }}</td>
-                        <td>
-                            <form method="post" action="{% url 'gym_plan_update' plan.pk %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="hotel" value="{{ hotel.pk }}">
-                                <input type="hidden" name="package" value="{{ plan.package }}">
-                                <input type="number" name="price" min="0" step="0.01" value="{{ plan.price }}" required>
-                                <label><input type="checkbox" name="is_active" {% if plan.is_active %}checked{% endif %}> Active</label>
-                                <button class="gym-btn">Update</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="4">No packages configured yet.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </section>
-    {% endif %}
+ <header class="gym-heading"><div><div class="gym-eyebrow">System setup · Gym</div><h1 class="gym-title">Membership packages</h1><p class="gym-subtitle">Set the membership prices and availability for each Gym-enabled hotel.</p></div></header>
+ <section class="gym-card">
+  <div class="gym-eyebrow">Hotel configuration</div>
+  <form method="get" class="gym-hotel-select"><label for="gym-hotel"><strong>Hotel</strong></label><select id="gym-hotel" name="hotel" onchange="this.form.submit()"><option value="">Select a hotel</option>{% for item in hotels %}<option value="{{ item.pk }}" {% if hotel and item.pk == hotel.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></form>
+  {% if hotel %}
+   <p class="gym-muted">{{ hotel.name }} · Package prices for this hotel</p>
+   <form method="post">{% csrf_token %}<input type="hidden" name="hotel" value="{{ hotel.pk }}">
+    {% if form.non_field_errors %}<p style="color:#b91c1c">{{ form.non_field_errors }}</p>{% endif %}
+    <div class="gym-form-grid">{% for field in form %}<div class="gym-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small style="color:#b91c1c">{{ error }}</small>{% endfor %}</div>{% endfor %}<div class="gym-field"><label>Availability</label><label class="gym-check"><input type="checkbox" checked disabled> Active by default</label></div><button class="gym-btn" type="submit">＋ Add package</button></div>
+   </form>
+  {% else %}<p class="gym-muted">Choose a hotel with Gym enabled to configure its packages.</p>{% endif %}
+ </section>
+ {% if hotel %}
+ <section class="gym-card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px"><div><h2 style="margin:0;font-size:21px">Configured packages</h2><p class="gym-muted" style="margin:5px 0 0">Update prices or deactivate packages that should no longer be sold.</p></div><span class="gym-eyebrow">{{ plans|length }} package{{ plans|length|pluralize }}</span></div>
+  {% if plans %}<div class="gym-package-grid">{% for plan in plans %}<article class="gym-package"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><strong>{{ plan.get_package_display }}</strong><span class="gym-status {% if not plan.is_active %}off{% endif %}">{{ plan.is_active|yesno:"Active,Inactive" }}</span></div><div class="gym-package-price">₦{{ plan.price|floatformat:2 }}</div><form method="post" action="{% url 'gym_plan_update' plan.pk %}" class="gym-edit">{% csrf_token %}<input type="hidden" name="hotel" value="{{ hotel.pk }}"><input type="hidden" name="package" value="{{ plan.package }}"><input type="number" name="price" min="0" step="0.01" value="{{ plan.price }}" aria-label="{{ plan.get_package_display }} price" required><label class="gym-check"><input type="checkbox" name="is_active" {% if plan.is_active %}checked{% endif %}> Active</label><button class="gym-btn" type="submit">Save</button></form></article>{% endfor %}</div>
+  {% else %}<p class="gym-muted">No packages configured yet. Add the first package above.</p>{% endif %}
+ </section>
+ {% endif %}
 </div>
 {% endblock %}
