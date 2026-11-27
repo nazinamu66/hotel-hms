@@ -30,7 +30,6 @@ class AccountForm(forms.ModelForm):
             )
         self.fields["parent"].required = False
         self.fields["description"].required = False
-        self.fields["opening_balance"].required = False
 
 
 class BankAccountForm(forms.ModelForm):
