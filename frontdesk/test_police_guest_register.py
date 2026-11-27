@@ -61,6 +61,13 @@ class PoliceGuestRegisterTests(TestCase):
             check_out_at=timezone.now() + timedelta(days=2),
         )
 
+    def test_frontdesk_room_board_exposes_police_register_button(self):
+        response = self.client.get(reverse("frontdesk_room_board"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Police Guest Register")
+        self.assertContains(response, reverse("frontdesk_police_guest_register"))
+
     def test_register_lists_active_checked_in_guest_and_standard_fields(self):
         response = self.client.get(reverse("frontdesk_police_guest_register"))
 
