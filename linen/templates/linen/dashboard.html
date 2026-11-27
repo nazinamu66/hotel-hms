@@ -41,34 +41,33 @@
 @media(max-width:1100px){.linen-stats{grid-template-columns:repeat(4,minmax(110px,1fr))}}
 @media(max-width:650px){.linen-hero h1{font-size:23px}.linen-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.linen-panel{padding:14px}}
 
-/* MGT navy theme — Linen management dashboard only */
-.linen-page{background:#f3f6fc;color:#17243a}
-.linen-page .linen-hero{background:linear-gradient(120deg,#0b1730 0%,#142b50 62%,#1d3c68 100%);color:#fff}
-.linen-page .linen-panel{background:#fff;border:1px solid #dce5f1;box-shadow:0 5px 18px rgba(20,43,80,.055)}
-.linen-page .linen-stat{background:#f7f9fd;border-color:#dce5f1}
-.linen-page .linen-table th{background:#edf3fb;color:#526783;border-bottom:1px solid #dce5f1}
-.linen-page .linen-table td{color:#17243a;border-color:#e5ebf3}
-.linen-page .linen-product{color:#142b50}
-.linen-page .linen-primary{background:#2563eb;color:#fff!important}
-.linen-page .linen-primary:hover{background:#1d4ed8}
-
-
-/* Dark navy management workspace — scoped to this Linen page only */
-body:has(.linen-page) .layout{background:#0b1424}
-body:has(.linen-page) .main{background:#0b1424}
-body:has(.linen-page) .topbar{background:#0d1a2d!important;color:#e7eefb!important;border-bottom:1px solid #263a55!important}
-body:has(.linen-page) .topbar a{color:#9fc2ff!important}
-body:has(.linen-page) .content{background:#0b1424!important;color:#e7eefb!important}
-.linen-page{background:transparent!important;color:#e7eefb!important}
-.linen-panel{background:#14243a!important;border:1px solid #293d58!important;color:#e7eefb!important;box-shadow:0 8px 22px rgba(0,0,0,.16)!important}
-.linen-stat{background:#192c45!important;border-color:#304763!important;color:#e7eefb!important}
-.linen-panel h2{color:#f3f7ff!important}
-.linen-panel-sub,.linen-stat span,.linen-sku{color:#9aacc4!important}
-.linen-table th{background:#1b304b!important;color:#aebed3!important;border-color:#304763!important}
-.linen-table td{background:transparent!important;color:#e0e9f7!important;border-color:#293d58!important}
-.linen-page a:not(.linen-primary):not(.linen-btn-primary):not(.ro-btn):not(.lca-primary):not(.lr-link){color:#8db7ff}
-.linen-page input,.linen-page select,.linen-page textarea{background:#fff!important;color:#17243a!important;border-color:#536a87!important;color-scheme:light}
-.linen-page button,.linen-page .linen-btn-primary,.linen-page .linen-primary,.linen-page .ro-btn:not(.secondary):not(.ghost),.linen-page .lca-primary{background:#2563eb!important;color:#fff!important;border-color:#2563eb!important}
+ 
+/* CCH unified brand theme — Linen operations dashboard */
+body:has(.linen-page) .layout,
+body:has(.linen-page) .main,
+body:has(.linen-page) .content{background:#faf8f4!important;color:#302316!important}
+body:has(.linen-page) .topbar{background:#fff!important;color:#302316!important;border-bottom:1px solid #e7ddce!important}
+body:has(.linen-page) .topbar a{color:#87551f!important}
+.linen-page{background:transparent!important;color:#302316!important}
+.linen-hero{background:linear-gradient(120deg,#211910 0%,#49321d 68%,#80531f 100%)!important;color:#fff8eb!important;box-shadow:0 12px 28px rgba(74,49,21,.12)!important}
+.linen-hero h1{color:#fff8eb!important}
+.linen-hero .linen-eyebrow,.linen-hero .linen-muted{color:#e2cfad!important}
+.linen-hero .linen-secondary{background:rgba(255,255,255,.1)!important;border:1px solid rgba(255,255,255,.25)!important;color:#fff8eb!important}
+.linen-panel{background:#fff!important;border:1px solid #e7ddce!important;color:#302316!important;box-shadow:0 6px 20px rgba(74,49,21,.055)!important}
+.linen-panel h2{color:#302316!important}
+.linen-panel-sub{color:#6f6253!important}
+.linen-stat{background:#fbf8f2!important;border:1px solid #e7ddce!important;color:#302316!important}
+.linen-stat span{color:#6f6253!important}
+.linen-stat strong{color:#302316!important}
+.linen-table th{background:#f2eadc!important;color:#594733!important;border-color:#e7ddce!important}
+.linen-table td{background:#fff!important;color:#302316!important;border-color:#eee5d8!important}
+.linen-table tbody tr:hover{background:#fbf6ed!important}
+.linen-product{color:#302316!important}
+.linen-sku{color:#786b5c!important}
+.linen-primary{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important;border:0!important}
+.linen-secondary{background:#f3eadb!important;color:#704719!important;border:1px solid #e7ddce!important}
+.linen-link{color:#87551f!important}
+.linen-empty{color:#6f6253!important}
 
 </style>
 <div class="linen-page">
