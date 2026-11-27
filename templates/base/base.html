@@ -90,6 +90,9 @@
             <a href="{% url 'accounting:expense_management' %}" {% if request.resolver_match.url_name == 'expense_management' %}aria-current="page"{% endif %}>
                 Expenses
             </a>
+            <a href="{% url 'accounting:bank_reconciliation' %}" {% if request.resolver_match.url_name == 'bank_reconciliation' %}aria-current="page"{% endif %}>
+                Bank Reconciliation
+            </a>
 
         </div>
 
