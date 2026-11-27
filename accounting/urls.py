@@ -11,6 +11,7 @@ urlpatterns = [
     path("staff-reimbursements/", views.staff_reimbursements, name="staff_reimbursements"),
     path("staff-reimbursements/<int:claim_id>/", views.staff_reimbursement_detail, name="staff_reimbursement_detail"),
     path("chart/", views.chart_of_accounts, name="chart"),
+    path("opening-balances/", views.financial_opening_balances, name="financial_opening_balances"),
     path("ledger/<int:account_id>/", views.account_ledger, name="ledger"),
     path("ledger/<int:account_id>/export.xlsx", views.account_ledger_export_xlsx, name="ledger_export_xlsx"),
     path("ledger/<int:account_id>/export.pdf", views.account_ledger_export_pdf, name="ledger_export_pdf"),
