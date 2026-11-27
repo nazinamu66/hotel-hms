@@ -625,3 +625,55 @@ class FinancialOpeningBalanceAdjustment(models.Model):
 
     def __str__(self):
         return f"Opening adjustment #{self.pk} · {self.account} · {self.amount} ({self.status})"
+
+
+
+class BankReconciliation(models.Model):
+    """Statement period and control totals for one hotel bank account."""
+    STATUS_CHOICES = (("DRAFT", "In progress"), ("RECONCILED", "Reconciled"))
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="bank_reconciliations")
+    bank_account = models.ForeignKey(BankAccount, on_delete=models.PROTECT, related_name="reconciliations")
+    period_start = models.DateField()
+    period_end = models.DateField()
+    statement_opening_balance = models.DecimalField(max_digits=14, decimal_places=2)
+    statement_closing_balance = models.DecimalField(max_digits=14, decimal_places=2)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="DRAFT")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="created_bank_reconciliations")
+    created_at = models.DateTimeField(auto_now_add=True)
+    reconciled_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="completed_bank_reconciliations")
+    reconciled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-period_end", "-id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(period_end__gte=models.F("period_start")), name="bank_recon_valid_period"),
+            models.UniqueConstraint(fields=("bank_account", "period_start", "period_end"), name="unique_bank_recon_period"),
+        ]
+
+    def __str__(self):
+        return f"{self.bank_account} · {self.period_start} to {self.period_end}"
+
+
+class BankStatementLine(models.Model):
+    """Imported bank statement row; matching links to an existing journal line only."""
+    reconciliation = models.ForeignKey(BankReconciliation, on_delete=models.CASCADE, related_name="statement_lines")
+    line_number = models.PositiveIntegerField()
+    transaction_date = models.DateField()
+    description = models.CharField(max_length=255)
+    reference = models.CharField(max_length=100, blank=True)
+    debit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    credit = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal("0.00"))
+    matched_journal_line = models.OneToOneField(JournalLine, null=True, blank=True, on_delete=models.PROTECT, related_name="bank_statement_match")
+    matched_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="matched_bank_statement_lines")
+    matched_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["transaction_date", "line_number"]
+        constraints = [
+            models.UniqueConstraint(fields=("reconciliation", "line_number"), name="unique_bank_statement_line_number"),
+            models.CheckConstraint(condition=models.Q(debit__gte=0) & models.Q(credit__gte=0), name="bank_statement_amounts_nonnegative"),
+            models.CheckConstraint(condition=~(models.Q(debit__gt=0) & models.Q(credit__gt=0)), name="bank_statement_one_amount_side"),
+        ]
+
+    def __str__(self):
+        return f"{self.transaction_date} · {self.description}"
