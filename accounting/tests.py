@@ -817,10 +817,13 @@ class TrialBalanceCalculationTests(TestCase):
 class ExpenseManagementWorkflowTests(TestCase):
     def setUp(self):
         from django.contrib.auth import get_user_model
-        from inventory.models import Hotel
+        from inventory.models import Hotel, Organization
         from accounting.models import Account
 
-        self.hotel = Hotel.objects.create(name="Expense Workflow Test Hotel")
+        self.organization = Organization.objects.create(name="Expense Workflow Test Organization")
+        self.hotel = Hotel.objects.create(
+            name="Expense Workflow Test Hotel", organization=self.organization,
+        )
         User = get_user_model()
         self.accountant = User.objects.create_user(
             username="expense_workflow_accountant", password="test-password",
@@ -828,7 +831,7 @@ class ExpenseManagementWorkflowTests(TestCase):
         )
         self.director = User.objects.create_user(
             username="expense_workflow_director", password="test-password",
-            role="DIRECTOR", hotel=self.hotel,
+            role="DIRECTOR", hotel=self.hotel, organization=self.organization,
         )
         self.expense_account = Account.objects.create(
             hotel=self.hotel, code="EXPT5101", name="Test Payroll Expense",
