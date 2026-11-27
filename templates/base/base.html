@@ -440,7 +440,7 @@
 
         {% feature_enabled user "KITCHEN" as kitchen_enabled %}
 
-        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" or kitchen_enabled and user|has_role:"KITCHEN" %}
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" or kitchen_enabled and user|has_role:"KITCHEN" %}
 
         <h4 class="menu-toggle"
             onclick="toggleMenu('kitchen_menu', this)">
@@ -528,7 +528,7 @@
             {% endif %}
 
 
-            {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
+            {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
             <hr>
             <strong>Kitchen Reports</strong>
             <a href="{% url 'kitchen_management_report' %}">📊 Management Overview</a>
@@ -538,7 +538,7 @@
             <a href="{% url 'kitchen_purchasing_report' %}">🧾 Purchasing & Fulfilment</a>
             {% endif %}
 
-            {% if user.role == "KITCHEN" and user.is_department_head or user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
+            {% if user.role == "KITCHEN" and user.is_department_head or user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
             <a href="{% url 'kitchen_food_sales_report' %}">🍽️ Food Sales &amp; Shift History</a>
             {% endif %}
 
@@ -836,7 +836,7 @@
         <!-- RESTAURANT CONFIGURATION -->
         <!-- ========================= -->
 
-        {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
         <h4 class="menu-toggle {% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_inventory_status,restaurant_sales_performance,restaurant_spoilage_analysis,restaurant_spoilage_records,restaurant_spoilage_record_detail,restaurant_menu_management' %}active-menu{% endif %}"
             onclick="toggleMenu('restaurant_management_menu', this)">
             <span class="arrow">{% if request.resolver_match.url_name in 'restaurant_management_overview,restaurant_inventory_status,restaurant_sales_performance,restaurant_spoilage_analysis,restaurant_spoilage_records,restaurant_spoilage_record_detail,restaurant_menu_management' %}▾{% else %}▸{% endif %}</span>
@@ -871,7 +871,7 @@
         <!-- PROCUREMENT -->
         <!-- ========================= -->
 
-        {% if user|has_role:"MANAGER,ADMIN,DIRECTOR,ACCOUNTANT" %}
+        {% if user|has_role:"MANAGER,ADMIN,DIRECTOR" %}
 
         <h4 class="menu-toggle"
             onclick="toggleMenu('proc_menu', this)">
@@ -904,7 +904,7 @@
             <!-- Manager MUST see Direct Purchases
                  because management approval happens there -->
 
-            {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
+            {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
             <a href="{% url 'direct_purchase_list' %}">
                 🧾 Direct Purchases
 
@@ -926,7 +926,7 @@
         <!-- APPROVALS -->
         <!-- ========================= -->
 
-        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
+        {% if user|has_role:"MANAGER,GENERAL_MANAGER,ADMIN,DIRECTOR" %}
 
         <h4 class="menu-toggle {% if request.resolver_match.url_name in 'kitchen_handover_reconciliation_queue manager_stock_requests manager_ingredient_requests restaurant_spoilage refund_list cash_custody_dashboard frontdesk_complimentary_room_night_queue production_override_queue urgent_purchase_review' %}active-menu{% endif %}"
             onclick="toggleMenu('approval_menu', this)">
@@ -984,13 +984,13 @@
             </a>
             {% endif %}
 
-            {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
+            {% if user|has_role:"MANAGER,GENERAL_MANAGER,DIRECTOR,ADMIN" %}
             <a href="{% url 'urgent_purchase_review' %}">
                 ⚡ Urgent Purchase Review
             </a>
             {% endif %}
 
-            {% if user|has_role:"MANAGER,ACCOUNTANT,DIRECTOR,ADMIN" %}
+            {% if user|has_role:"MANAGER,DIRECTOR,ADMIN" %}
             <a href="{% url 'cash_custody_dashboard' %}">
                 💵 Cash Custody
             </a>
