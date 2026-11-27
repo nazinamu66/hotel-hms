@@ -33,12 +33,12 @@
 .acct-key-link{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:center;text-decoration:none;color:inherit;border-radius:6px;padding:2px}
 .acct-key-link:hover span:nth-child(2){color:#1d4ed8;text-decoration:underline}
 .acct-period{font-size:.76rem;color:#64748b;font-weight:700}
-.acct-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px}
+.acct-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
 .acct-metric{background:linear-gradient(155deg,#fff 0%,#fbfdff 100%);border:1px solid #e2e8f0;border-radius:16px;padding:20px;min-width:0;box-shadow:0 5px 16px rgba(15,23,42,.025);position:relative;overflow:hidden}
 .acct-metric:before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:#cbd5e1}
 .acct-metric:nth-child(3):before{background:#2563eb}.acct-metric:nth-child(4):before{background:#f59e0b}.acct-metric:nth-child(5):before{background:#0f766e}
 .acct-metric span{display:block;color:#64748b;font-size:.82rem;font-weight:700}
-.acct-metric strong{display:block;font-size:clamp(1.25rem,2vw,1.7rem);margin-top:9px;overflow-wrap:anywhere}
+.acct-metric strong{display:block;font-size:clamp(1rem,1.55vw,1.65rem);line-height:1.2;letter-spacing:-.045em;white-space:nowrap;font-variant-numeric:tabular-nums;margin-top:9px;overflow:visible}
 .acct-metric small{display:block;color:#94a3b8;margin-top:5px}
 .acct-section-title{font-size:1.08rem;font-weight:850;letter-spacing:-.02em;margin:0 0 8px}
 .acct-chart-grid>.acct-card{min-width:0}
@@ -104,6 +104,8 @@
 .acct-table a{color:#1d4ed8;text-decoration:none;font-weight:750}
 .acct-empty{padding:24px;text-align:center;color:#64748b;border:1px dashed #cbd5e1;border-radius:12px}
 @media(max-width:640px){.acct-card{padding:16px}.acct-filter-actions{width:100%}.acct-filter-actions>div{flex:1;min-width:0}.acct-filter-actions input,.acct-filter-actions select{width:100%;min-width:0}.acct-filter-actions button{width:100%}.acct-donut-layout{grid-template-columns:105px minmax(0,1fr);gap:12px;padding:12px}.acct-donut{width:100px;height:100px}.acct-donut:after{inset:17px}.acct-month{grid-template-columns:64px minmax(0,1fr);gap:8px}.acct-bar-value{margin-left:72px}.acct-chart-hint:after{font-size:.64rem}}
+@media(max-width:1100px){.acct-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.acct-metric strong{font-size:clamp(.95rem,2.1vw,1.45rem)}}
+@media(max-width:560px){.acct-metrics{grid-template-columns:minmax(0,1fr)}.acct-metric strong{font-size:clamp(1.1rem,5vw,1.5rem)}}
 </style>
 <div class="acct-home">
   <header class="acct-head">
