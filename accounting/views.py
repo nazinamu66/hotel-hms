@@ -517,9 +517,17 @@ def chart_of_accounts(request):
         },
     )
 
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def journal_view(request):
+    from core.utils import get_user_hotels
 
-    hotel = request.user.hotel
+    hotels = get_user_hotels(request.user)
+    if request.user.role != "DIRECTOR" and getattr(request.user, "hotel_id", None):
+        hotels = hotels.filter(pk=request.user.hotel_id)
+    selected_hotel_id = (request.GET.get("hotel") or "").strip()
+    hotel = hotels.filter(pk=selected_hotel_id).first() if selected_hotel_id else hotels.first()
+    if not hotel:
+        raise PermissionDenied("No accessible hotel is available for the journal.")
 
     entries = (
         JournalEntry.objects
@@ -568,6 +576,8 @@ def journal_view(request):
         "start_date": start_date,
         "end_date": end_date,
         "search": search,
+        "hotel": hotel,
+        "hotels": hotels,
     })
 
 
