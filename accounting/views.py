@@ -568,23 +568,30 @@ def journal_view(request):
     })
 
 
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def journal_detail(request, journal_id):
+    from core.utils import get_user_hotels
+    from decimal import Decimal
 
     entry = get_object_or_404(
-        JournalEntry.objects.select_related("created_by", "business_day"),
-        id=journal_id
+        JournalEntry.objects.select_related("created_by", "business_day", "hotel"),
+        id=journal_id,
+        hotel__in=get_user_hotels(request.user),
     )
 
-    lines = entry.lines.select_related("account")
-
-    total_debit = sum(line.debit for line in lines)
-    total_credit = sum(line.credit for line in lines)
+    lines = list(
+        entry.lines.select_related("account").order_by("account__code", "id")
+    )
+    total_debit = sum((line.debit for line in lines), Decimal("0.00"))
+    total_credit = sum((line.credit for line in lines), Decimal("0.00"))
 
     return render(request, "accounting/journal_detail.html", {
         "entry": entry,
         "lines": lines,
         "total_debit": total_debit,
         "total_credit": total_credit,
+        "is_balanced": total_debit == total_credit,
+        "line_count": len(lines),
     })
 
 
