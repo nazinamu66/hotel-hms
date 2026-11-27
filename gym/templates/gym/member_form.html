@@ -1,5 +1,5 @@
 {% extends "base/base.html" %}
-{% block title %}Register Gym Member{% endblock %}
+{% block title %}{% if is_edit %}Edit Gym Member{% else %}Register Gym Member{% endif %}{% endblock %}
 {% block content %}
 <style>
 .gym-register{max-width:1120px;margin:26px auto;padding:0 18px 40px;color:#172033}
@@ -17,7 +17,7 @@
 @media(max-width:650px){.gym-register-grid{grid-template-columns:1fr}.gym-register-card{padding:18px}}
 </style>
 <div class="gym-register">
- <header class="gym-register-head"><div><p style="color:#64748b;margin:0 0 6px">{{ hotel.name }} · FRONT DESK</p><h1 style="font-size:30px;margin:0">Register a Gym member</h1><p style="color:#64748b;margin:8px 0 0">Create a member profile. The unique membership number is generated automatically.</p></div><a class="gym-secondary" href="{% url 'gym_home' %}">← Member register</a></header>
+ <header class="gym-register-head"><div><p style="color:#64748b;margin:0 0 6px">{{ hotel.name }} · FRONT DESK</p><h1 style="font-size:30px;margin:0">{% if is_edit %}Edit member profile{% else %}Register a Gym member{% endif %}</h1><p style="color:#64748b;margin:8px 0 0">{% if is_edit %}Update member details and photograph. The member number remains unchanged.{% else %}Create a member profile. The unique membership number is generated automatically.{% endif %}</p></div><a class="gym-secondary" href="{% url 'gym_home' %}">← Member register</a></header>
  <form method="post" enctype="multipart/form-data">{% csrf_token %}
  {% if form.non_field_errors %}<div style="color:#b91c1c;margin-bottom:14px">{{ form.non_field_errors }}</div>{% endif %}
  <section class="gym-register-card"><h2 style="font-size:18px;margin:0 0 18px">Personal information</h2><div class="gym-register-grid">
@@ -31,7 +31,7 @@
  <div class="gym-register-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small style="color:#b91c1c">{{ error }}</small>{% endfor %}</div>
  {% endif %}{% endfor %}
  </div></section>
- <div style="display:flex;justify-content:flex-end;gap:10px"><a class="gym-secondary" href="{% url 'gym_home' %}">Cancel</a><button class="gym-primary" type="submit">Save member profile</button></div>
+ <div style="display:flex;justify-content:flex-end;gap:10px"><a class="gym-secondary" href="{% url 'gym_home' %}">Cancel</a><button class="gym-primary" type="submit">{% if is_edit %}Save changes{% else %}Save member profile{% endif %}</button></div>
  </form>
 </div>
 <script>
