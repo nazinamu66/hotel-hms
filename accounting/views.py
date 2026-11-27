@@ -2852,5 +2852,6 @@ def bank_reconciliation(request):
         "hotel": hotel, "hotels": hotels, "show_hotel_selector": multi_hotel,
         "bank_accounts": bank_accounts, "reconciliations": reconciliations,
         "active_reconciliation": active, "statement_lines": lines,
+        "matched_count": active.statement_lines.filter(matched_journal_line__isnull=False).count() if active else 0,
         "operations_active": "bank_reconciliation",
     })
