@@ -2272,3 +2272,91 @@ input:focus, select:focus, textarea:focus,
 }
 .salon-mgmt .mgmt-link { color:var(--cch-ink) !important; }
 .salon-mgmt .mgmt-card small,.salon-mgmt .mgmt-table th { color:#594733 !important; }
+
+
+/* Additional management reports with their own legacy navy palettes. */
+.management-frontdesk {
+  --fd-bg:var(--cch-page);--fd-panel:#fff;--fd-raised:#fff;
+  --fd-border:var(--cch-border);--fd-text:var(--cch-ink);--fd-muted:#6f6253;
+  background:var(--cch-page) !important;color:var(--cch-ink) !important;
+}
+.content:has(.management-frontdesk),
+.content:has(.management-frontdesk)>.management-message-area { background:var(--cch-page) !important; }
+.management-frontdesk .fd-eyebrow,.management-frontdesk .fd-section-label { color:#80531f !important; }
+.management-frontdesk .fd-command-heading h1,
+.management-frontdesk .fd-panel-heading { color:var(--cch-ink) !important; }
+.management-frontdesk .fd-command-heading p,
+.management-frontdesk .fd-note { color:var(--cch-muted) !important; }
+.management-frontdesk .fd-period,.management-frontdesk .fd-count,
+.management-frontdesk .fd-filter,.management-frontdesk .fd-panel,
+.management-frontdesk .fd-kpi,.management-frontdesk .fd-watch-item {
+  background:#fff !important;color:var(--cch-ink) !important;border-color:var(--cch-border) !important;
+}
+.management-frontdesk .fd-field label { color:#594733 !important; }
+.management-frontdesk .fd-field input,.management-frontdesk .fd-field select {
+  background:#fff !important;color:var(--cch-ink) !important;border-color:#d8cbb8 !important;color-scheme:light !important;
+}
+.management-frontdesk .fd-filter-actions button,.management-frontdesk .fd-deposit-actions button {
+  background:linear-gradient(110deg,#986126,#c99a4e) !important;border:0 !important;color:#fff !important;
+}
+.management-frontdesk a,.management-frontdesk .fd-back-link { color:var(--cch-bronze) !important; }
+.management-frontdesk table th { background:var(--cch-table-head) !important;color:#594733 !important; }
+.management-frontdesk table td { color:var(--cch-ink) !important;border-color:#eee6da !important; }
+
+.management-reservations {
+  --mr-bg:var(--cch-page);--mr-panel:#fff;--mr-card:#fff;
+  --mr-border:var(--cch-border);--mr-muted:#6f6253;
+  background:var(--cch-page) !important;color:var(--cch-ink) !important;
+}
+.content:has(.management-reservations),
+.content:has(.management-reservations)>.management-message-area { background:var(--cch-page) !important; }
+.management-reservations .mr-eyebrow,.management-reservations .mr-section-heading { color:#80531f !important; }
+.management-reservations .mr-heading h1,
+.management-reservations .mr-panel-heading { color:var(--cch-ink) !important; }
+.management-reservations .mr-heading p:not(.mr-eyebrow),
+.management-reservations .mr-note { color:var(--cch-muted) !important; }
+.management-reservations .mr-period,.management-reservations .mr-count,
+.management-reservations .mr-filter,.management-reservations .mr-panel,
+.management-reservations .mr-kpi {
+  background:#fff !important;color:var(--cch-ink) !important;border-color:var(--cch-border) !important;
+}
+.management-reservations .mr-field label { color:#594733 !important; }
+.management-reservations .mr-field input,.management-reservations .mr-field select {
+  background:#fff !important;color:var(--cch-ink) !important;border-color:#d8cbb8 !important;color-scheme:light !important;
+}
+.management-reservations .mr-filter-actions button {
+  background:linear-gradient(110deg,#986126,#c99a4e) !important;color:#fff !important;
+}
+.management-reservations .mr-filter-actions a,.management-reservations a { color:var(--cch-bronze) !important; }
+.management-reservations table th { background:var(--cch-table-head) !important;color:#594733 !important; }
+.management-reservations table td { color:var(--cch-ink) !important;border-color:#eee6da !important; }
+
+.management-custom-reports {
+  --cr-panel:#fff;--cr-raised:#fff;--cr-border:var(--cch-border);
+  --cr-text:var(--cch-ink);--cr-muted:#6f6253;
+  color:var(--cch-ink) !important;
+}
+.main:has(.management-custom-reports),
+.main:has(.management-custom-reports)>.content { background:var(--cch-page) !important; }
+.management-custom-reports .heading h2,
+.management-custom-reports .category h3,
+.management-custom-reports .panel h3 { color:var(--cch-ink) !important; }
+.management-custom-reports .muted,.management-custom-reports .note,
+.management-custom-reports .category-description { color:var(--cch-muted) !important; }
+.management-custom-reports .panel,.management-custom-reports .category,
+.management-custom-reports .results-panel,.management-custom-reports .result-card {
+  background:#fff !important;color:var(--cch-ink) !important;border-color:var(--cch-border) !important;
+}
+.management-custom-reports .field label,.management-custom-reports .eyebrow { color:#594733 !important; }
+.management-custom-reports .field input,.management-custom-reports .field select {
+  background:#fff !important;color:var(--cch-ink) !important;border-color:#d8cbb8 !important;color-scheme:light !important;
+}
+.management-custom-reports button {
+  background:linear-gradient(110deg,#986126,#c99a4e) !important;color:#fff !important;
+}
+.management-custom-reports .reset,.management-custom-reports a { color:var(--cch-bronze) !important; }
+
+/* The executive chart's SVG includes a painted plot-area rectangle. */
+.management-overview .exec-chart svg rect:first-of-type {
+  fill:#fbf8f2 !important;
+}
