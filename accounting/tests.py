@@ -569,14 +569,12 @@ class FinancialOpeningBalancePageTests(TestCase):
             name="Opening Test Payables",
             account_type="current_liability",
         )
-        self.opening_equity = Account.objects.create(
+        # Hotel provisioning creates the canonical Opening Balance Equity
+        # account. Reuse it rather than creating a duplicate system account.
+        self.opening_equity = Account.objects.get(
             hotel=self.hotel,
-            code="TST3002",
-            name="Opening Test Equity",
-            account_type="equity",
             system_key="opening_balance_equity",
             is_system=True,
-            allow_manual_entries=False,
         )
 
     def test_page_preloads_existing_account_opening_balances(self):
@@ -656,10 +654,9 @@ class FinancialOpeningBalanceAdjustmentTests(TestCase):
             hotel=self.hotel, code="TST5100", name="Adjustment Test Bank",
             account_type="bank",
         )
-        self.equity = Account.objects.create(
-            hotel=self.hotel, code="TST3003", name="Adjustment Test Equity",
-            account_type="equity", system_key="opening_balance_equity",
-            is_system=True, allow_manual_entries=False,
+        # Use the canonical system account provisioned with the hotel.
+        self.equity = Account.objects.get(
+            hotel=self.hotel, system_key="opening_balance_equity", is_system=True,
         )
         FinancialOpeningBalanceSetup.objects.create(
             hotel=self.hotel, opening_date="2026-11-01",
@@ -714,12 +711,19 @@ class FinancialOpeningBalanceAdjustmentTests(TestCase):
         from django.urls import reverse
         from accounting.models import FinancialOpeningBalanceAdjustment
 
+        # Use an approver-capable requester so this specifically exercises
+        # the maker-checker rule, rather than the role permission boundary.
+        from django.contrib.auth import get_user_model
+        self_approver_requester = get_user_model().objects.create_user(
+            username="opening_self_approver", password="test-password",
+            role="CHIEF_ACCOUNTANT", hotel=self.hotel,
+        )
         adjustment = FinancialOpeningBalanceAdjustment.objects.create(
             hotel=self.hotel, account=self.bank, amount=Decimal("100.00"),
             reason="Omitted historical bank asset verified from opening statement.",
-            requested_by=self.requester,
+            requested_by=self_approver_requester,
         )
-        self.client.force_login(self.requester)
+        self.client.force_login(self_approver_requester)
         response = self.client.post(
             reverse("accounting:financial_opening_adjustments"),
             {"action": "approve", "adjustment_id": adjustment.pk},
