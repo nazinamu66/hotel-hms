@@ -30,10 +30,7 @@
 </style>
 <div class="exp-page">
 {% include "accounting/includes/operations_nav.html" %}
-<header class="exp-head"><div><div class="exp-kicker">Accounting · Operations</div><h1>Expense Management</h1><p>{{ hotel.name }} · Record obligations, review approvals and manage payments.</p></div></header>
-{% if show_hotel_selector %}
-
-{% endif %}
+<header class="exp-head"><div class="exp-title-wrap"><div class="exp-title-icon" aria-hidden="true">₦</div><div><div class="exp-kicker">Accounting · Operations</div><h1>Expense Management</h1><p>{{ hotel.name }} · Record obligations, review approvals and manage payments.</p></div></div>{% if show_hotel_selector %}<form method="get" class="exp-hotel"><label for="expense-hotel">Hotel</label><select id="expense-hotel" name="hotel" onchange="this.form.submit()">{% for option in hotels %}<option value="{{ option.id }}" {% if option.id == hotel.id %}selected{% endif %}>{{ option.name }}</option>{% endfor %}</select></form>{% endif %}</header>
 <section class="exp-kpis">
 <div class="exp-kpi pending"><div class="exp-kpi-top"><div class="exp-kpi-label">Awaiting approval</div><span class="exp-kpi-icon">◷</span></div><strong class="exp-kpi-value">₦{{ pending_total|floatformat:2|intcomma }}</strong><div class="exp-kpi-note">Expenses awaiting independent review</div></div>
 <div class="exp-kpi approved"><div class="exp-kpi-top"><div class="exp-kpi-label">Approved obligations</div><span class="exp-kpi-icon">✓</span></div><strong class="exp-kpi-value">₦{{ approved_total|floatformat:2|intcomma }}</strong><div class="exp-kpi-note">Gross value of approved and partially paid expenses</div></div>
