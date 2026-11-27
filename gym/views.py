@@ -138,6 +138,156 @@ def gym_membership_pass(request, membership_id):
 
 
 @role_required(*FRONT_DESK_ROLES)
+def gym_membership_pass_pdf(request, membership_id):
+    from io import BytesIO
+
+    import qrcode
+    from django.http import HttpResponse
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    hotel = _hotel_for_gym(request.user)
+    membership = get_object_or_404(
+        GymMembership.objects.select_related("member", "plan").filter(
+            hotel=hotel, member__hotel=hotel
+        ), pk=membership_id,
+    )
+    qr_buffer = BytesIO()
+    qr_image = qrcode.make(str(membership.pass_token))
+    qr_image.save(qr_buffer, format="PNG")
+    qr_buffer.seek(0)
+
+    photo = None
+    if membership.member.photograph:
+        try:
+            with membership.member.photograph.open("rb") as source:
+                photo_buffer = BytesIO(source.read())
+            photo = Image(photo_buffer, width=35*mm, height=42*mm)
+            photo.hAlign = "LEFT"
+        except (OSError, ValueError):
+            photo = None
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'attachment; filename="gym-membership-{membership.member.member_number}.pdf"'
+    )
+    doc = SimpleDocTemplate(
+        response, pagesize=A4, rightMargin=22*mm, leftMargin=22*mm,
+        topMargin=22*mm, bottomMargin=22*mm,
+    )
+    styles = getSampleStyleSheet()
+    title = ParagraphStyle("PassTitle", parent=styles["Title"], textColor=colors.HexColor("#10243b"), alignment=TA_CENTER, fontSize=19, leading=24)
+    small = ParagraphStyle("PassSmall", parent=styles["Normal"], textColor=colors.HexColor("#64748b"), fontSize=9)
+    story = [
+        Paragraph(hotel.name, title),
+        Paragraph("OFFICIAL GYM MEMBERSHIP PASS", ParagraphStyle("SubTitle", parent=styles["Heading2"], alignment=TA_CENTER, textColor=colors.HexColor("#0f766e"))),
+        Spacer(1, 12*mm),
+    ]
+    qr_flowable = Image(qr_buffer, width=42*mm, height=42*mm)
+    left = [photo or Paragraph("Photograph not provided", small), Spacer(1, 5*mm),
+            Paragraph(f"<b>{membership.member.full_name}</b>", styles["Heading2"]),
+            Paragraph(f"Member number: <b>{membership.member.member_number}</b>", styles["Normal"]),
+            Spacer(1, 5*mm),
+            Paragraph(f"Plan: {membership.plan_name_snapshot}", styles["Normal"]),
+            Paragraph(f"Status: {membership.get_status_display()}", styles["Normal"]),
+            Paragraph(f"Valid from: {membership.start_date:%d %b %Y}", styles["Normal"]),
+            Paragraph(f"Valid until: {membership.end_date:%d %b %Y}", styles["Normal"])]
+    right = [qr_flowable, Paragraph("Scan at Gym entrance", small), Spacer(1, 2*mm), Paragraph(str(membership.pass_token), small)]
+    card = Table([[left, right]], colWidths=[112*mm, 48*mm])
+    card.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), colors.HexColor("#f8fafc")),
+        ("BOX", (0,0), (-1,-1), 0.8, colors.HexColor("#cbd5e1")),
+        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+        ("LEFTPADDING", (0,0), (-1,-1), 10*mm),
+        ("RIGHTPADDING", (0,0), (-1,-1), 8*mm),
+        ("TOPPADDING", (0,0), (-1,-1), 10*mm),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 10*mm),
+    ]))
+    story.extend([card, Spacer(1, 8*mm), Paragraph("This pass is personal and non-transferable. Entry is subject to active membership validation at the issuing hotel.", small)])
+    doc.build(story)
+    return response
+
+
+@role_required(*FRONT_DESK_ROLES)
+def gym_membership_pass_pdf(request, membership_id):
+    from io import BytesIO
+
+    import qrcode
+    from django.http import HttpResponse
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    hotel = _hotel_for_gym(request.user)
+    membership = get_object_or_404(
+        GymMembership.objects.select_related("member", "plan").filter(
+            hotel=hotel, member__hotel=hotel
+        ), pk=membership_id,
+    )
+    qr_buffer = BytesIO()
+    qr_image = qrcode.make(str(membership.pass_token))
+    qr_image.save(qr_buffer, format="PNG")
+    qr_buffer.seek(0)
+
+    photo = None
+    if membership.member.photograph:
+        try:
+            with membership.member.photograph.open("rb") as source:
+                photo_buffer = BytesIO(source.read())
+            photo = Image(photo_buffer, width=35*mm, height=42*mm)
+            photo.hAlign = "LEFT"
+        except (OSError, ValueError):
+            photo = None
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'attachment; filename="gym-membership-{membership.member.member_number}.pdf"'
+    )
+    doc = SimpleDocTemplate(
+        response, pagesize=A4, rightMargin=22*mm, leftMargin=22*mm,
+        topMargin=22*mm, bottomMargin=22*mm,
+    )
+    styles = getSampleStyleSheet()
+    title = ParagraphStyle("PassTitle", parent=styles["Title"], textColor=colors.HexColor("#10243b"), alignment=TA_CENTER, fontSize=19, leading=24)
+    small = ParagraphStyle("PassSmall", parent=styles["Normal"], textColor=colors.HexColor("#64748b"), fontSize=9)
+    story = [
+        Paragraph(hotel.name, title),
+        Paragraph("OFFICIAL GYM MEMBERSHIP PASS", ParagraphStyle("SubTitle", parent=styles["Heading2"], alignment=TA_CENTER, textColor=colors.HexColor("#0f766e"))),
+        Spacer(1, 12*mm),
+    ]
+    qr_flowable = Image(qr_buffer, width=42*mm, height=42*mm)
+    left = [photo or Paragraph("Photograph not provided", small), Spacer(1, 5*mm),
+            Paragraph(f"<b>{membership.member.full_name}</b>", styles["Heading2"]),
+            Paragraph(f"Member number: <b>{membership.member.member_number}</b>", styles["Normal"]),
+            Spacer(1, 5*mm),
+            Paragraph(f"Plan: {membership.plan_name_snapshot}", styles["Normal"]),
+            Paragraph(f"Status: {membership.get_status_display()}", styles["Normal"]),
+            Paragraph(f"Valid from: {membership.start_date:%d %b %Y}", styles["Normal"]),
+            Paragraph(f"Valid until: {membership.end_date:%d %b %Y}", styles["Normal"])]
+    right = [qr_flowable, Paragraph("Scan at Gym entrance", small), Spacer(1, 2*mm), Paragraph(str(membership.pass_token), small)]
+    card = Table([[left, right]], colWidths=[112*mm, 48*mm])
+    card.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,-1), colors.HexColor("#f8fafc")),
+        ("BOX", (0,0), (-1,-1), 0.8, colors.HexColor("#cbd5e1")),
+        ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+        ("LEFTPADDING", (0,0), (-1,-1), 10*mm),
+        ("RIGHTPADDING", (0,0), (-1,-1), 8*mm),
+        ("TOPPADDING", (0,0), (-1,-1), 10*mm),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 10*mm),
+    ]))
+    story.extend([card, Spacer(1, 8*mm), Paragraph("This pass is personal and non-transferable. Entry is subject to active membership validation at the issuing hotel.", small)])
+    doc.build(story)
+    return response
+
+
+@role_required(*FRONT_DESK_ROLES)
 def gym_membership_receipt(request, membership_id):
     hotel = _hotel_for_gym(request.user)
     membership = get_object_or_404(
