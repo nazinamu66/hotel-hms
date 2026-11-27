@@ -1,24 +1,78 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Hotel System Login</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#17130f">
+    <title>Sign in | City Center Hotels</title>
+    <style>
+        *{box-sizing:border-box}
+        body{margin:0;min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:#15130f;color:#f8fafc;display:grid;place-items:center;padding:28px;overflow-x:hidden}
+        body:before,body:after{content:"";position:fixed;border-radius:50%;filter:blur(1px);pointer-events:none}
+        body:before{width:560px;height:560px;right:-210px;top:-240px;background:radial-gradient(circle,rgba(190,139,58,.22),transparent 68%)}
+        body:after{width:480px;height:480px;left:-230px;bottom:-250px;background:radial-gradient(circle,rgba(190,139,58,.13),transparent 68%)}
+        .shell{position:relative;z-index:1;width:min(100%,1020px);min-height:610px;display:grid;grid-template-columns:1.05fr .95fr;background:#fff;border:1px solid rgba(255,255,255,.12);border-radius:25px;overflow:hidden;box-shadow:0 35px 100px rgba(0,0,0,.45)}
+        .brand-panel{position:relative;display:flex;flex-direction:column;justify-content:space-between;padding:48px;background:linear-gradient(145deg,#292018,#17130f 65%,#3b2815);overflow:hidden}
+        .brand-panel:after{content:"";position:absolute;width:520px;height:520px;border:1px solid rgba(218,173,93,.16);border-radius:50%;right:-250px;bottom:-290px;box-shadow:0 0 0 35px rgba(218,173,93,.035),0 0 0 75px rgba(218,173,93,.025)}
+        .brand-mark{width:130px;height:130px;object-fit:contain;filter:drop-shadow(0 8px 22px rgba(0,0,0,.28))}
+        .brand-copy{position:relative;z-index:1;max-width:390px}
+        .eyebrow{color:#d5ad68;font-size:.72rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase}
+        .brand-copy h1{margin:15px 0 14px;font-family:Georgia,serif;font-size:clamp(2.2rem,4vw,3.45rem);line-height:1.04;letter-spacing:-.045em;color:#fff7e8}
+        .brand-copy p{max-width:340px;color:#c8bca9;font-size:.96rem;line-height:1.75;margin:0}
+        .brand-foot{position:relative;z-index:1;color:#9e907e;font-size:.72rem;letter-spacing:.04em}
+        .form-panel{display:flex;align-items:center;justify-content:center;padding:52px 48px;background:#fff;color:#172033}
+        .form-wrap{width:100%;max-width:360px}
+        .mobile-logo{display:none;width:76px;height:76px;object-fit:contain;margin-bottom:22px}
+        .form-wrap h2{font-size:1.85rem;letter-spacing:-.04em;margin:0 0 8px;font-weight:850}
+        .intro{color:#64748b;font-size:.88rem;line-height:1.6;margin:0 0 30px}
+        .field{margin-bottom:19px}
+        label{display:block;font-size:.78rem;font-weight:750;color:#334155;margin-bottom:8px}
+        input{width:100%;height:49px;border:1px solid #dce2e9;border-radius:10px;padding:0 14px;font:inherit;font-size:.9rem;color:#172033;background:#fbfcfd;outline:none;transition:border .2s,box-shadow .2s}
+        input:focus{border-color:#b7863c;box-shadow:0 0 0 4px rgba(183,134,60,.13);background:#fff}
+        .submit{width:100%;height:50px;border:0;border-radius:10px;background:linear-gradient(110deg,#9a6428,#c99a4e);color:#fff;font-size:.88rem;font-weight:850;letter-spacing:.02em;cursor:pointer;box-shadow:0 8px 18px rgba(154,100,40,.2);transition:transform .15s,filter .15s}
+        .submit:hover{filter:brightness(1.06);transform:translateY(-1px)}
+        .error{padding:11px 13px;margin:0 0 18px;border-radius:9px;background:#fff1f0;border:1px solid #ffd5d1;color:#b42318;font-size:.8rem}
+        .help{margin-top:22px;text-align:center;color:#94a3b8;font-size:.72rem}
+        @media(max-width:760px){body{padding:14px}.shell{grid-template-columns:1fr;min-height:auto;border-radius:19px}.brand-panel{display:none}.form-panel{padding:38px 26px}.mobile-logo{display:block}.form-wrap h2{font-size:1.65rem}}
+    </style>
 </head>
 <body>
-    <h2>Login</h2>
-
-    {% if form.errors %}
-        <p style="color:red;">Invalid username or password</p>
-    {% endif %}
-
-    <form method="post">
-        {% csrf_token %}
-        {{ form.username.label_tag }}<br>
-        {{ form.username }}<br><br>
-
-        {{ form.password.label_tag }}<br>
-        {{ form.password }}<br><br>
-
-        <button type="submit">Login</button>
-    </form>
+<main class="shell">
+    <section class="brand-panel">
+        <img class="brand-mark" src="{% static 'images/cch-logo.svg' %}" alt="City Center Hotels emblem">
+        <div class="brand-copy">
+            <div class="eyebrow">Welcome to</div>
+            <h1>City Center<br>Hotels</h1>
+            <p>Your central workspace for guest services, hotel operations and team collaboration.</p>
+        </div>
+        <div class="brand-foot">CITY CENTER HOTELS · STAFF ACCESS</div>
+    </section>
+    <section class="form-panel">
+        <div class="form-wrap">
+            <img class="mobile-logo" src="{% static 'images/cch-logo.svg' %}" alt="City Center Hotels emblem">
+            <h2>Welcome back</h2>
+            <p class="intro">Sign in with the account provided by your hotel administrator.</p>
+            {% if form.errors or form.non_field_errors %}
+                <div class="error">We couldn't sign you in with those details. Check your username and password and try again.</div>
+            {% endif %}
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="field">
+                    <label for="{{ form.username.id_for_label }}">Username</label>
+                    <input type="text" name="username" id="{{ form.username.id_for_label }}" autocomplete="username" autofocus required value="{{ form.username.value|default_if_none:'' }}">
+                    {{ form.username.errors }}
+                </div>
+                <div class="field">
+                    <label for="{{ form.password.id_for_label }}">Password</label>
+                    <input type="password" name="password" id="{{ form.password.id_for_label }}" autocomplete="current-password" required>
+                    {{ form.password.errors }}
+                </div>
+                <button class="submit" type="submit">Sign in to HMS</button>
+            </form>
+            <div class="help">Secure access · Authorised CCH personnel only</div>
+        </div>
+    </section>
+</main>
 </body>
 </html>
