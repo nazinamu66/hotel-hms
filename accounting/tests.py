@@ -679,6 +679,7 @@ class FinancialOpeningBalanceAdjustmentTests(TestCase):
                 "amount": "250000.00",
                 "reason": "This bank account existed at go-live but was omitted from the original opening schedule.",
                 "reference": "Opening bank statement",
+                "confirmed_existing_at_opening": "on",
             },
         )
         self.assertEqual(response.status_code, 302)
