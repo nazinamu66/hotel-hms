@@ -1450,10 +1450,15 @@ def balance_sheet_export_pdf(request):
 @transaction.atomic
 def create_account(request):
     hotel = request.user.hotel
+    from accounting.models import FinancialOpeningBalanceSetup
+    opening_balances_locked = FinancialOpeningBalanceSetup.objects.filter(hotel=hotel).exists()
 
     if request.method == "POST":
         account_form = AccountForm(request.POST, hotel=hotel)
         bank_form = BankAccountForm(request.POST)
+        if opening_balances_locked:
+            account_form.fields["opening_balance"].disabled = True
+            account_form.fields["opening_balance"].initial = Decimal("0.00")
         account_valid = account_form.is_valid()
         needs_bank = account_valid and account_form.cleaned_data["account_type"] == "bank"
         bank_valid = bank_form.is_valid() if needs_bank else True
@@ -1476,6 +1481,9 @@ def create_account(request):
             return redirect("accounting:chart")
     else:
         account_form = AccountForm(hotel=hotel)
+        if opening_balances_locked:
+            account_form.fields["opening_balance"].disabled = True
+            account_form.fields["opening_balance"].initial = Decimal("0.00")
         bank_form = BankAccountForm()
 
     return render(request, "accounting/create_account.html", {
@@ -1488,6 +1496,8 @@ def create_account(request):
 @transaction.atomic
 def edit_account(request, account_id):
     hotel = request.user.hotel
+    from accounting.models import FinancialOpeningBalanceSetup
+    opening_balances_locked = FinancialOpeningBalanceSetup.objects.filter(hotel=hotel).exists()
     account = get_object_or_404(Account, id=account_id, hotel=hotel)
 
     if account.is_system:
@@ -1501,6 +1511,9 @@ def edit_account(request, account_id):
 
     if request.method == "POST":
         account_form = AccountForm(request.POST, instance=account, hotel=hotel)
+        if opening_balances_locked:
+            account_form.fields["opening_balance"].disabled = True
+            account_form.fields["opening_balance"].initial = account.opening_balance
         account_valid = account_form.is_valid()
         needs_bank = account_valid and account_form.cleaned_data["account_type"] == "bank"
         bank_form = (
@@ -1529,6 +1542,9 @@ def edit_account(request, account_id):
             return redirect("accounting:chart")
     else:
         account_form = AccountForm(instance=account, hotel=hotel)
+        if opening_balances_locked:
+            account_form.fields["opening_balance"].disabled = True
+            account_form.fields["opening_balance"].initial = account.opening_balance
         bank_form = (
             BankAccountForm(instance=bank_account)
             if bank_account else BankAccountForm()
@@ -2200,7 +2216,6 @@ def staff_reimbursement_detail(request, claim_id):
 @role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def financial_opening_balances(request):
     """Capture and reconcile a hotel's one-time financial opening position."""
-    from datetime import date
     from decimal import InvalidOperation
     from django.db import transaction
     from django.utils import timezone
@@ -2244,6 +2259,8 @@ def financial_opening_balances(request):
         opening_date = parse_date((request.POST.get("opening_date") or "").strip())
         if not opening_date:
             errors.append("Enter a valid opening date.")
+        elif opening_date > timezone.localdate():
+            errors.append("The opening date cannot be in the future.")
 
         for account in accounts:
             raw = (request.POST.get(f"opening_{account.pk}") or "0").strip().replace(",", "")
