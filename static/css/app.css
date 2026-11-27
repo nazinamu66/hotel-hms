@@ -2360,3 +2360,121 @@ input:focus, select:focus, textarea:focus,
 .management-overview .exec-chart svg rect:first-of-type {
   fill:#fbf8f2 !important;
 }
+
+
+/* =========================================================
+   CCH focused management pages — readable gold / ivory skin
+   Reservations, Front Desk Command Center and Custom Reports.
+   ========================================================= */
+.management-reservations {
+  --mr-bg:#faf8f4;--mr-panel:#fff;--mr-card:#fff;--mr-border:#e7ddce;--mr-muted:#6f6253;
+  margin:calc(-1 * clamp(18px,2.5vw,34px));
+  padding:clamp(18px,2.5vw,34px);
+  background:#faf8f4 !important;color:#302316 !important;
+}
+.content:has(.management-reservations),
+.content:has(.management-reservations)>.management-message-area {background:#faf8f4 !important}
+.management-reservations .mr-eyebrow {color:#986126 !important}
+.management-reservations .mr-heading h1,
+.management-reservations .mr-panel-heading h2 {color:#302316 !important}
+.management-reservations .mr-heading p:not(.mr-eyebrow),
+.management-reservations .mr-panel-heading p,
+.management-reservations .mr-section-heading small,
+.management-reservations .mr-note {color:#6f6253 !important}
+.management-reservations .mr-period,
+.management-reservations .mr-count {background:#f3eadb !important;border-color:#e7ddce !important;color:#704719 !important}
+.management-reservations .mr-filter,
+.management-reservations .mr-panel {background:#fff !important;border-color:#e7ddce !important;box-shadow:0 6px 20px rgba(74,49,21,.055) !important}
+.management-reservations .mr-field label,
+.management-reservations .mr-section-heading {color:#765a35 !important}
+.management-reservations .mr-field input,
+.management-reservations .mr-field select {background:#fff !important;color:#302316 !important;border-color:#d8cbb8 !important;color-scheme:light}
+.management-reservations .mr-filter-actions button {background:linear-gradient(110deg,#986126,#c99a4e) !important;color:#fff !important}
+.management-reservations .mr-filter-actions a {color:#87551f !important}
+.management-reservations .mr-kpi {background:#fff !important;border-color:#e7ddce !important;box-shadow:0 5px 16px rgba(74,49,21,.05) !important}
+.management-reservations .mr-kpi>span {color:#594733 !important}
+.management-reservations .mr-kpi strong {color:#302316 !important}
+.management-reservations .mr-kpi small {color:#6f6253 !important}
+.management-reservations .mr-kpi.mr-blue {border-left-color:#b9853c !important}
+.management-reservations .mr-kpi.mr-violet {border-left-color:#a8752d !important}
+.management-reservations .mr-kpi.mr-green {border-left-color:#4b8060 !important}
+.management-reservations .mr-kpi.mr-amber {border-left-color:#c99a4e !important}
+.management-reservations .mr-stat-list span {color:#594733 !important}
+.management-reservations .mr-stat-list strong {color:#302316 !important}
+.management-reservations .mr-stat-list>div {border-color:#eee5d8 !important}
+.management-reservations .mr-table th {background:#f2eadc !important;color:#594733 !important}
+.management-reservations .mr-table td {color:#302316 !important;border-color:#eee5d8 !important}
+.management-reservations .mr-empty {color:#6f6253 !important}
+.management-reservations .mr-basis.is-actual {background:#e8f1e9 !important;color:#28613c !important}
+.management-reservations .mr-basis.is-forecast {background:#f3eadb !important;color:#80531f !important}
+.management-reservations .mr-track {background:#eee5d8 !important}
+.management-reservations .mr-track span {background:linear-gradient(90deg,#986126,#c99a4e) !important}
+.management-reservations .mr-occupancy-cell strong {color:#302316 !important}
+
+/* Front Desk Command Center */
+.management-frontdesk:not(.billing-report) {
+  --fd-bg:#faf8f4;--fd-panel:#fff;--fd-raised:#fff;--fd-border:#e7ddce;--fd-text:#302316;--fd-muted:#6f6253;
+  margin:calc(-1 * clamp(18px,2.5vw,34px));
+  padding:clamp(18px,2.5vw,34px);
+  background:#faf8f4 !important;color:#302316 !important;
+}
+.content:has(.management-frontdesk:not(.billing-report)) {background:#faf8f4 !important}
+.management-frontdesk .fd-eyebrow {color:#986126 !important}
+.management-frontdesk .fd-command-heading h1 {color:#302316 !important}
+.management-frontdesk .fd-command-heading p {color:#6f6253 !important}
+.management-frontdesk .fd-period,.management-frontdesk .fd-count {background:#f3eadb !important;border-color:#e7ddce !important;color:#704719 !important}
+.management-frontdesk .fd-filter,.management-frontdesk .fd-panel {background:#fff !important;border-color:#e7ddce !important;box-shadow:0 6px 20px rgba(74,49,21,.055) !important}
+.management-frontdesk .fd-field label {color:#765a35 !important}
+.management-frontdesk .fd-field input,.management-frontdesk .fd-field select {background:#fff !important;color:#302316 !important;border-color:#d8cbb8 !important;color-scheme:light}
+.management-frontdesk .fd-filter-actions button,.management-frontdesk .fd-deposit-actions button {background:linear-gradient(110deg,#986126,#c99a4e) !important;border-color:#b9853c !important;color:#fff !important}
+.management-frontdesk .fd-filter-actions a,.management-frontdesk .fd-back-link,.management-frontdesk .fd-view-link {color:#87551f !important}
+.management-frontdesk .fd-section-label {color:#765a35 !important}
+.management-frontdesk .fd-kpi {background:#fff !important;border-color:#e7ddce !important;box-shadow:0 5px 16px rgba(74,49,21,.05)}
+.management-frontdesk .fd-kpi span {color:#594733 !important}
+.management-frontdesk .fd-kpi strong {color:#302316 !important}
+.management-frontdesk .fd-kpi small {color:#6f6253 !important}
+.management-frontdesk .fd-panel-heading h2 {color:#302316 !important}
+.management-frontdesk .fd-panel-heading p,.management-frontdesk .fd-note {color:#6f6253 !important}
+.management-frontdesk .fd-panel-icon,.management-frontdesk .fd-command-symbol {background:#f3eadb !important;border-color:#e7ddce !important;color:#87551f !important}
+.management-frontdesk .fd-watch-item,.management-frontdesk .fd-command-link {background:#fbf8f2 !important;border-color:#e7ddce !important;color:#302316 !important}
+.management-frontdesk .fd-watch-item span,.management-frontdesk .fd-status-list span,
+.management-frontdesk .fd-command-link small {color:#6f6253 !important}
+.management-frontdesk .fd-watch-item strong,.management-frontdesk .fd-status-list strong,
+.management-frontdesk .fd-command-link strong {color:#302316 !important}
+.management-frontdesk .fd-link-arrow {color:#986126 !important}
+.management-frontdesk .fd-status-list>div {border-color:#eee5d8 !important}
+.management-frontdesk .fd-table-wrap {border-color:#e7ddce !important}
+.management-frontdesk .fd-table th {background:#f2eadc !important;color:#594733 !important;border-color:#eee5d8 !important}
+.management-frontdesk .fd-table td {background:#fff !important;color:#302316 !important;border-color:#eee5d8 !important}
+.management-frontdesk .fd-empty {color:#6f6253 !important}
+
+/* Custom Reports */
+.management-custom-reports {
+  --cr-panel:#fff;--cr-raised:#fbf8f2;--cr-border:#e7ddce;--cr-text:#302316;--cr-muted:#6f6253;
+  color:#302316 !important;
+}
+.main:has(.management-custom-reports),.main:has(.management-custom-reports)>.content {background:#faf8f4 !important}
+.management-custom-reports .heading h2,.management-custom-reports .category h3,
+.management-custom-reports .panel h3,.management-custom-reports .result-card h4 {color:#302316 !important}
+.management-custom-reports .muted,.management-custom-reports .note,
+.management-custom-reports .category-description,.management-custom-reports .metric small {color:#6f6253 !important}
+.management-custom-reports .panel,.management-custom-reports .category {
+  background:#fff !important;border-color:#e7ddce !important;color:#302316 !important;
+  box-shadow:0 6px 20px rgba(74,49,21,.055) !important;
+}
+.management-custom-reports .field label,.management-custom-reports .eyebrow {color:#765a35 !important}
+.management-custom-reports .field input,.management-custom-reports .field select {
+  background:#fff !important;color:#302316 !important;border-color:#d8cbb8 !important;color-scheme:light;
+}
+.management-custom-reports button {background:linear-gradient(110deg,#986126,#c99a4e) !important;color:#fff !important}
+.management-custom-reports button:hover {background:linear-gradient(110deg,#80531f,#b9853c) !important}
+.management-custom-reports .reset,.management-custom-reports a {color:#87551f !important}
+.management-custom-reports .metric {border-color:#eee5d8 !important}
+.management-custom-reports .metric label {color:#302316 !important}
+.management-custom-reports .metric input,.management-custom-reports .breakdowns input {accent-color:#986126 !important}
+.management-custom-reports .selection-count {color:#80531f !important}
+.management-custom-reports .breakdowns label {color:#594733 !important}
+.management-custom-reports .notice {background:#f7efe2 !important;border-color:#e7ddce !important;color:#594733 !important}
+.management-custom-reports .empty {border-color:#d8cbb8 !important;color:#6f6253 !important}
+.management-custom-reports .result-card {background:#fff !important;border-color:#e7ddce !important;box-shadow:0 5px 16px rgba(74,49,21,.05)}
+.management-custom-reports .result-card h4,.management-custom-reports .result-value {color:#302316 !important}
