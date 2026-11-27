@@ -2787,7 +2787,8 @@ def bank_reconciliation(request):
                 journal_line = get_object_or_404(
                     JournalLine.objects.select_related("journal").filter(
                         account=active.bank_account.account, journal__hotel=hotel,
-                        journal__date__gte=active.period_start, journal__date__lte=active.period_end,
+                        journal__date__gte=max(active.period_start, line.transaction_date - timedelta(days=3)),
+                        journal__date__lte=min(active.period_end, line.transaction_date + timedelta(days=3)),
                     ), pk=request.POST.get("journal_line_id"), bank_statement_match__isnull=True
                 )
                 expected_debit = line.credit
