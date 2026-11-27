@@ -13,6 +13,7 @@ from .views import (
 urlpatterns = [
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', logout_view, name='logout'),
+    path("set-password/", views.password_change_required, name="password_change_required"),
     path('redirect/', role_redirect, name='role_redirect'),
     path("first-run/", views.first_run_bootstrap, name="first_run_bootstrap"),
 
