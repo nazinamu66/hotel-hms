@@ -1183,70 +1183,267 @@ def profit_and_loss_export_pdf(request):
     response["Content-Disposition"] = f'attachment; filename="profit_and_loss_{context["hotel"].pk}_{context["start_date"]}_{context["end_date"]}.pdf"'
     return response
 
-def balance_sheet(request):
+def _balance_sheet_context(request):
+    """Build a hotel-scoped, as-at-date balance sheet from opening balances and posted journals."""
+    from django.utils import timezone
+    from django.utils.dateparse import parse_date
+    from django.db.models import Sum
+    from core.utils import get_user_hotels
 
-    from accounting.models import Account
+    hotels = get_user_hotels(request.user)
+    if request.user.role != "DIRECTOR" and getattr(request.user, "hotel_id", None):
+        hotels = hotels.filter(pk=request.user.hotel_id)
 
-    date = request.GET.get("date")
+    selected_hotel_id = (request.GET.get("hotel") or "").strip()
+    if request.user.role == "DIRECTOR" and selected_hotel_id:
+        hotel = hotels.filter(pk=selected_hotel_id).first()
+    else:
+        hotel = hotels.first()
+    if not hotel:
+        raise PermissionDenied("No accessible hotel is available for the Balance Sheet.")
 
-    hotel = request.user.hotel
+    today = timezone.localdate()
+    raw_date = (request.GET.get("date") or "").strip()
+    as_at_date = parse_date(raw_date) if raw_date else today
+    date_error = ""
+    if not as_at_date:
+        as_at_date = today
+        date_error = "Please enter a valid reporting date."
+    elif as_at_date > today:
+        as_at_date = today
+        date_error = "Future dates are not included; the date was set to today."
 
-    assets = Account.objects.filter(
-        hotel=hotel,
-        account_type__in=ASSET_TYPES,
+    accounts = Account.objects.filter(hotel=hotel, is_active=True).order_by("display_order", "code", "name")
+    activity = (
+        JournalLine.objects.filter(
+            journal__hotel=hotel,
+            journal__date__lte=as_at_date,
+            account__hotel=hotel,
+            account__is_active=True,
+        )
+        .values("account_id")
+        .annotate(debit_total=Sum("debit"), credit_total=Sum("credit"))
     )
+    activity_by_account = {
+        row["account_id"]: (
+            row["debit_total"] or Decimal("0.00"),
+            row["credit_total"] or Decimal("0.00"),
+        )
+        for row in activity
+    }
 
-    liabilities = Account.objects.filter(
-        hotel=hotel,
-        account_type__in=LIABILITY_TYPES,
-    )
+    sections = {
+        "current_assets": [], "fixed_assets": [],
+        "current_liabilities": [], "long_term_liabilities": [],
+        "equity": [],
+    }
+    totals = {key: Decimal("0.00") for key in sections}
+    income_activity = Decimal("0.00")
+    expense_activity = Decimal("0.00")
 
-    equity = Account.objects.filter(
-        hotel=hotel,
-        account_type=EQUITY,
-    )
-
-    def calculate(accounts, normal="debit"):
-        data = []
-        total = 0
-
-        for acc in accounts:
-
-            lines = acc.journalline_set.all()
-
-            if date:
-                lines = lines.filter(journal__date__lte=date)
-
-            debit = lines.aggregate(Sum("debit"))["debit__sum"] or 0
-            credit = lines.aggregate(Sum("credit"))["credit__sum"] or 0
-
-            if normal == "debit":
-                balance = debit - credit
+    for account in accounts:
+        debit, credit = activity_by_account.get(account.pk, (Decimal("0.00"), Decimal("0.00")))
+        if account.account_type in ASSET_TYPES:
+            balance = account.opening_balance + debit - credit
+            if account.account_type == "fixed_asset":
+                key = "fixed_assets"
             else:
-                balance = credit - debit
+                key = "current_assets"
+        elif account.account_type in LIABILITY_TYPES:
+            balance = account.opening_balance + credit - debit
+            key = "long_term_liabilities" if account.account_type == "long_term_liability" else "current_liabilities"
+        elif account.account_type == EQUITY:
+            balance = account.opening_balance + credit - debit
+            key = "equity"
+        elif account.account_type in INCOME_TYPES:
+            income_activity += credit - debit
+            continue
+        elif account.account_type in EXPENSE_TYPES:
+            expense_activity += debit - credit
+            continue
+        else:
+            continue
 
-            total += balance
+        if balance:
+            sections[key].append({"account": account, "balance": balance})
+            totals[key] += balance
 
-            data.append({
-                "name": acc.name,
-                "balance": balance
-            })
+    current_earnings = income_activity - expense_activity
+    current_assets_total = totals["current_assets"]
+    fixed_assets_total = totals["fixed_assets"]
+    current_liabilities_total = totals["current_liabilities"]
+    long_term_liabilities_total = totals["long_term_liabilities"]
+    equity_accounts_total = totals["equity"]
+    total_assets = current_assets_total + fixed_assets_total
+    total_liabilities = current_liabilities_total + long_term_liabilities_total
+    total_equity = equity_accounts_total + current_earnings
+    liabilities_and_equity = total_liabilities + total_equity
+    difference = total_assets - liabilities_and_equity
 
-        return data, total
+    return {
+        "hotel": hotel, "hotels": hotels,
+        "show_hotel_selector": request.user.role == "DIRECTOR" and hotels.count() > 1,
+        "as_at_date": as_at_date, "date_error": date_error,
+        **sections,
+        "current_assets_total": current_assets_total,
+        "fixed_assets_total": fixed_assets_total,
+        "current_liabilities_total": current_liabilities_total,
+        "long_term_liabilities_total": long_term_liabilities_total,
+        "equity_accounts_total": equity_accounts_total,
+        "current_earnings": current_earnings,
+        "total_assets": total_assets,
+        "total_liabilities": total_liabilities,
+        "total_equity": total_equity,
+        "liabilities_and_equity": liabilities_and_equity,
+        "difference": difference,
+        "is_balanced": difference == Decimal("0.00"),
+    }
 
-    asset_data, asset_total = calculate(assets, "debit")
-    liability_data, liability_total = calculate(liabilities, "credit")
-    equity_data, equity_total = calculate(equity, "credit")
 
-    return render(request, "accounting/balance_sheet.html", {
-        "assets": asset_data,
-        "liabilities": liability_data,
-        "equity": equity_data,
-        "asset_total": asset_total,
-        "liability_total": liability_total,
-        "equity_total": equity_total,
-        "date": date,
-    })
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def balance_sheet(request):
+    return render(request, "accounting/balance_sheet.html", _balance_sheet_context(request))
+
+
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def balance_sheet_export_xlsx(request):
+    from io import BytesIO
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+
+    context = _balance_sheet_context(request)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Balance Sheet"
+    ws.merge_cells("A1:C1")
+    ws["A1"] = context["hotel"].name.upper()
+    ws["A1"].font = Font(size=16, bold=True, color="FFFFFF")
+    ws["A1"].fill = PatternFill("solid", fgColor="14233B")
+    ws.merge_cells("A2:C2")
+    ws["A2"] = "BALANCE SHEET"
+    ws["A2"].font = Font(size=13, bold=True, color="2454D6")
+    ws.merge_cells("A3:C3")
+    ws["A3"] = f'As at {context["as_at_date"]:%d %b %Y}'
+    ws.append([])
+    summary = [
+        ("Total assets", context["total_assets"]),
+        ("Total liabilities", context["total_liabilities"]),
+        ("Equity accounts", context["equity_accounts_total"]),
+        ("Current period earnings", context["current_earnings"]),
+        ("Total equity", context["total_equity"]),
+        ("Total liabilities and equity", context["liabilities_and_equity"]),
+        ("Balance check", context["difference"]),
+    ]
+    ws.append(["FINANCIAL POSITION", "AMOUNT (NGN)", ""])
+    for label, amount in summary:
+        ws.append([label, float(amount), ""])
+    sections = [
+        ("CURRENT ASSETS", "current_assets", "current_assets_total"),
+        ("FIXED ASSETS", "fixed_assets", "fixed_assets_total"),
+        ("CURRENT LIABILITIES", "current_liabilities", "current_liabilities_total"),
+        ("LONG-TERM LIABILITIES", "long_term_liabilities", "long_term_liabilities_total"),
+        ("EQUITY", "equity", "equity_accounts_total"),
+    ]
+    for title, key, total_key in sections:
+        ws.append([])
+        ws.append([title, "", ""])
+        ws.append(["Code", "Account", "Balance (NGN)"])
+        for item in context[key]:
+            ws.append([item["account"].code, item["account"].name, float(item["balance"])])
+        ws.append(["", f"Total {title.title()}", float(context[total_key])])
+    ws.freeze_panes = "A9"
+    ws.column_dimensions["A"].width = 20
+    ws.column_dimensions["B"].width = 42
+    ws.column_dimensions["C"].width = 22
+    for row in ws.iter_rows():
+        for cell in row:
+            if cell.row not in (1, 2, 3) and cell.column == 3 and isinstance(cell.value, (int, float)):
+                cell.number_format = '"₦"#,##0.00;[Red]("₦"#,##0.00)'
+            if cell.value in ("FINANCIAL POSITION", "CURRENT ASSETS", "FIXED ASSETS", "CURRENT LIABILITIES", "LONG-TERM LIABILITIES", "EQUITY"):
+                cell.font = Font(bold=True, color="FFFFFF")
+                cell.fill = PatternFill("solid", fgColor="14233B")
+    buffer = BytesIO()
+    wb.save(buffer)
+    response = HttpResponse(buffer.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = f'attachment; filename="balance_sheet_{context["hotel"].pk}_{context["as_at_date"]}.xlsx"'
+    return response
+
+
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def balance_sheet_export_pdf(request):
+    from io import BytesIO
+    from django.http import HttpResponse
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+
+    context = _balance_sheet_context(request)
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=17*mm, leftMargin=17*mm, topMargin=17*mm, bottomMargin=17*mm)
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name="StatementTitle", parent=styles["Title"], textColor=colors.HexColor("#14233B"), alignment=0))
+    story = [
+        Paragraph(context["hotel"].name.upper(), styles["Heading1"]),
+        Paragraph("BALANCE SHEET", styles["StatementTitle"]),
+        Paragraph(f'As at {context["as_at_date"]:%d %b %Y}', styles["Normal"]),
+        Spacer(1, 8*mm),
+    ]
+    summary = [["FINANCIAL POSITION", "AMOUNT (NGN)"]]
+    for label, amount in [
+        ("Total assets", context["total_assets"]),
+        ("Total liabilities", context["total_liabilities"]),
+        ("Equity accounts", context["equity_accounts_total"]),
+        ("Current period earnings", context["current_earnings"]),
+        ("Total equity", context["total_equity"]),
+        ("Total liabilities and equity", context["liabilities_and_equity"]),
+        ("Balance check", context["difference"]),
+    ]:
+        summary.append([label, f"NGN {amount:,.2f}"])
+    table = Table(summary, colWidths=[115*mm, 55*mm], hAlign="LEFT")
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#14233B")),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+        ("ALIGN", (1,1), (1,-1), "RIGHT"),
+        ("GRID", (0,0), (-1,-1), .35, colors.HexColor("#CBD5E1")),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.HexColor("#F1F5F9")]),
+        ("PADDING", (0,0), (-1,-1), 6),
+    ]))
+    story.append(table)
+    for title, key, total_key in [
+        ("Current assets", "current_assets", "current_assets_total"),
+        ("Fixed assets", "fixed_assets", "fixed_assets_total"),
+        ("Current liabilities", "current_liabilities", "current_liabilities_total"),
+        ("Long-term liabilities", "long_term_liabilities", "long_term_liabilities_total"),
+        ("Equity", "equity", "equity_accounts_total"),
+    ]:
+        story.extend([Spacer(1, 5*mm), Paragraph(title, styles["Heading2"])])
+        rows = [["Code", "Account", "Balance (NGN)"]]
+        rows.extend([[item["account"].code, item["account"].name, f'NGN {item["balance"]:,.2f}'] for item in context[key]])
+        rows.append(["", f"Total {title}", f'NGN {context[total_key]:,.2f}'])
+        section_table = Table(rows, colWidths=[22*mm, 93*mm, 55*mm], repeatRows=1, hAlign="LEFT")
+        section_table.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#E6EDF7")),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+            ("ALIGN", (2,1), (2,-1), "RIGHT"),
+            ("GRID", (0,0), (-1,-1), .35, colors.HexColor("#CBD5E1")),
+            ("PADDING", (0,0), (-1,-1), 5),
+        ]))
+        story.append(section_table)
+    def footer(canvas, document):
+        canvas.saveState()
+        canvas.setFont("Helvetica", 8)
+        canvas.setFillColor(colors.HexColor("#64748B"))
+        canvas.drawString(17*mm, 8*mm, f'{context["hotel"].name} · Confidential financial statement')
+        canvas.drawRightString(A4[0]-17*mm, 8*mm, f"Page {document.page}")
+        canvas.restoreState()
+    doc.build(story, onFirstPage=footer, onLaterPages=footer)
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="balance_sheet_{context["hotel"].pk}_{context["as_at_date"]}.pdf"'
+    return response
 
 @role_required("DIRECTOR", "ACCOUNTANT", "ADMIN", "KITCHEN")
 @transaction.atomic
