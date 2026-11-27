@@ -285,6 +285,14 @@ class GymGateVerificationTests(TestCase):
         self.assertContains(response, str(membership.pass_token))
         self.assertContains(response, "data:image/png;base64,")
 
+    def test_front_desk_can_download_membership_pass_pdf(self):
+        membership = self.create_membership()
+        self.client.force_login(self.frontdesk)
+        response = self.client.get(f"/gym/memberships/{membership.pk}/pass/pdf/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn(".pdf", response["Content-Disposition"])
+
     def test_membership_from_another_hotel_cannot_be_checked_in(self):
         from django.core.exceptions import ValidationError
         from gym.services.gate import check_in_member
