@@ -2336,6 +2336,7 @@ def financial_opening_balances(request):
 
 
 @role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+@transaction.atomic
 def financial_opening_adjustments(request):
     """Request and approve auditable additions for omitted opening assets."""
     from django.utils import timezone
