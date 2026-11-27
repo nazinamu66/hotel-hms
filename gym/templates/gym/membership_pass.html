@@ -19,7 +19,7 @@
 @media print{body{background:#fff!important}.no-print{display:none!important}.gym-pass-wrap{margin:0;max-width:none;padding:0}.gym-pass{box-shadow:none;break-inside:avoid}}
 </style>
 <div class="gym-pass-wrap">
- <div class="gym-pass-actions no-print"><button type="button" onclick="window.print()">Print membership pass</button><a href="{% url 'gym_member_detail' membership.member.pk %}">Back to member</a></div>
+ <div class="gym-pass-actions no-print"><button type="button" onclick="window.print()">Print membership pass</button><a href="{% url 'gym_membership_pass_pdf' membership.pk %}">Download PDF</a><a href="{% url 'gym_member_detail' membership.member.pk %}">Back to member</a></div>
  <article class="gym-pass">
   <header class="gym-pass-top"><div><h1>{{ hotel.name }}</h1><p>OFFICIAL GYM MEMBERSHIP PASS</p></div><strong>GYM PASS</strong></header>
   <div class="gym-pass-body">
