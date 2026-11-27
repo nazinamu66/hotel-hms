@@ -2523,6 +2523,7 @@ def financial_opening_adjustments(request):
 
 
 @role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+@transaction.atomic
 def expense_management(request):
     """Record, review and pay non-supplier expense obligations."""
     from datetime import date
