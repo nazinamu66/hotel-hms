@@ -76,10 +76,16 @@
 <div class="fb-dashboard">
   <div class="fb-topbar">
     <div class="fb-intro"><h1>Room Board</h1><p>Live room status and front desk operations at a glance.</p></div>
-    <a href="{% url 'frontdesk_night_audit' %}" class="fb-audit">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4m8-4v4M3 10h18"/><rect x="3" y="4" width="18" height="17" rx="2"/><path d="m9 16 2 2 4-4"/></svg>
-      Run Night Audit
-    </a>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+      <a href="{% url 'frontdesk_police_guest_register' %}" class="fb-audit" style="background:#1d4ed8">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+        Police Guest Register
+      </a>
+      <a href="{% url 'frontdesk_night_audit' %}" class="fb-audit">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4m8-4v4M3 10h18"/><rect x="3" y="4" width="18" height="17" rx="2"/><path d="m9 16 2 2 4-4"/></svg>
+        Run Night Audit
+      </a>
+    </div>
   </div>
 
   <div class="fb-stats">
