@@ -112,6 +112,32 @@ def gym_membership_checkout(request, member_id):
 
 
 @role_required(*FRONT_DESK_ROLES)
+def gym_membership_pass(request, membership_id):
+    import base64
+    from io import BytesIO
+    import qrcode
+    from qrcode.constants import ERROR_CORRECT_M
+
+    hotel = _hotel_for_gym(request.user)
+    membership = get_object_or_404(
+        GymMembership.objects.select_related("member", "plan").filter(
+            hotel=hotel, member__hotel=hotel
+        ),
+        pk=membership_id,
+    )
+    qr = qrcode.QRCode(error_correction=ERROR_CORRECT_M, box_size=8, border=3)
+    qr.add_data(str(membership.pass_token))
+    qr.make(fit=True)
+    image = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    qr_data_uri = "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+    return render(request, "gym/membership_pass.html", {
+        "hotel": hotel, "membership": membership, "qr_data_uri": qr_data_uri,
+    })
+
+
+@role_required(*FRONT_DESK_ROLES)
 def gym_membership_receipt(request, membership_id):
     hotel = _hotel_for_gym(request.user)
     membership = get_object_or_404(
@@ -227,6 +253,7 @@ def gym_gate_verify(request):
         "membership__member", "membership__plan"
     )[:10]
     error_message = None
+    candidates = []
 
     if request.method == "POST" and form.is_valid():
         action = form.cleaned_data.get("action") or "lookup"
@@ -246,6 +273,13 @@ def gym_gate_verify(request):
                     membership = memberships.filter(pass_token=token).first()
                 else:
                     membership = memberships.filter(member__member_number__iexact=code).first()
+                    if not membership:
+                        candidates = list(
+                            memberships.filter(member__member_number__icontains=code)
+                            .order_by("member__member_number")[:10]
+                        )
+                        if len(candidates) == 1:
+                            membership = candidates[0]
 
             if membership:
                 open_visit = GymVisit.objects.filter(
@@ -294,4 +328,5 @@ def gym_gate_verify(request):
         "hotel": hotel, "form": form, "membership": membership,
         "open_visit": open_visit, "recent_visits": recent_visits,
         "error_message": error_message,
+        "candidates": candidates,
     })
