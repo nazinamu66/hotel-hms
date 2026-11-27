@@ -2,20 +2,37 @@
 {% block title %}Gym Memberships · Front Desk{% endblock %}
 {% block content %}
 <style>
-.gym-page{max-width:1400px;margin:auto;color:#172033}.gym-hero,.gym-card,.gym-table{background:#fff;border:1px solid #e5e9f0;border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 4px 16px #0f172a08}.gym-hero{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.gym-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.gym-stat{font-size:27px;font-weight:800;margin-top:8px}.gym-muted{color:#64748b}.gym-btn{display:inline-block;background:#1d4ed8;color:#fff!important;text-decoration:none;padding:11px 16px;border-radius:9px;font-weight:700;border:0;cursor:pointer}.gym-btn.secondary{background:#334155}.gym-search{display:flex;gap:8px;flex-wrap:wrap}.gym-search input{padding:10px;border:1px solid #cbd5e1;border-radius:8px;min-width:240px}.gym-table table{width:100%;border-collapse:collapse}.gym-table th,.gym-table td{text-align:left;padding:12px 8px;border-bottom:1px solid #e5e7eb}@media(max-width:850px){.gym-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:520px){.gym-grid{grid-template-columns:1fr}}
+.gym-page{max-width:1400px;margin:24px auto;padding:0 18px 40px;color:#172033}
+.gym-hero,.gym-card,.gym-table{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:22px;margin-bottom:18px;box-shadow:0 5px 20px #0f172a08}
+.gym-hero{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.gym-eyebrow{font-size:11px;letter-spacing:.08em;font-weight:800;text-transform:uppercase;color:#64748b}
+.gym-title{font-size:30px;letter-spacing:-.04em;margin:4px 0}.gym-muted{color:#64748b}
+.gym-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.gym-stat{font-size:28px;font-weight:850;margin-top:7px;letter-spacing:-.03em}
+.gym-stat-label{font-size:13px;color:#64748b}
+.gym-btn{display:inline-flex;align-items:center;justify-content:center;background:#1d4ed8;color:#fff!important;text-decoration:none;padding:11px 16px;border-radius:10px;font-weight:750;border:0;cursor:pointer;min-height:42px}
+.gym-search{display:flex;gap:9px;flex-wrap:wrap}.gym-search input{padding:11px 13px;border:1px solid #cbd5e1;border-radius:10px;min-width:min(280px,70vw);font:inherit}
+.gym-table table{width:100%;border-collapse:collapse;min-width:760px}.gym-table th{text-align:left;padding:13px 10px;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #e2e8f0}.gym-table td{padding:14px 10px;border-bottom:1px solid #edf2f7}
+.gym-member{display:flex;align-items:center;gap:11px;min-width:210px}.gym-avatar{width:38px;height:38px;border-radius:50%;background:#e0f2fe;color:#075985;display:grid;place-items:center;font-weight:850;overflow:hidden;flex:none}.gym-avatar img{width:100%;height:100%;object-fit:cover}
+.gym-member-name{font-weight:800}.gym-member-number{font-size:12px;color:#64748b;font-family:monospace}
+.gym-link{font-weight:750;color:#1d4ed8;text-decoration:none}.gym-link:hover{text-decoration:underline}
+.gym-messages{padding:10px 14px;border-radius:10px;background:#f0fdf4;color:#166534;margin-bottom:14px}
+@media(max-width:900px){.gym-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.gym-grid{grid-template-columns:1fr}.gym-card,.gym-table,.gym-hero{padding:17px}}
 </style>
 <div class="gym-page">
- <header class="gym-hero"><div><h1 style="margin:0 0 5px">Gym Memberships</h1><div class="gym-muted">{{ hotel.name }} · Front Desk</div></div><div style="display:flex;gap:9px;flex-wrap:wrap"><a class="gym-btn" href="{% url 'gym_member_create' %}">Register member</a></div></header>
- {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+ <header class="gym-hero"><div><div class="gym-eyebrow">{{ hotel.name }} · Front Desk</div><h1 class="gym-title">Gym memberships</h1><p class="gym-muted" style="margin:0">Manage member profiles, membership sales and visit history.</p></div><a class="gym-btn" href="{% url 'gym_member_create' %}">＋ Register member</a></header>
+ {% for message in messages %}<div class="gym-messages">{{ message }}</div>{% endfor %}
  <div class="gym-grid">
-  <section class="gym-card"><div class="gym-muted">Registered members</div><div class="gym-stat">{{ member_count }}</div></section>
-  <section class="gym-card"><div class="gym-muted">Active memberships</div><div class="gym-stat">{{ active_memberships }}</div></section>
-  <section class="gym-card"><div class="gym-muted">Expiring in 7 days</div><div class="gym-stat">{{ expiring_memberships }}</div></section>
-  <section class="gym-card"><div class="gym-muted">Visits today</div><div class="gym-stat">{{ today_visits }}</div></section>
+  <section class="gym-card"><div class="gym-stat-label">Registered members</div><div class="gym-stat">{{ member_count }}</div></section>
+  <section class="gym-card"><div class="gym-stat-label">Active memberships</div><div class="gym-stat">{{ active_memberships }}</div></section>
+  <section class="gym-card"><div class="gym-stat-label">Expiring in 7 days</div><div class="gym-stat">{{ expiring_memberships }}</div></section>
+  <section class="gym-card"><div class="gym-stat-label">Visits today</div><div class="gym-stat">{{ today_visits }}</div></section>
  </div>
- <section class="gym-table"><div style="display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap"><h2 style="margin:0">Member register</h2><form method="get" class="gym-search"><input name="q" value="{{ query }}" placeholder="Search name, number, phone or email"><button class="gym-btn">Search</button></form></div>
- <div style="overflow-x:auto;margin-top:14px"><table><thead><tr><th>Member no.</th><th>Name</th><th>Phone</th><th>Registered</th><th></th></tr></thead><tbody>
- {% for member in members %}<tr><td>{{ member.member_number }}</td><td>{{ member.full_name }}</td><td>{{ member.phone }}</td><td>{{ member.created_at|date:"d M Y" }}</td><td><a href="{% url 'gym_member_detail' member.pk %}">View</a></td></tr>{% empty %}<tr><td colspan="5" class="gym-muted">No members found. Register the first Gym member to get started.</td></tr>{% endfor %}
- </tbody></table></div></section>
+ <section class="gym-table"><div style="display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap"><div><h2 style="margin:0;font-size:21px">Member register</h2><p class="gym-muted" style="margin:5px 0 0">Search by member name, number, phone or email.</p></div><form method="get" class="gym-search"><input name="q" value="{{ query }}" placeholder="Search members…" aria-label="Search members"><button class="gym-btn" type="submit">Search</button>{% if query %}<a class="gym-btn" style="background:#475569" href="{% url 'gym_home' %}">Clear</a>{% endif %}</form></div>
+  <div style="overflow-x:auto;margin-top:18px"><table><thead><tr><th>Member</th><th>Phone</th><th>Email</th><th>Registered</th><th>Profile</th></tr></thead><tbody>
+  {% for member in members %}<tr><td><div class="gym-member"><div class="gym-avatar">{% if member.photograph %}<img src="{{ member.photograph.url }}" alt="">{% else %}{{ member.first_name|first|upper }}{{ member.last_name|first|upper }}{% endif %}</div><div><div class="gym-member-name">{{ member.full_name }}</div><div class="gym-member-number">{{ member.member_number }}</div></div></div></td><td>{{ member.phone|default:"—" }}</td><td>{{ member.email|default:"—" }}</td><td>{{ member.created_at|date:"d M Y" }}</td><td><a class="gym-link" href="{% url 'gym_member_detail' member.pk %}">View profile →</a></td></tr>{% empty %}<tr><td colspan="5" class="gym-muted" style="padding:28px;text-align:center">No members found. Register the first Gym member to get started.</td></tr>{% endfor %}
+  </tbody></table></div>
+ </section>
 </div>
 {% endblock %}
