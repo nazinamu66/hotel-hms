@@ -37,7 +37,7 @@ def accounting_dashboard(request):
     hotel = hotels.filter(pk=selected_hotel_id).first() if selected_hotel_id else hotels.first()
     if not hotel:
         messages.error(request, "No accessible hotel is available for Accounting.")
-        return redirect("home")
+        raise PermissionDenied("No accessible hotel is available for Accounting.")
 
     today = timezone.localdate()
     month_start = today.replace(day=1)
