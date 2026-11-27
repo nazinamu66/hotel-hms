@@ -37,7 +37,7 @@
         <div class="ob-row">
           <span class="ob-code">{{ account.code }}</span>
           <span><span class="ob-name">{{ account.name }}</span><span class="ob-type">{{ account.get_account_type_display }}</span></span>
-          <span class="ob-value"><input class="ob-input" type="number" name="opening_{{ account.pk }}" min="0" step="0.01" value="{{ preview|get_item:account.pk|default:'0.00' }}" aria-label="Opening balance for {{ account.name }}"></span>
+          <span class="ob-value"><input class="ob-input" type="number" name="opening_{{ account.pk }}" min="0" step="0.01" value="{{ account.initial_opening_balance|floatformat:2 }}" aria-label="Opening balance for {{ account.name }}"></span>
         </div>
         {% endfor %}
       </div>
