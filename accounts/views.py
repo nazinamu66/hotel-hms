@@ -1,6 +1,8 @@
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
 from django.urls import reverse_lazy
 from django.contrib.auth import logout
 from accounts.decorators import role_required
@@ -60,7 +62,32 @@ class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
 
     def get_success_url(self):
+        if self.request.user.must_change_password:
+            return reverse_lazy('password_change_required')
         return reverse_lazy('role_redirect')
+
+
+
+@login_required
+def password_change_required(request):
+    """Force newly provisioned users to replace their temporary password."""
+    if not request.user.must_change_password:
+        return redirect("role_redirect")
+
+    if request.method == "POST":
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            user.must_change_password = False
+            user.save(update_fields=["password", "must_change_password"])
+            update_session_auth_hash(request, user)
+            messages.success(request, "Your password has been updated. Welcome to City Center Hotels.")
+            return redirect("role_redirect")
+    else:
+        form = PasswordChangeForm(request.user)
+
+    return render(request, "accounts/first_login_password_change.html", {"form": form})
+
 
 
 def logout_view(request):
@@ -743,6 +770,9 @@ def initial_setup(request):
 
 @login_required
 def role_redirect(request):
+
+    if request.user.must_change_password:
+        return redirect("password_change_required")
 
     # A fresh installation starts with a Django superuser. Activate that
     # account as the first Director, then route it through organization setup.
