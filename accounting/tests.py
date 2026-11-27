@@ -540,3 +540,95 @@ class HousekeepingMaterialAccountingPostingTests(TestCase):
                 },
                 user=None,
             )
+
+
+class FinancialOpeningBalancePageTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Hotel
+        from accounting.models import Account
+
+        self.hotel = Hotel.objects.create(name="Financial Opening Test Hotel")
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="opening_accountant",
+            password="test-password",
+            role="ACCOUNTANT",
+            hotel=self.hotel,
+        )
+        self.bank = Account.objects.create(
+            hotel=self.hotel,
+            code="5185",
+            name="Test Bank",
+            account_type="bank",
+            opening_balance=Decimal("1000000.00"),
+        )
+        self.payables = Account.objects.create(
+            hotel=self.hotel,
+            code="2000",
+            name="Accounts Payable",
+            account_type="current_liability",
+        )
+        self.opening_equity = Account.objects.create(
+            hotel=self.hotel,
+            code="3002",
+            name="Opening Balance Equity",
+            account_type="equity",
+            system_key="opening_balance_equity",
+            is_system=True,
+            allow_manual_entries=False,
+        )
+
+    def test_page_preloads_existing_account_opening_balances(self):
+        from django.urls import reverse
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("accounting:financial_opening_balances"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Financial Opening Balances")
+        self.assertContains(response, "1,000,000.00")
+        self.assertContains(response, "Opening Balance Equity")
+
+    def test_confirmation_sets_balancing_opening_equity_and_audit_snapshot(self):
+        from django.urls import reverse
+        from accounting.models import FinancialOpeningBalanceSetup
+
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("accounting:financial_opening_balances"),
+            {
+                "opening_date": "2026-11-01",
+                f"opening_{self.bank.pk}": "1000000.00",
+                f"opening_{self.payables.pk}": "0.00",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.opening_equity.refresh_from_db()
+        self.bank.refresh_from_db()
+        self.assertEqual(self.bank.opening_balance, Decimal("1000000.00"))
+        self.assertEqual(self.opening_equity.opening_balance, Decimal("1000000.00"))
+        setup = FinancialOpeningBalanceSetup.objects.get(hotel=self.hotel)
+        self.assertEqual(setup.opening_date.isoformat(), "2026-11-01")
+        self.assertEqual(setup.posted_by, self.user)
+        self.assertEqual(setup.balances[str(self.opening_equity.pk)]["amount"], "1000000.00")
+        self.assertTrue(setup.balances[str(self.opening_equity.pk)]["calculated"])
+
+    def test_empty_setup_cannot_be_confirmed(self):
+        from django.urls import reverse
+        from accounting.models import FinancialOpeningBalanceSetup
+
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("accounting:financial_opening_balances"),
+            {
+                "opening_date": "2026-11-01",
+                f"opening_{self.bank.pk}": "0.00",
+                f"opening_{self.payables.pk}": "0.00",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Enter at least one non-zero opening balance")
+        self.assertFalse(FinancialOpeningBalanceSetup.objects.filter(hotel=self.hotel).exists())
