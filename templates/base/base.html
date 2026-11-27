@@ -44,6 +44,8 @@
         <div id="accounting_menu"
              class="menu-section {% if request.resolver_match.namespace == 'accounting' %}open{% endif %}">
 
+            <a href="{% url 'accounting:dashboard' %}">Accounting Dashboard</a>
+
             <a href="{% url 'accounting:chart' %}">
                 Chart of Accounts
             </a>
