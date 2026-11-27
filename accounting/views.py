@@ -2195,3 +2195,120 @@ def staff_reimbursement_detail(request, claim_id):
     return render(request, "accounting/staff_reimbursement_detail.html", {
         "hotel": hotel, "claim": claim,
     })
+
+
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def financial_opening_balances(request):
+    """Capture and reconcile a hotel's one-time financial opening position."""
+    from datetime import date
+    from decimal import InvalidOperation
+    from django.db import transaction
+    from django.utils import timezone
+    from django.utils.dateparse import parse_date
+    from core.utils import get_user_hotels
+    from accounting.models import FinancialOpeningBalanceSetup
+
+    hotels = get_user_hotels(request.user)
+    if request.user.role != "DIRECTOR" and getattr(request.user, "hotel_id", None):
+        hotels = hotels.filter(pk=request.user.hotel_id)
+
+    selected_id = (request.POST.get("hotel") or request.GET.get("hotel") or "").strip()
+    hotel = hotels.filter(pk=selected_id).first() if selected_id else hotels.first()
+    if not hotel:
+        raise PermissionDenied("No accessible hotel is available for financial opening balances.")
+
+    setup = FinancialOpeningBalanceSetup.objects.filter(hotel=hotel).select_related("posted_by").first()
+    balance_types = ("cash", "bank", "current_asset", "inventory", "fixed_asset",
+                     "current_liability", "long_term_liability", "equity")
+    accounts = list(
+        Account.objects.filter(hotel=hotel, is_active=True, account_type__in=balance_types)
+        .exclude(system_key="opening_balance_equity")
+        .order_by("code")
+    )
+    equity_account = Account.objects.filter(
+        hotel=hotel, system_key="opening_balance_equity", is_system=True
+    ).first()
+    if not equity_account:
+        raise PermissionDenied("The Opening Balance Equity system account is missing. Please contact an administrator.")
+
+    errors = []
+    opening_date = timezone.localdate()
+    preview = {}
+    asset_total = Decimal("0.00")
+    liability_equity_total = Decimal("0.00")
+
+    if request.method == "POST":
+        if setup:
+            messages.error(request, "Financial opening balances have already been confirmed for this hotel.")
+            return redirect("accounting:financial_opening_balances")
+        opening_date = parse_date((request.POST.get("opening_date") or "").strip())
+        if not opening_date:
+            errors.append("Enter a valid opening date.")
+
+        for account in accounts:
+            raw = (request.POST.get(f"opening_{account.pk}") or "0").strip().replace(",", "")
+            try:
+                amount = Decimal(raw).quantize(Decimal("0.01"))
+                if not amount.is_finite() or amount < 0:
+                    raise InvalidOperation
+            except (InvalidOperation, ValueError):
+                errors.append(f"Enter a valid non-negative amount for {account.code} · {account.name}.")
+                continue
+            preview[account.pk] = amount
+            if account.account_type in ("cash", "bank", "current_asset", "inventory", "fixed_asset"):
+                asset_total += amount
+            else:
+                liability_equity_total += amount
+    else:
+        preview = {account.pk: account.opening_balance for account in accounts}
+        for account in accounts:
+            amount = preview[account.pk]
+            if account.account_type in ("cash", "bank", "current_asset", "inventory", "fixed_asset"):
+                asset_total += amount
+            else:
+                liability_equity_total += amount
+
+    opening_equity = asset_total - liability_equity_total
+    difference = asset_total - (liability_equity_total + opening_equity)
+
+    if request.method == "POST" and not errors:
+        with transaction.atomic():
+            locked_setup = FinancialOpeningBalanceSetup.objects.select_for_update().filter(hotel=hotel).first()
+            if locked_setup:
+                messages.error(request, "Opening balances were confirmed by another session. No changes were made.")
+                return redirect("accounting:financial_opening_balances")
+            snapshot = {}
+            for account in accounts:
+                amount = preview[account.pk]
+                Account.objects.filter(pk=account.pk, hotel=hotel).update(opening_balance=amount)
+                snapshot[str(account.pk)] = {
+                    "code": account.code, "name": account.name, "account_type": account.account_type,
+                    "amount": str(amount),
+                }
+            Account.objects.filter(pk=equity_account.pk, hotel=hotel).update(opening_balance=opening_equity)
+            snapshot[str(equity_account.pk)] = {
+                "code": equity_account.code, "name": equity_account.name,
+                "account_type": equity_account.account_type, "amount": str(opening_equity),
+                "calculated": True,
+            }
+            FinancialOpeningBalanceSetup.objects.create(
+                hotel=hotel, opening_date=opening_date, balances=snapshot, posted_by=request.user,
+            )
+        messages.success(request, "Financial opening balances confirmed and reconciled successfully.")
+        return redirect("accounting:financial_opening_balances",)
+
+    return render(request, "accounting/financial_opening_balances.html", {
+        "hotel": hotel,
+        "hotels": hotels,
+        "show_hotel_selector": request.user.role == "DIRECTOR" and hotels.count() > 1,
+        "accounts": accounts,
+        "preview": preview,
+        "equity_account": equity_account,
+        "asset_total": asset_total,
+        "liability_equity_total": liability_equity_total,
+        "opening_equity": opening_equity,
+        "difference": difference,
+        "opening_date": opening_date,
+        "setup": setup,
+        "errors": errors,
+    })
