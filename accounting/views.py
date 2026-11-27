@@ -1447,10 +1447,18 @@ def balance_sheet_export_pdf(request):
 
 @role_required("DIRECTOR", "ACCOUNTANT", "ADMIN", "KITCHEN")
 @transaction.atomic
-@transaction.atomic
 def create_account(request):
-    hotel = request.user.hotel
+    from core.utils import get_user_hotels
     from accounting.models import FinancialOpeningBalanceSetup
+
+    hotels = get_user_hotels(request.user)
+    if request.user.role not in ("DIRECTOR", "ADMIN") and request.user.hotel_id:
+        hotels = hotels.filter(pk=request.user.hotel_id)
+    selected_hotel_id = (request.POST.get("hotel") or request.GET.get("hotel") or "").strip()
+    hotel = hotels.filter(pk=selected_hotel_id).first() if selected_hotel_id else hotels.first()
+    if not hotel:
+        raise PermissionDenied("No accessible hotel is available for account creation.")
+
     opening_balances_locked = FinancialOpeningBalanceSetup.objects.filter(hotel=hotel).exists()
 
     if request.method == "POST":
@@ -1489,16 +1497,26 @@ def create_account(request):
     return render(request, "accounting/create_account.html", {
         "account_form": account_form,
         "bank_form": bank_form,
+        "hotel": hotel,
+        "hotels": hotels,
+        "show_hotel_selector": request.user.role in ("DIRECTOR", "ADMIN") and hotels.count() > 1,
     })
 
 
 @role_required("DIRECTOR", "ACCOUNTANT", "ADMIN")
 @transaction.atomic
 def edit_account(request, account_id):
-    hotel = request.user.hotel
+    from core.utils import get_user_hotels
     from accounting.models import FinancialOpeningBalanceSetup
+
+    hotels = get_user_hotels(request.user)
+    if request.user.role not in ("DIRECTOR", "ADMIN") and request.user.hotel_id:
+        hotels = hotels.filter(pk=request.user.hotel_id)
+    account = get_object_or_404(
+        Account.objects.select_related("hotel"), id=account_id, hotel__in=hotels
+    )
+    hotel = account.hotel
     opening_balances_locked = FinancialOpeningBalanceSetup.objects.filter(hotel=hotel).exists()
-    account = get_object_or_404(Account, id=account_id, hotel=hotel)
 
     if account.is_system:
         messages.error(request, "System accounts cannot be edited.")
@@ -1554,6 +1572,7 @@ def edit_account(request, account_id):
         "account_form": account_form,
         "bank_form": bank_form,
         "account": account,
+        "hotel": hotel,
     })
 
 
@@ -2442,8 +2461,19 @@ def financial_opening_adjustments(request):
     adjustments = FinancialOpeningBalanceAdjustment.objects.filter(hotel=hotel).select_related(
         "account", "requested_by", "reviewed_by", "journal_entry"
     )
+    from django.db.models import Count, Sum
+    status_counts = {
+        row["status"]: row["total"]
+        for row in adjustments.values("status").annotate(total=Count("id"))
+    }
+    approved_total = adjustments.filter(status="APPROVED").aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
     return render(request, "accounting/financial_opening_adjustments.html", {
         "hotel": hotel, "hotels": hotels, "accounts": accounts,
-        "adjustments": adjustments, "can_approve": can_approve,
+        "adjustments": adjustments,
+        "pending_count": status_counts.get("PENDING", 0),
+        "approved_count": status_counts.get("APPROVED", 0),
+        "rejected_count": status_counts.get("REJECTED", 0),
+        "approved_total": approved_total,
+        "can_approve": can_approve,
         "show_hotel_selector": request.user.role in ("DIRECTOR", "ADMIN") and hotels.count() > 1,
     })
