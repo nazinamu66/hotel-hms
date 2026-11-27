@@ -1,0 +1,23 @@
+{% load accounting_extras %}
+{% if item.children %}
+<details class="coa-node" open>
+  <summary>
+    <div class="coa-node-summary">
+      <div class="coa-node-name"><span class="coa-code">{{ item.account.code }}</span><div><div class="coa-name">{{ item.account.name }}</div><div class="coa-sub">Account group · {{ item.account.get_account_type_display }}</div></div></div>
+      <div class="coa-balance">{{ item.account.get_balance|floatformat:2|money }}</div>
+      <div class="coa-node-actions"><a href="{% url 'accounting:ledger' item.account.id %}">Ledger</a>{% if not item.account.is_system %}<a href="{% url 'accounting:edit_account' item.account.id %}">Edit</a>{% endif %}</div>
+    </div>
+  </summary>
+  <div class="coa-children">
+    {% for child in item.children %}
+      {% include "accounting/_account_tree_node.html" with item=child %}
+    {% endfor %}
+  </div>
+</details>
+{% else %}
+<div class="coa-leaf">
+  <div class="coa-leaf-name"><span class="coa-code">{{ item.account.code }}</span><div><div class="coa-name">{{ item.account.name }}</div><div class="coa-sub">{{ item.account.get_account_type_display }}{% if item.account.is_system %} · System account{% else %} · Custom account{% endif %}{% if not item.account.allow_posting %} · Non-posting{% endif %}</div></div></div>
+  <div class="coa-balance">{{ item.account.get_balance|floatformat:2|money }}</div>
+  <div class="coa-node-actions"><a href="{% url 'accounting:ledger' item.account.id %}">Ledger</a>{% if not item.account.is_system %}<a href="{% url 'accounting:edit_account' item.account.id %}">Edit</a>{% endif %}</div>
+</div>
+{% endif %}
