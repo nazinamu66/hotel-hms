@@ -495,3 +495,29 @@ class StaffReimbursement(models.Model):
 
     def __str__(self):
         return f"Reimbursement #{self.pk} - {self.claimant} - {self.amount} ({self.status})"
+
+
+class FinancialOpeningBalanceSetup(models.Model):
+    """One-time, auditable opening-balance confirmation for a hotel."""
+
+    hotel = models.OneToOneField(
+        Hotel,
+        on_delete=models.PROTECT,
+        related_name="financial_opening_balance_setup",
+    )
+    opening_date = models.DateField()
+    balances = models.JSONField(default=dict)
+    posted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="financial_opening_balance_setups",
+    )
+    posted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-posted_at"]
+
+    def __str__(self):
+        return f"Financial opening balances · {self.hotel} · {self.opening_date}"
