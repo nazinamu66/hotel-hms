@@ -910,7 +910,6 @@ def account_ledger_export_pdf(request, account_id):
 
 
 
-@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def _profit_and_loss_context(request):
     """Build one authoritative, hotel-scoped P&L dataset for screen and exports."""
     from django.utils import timezone
@@ -1014,6 +1013,7 @@ def _profit_and_loss_context(request):
     }
 
 
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def profit_and_loss(request):
     context = _profit_and_loss_context(request)
     return render(request, "accounting/profit_and_loss.html", context)
