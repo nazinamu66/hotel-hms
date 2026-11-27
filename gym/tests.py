@@ -265,6 +265,26 @@ class GymGateVerificationTests(TestCase):
         self.assertIsNotNone(visit.exited_at)
         self.assertEqual(visit.checked_out_by, self.security)
 
+    def test_security_can_search_by_partial_member_number(self):
+        membership = self.create_membership()
+        self.client.force_login(self.security)
+        partial = membership.member.member_number[-5:-1]
+        response = self.client.post("/gym/gate/", {
+            "action": "lookup", "code": partial,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, membership.member.full_name)
+        self.assertContains(response, "Record entry")
+
+    def test_front_desk_can_open_printable_membership_pass(self):
+        membership = self.create_membership()
+        self.client.force_login(self.frontdesk)
+        response = self.client.get(f"/gym/memberships/{membership.pk}/pass/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "OFFICIAL GYM MEMBERSHIP PASS")
+        self.assertContains(response, str(membership.pass_token))
+        self.assertContains(response, "data:image/png;base64,")
+
     def test_membership_from_another_hotel_cannot_be_checked_in(self):
         from django.core.exceptions import ValidationError
         from gym.services.gate import check_in_member
