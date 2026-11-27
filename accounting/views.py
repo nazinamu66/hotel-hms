@@ -2839,9 +2839,9 @@ def bank_reconciliation(request):
             candidates = JournalLine.objects.filter(
                 account=active.bank_account.account, journal__hotel=hotel,
                 journal__date__gte=line.transaction_date - timedelta(days=3),
-                journal__date__lte=line.transaction_date + __import__("datetime").timedelta(days=3),
+                journal__date__lte=line.transaction_date + timedelta(days=3),
                 debit=line.credit, credit=line.debit,
-            ).filter(matched_journal_line__isnull=True).select_related("journal").order_by("journal_id")
+            ).filter(bank_statement_match__isnull=True).select_related("journal").order_by("journal_id")
             line.candidates = candidates
     else:
         lines = []
