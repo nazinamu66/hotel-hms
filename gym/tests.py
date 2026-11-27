@@ -276,6 +276,40 @@ class GymGateVerificationTests(TestCase):
         self.assertContains(response, membership.member.full_name)
         self.assertContains(response, "Record entry")
 
+    def test_front_desk_can_edit_member_profile(self):
+        self.client.force_login(self.frontdesk)
+        url = f"/gym/members/{self.member.pk}/edit/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Edit member profile")
+        response = self.client.post(url, {
+            "first_name": "Updated",
+            "last_name": "Member",
+            "phone": "08022222222",
+            "email": "updated@example.com",
+            "gender": "OTHER",
+            "date_of_birth": "",
+            "address": "Updated address",
+            "emergency_contact_name": "Emergency Contact",
+            "emergency_contact_phone": "08033333333",
+            "notes": "Updated notes",
+        })
+        self.assertEqual(response.status_code, 302)
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.first_name, "Updated")
+        self.assertEqual(self.member.phone, "08022222222")
+        self.assertEqual(self.member.member_number, self.member.member_number)
+
+    def test_front_desk_cannot_edit_member_from_another_hotel(self):
+        other_hotel = Hotel.objects.create(name="Other Gym Hotel")
+        other_member = GymMember.objects.create(
+            hotel=other_hotel, first_name="Other", last_name="Member",
+            phone="08099999999", created_by=self.frontdesk,
+        )
+        self.client.force_login(self.frontdesk)
+        response = self.client.get(f"/gym/members/{other_member.pk}/edit/")
+        self.assertEqual(response.status_code, 404)
+
     def test_front_desk_can_open_printable_membership_pass(self):
         membership = self.create_membership()
         self.client.force_login(self.frontdesk)
