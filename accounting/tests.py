@@ -732,3 +732,78 @@ class FinancialOpeningBalanceAdjustmentTests(TestCase):
         adjustment.refresh_from_db()
         self.assertEqual(adjustment.status, "PENDING")
         self.assertIsNone(adjustment.journal_entry_id)
+
+
+
+
+class TrialBalanceCalculationTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Hotel
+        from accounting.models import Account, JournalEntry, JournalLine
+
+        self.hotel = Hotel.objects.create(name="Trial Balance Verification Hotel")
+        self.user = get_user_model().objects.create_user(
+            username="trial_balance_accountant",
+            password="test-password",
+            role="ACCOUNTANT",
+            hotel=self.hotel,
+        )
+        self.cash = Account.objects.create(
+            hotel=self.hotel, code="TB1001", name="Trial Balance Cash",
+            account_type="cash", opening_balance=Decimal("100.00"),
+        )
+        self.equity = Account.objects.create(
+            hotel=self.hotel, code="TB3001", name="Trial Balance Equity",
+            account_type="equity", opening_balance=Decimal("100.00"),
+        )
+        self.revenue = Account.objects.create(
+            hotel=self.hotel, code="TB4001", name="Trial Balance Revenue",
+            account_type="income",
+        )
+        self.zero_bank = Account.objects.create(
+            hotel=self.hotel, code="TB1002", name="Trial Balance Zero Bank",
+            account_type="bank",
+        )
+        journal = JournalEntry.objects.create(
+            hotel=self.hotel,
+            date=timezone.localdate(),
+            description="Trial balance calculation test",
+            reference="TB-CALC-001",
+        )
+        JournalLine.objects.create(
+            journal=journal, account=self.cash, debit=Decimal("50.00"),
+        )
+        JournalLine.objects.create(
+            journal=journal, account=self.revenue, credit=Decimal("50.00"),
+        )
+
+    def test_trial_balance_includes_opening_balances_and_net_journal_activity(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("accounting:trial_balance"))
+
+        self.assertEqual(response.status_code, 200)
+        rows = {row["code"]: row for row in response.context["data"]}
+        self.assertEqual(rows["TB1001"]["debit"], Decimal("150.00"))
+        self.assertEqual(rows["TB3001"]["credit"], Decimal("100.00"))
+        self.assertEqual(rows["TB4001"]["credit"], Decimal("50.00"))
+        self.assertEqual(rows["TB1002"]["debit"], Decimal("0.00"))
+        self.assertEqual(response.context["total_debit"], Decimal("150.00"))
+        self.assertEqual(response.context["total_credit"], Decimal("150.00"))
+        self.assertTrue(response.context["is_balanced"])
+
+    def test_trial_balance_does_not_include_another_hotels_accounts(self):
+        from inventory.models import Hotel
+        from accounting.models import Account
+
+        other_hotel = Hotel.objects.create(name="Other Trial Balance Hotel")
+        Account.objects.create(
+            hotel=other_hotel, code="TB9999", name="Other Hotel Cash",
+            account_type="cash", opening_balance=Decimal("999999.00"),
+        )
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("accounting:trial_balance"))
+
+        self.assertEqual(response.status_code, 200)
+        codes = {row["code"] for row in response.context["data"]}
+        self.assertNotIn("TB9999", codes)
