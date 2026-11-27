@@ -741,7 +741,7 @@ def police_guest_register(request):
     missing_identity_count = 0
     for folio in active_stays:
         guest = folio.guest
-        if guest is None:
+        if not guest or not guest.id_number:
             missing_identity_count += 1
         rows.append({
             "guest": guest,
