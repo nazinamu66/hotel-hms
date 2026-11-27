@@ -107,37 +107,49 @@ from kitchen.models import (
 # =========================
 
 @role_required("ADMIN", "DIRECTOR")
+@role_required("ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def supplier_list(request):
+    from django.db.models import Sum
+    from django.utils import timezone
+    from accounting.models import SupplierPayment
 
-    accessible_hotels = (
-        get_accessible_hotels(
-            request.user,
-        )
-        .filter(
-            is_active=True,
-        )
-        .order_by("name")
-    )
+    accessible_hotels = get_accessible_hotels(request.user).filter(is_active=True).order_by("name")
+    selected_hotel_id = (request.GET.get("hotel") or "").strip()
+    selected_hotel = accessible_hotels.filter(pk=selected_hotel_id).first() if selected_hotel_id else None
+    base_scope = Supplier.objects.filter(hotel=selected_hotel) if selected_hotel else Supplier.objects.filter(hotel__in=accessible_hotels)
+    query = (request.GET.get("q") or "").strip()
+    status = (request.GET.get("status") or "active").strip().lower()
+    if status not in {"active", "archived", "all"}:
+        status = "active"
+    supplier_scope = base_scope
+    if status == "active":
+        supplier_scope = supplier_scope.filter(is_active=True)
+    elif status == "archived":
+        supplier_scope = supplier_scope.filter(is_active=False)
+    if query:
+        supplier_scope = supplier_scope.filter(Q(name__icontains=query) | Q(phone__icontains=query) | Q(email__icontains=query) | Q(address__icontains=query))
+    suppliers = supplier_scope.select_related("hotel").order_by("hotel__name", "name")
+    active_count = base_scope.filter(is_active=True).count()
+    archived_count = base_scope.filter(is_active=False).count()
+    month_start = timezone.localdate().replace(day=1)
+    payments = SupplierPayment.objects.filter(hotel__in=accessible_hotels, payment_date__gte=month_start)
+    if selected_hotel:
+        payments = payments.filter(hotel=selected_hotel)
+    paid_this_month = payments.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+    top_query = SupplierPayment.objects.filter(hotel__in=accessible_hotels)
+    if selected_hotel:
+        top_query = top_query.filter(hotel=selected_hotel)
+    top_suppliers = list(top_query.values("supplier_id", "supplier__name").annotate(total=Sum("amount")).order_by("-total")[:5])
+    top_total = max([row["total"] for row in top_suppliers] or [Decimal("1.00")])
+    for row in top_suppliers:
+        row["pct"] = min(100, float(row["total"] / top_total * 100))
+    return render(request, "inventory/supplier_list.html", {
+        "suppliers": suppliers, "hotels": accessible_hotels, "selected_hotel": selected_hotel,
+        "query": query, "status": status, "active_count": active_count, "archived_count": archived_count,
+        "paid_this_month": paid_this_month, "top_suppliers": top_suppliers,
+    })
 
-    suppliers = (
-        Supplier.objects
-        .filter(
-            hotel__in=accessible_hotels,
-        )
-        .select_related("hotel")
-        .order_by("hotel__name", "name")
-    )
-
-    return render(
-        request,
-        "inventory/supplier_list.html",
-        {
-            "suppliers": suppliers,
-            "hotels": accessible_hotels,
-        },
-    )
-
-@role_required("ADMIN", "DIRECTOR")
+@role_required("ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def supplier_detail(request, pk):
 
     accessible_hotels = (
@@ -222,7 +234,7 @@ def supplier_detail(request, pk):
         },
     )
 
-@role_required("ADMIN", "DIRECTOR")
+@role_required("ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def supplier_create(request):
 
     accessible_hotels = (
@@ -300,7 +312,7 @@ def supplier_create(request):
         },
     )
 
-@role_required("ADMIN", "DIRECTOR")
+@role_required("ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def supplier_edit(request, pk):
 
     accessible_hotels = (
