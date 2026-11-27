@@ -1506,7 +1506,6 @@ def supplier_payments(request):
     # headline outstanding balance remains the hotel's full open exposure.
     from django.utils.dateparse import parse_date
     from datetime import timedelta
-    from django.db.models import Sum
     from django.db.models.functions import TruncMonth
 
     all_obligations = list(obligations)
