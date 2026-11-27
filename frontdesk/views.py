@@ -821,9 +821,11 @@ def police_guest_register_pdf(request):
             business.logo.open("rb")
             logo = PDFImage(business.logo, width=25 * mm, height=22 * mm, kind="proportional")
             business.logo.close()
+            # Keep the logo anchored in the left margin while centering
+            # the hotel name on the physical page, not in the remaining space.
             brand = Table(
-                [[logo, Paragraph(f"<b>{escape(business.name)}</b>", title_style)]],
-                colWidths=[32 * mm, 240 * mm],
+                [[logo, Paragraph(f"<b>{escape(business.name)}</b>", title_style), ""]],
+                colWidths=[32 * mm, 208 * mm, 32 * mm],
                 hAlign="CENTER",
             )
             brand.setStyle(TableStyle([
