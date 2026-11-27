@@ -1,624 +1,140 @@
 {% extends "base/base.html" %}
 {% load accounting_extras %}
-
-{% block title %}{{ account.name }} Ledger{% endblock %}
-
+{% block title %}{{ account.name }} · Account Ledger{% endblock %}
 {% block content %}
-
-<div style="max-width:1400px;margin:0 auto;padding:30px 24px;">
-
-    <!-- ================================================== -->
-    <!-- HEADER -->
-    <!-- ================================================== -->
-
-    <div style="
-        display:flex;
-        justify-content:space-between;
-        align-items:flex-start;
-        gap:20px;
-        margin-bottom:25px;
-    ">
-
-        <div>
-
-            <div style="
-                color:#777;
-                font-size:13px;
-                margin-bottom:6px;
-            ">
-                ACCOUNTING · LEDGER
-            </div>
-
-            <h1 style="
-                margin:0;
-                font-size:30px;
-                font-weight:700;
-            ">
-                {{ account.name }}
-            </h1>
-
-            <div style="
-                margin-top:7px;
-                color:#666;
-                font-size:14px;
-            ">
-                Account {{ account.code }}
-                ·
-                {{ account.get_account_type_display }}
-                ·
-                {{ account.hotel.name }}
-            </div>
-
-        </div>
-
-        <a
-            href="{% url 'accounting:chart' %}"
-            style="
-                display:inline-block;
-                padding:9px 15px;
-                border:1px solid #ddd;
-                border-radius:7px;
-                text-decoration:none;
-                background:#fff;
-                color:#444;
-                white-space:nowrap;
-            "
-        >
-            ← Chart of Accounts
-        </a>
-
+<style>
+.ledger-page{max-width:1540px;margin:0 auto;padding:30px 26px 56px;color:#172033}
+.ledger-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:22px}
+.ledger-kicker{font-size:11px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#64748b}
+.ledger-title{font-size:30px;line-height:1.15;letter-spacing:-.04em;font-weight:800;margin:6px 0}
+.ledger-subtitle{color:#64748b;font-size:14px}
+.ledger-actions{display:flex;gap:10px;flex-wrap:wrap}
+.ledger-btn{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 15px;border-radius:10px;text-decoration:none;font-weight:750;font-size:13px;border:1px solid #dbe2ea;background:#fff;color:#334155}
+.ledger-btn.primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.ledger-panel{background:#fff;border:1px solid #e2e8f0;border-radius:17px;box-shadow:0 5px 18px rgba(15,23,42,.035);margin-bottom:18px}
+.ledger-identity{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:0;overflow:hidden}
+.ledger-identity-item{padding:18px 21px;min-width:0}
+.ledger-identity-item+.ledger-identity-item{border-left:1px solid #edf0f4}
+.ledger-label{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#64748b;margin-bottom:7px}
+.ledger-identity-value{font-size:18px;font-weight:800;overflow-wrap:anywhere}
+.ledger-identity-note{font-size:12px;color:#94a3b8;margin-top:4px}
+.ledger-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.ledger-kpi{background:#fff;border:1px solid #e2e8f0;border-radius:15px;padding:17px 18px;min-width:0;box-shadow:0 4px 14px rgba(15,23,42,.025)}
+.ledger-kpi:nth-child(1){border-left:4px solid #64748b}.ledger-kpi:nth-child(2){border-left:4px solid #2563eb}.ledger-kpi:nth-child(3){border-left:4px solid #d97706}.ledger-kpi:nth-child(4){border-left:4px solid #0f766e}
+.ledger-kpi-value{font-size:clamp(17px,1.5vw,23px);font-weight:850;letter-spacing:-.035em;line-height:1.25;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ledger-kpi-note{font-size:12px;color:#94a3b8;margin-top:6px}
+.ledger-filter{padding:20px 22px}
+.ledger-section-title{font-size:17px;font-weight:800;margin:0 0 15px}
+.ledger-filter-grid{display:grid;grid-template-columns:1fr 1fr 1.15fr auto auto;gap:12px;align-items:end}
+.ledger-field label{display:block;font-size:12px;font-weight:750;color:#475569;margin-bottom:7px}
+.ledger-field input,.ledger-field select{width:100%;height:43px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;background:#fff;padding:0 11px;color:#172033}
+.ledger-field input:focus,.ledger-field select:focus{outline:3px solid rgba(37,99,235,.12);border-color:#2563eb}
+.ledger-apply{height:43px;border:0;border-radius:9px;background:#1d4ed8;color:#fff;padding:0 17px;font-weight:750;cursor:pointer;white-space:nowrap}
+.ledger-reset{height:43px;display:inline-flex;align-items:center;padding:0 10px;color:#475569;text-decoration:none;font-weight:700;white-space:nowrap}
+.ledger-period{font-size:12px;color:#64748b;margin-top:13px}
+.ledger-error{background:#fff1f2;border:1px solid #fecdd3;color:#9f1239;border-radius:10px;padding:11px 14px;margin-bottom:14px;font-size:13px}
+.ledger-table-head{padding:19px 21px;border-bottom:1px solid #e8edf2;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.ledger-table-sub{font-size:12px;color:#64748b;margin-top:4px}
+.ledger-count{font-size:12px;color:#64748b;background:#f1f5f9;border-radius:99px;padding:6px 10px;font-weight:750;white-space:nowrap}
+.ledger-scroll{overflow-x:auto}
+.ledger-table{width:100%;min-width:1040px;border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
+.ledger-table th{background:#f8fafc;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-size:10px;font-weight:850;text-align:left;padding:13px 15px;white-space:nowrap;border-bottom:1px solid #e2e8f0}
+.ledger-table td{padding:14px 15px;border-bottom:1px solid #edf0f4;font-size:13px;vertical-align:middle}
+.ledger-table tbody tr:hover{background:#fafcff}
+.ledger-table .numeric{text-align:right;white-space:nowrap;font-weight:650}
+.ledger-table .balance{font-weight:850;color:#172033}
+.ledger-table .date{white-space:nowrap;color:#475569}
+.ledger-table .description{font-weight:750;color:#1d4ed8;text-decoration:none}
+.ledger-table .description:hover{text-decoration:underline}
+.ledger-table .muted{color:#94a3b8}
+.ledger-opening td{background:#f8fafc;font-weight:800}
+.ledger-empty{text-align:center;padding:55px 20px!important;color:#64748b}
+.ledger-empty strong{display:block;font-size:16px;color:#334155;margin-bottom:5px}
+@media(max-width:1050px){.ledger-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ledger-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.ledger-page{padding:20px 12px 40px}.ledger-head{flex-direction:column}.ledger-title{font-size:25px}.ledger-identity{grid-template-columns:1fr}.ledger-identity-item+.ledger-identity-item{border-left:0;border-top:1px solid #edf0f4}.ledger-kpis{gap:9px}.ledger-kpi{padding:14px 12px}.ledger-filter-grid{grid-template-columns:1fr}.ledger-apply,.ledger-reset{width:100%}.ledger-reset{justify-content:center}}
+@media print{.ledger-head .ledger-actions,.ledger-filter{display:none!important}.ledger-page{max-width:none;padding:0}.ledger-panel,.ledger-kpi{box-shadow:none;break-inside:avoid}.ledger-table{min-width:0}.ledger-table th,.ledger-table td{padding:7px;font-size:10px}}
+</style>
+<div class="ledger-page">
+  <header class="ledger-head">
+    <div>
+      <div class="ledger-kicker">Accounting · General ledger</div>
+      <h1 class="ledger-title">{{ account.name }}</h1>
+      <div class="ledger-subtitle">Account {{ account.code }} · {{ account.get_account_type_display }} · {{ account.hotel.name }}</div>
     </div>
-
-
-    <!-- ================================================== -->
-    <!-- ACCOUNT SUMMARY -->
-    <!-- ================================================== -->
-
-    <div style="
-        display:grid;
-        grid-template-columns:repeat(3,1fr);
-        gap:16px;
-        margin-bottom:22px;
-    ">
-
-        <div style="
-            background:#fff;
-            border:1px solid #e3e6ea;
-            border-radius:10px;
-            padding:18px 20px;
-        ">
-
-            <div style="
-                color:#777;
-                font-size:13px;
-                margin-bottom:7px;
-            ">
-                Account
-            </div>
-
-            <div style="
-                font-size:18px;
-                font-weight:700;
-            ">
-                {{ account.code }}
-            </div>
-
-        </div>
-
-
-        <div style="
-            background:#fff;
-            border:1px solid #e3e6ea;
-            border-radius:10px;
-            padding:18px 20px;
-        ">
-
-            <div style="
-                color:#777;
-                font-size:13px;
-                margin-bottom:7px;
-            ">
-                Account Type
-            </div>
-
-            <div style="
-                font-size:18px;
-                font-weight:700;
-            ">
-                {{ account.get_account_type_display }}
-            </div>
-
-        </div>
-
-
-        <div style="
-            background:#fff;
-            border:1px solid #e3e6ea;
-            border-radius:10px;
-            padding:18px 20px;
-        ">
-
-            <div style="
-                color:#777;
-                font-size:13px;
-                margin-bottom:7px;
-            ">
-                Opening Balance
-            </div>
-
-            <div style="
-                font-size:20px;
-                font-weight:700;
-            ">
-                {{ opening_balance|money }}
-            </div>
-
-        </div>
-
+    <div class="ledger-actions">
+      <a class="ledger-btn" href="{% url 'accounting:chart' %}">← Chart of accounts</a>
+      <button class="ledger-btn" type="button" onclick="window.print()">Print ledger</button>
     </div>
+  </header>
 
-
-    <!-- ================================================== -->
-    <!-- FILTERS -->
-    <!-- ================================================== -->
-
-    <div style="
-        background:#fff;
-        border:1px solid #e3e6ea;
-        border-radius:10px;
-        padding:20px;
-        margin-bottom:22px;
-    ">
-
-        <div style="
-            font-size:17px;
-            font-weight:700;
-            margin-bottom:15px;
-        ">
-            Filter Ledger
-        </div>
-
-
-        <form method="get"
-              style="
-                  display:grid;
-                  grid-template-columns:repeat(3,1fr) auto;
-                  gap:14px;
-                  align-items:end;
-              ">
-
-            <div>
-
-                <label style="
-                    display:block;
-                    font-size:13px;
-                    color:#666;
-                    margin-bottom:6px;
-                ">
-                    From
-                </label>
-
-                <input
-                    type="date"
-                    name="start_date"
-                    value="{{ start_date }}"
-                    style="
-                        width:100%;
-                        box-sizing:border-box;
-                        padding:10px 11px;
-                        border:1px solid #ccc;
-                        border-radius:7px;
-                        background:#fff;
-                    "
-                >
-
-            </div>
-
-
-            <div>
-
-                <label style="
-                    display:block;
-                    font-size:13px;
-                    color:#666;
-                    margin-bottom:6px;
-                ">
-                    To
-                </label>
-
-                <input
-                    type="date"
-                    name="end_date"
-                    value="{{ end_date }}"
-                    style="
-                        width:100%;
-                        box-sizing:border-box;
-                        padding:10px 11px;
-                        border:1px solid #ccc;
-                        border-radius:7px;
-                        background:#fff;
-                    "
-                >
-
-            </div>
-
-
-            <div>
-
-                <label style="
-                    display:block;
-                    font-size:13px;
-                    color:#666;
-                    margin-bottom:6px;
-                ">
-                    Posted By
-                </label>
-
-                <select
-                    name="user"
-                    style="
-                        width:100%;
-                        box-sizing:border-box;
-                        padding:10px 11px;
-                        border:1px solid #ccc;
-                        border-radius:7px;
-                        background:#fff;
-                    "
-                >
-
-                    <option value="">
-                        All Users
-                    </option>
-
-                    {% for u in users %}
-
-                        <option
-                            value="{{ u.id }}"
-                            {% if user_id == u.id|stringformat:"s" %}
-                                selected
-                            {% endif %}
-                        >
-                            {{ u.get_full_name|default:u.username }}
-                        </option>
-
-                    {% endfor %}
-
-                </select>
-
-            </div>
-
-
-            <button
-                type="submit"
-                style="
-                    padding:10px 18px;
-                    border:0;
-                    border-radius:7px;
-                    background:#287be5;
-                    color:#fff;
-                    font-weight:600;
-                    cursor:pointer;
-                    white-space:nowrap;
-                "
-            >
-                Apply Filters
-            </button>
-
-        </form>
-
+  <section class="ledger-panel ledger-identity">
+    <div class="ledger-identity-item">
+      <div class="ledger-label">Account code</div>
+      <div class="ledger-identity-value">{{ account.code }}</div>
+      <div class="ledger-identity-note">{{ account.name }}</div>
     </div>
-
-
-    <!-- ================================================== -->
-    <!-- LEDGER TABLE -->
-    <!-- ================================================== -->
-
-    <div style="
-        background:#fff;
-        border:1px solid #e3e6ea;
-        border-radius:10px;
-        overflow:hidden;
-    ">
-
-        <div style="
-            padding:18px 20px;
-            border-bottom:1px solid #e5e7eb;
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-        ">
-
-            <div>
-
-                <div style="
-                    font-size:18px;
-                    font-weight:700;
-                ">
-                    Transaction Ledger
-                </div>
-
-                <div style="
-                    color:#777;
-                    font-size:13px;
-                    margin-top:4px;
-                ">
-                    Journal activity for {{ account.name }}
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div style="overflow-x:auto;">
-
-            <table style="
-                width:100%;
-                border-collapse:collapse;
-                min-width:900px;
-            ">
-
-                <thead>
-
-                    <tr style="background:#f5f6f8;">
-
-                        <th style="
-                            padding:13px 14px;
-                            text-align:left;
-                            font-size:13px;
-                            color:#555;
-                        ">
-                            Date
-                        </th>
-
-                        <th style="
-                            padding:13px 14px;
-                            text-align:left;
-                            font-size:13px;
-                            color:#555;
-                        ">
-                            Business Day
-                        </th>
-
-                        <th style="
-                            padding:13px 14px;
-                            text-align:left;
-                            font-size:13px;
-                            color:#555;
-                        ">
-                            Description
-                        </th>
-
-                        <th style="
-                            padding:13px 14px;
-                            text-align:left;
-                            font-size:13px;
-                            color:#555;
-                        ">
-                            Posted By
-                        </th>
-
-                        <th style="
-                            padding:13px 14px;
-                            text-align:right;
-                            font-size:13px;
-                            color:#555;
-                        ">
-                            Debit
-                        </th>
-
-                        <th style="
-                            padding:13px 14px;
-                            text-align:right;
-                            font-size:13px;
-                            color:#555;
-                        ">
-                            Credit
-                        </th>
-
-                        <th style="
-                            padding:13px 14px;
-                            text-align:right;
-                            font-size:13px;
-                            color:#555;
-                        ">
-                            Balance
-                        </th>
-
-                    </tr>
-
-                </thead>
-
-
-                <tbody>
-
-
-                    <!-- OPENING BALANCE -->
-
-                    <tr style="
-                        background:#fafafa;
-                        border-bottom:1px solid #eee;
-                    ">
-
-                        <td
-                            colspan="6"
-                            style="
-                                padding:14px;
-                                font-weight:700;
-                            "
-                        >
-                            Opening Balance
-                        </td>
-
-                        <td style="
-                            padding:14px;
-                            text-align:right;
-                            font-weight:700;
-                            white-space:nowrap;
-                        ">
-                            {{ opening_balance|money }}
-                        </td>
-
-                    </tr>
-
-
-                    {% for line in ledger %}
-
-                    <tr style="
-                        border-bottom:1px solid #eee;
-                    ">
-
-                        <td style="
-                            padding:13px 14px;
-                            white-space:nowrap;
-                        ">
-                            {{ line.date|date:"d M Y" }}
-                        </td>
-
-
-                        <td style="
-                            padding:13px 14px;
-                            white-space:nowrap;
-                            color:#666;
-                        ">
-                            {% if line.business_day %}
-                                {{ line.business_day|date:"d M Y" }}
-                            {% else %}
-                                —
-                            {% endif %}
-                        </td>
-
-
-                        <td style="
-                            padding:13px 14px;
-                        ">
-
-                            <a
-                                href="{% url 'accounting:journal_detail' line.journal_id %}"
-                                style="
-                                    text-decoration:none;
-                                    font-weight:600;
-                                "
-                            >
-                                {{ line.description }}
-                            </a>
-
-                        </td>
-
-
-                        <td style="
-                            padding:13px 14px;
-                            white-space:nowrap;
-                        ">
-                            {% if line.user %}
-                                {{ line.user.get_full_name|default:line.user.username }}
-                            {% else %}
-                                System
-                            {% endif %}
-                        </td>
-
-
-                        <td style="
-                            padding:13px 14px;
-                            text-align:right;
-                            white-space:nowrap;
-                        ">
-                            {% if line.debit %}
-                                {{ line.debit|money }}
-                            {% else %}
-                                —
-                            {% endif %}
-                        </td>
-
-
-                        <td style="
-                            padding:13px 14px;
-                            text-align:right;
-                            white-space:nowrap;
-                        ">
-                            {% if line.credit %}
-                                {{ line.credit|money }}
-                            {% else %}
-                                —
-                            {% endif %}
-                        </td>
-
-
-                        <td style="
-                            padding:13px 14px;
-                            text-align:right;
-                            font-weight:700;
-                            white-space:nowrap;
-                            {% if line.balance < 0 %}
-                                color:#c62828;
-                            {% endif %}
-                        ">
-                            {{ line.balance|money }}
-                        </td>
-
-                    </tr>
-
-
-                    {% empty %}
-
-                    <tr>
-
-                        <td
-                            colspan="7"
-                            style="
-                                padding:45px 20px;
-                                text-align:center;
-                                color:#777;
-                            "
-                        >
-
-                            <div style="
-                                font-size:18px;
-                                font-weight:600;
-                                margin-bottom:6px;
-                            ">
-                                No transactions found
-                            </div>
-
-                            <div style="font-size:14px;">
-                                No journal entries match the selected filters.
-                            </div>
-
-                        </td>
-
-                    </tr>
-
-                    {% endfor %}
-
-                </tbody>
-
-            </table>
-
-        </div>
-
+    <div class="ledger-identity-item">
+      <div class="ledger-label">Account classification</div>
+      <div class="ledger-identity-value">{{ account.get_account_type_display }}</div>
+      <div class="ledger-identity-note">{% if account.is_system %}System-managed account{% else %}Hotel account{% endif %}</div>
     </div>
-
-
-    <!-- ================================================== -->
-    <!-- FOOTER -->
-    <!-- ================================================== -->
-
-    <div style="
-        margin-top:20px;
-    ">
-
-        <a
-            href="{% url 'accounting:chart' %}"
-            style="
-                text-decoration:none;
-                color:#555;
-            "
-        >
-            ← Back to Chart of Accounts
-        </a>
-
+    <div class="ledger-identity-item">
+      <div class="ledger-label">Opening balance</div>
+      <div class="ledger-identity-value">{{ account.opening_balance|money }}</div>
+      <div class="ledger-identity-note">Configured account opening amount</div>
     </div>
+  </section>
 
+  <section class="ledger-kpis">
+    <div class="ledger-kpi"><div class="ledger-label">Opening position</div><div class="ledger-kpi-value">{{ opening_balance|money }}</div><div class="ledger-kpi-note">Balance brought into this period</div></div>
+    <div class="ledger-kpi"><div class="ledger-label">Period debits</div><div class="ledger-kpi-value">{{ total_debits|money }}</div><div class="ledger-kpi-note">Visible transactions</div></div>
+    <div class="ledger-kpi"><div class="ledger-label">Period credits</div><div class="ledger-kpi-value">{{ total_credits|money }}</div><div class="ledger-kpi-note">Visible transactions</div></div>
+    <div class="ledger-kpi"><div class="ledger-label">Closing balance</div><div class="ledger-kpi-value">{{ closing_balance|money }}</div><div class="ledger-kpi-note">Actual account position at period end</div></div>
+  </section>
+
+  <section class="ledger-panel ledger-filter">
+    <h2 class="ledger-section-title">Filter ledger activity</h2>
+    {% for error in filter_errors %}<div class="ledger-error">{{ error }}</div>{% endfor %}
+    <form method="get" class="ledger-filter-grid">
+      <div class="ledger-field"><label for="ledger-start">From date</label><input id="ledger-start" type="date" name="start_date" value="{{ start_date }}"></div>
+      <div class="ledger-field"><label for="ledger-end">To date</label><input id="ledger-end" type="date" name="end_date" value="{{ end_date }}"></div>
+      <div class="ledger-field"><label for="ledger-user">Posted by</label><select id="ledger-user" name="user"><option value="">All users</option>{% for u in users %}<option value="{{ u.id }}" {% if user_id == u.id|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>{% endfor %}</select></div>
+      <button class="ledger-apply" type="submit">Apply filters</button>
+      <a class="ledger-reset" href="{% url 'accounting:ledger' account.id %}">Reset</a>
+    </form>
+    <div class="ledger-period">
+      {% if start_date or end_date %}Selected period: {{ start_date|default:"Beginning" }} to {{ end_date|default:"Today" }}{% else %}Showing all recorded journal activity{% endif %}
+      {% if selected_user %} · Posted by {{ selected_user.get_full_name|default:selected_user.username }}{% endif %}
+    </div>
+  </section>
+
+  <section class="ledger-panel">
+    <div class="ledger-table-head">
+      <div><h2 class="ledger-section-title" style="margin:0">Transaction ledger</h2><div class="ledger-table-sub">Journal entries affecting {{ account.name }}</div></div>
+      <span class="ledger-count">{{ transaction_count }} transaction{{ transaction_count|pluralize }}</span>
+    </div>
+    <div class="ledger-scroll">
+      <table class="ledger-table">
+        <thead><tr><th>Date</th><th>Business day</th><th>Description / reference</th><th>Posted by</th><th style="text-align:right">Debit</th><th style="text-align:right">Credit</th><th style="text-align:right">Running balance</th></tr></thead>
+        <tbody>
+          <tr class="ledger-opening"><td colspan="6">Opening balance for selected period</td><td class="numeric">{{ opening_balance|money }}</td></tr>
+          {% for line in ledger %}
+          <tr>
+            <td class="date">{{ line.date|date:"d M Y" }}</td>
+            <td class="date">{% if line.business_day %}{{ line.business_day|date:"d M Y" }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td><a class="description" href="{% url 'accounting:journal_detail' line.journal_id %}">{{ line.description }}</a>{% if line.reference %}<div class="ledger-table-sub">{{ line.reference }} · {{ line.entry_type }}</div>{% endif %}</td>
+            <td>{% if line.user %}{{ line.user.get_full_name|default:line.user.username }}{% else %}<span class="muted">System</span>{% endif %}</td>
+            <td class="numeric">{% if line.debit %}{{ line.debit|money }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="numeric">{% if line.credit %}{{ line.credit|money }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td class="numeric balance">{{ line.balance|money }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="ledger-empty"><strong>No transactions found</strong>No journal entries match the selected filters.</td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot><tr style="background:#f8fafc;font-weight:850"><td colspan="4" style="padding:15px">Period totals · {{ transaction_count }} transaction{{ transaction_count|pluralize }}</td><td class="numeric" style="padding:15px">{{ total_debits|money }}</td><td class="numeric" style="padding:15px">{{ total_credits|money }}</td><td class="numeric" style="padding:15px">{{ closing_balance|money }}</td></tr></tfoot>
+      </table>
+    </div>
+  </section>
 </div>
-
 {% endblock %}
