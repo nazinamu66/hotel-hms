@@ -117,6 +117,22 @@ class PoliceGuestRegisterTests(TestCase):
         self.assertContains(response, "Not recorded")
         self.assertContains(response, "active stay(s) have no recorded guest identity number")
 
+    def test_pdf_endpoint_returns_a_pdf_document(self):
+        response = self.client.get(reverse("frontdesk_police_guest_register_pdf"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/pdf")
+        self.assertIn(b"%PDF", response.content[:10])
+        self.assertIn(b"DAILY POLICE GUEST REGISTER", response.content)
+
+    def test_system_report_page_does_not_render_hotel_letterhead(self):
+        response = self.client.get(reverse("frontdesk_police_guest_register"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "business.logo.url")
+        self.assertNotContains(response, "pgr-letterhead")
+        self.assertContains(response, "Generate PDF Report")
+
     def test_register_is_limited_to_the_users_hotel(self):
         other_org = Organization.objects.create(name="Other Police Register Org")
         other_hotel = Hotel.objects.create(
