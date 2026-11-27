@@ -2360,8 +2360,11 @@ def financial_opening_adjustments(request):
     can_approve = request.user.role in ("DIRECTOR", "ADMIN", "CHIEF_ACCOUNTANT")
     asset_types = ("cash", "bank", "current_asset", "inventory", "fixed_asset")
     accounts = Account.objects.filter(
-        hotel=hotel, is_active=True, account_type__in=asset_types
-    ).exclude(system_key__in=("bank_control", "opening_balance_equity")).order_by("code")
+        hotel=hotel, is_active=True, account_type__in=asset_types,
+        opening_balance=Decimal("0.00"),
+    ).exclude(system_key__in=("bank_control", "opening_balance_equity")).exclude(
+        opening_balance_adjustments__status__in=("PENDING", "APPROVED")
+    ).distinct().order_by("code")
 
     if request.method == "POST":
         action = (request.POST.get("action") or "").strip()
