@@ -738,6 +738,7 @@ class FinancialOpeningBalanceAdjustmentTests(TestCase):
 
 class TrialBalanceCalculationTests(TestCase):
     def setUp(self):
+        from django.utils import timezone
         from django.contrib.auth import get_user_model
         from inventory.models import Hotel
         from accounting.models import Account, JournalEntry, JournalLine
@@ -779,6 +780,8 @@ class TrialBalanceCalculationTests(TestCase):
         )
 
     def test_trial_balance_includes_opening_balances_and_net_journal_activity(self):
+        from django.urls import reverse
+
         self.client.force_login(self.user)
         response = self.client.get(reverse("accounting:trial_balance"))
 
@@ -793,6 +796,7 @@ class TrialBalanceCalculationTests(TestCase):
         self.assertTrue(response.context["is_balanced"])
 
     def test_trial_balance_does_not_include_another_hotels_accounts(self):
+        from django.urls import reverse
         from inventory.models import Hotel
         from accounting.models import Account
 
