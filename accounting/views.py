@@ -1734,12 +1734,42 @@ def cash_deposit(request):
         },
     )
 
+def _accounting_operation_hotel(request):
+    """Resolve the hotel for a cash/bank operation with strict hotel scoping."""
+    from core.utils import get_user_hotels
+
+    accessible_hotels = get_user_hotels(request.user)
+    is_multi_hotel_user = request.user.role in ("DIRECTOR", "ADMIN")
+    if not is_multi_hotel_user and getattr(request.user, "hotel_id", None):
+        accessible_hotels = accessible_hotels.filter(pk=request.user.hotel_id)
+
+    selected_id = (request.POST.get("hotel") or request.GET.get("hotel") or "").strip()
+    if selected_id:
+        hotel = accessible_hotels.filter(pk=selected_id).first()
+    elif is_multi_hotel_user:
+        hotel = None
+    else:
+        hotel = accessible_hotels.first()
+
+    return accessible_hotels, hotel, is_multi_hotel_user
+
+
 @role_required("DIRECTOR", "ACCOUNTANT", "ADMIN")
 @transaction.atomic
 def bank_transfer(request):
-    hotel = request.user.hotel
+    accessible_hotels, hotel, show_hotel_selector = _accounting_operation_hotel(request)
+    if not hotel:
+        if request.method == "POST":
+            messages.error(request, "Select a hotel before recording this transfer.")
+        bank_accounts = BankAccount.objects.none()
+    else:
+        bank_accounts = (
+            BankAccount.objects.select_related("account")
+            .filter(hotel=hotel, is_active=True)
+            .order_by("-is_default", "bank_name", "account_name")
+        )
 
-    if request.method == "POST":
+    if request.method == "POST" and hotel:
         source_id = request.POST.get("source_bank")
         destination_id = request.POST.get("destination_bank")
         amount_raw = request.POST.get("amount", "").strip()
@@ -1747,50 +1777,28 @@ def bank_transfer(request):
 
         try:
             amount = Decimal(amount_raw)
-        except Exception:
-            messages.error(request, "Please enter a valid amount.")
-            return redirect("accounting:bank_transfer")
-
-        if amount <= 0:
-            messages.error(request, "Amount must be greater than zero.")
-            return redirect("accounting:bank_transfer")
+            if not amount.is_finite() or amount <= 0:
+                raise InvalidOperation
+        except (InvalidOperation, ValueError):
+            messages.error(request, "Enter a valid amount greater than zero.")
+            return redirect(f"{request.path}?hotel={hotel.pk}")
 
         if source_id == destination_id:
-            messages.error(
-                request,
-                "Source and destination bank accounts must be different.",
-            )
-            return redirect("accounting:bank_transfer")
+            messages.error(request, "Source and destination bank accounts must be different.")
+            return redirect(f"{request.path}?hotel={hotel.pk}")
 
-        source_bank = get_object_or_404(
-            BankAccount.objects.select_related("account"),
-            id=source_id,
-            hotel=hotel,
-            is_active=True,
-        )
-
-        destination_bank = get_object_or_404(
-            BankAccount.objects.select_related("account"),
-            id=destination_id,
-            hotel=hotel,
-            is_active=True,
-        )
+        source_bank = get_object_or_404(bank_accounts, pk=source_id)
+        destination_bank = get_object_or_404(bank_accounts, pk=destination_id)
+        if source_bank.pk == destination_bank.pk:
+            messages.error(request, "Choose two different bank accounts.")
+            return redirect(f"{request.path}?hotel={hotel.pk}")
 
         available_balance = source_bank.account.get_balance()
-
         if amount > available_balance:
-            messages.error(
-                request,
-                f"Insufficient funds in the source bank account. "
-                f"Available balance is ₦{available_balance:,.2f}.",
-            )
-            return redirect("accounting:bank_transfer")
+            messages.error(request, f"Insufficient funds. Available balance is ₦{available_balance:,.2f}.")
+            return redirect(f"{request.path}?hotel={hotel.pk}")
 
-        description = (
-            f"Bank transfer: {source_bank.bank_name} "
-            f"→ {destination_bank.bank_name}"
-        )
-
+        description = f"Bank transfer: {source_bank.bank_name} → {destination_bank.bank_name}"
         if note:
             description += f" — {note}"
 
@@ -1803,31 +1811,76 @@ def bank_transfer(request):
             created_by=request.user,
             reference=None,
         )
+        messages.success(request, f"Bank transfer of ₦{amount:,.2f} recorded successfully.")
+        return redirect(f"{request.path}?hotel={hotel.pk}")
 
-        messages.success(
-            request,
-            f"Bank transfer of ₦{amount:.2f} recorded successfully.",
+    return render(request, "accounting/bank_transfer.html", {
+        "bank_accounts": bank_accounts,
+        "hotel": hotel,
+        "hotels": accessible_hotels,
+        "show_hotel_selector": show_hotel_selector,
+        "operations_active": "bank_transfer",
+    })
+
+
+@role_required("DIRECTOR", "ACCOUNTANT", "ADMIN")
+@transaction.atomic
+def cash_deposit(request):
+    accessible_hotels, hotel, show_hotel_selector = _accounting_operation_hotel(request)
+    if not hotel:
+        if request.method == "POST":
+            messages.error(request, "Select a hotel before recording this deposit.")
+        bank_accounts = BankAccount.objects.none()
+    else:
+        bank_accounts = (
+            BankAccount.objects.select_related("account")
+            .filter(hotel=hotel, is_active=True)
+            .order_by("-is_default", "bank_name", "account_name")
         )
 
-        return redirect("accounting:bank_transfer")
+    if request.method == "POST" and hotel:
+        bank_account_id = request.POST.get("bank_account")
+        amount_raw = request.POST.get("amount", "").strip()
+        note = request.POST.get("note", "").strip()
 
-    bank_accounts = (
-        BankAccount.objects
-        .select_related("account")
-        .filter(
+        try:
+            amount = Decimal(amount_raw)
+            if not amount.is_finite() or amount <= 0:
+                raise InvalidOperation
+        except (InvalidOperation, ValueError):
+            messages.error(request, "Enter a valid amount greater than zero.")
+            return redirect(f"{request.path}?hotel={hotel.pk}")
+
+        bank_account = get_object_or_404(bank_accounts, pk=bank_account_id)
+        cash_account = get_system_account(hotel, "cash")
+        available_cash = cash_account.get_balance()
+        if amount > available_cash:
+            messages.error(request, f"Insufficient physical cash. Available cash is ₦{available_cash:,.2f}.")
+            return redirect(f"{request.path}?hotel={hotel.pk}")
+
+        description = f"Cash deposit to {bank_account.bank_name} ({bank_account.account_number})"
+        if note:
+            description += f" — {note}"
+
+        record_transaction(
+            debit_account=bank_account.account,
+            credit_account=cash_account,
+            amount=amount,
+            description=description,
             hotel=hotel,
-            is_active=True,
+            created_by=request.user,
+            reference=None,
         )
-        .order_by("-is_default", "bank_name")
-    )
+        messages.success(request, f"Cash deposit of ₦{amount:,.2f} recorded successfully.")
+        return redirect(f"{request.path}?hotel={hotel.pk}")
 
-    return render(
-        request,
-        "accounting/bank_transfer.html",
-        {
-            "bank_accounts": bank_accounts,
-        },
-    )
+    return render(request, "accounting/cash_deposit.html", {
+        "bank_accounts": bank_accounts,
+        "hotel": hotel,
+        "hotels": accessible_hotels,
+        "show_hotel_selector": show_hotel_selector,
+        "operations_active": "cash_deposit",
+    })
 
 
 @transaction.atomic
