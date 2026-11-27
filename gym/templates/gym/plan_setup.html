@@ -12,7 +12,7 @@
 .gym-setup select:focus,.gym-setup input:focus{outline:3px solid #dbeafe;border-color:#3b82f6}
 .gym-form-grid{display:grid;grid-template-columns:1.1fr 1fr auto auto;gap:16px;align-items:end;margin-top:18px}
 .gym-field label{display:block;font-size:13px;font-weight:750;color:#475569;margin-bottom:7px}
-.gym-field select,.gym-field input{width:100%;box-sizing:border-box}
+.gym-field select,.gym-field input:not([type=checkbox]){width:100%;box-sizing:border-box}.gym-field input[type=checkbox]{width:16px;height:16px;min-height:0}
 .gym-check{display:flex;align-items:center;gap:8px;min-height:44px;font-weight:700}
 .gym-btn{border:0;border-radius:10px;padding:12px 18px;background:#1d4ed8;color:#fff;font-weight:750;cursor:pointer;min-height:44px}
 .gym-btn:hover{background:#1e40af}
@@ -39,7 +39,7 @@
    <p class="gym-muted">{{ hotel.name }} · Package prices for this hotel</p>
    <form method="post">{% csrf_token %}<input type="hidden" name="hotel" value="{{ hotel.pk }}">
     {% if form.non_field_errors %}<p style="color:#b91c1c">{{ form.non_field_errors }}</p>{% endif %}
-    <div class="gym-form-grid">{% for field in form %}<div class="gym-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small style="color:#b91c1c">{{ error }}</small>{% endfor %}</div>{% endfor %}<div class="gym-field"><label>Availability</label><label class="gym-check"><input type="checkbox" checked disabled> Active by default</label></div><button class="gym-btn" type="submit">＋ Add package</button></div>
+    <div class="gym-form-grid">{% for field in form %}<div class="gym-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small style="color:#b91c1c">{{ error }}</small>{% endfor %}</div>{% endfor %}<button class="gym-btn" type="submit">＋ Add package</button></div>
    </form>
   {% else %}<p class="gym-muted">Choose a hotel with Gym enabled to configure its packages.</p>{% endif %}
  </section>
