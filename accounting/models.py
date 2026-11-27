@@ -395,7 +395,8 @@ class ExpenseObligation(models.Model):
 
     @property
     def paid_amount(self):
-        return self.payments.aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
+        from django.db.models import Sum
+        return self.payments.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
 
     @property
     def outstanding_amount(self):
