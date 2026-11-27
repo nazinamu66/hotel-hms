@@ -1,83 +1,18 @@
 {% extends "base/base.html" %}
-
-{% block title %}Cash Deposit{% endblock %}
-
+{% block title %}Cash Deposit | Accounting Operations{% endblock %}
 {% block content %}
-
-<div style="max-width:800px;margin:0 auto;padding:30px 20px;">
-
-    <h1>Cash Deposit</h1>
-
-    <p style="color:#666;">
-        Record physical hotel cash deposited into a hotel bank account.
-    </p>
-
-    <div style="padding:25px;border:1px solid #ddd;border-radius:10px;">
-
-        <form method="post">
-            {% csrf_token %}
-
-            <div style="margin-bottom:20px;">
-                <label style="display:block;font-weight:600;margin-bottom:7px;">
-                    Bank Account
-                </label>
-
-                <select
-                    name="bank_account"
-                    required
-                    style="width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;"
-                >
-                    <option value="">Select bank account</option>
-
-                    {% for bank in bank_accounts %}
-                        <option value="{{ bank.id }}">
-                            {{ bank.bank_name }}
-                            — {{ bank.account_name }}
-                            — {{ bank.account_number }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div style="margin-bottom:20px;">
-                <label style="display:block;font-weight:600;margin-bottom:7px;">
-                    Amount
-                </label>
-
-                <input
-                    type="number"
-                    name="amount"
-                    min="0.01"
-                    step="0.01"
-                    required
-                    style="width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;"
-                >
-            </div>
-
-            <div style="margin-bottom:20px;">
-                <label style="display:block;font-weight:600;margin-bottom:7px;">
-                    Note
-                </label>
-
-                <textarea
-                    name="note"
-                    rows="3"
-                    placeholder="Optional deposit note..."
-                    style="width:100%;padding:11px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;"
-                ></textarea>
-            </div>
-
-            <button
-                type="submit"
-                style="padding:12px 20px;border:0;border-radius:6px;background:#198754;color:white;font-weight:600;cursor:pointer;"
-            >
-                Record Cash Deposit
-            </button>
-
-        </form>
-
-    </div>
-
+<div class="ops-page">
+{% include "accounting/includes/operations_nav.html" %}
+<header class="ops-heading"><div class="ops-kicker">Accounting · Operations</div><h1>Cash Deposit</h1><p>{{ hotel.name|default:"Select a hotel" }} · Record physical hotel cash deposited into a hotel bank account.</p></header>
+{% if hotel %}
+<section class="ops-panel">
+{% if not bank_accounts %}<div class="ops-hint">No active bank accounts are configured for this hotel. Add a bank account before recording a cash deposit.</div>{% endif %}
+<form method="post">{% csrf_token %}<input type="hidden" name="hotel" value="{{ hotel.id }}">
+<div class="ops-field"><label for="deposit-bank">Bank account</label><select id="deposit-bank" name="bank_account" required><option value="">Choose destination bank account…</option>{% for bank in bank_accounts %}<option value="{{ bank.id }}">{{ bank.bank_name }} — {{ bank.account_name }} — {{ bank.account_number }}</option>{% endfor %}</select></div>
+<div class="ops-field"><label for="deposit-amount">Amount (NGN)</label><input id="deposit-amount" type="number" name="amount" min="0.01" step="0.01" placeholder="0.00" required></div>
+<div class="ops-field"><label for="deposit-note">Deposit note <span style="font-weight:500;color:#94a3b8">(optional)</span></label><textarea id="deposit-note" name="note" rows="3" placeholder="Add a deposit slip number or explanation…"></textarea></div>
+<button class="ops-submit" type="submit" {% if not bank_accounts %}disabled style="opacity:.5;cursor:not-allowed"{% endif %}>Record Cash Deposit</button>
+</form></section>
+{% else %}<div class="ops-panel"><div class="ops-hint">Choose a hotel above to load its bank accounts and continue.</div></div>{% endif %}
 </div>
-
 {% endblock %}
