@@ -34,45 +34,32 @@
 @media(max-width:900px){.spr-comparison-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.spr-period-meta{align-items:flex-start;flex-direction:column;gap:3px}.spr-period-meta span{text-align:left}}
 
-/* Spoilage report: align the entire page and its drill-down register with the dark Kitchen reporting workspace. */
-.main:has(.spr-page) { background:#0d1728 !important; }
-.main:has(.spr-page) > .content {
-  flex:1 1 auto; min-height:0;
-  background:linear-gradient(135deg,#10203a 0%,#0d1728 58%,#101d32 100%) !important;
-  color:#e7eefb !important;
-}
-.main:has(.spr-page) > .topbar {
-  background:#0d1728 !important; color:#f1f5f9 !important;
-  border-bottom:1px solid rgba(148,163,184,.17) !important;
-}
-.main:has(.spr-page) .sidebar { background:#0d1728; }
-.spr-page{color:#e7eefb}
-.spr-title{color:#f4f7ff !important}
-.spr-muted{color:#9aacc4 !important}
-.spr-card{
-  background:#15263d !important;border:1px solid #293d58 !important;
-  box-shadow:0 8px 24px rgba(0,0,0,.12) !important;color:#e7eefb !important;
-}
-.spr-field label,.spr-label{color:#9aacc4 !important}
-.spr-field input,.spr-field select{
-  background:#0e1b2e !important;color:#edf4ff !important;
-  border:1px solid #344b68 !important;color-scheme:dark;
-}
-.spr-field input:focus,.spr-field select:focus{outline:2px solid #5795ff;outline-offset:1px}
-.spr-chart-head{border-color:#293d58}
-.spr-chart-head h2{color:#edf4ff !important}
-.spr-chart-unit{background:#203650;color:#b9c9df}
-.spr-period-row{border-color:#293d58}
-.spr-period-meta strong{color:#e7eefb}
-.spr-period-meta span{color:#9aacc4}
-.spr-track{background:#263b56}
-.spr-table th{background:#0e1b2e !important;color:#9aacc4 !important}
-.spr-table td{border-color:#293d58 !important;color:#dce7f6 !important}
-.spr-table tbody tr:hover{background:#1b304b}
-.spr-status{background:#49351e;color:#ffd28a}
-.spr-status.reviewed{background:#123c36;color:#72e0bd}
-.spr-btn{background:#2563eb;color:#fff}
-.spr-btn:hover{background:#1d4ed8}
+
+/* CCH gold, bronze and ivory theme — Kitchen Spoilage Report */
+.spr-page{color:#302316!important;background:#faf8f4!important}
+.spr-title{color:#302316!important}
+.spr-muted{color:#6f6253!important}
+.spr-card{background:#fff!important;border:1px solid #e7ddce!important;color:#302316!important;box-shadow:0 6px 20px rgba(74,49,21,.055)!important}
+.spr-field label,.spr-label{color:#765a35!important}
+.spr-field input,.spr-field select{background:#fff!important;color:#302316!important;border:1px solid #d8cbb8!important;color-scheme:light}
+.spr-field input:focus,.spr-field select:focus{outline:2px solid rgba(201,154,78,.22)!important;border-color:#c99a4e!important}
+.spr-chart-head{border-color:#e7ddce!important}
+.spr-chart-head h2{color:#302316!important}
+.spr-chart-unit{background:#f3eadb!important;color:#704719!important}
+.spr-period-row{border-color:#eee5d8!important}
+.spr-period-meta strong{color:#594733!important}
+.spr-period-meta span{color:#6f6253!important}
+.spr-track{background:#eee5d8!important}
+.spr-month-bar{background:linear-gradient(90deg,#986126,#c99a4e)!important}
+.spr-week-bar{background:linear-gradient(90deg,#64856a,#8eae83)!important}
+.spr-table th{background:#f2eadc!important;color:#594733!important}
+.spr-table td{border-color:#eee5d8!important;color:#302316!important}
+.spr-table tbody tr:hover{background:#fbf6ed!important}
+.spr-status{background:#fff0d9!important;color:#80531f!important}
+.spr-status.reviewed{background:#e8f1e9!important;color:#28613c!important}
+.spr-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important;border:0!important}
+.spr-btn:hover{background:linear-gradient(110deg,#80531f,#b9853c)!important}
+
 </style>
 <div class="spr-page">
   <header class="spr-head">
