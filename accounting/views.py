@@ -2376,16 +2376,20 @@ def financial_opening_adjustments(request):
                 amount = Decimal("0.00")
             reason = (request.POST.get("reason") or "").strip()
             reference = (request.POST.get("reference") or "").strip()[:100]
+            confirmed_existing = request.POST.get("confirmed_existing_at_opening") == "on"
             if not account:
                 messages.error(request, "Choose an active asset account belonging to this hotel.")
             elif not amount.is_finite() or amount <= 0:
                 messages.error(request, "Enter an amount greater than zero.")
+            elif not confirmed_existing:
+                messages.error(request, "Confirm that this asset existed on the original opening date.")
             elif len(reason) < 10:
                 messages.error(request, "Provide a reason of at least 10 characters.")
             else:
                 FinancialOpeningBalanceAdjustment.objects.create(
                     hotel=hotel, account=account, amount=amount, reason=reason,
                     reference=reference, requested_by=request.user,
+                    confirmed_existing_at_opening=True,
                 )
                 messages.success(request, "Opening balance adjustment submitted for independent approval.")
                 return redirect("accounting:financial_opening_adjustments",)
