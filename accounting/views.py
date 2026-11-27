@@ -2287,6 +2287,8 @@ def financial_opening_balances(request):
 
     opening_equity = asset_total - liability_equity_total
     difference = asset_total - (liability_equity_total + opening_equity)
+    if request.method == "POST" and not errors and not any(preview.values()):
+        errors.append("Enter at least one non-zero opening balance before confirming this setup.")
     for account in accounts:
         account.initial_opening_balance = preview.get(account.pk, account.opening_balance)
 
