@@ -1922,3 +1922,155 @@ input, select, textarea { font-size: 16px; }
     grid-template-columns:minmax(0,1fr);
   }
 }
+
+
+/* =========================================================
+   CITY CENTER HOTELS — unified gold, bronze & ivory theme
+   Applies consistently to management and operational roles.
+   ========================================================= */
+:root {
+    --hms-ink: #302316;
+    --hms-muted: #786b5c;
+    --hms-border: #e8dfd2;
+    --hms-surface: #ffffff;
+    --hms-page: #faf8f4;
+    --hms-primary: #a8752d;
+    --hms-primary-dark: #80531f;
+    --hms-radius: 14px;
+    --hms-shadow: 0 8px 24px rgba(74, 49, 21, .07);
+    --cch-gold: #c99a4e;
+    --cch-bronze: #986126;
+    --cch-espresso: #211910;
+    --cch-ivory: #faf8f4;
+}
+html, body { background: var(--cch-ivory); color: var(--hms-ink); }
+.sidebar {
+    background: linear-gradient(180deg, #211910 0%, #302316 100%) !important;
+    color: #fff8eb;
+    border-right: 1px solid rgba(201,154,78,.22);
+}
+.sidebar h4 { color: #d8bd91; }
+.sidebar h4:hover, .sidebar h4.active-menu {
+    background: rgba(201,154,78,.16);
+    color: #fff4dc;
+}
+.sidebar strong { color: #c5a875; }
+.sidebar a { color: #f3e9d8; }
+.sidebar a:hover, .sidebar a[aria-current="page"] {
+    background: rgba(201,154,78,.18);
+    color: #f6d89f;
+}
+.sidebar .menu-subtoggle { color: #d7c4a5; }
+.sidebar .menu-subtoggle:hover { background: rgba(201,154,78,.15); color: #fff4dc; }
+.mobile-sidebar-head { background: #211910 !important; }
+.main, .content { background: var(--cch-ivory) !important; color: var(--hms-ink); }
+.topbar {
+    background: #fff !important;
+    color: var(--hms-ink) !important;
+    border-bottom: 1px solid var(--hms-border) !important;
+    box-shadow: 0 2px 8px rgba(74,49,21,.035);
+}
+.card, .hms-card, .hms-kpi {
+    background: #fff;
+    border-color: var(--hms-border);
+    box-shadow: var(--hms-shadow);
+}
+.content h1, .content h2, .content h3,
+.hms-page-title, .hms-card-title { color: var(--hms-ink); }
+.hms-eyebrow { color: var(--cch-bronze); }
+.btn-primary, .hms-btn-primary, button.btn-primary,
+input[type="submit"], .content button[type="submit"] {
+    background: linear-gradient(110deg, #986126, #c99a4e);
+    border-color: #b9853c;
+    color: #fff;
+}
+.btn-primary:hover, .hms-btn-primary:hover,
+.content button[type="submit"]:hover, input[type="submit"]:hover {
+    background: linear-gradient(110deg, #80531f, #b9853c);
+    color: #fff;
+    box-shadow: 0 5px 14px rgba(152,97,38,.2);
+}
+a, .hms-link { color: var(--cch-bronze); }
+a:hover, .hms-link:hover { color: #704719; }
+input:focus, select:focus, textarea:focus,
+.hms-field input:focus, .hms-field select:focus, .hms-field textarea:focus {
+    outline: 3px solid rgba(201,154,78,.18);
+    border-color: var(--cch-gold);
+}
+.table thead, .hms-table th { background: #f5efe5; color: #6c5638; }
+.table tbody tr:hover, .hms-table tbody tr:hover { background: #fcf8f1; }
+.notification-badge { background: #986126; }
+
+/* Remove the old role/page-specific navy executive shell. */
+.main:has(.management-frontdesk),
+.main:has(.management-reservations),
+.main:has(.management-custom-reports),
+.main:has(.kitchen-management-report),
+.main:has(.kir-page),
+.main:has(.kird-page),
+.main:has(.kbp-page),
+.main:has(.production-page) {
+    background: var(--cch-ivory) !important;
+}
+.main:has(.management-frontdesk) > .content,
+.main:has(.management-reservations) > .content,
+.main:has(.management-custom-reports) > .content,
+.main:has(.kitchen-management-report) > .content,
+.main:has(.kir-page) > .content,
+.main:has(.kird-page) > .content,
+.main:has(.kbp-page) > .content,
+.main:has(.production-page) > .content {
+    background: var(--cch-ivory) !important;
+    color: var(--hms-ink) !important;
+}
+.main:has(.management-frontdesk) > .topbar,
+.main:has(.management-reservations) > .topbar,
+.main:has(.management-custom-reports) > .topbar,
+.main:has(.kitchen-management-report) > .topbar,
+.main:has(.kir-page) > .topbar,
+.main:has(.kird-page) > .topbar,
+.main:has(.kbp-page) > .topbar,
+.main:has(.production-page) > .topbar {
+    background: #fff !important;
+    color: var(--hms-ink) !important;
+    border-bottom: 1px solid var(--hms-border) !important;
+}
+
+/* Shared report surfaces: convert former dark panels into white cards. */
+.management-frontdesk, .management-reservations, .management-custom-reports,
+.kitchen-management-report, .kir-page, .kird-page, .kbp-page {
+    color: var(--hms-ink) !important;
+}
+.management-frontdesk [class*="card"],
+.management-frontdesk [class*="panel"],
+.management-reservations [class*="card"],
+.management-reservations [class*="panel"],
+.management-custom-reports [class*="card"],
+.management-custom-reports [class*="panel"],
+.kitchen-management-report [class*="card"],
+.kitchen-management-report [class*="panel"],
+.kir-page [class*="card"], .kir-page [class*="panel"],
+.kird-page [class*="card"], .kird-page [class*="panel"],
+.kbp-page [class*="card"], .kbp-page [class*="panel"] {
+    background: #fff !important;
+    color: var(--hms-ink) !important;
+    border-color: var(--hms-border) !important;
+    box-shadow: var(--hms-shadow);
+}
+.management-frontdesk h1, .management-frontdesk h2, .management-frontdesk h3,
+.management-reservations h1, .management-reservations h2, .management-reservations h3,
+.management-custom-reports h1, .management-custom-reports h2, .management-custom-reports h3,
+.kitchen-management-report h1, .kitchen-management-report h2, .kitchen-management-report h3,
+.kir-page h1, .kir-page h2, .kir-page h3,
+.kird-page h1, .kird-page h2, .kird-page h3,
+.kbp-page h1, .kbp-page h2, .kbp-page h3 {
+    color: var(--hms-ink) !important;
+}
+.management-frontdesk a, .management-reservations a,
+.management-custom-reports a, .kitchen-management-report a,
+.kir-page a, .kird-page a, .kbp-page a {
+    color: var(--cch-bronze);
+}
+@media (prefers-reduced-motion: no-preference) {
+    .sidebar a, .btn, .hms-btn { transition: background .16s ease, color .16s ease, box-shadow .16s ease; }
+}
