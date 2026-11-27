@@ -754,17 +754,17 @@ def account_ledger_export_xlsx(request, account_id):
     wb = Workbook()
     ws = wb.active
     ws.title = "Account Ledger"
-    ws.merge_cells("A1:G1")
+    ws.merge_cells("A1:H1")
     ws["A1"] = account.hotel.name.upper()
     ws["A1"].font = Font(size=16, bold=True, color="FFFFFF")
     ws["A1"].fill = PatternFill("solid", fgColor="14233B")
     ws["A1"].alignment = Alignment(horizontal="left")
-    ws.merge_cells("A2:G2")
+    ws.merge_cells("A2:H2")
     ws["A2"] = "GENERAL LEDGER STATEMENT"
     ws["A2"].font = Font(size=13, bold=True, color="1D4ED8")
-    ws.merge_cells("A3:G3")
+    ws.merge_cells("A3:H3")
     ws["A3"] = f"Account {account.code} · {account.name} · {account.get_account_type_display()}"
-    ws.merge_cells("A4:G4")
+    ws.merge_cells("A4:H4")
     period = f'{context["start_date"] or "Beginning"} to {context["end_date"] or "Current"}'
     posted = context["selected_user"].get_full_name() or context["selected_user"].username if context["selected_user"] else "All users"
     ws["A4"] = f"Period: {period}    |    Posted by: {posted}"
@@ -800,7 +800,7 @@ def account_ledger_export_xlsx(request, account_id):
     ws.freeze_panes = "A9"
     ws.auto_filter.ref = f"A8:H{max(8, ws.max_row-1)}"
     ws.sheet_view.showGridLines = False
-    for row in ws.iter_rows(min_row=8, max_col=2):
+    for row in ws.iter_rows(min_row=9, max_col=2):
         for cell in row:
             cell.number_format = "dd mmm yyyy"
     output = BytesIO()
@@ -839,7 +839,7 @@ def account_ledger_export_pdf(request, account_id):
     styles.add(ParagraphStyle(name="SubTitleLedger", parent=styles["Normal"], fontSize=9, textColor=colors.HexColor("#64748B"), spaceAfter=8))
     styles.add(ParagraphStyle(name="CellLedger", parent=styles["Normal"], fontSize=7, leading=9))
     styles.add(ParagraphStyle(name="CellRightLedger", parent=styles["CellLedger"], alignment=TA_RIGHT))
-    money = lambda value: f"₦{value:,.2f}"
+    money = lambda value: f"NGN {value:,.2f}"
     story = [
         Paragraph(account.hotel.name.upper(), styles["HotelTitle"]),
         Paragraph("GENERAL LEDGER STATEMENT", styles["Heading2"]),
