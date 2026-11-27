@@ -1707,8 +1707,7 @@ def staff_reimbursements(request):
             messages.error(request, f"Reimbursement action failed; no payment was confirmed: {exc}")
         return redirect(f"{request.path}?hotel={hotel.pk}")
 
-    # Create a claim for each staff-funded urgent purchase approved by
-    # management. OneToOne keeps a purchase from being claimed twice.
+    # Create each eligible claim once. The OneToOne relation prevents duplicates.
     for purchase in DirectPurchase.objects.filter(
         supplier__hotel=hotel, urgent_purchase=True, payment_source="STAFF_FUNDS",
         status__in=("APPROVED", "PARTIALLY_RECEIVED", "RECEIVED"),
@@ -1716,21 +1715,97 @@ def staff_reimbursements(request):
         if purchase.requested_by_id:
             StaffReimbursement.objects.get_or_create(
                 hotel=hotel, direct_purchase=purchase,
-                defaults={
-                    "claimant": purchase.requested_by,
-                    "amount": purchase.total_cost,
-                    "status": "PENDING",
-                },
+                defaults={"claimant": purchase.requested_by, "amount": purchase.total_cost, "status": "PENDING"},
             )
 
-    claims = StaffReimbursement.objects.filter(hotel=hotel).select_related(
+    from django.db.models import Count, Sum, Q
+    from django.core.paginator import Paginator
+    from django.utils.dateparse import parse_date
+
+    base_claims = StaffReimbursement.objects.filter(hotel=hotel).select_related(
         "direct_purchase", "direct_purchase__supplier", "claimant", "reviewed_by",
-        "payment_account", "paid_by",
+        "payment_account", "paid_by", "liability_journal", "payment_journal",
     )
+    today = timezone.localdate()
+    raw_start = (request.GET.get("start_date") or "").strip()
+    raw_end = (request.GET.get("end_date") or "").strip()
+    start_date, end_date = parse_date(raw_start) if raw_start else None, parse_date(raw_end) if raw_end else None
+    filter_error = ""
+    if raw_start and not start_date or raw_end and not end_date:
+        start_date = end_date = None
+        filter_error = "Enter valid dates to filter the register."
+    elif start_date and end_date and start_date > end_date:
+        start_date = end_date = None
+        filter_error = "The start date must be on or before the end date."
+
+    query = (request.GET.get("q") or "").strip()
+    status_filter = (request.GET.get("status") or "").strip().upper()
+    purchase_status_filter = (request.GET.get("purchase_status") or "").strip().upper()
+    staff_filter = (request.GET.get("staff") or "").strip()
+    claims = base_claims
+    if query:
+        search = Q(claimant__first_name__icontains=query) | Q(claimant__last_name__icontains=query) | Q(claimant__username__icontains=query) | Q(direct_purchase__supplier__name__icontains=query) | Q(payment_reference__icontains=query)
+        if query.upper().startswith("RB-") and query[3:].isdigit():
+            search |= Q(pk=int(query[3:]))
+        elif query.isdigit():
+            search |= Q(pk=int(query)) | Q(direct_purchase_id=int(query))
+        claims = claims.filter(search)
+    valid_statuses = {choice[0] for choice in StaffReimbursement.STATUS_CHOICES}
+    if status_filter in valid_statuses:
+        claims = claims.filter(status=status_filter)
+    if purchase_status_filter in {"APPROVED", "PARTIALLY_RECEIVED", "RECEIVED"}:
+        claims = claims.filter(direct_purchase__status=purchase_status_filter)
+    if staff_filter.isdigit():
+        claims = claims.filter(claimant_id=staff_filter)
+    if start_date:
+        claims = claims.filter(created_at__date__gte=start_date)
+    if end_date:
+        claims = claims.filter(created_at__date__lte=end_date)
+
+    totals = base_claims.aggregate(
+        pending_count=Count("id", filter=Q(status="PENDING")),
+        approved_count=Count("id", filter=Q(status="APPROVED")),
+        paid_count=Count("id", filter=Q(status="PAID")),
+        total_count=Count("id"),
+        pending_amount=Sum("amount", filter=Q(status="PENDING")),
+        approved_amount=Sum("amount", filter=Q(status="APPROVED")),
+        paid_amount=Sum("amount", filter=Q(status="PAID")),
+    )
+    paginator = Paginator(claims, 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    staff_members = base_claims.order_by().values("claimant_id", "claimant__first_name", "claimant__last_name", "claimant__username").distinct().order_by("claimant__first_name", "claimant__last_name", "claimant__username")
     payment_accounts = Account.objects.filter(
         hotel=hotel, account_type__in=("cash", "bank"), is_active=True, allow_posting=True
     ).order_by("code")
     return render(request, "accounting/staff_reimbursements.html", {
-        "hotel": hotel, "hotels": hotels, "claims": claims,
-        "payment_accounts": payment_accounts, "today": date.today(),
+        "hotel": hotel, "hotels": hotels, "claims": page_obj.object_list,
+        "page_obj": page_obj, "payment_accounts": payment_accounts, "today": today,
+        "totals": totals, "query": query, "status_filter": status_filter,
+        "purchase_status_filter": purchase_status_filter, "staff_filter": staff_filter,
+        "staff_members": staff_members, "start_date": raw_start, "end_date": raw_end,
+        "filter_error": filter_error,
+    })
+
+
+@role_required("MANAGER", "GENERAL_MANAGER", "ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def staff_reimbursement_detail(request, claim_id):
+    from core.utils import get_user_hotels
+    from accounting.models import StaffReimbursement
+
+    hotels = get_user_hotels(request.user)
+    hotel_id = request.GET.get("hotel") or ""
+    if request.user.role != "DIRECTOR" and getattr(request.user, "hotel_id", None):
+        hotels = hotels.filter(pk=request.user.hotel_id)
+    hotel = hotels.filter(pk=hotel_id).first() if hotel_id else hotels.first()
+    if not hotel:
+        raise PermissionDenied("No accessible hotel is available.")
+    claim = get_object_or_404(
+        StaffReimbursement.objects.select_related(
+            "direct_purchase", "direct_purchase__supplier", "claimant", "reviewed_by",
+            "payment_account", "paid_by", "liability_journal", "payment_journal",
+        ),
+        pk=claim_id, hotel=hotel,
+    )
+    return render(request, "accounting/staff_reimbursement_detail.html", {
+        "hotel": hotel, "claim": claim,
     })
