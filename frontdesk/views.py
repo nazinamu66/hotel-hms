@@ -718,7 +718,7 @@ def folio_invoice(request, folio_id):
     )
 
 
-@role_required("FRONTDESK", "MANAGER", "ADMIN", "DIRECTOR", "SECURITY")
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
 def police_guest_register(request):
     """Printable, hotel-scoped snapshot of guests with active room stays."""
     from django.utils import timezone
