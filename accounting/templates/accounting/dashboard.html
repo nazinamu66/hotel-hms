@@ -11,7 +11,16 @@
 .acct-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:20px;box-shadow:0 6px 22px rgba(15,23,42,.04);margin-bottom:18px}
 .acct-filter{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
 .acct-filter label{display:block;font-size:.78rem;font-weight:800;color:#475569;margin-bottom:6px}
-.acct-filter select{min-width:260px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font:inherit}
+.acct-filter select,.acct-filter input{min-width:190px;padding:10px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font:inherit}
+.acct-filter button{padding:11px 17px;border:0;border-radius:9px;background:#1d4ed8;color:#fff;font-weight:800;cursor:pointer}
+.acct-filter .reset{padding:10px 12px;color:#475569;text-decoration:none;font-weight:750}
+.acct-filter-error{color:#b91c1c;font-size:.82rem;font-weight:700;margin-top:10px}
+.acct-chart-click{display:block;text-decoration:none;color:inherit;border-radius:8px;padding:3px 4px;margin:-3px -4px;transition:background .15s}
+.acct-chart-click:hover{background:#eff6ff}
+.acct-chart-click:focus-visible,.acct-key-link:focus-visible{outline:2px solid #2563eb;outline-offset:3px}
+.acct-key-link{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:center;text-decoration:none;color:inherit;border-radius:6px;padding:2px}
+.acct-key-link:hover span:nth-child(2){color:#1d4ed8;text-decoration:underline}
+.acct-period{font-size:.76rem;color:#64748b;font-weight:700}
 .acct-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px}
 .acct-metric{background:#fff;border:1px solid #e2e8f0;border-radius:15px;padding:18px;min-width:0}
 .acct-metric span{display:block;color:#64748b;font-size:.82rem;font-weight:700}
@@ -77,6 +86,18 @@
     </div>
   </header>
 
+  <section class="acct-card">
+    <form method="get" class="acct-filter">
+      {% if user.role == "DIRECTOR" and hotels|length > 1 %}<input type="hidden" name="hotel" value="{{ hotel.pk }}">{% endif %}
+      <div><label for="start_date">From</label><input type="date" id="start_date" name="start_date" value="{{ filter_start|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" required></div>
+      <div><label for="end_date">To</label><input type="date" id="end_date" name="end_date" value="{{ filter_end|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" required></div>
+      <button type="submit">Apply dates</button>
+      <a class="reset" href="{% url 'accounting:dashboard' %}{% if user.role == 'DIRECTOR' and hotels|length > 1 %}?hotel={{ hotel.pk }}{% endif %}">Reset</a>
+    </form>
+    {% if date_filter_error %}<p class="acct-filter-error">{{ date_filter_error }}</p>{% endif %}
+    <p class="acct-period">Showing journal activity from {{ filter_start|date:"d M Y" }} to {{ filter_end|date:"d M Y" }}</p>
+  </section>
+
   {% if user.role == "DIRECTOR" and hotels|length > 1 %}
   <section class="acct-card">
     <form method="get" class="acct-filter">
@@ -93,9 +114,9 @@
   <section class="acct-metrics">
     <article class="acct-metric"><span>Cash on hand</span><strong>₦{{ cash_balance|floatformat:2 }}</strong><small>Current ledger balance</small></article>
     <article class="acct-metric"><span>Bank balances</span><strong>₦{{ bank_balance|floatformat:2 }}</strong><small>All active bank accounts</small></article>
-    <article class="acct-metric"><span>Revenue this month</span><strong>₦{{ revenue_month|floatformat:2 }}</strong><small>Posted journal activity</small></article>
-    <article class="acct-metric"><span>Expenses this month</span><strong>₦{{ expenses_month|floatformat:2 }}</strong><small>Posted journal activity</small></article>
-    <article class="acct-metric"><span>Net operating result</span><strong>₦{{ net_profit_month|floatformat:2 }}</strong><small>{{ profit_margin|floatformat:1 }}% margin on revenue</small></article>
+    <article class="acct-metric"><span>Revenue in period</span><strong>₦{{ revenue_month|floatformat:2 }}</strong><small>Posted journal activity</small></article>
+    <article class="acct-metric"><span>Expenses in period</span><strong>₦{{ expenses_month|floatformat:2 }}</strong><small>Posted journal activity</small></article>
+    <article class="acct-metric"><span>Net result in period</span><strong>₦{{ net_profit_month|floatformat:2 }}</strong><small>{{ profit_margin|floatformat:1 }}% margin on revenue</small></article>
     <article class="acct-metric"><span>Accounts payable</span><strong>₦{{ payables_balance|floatformat:2 }}</strong><small>Supplier liability balance</small></article>
     <article class="acct-metric"><span>Pending reimbursements</span><strong>{{ pending_reimbursements }}</strong><small>Claims awaiting review</small></article>
   </section>
@@ -103,26 +124,28 @@
   <section class="acct-chart-grid">
     <article class="acct-card">
       <h2 class="acct-section-title">Revenue vs expenses</h2>
-      <p class="acct-sub" style="margin:-7px 0 17px">Monthly income and expense movement · Last six months</p>
+      <p class="acct-sub" style="margin:-7px 0 17px">Monthly income and expense movement · Selected date range</p>
       <div class="acct-legend"><span><i style="background:#2563eb"></i>Revenue</span><span><i style="background:#f59e0b"></i>Expenses</span></div>
       {% if monthly_chart %}
         {% for month in monthly_chart %}
-        <div class="acct-month">
-          <span class="acct-month-label">{{ month.label }}</span>
-          <div class="acct-bars" title="Revenue ₦{{ month.revenue|floatformat:2 }} · Expenses ₦{{ month.expenses|floatformat:2 }}">
-            <div class="acct-bar-track"><div class="acct-bar acct-revenue" style="width:{{ month.revenue_pct }}%"></div></div>
-            <div class="acct-bar-track"><div class="acct-bar acct-expense" style="width:{{ month.expenses_pct }}%"></div></div>
+        <a class="acct-chart-click" href="{% url 'accounting:journal' %}?start_date={{ month.start_date }}&amp;end_date={{ month.end_date }}{% if user.role == 'DIRECTOR' and hotels|length > 1 %}&amp;hotel={{ hotel.pk }}{% endif %}" title="Open journal entries for {{ month.label }}">
+          <div class="acct-month">
+            <span class="acct-month-label">{{ month.label }}</span>
+            <div class="acct-bars" title="Revenue ₦{{ month.revenue|floatformat:2 }} · Expenses ₦{{ month.expenses|floatformat:2 }}">
+              <div class="acct-bar-track"><div class="acct-bar acct-revenue" style="width:{{ month.revenue_pct }}%"></div></div>
+              <div class="acct-bar-track"><div class="acct-bar acct-expense" style="width:{{ month.expenses_pct }}%"></div></div>
+            </div>
           </div>
-        </div>
+        </a>
         <div class="acct-trend-value">Revenue ₦{{ month.revenue|floatformat:0 }} · Expenses ₦{{ month.expenses|floatformat:0 }}</div>
         {% endfor %}
       {% else %}<div class="acct-chart-empty">No financial activity is available for this period.</div>{% endif %}
-      <div class="acct-net-note"><span>Net result this month</span><strong>₦{{ net_profit_month|floatformat:2 }}</strong></div>
+      <div class="acct-net-note"><span>Net result in period</span><strong>₦{{ net_profit_month|floatformat:2 }}</strong></div>
       <p class="acct-sub" style="font-size:.74rem">Based on income and expense journal lines for this hotel. This is not a cash-flow figure.</p>
     </article>
     <article class="acct-card">
       <h2 class="acct-section-title">Expense composition</h2>
-      <p class="acct-sub" style="margin:-7px 0 20px">Largest expense accounts · This month</p>
+      <p class="acct-sub" style="margin:-7px 0 20px">Largest expense accounts · Selected period</p>
       {% if expense_breakdown %}
       <div class="acct-donut-layout">
         <div class="acct-donut" style="background:{{ expense_donut_style }}">
@@ -130,14 +153,16 @@
         </div>
         <div class="acct-key">
           {% for item in expense_composition %}
-          <div class="acct-key-row"><i class="acct-key-dot" style="background:{{ item.color }}"></i><span title="{{ item.name }}">{{ item.name }}</span><strong>{{ item.share_pct|floatformat:0 }}%</strong></div>
+          {% if item.account_id %}<a class="acct-key-link" href="{% url 'accounting:ledger' item.account_id %}?start_date={{ filter_start|date:'Y-m-d' }}&amp;end_date={{ filter_end|date:'Y-m-d' }}" title="Open {{ item.name }} ledger">{% else %}<div class="acct-key-row">{% endif %}
+            <i class="acct-key-dot" style="background:{{ item.color }}"></i><span title="{{ item.name }}">{{ item.name }}</span><strong>{{ item.share_pct|floatformat:0 }}%</strong>
+          {% if item.account_id %}</a>{% else %}</div>{% endif %}
           {% endfor %}
         </div>
       </div>
       <div class="acct-breakdown" style="margin-top:20px">
         {% for item in expense_breakdown %}
         <div class="acct-breakdown-row">
-          <div class="acct-breakdown-head"><span>{{ item.name }}</span><strong>₦{{ item.amount|floatformat:2 }}</strong></div>
+          <div class="acct-breakdown-head"><a href="{% url 'accounting:ledger' item.account_id %}?start_date={{ filter_start|date:'Y-m-d' }}&amp;end_date={{ filter_end|date:'Y-m-d' }}" style="color:inherit;text-decoration:none;font-weight:700">{{ item.name }}</a><strong>₦{{ item.amount|floatformat:2 }}</strong></div>
           <div class="acct-expense-track"><div class="acct-expense-fill" style="width:{{ item.pct }}%;background:{{ item.color }}"></div></div>
         </div>
         {% endfor %}
@@ -149,15 +174,17 @@
   <section class="acct-chart-grid equal">
     <article class="acct-card">
       <h2 class="acct-section-title">Cash and bank movement</h2>
-      <p class="acct-sub" style="margin:-7px 0 17px">Net ledger movement · Last six months</p>
+      <p class="acct-sub" style="margin:-7px 0 17px">Net ledger movement · Selected date range</p>
       <div class="acct-legend"><span><i style="background:#0f766e"></i>Net inflow</span><span><i style="background:#e11d48"></i>Net outflow</span></div>
       {% if cash_flow_chart %}
         {% for month in cash_flow_chart %}
-        <div class="acct-flow-row">
-          <span class="acct-month-label">{{ month.label }}</span>
-          <div class="acct-flow-track"><div class="acct-flow-fill {% if month.positive %}acct-flow-positive{% else %}acct-flow-negative{% endif %}" style="width:{{ month.pct }}%"></div></div>
-          <strong style="font-size:.78rem;text-align:right;white-space:nowrap">₦{{ month.amount|floatformat:0 }}</strong>
-        </div>
+        <a class="acct-chart-click" href="{% url 'accounting:journal' %}?start_date={{ month.start_date }}&amp;end_date={{ month.end_date }}" title="Open journal entries for {{ month.label }}">
+          <div class="acct-flow-row">
+            <span class="acct-month-label">{{ month.label }}</span>
+            <div class="acct-flow-track"><div class="acct-flow-fill {% if month.positive %}acct-flow-positive{% else %}acct-flow-negative{% endif %}" style="width:{{ month.pct }}%"></div></div>
+            <strong style="font-size:.78rem;text-align:right;white-space:nowrap">₦{{ month.amount|floatformat:0 }}</strong>
+          </div>
+        </a>
         {% endfor %}
       {% else %}<div class="acct-chart-empty">No cash or bank movements found.</div>{% endif %}
       <p class="acct-sub" style="font-size:.74rem">Calculated from debit and credit movements in cash and bank accounts. Transfers between these accounts may offset in the combined total.</p>
