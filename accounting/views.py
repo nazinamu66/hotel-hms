@@ -22,10 +22,12 @@ from accounting.services.journal import record_transaction, get_system_account
 
 @role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def accounting_dashboard(request):
-    """Hotel-scoped accounting overview; no figures are combined across hotels."""
+    """Hotel-scoped finance dashboard with six-month trends and expense analysis."""
     from datetime import date
+    from decimal import Decimal
     from django.db.models import Sum
     from django.utils import timezone
+    from django.db.models.functions import TruncMonth
     from core.utils import get_user_hotels
     from accounting.models import StaffReimbursement
 
@@ -46,8 +48,6 @@ def accounting_dashboard(request):
     cash_balance = Decimal("0.00")
     bank_balance = Decimal("0.00")
     payables_balance = Decimal("0.00")
-    revenue_month = Decimal("0.00")
-    expenses_month = Decimal("0.00")
     for account in accounts:
         balance = account.get_balance()
         if account.account_type == "cash":
@@ -56,22 +56,100 @@ def accounting_dashboard(request):
             bank_balance += balance
         elif account.system_key == "accounts_payable":
             payables_balance += balance
-        if account.account_type in INCOME_TYPES:
-            totals = JournalLine.objects.filter(
-                account=account, journal__hotel=hotel,
-                journal__date__gte=month_start, journal__date__lte=today,
-            ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
-            revenue_month += (totals["credit"] or Decimal("0.00")) - (totals["debit"] or Decimal("0.00"))
-        elif account.account_type in EXPENSE_TYPES:
-            totals = JournalLine.objects.filter(
-                account=account, journal__hotel=hotel,
-                journal__date__gte=month_start, journal__date__lte=today,
-            ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
-            expenses_month += (totals["debit"] or Decimal("0.00")) - (totals["credit"] or Decimal("0.00"))
 
-    pending_reimbursements = StaffReimbursement.objects.filter(
-        hotel=hotel, status="PENDING"
-    ).count()
+    monthly_totals = (
+        JournalLine.objects.filter(
+            journal__hotel=hotel,
+            journal__date__gte=(month_start.replace(day=1) - __import__("datetime").timedelta(days=155)),
+            journal__date__lte=today,
+        )
+        .values("account__account_type")
+        .annotate(total_debit=Sum("debit"), total_credit=Sum("credit"))
+    )
+    # Build the six calendar-month buckets using the journal's actual posting dates.
+    from datetime import timedelta
+    first_month = (month_start.replace(day=1) - timedelta(days=155)).replace(day=1)
+    monthly_rows = (
+        JournalLine.objects.filter(
+            journal__hotel=hotel,
+            journal__date__gte=first_month,
+            journal__date__lte=today,
+            account__account_type__in=tuple(INCOME_TYPES) + tuple(EXPENSE_TYPES),
+        )
+        .annotate(month=TruncMonth("journal__date"))
+        .values("month", "account__account_type")
+        .annotate(debit=Sum("debit"), credit=Sum("credit"))
+        .order_by("month")
+    )
+    monthly_map = {}
+    for row in monthly_rows:
+        key = row["month"].date().replace(day=1) if hasattr(row["month"], "date") else row["month"].replace(day=1)
+        bucket = monthly_map.setdefault(key, {"revenue": Decimal("0.00"), "expenses": Decimal("0.00")})
+        debit = row["debit"] or Decimal("0.00")
+        credit = row["credit"] or Decimal("0.00")
+        if row["account__account_type"] in INCOME_TYPES:
+            bucket["revenue"] += credit - debit
+        elif row["account__account_type"] in EXPENSE_TYPES:
+            bucket["expenses"] += debit - credit
+
+    month_keys = []
+    cursor = first_month
+    for _ in range(6):
+        month_keys.append(cursor)
+        cursor = (cursor.replace(day=28) + timedelta(days=4)).replace(day=1)
+    monthly_chart = []
+    max_month_value = max(
+        [max(values["revenue"], values["expenses"]) for values in monthly_map.values()] or [Decimal("0.00")]
+    )
+    max_month_value = max_month_value or Decimal("1.00")
+    for key in month_keys:
+        values = monthly_map.get(key, {"revenue": Decimal("0.00"), "expenses": Decimal("0.00")})
+        monthly_chart.append({
+            "label": key.strftime("%b %Y"),
+            "revenue": values["revenue"],
+            "expenses": values["expenses"],
+            "revenue_pct": min(100, float(values["revenue"] / max_month_value * 100)),
+            "expenses_pct": min(100, float(values["expenses"] / max_month_value * 100)),
+        })
+
+    current_totals = JournalLine.objects.filter(
+        journal__hotel=hotel,
+        journal__date__gte=month_start,
+        journal__date__lte=today,
+        account__account_type__in=INCOME_TYPES,
+    ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
+    revenue_month = (current_totals["credit"] or Decimal("0.00")) - (current_totals["debit"] or Decimal("0.00"))
+
+    expense_rows = (
+        JournalLine.objects.filter(
+            journal__hotel=hotel,
+            journal__date__gte=month_start,
+            journal__date__lte=today,
+            account__account_type__in=EXPENSE_TYPES,
+        )
+        .values("account__name")
+        .annotate(debit=Sum("debit"), credit=Sum("credit"))
+        .order_by("-debit")[:6]
+    )
+    expense_breakdown = []
+    for row in expense_rows:
+        amount = (row["debit"] or Decimal("0.00")) - (row["credit"] or Decimal("0.00"))
+        if amount > 0:
+            expense_breakdown.append({"name": row["account__name"], "amount": amount})
+    expenses_month = sum((item["amount"] for item in expense_breakdown), Decimal("0.00"))
+    # KPI total includes every expense account, not only the six displayed categories.
+    expense_totals = JournalLine.objects.filter(
+        journal__hotel=hotel,
+        journal__date__gte=month_start,
+        journal__date__lte=today,
+        account__account_type__in=EXPENSE_TYPES,
+    ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
+    expenses_month = (expense_totals["debit"] or Decimal("0.00")) - (expense_totals["credit"] or Decimal("0.00"))
+    max_expense = max([item["amount"] for item in expense_breakdown] or [Decimal("1.00")])
+    for item in expense_breakdown:
+        item["pct"] = min(100, float(item["amount"] / max_expense * 100))
+
+    pending_reimbursements = StaffReimbursement.objects.filter(hotel=hotel, status="PENDING").count()
     recent_entries = (
         JournalEntry.objects.filter(hotel=hotel)
         .select_related("created_by")
@@ -79,16 +157,12 @@ def accounting_dashboard(request):
         .order_by("-date", "-id")[:8]
     )
     return render(request, "accounting/dashboard.html", {
-        "hotel": hotel,
-        "hotels": hotels,
-        "today": today,
-        "cash_balance": cash_balance,
-        "bank_balance": bank_balance,
-        "payables_balance": payables_balance,
-        "revenue_month": revenue_month,
-        "expenses_month": expenses_month,
-        "pending_reimbursements": pending_reimbursements,
-        "recent_entries": recent_entries,
+        "hotel": hotel, "hotels": hotels, "today": today,
+        "cash_balance": cash_balance, "bank_balance": bank_balance,
+        "payables_balance": payables_balance, "revenue_month": revenue_month,
+        "expenses_month": expenses_month, "pending_reimbursements": pending_reimbursements,
+        "recent_entries": recent_entries, "monthly_chart": monthly_chart,
+        "expense_breakdown": expense_breakdown,
     })
 
 def trial_balance(request):
