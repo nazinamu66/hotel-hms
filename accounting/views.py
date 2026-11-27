@@ -244,41 +244,93 @@ def accounting_dashboard(request):
         "expense_donut_style": expense_donut_style, "expense_composition": donut_items,
     })
 
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def trial_balance(request):
+    from core.utils import get_user_hotels
+    from django.db.models import Sum
+    from decimal import Decimal
 
-    hotel = request.user.hotel
+    hotels = get_user_hotels(request.user)
+    if request.user.role not in ("DIRECTOR", "ADMIN") and getattr(request.user, "hotel_id", None):
+        hotels = hotels.filter(pk=request.user.hotel_id)
+
+    selected_hotel_id = (request.GET.get("hotel") or "").strip()
+    hotel = hotels.filter(pk=selected_hotel_id).first() if selected_hotel_id else hotels.first()
+    if not hotel:
+        raise PermissionDenied("No accessible hotel is available for the trial balance.")
 
     accounts = (
-        Account.objects
-        .filter(hotel=hotel)
+        Account.objects.filter(hotel=hotel, is_active=True)
         .order_by("code")
     )
 
+    # Aggregate all posted activity once, then calculate each account's
+    # closing balance using its normal balance side and recorded opening balance.
+    line_totals = {
+        row["account_id"]: row
+        for row in JournalLine.objects.filter(
+            journal__hotel=hotel,
+            account__hotel=hotel,
+        ).values("account_id").annotate(
+            debit_total=Sum("debit"),
+            credit_total=Sum("credit"),
+        )
+    }
+
     data = []
-    total_debit = 0
-    total_credit = 0
+    total_debit = Decimal("0.00")
+    total_credit = Decimal("0.00")
+    zero_balance_count = 0
 
-    for acc in accounts:
+    for account in accounts:
+        totals = line_totals.get(account.pk, {})
+        debits = totals.get("debit_total") or Decimal("0.00")
+        credits = totals.get("credit_total") or Decimal("0.00")
 
-        debit = acc.journalline_set.aggregate(Sum("debit"))["debit__sum"] or 0
-        credit = acc.journalline_set.aggregate(Sum("credit"))["credit__sum"] or 0
+        if account.account_type in DEBIT_NORMAL_TYPES:
+            balance = account.opening_balance + debits - credits
+        else:
+            balance = account.opening_balance + credits - debits
 
-        total_debit += debit
-        total_credit += credit
+        debit_balance = balance if balance > 0 and account.account_type in DEBIT_NORMAL_TYPES else Decimal("0.00")
+        credit_balance = balance if balance > 0 and account.account_type not in DEBIT_NORMAL_TYPES else Decimal("0.00")
 
+        # A negative normal balance is presented on the opposite side.
+        if balance < 0:
+            if account.account_type in DEBIT_NORMAL_TYPES:
+                credit_balance = abs(balance)
+            else:
+                debit_balance = abs(balance)
+
+        if debit_balance == 0 and credit_balance == 0:
+            zero_balance_count += 1
+
+        total_debit += debit_balance
+        total_credit += credit_balance
         data.append({
-            "code": acc.code,
-            "name": acc.name,
-            "debit": debit,
-            "credit": credit,
+            "id": account.pk,
+            "code": account.code,
+            "name": account.name,
+            "account_type": account.get_account_type_display(),
+            "debit": debit_balance,
+            "credit": credit_balance,
+            "balance": abs(balance),
+            "is_zero": balance == 0,
         })
 
+    difference = total_debit - total_credit
     return render(request, "accounting/trial_balance.html", {
         "data": data,
+        "hotel": hotel,
+        "hotels": hotels,
+        "show_hotel_selector": request.user.role in ("DIRECTOR", "ADMIN") and hotels.count() > 1,
         "total_debit": total_debit,
         "total_credit": total_credit,
+        "difference": difference,
+        "is_balanced": difference == 0,
+        "account_count": len(data),
+        "zero_balance_count": zero_balance_count,
     })
-
 
 
 @role_required("DIRECTOR", "ACCOUNTANT", "ADMIN")
