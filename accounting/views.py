@@ -2729,6 +2729,8 @@ def bank_reconciliation(request):
                 closing = Decimal(request.POST.get("closing_balance", ""))
                 if end < start or not opening.is_finite() or not closing.is_finite():
                     raise ValueError("Enter a valid period and statement balances.")
+                if BankReconciliation.objects.filter(bank_account=bank, period_start=start, period_end=end).exists():
+                    raise ValueError("A reconciliation already exists for this bank account and statement period.")
                 active = BankReconciliation.objects.create(
                     hotel=hotel, bank_account=bank, period_start=start, period_end=end,
                     statement_opening_balance=opening, statement_closing_balance=closing,
@@ -2790,8 +2792,6 @@ def bank_reconciliation(request):
                 expected_credit = line.debit
                 if journal_line.debit != expected_debit or journal_line.credit != expected_credit:
                     raise ValueError("The selected ledger entry does not match the statement amount and direction.")
-                if journal_line.journal.date != line.transaction_date:
-                    raise ValueError("The selected ledger entry date does not match the statement date.")
                 line.matched_journal_line = journal_line
                 line.matched_by = request.user
                 line.matched_at = timezone.now()
@@ -2821,17 +2821,11 @@ def bank_reconciliation(request):
                 active.reconciled_by = request.user
                 active.reconciled_at = timezone.now()
                 active.save(update_fields=["status", "reconciled_by", "reconciled_at"])
-                messages.success(request, "Bank account successfully reconciled. The period is now locked.")
+                messages.success(request, "Bank account successfully reconciled. This reconciliation record is now read-only.")
             else:
                 raise ValueError("Unknown reconciliation action.")
         except (ValueError, InvalidOperation, BankReconciliation.DoesNotExist) as exc:
             messages.error(request, str(exc))
-        except Exception as exc:
-            # Surface expected validation/uniqueness issues without leaving partial imports.
-            if exc.__class__.__name__ == "IntegrityError":
-                messages.error(request, "This bank account already has a reconciliation for that statement period.")
-            else:
-                raise
         url = f"{request.path}?hotel={hotel.pk}"
         if active:
             url += f"&reconciliation={active.pk}"
@@ -2842,7 +2836,8 @@ def bank_reconciliation(request):
         for line in lines:
             candidates = JournalLine.objects.filter(
                 account=active.bank_account.account, journal__hotel=hotel,
-                journal__date=line.transaction_date,
+                journal__date__gte=line.transaction_date - __import__("datetime").timedelta(days=3),
+                journal__date__lte=line.transaction_date + __import__("datetime").timedelta(days=3),
                 debit=line.credit, credit=line.debit,
             ).filter(matched_journal_line__isnull=True).select_related("journal").order_by("journal_id")
             line.candidates = candidates
