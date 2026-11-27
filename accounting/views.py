@@ -2520,3 +2520,176 @@ def financial_opening_adjustments(request):
         "can_approve": can_approve,
         "show_hotel_selector": request.user.role in ("DIRECTOR", "ADMIN") and hotels.count() > 1,
     })
+
+
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def expense_management(request):
+    """Record, review and pay non-supplier expense obligations."""
+    from datetime import date
+    from django.utils import timezone
+    from django.urls import reverse
+    from django.db.models import Sum
+    from core.utils import get_user_hotels
+    from accounting.models import ExpenseObligation, ExpensePayment
+
+    role = request.user.role
+    hotels = get_user_hotels(request.user)
+    if role not in ("DIRECTOR", "ADMIN") and getattr(request.user, "hotel_id", None):
+        hotels = hotels.filter(pk=request.user.hotel_id)
+    selected_id = (request.POST.get("hotel") or request.GET.get("hotel") or "").strip()
+    hotel = hotels.filter(pk=selected_id).first() if selected_id else hotels.first()
+    if not hotel:
+        raise PermissionDenied("No accessible hotel is available for expense management.")
+
+    can_create = role in ("ACCOUNTANT", "CHIEF_ACCOUNTANT", "DIRECTOR", "ADMIN")
+    can_review = role in ("DIRECTOR", "ADMIN", "CHIEF_ACCOUNTANT")
+    can_pay = role in ("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+    expense_accounts = Account.objects.filter(
+        hotel=hotel, account_type__in=("expense", "other_expense"),
+        is_active=True, allow_posting=True,
+    ).order_by("code")
+    payment_accounts = Account.objects.filter(
+        hotel=hotel, account_type__in=("cash", "bank"),
+        is_active=True, allow_posting=True,
+    ).order_by("code")
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip().upper()
+        try:
+            if action == "CREATE":
+                if not can_create:
+                    raise PermissionDenied("You are not authorised to record expenses.")
+                account = get_object_or_404(expense_accounts, pk=request.POST.get("expense_account"))
+                amount = Decimal((request.POST.get("amount") or "").strip())
+                expense_date = date.fromisoformat((request.POST.get("expense_date") or "").strip())
+                description = (request.POST.get("description") or "").strip()
+                reference = (request.POST.get("reference") or "").strip()
+                period_label = (request.POST.get("period_label") or "").strip()
+                notes = (request.POST.get("notes") or "").strip()
+                if not amount.is_finite() or amount <= 0:
+                    raise ValueError("Enter an amount greater than zero.")
+                if not description:
+                    raise ValueError("Enter a clear description for this expense.")
+                if len(description) > 255:
+                    raise ValueError("Description must be 255 characters or fewer.")
+                if reference and ExpenseObligation.objects.filter(hotel=hotel, reference=reference).exists():
+                    raise ValueError("This expense reference has already been used for this hotel.")
+                obligation = ExpenseObligation.objects.create(
+                    hotel=hotel, expense_account=account, amount=amount,
+                    description=description, expense_date=expense_date,
+                    period_label=period_label, reference=reference, notes=notes,
+                    attachment=request.FILES.get("attachment"), created_by=request.user,
+                )
+                messages.success(request, f"Expense #{obligation.pk} submitted for approval.")
+                return redirect(f"{reverse('accounting:expense_management')}?hotel={hotel.pk}")
+
+            obligation = get_object_or_404(
+                ExpenseObligation.objects.select_for_update().select_related("expense_account"),
+                pk=request.POST.get("obligation_id"), hotel=hotel,
+            )
+            if action in ("APPROVE", "REJECT"):
+                if not can_review:
+                    raise PermissionDenied("You are not authorised to review expenses.")
+                if obligation.status != "PENDING":
+                    raise ValueError("Only pending expenses can be reviewed.")
+                if obligation.created_by_id == request.user.pk:
+                    raise ValueError("The person who recorded an expense cannot approve it.")
+                review_note = (request.POST.get("review_note") or "").strip()
+                if not review_note:
+                    raise ValueError("A review note is required.")
+                with transaction.atomic():
+                    if action == "REJECT":
+                        obligation.status = "REJECTED"
+                        obligation.review_note = review_note
+                    else:
+                        payable = get_system_account(hotel, "accounts_payable")
+                        journal = record_transaction(
+                            debit_account=obligation.expense_account,
+                            credit_account=payable,
+                            amount=obligation.amount,
+                            description=f"Expense approved · {obligation.description}",
+                            hotel=hotel, created_by=request.user,
+                            entry_type="NORMAL", reference=f"EXP-APP-{obligation.pk}",
+                        )
+                        obligation.status = "APPROVED"
+                        obligation.approval_journal = journal
+                        obligation.review_note = review_note
+                    obligation.reviewed_by = request.user
+                    obligation.reviewed_at = timezone.now()
+                    obligation.save(update_fields=[
+                        "status", "approval_journal", "review_note",
+                        "reviewed_by", "reviewed_at",
+                    ])
+                messages.success(request, f"Expense #{obligation.pk} {obligation.status.lower()}.")
+                return redirect(f"{reverse('accounting:expense_management')}?hotel={hotel.pk}")
+
+            if action == "PAY":
+                if not can_pay:
+                    raise PermissionDenied("You are not authorised to pay expenses.")
+                if obligation.status not in ("APPROVED", "PARTIAL"):
+                    raise ValueError("Only approved outstanding expenses can be paid.")
+                payment_amount = Decimal((request.POST.get("payment_amount") or "").strip())
+                payment_date = date.fromisoformat((request.POST.get("payment_date") or "").strip())
+                payment_account = get_object_or_404(
+                    payment_accounts, pk=request.POST.get("payment_account")
+                )
+                reference = (request.POST.get("payment_reference") or "").strip()
+                notes = (request.POST.get("payment_notes") or "").strip()
+                paid_before = obligation.payments.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+                outstanding = obligation.amount - paid_before
+                if not payment_amount.is_finite() or payment_amount <= 0:
+                    raise ValueError("Payment amount must be greater than zero.")
+                if payment_amount > outstanding:
+                    raise ValueError(f"Payment exceeds the outstanding balance of ₦{outstanding:,.2f}.")
+                if reference and ExpensePayment.objects.filter(hotel=hotel, reference=reference).exists():
+                    raise ValueError("This payment reference has already been used for this hotel.")
+                with transaction.atomic():
+                    payment = ExpensePayment.objects.create(
+                        obligation=obligation, hotel=hotel, amount=payment_amount,
+                        payment_account=payment_account, payment_date=payment_date,
+                        reference=reference, notes=notes, paid_by=request.user,
+                    )
+                    journal = record_transaction(
+                        debit_account=get_system_account(hotel, "accounts_payable"),
+                        credit_account=payment_account, amount=payment_amount,
+                        description=f"Expense payment · {obligation.description}",
+                        hotel=hotel, created_by=request.user, entry_type="NORMAL",
+                        reference=f"EXP-PAY-{payment.pk}",
+                    )
+                    payment.journal_entry = journal
+                    payment.save(update_fields=["journal_entry"])
+                    obligation.status = "PAID" if paid_before + payment_amount == obligation.amount else "PARTIAL"
+                    obligation.save(update_fields=["status"])
+                remaining = obligation.amount - paid_before - payment_amount
+                messages.success(request, f"Payment of ₦{payment_amount:,.2f} recorded. Remaining balance: ₦{remaining:,.2f}.")
+                return redirect(f"{reverse('accounting:expense_management')}?hotel={hotel.pk}")
+            raise ValueError("Choose a valid expense action.")
+        except PermissionDenied:
+            raise
+        except (ValueError, InvalidOperation, TypeError) as exc:
+            messages.error(request, str(exc))
+        except Exception as exc:
+            messages.error(request, f"Expense operation was not completed: {exc}")
+
+    obligations = ExpenseObligation.objects.filter(hotel=hotel).select_related(
+        "expense_account", "created_by", "reviewed_by", "approval_journal"
+    ).prefetch_related("payments__payment_account", "payments__paid_by", "payments__journal_entry")
+    rows = []
+    for item in obligations[:200]:
+        paid = item.payments.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+        rows.append({
+            "item": item, "paid": paid, "outstanding": item.amount - paid,
+            "payments": item.payments.all(),
+        })
+    totals = ExpenseObligation.objects.filter(hotel=hotel).aggregate(
+        pending=Sum("amount", filter=Q(status="PENDING")),
+        approved=Sum("amount", filter=Q(status__in=("APPROVED", "PARTIAL"))),
+    )
+    return render(request, "accounting/expense_management.html", {
+        "hotels": hotels, "hotel": hotel, "show_hotel_selector": hotels.count() > 1,
+        "expense_accounts": expense_accounts, "payment_accounts": payment_accounts,
+        "rows": rows, "can_create": can_create, "can_review": can_review,
+        "can_pay": can_pay, "today": timezone.localdate(),
+        "pending_total": totals["pending"] or Decimal("0.00"),
+        "approved_total": totals["approved"] or Decimal("0.00"),
+    })
