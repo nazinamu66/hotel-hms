@@ -9,6 +9,12 @@
 {% block content %}
 <style>
 .pgr-page{max-width:1320px;margin:0 auto;color:#172033}
+.pgr-letterhead{display:flex;align-items:center;gap:18px;padding:20px 22px;border-bottom:2px solid #1e3a5f}
+.pgr-logo{width:86px;height:76px;object-fit:contain;flex:0 0 auto}
+.pgr-brand-copy{min-width:0;flex:1;text-align:center}
+.pgr-brand-copy h1{margin:0;color:#172033;font-size:1.45rem;line-height:1.2;font-weight:900;letter-spacing:.015em;text-transform:uppercase}
+.pgr-brand-copy p{margin:5px 0 0;color:#475569;font-size:.78rem;line-height:1.4}
+.pgr-brand-spacer{width:86px;flex:0 0 auto}
 .pgr-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
 .pgr-heading h1{margin:0;font-size:1.65rem;font-weight:850;letter-spacing:-.035em}
 .pgr-heading p{margin:5px 0 0;color:#64748b;font-size:.88rem}
@@ -45,7 +51,7 @@
  .pgr-panel,.pgr-stat{box-shadow:none;break-inside:avoid}
  .pgr-table{min-width:0}
  .pgr-table th,.pgr-table td{padding:7px 6px;font-size:9px}
- .pgr-heading h1{font-size:19px}
+ .pgr-heading h1{font-size:19px}.pgr-letterhead{padding:10px 12px;gap:10px}.pgr-logo,.pgr-brand-spacer{width:60px;height:54px}.pgr-brand-copy h1{font-size:15px}.pgr-brand-copy p{font-size:9px}
  .pgr-footer{font-size:8px}
 }
 </style>
@@ -69,6 +75,29 @@
   </div>
 
   <section class="pgr-panel">
+    <header class="pgr-letterhead">
+      {% if business and business.logo %}
+        <img class="pgr-logo" src="{{ business.logo.url }}" alt="{{ business.name }} logo">
+      {% else %}
+        <span class="pgr-brand-spacer" aria-hidden="true"></span>
+      {% endif %}
+      <div class="pgr-brand-copy">
+        <h1>{% if business and business.name %}{{ business.name }}{% else %}{{ hotel.name }}{% endif %}</h1>
+        {% if business %}
+          {% if business.address %}<p>{{ business.address|linebreaksbr }}</p>{% endif %}
+          {% if business.city or business.state or business.country %}
+            <p>{% if business.city %}{{ business.city }}{% endif %}{% if business.city and business.state %}, {% endif %}{% if business.state %}{{ business.state }}{% endif %}{% if business.country %}{% if business.city or business.state %}, {% endif %}{{ business.country }}{% endif %}</p>
+          {% endif %}
+        {% elif hotel.location %}
+          <p>{{ hotel.location }}</p>
+        {% endif %}
+      </div>
+      {% if business and business.logo %}
+        <span class="pgr-brand-spacer" aria-hidden="true"></span>
+      {% else %}
+        <span class="pgr-brand-spacer" aria-hidden="true"></span>
+      {% endif %}
+    </header>
     <div class="pgr-meta">
       <div>Hotel: <strong>{{ hotel.name }}</strong></div>
       <div>Generated: <strong>{{ generated_at|date:"d M Y, H:i" }}</strong></div>
