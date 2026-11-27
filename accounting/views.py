@@ -494,11 +494,23 @@ def chart_of_accounts(request):
             for account in accounts
         ]
 
+    # Flat presentation is also available for users who prefer a sortable,
+    # scan-friendly account list. Keep the nested tree as the source of truth.
+    account_rows = []
+
+    def flatten_account_tree(nodes):
+        for node in nodes:
+            account_rows.append(node["account"])
+            flatten_account_tree(node.get("children", []))
+
+    flatten_account_tree(account_tree)
+
     return render(
         request,
         "accounting/chart_of_accounts.html",
         {
             "account_tree": account_tree,
+            "account_rows": account_rows,
             "accessible_hotels": accessible_hotels,
             "selected_hotel": selected_hotel,
             "is_all_hotels": selected_hotel is None,
