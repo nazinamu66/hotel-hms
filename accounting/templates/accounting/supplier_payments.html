@@ -22,6 +22,23 @@
 .spm-filter-actions{display:flex;gap:8px;align-items:center}
 .spm-btn-link{display:inline-flex;align-items:center;justify-content:center;padding:11px 12px;color:#475569;text-decoration:none;font-weight:800}
 .spm-error{padding:10px 12px;background:#fff7ed;color:#9a3412;border-radius:10px;margin-bottom:12px;font-size:.88rem}
+.spm-period{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:22px;align-items:center}
+.spm-period-copy h2{font-size:1rem;margin:0;color:#172033}
+.spm-period-copy p{margin:6px 0 0;color:#64748b;font-size:.84rem}
+.spm-period-form{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
+.spm-period-form .spm-field{min-width:150px}
+.spm-period-form .spm-field input{min-height:42px}
+.spm-period-actions{display:flex;align-items:center;gap:8px}
+.spm-filter-grid{grid-template-columns:minmax(220px,2fr) repeat(2,minmax(160px,1fr)) auto}
+.spm-kpi-value{font-size:clamp(.95rem,1.35vw,1.35rem);font-variant-numeric:tabular-nums;white-space:normal;overflow-wrap:anywhere}
+.spm-kpi{display:flex;flex-direction:column;justify-content:space-between;min-height:112px}
+.spm-kpi-note{line-height:1.4}
+.spm-obligation{box-shadow:0 3px 12px rgba(15,23,42,.025);transition:border-color .15s,box-shadow .15s}
+.spm-obligation:hover{border-color:#bfdbfe;box-shadow:0 8px 22px rgba(15,23,42,.06)}
+.spm-obligation .spm-btn{width:100%}
+.spm-table tbody tr:hover{background:#f8fafc}
+@media(max-width:760px){.spm-period{grid-template-columns:1fr}.spm-period-form{width:100%}.spm-period-form .spm-field{flex:1;min-width:130px}}
+@media(max-width:560px){.spm-period-form{display:grid;grid-template-columns:1fr 1fr}.spm-period-actions{grid-column:1/-1}.spm-period-actions .spm-btn{flex:1}}
 @media(max-width:900px){.spm-analytics{grid-template-columns:1fr}.spm-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.spm-filter-grid{grid-template-columns:1fr}.spm-filter-actions{width:100%}.spm-filter-actions .spm-btn{flex:1}.spm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.spm-kpi{padding:13px}.spm-kpi-value{font-size:1rem}}
 @media(max-width:640px){.spm-card{padding:15px;border-radius:14px}.spm-metrics{gap:5px}.spm-metric{padding:8px 6px}.spm-form-grid{grid-template-columns:1fr}.spm-span{grid-column:auto}.spm-filter,.spm-filter .spm-field,.spm-filter select{width:100%;min-width:0}}
@@ -48,6 +65,20 @@
       </div>
       <noscript><button class="spm-btn" type="submit">Switch hotel</button></noscript>
       <span class="spm-muted">Payments and balances shown for the selected hotel.</span>
+    </form>
+  </section>
+
+  <section class="spm-card spm-period">
+    <div class="spm-period-copy">
+      <h2>Payment history period</h2>
+      <p>{% if history_start or history_end %}Showing payments{% if history_start %} from {{ history_start|date:"d M Y" }}{% endif %}{% if history_end %} to {{ history_end|date:"d M Y" }}{% endif %}{% else %}Showing all recorded supplier payments{% endif %}</p>
+      {% if filter_error %}<div class="spm-error" style="margin:10px 0 0">{{ filter_error }}</div>{% endif %}
+    </div>
+    <form method="get" class="spm-period-form">
+      <input type="hidden" name="hotel" value="{{ hotel.pk }}">
+      <div class="spm-field"><label for="spm-from">From date</label><input id="spm-from" type="date" name="from_date" value="{{ request.GET.from_date }}"></div>
+      <div class="spm-field"><label for="spm-to">To date</label><input id="spm-to" type="date" name="to_date" value="{{ request.GET.to_date }}"></div>
+      <div class="spm-period-actions"><button class="spm-btn" type="submit">Apply period</button><a class="spm-btn-link" href="{% url 'accounting:supplier_payments' %}?hotel={{ hotel.pk }}">Reset</a></div>
     </form>
   </section>
 
@@ -81,11 +112,9 @@
       <div class="spm-field"><label for="spm-q">Search</label><input id="spm-q" name="q" value="{{ query }}" placeholder="Supplier, PO or reference"></div>
       <div class="spm-field"><label for="spm-source">Source</label><select id="spm-source" name="source"><option value="">All sources</option><option value="PO" {% if source_filter == "PO" %}selected{% endif %}>Purchase orders</option><option value="DIRECT" {% if source_filter == "DIRECT" %}selected{% endif %}>Direct purchases</option><option value="LABOUR" {% if source_filter == "LABOUR" %}selected{% endif %}>Maintenance labour</option></select></div>
       <div class="spm-field"><label for="spm-status">Obligation status</label><select id="spm-status" name="status"><option value="OPEN" {% if status_filter == "OPEN" %}selected{% endif %}>All outstanding</option><option value="UNPAID" {% if status_filter == "UNPAID" %}selected{% endif %}>Unpaid</option><option value="PARTIAL" {% if status_filter == "PARTIAL" %}selected{% endif %}>Partially paid</option></select></div>
-      <div class="spm-field"><label for="spm-from">Payment from</label><input id="spm-from" type="date" name="from_date" value="{{ request.GET.from_date }}"></div>
-      <div class="spm-field"><label for="spm-to">Payment to</label><input id="spm-to" type="date" name="to_date" value="{{ request.GET.to_date }}"></div>
       <div class="spm-filter-actions"><button class="spm-btn" type="submit">Apply filters</button><a class="spm-btn-link" href="{% url 'accounting:supplier_payments' %}?hotel={{ hotel.pk }}">Reset</a></div>
     </form>
-    <p class="spm-muted" style="margin:12px 0 0">The payment date range filters payment history and the paid-in-period figure; obligation status filters the outstanding register.</p>
+    <p class="spm-muted" style="margin:12px 0 0">The date range above filters payment history and the paid-in-period figure. Search, source and status filters apply to outstanding obligations and matching payment records.</p>
   </section>
   <section class="spm-card">
     <div class="spm-card-head">
