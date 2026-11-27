@@ -493,6 +493,9 @@ class UserCreateForm(forms.ModelForm):
 
         if password:
             user.set_password(password)
+            # New accounts and administrator-issued password resets must
+            # choose their own password before entering the HMS.
+            user.must_change_password = True
 
         role = self.cleaned_data.get("role")
 
