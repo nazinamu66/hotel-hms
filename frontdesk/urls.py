@@ -27,6 +27,7 @@ from .company_invoice_views import (
 )
 from .views import (
     room_board,
+    police_guest_register,
     check_in,
     active_stay,
     checkout,
@@ -87,6 +88,7 @@ urlpatterns = [
     path('corporate/invoices/<int:invoice_id>/', company_invoice_detail, name='frontdesk_company_invoice_detail'),
     path('corporate/invoices/<int:invoice_id>/pdf/', company_invoice_pdf, name='frontdesk_company_invoice_pdf'),
     path('', room_board, name='frontdesk_room_board'),
+    path('reports/police-guest-register/', police_guest_register, name='frontdesk_police_guest_register'),
     path('check-in/<int:room_id>/', check_in, name='frontdesk_check_in'),
     path('stay/<int:room_id>/', active_stay, name='frontdesk_active_stay'),
     path('stay/<int:room_id>/pay/', take_payment, name='frontdesk_take_payment'),
