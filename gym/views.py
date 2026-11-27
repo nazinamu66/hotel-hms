@@ -319,6 +319,22 @@ def gym_member_create(request):
 
 
 @role_required(*FRONT_DESK_ROLES)
+def gym_member_edit(request, member_id):
+    hotel = _hotel_for_gym(request.user)
+    member = get_object_or_404(GymMember, pk=member_id, hotel=hotel)
+    if request.method == "POST":
+        form = GymMemberForm(request.POST, request.FILES, instance=member)
+        if form.is_valid():
+            updated_member = form.save()
+            messages.success(request, f"{updated_member.full_name}'s profile was updated.")
+            return redirect("gym_member_detail", member_id=updated_member.pk)
+    else:
+        form = GymMemberForm(instance=member)
+    return render(request, "gym/member_form.html", {
+        "form": form, "hotel": hotel, "member": member, "is_edit": True,
+    })
+
+@role_required(*FRONT_DESK_ROLES)
 def gym_member_detail(request, member_id):
     hotel = _hotel_for_gym(request.user)
     member = get_object_or_404(
