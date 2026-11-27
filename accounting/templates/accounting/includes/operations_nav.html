@@ -19,6 +19,7 @@
 <nav class="ops-tabs" aria-label="Accounting operations">
   <a class="ops-tab {% if operations_active == 'bank_transfer' %}active{% endif %}" href="{% url 'accounting:bank_transfer' %}{% if hotel %}?hotel={{ hotel.id }}{% endif %}"><span class="ops-tab-icon">⇄</span> Bank Transfer</a>
   <a class="ops-tab {% if operations_active == 'cash_deposit' %}active{% endif %}" href="{% url 'accounting:cash_deposit' %}{% if hotel %}?hotel={{ hotel.id }}{% endif %}"><span class="ops-tab-icon">↓</span> Cash Deposit</a>
+  <a class="ops-tab {% if operations_active == 'expenses' %}active{% endif %}" href="{% url 'accounting:expense_management' %}{% if hotel %}?hotel={{ hotel.id }}{% endif %}"><span class="ops-tab-icon">▤</span> Expenses</a>
 </nav>
 {% if show_hotel_selector %}
 <section class="ops-hotel">
