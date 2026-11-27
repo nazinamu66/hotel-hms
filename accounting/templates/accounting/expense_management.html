@@ -35,13 +35,13 @@
 
 {% endif %}
 <section class="exp-kpis">
-<div class="exp-kpi"><div class="exp-kpi-label">Awaiting approval</div><strong class="exp-kpi-value">₦{{ pending_total|floatformat:2|intcomma }}</strong><div class="exp-kpi-note">Expenses awaiting independent review</div></div>
-<div class="exp-kpi"><div class="exp-kpi-label">Approved obligations</div><strong class="exp-kpi-value">₦{{ approved_total|floatformat:2|intcomma }}</strong><div class="exp-kpi-note">Gross value of approved and partially paid expenses</div></div>
-<div class="exp-kpi"><div class="exp-kpi-label">Expense records</div><strong class="exp-kpi-value">{{ rows|length }}</strong><div class="exp-kpi-note">Latest 200 records for this hotel</div></div>
+<div class="exp-kpi pending"><div class="exp-kpi-top"><div class="exp-kpi-label">Awaiting approval</div><span class="exp-kpi-icon">◷</span></div><strong class="exp-kpi-value">₦{{ pending_total|floatformat:2|intcomma }}</strong><div class="exp-kpi-note">Expenses awaiting independent review</div></div>
+<div class="exp-kpi approved"><div class="exp-kpi-top"><div class="exp-kpi-label">Approved obligations</div><span class="exp-kpi-icon">✓</span></div><strong class="exp-kpi-value">₦{{ approved_total|floatformat:2|intcomma }}</strong><div class="exp-kpi-note">Gross value of approved and partially paid expenses</div></div>
+<div class="exp-kpi records"><div class="exp-kpi-top"><div class="exp-kpi-label">Expense records</div><span class="exp-kpi-icon">▤</span></div><strong class="exp-kpi-value">{{ rows|length }}</strong><div class="exp-kpi-note">Latest 200 records for this hotel</div></div>
 </section>
 {% if can_create %}
 <section class="exp-card">
-<div style="margin-bottom:16px"><h2 style="margin:0 0 5px">Record an expense</h2><div class="exp-muted">Create an obligation for review. No cash or bank balance changes until a payment is recorded.</div></div>
+<div class="exp-section-head"><div class="exp-section-icon">＋</div><div><h2>Record an expense</h2><div class="exp-muted">Create an obligation for review. No cash or bank balance changes until a payment is recorded.</div></div>
 <form method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="hotel" value="{{ hotel.id }}"><input type="hidden" name="action" value="CREATE">
 <div class="exp-grid">
 <div class="exp-field"><label for="expense-description">Description *</label><input id="expense-description" name="description" maxlength="255" placeholder="e.g. November staff payroll" required></div>
