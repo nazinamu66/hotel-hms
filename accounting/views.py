@@ -2694,3 +2694,163 @@ def expense_management(request):
         "pending_total": totals["pending"] or Decimal("0.00"),
         "approved_total": totals["approved"] or Decimal("0.00"),
     })
+
+
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+@transaction.atomic
+def bank_reconciliation(request):
+    """Import a bank statement, match rows to existing journal lines, and reconcile."""
+    import csv
+    import io
+    from datetime import date
+    from decimal import Decimal, InvalidOperation
+    from django.utils import timezone
+    from core.utils import get_user_hotels
+    from accounting.models import BankReconciliation, BankStatementLine
+
+    hotels = get_user_hotels(request.user)
+    multi_hotel = request.user.role in ("DIRECTOR", "ADMIN")
+    if not multi_hotel and getattr(request.user, "hotel_id", None):
+        hotels = hotels.filter(pk=request.user.hotel_id)
+    selected = (request.POST.get("hotel") or request.GET.get("hotel") or "").strip()
+    hotel = hotels.filter(pk=selected).first() if selected else (None if multi_hotel else hotels.first())
+    bank_accounts = BankAccount.objects.filter(hotel=hotel, is_active=True).select_related("account").order_by("bank_name", "account_name") if hotel else BankAccount.objects.none()
+    reconciliations = BankReconciliation.objects.filter(hotel=hotel).select_related("bank_account", "bank_account__account") if hotel else BankReconciliation.objects.none()
+    active = reconciliations.filter(pk=request.GET.get("reconciliation")).first() if request.GET.get("reconciliation") else None
+
+    if request.method == "POST" and hotel:
+        action = request.POST.get("action", "").upper()
+        try:
+            if action == "CREATE":
+                bank = get_object_or_404(bank_accounts, pk=request.POST.get("bank_account"))
+                start = date.fromisoformat(request.POST.get("period_start", ""))
+                end = date.fromisoformat(request.POST.get("period_end", ""))
+                opening = Decimal(request.POST.get("opening_balance", ""))
+                closing = Decimal(request.POST.get("closing_balance", ""))
+                if end < start or not opening.is_finite() or not closing.is_finite():
+                    raise ValueError("Enter a valid period and statement balances.")
+                active = BankReconciliation.objects.create(
+                    hotel=hotel, bank_account=bank, period_start=start, period_end=end,
+                    statement_opening_balance=opening, statement_closing_balance=closing,
+                    created_by=request.user,
+                )
+                messages.success(request, "Reconciliation period created. Import its statement CSV to begin matching.")
+            elif action == "IMPORT":
+                active = get_object_or_404(reconciliations.select_for_update(), pk=request.POST.get("reconciliation_id"), status="DRAFT")
+                upload = request.FILES.get("statement_file")
+                if not upload or not upload.name.lower().endswith(".csv"):
+                    raise ValueError("Upload a CSV bank statement.")
+                decoded = upload.read().decode("utf-8-sig")
+                reader = csv.DictReader(io.StringIO(decoded))
+                required = {"date", "description", "debit", "credit"}
+                headers = {str(h or "").strip().lower() for h in (reader.fieldnames or [])}
+                if not required.issubset(headers):
+                    raise ValueError("CSV must contain date, description, debit and credit columns. Reference is optional.")
+                created = []
+                for row_no, row in enumerate(reader, start=2):
+                    normalized = {str(k or "").strip().lower(): (v or "").strip() for k, v in row.items()}
+                    raw_date = normalized.get("date", "")
+                    try:
+                        try:
+                            txn_date = date.fromisoformat(raw_date)
+                        except ValueError:
+                            txn_date = date.strptime(raw_date, "%d/%m/%Y")
+                        debit = Decimal(normalized.get("debit") or "0")
+                        credit = Decimal(normalized.get("credit") or "0")
+                    except (ValueError, InvalidOperation):
+                        raise ValueError(f"Invalid date or amount on CSV row {row_no}.")
+                    description = normalized.get("description", "")[:255]
+                    if txn_date < active.period_start or txn_date > active.period_end or not description:
+                        raise ValueError(f"CSV row {row_no} is outside the statement period or has no description.")
+                    if not debit.is_finite() or not credit.is_finite() or debit < 0 or credit < 0 or (debit > 0 and credit > 0) or (debit == 0 and credit == 0):
+                        raise ValueError(f"CSV row {row_no} must contain one positive debit or credit amount.")
+                    created.append(BankStatementLine(
+                        reconciliation=active, line_number=row_no, transaction_date=txn_date,
+                        description=description, reference=normalized.get("reference", "")[:100],
+                        debit=debit, credit=credit,
+                    ))
+                if not created:
+                    raise ValueError("The CSV contains no statement transactions.")
+                if active.statement_opening_balance + sum((x.credit - x.debit for x in created), Decimal("0.00")) != active.statement_closing_balance:
+                    raise ValueError("Statement rows do not reconcile to the supplied opening and closing balances. Check the CSV and statement balances.")
+                if active.statement_lines.exists():
+                    raise ValueError("A statement has already been imported for this reconciliation.")
+                BankStatementLine.objects.bulk_create(created)
+                messages.success(request, f"Imported {len(created)} statement transactions. Match each row to the bank ledger.")
+            elif action == "MATCH":
+                active = get_object_or_404(reconciliations.select_for_update(), pk=request.POST.get("reconciliation_id"), status="DRAFT")
+                line = get_object_or_404(BankStatementLine.objects.select_for_update(), pk=request.POST.get("statement_line_id"), reconciliation=active)
+                journal_line = get_object_or_404(
+                    JournalLine.objects.select_related("journal").filter(
+                        account=active.bank_account.account, journal__hotel=hotel,
+                        journal__date__gte=active.period_start, journal__date__lte=active.period_end,
+                    ), pk=request.POST.get("journal_line_id"), matched_journal_line__isnull=True
+                )
+                expected_debit = line.credit
+                expected_credit = line.debit
+                if journal_line.debit != expected_debit or journal_line.credit != expected_credit:
+                    raise ValueError("The selected ledger entry does not match the statement amount and direction.")
+                if journal_line.journal.date != line.transaction_date:
+                    raise ValueError("The selected ledger entry date does not match the statement date.")
+                line.matched_journal_line = journal_line
+                line.matched_by = request.user
+                line.matched_at = timezone.now()
+                line.save(update_fields=["matched_journal_line", "matched_by", "matched_at"])
+                messages.success(request, "Statement line matched to the existing journal entry.")
+            elif action == "UNMATCH":
+                active = get_object_or_404(reconciliations.select_for_update(), pk=request.POST.get("reconciliation_id"), status="DRAFT")
+                line = get_object_or_404(BankStatementLine.objects.select_for_update(), pk=request.POST.get("statement_line_id"), reconciliation=active)
+                line.matched_journal_line = None
+                line.matched_by = None
+                line.matched_at = None
+                line.save(update_fields=["matched_journal_line", "matched_by", "matched_at"])
+                messages.success(request, "Statement match removed.")
+            elif action == "FINALIZE":
+                active = get_object_or_404(reconciliations.select_for_update(), pk=request.POST.get("reconciliation_id"), status="DRAFT")
+                lines = active.statement_lines.all()
+                if not lines.exists() or lines.filter(matched_journal_line__isnull=True).exists():
+                    raise ValueError("Match every statement line before completing reconciliation.")
+                totals = JournalLine.objects.filter(
+                    account=active.bank_account.account, journal__hotel=hotel,
+                    journal__date__lte=active.period_end,
+                ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
+                book_balance = active.bank_account.account.opening_balance + (totals["debit"] or Decimal("0")) - (totals["credit"] or Decimal("0"))
+                if book_balance != active.statement_closing_balance:
+                    raise ValueError(f"Statement closing balance does not match the book balance of ₦{book_balance:,.2f}. Investigate outstanding or unrecorded items before completing.")
+                active.status = "RECONCILED"
+                active.reconciled_by = request.user
+                active.reconciled_at = timezone.now()
+                active.save(update_fields=["status", "reconciled_by", "reconciled_at"])
+                messages.success(request, "Bank account successfully reconciled. The period is now locked.")
+            else:
+                raise ValueError("Unknown reconciliation action.")
+        except (ValueError, InvalidOperation, BankReconciliation.DoesNotExist) as exc:
+            messages.error(request, str(exc))
+        except Exception as exc:
+            # Surface expected validation/uniqueness issues without leaving partial imports.
+            if exc.__class__.__name__ == "IntegrityError":
+                messages.error(request, "This bank account already has a reconciliation for that statement period.")
+            else:
+                raise
+        url = f"{request.path}?hotel={hotel.pk}"
+        if active:
+            url += f"&reconciliation={active.pk}"
+        return redirect(url)
+
+    if active:
+        lines = active.statement_lines.select_related("matched_journal_line", "matched_journal_line__journal").all()
+        for line in lines:
+            candidates = JournalLine.objects.filter(
+                account=active.bank_account.account, journal__hotel=hotel,
+                journal__date=line.transaction_date,
+                debit=line.credit, credit=line.debit,
+            ).filter(matched_journal_line__isnull=True).select_related("journal").order_by("journal_id")
+            line.candidates = candidates
+    else:
+        lines = []
+    return render(request, "accounting/bank_reconciliation.html", {
+        "hotel": hotel, "hotels": hotels, "show_hotel_selector": multi_hotel,
+        "bank_accounts": bank_accounts, "reconciliations": reconciliations,
+        "active_reconciliation": active, "statement_lines": lines,
+        "operations_active": "bank_reconciliation",
+    })
