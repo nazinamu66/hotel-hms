@@ -106,7 +106,6 @@ from kitchen.models import (
 # SUPPLIERS
 # =========================
 
-@role_required("ADMIN", "DIRECTOR")
 @role_required("ADMIN", "DIRECTOR", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def supplier_list(request):
     from django.db.models import Sum
