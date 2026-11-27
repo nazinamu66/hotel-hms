@@ -60,7 +60,7 @@ def hotel_dashboard(request):
         context = get_manager_dashboard(hotels)
 
     elif user.role == "ACCOUNTANT":
-        context = get_accountant_dashboard(hotels)
+        return redirect("accounting:dashboard")
 
     else:  # ADMIN
         context = get_manager_dashboard(hotels)
