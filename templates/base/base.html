@@ -54,8 +54,6 @@
                 Supplier Payments
             </a>
 
-            <a href="{% url 'inventory:supplier_list' %}">Suppliers</a>
-
             <a href="{% url 'accounting:staff_reimbursements' %}">
                 Staff Reimbursements
             </a>
@@ -176,7 +174,6 @@
             <div id="setup_products_menu" class="menu-section">
                 <a href="{% url 'inventory:product_list' %}">Product Master</a>
                 {% if user|has_role:"ADMIN,DIRECTOR,ACCOUNTANT,CHIEF_ACCOUNTANT" %}
-                <a href="{% url 'inventory:supplier_list' %}">Suppliers</a>
                 {% endif %}
             </div>
             {% endif %}
