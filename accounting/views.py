@@ -341,26 +341,16 @@ def chart_of_accounts(request):
     # --------------------------------------------------
 
     if selected_hotel:
-        accounts = (
-            Account.objects
-            .filter(
-                hotel=selected_hotel,
-                is_active=True,
-            )
-            .select_related("parent")
-            .order_by("code")
+        all_accounts = (
+            Account.objects.filter(hotel=selected_hotel, is_active=True)
+            .select_related("parent").order_by("code")
         )
-
     else:
-        accounts = (
-            Account.objects
-            .filter(
-                hotel__in=accessible_hotels,
-                is_active=True,
-            )
-            .select_related("hotel", "parent")
-            .order_by("hotel__name", "code")
+        all_accounts = (
+            Account.objects.filter(hotel__in=accessible_hotels, is_active=True)
+            .select_related("hotel", "parent").order_by("hotel__name", "code")
         )
+    accounts = all_accounts
 
     # --------------------------------------------------
     # SEARCH
@@ -452,30 +442,23 @@ def chart_of_accounts(request):
     if selected_hotel:
 
         accounts_by_parent = {}
+        for account in all_accounts:
+            accounts_by_parent.setdefault(account.parent_id, []).append(account)
 
-        for account in accounts:
-            accounts_by_parent.setdefault(
-                account.parent_id,
-                []
-            ).append(account)
+        matching_account_ids = set(accounts.values_list("id", flat=True))
 
         def build_tree(parent_id=None, level=0):
-
             tree = []
-
-            for account in accounts_by_parent.get(
-                parent_id,
-                []
-            ):
-                tree.append({
-                    "account": account,
-                    "level": level,
-                    "children": build_tree(
-                        account.id,
-                        level + 1,
-                    ),
-                })
-
+            for account in accounts_by_parent.get(parent_id, []):
+                children = build_tree(account.id, level + 1)
+                # Keep ancestors of matching accounts visible so filters
+                # never hide a matching child from the hierarchy.
+                if account.id in matching_account_ids or children:
+                    tree.append({
+                        "account": account,
+                        "level": level,
+                        "children": children,
+                    })
             return tree
 
         account_tree = build_tree()
