@@ -360,6 +360,75 @@ class SupplierLedger(models.Model):
         return f"{self.supplier.name} {self.entry_type} {self.amount}"
 
 
+class ExpenseObligation(models.Model):
+    """Approved non-supplier expense owed by a hotel, with separately tracked payments."""
+    STATUS_CHOICES = (
+        ("PENDING", "Pending approval"),
+        ("APPROVED", "Approved · unpaid"),
+        ("PARTIAL", "Partially paid"),
+        ("PAID", "Paid"),
+        ("REJECTED", "Rejected"),
+    )
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="expense_obligations")
+    expense_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="expense_obligations")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    description = models.CharField(max_length=255)
+    expense_date = models.DateField()
+    period_label = models.CharField(max_length=80, blank=True)
+    reference = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    attachment = models.FileField(upload_to="accounting/expenses/%Y/%m/", null=True, blank=True)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="PENDING")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="created_expense_obligations")
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="reviewed_expense_obligations")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True)
+    approval_journal = models.ForeignKey(JournalEntry, null=True, blank=True, on_delete=models.PROTECT, related_name="approved_expense_obligations")
+
+    class Meta:
+        ordering = ["-expense_date", "-id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name="expense_obligation_amount_positive"),
+            models.UniqueConstraint(fields=("hotel", "reference"), condition=~models.Q(reference=""), name="unique_expense_reference_per_hotel"),
+        ]
+
+    @property
+    def paid_amount(self):
+        return self.payments.aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
+
+    @property
+    def outstanding_amount(self):
+        return self.amount - self.paid_amount
+
+    def __str__(self):
+        return f"{self.description} · {self.amount}"
+
+
+class ExpensePayment(models.Model):
+    """A payment against an approved expense obligation."""
+    obligation = models.ForeignKey(ExpenseObligation, on_delete=models.PROTECT, related_name="payments")
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="expense_payments")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="expense_obligation_payments")
+    payment_date = models.DateField()
+    reference = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    journal_entry = models.ForeignKey(JournalEntry, null=True, blank=True, on_delete=models.PROTECT, related_name="expense_obligation_payments")
+    paid_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="recorded_expense_payments")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-payment_date", "-id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name="expense_payment_amount_positive"),
+            models.UniqueConstraint(fields=("hotel", "reference"), condition=~models.Q(reference=""), name="unique_expense_payment_reference_per_hotel"),
+        ]
+
+    def __str__(self):
+        return f"Payment for expense #{self.obligation_id} · {self.amount}"
+
+
 class ExpenseEntry(models.Model):
 
     hotel = models.ForeignKey(
