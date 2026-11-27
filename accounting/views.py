@@ -2270,6 +2270,8 @@ def financial_opening_balances(request):
 
     opening_equity = asset_total - liability_equity_total
     difference = asset_total - (liability_equity_total + opening_equity)
+    for account in accounts:
+        account.initial_opening_balance = preview.get(account.pk, account.opening_balance)
 
     if request.method == "POST" and not errors:
         with transaction.atomic():
