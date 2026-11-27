@@ -538,6 +538,7 @@ class FinancialOpeningBalanceAdjustment(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     reason = models.TextField()
     reference = models.CharField(max_length=100, blank=True)
+    confirmed_existing_at_opening = models.BooleanField(default=False)
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="PENDING")
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="requested_opening_adjustments")
     requested_at = models.DateTimeField(auto_now_add=True)
