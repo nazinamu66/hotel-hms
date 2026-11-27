@@ -3,6 +3,24 @@
 {% block content %}
 <style>
 .salon-workspace{box-sizing:border-box;margin:calc(-1 * clamp(18px,2.5vw,34px));min-height:calc(100vh - 80px);padding:clamp(18px,2.5vw,34px);color:#edf4ff;background:radial-gradient(ellipse at 85% 0%,rgba(37,99,235,.17),transparent 34%),#0d1728}.s-muted{color:#9fb0c8}.s-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px}.s-panel,.s-kpi{background:#172943;border:1px solid #304563;border-radius:16px;padding:18px;margin-bottom:18px}.s-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.s-kpi small{color:#aebdd5}.s-value{font-size:27px;font-weight:850;margin-top:8px}.s-filters{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.s-filters label{display:block;color:#b8c7dc;font-size:12px;font-weight:700;margin-bottom:6px}.s-input,.s-select{background:#1b2b46;color:white;border:1px solid #3b506f;border-radius:9px;padding:11px}.s-btn{background:#2563eb;color:white!important;text-decoration:none;border:0;border-radius:9px;padding:11px 16px;font-weight:750;cursor:pointer}.s-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.s-table{width:100%;border-collapse:collapse}.s-table th,.s-table td{padding:11px 7px;border-bottom:1px solid #304563;text-align:left}.s-table th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#aebdd5}.s-bar{height:8px;background:#263c5d;border-radius:99px;overflow:hidden;margin-top:6px}.s-bar span{display:block;height:100%;background:linear-gradient(90deg,#3b82f6,#34d399);border-radius:99px}.s-link{color:#93c5fd;text-decoration:none;font-weight:750}.s-select{min-width:190px}@media(max-width:900px){.s-kpis{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){.s-grid{grid-template-columns:1fr}.s-head{align-items:flex-start;flex-direction:column}}@media(max-width:480px){.s-kpis{grid-template-columns:1fr}.s-filters>*{width:100%}.s-input,.s-select{width:100%;box-sizing:border-box}}
+
+/* CCH unified gold / ivory Salon reporting palette */
+.salon-workspace{color:#302316!important;background:#faf8f4!important}
+.salon-workspace .s-muted{color:#6f6253!important}
+.salon-workspace .s-panel,.salon-workspace .s-kpi{background:#fff!important;color:#302316!important;border:1px solid #e7ddce!important;box-shadow:0 6px 20px rgba(74,49,21,.055)!important}
+.salon-workspace h1,.salon-workspace h2,.salon-workspace h3,.salon-workspace h4{color:#302316!important}
+.salon-workspace .s-kpi small{color:#6f6253!important}
+.salon-workspace .s-value{color:#302316!important}
+.salon-workspace .s-filters label{color:#594733!important}
+.salon-workspace .s-input,.salon-workspace .s-select{background:#fff!important;color:#302316!important;border:1px solid #d8cbb8!important;color-scheme:light}
+.salon-workspace .s-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important}
+.salon-workspace .s-table th{background:#f2eadc!important;color:#594733!important}
+.salon-workspace .s-table td{color:#302316!important}
+.salon-workspace .s-table th,.salon-workspace .s-table td{border-color:#eee5d8!important}
+.salon-workspace .s-bar{background:#eee5d8!important}
+.salon-workspace .s-bar span{background:linear-gradient(90deg,#986126,#c99a4e)!important}
+.salon-workspace .s-link{color:#87551f!important}
+
 </style>
 <div class="salon-workspace">
  <header class="s-head"><div><div class="s-muted" style="font-size:11px;font-weight:800;letter-spacing:.14em">MANAGEMENT WORKSPACE · SALON</div><h1 style="margin:5px 0">Performance & Reports</h1><div class="s-muted">{{ hotel.name }} · Revenue, service mix and staff productivity</div></div><form method="get" class="s-filters"><select class="s-select" name="hotel" onchange="this.form.submit()">{% for item in hotels %}<option value="{{ item.pk }}" {% if item.pk == hotel.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></form></header>
