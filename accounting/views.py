@@ -12,7 +12,7 @@ from inventory.models import Hotel
 from accounting.constants import DEBIT_NORMAL_TYPES
 from accounting.constants import (INCOME_TYPES,EXPENSE_TYPES,)
 from accounting.constants import (ASSET_TYPES,LIABILITY_TYPES,EQUITY,)
-from django.db import transaction, models
+from django.db import transaction
 from accounting.forms import AccountForm, BankAccountForm
 from decimal import Decimal
 from accounting.services.journal import record_transaction, get_system_account
@@ -645,8 +645,9 @@ def account_ledger(request, account_id):
 
     User = get_user_model()
     users = User.objects.filter(is_active=True).filter(
-        models.Q(hotel_id=account.hotel_id)
-        | models.Q(department__hotel_id=account.hotel_id)
+        Q(hotel_id=account.hotel_id)
+        | Q(department__hotel_id=account.hotel_id)
+        | Q(assigned_hotels=account.hotel)
     ).distinct().order_by("first_name", "last_name", "username")
 
     selected_user = None
