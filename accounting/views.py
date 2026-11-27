@@ -23,7 +23,7 @@ from accounting.services.journal import record_transaction, get_system_account
 @role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def accounting_dashboard(request):
     """Hotel-scoped finance dashboard with six-month trends and expense analysis."""
-    from datetime import date
+    from datetime import date, timedelta
     from decimal import Decimal
     from django.db.models import Sum
     from django.utils import timezone
@@ -43,6 +43,26 @@ def accounting_dashboard(request):
 
     today = timezone.localdate()
     month_start = today.replace(day=1)
+    default_start = month_start
+    for _ in range(5):
+        default_start = (default_start - timedelta(days=1)).replace(day=1)
+
+    from django.utils.dateparse import parse_date
+    raw_start = (request.GET.get("start_date") or "").strip()
+    raw_end = (request.GET.get("end_date") or "").strip()
+    filter_start = parse_date(raw_start) if raw_start else default_start
+    filter_end = parse_date(raw_end) if raw_end else today
+    date_filter_error = ""
+    if not filter_start or not filter_end:
+        filter_start, filter_end = default_start, today
+        date_filter_error = "Enter valid start and end dates."
+    elif filter_start > filter_end:
+        filter_start, filter_end = default_start, today
+        date_filter_error = "Start date must be on or before end date."
+    elif filter_end > today:
+        filter_end = today
+        date_filter_error = "Future dates are not available; the end date was set to today."
+
     accounts = Account.objects.filter(hotel=hotel, is_active=True)
 
     cash_balance = Decimal("0.00")
@@ -57,16 +77,12 @@ def accounting_dashboard(request):
         elif account.system_key == "accounts_payable":
             payables_balance += balance
 
-    # Build the six calendar-month buckets using the journal's actual posting dates.
-    from datetime import timedelta
-    first_month = month_start
-    for _ in range(5):
-        first_month = (first_month - timedelta(days=1)).replace(day=1)
+    # Aggregate journal activity within the selected date window.
     monthly_rows = (
         JournalLine.objects.filter(
             journal__hotel=hotel,
-            journal__date__gte=first_month,
-            journal__date__lte=today,
+            journal__date__gte=filter_start,
+            journal__date__lte=filter_end,
             account__account_type__in=tuple(INCOME_TYPES) + tuple(EXPENSE_TYPES),
         )
         .annotate(month=TruncMonth("journal__date"))
@@ -86,8 +102,9 @@ def accounting_dashboard(request):
             bucket["expenses"] += debit - credit
 
     month_keys = []
-    cursor = first_month
-    for _ in range(6):
+    cursor = filter_start.replace(day=1)
+    final_month = filter_end.replace(day=1)
+    while cursor <= final_month:
         month_keys.append(cursor)
         cursor = (cursor.replace(day=28) + timedelta(days=4)).replace(day=1)
     monthly_chart = []
@@ -107,8 +124,8 @@ def accounting_dashboard(request):
 
     current_totals = JournalLine.objects.filter(
         journal__hotel=hotel,
-        journal__date__gte=month_start,
-        journal__date__lte=today,
+        journal__date__gte=filter_start,
+        journal__date__lte=filter_end,
         account__account_type__in=INCOME_TYPES,
     ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
     revenue_month = (current_totals["credit"] or Decimal("0.00")) - (current_totals["debit"] or Decimal("0.00"))
@@ -116,11 +133,11 @@ def accounting_dashboard(request):
     expense_rows = (
         JournalLine.objects.filter(
             journal__hotel=hotel,
-            journal__date__gte=month_start,
-            journal__date__lte=today,
+            journal__date__gte=filter_start,
+            journal__date__lte=filter_end,
             account__account_type__in=EXPENSE_TYPES,
         )
-        .values("account__name")
+        .values("account_id", "account__name")
         .annotate(debit=Sum("debit"), credit=Sum("credit"))
         .order_by("-debit")[:6]
     )
@@ -128,13 +145,13 @@ def accounting_dashboard(request):
     for row in expense_rows:
         amount = (row["debit"] or Decimal("0.00")) - (row["credit"] or Decimal("0.00"))
         if amount > 0:
-            expense_breakdown.append({"name": row["account__name"], "amount": amount})
+            expense_breakdown.append({"account_id": row["account_id"], "name": row["account__name"], "amount": amount})
     expenses_month = sum((item["amount"] for item in expense_breakdown), Decimal("0.00"))
     # KPI total includes every expense account, not only the six displayed categories.
     expense_totals = JournalLine.objects.filter(
         journal__hotel=hotel,
-        journal__date__gte=month_start,
-        journal__date__lte=today,
+        journal__date__gte=filter_start,
+        journal__date__lte=filter_end,
         account__account_type__in=EXPENSE_TYPES,
     ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
     expenses_month = (expense_totals["debit"] or Decimal("0.00")) - (expense_totals["credit"] or Decimal("0.00"))
@@ -154,8 +171,8 @@ def accounting_dashboard(request):
     cash_rows = (
         JournalLine.objects.filter(
             journal__hotel=hotel,
-            journal__date__gte=first_month,
-            journal__date__lte=today,
+            journal__date__gte=filter_start,
+            journal__date__lte=filter_end,
             account__account_type__in=("cash", "bank"),
         )
         .annotate(month=TruncMonth("journal__date"))
@@ -204,13 +221,15 @@ def accounting_dashboard(request):
 
     pending_reimbursements = StaffReimbursement.objects.filter(hotel=hotel, status="PENDING").count()
     recent_entries = (
-        JournalEntry.objects.filter(hotel=hotel)
+        JournalEntry.objects.filter(hotel=hotel, date__gte=filter_start, date__lte=filter_end)
         .select_related("created_by")
         .prefetch_related("lines__account")
         .order_by("-date", "-id")[:8]
     )
     return render(request, "accounting/dashboard.html", {
         "hotel": hotel, "hotels": hotels, "today": today,
+        "filter_start": filter_start, "filter_end": filter_end,
+        "date_filter_error": date_filter_error,
         "cash_balance": cash_balance, "bank_balance": bank_balance,
         "payables_balance": payables_balance, "revenue_month": revenue_month,
         "expenses_month": expenses_month, "net_profit_month": net_profit_month,
