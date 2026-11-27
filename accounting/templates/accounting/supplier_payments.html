@@ -1,8 +1,29 @@
 {% extends "base/base.html" %}
 {% block title %}Supplier Payments | Hotel HMS{% endblock %}
 {% block content %}
+{% load humanize %}
 <style>
 .spm-page{max-width:1500px;margin:0 auto}.spm-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:24px}.spm-eyebrow{font-size:.76rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#64748b;margin:0 0 7px}.spm-heading h1{font-size:clamp(1.65rem,2.4vw,2.35rem);line-height:1.15;margin:0;color:#172033}.spm-subtitle{margin:9px 0 0;color:#64748b;max-width:720px}.spm-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:22px;box-shadow:0 8px 28px rgba(15,23,42,.045);margin-bottom:22px}.spm-card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:17px}.spm-card h2{font-size:1.15rem;margin:0;color:#172033}.spm-muted{color:#64748b;font-size:.9rem}.spm-filter{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.spm-field{display:flex;flex-direction:column;gap:6px;min-width:0}.spm-field label{font-size:.8rem;font-weight:700;color:#475569}.spm-field input,.spm-field select{width:100%;min-width:0;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:10px;padding:10px 11px;background:#fff;color:#0f172a;font:inherit;font-size:.92rem}.spm-filter select{min-width:250px}.spm-obligations{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}.spm-obligation{border:1px solid #e2e8f0;border-radius:15px;padding:18px;min-width:0}.spm-obligation-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:15px}.spm-vendor{font-size:1rem;font-weight:800;color:#172033;margin:0;overflow-wrap:anywhere}.spm-source{font-size:.84rem;color:#64748b;margin:5px 0 0}.spm-pill{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;background:#fff7ed;color:#9a3412;font-size:.76rem;font-weight:800;white-space:nowrap}.spm-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:17px}.spm-metric{background:#f8fafc;border-radius:11px;padding:10px;min-width:0}.spm-metric span{display:block;font-size:.72rem;color:#64748b;margin-bottom:5px}.spm-metric strong{display:block;font-size:clamp(.8rem,1.5vw,.98rem);color:#172033;overflow-wrap:anywhere}.spm-metric.balance{background:#eff6ff}.spm-metric.balance strong{color:#1d4ed8}.spm-payment-title{font-size:.84rem;font-weight:800;color:#334155;margin:0 0 10px}.spm-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.spm-span{grid-column:1/-1}.spm-btn{border:0;border-radius:10px;padding:11px 14px;background:#1d4ed8;color:white;font-weight:800;font-size:.92rem;cursor:pointer}.spm-btn:hover{background:#1e40af}.spm-empty{padding:32px 18px;text-align:center;border:1px dashed #cbd5e1;border-radius:14px;color:#64748b}.spm-table-wrap{overflow:auto}table.spm-table{width:100%;border-collapse:collapse;min-width:800px}table.spm-table th{text-align:left;font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;color:#64748b;background:#f8fafc;padding:12px}table.spm-table td{padding:13px 12px;border-top:1px solid #eef2f7;font-size:.88rem;color:#334155}table.spm-table td.amount{font-weight:800;color:#172033;white-space:nowrap}.spm-journal{color:#1d4ed8;font-weight:700;text-decoration:none}.spm-journal:hover{text-decoration:underline}.spm-history-ref{overflow-wrap:anywhere;max-width:180px}
+.spm-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;margin-bottom:22px}
+.spm-kpi{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;min-width:0;box-shadow:0 6px 20px rgba(15,23,42,.035)}
+.spm-kpi-label{font-size:.76rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#64748b}
+.spm-kpi-value{display:block;margin-top:9px;font-size:clamp(1.05rem,1.65vw,1.5rem);line-height:1.25;font-weight:850;color:#172033;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.035em}
+.spm-kpi-note{margin:6px 0 0;color:#94a3b8;font-size:.8rem}
+.spm-analytics{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr);gap:18px;margin-bottom:22px}
+.spm-chart-row{display:grid;grid-template-columns:70px minmax(0,1fr);gap:10px;align-items:center;margin:13px 0}
+.spm-chart-label{font-size:.8rem;color:#64748b;font-weight:700}
+.spm-track{height:11px;background:#eef2f7;border-radius:99px;overflow:hidden}
+.spm-fill{height:100%;background:#2563eb;border-radius:99px;min-width:0}
+.spm-exposure .spm-chart-row{grid-template-columns:minmax(100px,1fr) minmax(70px,1.5fr)}
+.spm-exposure-amount{font-size:.8rem;font-weight:800;text-align:right;white-space:nowrap;color:#334155}
+.spm-filter-grid{display:grid;grid-template-columns:minmax(180px,2fr) repeat(3,minmax(130px,1fr)) auto;gap:12px;align-items:end}
+.spm-filter-grid .spm-field{min-width:0}
+.spm-filter-grid .spm-field input,.spm-filter-grid .spm-field select{min-width:0}
+.spm-filter-actions{display:flex;gap:8px;align-items:center}
+.spm-btn-link{display:inline-flex;align-items:center;justify-content:center;padding:11px 12px;color:#475569;text-decoration:none;font-weight:800}
+.spm-error{padding:10px 12px;background:#fff7ed;color:#9a3412;border-radius:10px;margin-bottom:12px;font-size:.88rem}
+@media(max-width:900px){.spm-analytics{grid-template-columns:1fr}.spm-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.spm-filter-grid{grid-template-columns:1fr}.spm-filter-actions{width:100%}.spm-filter-actions .spm-btn{flex:1}.spm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.spm-kpi{padding:13px}.spm-kpi-value{font-size:1rem}}
 @media(max-width:640px){.spm-card{padding:15px;border-radius:14px}.spm-metrics{gap:5px}.spm-metric{padding:8px 6px}.spm-form-grid{grid-template-columns:1fr}.spm-span{grid-column:auto}.spm-filter,.spm-filter .spm-field,.spm-filter select{width:100%;min-width:0}}
 </style>
 <div class="spm-page">
@@ -30,6 +51,41 @@
     </form>
   </section>
 
+  <section class="spm-kpis">
+    <article class="spm-kpi"><div class="spm-kpi-label">Outstanding balance</div><strong class="spm-kpi-value">₦{{ open_total|floatformat:2|intcomma }}</strong><p class="spm-kpi-note">Across all open obligations</p></article>
+    <article class="spm-kpi"><div class="spm-kpi-label">Open obligations</div><strong class="spm-kpi-value">{{ open_count|intcomma }}</strong><p class="spm-kpi-note">Purchase, direct and labour obligations</p></article>
+    <article class="spm-kpi"><div class="spm-kpi-label">Suppliers to pay</div><strong class="spm-kpi-value">{{ supplier_count|intcomma }}</strong><p class="spm-kpi-note">Suppliers with outstanding balances</p></article>
+    <article class="spm-kpi"><div class="spm-kpi-label">Payments in selected period</div><strong class="spm-kpi-value">₦{{ paid_in_period|floatformat:2|intcomma }}</strong><p class="spm-kpi-note">Based on payment date filters</p></article>
+  </section>
+
+  <section class="spm-analytics">
+    <article class="spm-card" style="margin:0">
+      <div class="spm-card-head"><div><h2>Supplier payment trend</h2><p class="spm-muted" style="margin:6px 0 0">Payments recorded over the last six months</p></div></div>
+      {% for month in payment_trend %}
+        <div class="spm-chart-row"><span class="spm-chart-label">{{ month.label }}</span><div><div class="spm-track"><div class="spm-fill" style="width:{{ month.pct }}%"></div></div><div class="spm-muted" style="font-size:.76rem;margin-top:4px">₦{{ month.amount|floatformat:2|intcomma }}</div></div></div>
+      {% empty %}<div class="spm-empty">No payment activity to chart yet.</div>{% endfor %}
+    </article>
+    <article class="spm-card spm-exposure" style="margin:0">
+      <div class="spm-card-head"><div><h2>Outstanding by supplier</h2><p class="spm-muted" style="margin:6px 0 0">Largest open balances</p></div></div>
+      {% for supplier in outstanding_by_supplier %}
+        <div class="spm-chart-row"><span class="spm-chart-label" title="{{ supplier.name }}">{{ supplier.name|truncatechars:22 }}</span><div><div class="spm-track"><div class="spm-fill" style="width:{{ supplier.pct }}%;background:#0f766e"></div></div><div class="spm-exposure-amount">₦{{ supplier.amount|floatformat:2|intcomma }}</div></div></div>
+      {% empty %}<div class="spm-empty">No outstanding supplier balances.</div>{% endfor %}
+    </article>
+  </section>
+
+  <section class="spm-card">
+    <div class="spm-card-head"><div><h2>Find obligations and payments</h2><p class="spm-muted" style="margin:6px 0 0">Search suppliers, references and payment notes. Narrow the register by source and status.</p></div></div>
+    {% if filter_error %}<div class="spm-error">{{ filter_error }}</div>{% endif %}
+    <form method="get" class="spm-filter-grid">
+      <input type="hidden" name="hotel" value="{{ hotel.pk }}">
+      <div class="spm-field"><label for="spm-q">Search</label><input id="spm-q" name="q" value="{{ query }}" placeholder="Supplier, PO or reference"></div>
+      <div class="spm-field"><label for="spm-source">Source</label><select id="spm-source" name="source"><option value="">All sources</option><option value="PO" {% if source_filter == "PO" %}selected{% endif %}>Purchase orders</option><option value="DIRECT" {% if source_filter == "DIRECT" %}selected{% endif %}>Direct purchases</option><option value="LABOUR" {% if source_filter == "LABOUR" %}selected{% endif %}>Maintenance labour</option></select></div>
+      <div class="spm-field"><label for="spm-status">Obligation status</label><select id="spm-status" name="status"><option value="OPEN" {% if status_filter == "OPEN" %}selected{% endif %}>All outstanding</option><option value="UNPAID" {% if status_filter == "UNPAID" %}selected{% endif %}>Unpaid</option><option value="PARTIAL" {% if status_filter == "PARTIAL" %}selected{% endif %}>Partially paid</option></select></div>
+      <div class="spm-field"><label for="spm-from">Payment from</label><input id="spm-from" type="date" name="from_date" value="{{ request.GET.from_date }}"></div>
+      <div class="spm-filter-actions"><button class="spm-btn" type="submit">Apply filters</button><a class="spm-btn-link" href="{% url 'accounting:supplier_payments' %}?hotel={{ hotel.pk }}">Reset</a></div>
+    </form>
+    <p class="spm-muted" style="margin:12px 0 0">The payment date range filters payment history and the paid-in-period figure; obligation status filters the outstanding register.</p>
+  </section>
   <section class="spm-card">
     <div class="spm-card-head">
       <div>
@@ -50,9 +106,9 @@
               <span class="spm-pill">Unsettled</span>
             </div>
             <div class="spm-metrics">
-              <div class="spm-metric"><span>Obligation total</span><strong>₦{{ item.total|floatformat:2 }}</strong></div>
-              <div class="spm-metric"><span>Paid to date</span><strong>₦{{ item.paid|floatformat:2 }}</strong></div>
-              <div class="spm-metric balance"><span>Remaining</span><strong>₦{{ item.outstanding|floatformat:2 }}</strong></div>
+              <div class="spm-metric"><span>Obligation total</span><strong>₦{{ item.total|floatformat:2|intcomma }}</strong></div>
+              <div class="spm-metric"><span>Paid to date</span><strong>₦{{ item.paid|floatformat:2|intcomma }}</strong></div>
+              <div class="spm-metric balance"><span>Remaining</span><strong>₦{{ item.outstanding|floatformat:2|intcomma }}</strong></div>
             </div>
             <p class="spm-payment-title">Record a payment</p>
             <form method="post" class="spm-form-grid">
@@ -110,7 +166,7 @@
               <td>{{ payment.payment_date|date:"Y-m-d" }}</td>
               <td><strong>{{ payment.supplier.name }}</strong></td>
               <td>{{ payment.get_source_type_display }} #{{ payment.source_id }}</td>
-              <td class="amount">₦{{ payment.amount|floatformat:2 }}</td>
+              <td class="amount">₦{{ payment.amount|floatformat:2|intcomma }}</td>
               <td>{{ payment.payment_account.name }}</td>
               <td class="spm-history-ref">{{ payment.reference|default:"—" }}</td>
               <td>{% if payment.journal_entry_id %}<a class="spm-journal" href="{% url 'accounting:journal_detail' payment.journal_entry_id %}">JE-{{ payment.journal_entry_id }}</a>{% else %}—{% endif %}</td>
