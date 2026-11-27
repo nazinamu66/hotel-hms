@@ -3,7 +3,15 @@
 {% block title %}Accounting Dashboard | Hotel HMS{% endblock %}
 {% block content %}
 <style>
-.acct-home{max-width:1500px;margin:0 auto;padding:4px 0 30px;color:#172033}
+.acct-home{max-width:1500px;margin:0 auto;padding:8px 0 42px;color:#172033}
+.acct-head h1{letter-spacing:-.035em}
+.acct-card{border-radius:18px;padding:23px;box-shadow:0 8px 26px rgba(15,23,42,.045)}
+.acct-filter-card{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap;background:linear-gradient(135deg,#fff 0%,#f8fbff 100%)}
+.acct-filter-actions{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.acct-hotel-filter{min-width:220px}
+.acct-filter input:focus,.acct-filter select:focus{outline:3px solid rgba(37,99,235,.13);border-color:#2563eb}
+.acct-filter button{box-shadow:0 5px 12px rgba(37,99,235,.18)}
+.acct-filter .reset:hover{color:#1d4ed8}
 .acct-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:22px}
 .acct-eyebrow{font-size:.75rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#64748b;margin:0 0 7px}
 .acct-head h1{font-size:clamp(1.7rem,2.5vw,2.35rem);margin:0;line-height:1.15}
@@ -22,14 +30,22 @@
 .acct-key-link:hover span:nth-child(2){color:#1d4ed8;text-decoration:underline}
 .acct-period{font-size:.76rem;color:#64748b;font-weight:700}
 .acct-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:20px}
-.acct-metric{background:#fff;border:1px solid #e2e8f0;border-radius:15px;padding:18px;min-width:0}
+.acct-metric{background:linear-gradient(155deg,#fff 0%,#fbfdff 100%);border:1px solid #e2e8f0;border-radius:16px;padding:20px;min-width:0;box-shadow:0 5px 16px rgba(15,23,42,.025);position:relative;overflow:hidden}
+.acct-metric:before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:#cbd5e1}
+.acct-metric:nth-child(3):before{background:#2563eb}.acct-metric:nth-child(4):before{background:#f59e0b}.acct-metric:nth-child(5):before{background:#0f766e}
 .acct-metric span{display:block;color:#64748b;font-size:.82rem;font-weight:700}
 .acct-metric strong{display:block;font-size:clamp(1.25rem,2vw,1.7rem);margin-top:9px;overflow-wrap:anywhere}
 .acct-metric small{display:block;color:#94a3b8;margin-top:5px}
-.acct-section-title{font-size:1.05rem;font-weight:850;margin:0 0 15px}
+.acct-section-title{font-size:1.08rem;font-weight:850;letter-spacing:-.02em;margin:0 0 8px}
+.acct-chart-grid>.acct-card{min-width:0}
+.acct-chart-hint{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#94a3b8;font-size:.7rem;font-weight:750;text-transform:uppercase;letter-spacing:.06em;margin:18px 0 12px}
+.acct-chart-hint:after{content:'Click a month to inspect';text-transform:none;letter-spacing:0;font-weight:600;color:#94a3b8}
 .acct-chart-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr);gap:18px;margin-bottom:18px}
 .acct-chart-grid.equal{grid-template-columns:repeat(2,minmax(0,1fr))}
-.acct-donut-layout{display:grid;grid-template-columns:145px 1fr;gap:18px;align-items:center}
+.acct-donut-layout{display:grid;grid-template-columns:150px minmax(0,1fr);gap:20px;align-items:center;padding:15px;border-radius:14px;background:#f8fafc}
+.acct-donut{box-shadow:0 5px 16px rgba(15,23,42,.08)}
+.acct-key-link{font-size:.79rem;line-height:1.35;padding:4px 2px}
+.acct-key-row{font-size:.79rem;line-height:1.35}
 .acct-donut{width:140px;height:140px;border-radius:50%;position:relative;display:grid;place-items:center;flex-shrink:0}
 .acct-donut:after{content:"";position:absolute;inset:24px;background:#fff;border-radius:50%}
 .acct-donut-center{position:relative;z-index:1;text-align:center;font-size:.72rem;color:#64748b}
@@ -45,11 +61,19 @@
 .acct-flow-positive{background:#0f766e}.acct-flow-negative{background:#e11d48}
 .acct-net-note{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 15px;border-radius:11px;background:#f8fafc;margin-top:16px;font-size:.84rem}
 .acct-net-note strong{font-size:1rem}
-.acct-trend-value{font-size:.72rem;color:#64748b;margin-left:84px;margin-top:-8px}
+.acct-trend-value{display:none}
 @media(max-width:850px){.acct-chart-grid,.acct-chart-grid.equal{grid-template-columns:1fr}.acct-donut-layout{grid-template-columns:110px 1fr}.acct-donut{width:105px;height:105px}.acct-donut:after{inset:18px}}
 .acct-legend{display:flex;gap:16px;flex-wrap:wrap;color:#64748b;font-size:.78rem;font-weight:700;margin:-4px 0 18px}
 .acct-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px}
-.acct-month{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:center;margin:13px 0}
+.acct-month{display:grid;grid-template-columns:76px minmax(0,1fr);gap:13px;align-items:center;margin:0;padding:11px 8px;border-radius:10px;transition:background .15s}
+.acct-chart-click:hover .acct-month{background:#f1f6ff}
+.acct-chart-click:hover .acct-month-label{color:#1d4ed8}
+.acct-chart-click:hover .acct-bar-track{background:#e5edf8}
+.acct-month-label{font-variant-numeric:tabular-nums}
+.acct-bar-track{height:12px;background:#f1f5f9;border-radius:5px}
+.acct-bar{border-radius:5px}
+.acct-bar-value{display:flex;justify-content:space-between;gap:10px;margin:3px 8px 10px 97px;color:#64748b;font-size:.72rem;font-variant-numeric:tabular-nums}
+.acct-bar-value span:first-child{color:#2563eb}.acct-bar-value span:last-child{color:#b77908}
 .acct-month-label{font-size:.78rem;color:#64748b;font-weight:750}
 .acct-bars{display:grid;gap:5px}
 .acct-bar-track{height:11px;background:#f1f5f9;border-radius:99px;overflow:hidden}
@@ -75,7 +99,7 @@
 .acct-table td{padding:13px 11px;border-top:1px solid #eef2f7;font-size:.88rem}
 .acct-table a{color:#1d4ed8;text-decoration:none;font-weight:750}
 .acct-empty{padding:24px;text-align:center;color:#64748b;border:1px dashed #cbd5e1;border-radius:12px}
-@media(max-width:640px){.acct-card{padding:15px}.acct-filter,.acct-filter select{width:100%;min-width:0}}
+@media(max-width:640px){.acct-card{padding:16px}.acct-filter-actions{width:100%}.acct-filter-actions>div{flex:1;min-width:0}.acct-filter-actions input,.acct-filter-actions select{width:100%;min-width:0}.acct-filter-actions button{width:100%}.acct-donut-layout{grid-template-columns:105px minmax(0,1fr);gap:12px;padding:12px}.acct-donut{width:100px;height:100px}.acct-donut:after{inset:17px}.acct-month{grid-template-columns:64px minmax(0,1fr);gap:8px}.acct-bar-value{margin-left:72px}.acct-chart-hint:after{font-size:.64rem}}
 </style>
 <div class="acct-home">
   <header class="acct-head">
