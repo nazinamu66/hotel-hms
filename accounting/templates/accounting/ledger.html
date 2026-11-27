@@ -62,6 +62,8 @@
       <div class="ledger-subtitle">Account {{ account.code }} · {{ account.get_account_type_display }} · {{ account.hotel.name }}</div>
     </div>
     <div class="ledger-actions">
+      <a class="ledger-btn primary" href="{% url 'accounting:ledger_export_pdf' account.id %}?{{ request.GET.urlencode }}">Download PDF</a>
+      <a class="ledger-btn primary" href="{% url 'accounting:ledger_export_xlsx' account.id %}?{{ request.GET.urlencode }}">Download Excel</a>
       <a class="ledger-btn" href="{% url 'accounting:chart' %}">← Chart of accounts</a>
       <button class="ledger-btn" type="button" onclick="window.print()">Print ledger</button>
     </div>
