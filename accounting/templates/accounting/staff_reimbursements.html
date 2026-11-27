@@ -1,33 +1,64 @@
 {% extends "base/base.html" %}
+{% load humanize %}
 {% block title %}Staff Reimbursements | Hotel HMS{% endblock %}
 {% block content %}
 <style>
-.sr-page{max-width:1400px;margin:0 auto;padding:28px 20px 48px;color:#172033}.sr-title{font-size:clamp(1.7rem,2.4vw,2.25rem);font-weight:800;letter-spacing:-.03em;margin:0}.sr-sub{color:#64748b;margin:8px 0 22px;max-width:850px}.sr-card{background:#fff;border:1px solid #e2e8f0;border-radius:15px;overflow:hidden;margin-bottom:16px;box-shadow:0 5px 20px rgba(15,23,42,.035)}.sr-wrap{overflow-x:auto}.sr-table{width:100%;border-collapse:collapse;min-width:1050px}.sr-table th{text-align:left;padding:12px 14px;background:#f8fafc;color:#64748b;font-size:.72rem;letter-spacing:.05em;text-transform:uppercase}.sr-table td{padding:14px;border-top:1px solid #eef2f7;font-size:.88rem;vertical-align:top}.sr-muted{color:#64748b;font-size:.8rem;line-height:1.5}.sr-status{display:inline-block;border-radius:999px;padding:5px 9px;background:#f1f5f9;color:#334155;font-size:.75rem;font-weight:800}.sr-form{min-width:230px;display:grid;gap:7px}.sr-form textarea,.sr-form input,.sr-form select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font:inherit;font-size:.82rem}.sr-btn{border:0;border-radius:8px;padding:8px 10px;font-weight:700;cursor:pointer;background:#dbeafe;color:#1d4ed8}.sr-btn-danger{background:#fee2e2;color:#991b1b}.sr-empty{padding:42px;text-align:center;color:#64748b}
+.sr-page{max-width:1500px;margin:0 auto;padding:28px 24px 52px;color:#172033}.sr-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:22px}.sr-kicker{font-size:.72rem;font-weight:800;letter-spacing:.14em;color:#64748b;text-transform:uppercase}.sr-title{font-size:clamp(1.8rem,2.5vw,2.35rem);font-weight:850;letter-spacing:-.045em;margin:5px 0}.sr-sub{color:#64748b;max-width:850px;margin:0;line-height:1.55}.sr-panel,.sr-metric{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 5px 22px rgba(15,23,42,.035)}.sr-panel{padding:20px;margin-bottom:18px}.sr-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.sr-metric{padding:18px;min-width:0;border-left:3px solid #cbd5e1}.sr-metric:nth-child(2){border-left-color:#2563eb}.sr-metric:nth-child(3){border-left-color:#d97706}.sr-metric:nth-child(4){border-left-color:#0f766e}.sr-label{color:#64748b;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;font-weight:800}.sr-value{font-size:clamp(1.05rem,1.55vw,1.55rem);font-weight:850;letter-spacing:-.035em;margin:9px 0 5px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.sr-help{color:#94a3b8;font-size:.78rem}.sr-filters{display:grid;grid-template-columns:minmax(220px,2fr) repeat(4,minmax(130px,1fr));gap:12px;align-items:end}.sr-field label{display:block;font-size:.76rem;font-weight:750;color:#475569;margin:0 0 6px}.sr-field input,.sr-field select,.sr-form input,.sr-form select,.sr-form textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:9px;padding:10px 11px;background:#fff;color:#172033;font:inherit;font-size:.86rem}.sr-actions{display:flex;gap:9px;align-items:center;margin-top:14px;flex-wrap:wrap}.sr-btn{display:inline-flex;justify-content:center;align-items:center;border:0;border-radius:9px;padding:10px 14px;font-weight:800;cursor:pointer;text-decoration:none;background:#2454d7;color:#fff}.sr-btn:hover{filter:brightness(.96)}.sr-btn-light{background:#f1f5f9;color:#334155}.sr-btn-danger{background:#fee2e2;color:#991b1b}.sr-section-title{font-size:1.08rem;font-weight:850;margin:0 0 4px}.sr-section-sub{color:#64748b;font-size:.82rem;margin:0 0 14px}.sr-wrap{overflow-x:auto}.sr-table{width:100%;border-collapse:collapse;min-width:1120px}.sr-table th{text-align:left;padding:12px 13px;background:#f8fafc;color:#64748b;font-size:.69rem;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}.sr-table td{padding:14px 13px;border-top:1px solid #eef2f7;font-size:.84rem;vertical-align:top}.sr-table tr:hover td{background:#fbfdff}.sr-muted{color:#64748b;font-size:.78rem;line-height:1.5}.sr-amount{font-weight:850;white-space:nowrap;font-variant-numeric:tabular-nums}.sr-status{display:inline-flex;border-radius:999px;padding:5px 9px;background:#f1f5f9;color:#334155;font-size:.72rem;font-weight:800}.sr-status.pending{background:#fff7ed;color:#9a3412}.sr-status.approved{background:#eff6ff;color:#1d4ed8}.sr-status.paid{background:#ecfdf5;color:#047857}.sr-status.rejected{background:#fef2f2;color:#b91c1c}.sr-form{min-width:220px;display:grid;gap:7px}.sr-form textarea{min-height:62px;resize:vertical}.sr-empty{padding:42px 20px;text-align:center;color:#64748b}.sr-pagination{display:flex;justify-content:space-between;align-items:center;padding:14px 2px 0;color:#64748b;font-size:.82rem}.sr-pagination a{color:#2454d7;font-weight:800;text-decoration:none;margin-left:12px}.sr-error{color:#b91c1c;font-size:.82rem;margin-top:10px}@media(max-width:1050px){.sr-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.sr-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.sr-page{padding:20px 12px 36px}.sr-head{display:block}.sr-metrics{grid-template-columns:1fr 1fr;gap:9px}.sr-metric{padding:13px}.sr-filters{grid-template-columns:1fr}.sr-panel{padding:14px}}
 </style>
 <div class="sr-page">
-<h1 class="sr-title">Staff Reimbursements</h1>
-<p class="sr-sub">Review personally funded urgent purchases and record actual reimbursement payments. Claims are created once per eligible purchase. Payment is only available after the purchase is fully received; payment posts a journal entry and records the cash/bank account and reference.</p>
-<div class="sr-card"><div class="sr-wrap"><table class="sr-table"><thead><tr><th>Claim</th><th>Staff member</th><th>Purchase / supplier</th><th>Claim amount</th><th>Purchase status</th><th>Reimbursement status</th><th>Review / payment</th></tr></thead><tbody>
-{% for claim in claims %}
-<tr>
-<td><strong>RB-{{ claim.pk }}</strong><div class="sr-muted">{{ claim.created_at|date:"d M Y H:i" }}</div></td>
-<td>{{ claim.claimant.get_full_name|default:claim.claimant.username }}</td>
-<td><strong>DP-{{ claim.direct_purchase_id }}</strong><div class="sr-muted">{{ claim.direct_purchase.supplier.name }}</div><div class="sr-muted">{{ claim.direct_purchase.purchase_date|date:"d M Y" }}</div></td>
-<td><strong>₦{{ claim.amount|floatformat:2 }}</strong></td>
-<td>{{ claim.direct_purchase.get_status_display }}<div class="sr-muted">{% if claim.direct_purchase.status == "RECEIVED" %}All goods received{% else %}Goods must be fully received before reimbursement payment{% endif %}</div></td>
-<td><span class="sr-status">{{ claim.get_status_display }}</span>{% if claim.review_note %}<div class="sr-muted">{{ claim.review_note }}</div>{% endif %}{% if claim.reviewed_by %}<div class="sr-muted">Reviewed by {{ claim.reviewed_by.get_full_name|default:claim.reviewed_by.username }}{% if claim.reviewed_at %} · {{ claim.reviewed_at|date:"d M Y H:i" }}{% endif %}</div>{% endif %}{% if claim.payment_reference %}<div class="sr-muted">Payment ref: {{ claim.payment_reference }}</div>{% endif %}</td>
-<td>
-{% if claim.status == "PENDING" %}
-<form class="sr-form" method="post">{% csrf_token %}<input type="hidden" name="claim_id" value="{{ claim.pk }}"><textarea name="review_note" required placeholder="Required review note"></textarea><button class="sr-btn" name="action" value="APPROVE">Approve claim</button><button class="sr-btn sr-btn-danger" name="action" value="REJECT" onclick="return confirm('Reject this reimbursement claim?')">Reject claim</button></form>
-{% elif claim.status == "APPROVED" %}
-{% if claim.direct_purchase.status == "RECEIVED" %}
-<form class="sr-form" method="post">{% csrf_token %}<input type="hidden" name="claim_id" value="{{ claim.pk }}"><label class="sr-muted">Pay from</label><select name="payment_account" required><option value="">Choose cash/bank account</option>{% for account in payment_accounts %}<option value="{{ account.pk }}">{{ account.code }} · {{ account.name }}</option>{% endfor %}</select><input name="payment_reference" required placeholder="Transfer / payment reference"><button class="sr-btn" name="action" value="PAY">Record reimbursement payment</button></form>
-{% else %}<span class="sr-muted">Awaiting full goods receipt</span>{% endif %}
-{% elif claim.status == "PAID" %}
-<div class="sr-muted">Paid {{ claim.paid_at|date:"d M Y H:i" }}{% if claim.paid_by %} by {{ claim.paid_by.get_full_name|default:claim.paid_by.username }}{% endif %}</div>{% if claim.payment_account %}<div class="sr-muted">{{ claim.payment_account.name }}</div>{% endif %}
-{% else %}<span class="sr-muted">No further action</span>{% endif %}
-</td>
-</tr>
-{% empty %}<tr><td colspan="7"><div class="sr-empty">No staff reimbursement claims for this hotel yet. Eligible staff-funded urgent purchases will appear after management approval.</div></td></tr>{% endfor %}
-</tbody></table></div></div></div>
+  <header class="sr-head">
+    <div><div class="sr-kicker">Finance · Staff accounts</div><h1 class="sr-title">Staff Reimbursements</h1><p class="sr-sub">Review staff-funded urgent purchases, approve eligible claims and record actual reimbursement payments. Payments remain subject to full goods receipt and are posted to the accounting journal.</p></div>
+  </header>
+
+  <section class="sr-metrics" aria-label="Reimbursement overview">
+    <div class="sr-metric"><div class="sr-label">Pending review</div><div class="sr-value">{{ totals.pending_count|default:0|intcomma }}</div><div class="sr-help">₦{{ totals.pending_amount|default:0|floatformat:2|intcomma }} awaiting decision</div></div>
+    <div class="sr-metric"><div class="sr-label">Approved to pay</div><div class="sr-value">{{ totals.approved_count|default:0|intcomma }}</div><div class="sr-help">₦{{ totals.approved_amount|default:0|floatformat:2|intcomma }} approved, unpaid</div></div>
+    <div class="sr-metric"><div class="sr-label">Reimbursed</div><div class="sr-value">₦{{ totals.paid_amount|default:0|floatformat:2|intcomma }}</div><div class="sr-help">{{ totals.paid_count|default:0|intcomma }} completed payments</div></div>
+    <div class="sr-metric"><div class="sr-label">Total claims</div><div class="sr-value">{{ totals.total_count|default:0|intcomma }}</div><div class="sr-help">All claims recorded for this hotel</div></div>
+  </section>
+
+  <section class="sr-panel">
+    <h2 class="sr-section-title">Find reimbursement claims</h2><p class="sr-section-sub">Search by claim, staff member, supplier or purchase reference. Filters apply to the register below.</p>
+    <form method="get">
+      {% if hotel %}<input type="hidden" name="hotel" value="{{ hotel.pk }}">{% endif %}
+      <div class="sr-filters">
+        <div class="sr-field"><label for="sr-q">Search</label><input id="sr-q" name="q" value="{{ query }}" placeholder="RB-12, staff, supplier, reference"></div>
+        <div class="sr-field"><label for="sr-status">Reimbursement status</label><select id="sr-status" name="status"><option value="">All statuses</option><option value="PENDING" {% if status_filter == "PENDING" %}selected{% endif %}>Awaiting review</option><option value="APPROVED" {% if status_filter == "APPROVED" %}selected{% endif %}>Approved</option><option value="PAID" {% if status_filter == "PAID" %}selected{% endif %}>Reimbursed</option><option value="REJECTED" {% if status_filter == "REJECTED" %}selected{% endif %}>Rejected</option></select></div>
+        <div class="sr-field"><label for="sr-purchase-status">Purchase status</label><select id="sr-purchase-status" name="purchase_status"><option value="">All purchase statuses</option><option value="APPROVED" {% if purchase_status_filter == "APPROVED" %}selected{% endif %}>Approved</option><option value="PARTIALLY_RECEIVED" {% if purchase_status_filter == "PARTIALLY_RECEIVED" %}selected{% endif %}>Partially received</option><option value="RECEIVED" {% if purchase_status_filter == "RECEIVED" %}selected{% endif %}>Received</option></select></div>
+        <div class="sr-field"><label for="sr-staff">Staff member</label><select id="sr-staff" name="staff"><option value="">All staff</option>{% for person in staff_members %}<option value="{{ person.claimant_id }}" {% if staff_filter == person.claimant_id|stringformat:"s" %}selected{% endif %}>{{ person.claimant__first_name }} {{ person.claimant__last_name }}{% if not person.claimant__first_name and not person.claimant__last_name %}{{ person.claimant__username }}{% endif %}</option>{% endfor %}</select></div>
+        <div class="sr-field"><label for="sr-from">Claim date from</label><input id="sr-from" type="date" name="start_date" value="{{ start_date }}"></div>
+        <div class="sr-field"><label for="sr-to">Claim date to</label><input id="sr-to" type="date" name="end_date" value="{{ end_date }}"></div>
+      </div>
+      <div class="sr-actions"><button class="sr-btn" type="submit">Apply filters</button><a class="sr-btn sr-btn-light" href="{% url 'accounting:staff_reimbursements' %}{% if hotel %}?hotel={{ hotel.pk }}{% endif %}">Clear filters</a></div>
+      {% if filter_error %}<div class="sr-error">{{ filter_error }}</div>{% endif %}
+    </form>
+  </section>
+
+  <section class="sr-panel">
+    <h2 class="sr-section-title">Reimbursement register</h2><p class="sr-section-sub">Review, pay and audit claims. Select a claim to inspect its full purchase and accounting history.</p>
+    <div class="sr-wrap"><table class="sr-table"><thead><tr><th>Claim</th><th>Staff member</th><th>Purchase / supplier</th><th>Claim amount</th><th>Goods receipt</th><th>Status / audit</th><th>Action</th></tr></thead><tbody>
+    {% for claim in claims %}
+      <tr>
+        <td><strong>RB-{{ claim.pk }}</strong><div class="sr-muted">{{ claim.created_at|date:"d M Y · H:i" }}</div><a class="sr-muted" href="{% url 'accounting:staff_reimbursement_detail' claim.pk %}{% if hotel %}?hotel={{ hotel.pk }}{% endif %}">View details</a></td>
+        <td><strong>{{ claim.claimant.get_full_name|default:claim.claimant.username }}</strong></td>
+        <td><strong>DP-{{ claim.direct_purchase_id }}</strong><div class="sr-muted">{{ claim.direct_purchase.supplier.name }}</div><div class="sr-muted">{{ claim.direct_purchase.purchase_date|date:"d M Y" }}</div></td>
+        <td class="sr-amount">₦{{ claim.amount|floatformat:2|intcomma }}</td>
+        <td>{% if claim.direct_purchase.status == "RECEIVED" %}<span class="sr-status paid">Fully received</span>{% else %}<span class="sr-status pending">{{ claim.direct_purchase.get_status_display }}</span><div class="sr-muted">Full receipt required before payment</div>{% endif %}</td>
+        <td><span class="sr-status {{ claim.status|lower }}">{{ claim.get_status_display }}</span>{% if claim.reviewed_by %}<div class="sr-muted">Reviewed by {{ claim.reviewed_by.get_full_name|default:claim.reviewed_by.username }}{% if claim.reviewed_at %} · {{ claim.reviewed_at|date:"d M Y H:i" }}{% endif %}</div>{% endif %}{% if claim.review_note %}<div class="sr-muted">{{ claim.review_note }}</div>{% endif %}{% if claim.payment_reference %}<div class="sr-muted">Ref: {{ claim.payment_reference }}</div>{% endif %}</td>
+        <td>
+          {% if claim.status == "PENDING" %}
+          <form class="sr-form" method="post">{% csrf_token %}<input type="hidden" name="claim_id" value="{{ claim.pk }}"><input type="hidden" name="hotel" value="{{ hotel.pk }}"><textarea name="review_note" required placeholder="Required review note"></textarea><button class="sr-btn" name="action" value="APPROVE">Approve claim</button><button class="sr-btn sr-btn-danger" name="action" value="REJECT" onclick="return confirm('Reject this reimbursement claim?')">Reject claim</button></form>
+          {% elif claim.status == "APPROVED" %}
+            {% if claim.direct_purchase.status == "RECEIVED" %}
+            <form class="sr-form" method="post">{% csrf_token %}<input type="hidden" name="claim_id" value="{{ claim.pk }}"><input type="hidden" name="hotel" value="{{ hotel.pk }}"><select name="payment_account" required><option value="">Pay from cash / bank account</option>{% for account in payment_accounts %}<option value="{{ account.pk }}">{{ account.code }} · {{ account.name }}</option>{% endfor %}</select><input name="payment_reference" required placeholder="Unique payment reference"><button class="sr-btn" name="action" value="PAY">Record payment</button></form>
+            {% else %}<span class="sr-muted">Awaiting full goods receipt</span>{% endif %}
+          {% elif claim.status == "PAID" %}<div class="sr-muted">Paid {{ claim.paid_at|date:"d M Y H:i" }}{% if claim.payment_account %}<br>{{ claim.payment_account.name }}{% endif %}</div>
+          {% else %}<span class="sr-muted">No further action</span>{% endif %}
+        </td>
+      </tr>
+    {% empty %}<tr><td colspan="7"><div class="sr-empty"><strong>No reimbursement claims found</strong><div class="sr-muted">Try adjusting the filters, or eligible staff-funded urgent purchases will appear here after management approval.</div></div></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% if page_obj.paginator.num_pages > 1 %}<div class="sr-pagination"><span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} · {{ page_obj.paginator.count|intcomma }} claims</span><span>{% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&q={{ query|urlencode }}&status={{ status_filter }}&purchase_status={{ purchase_status_filter }}&staff={{ staff_filter }}&start_date={{ start_date }}&end_date={{ end_date }}&hotel={{ hotel.pk }}">Previous</a>{% endif %}{% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&q={{ query|urlencode }}&status={{ status_filter }}&purchase_status={{ purchase_status_filter }}&staff={{ staff_filter }}&start_date={{ start_date }}&end_date={{ end_date }}&hotel={{ hotel.pk }}">Next</a>{% endif %}</span></div>{% endif %}
+  </section>
+</div>
 {% endblock %}
