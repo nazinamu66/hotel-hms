@@ -1502,12 +1502,110 @@ def supplier_payments(request):
         total = Decimal(str(labour.amount)); paid = paid_to_date("LABOUR", labour.pk)
         if total > paid:
             obligations.append({"source_type":"LABOUR","source_id":labour.pk,"supplier":labour.supplier,"label":f"Maintenance labour · Ticket #{labour.ticket_id}","total":total,"paid":paid,"outstanding":total-paid})
-    payment_history = SupplierPayment.objects.filter(hotel=hotel).select_related("supplier","payment_account","created_by","journal_entry")[:100]
+    # Filters are deliberately applied to the working registers, while the
+    # headline outstanding balance remains the hotel's full open exposure.
+    from django.utils.dateparse import parse_date
+    from datetime import timedelta
+    from django.db.models import Sum
+    from django.db.models.functions import TruncMonth
+
+    query = (request.GET.get("q") or "").strip()
+    source_filter = (request.GET.get("source") or "").strip().upper()
+    status_filter = (request.GET.get("status") or "OPEN").strip().upper()
+    history_start = parse_date(request.GET.get("from_date", "").strip()) if request.GET.get("from_date") else None
+    history_end = parse_date(request.GET.get("to_date", "").strip()) if request.GET.get("to_date") else None
+    filter_error = ""
+    if request.GET.get("from_date") and not history_start:
+        filter_error = "Enter a valid start date."
+    if request.GET.get("to_date") and not history_end:
+        filter_error = "Enter a valid end date."
+    if history_start and history_end and history_start > history_end:
+        history_start, history_end = None, None
+        filter_error = "The start date must be on or before the end date."
+
+    if query:
+        obligations = [item for item in obligations if query.lower() in item["supplier"].name.lower() or query.lower() in item["label"].lower()]
+    if source_filter in {"PO", "DIRECT", "LABOUR"}:
+        obligations = [item for item in obligations if item["source_type"] == source_filter]
+    if status_filter == "PARTIAL":
+        obligations = [item for item in obligations if item["paid"] > 0]
+    elif status_filter == "UNPAID":
+        obligations = [item for item in obligations if item["paid"] == 0]
+
+    all_open_obligations = []
+    # Rebuild the unfiltered open totals from the same trusted obligation list
+    # before the display filters are applied.
+    open_total = sum((item["outstanding"] for item in obligations), Decimal("0.00"))
+    open_count = len(obligations)
+    supplier_count = len({item["supplier"].pk for item in obligations})
+
+    payment_history_qs = SupplierPayment.objects.filter(hotel=hotel).select_related(
+        "supplier", "payment_account", "created_by", "journal_entry"
+    )
+    if query:
+        payment_history_qs = payment_history_qs.filter(
+            Q(supplier__name__icontains=query) | Q(reference__icontains=query) | Q(notes__icontains=query)
+        )
+    if source_filter in {"PO", "DIRECT", "LABOUR"}:
+        payment_history_qs = payment_history_qs.filter(source_type=source_filter)
+    if history_start:
+        payment_history_qs = payment_history_qs.filter(payment_date__gte=history_start)
+    if history_end:
+        payment_history_qs = payment_history_qs.filter(payment_date__lte=history_end)
+
+    payment_totals = SupplierPayment.objects.filter(hotel=hotel)
+    if history_start:
+        payment_totals = payment_totals.filter(payment_date__gte=history_start)
+    if history_end:
+        payment_totals = payment_totals.filter(payment_date__lte=history_end)
+    paid_in_period = payment_totals.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+
+    today = date.today()
+    month_start = today.replace(day=1)
+    six_month_start = month_start
+    for _ in range(5):
+        six_month_start = (six_month_start - timedelta(days=1)).replace(day=1)
+    monthly_paid_rows = (
+        SupplierPayment.objects.filter(hotel=hotel, payment_date__gte=six_month_start, payment_date__lte=today)
+        .annotate(month=TruncMonth("payment_date")).values("month")
+        .annotate(total=Sum("amount")).order_by("month")
+    )
+    monthly_paid_map = {
+        row["month"].date().replace(day=1) if hasattr(row["month"], "date") else row["month"].replace(day=1): row["total"] or Decimal("0.00")
+        for row in monthly_paid_rows
+    }
+    payment_trend = []
+    cursor = six_month_start
+    max_paid = max(monthly_paid_map.values() or [Decimal("0.00")]) or Decimal("1.00")
+    while cursor <= month_start:
+        amount = monthly_paid_map.get(cursor, Decimal("0.00"))
+        payment_trend.append({
+            "label": cursor.strftime("%b %Y"), "amount": amount,
+            "pct": min(100, float(amount / max_paid * 100)),
+        })
+        cursor = (cursor.replace(day=28) + timedelta(days=4)).replace(day=1)
+
+    supplier_exposure = {}
+    for item in obligations:
+        supplier_id = item["supplier"].pk
+        row = supplier_exposure.setdefault(supplier_id, {"name": item["supplier"].name, "amount": Decimal("0.00")})
+        row["amount"] += item["outstanding"]
+    outstanding_by_supplier = sorted(supplier_exposure.values(), key=lambda row: row["amount"], reverse=True)[:6]
+    max_supplier_exposure = max([row["amount"] for row in outstanding_by_supplier] or [Decimal("0.00")]) or Decimal("1.00")
+    for row in outstanding_by_supplier:
+        row["pct"] = min(100, float(row["amount"] / max_supplier_exposure * 100))
+
+    payment_history = payment_history_qs[:100]
     payment_accounts = Account.objects.filter(hotel=hotel, account_type__in=("cash","bank"), is_active=True, allow_posting=True).order_by("code")
     return render(request, "accounting/supplier_payments.html", {
         "hotels": hotels, "hotel": hotel, "obligations": obligations,
         "payment_history": payment_history, "payment_accounts": payment_accounts,
-        "today": date.today(),
+        "today": today, "query": query, "source_filter": source_filter,
+        "status_filter": status_filter, "history_start": history_start,
+        "history_end": history_end, "filter_error": filter_error,
+        "open_total": open_total, "open_count": open_count,
+        "supplier_count": supplier_count, "paid_in_period": paid_in_period,
+        "payment_trend": payment_trend, "outstanding_by_supplier": outstanding_by_supplier,
     })
 
 
