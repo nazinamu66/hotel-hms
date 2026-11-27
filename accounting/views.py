@@ -178,15 +178,25 @@ def accounting_dashboard(request):
             "positive": amount >= 0,
         })
 
-    # Create a CSS conic-gradient for a compact visual expense composition.
+    # Create an accurate expense composition (top six accounts plus Other).
+    top_expense_total = sum((item["amount"] for item in expense_breakdown), Decimal("0.00"))
+    other_expenses = max(Decimal("0.00"), expenses_month - top_expense_total)
+    composition_total = top_expense_total + other_expenses
+    donut_palette = ["#2563eb", "#0f766e", "#f59e0b", "#8b5cf6", "#e11d48", "#64748b", "#94a3b8"]
+    donut_items = list(expense_breakdown)
+    if other_expenses > 0:
+        donut_items.append({"name": "Other expenses", "amount": other_expenses, "pct": 0})
     donut_segments = []
     running_pct = 0.0
-    donut_palette = ["#2563eb", "#0f766e", "#f59e0b", "#8b5cf6", "#e11d48", "#64748b"]
-    for index, item in enumerate(expense_breakdown):
-        start = running_pct
-        running_pct += item["pct"]
+    for index, item in enumerate(donut_items):
         item["color"] = donut_palette[index % len(donut_palette)]
-        donut_segments.append(f"{item['color']} {start:.2f}% {running_pct:.2f}%")
+        item["share_pct"] = (
+            float(item["amount"] / composition_total * 100)
+            if composition_total > 0 else 0
+        )
+        start = running_pct
+        running_pct += item["share_pct"]
+        donut_segments.append(f'{item["color"]} {start:.2f}% {running_pct:.2f}%')
     expense_donut_style = (
         "conic-gradient(" + ", ".join(donut_segments) + ")"
         if donut_segments else "conic-gradient(#e2e8f0 0% 100%)"
@@ -207,7 +217,7 @@ def accounting_dashboard(request):
         "profit_margin": profit_margin, "pending_reimbursements": pending_reimbursements,
         "recent_entries": recent_entries, "monthly_chart": monthly_chart,
         "cash_flow_chart": cash_flow_chart, "expense_breakdown": expense_breakdown,
-        "expense_donut_style": expense_donut_style,
+        "expense_donut_style": expense_donut_style, "expense_composition": donut_items,
     })
 
 def trial_balance(request):
