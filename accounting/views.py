@@ -2738,43 +2738,101 @@ def bank_reconciliation(request):
                     statement_opening_balance=opening, statement_closing_balance=closing,
                     created_by=request.user,
                 )
-                messages.success(request, "Reconciliation period created. Import its statement CSV to begin matching.")
+                messages.success(request, "Reconciliation period created. Import its CSV or Excel statement to begin matching.")
             elif action == "IMPORT":
                 active = get_object_or_404(reconciliations.select_for_update(), pk=request.POST.get("reconciliation_id"), status="DRAFT")
                 upload = request.FILES.get("statement_file")
-                if not upload or not upload.name.lower().endswith(".csv"):
-                    raise ValueError("Upload a CSV bank statement.")
-                decoded = upload.read().decode("utf-8-sig")
-                reader = csv.DictReader(io.StringIO(decoded))
+                if not upload:
+                    raise ValueError("Choose a CSV or Excel bank statement to import.")
+                filename = upload.name.lower()
                 required = {"date", "description", "debit", "credit"}
-                headers = {str(h or "").strip().lower() for h in (reader.fieldnames or [])}
-                if not required.issubset(headers):
-                    raise ValueError("CSV must contain date, description, debit and credit columns. Reference is optional.")
+                rows = []
+                if filename.endswith(".csv"):
+                    try:
+                        decoded = upload.read().decode("utf-8-sig")
+                    except UnicodeDecodeError:
+                        raise ValueError("The CSV must use UTF-8 encoding. Re-save it as CSV UTF-8 and try again.")
+                    reader = csv.DictReader(io.StringIO(decoded))
+                    headers = {str(h or "").strip().lower() for h in (reader.fieldnames or [])}
+                    if not required.issubset(headers):
+                        raise ValueError("CSV must contain date, description, debit and credit columns. Reference is optional.")
+                    rows = [(row_no, {str(k or "").strip().lower(): (v or "").strip() for k, v in row.items()}) for row_no, row in enumerate(reader, start=2)]
+                elif filename.endswith(".xlsx"):
+                    try:
+                        from openpyxl import load_workbook
+                        workbook = load_workbook(upload, read_only=True, data_only=True)
+                        sheet = workbook.active
+                        sheet_rows = sheet.iter_rows(values_only=True)
+                        header_map = None
+                        data_start = 0
+                        for row_no, values in enumerate(sheet_rows, start=1):
+                            normalized_headers = [str(value or "").strip().lower() for value in values]
+                            aliases = {
+                                "date": ("date", "transaction date", "txn date"),
+                                "description": ("description", "transaction description", "details", "narration"),
+                                "debit": ("debit", "withdrawal", "money out", "debit amount"),
+                                "credit": ("credit", "deposit", "money in", "credit amount"),
+                                "reference": ("reference", "ref", "transaction reference"),
+                            }
+                            candidate = {}
+                            for field, names in aliases.items():
+                                for index, header in enumerate(normalized_headers):
+                                    if header in names:
+                                        candidate[field] = index
+                                        break
+                            if required.issubset(candidate):
+                                header_map = candidate
+                                data_start = row_no + 1
+                                break
+                        if header_map is None:
+                            raise ValueError("Excel sheet must contain date, description, debit and credit columns in one header row.")
+                        for row_no, values in enumerate(sheet.iter_rows(min_row=data_start, values_only=True), start=data_start):
+                            if not any(value not in (None, "") for value in values):
+                                continue
+                            rows.append((row_no, {
+                                field: (values[index] if index < len(values) else "")
+                                for field, index in header_map.items()
+                            }))
+                        workbook.close()
+                    except ValueError:
+                        raise
+                    except Exception as exc:
+                        raise ValueError("Could not read this Excel file. Please upload a valid .xlsx workbook.") from exc
+                else:
+                    raise ValueError("Unsupported file type. Upload a .csv or .xlsx bank statement.")
                 created = []
-                for row_no, row in enumerate(reader, start=2):
-                    normalized = {str(k or "").strip().lower(): (v or "").strip() for k, v in row.items()}
+                for row_no, normalized in rows:
                     raw_date = normalized.get("date", "")
                     try:
-                        try:
-                            txn_date = date.fromisoformat(raw_date)
-                        except ValueError:
-                            txn_date = datetime.strptime(raw_date, "%d/%m/%Y").date()
-                        debit = Decimal(normalized.get("debit") or "0")
-                        credit = Decimal(normalized.get("credit") or "0")
-                    except (ValueError, InvalidOperation):
-                        raise ValueError(f"Invalid date or amount on CSV row {row_no}.")
-                    description = normalized.get("description", "")[:255]
+                        if isinstance(raw_date, datetime):
+                            txn_date = raw_date.date()
+                        elif hasattr(raw_date, "year") and hasattr(raw_date, "month") and hasattr(raw_date, "day"):
+                            txn_date = raw_date
+                        else:
+                            raw_date = str(raw_date).strip()
+                            try:
+                                txn_date = date.fromisoformat(raw_date)
+                            except ValueError:
+                                txn_date = datetime.strptime(raw_date, "%d/%m/%Y").date()
+                        def amount(value):
+                            raw = str(value or "0").replace("₦", "").replace(",", "").strip()
+                            return Decimal(raw or "0")
+                        debit = amount(normalized.get("debit"))
+                        credit = amount(normalized.get("credit"))
+                    except (ValueError, InvalidOperation, TypeError):
+                        raise ValueError(f"Invalid date or amount on statement row {row_no}.")
+                    description = str(normalized.get("description") or "").strip()[:255]
                     if txn_date < active.period_start or txn_date > active.period_end or not description:
-                        raise ValueError(f"CSV row {row_no} is outside the statement period or has no description.")
+                        raise ValueError(f"Statement row {row_no} is outside the selected period or has no description.")
                     if not debit.is_finite() or not credit.is_finite() or debit < 0 or credit < 0 or (debit > 0 and credit > 0) or (debit == 0 and credit == 0):
-                        raise ValueError(f"CSV row {row_no} must contain one positive debit or credit amount.")
+                        raise ValueError(f"Statement row {row_no} must contain exactly one positive debit or credit amount.")
                     created.append(BankStatementLine(
                         reconciliation=active, line_number=row_no, transaction_date=txn_date,
-                        description=description, reference=normalized.get("reference", "")[:100],
+                        description=description, reference=str(normalized.get("reference") or "").strip()[:100],
                         debit=debit, credit=credit,
                     ))
                 if not created:
-                    raise ValueError("The CSV contains no statement transactions.")
+                    raise ValueError("The statement contains no transaction rows.")
                 if active.statement_opening_balance + sum((x.credit - x.debit for x in created), Decimal("0.00")) != active.statement_closing_balance:
                     raise ValueError("Statement rows do not reconcile to the supplied opening and closing balances. Check the CSV and statement balances.")
                 if active.statement_lines.exists():
