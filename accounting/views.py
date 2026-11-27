@@ -769,15 +769,13 @@ def account_ledger_export_xlsx(request, account_id):
     posted = context["selected_user"].get_full_name() or context["selected_user"].username if context["selected_user"] else "All users"
     ws["A4"] = f"Period: {period}    |    Posted by: {posted}"
     ws.append([])
-    ws.append(["Opening position", context["opening_balance"], "Period debits", context["total_debits"], "Period credits", context["total_credits"], "Closing balance"])
+    ws.append(["OPENING POSITION", float(context["opening_balance"]), "PERIOD DEBITS", float(context["total_debits"]), "PERIOD CREDITS", float(context["total_credits"]), "CLOSING BALANCE", float(context["closing_balance"])])
+    ws.append(["TRANSACTION DETAILS"])
+    ws.merge_cells("A7:H7")
+    ws["A7"].font = Font(bold=True, color="FFFFFF")
+    ws["A7"].fill = PatternFill("solid", fgColor="14233B")
     ws.append(["Date", "Business day", "Description", "Reference", "Posted by", "Debit (NGN)", "Credit (NGN)", "Running balance (NGN)"])
-    # Rebuild header row to eight columns after the summary band.
-    ws.merge_cells("A6:H6")
-    ws["A6"] = "TRANSACTION DETAILS"
-    ws["A6"].font = Font(bold=True, color="FFFFFF")
-    ws["A6"].fill = PatternFill("solid", fgColor="14233B")
-    ws.append(["Date", "Business day", "Description", "Reference", "Posted by", "Debit (NGN)", "Credit (NGN)", "Running balance (NGN)"])
-    for cell in ws[7]:
+    for cell in ws[8]:
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = PatternFill("solid", fgColor="334155")
     for item in context["ledger"]:
@@ -788,19 +786,19 @@ def account_ledger_export_xlsx(request, account_id):
             float(item["credit"]), float(item["balance"]),
         ])
     ws.append(["", "", "PERIOD TOTALS", "", "", float(context["total_debits"]), float(context["total_credits"]), float(context["closing_balance"])])
-    for row in ws.iter_rows(min_row=8, min_col=6, max_col=8):
+    for row in ws.iter_rows(min_row=9, min_col=6, max_col=8):
         for cell in row:
             cell.number_format = '"₦"#,##0.00;[Red]("₦"#,##0.00)'
     for cell in ws[6]:
-        cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = PatternFill("solid", fgColor="14233B")
+        cell.font = Font(bold=True, color="334155")
+        cell.fill = PatternFill("solid", fgColor="E8EEF7")
     for cell in ws[ws.max_row]:
         cell.font = Font(bold=True)
         cell.fill = PatternFill("solid", fgColor="E8EEF7")
     for col, width in enumerate([15, 15, 42, 25, 24, 19, 19, 23], 1):
         ws.column_dimensions[get_column_letter(col)].width = width
-    ws.freeze_panes = "A8"
-    ws.auto_filter.ref = f"A7:H{max(7, ws.max_row-1)}"
+    ws.freeze_panes = "A9"
+    ws.auto_filter.ref = f"A8:H{max(8, ws.max_row-1)}"
     ws.sheet_view.showGridLines = False
     for row in ws.iter_rows(min_row=8, max_col=2):
         for cell in row:
