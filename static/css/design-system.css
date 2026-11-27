@@ -73,3 +73,31 @@
  .hms-form-footer{flex-direction:column-reverse}.hms-form-footer .hms-btn{width:100%}
  .hms-detail-list{grid-template-columns:1fr;gap:4px}.hms-detail-list dd{margin-bottom:9px}
 }
+
+
+/* CCH unified brand tokens — shared by every role and department. */
+:root {
+  --hms-ink:#302316;
+  --hms-muted:#786b5c;
+  --hms-subtle:#9a8c7b;
+  --hms-border:#e8dfd2;
+  --hms-surface:#fff;
+  --hms-page:#faf8f4;
+  --hms-primary:#a8752d;
+  --hms-primary-hover:#80531f;
+  --hms-success:#15803d;
+  --hms-warning:#a8752d;
+  --hms-danger:#b91c1c;
+  --hms-shadow:0 8px 24px rgba(74,49,21,.07);
+}
+.hms-eyebrow { color:#986126; }
+.hms-btn-primary { background:linear-gradient(110deg,#986126,#c99a4e); color:#fff; }
+.hms-btn-primary:hover { background:linear-gradient(110deg,#80531f,#b9853c); color:#fff; }
+.hms-btn-quiet { background:#f7efe2; color:#80531f; }
+.hms-link { color:#986126; }
+.hms-notice { border-color:#ead8b8; background:#fbf5ea; color:#704719; }
+.hms-field input:focus,.hms-field select:focus,.hms-field textarea:focus {
+  outline:3px solid rgba(201,154,78,.18); border-color:#c99a4e;
+}
+.hms-table th { background:#f5efe5; color:#6c5638; }
+.hms-table tbody tr:hover { background:#fcf8f1; }
