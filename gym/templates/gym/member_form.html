@@ -1,9 +1,40 @@
 {% extends "base/base.html" %}
 {% block title %}Register Gym Member{% endblock %}
 {% block content %}
-<style>.gym-form-wrap{max-width:1000px;margin:auto;color:#172033}.gym-form-card{background:#fff;border:1px solid #e5e9f0;border-radius:16px;padding:24px;box-shadow:0 4px 16px #0f172a08}.gym-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.gym-form-grid p{margin:0}.gym-form-grid label{display:block;font-size:13px;font-weight:700;color:#475569;margin-bottom:6px}.gym-form-grid input,.gym-form-grid select,.gym-form-grid textarea{box-sizing:border-box;width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px}.gym-form-grid input[type=checkbox]{width:auto}.gym-submit{background:#1d4ed8;color:white;border:0;border-radius:9px;padding:12px 18px;font-weight:700;margin-top:20px;cursor:pointer}@media(max-width:650px){.gym-form-grid{grid-template-columns:1fr}}</style>
-<div class="gym-form-wrap"><p><a href="{% url 'gym_home' %}">← Gym Memberships</a></p><section class="gym-form-card"><h1 style="margin-top:0">Register a Gym member</h1><p style="color:#64748b">{{ hotel.name }} · Member number is generated automatically</p>
-<form method="post" enctype="multipart/form-data">{% csrf_token %}{% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
-<div class="gym-form-grid">{% for field in form %}<p><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small style="color:#b91c1c">{{ error }}</small>{% endfor %}</p>{% endfor %}</div>
-<button class="gym-submit">Save member</button></form></section></div>
+<style>
+.gym-register{max-width:1120px;margin:26px auto;padding:0 18px 40px;color:#172033}
+.gym-register-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:18px}
+.gym-register-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:26px;box-shadow:0 5px 20px #0f172a08;margin-bottom:18px}
+.gym-register-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 22px}
+.gym-register-field label{display:block;font-size:13px;font-weight:750;color:#475569;margin-bottom:7px}
+.gym-register-field input,.gym-register-field select,.gym-register-field textarea{box-sizing:border-box;width:100%;min-height:44px;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font:inherit}
+.gym-register-field textarea{min-height:82px}
+.gym-photo-row{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.gym-photo-preview{width:112px;height:128px;border-radius:12px;border:1px dashed #94a3b8;background:#f8fafc;display:grid;place-items:center;overflow:hidden;color:#64748b;text-align:center;font-size:12px}
+.gym-photo-preview img{width:100%;height:100%;object-fit:cover}
+.gym-primary{border:0;border-radius:10px;background:#0f766e;color:#fff;padding:12px 20px;font-weight:750;cursor:pointer}
+.gym-secondary{border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#334155;padding:12px 18px;text-decoration:none;font-weight:700}
+@media(max-width:650px){.gym-register-grid{grid-template-columns:1fr}.gym-register-card{padding:18px}}
+</style>
+<div class="gym-register">
+ <header class="gym-register-head"><div><p style="color:#64748b;margin:0 0 6px">{{ hotel.name }} · FRONT DESK</p><h1 style="font-size:30px;margin:0">Register a Gym member</h1><p style="color:#64748b;margin:8px 0 0">Create a member profile. The unique membership number is generated automatically.</p></div><a class="gym-secondary" href="{% url 'gym_home' %}">← Member register</a></header>
+ <form method="post" enctype="multipart/form-data">{% csrf_token %}
+ {% if form.non_field_errors %}<div style="color:#b91c1c;margin-bottom:14px">{{ form.non_field_errors }}</div>{% endif %}
+ <section class="gym-register-card"><h2 style="font-size:18px;margin:0 0 18px">Personal information</h2><div class="gym-register-grid">
+ {% for field in form %}{% if field.name == "first_name" or field.name == "last_name" or field.name == "phone" or field.name == "email" or field.name == "gender" or field.name == "date_of_birth" or field.name == "address" %}
+ <div class="gym-register-field"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span style="color:#dc2626">*</span>{% endif %}</label>{{ field }}{% for error in field.errors %}<small style="color:#b91c1c">{{ error }}</small>{% endfor %}</div>
+ {% endif %}{% endfor %}
+ </div></section>
+ <section class="gym-register-card"><h2 style="font-size:18px;margin:0 0 18px">Member photograph</h2><div class="gym-photo-row"><div class="gym-photo-preview" id="gym-photo-preview">Photo preview</div><div class="gym-register-field" style="flex:1;min-width:220px"><label for="{{ form.photograph.id_for_label }}">Upload photograph</label>{{ form.photograph }}<small style="display:block;color:#64748b;margin-top:7px">Use a clear, recent face photograph. It will appear on the member's Gym pass.</small>{% for error in form.photograph.errors %}<small style="color:#b91c1c">{{ error }}</small>{% endfor %}</div></div></section>
+ <section class="gym-register-card"><h2 style="font-size:18px;margin:0 0 18px">Emergency contact and notes</h2><div class="gym-register-grid">
+ {% for field in form %}{% if field.name == "emergency_contact_name" or field.name == "emergency_contact_phone" or field.name == "notes" %}
+ <div class="gym-register-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small style="color:#b91c1c">{{ error }}</small>{% endfor %}</div>
+ {% endif %}{% endfor %}
+ </div></section>
+ <div style="display:flex;justify-content:flex-end;gap:10px"><a class="gym-secondary" href="{% url 'gym_home' %}">Cancel</a><button class="gym-primary" type="submit">Save member profile</button></div>
+ </form>
+</div>
+<script>
+(function(){const input=document.getElementById("{{ form.photograph.id_for_label }}"),preview=document.getElementById("gym-photo-preview");if(!input||!preview)return;input.addEventListener("change",function(){const file=this.files&&this.files[0];if(!file)return;if(!file.type.startsWith("image/")){preview.textContent="Please choose an image file.";return;}const reader=new FileReader();reader.onload=function(){preview.innerHTML="";const img=document.createElement("img");img.src=reader.result;img.alt="Selected member photograph";preview.appendChild(img);};reader.readAsDataURL(file);});})();
+</script>
 {% endblock %}
