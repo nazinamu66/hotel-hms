@@ -2077,129 +2077,198 @@ input:focus, select:focus, textarea:focus,
 
 
 /* =========================================================
-   CCH management report readability pass
-   Standard report canvas: warm ivory, white panels, dark ink.
-   Overrides legacy per-template navy/blue report styling.
+   
+
+/* =========================================================
+   CCH management reports — precise component styling.
+   Avoid generic [class*=panel/kpi] selectors: those also match
+   panel headings and KPI labels, creating unwanted outlines.
    ========================================================= */
 :root {
-  --cch-report-ink:#302316;
-  --cch-report-muted:#6f6253;
-  --cch-report-border:#e7ddce;
-  --cch-report-panel:#fff;
-  --cch-report-head:#f2eadc;
+  --cch-ink:#302316;
+  --cch-muted:#6f6253;
+  --cch-border:#e7ddce;
+  --cch-page:#faf8f4;
+  --cch-card:#fff;
+  --cch-table-head:#f2eadc;
+  --cch-gold:#c99a4e;
+  --cch-bronze:#986126;
 }
-.management-overview,.management-performance,
-.management-frontdesk,.management-reservations,
-.management-custom-reports,.corporate-performance,
-.billing-report,.hk-report,.lrm,.mm,
-.restaurant-management,.restaurant-sales,.salon-mgmt,
-.kitchen-management-report,.management-guest-company-billing {
-  background:#faf8f4 !important;
-  color:var(--cch-report-ink) !important;
+
+/* All role workspaces use the same light top bar. */
+.topbar, .topbar.topbar-executive {
+  background:#fff !important;
+  color:var(--cch-ink) !important;
+  border-bottom:1px solid var(--cch-border) !important;
+  box-shadow:0 2px 8px rgba(74,49,21,.04) !important;
 }
-.management-overview h1,.management-overview h2,.management-overview h3,
-.management-performance h1,.management-performance h2,.management-performance h3,
-.management-frontdesk h1,.management-frontdesk h2,.management-frontdesk h3,
-.management-reservations h1,.management-reservations h2,.management-reservations h3,
-.management-custom-reports h1,.management-custom-reports h2,.management-custom-reports h3,
-.corporate-performance h1,.corporate-performance h2,.corporate-performance h3,
-.billing-report h1,.billing-report h2,.billing-report h3,
-.hk-report h1,.hk-report h2,.hk-report h3,
-.lrm h1,.lrm h2,.lrm h3,.mm h1,.mm h2,.mm h3,
-.restaurant-management h1,.restaurant-management h2,.restaurant-management h3,
-.restaurant-sales h1,.restaurant-sales h2,.restaurant-sales h3,
-.salon-mgmt h1,.salon-mgmt h2,.salon-mgmt h3,
-.kitchen-management-report h1,.kitchen-management-report h2,.kitchen-management-report h3 {
-  color:var(--cch-report-ink) !important;
+.topbar .user-info, .topbar.topbar-executive .user-info { color:var(--cch-muted) !important; }
+.topbar .user-info strong, .topbar.topbar-executive .user-info strong { color:var(--cch-ink) !important; }
+.topbar .user-info a, .topbar.topbar-executive .user-info a { color:var(--cch-bronze) !important; }
+.topbar .mobile-nav-toggle, .topbar.topbar-executive .mobile-nav-toggle {
+  background:#f7efe2 !important;border:1px solid var(--cch-border) !important;color:var(--cch-ink) !important;
 }
-.management-overview [class*="panel"],.management-overview [class*="kpi"],
-.management-performance [class*="panel"],.management-performance [class*="kpi"],
-.management-frontdesk [class*="panel"],.management-frontdesk [class*="kpi"],
-.management-reservations [class*="panel"],.management-reservations [class*="kpi"],
-.management-custom-reports [class*="panel"],.management-custom-reports [class*="card"],
-.corporate-performance .card,.corporate-performance .panel,
-.billing-report .card,.billing-report .panel,.billing-report .kpi,
+
+/* Executive Dashboard — actual component classes only. */
+.management-overview {
+  --exec-bg:var(--cch-page);--exec-surface:#fff;--exec-surface-raised:#fff;
+  --exec-border:var(--cch-border);--exec-text:var(--cch-ink);
+  --exec-muted:#6f6253;--exec-blue:#986126;--exec-green:#28734a;
+  --exec-amber:#a8752d;--exec-purple:#7957a6;
+  background:var(--cch-page) !important;color:var(--cch-ink) !important;
+}
+.management-overview .exec-eyebrow,
+.management-overview .exec-section-label { color:#80531f !important; }
+.management-overview .exec-heading h1,
+.management-overview .exec-panel-heading { color:var(--cch-ink) !important; }
+.management-overview .exec-heading p,
+.management-overview .exec-panel-subtitle,
+.management-overview .exec-kpi-note,
+.management-overview .exec-footnote { color:#6f6253 !important; }
+.management-overview .exec-period {
+  background:#f3eadb !important;border-color:var(--cch-border) !important;color:#594733 !important;
+}
+.management-overview .exec-filter {
+  background:#fff !important;border:1px solid var(--cch-border) !important;
+  box-shadow:0 5px 18px rgba(74,49,21,.055) !important;
+}
+.management-overview .exec-filter-field label { color:#594733 !important; }
+.management-overview .exec-filter-field input,
+.management-overview .exec-filter-field select {
+  background:#fff !important;color:var(--cch-ink) !important;
+  border:1px solid #d8cbb8 !important;color-scheme:light !important;
+}
+.management-overview .exec-filter-actions button {
+  background:linear-gradient(110deg,#986126,#c99a4e) !important;
+  border:0 !important;color:#fff !important;
+}
+.management-overview .exec-filter-actions a { color:var(--cch-bronze) !important; }
+.management-overview .exec-kpi,
+.management-overview .exec-panel,
+.management-overview .exec-position {
+  background:#fff !important;border:1px solid var(--cch-border) !important;
+  box-shadow:0 5px 18px rgba(74,49,21,.055) !important;
+}
+.management-overview .exec-kpi-label { color:#594733 !important; }
+.management-overview .exec-kpi-value { color:var(--cch-ink) !important; }
+.management-overview .exec-hotel-row-head { color:var(--cch-ink) !important; }
+.management-overview .exec-hotel-row-head span { color:#594733 !important; }
+.management-overview .exec-bar-track { background:#eee5d8 !important; }
+.management-overview .exec-bar-fill { background:linear-gradient(90deg,#986126,#c99a4e) !important; }
+.management-overview .exec-chart { background:#fbf8f2 !important; }
+.management-overview .exec-chart svg { background:transparent !important; }
+.management-overview .exec-position-item { border-left-color:rgba(152,97,38,.48) !important; }
+.management-overview .exec-position-item span { color:#6f6253 !important; }
+.management-overview .exec-position-item strong { color:var(--cch-ink) !important; }
+
+/* Hotel Performance — fix the white-on-white KPI and hotel-name text. */
+.management-performance {
+  --perf-bg:var(--cch-page);--perf-surface:#fff;--perf-raised:#fff;
+  --perf-border:var(--cch-border);--perf-text:var(--cch-ink);--perf-muted:#6f6253;
+  background:var(--cch-page) !important;color:var(--cch-ink) !important;
+}
+.management-performance .perf-eyebrow,
+.management-performance .perf-section-label { color:#80531f !important; }
+.management-performance .perf-heading h1,
+.management-performance .perf-panel-heading h2 { color:var(--cch-ink) !important; }
+.management-performance .perf-heading p,
+.management-performance .perf-panel-heading p,
+.management-performance .perf-note { color:#6f6253 !important; }
+.management-performance .perf-period {
+  background:#f3eadb !important;border-color:var(--cch-border) !important;color:#594733 !important;
+}
+.management-performance .perf-filter {
+  background:#fff !important;border:1px solid var(--cch-border) !important;
+  box-shadow:0 5px 18px rgba(74,49,21,.055) !important;
+}
+.management-performance .perf-filter-field label { color:#594733 !important; }
+.management-performance .perf-filter-field input,
+.management-performance .perf-filter-field select {
+  background:#fff !important;color:var(--cch-ink) !important;
+  border:1px solid #d8cbb8 !important;color-scheme:light !important;
+}
+.management-performance .perf-filter-actions button {
+  background:linear-gradient(110deg,#986126,#c99a4e) !important;border:0 !important;color:#fff !important;
+}
+.management-performance .perf-filter-actions a,
+.management-performance .perf-scope-reset,
+.management-performance .perf-drill-link { color:var(--cch-bronze) !important; }
+.management-performance .perf-kpi,
+.management-performance .perf-panel {
+  background:#fff !important;border:1px solid var(--cch-border) !important;
+  box-shadow:0 5px 18px rgba(74,49,21,.055) !important;
+}
+.management-performance .perf-kpi span,
+.management-performance .perf-kpi small { color:#594733 !important; }
+.management-performance .perf-kpi strong { color:var(--cch-ink) !important; }
+.management-performance .perf-count {
+  background:#f7efe2 !important;border-color:var(--cch-border) !important;color:#594733 !important;
+}
+.management-performance .perf-table-wrap { border-color:var(--cch-border) !important; }
+.management-performance .perf-table th {
+  background:var(--cch-table-head) !important;color:#594733 !important;border-color:var(--cch-border) !important;
+}
+.management-performance .perf-table td {
+  background:#fff !important;color:var(--cch-ink) !important;border-color:#eee6da !important;
+}
+.management-performance .perf-table tbody tr:hover td { background:#fbf6ed !important; }
+.management-performance .perf-hotel-name { color:var(--cch-ink) !important;font-weight:750 !important; }
+.management-performance .perf-result.is-positive { color:#21633f !important; }
+.management-performance .perf-result.is-negative { color:#a12626 !important; }
+.management-performance .perf-rank {
+  background:#f7efe2 !important;border-color:var(--cch-border) !important;color:#80531f !important;
+}
+
+/* Legacy management reports — preserve their layout, replace only their
+   scoped surfaces, typography and controls. */
+.hk-report,.lrm,.mm,.restaurant-management,.restaurant-sales,.salon-mgmt,
+.corporate-performance,.billing-report {
+  background:var(--cch-page) !important;color:var(--cch-ink) !important;
+}
 .hk-report .hk-panel,.hk-report .hk-kpi,
-.lrm .lrm-panel,.lrm .lrm-kpi,
-.mm .mm-panel,.mm .mm-kpi,
+.lrm .lrm-panel,.lrm .lrm-kpi,.mm .mm-panel,.mm .mm-kpi,
 .restaurant-management .rm-panel,.restaurant-management .rm-kpi,
 .restaurant-sales .rs-panel,.restaurant-sales .rs-kpi,
 .salon-mgmt .mgmt-card,.salon-mgmt .mgmt-link,.salon-mgmt .mgmt-table,
-.kitchen-management-report .kmr-section,.kitchen-management-report .kmr-card {
-  background:#fff !important;
-  color:var(--cch-report-ink) !important;
-  border:1px solid var(--cch-report-border) !important;
-  box-shadow:0 5px 18px rgba(74,49,21,.055) !important;
+.corporate-performance .filters,.corporate-performance .kpi,.corporate-performance .panel,
+.billing-report .filters,.billing-report .kpi,.billing-report .panel {
+  background:#fff !important;color:var(--cch-ink) !important;
+  border-color:var(--cch-border) !important;box-shadow:0 5px 18px rgba(74,49,21,.055) !important;
 }
-.management-overview [class*="muted"],.management-overview [class*="note"],
-.management-performance [class*="muted"],.management-performance [class*="note"],
-.management-frontdesk [class*="muted"],.management-frontdesk [class*="note"],
-.management-reservations [class*="muted"],.management-reservations [class*="note"],
-.management-custom-reports [class*="muted"],.corporate-performance .muted,
-.corporate-performance .subtitle,.billing-report .muted,.billing-report .subtitle,
+.hk-report h1,.hk-report h2,.hk-report h3,.lrm h1,.lrm h2,.lrm h3,
+.mm h1,.mm h2,.mm h3,.restaurant-management h1,.restaurant-management h2,
+.restaurant-management h3,.restaurant-sales h1,.restaurant-sales h2,
+.restaurant-sales h3,.salon-mgmt h1,.salon-mgmt h2,.salon-mgmt h3,
+.corporate-performance h1,.corporate-performance h2,.corporate-performance h3,
+.billing-report h1,.billing-report h2,.billing-report h3 { color:var(--cch-ink) !important; }
 .hk-report .hk-muted,.lrm .lrm-muted,.mm .mm-muted,
 .restaurant-management .rm-muted,.restaurant-sales .rs-muted,
-.restaurant-sales .rs-note,.salon-mgmt .mgmt-sub,
-.kitchen-management-report .kmr-muted {
-  color:var(--cch-report-muted) !important;
-}
-.hk-report label,.lrm label,.mm label,
-.restaurant-management label,.restaurant-sales .rs-field label,
-.corporate-performance .field label,.billing-report .field label {
-  color:#594733 !important;
-}
-.hk-report input,.hk-report select,.lrm input,.lrm select,
-.mm input,.mm select,.restaurant-management input,.restaurant-management select,
+.salon-mgmt .mgmt-sub,.corporate-performance .muted,.corporate-performance .subtitle,
+.billing-report .muted,.billing-report .subtitle { color:#6f6253 !important; }
+.hk-report label,.lrm label,.mm label,.restaurant-management label,
+.restaurant-sales .rs-field label,.corporate-performance .field label,
+.billing-report .field label { color:#594733 !important; }
+.hk-report input,.hk-report select,.lrm input,.lrm select,.mm input,.mm select,
+.restaurant-management input,.restaurant-management select,
 .restaurant-sales .rs-field input,.restaurant-sales .rs-field select,
 .corporate-performance .field input,.corporate-performance .field select,
 .billing-report .field input,.billing-report .field select {
-  background:#fff !important;color:#302316 !important;
+  background:#fff !important;color:var(--cch-ink) !important;
   border:1px solid #d8cbb8 !important;color-scheme:light !important;
 }
-.management-overview table,.management-performance table,
-.management-frontdesk table,.management-reservations table,
-.management-custom-reports table,.corporate-performance table,
-.billing-report table,.hk-report table,.lrm table,.mm table,
-.restaurant-management table,.restaurant-sales table,.salon-mgmt table {
-  color:#302316 !important;
+.hk-report th,.lrm th,.mm th,.restaurant-management th,.restaurant-sales th,
+.salon-mgmt th,.corporate-performance th,.billing-report th {
+  background:var(--cch-table-head) !important;color:#594733 !important;
+  border-color:var(--cch-border) !important;
 }
-.management-overview th,.management-performance th,
-.management-frontdesk th,.management-reservations th,
-.management-custom-reports th,.corporate-performance th,
-.billing-report th,.hk-report th,.lrm th,.mm th,
-.restaurant-management th,.restaurant-sales th,.salon-mgmt th {
-  background:#f2eadc !important;color:#594733 !important;
-  border-color:#e7ddce !important;
-}
-.management-overview td,.management-performance td,
-.management-frontdesk td,.management-reservations td,
-.management-custom-reports td,.corporate-performance td,
-.billing-report td,.hk-report td,.lrm td,.mm td,
-.restaurant-management td,.restaurant-sales td,.salon-mgmt td {
-  color:#302316 !important;border-color:#eee6da !important;
-}
-.management-overview tbody tr:hover,.management-performance tbody tr:hover,
-.management-frontdesk tbody tr:hover,.management-reservations tbody tr:hover,
-.management-custom-reports tbody tr:hover,.corporate-performance tbody tr:hover,
-.billing-report tbody tr:hover,.hk-report tbody tr:hover,.lrm tbody tr:hover,
-.mm tbody tr:hover,.restaurant-management tbody tr:hover,
-.restaurant-sales tbody tr:hover,.salon-mgmt tbody tr:hover {
-  background:#fbf6ed !important;
-}
-.management-overview a,.management-performance a,
-.management-frontdesk a,.management-reservations a,
-.management-custom-reports a,.corporate-performance a,
-.billing-report a,.hk-report a,.lrm a,.mm a,
-.restaurant-management a,.restaurant-sales a,.salon-mgmt a {
-  color:#87551f !important;
+.hk-report td,.lrm td,.mm td,.restaurant-management td,.restaurant-sales td,
+.salon-mgmt td,.corporate-performance td,.billing-report td {
+  color:var(--cch-ink) !important;border-color:#eee6da !important;
 }
 .hk-report .hk-btn,.lrm .lrm-btn,.mm .mm-btn,
 .restaurant-management .rm-btn,.restaurant-sales .rs-btn,
 .corporate-performance .actions button,.billing-report .actions button {
-  background:linear-gradient(110deg,#986126,#c99a4e) !important;
-  color:#fff !important;border:0 !important;
+  background:linear-gradient(110deg,#986126,#c99a4e) !important;color:#fff !important;border:0 !important;
 }
-.hk-report .hk-pill,.mm .mm-pill,.restaurant-management .rm-status,
-.restaurant-sales .rs-status {
-  border:1px solid #e7ddce;
-}
+.salon-mgmt .mgmt-link { color:var(--cch-ink) !important; }
+.salon-mgmt .mgmt-card small,.salon-mgmt .mgmt-table th { color:#594733 !important; }
