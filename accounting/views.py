@@ -2702,7 +2702,7 @@ def bank_reconciliation(request):
     """Import a bank statement, match rows to existing journal lines, and reconcile."""
     import csv
     import io
-    from datetime import date, datetime
+    from datetime import date, datetime, timedelta
     from decimal import Decimal, InvalidOperation
     from django.utils import timezone
     from core.utils import get_user_hotels
@@ -2838,7 +2838,7 @@ def bank_reconciliation(request):
         for line in lines:
             candidates = JournalLine.objects.filter(
                 account=active.bank_account.account, journal__hotel=hotel,
-                journal__date__gte=line.transaction_date - __import__("datetime").timedelta(days=3),
+                journal__date__gte=line.transaction_date - timedelta(days=3),
                 journal__date__lte=line.transaction_date + __import__("datetime").timedelta(days=3),
                 debit=line.credit, credit=line.debit,
             ).filter(matched_journal_line__isnull=True).select_related("journal").order_by("journal_id")
