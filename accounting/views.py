@@ -507,9 +507,12 @@ def chart_of_accounts(request):
 @role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
 def journal_view(request):
     from core.utils import get_user_hotels
+    from django.core.paginator import Paginator
+    from django.db.models import Sum
+    from django.utils.dateparse import parse_date
 
     hotels = get_user_hotels(request.user)
-    if request.user.role != "DIRECTOR" and getattr(request.user, "hotel_id", None):
+    if request.user.role not in ("DIRECTOR", "ADMIN") and getattr(request.user, "hotel_id", None):
         hotels = hotels.filter(pk=request.user.hotel_id)
     selected_hotel_id = (request.GET.get("hotel") or "").strip()
     hotel = hotels.filter(pk=selected_hotel_id).first() if selected_hotel_id else hotels.first()
@@ -517,47 +520,60 @@ def journal_view(request):
         raise PermissionDenied("No accessible hotel is available for the journal.")
 
     entries = (
-        JournalEntry.objects
-        .filter(hotel=hotel)
+        JournalEntry.objects.filter(hotel=hotel)
         .prefetch_related("lines__account")
-        .select_related("created_by")
+        .select_related("created_by", "business_day")
         .order_by("-date", "-id")
     )
 
-    start_date = request.GET.get("start_date")
-    end_date = request.GET.get("end_date")
-    account_id = request.GET.get("account")
-    search = request.GET.get("search")
-    
+    start_date = (request.GET.get("start_date") or "").strip()
+    end_date = (request.GET.get("end_date") or "").strip()
+    account_id = (request.GET.get("account") or "").strip()
+    search = (request.GET.get("search") or "").strip()
+    filter_errors = []
+    start_day = parse_date(start_date) if start_date else None
+    end_day = parse_date(end_date) if end_date else None
 
-    if start_date:
-        entries = entries.filter(date__gte=start_date)
+    if start_date and not start_day:
+        filter_errors.append("Enter a valid start date.")
+    if end_date and not end_day:
+        filter_errors.append("Enter a valid end date.")
+    if start_day and end_day and start_day > end_day:
+        filter_errors.append("The start date cannot be after the end date.")
 
-    if end_date:
-        entries = entries.filter(date__lte=end_date)
+    accounts = Account.objects.filter(hotel=hotel, is_active=True).order_by("code")
+    if account_id and not accounts.filter(pk=account_id).exists():
+        filter_errors.append("Choose an account belonging to the selected hotel.")
+        account_id = ""
 
-    if account_id:
-        entries = entries.filter(lines__account_id=account_id).distinct()
+    if not filter_errors:
+        if start_day:
+            entries = entries.filter(date__gte=start_day)
+        if end_day:
+            entries = entries.filter(date__lte=end_day)
+        if account_id:
+            entries = entries.filter(lines__account_id=account_id).distinct()
+        if search:
+            entries = entries.filter(
+                Q(description__icontains=search) | Q(reference__icontains=search)
+            )
 
-    # 🔎 SEARCH
-    if search:
-        entries = entries.filter(
-            Q(description__icontains=search) |
-            Q(reference__icontains=search)
-        )
-
-    accounts = (
-        Account.objects
-        .filter(hotel=hotel)
-        .order_by("code")
+    totals = entries.aggregate(
+        debit_total=Sum("lines__debit"),
+        credit_total=Sum("lines__credit"),
     )
+    entry_count = entries.count()
+    paginator = Paginator(entries, 25)
+    page_obj = paginator.get_page(request.GET.get("page"))
 
-    for entry in entries:
+    for entry in page_obj.object_list:
         entry.total_debit = sum(line.debit for line in entry.lines.all())
         entry.total_credit = sum(line.credit for line in entry.lines.all())
 
     return render(request, "accounting/journal.html", {
-        "entries": entries,
+        "entries": page_obj.object_list,
+        "page_obj": page_obj,
+        "paginator": paginator,
         "accounts": accounts,
         "selected_account": account_id,
         "start_date": start_date,
@@ -565,6 +581,12 @@ def journal_view(request):
         "search": search,
         "hotel": hotel,
         "hotels": hotels,
+        "show_hotel_selector": request.user.role in ("DIRECTOR", "ADMIN") and hotels.count() > 1,
+        "entry_count": entry_count,
+        "debit_total": totals["debit_total"] or Decimal("0.00"),
+        "credit_total": totals["credit_total"] or Decimal("0.00"),
+        "filter_errors": filter_errors,
+        "has_filters": bool(start_date or end_date or account_id or search),
     })
 
 
