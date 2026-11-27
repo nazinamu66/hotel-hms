@@ -6,6 +6,7 @@ urlpatterns = [
     path("", views.gym_home, name="gym_home"),
     path("members/new/", views.gym_member_create, name="gym_member_create"),
     path("members/<int:member_id>/", views.gym_member_detail, name="gym_member_detail"),
+    path("members/<int:member_id>/edit/", views.gym_member_edit, name="gym_member_edit"),
     path("members/<int:member_id>/membership/new/", views.gym_membership_checkout, name="gym_membership_checkout"),
     path("memberships/<int:membership_id>/receipt/", views.gym_membership_receipt, name="gym_membership_receipt"),
     path("memberships/<int:membership_id>/pass/", views.gym_membership_pass, name="gym_membership_pass"),
