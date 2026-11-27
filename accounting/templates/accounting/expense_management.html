@@ -41,7 +41,7 @@
 </section>
 {% if can_create %}
 <section class="exp-card">
-<div class="exp-section-head"><div class="exp-section-icon">＋</div><div><h2>Record an expense</h2><div class="exp-muted">Create an obligation for review. No cash or bank balance changes until a payment is recorded.</div></div>
+<div class="exp-section-head"><div class="exp-section-icon">＋</div><div><h2>Record an expense</h2><div class="exp-muted">Create an obligation for review. No cash or bank balance changes until a payment is recorded.</div></div></div>
 <form method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="hotel" value="{{ hotel.id }}"><input type="hidden" name="action" value="CREATE">
 <div class="exp-grid">
 <div class="exp-field"><label for="expense-description">Description *</label><input id="expense-description" name="description" maxlength="255" placeholder="e.g. November staff payroll" required></div>
