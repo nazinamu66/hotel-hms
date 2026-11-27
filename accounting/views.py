@@ -101,8 +101,8 @@ def accounting_dashboard(request):
             "label": key.strftime("%b %Y"),
             "revenue": values["revenue"],
             "expenses": values["expenses"],
-            "revenue_pct": min(100, float(values["revenue"] / max_month_value * 100)),
-            "expenses_pct": min(100, float(values["expenses"] / max_month_value * 100)),
+            "revenue_pct": max(0, min(100, float(values["revenue"] / max_month_value * 100))),
+            "expenses_pct": max(0, min(100, float(values["expenses"] / max_month_value * 100))),
         })
 
     current_totals = JournalLine.objects.filter(
