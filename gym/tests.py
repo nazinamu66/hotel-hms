@@ -282,6 +282,7 @@ class GymGateVerificationTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Edit member profile")
+        original_member_number = self.member.member_number
         response = self.client.post(url, {
             "first_name": "Updated",
             "last_name": "Member",
@@ -298,7 +299,7 @@ class GymGateVerificationTests(TestCase):
         self.member.refresh_from_db()
         self.assertEqual(self.member.first_name, "Updated")
         self.assertEqual(self.member.phone, "08022222222")
-        self.assertEqual(self.member.member_number, self.member.member_number)
+        self.assertEqual(self.member.member_number, original_member_number)
 
     def test_front_desk_cannot_edit_member_from_another_hotel(self):
         other_hotel = Hotel.objects.create(name="Other Gym Hotel")
