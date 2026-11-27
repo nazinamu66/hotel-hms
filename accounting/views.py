@@ -591,6 +591,7 @@ def journal_detail(request, journal_id):
         "total_debit": total_debit,
         "total_credit": total_credit,
         "is_balanced": total_debit == total_credit,
+        "balance_difference": abs(total_debit - total_credit),
         "line_count": len(lines),
     })
 
