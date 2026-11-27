@@ -110,30 +110,22 @@
     </div>
   </header>
 
-  <section class="acct-card">
-    <form method="get" class="acct-filter">
-      {% if user.role == "DIRECTOR" and hotels|length > 1 %}<input type="hidden" name="hotel" value="{{ hotel.pk }}">{% endif %}
+  <section class="acct-card acct-filter-card">
+    <div>
+      <p class="acct-eyebrow" style="margin-bottom:5px">Reporting period</p>
+      <p class="acct-period">Journal activity from {{ filter_start|date:"d M Y" }} to {{ filter_end|date:"d M Y" }}</p>
+      {% if date_filter_error %}<p class="acct-filter-error">{{ date_filter_error }}</p>{% endif %}
+    </div>
+    <form method="get" class="acct-filter-actions">
+      {% if user.role == "DIRECTOR" and hotels|length > 1 %}
+      <div class="acct-hotel-filter"><label for="hotel">Hotel</label><select id="hotel" name="hotel">{% for item in hotels %}<option value="{{ item.pk }}" {% if item.pk == hotel.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></div>
+      {% endif %}
       <div><label for="start_date">From</label><input type="date" id="start_date" name="start_date" value="{{ filter_start|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" required></div>
       <div><label for="end_date">To</label><input type="date" id="end_date" name="end_date" value="{{ filter_end|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" required></div>
       <button type="submit">Apply dates</button>
       <a class="reset" href="{% url 'accounting:dashboard' %}{% if user.role == 'DIRECTOR' and hotels|length > 1 %}?hotel={{ hotel.pk }}{% endif %}">Reset</a>
     </form>
-    {% if date_filter_error %}<p class="acct-filter-error">{{ date_filter_error }}</p>{% endif %}
-    <p class="acct-period">Showing journal activity from {{ filter_start|date:"d M Y" }} to {{ filter_end|date:"d M Y" }}</p>
   </section>
-
-  {% if user.role == "DIRECTOR" and hotels|length > 1 %}
-  <section class="acct-card">
-    <form method="get" class="acct-filter">
-      <div><label for="hotel">Hotel</label>
-        <select id="hotel" name="hotel" onchange="this.form.submit()">
-          {% for item in hotels %}<option value="{{ item.pk }}" {% if item.pk == hotel.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}
-        </select>
-      </div>
-      <noscript><button type="submit">Switch hotel</button></noscript>
-    </form>
-  </section>
-  {% endif %}
 
   <section class="acct-metrics">
     <article class="acct-metric"><span>Cash on hand</span><strong>₦{{ cash_balance|floatformat:2 }}</strong><small>Current ledger balance</small></article>
@@ -150,6 +142,7 @@
       <h2 class="acct-section-title">Revenue vs expenses</h2>
       <p class="acct-sub" style="margin:-7px 0 17px">Monthly income and expense movement · Selected date range</p>
       <div class="acct-legend"><span><i style="background:#2563eb"></i>Revenue</span><span><i style="background:#f59e0b"></i>Expenses</span></div>
+      <div class="acct-chart-hint">Monthly performance</div>
       {% if monthly_chart %}
         {% for month in monthly_chart %}
         <a class="acct-chart-click" href="{% url 'accounting:journal' %}?start_date={{ month.start_date }}&amp;end_date={{ month.end_date }}{% if user.role == 'DIRECTOR' and hotels|length > 1 %}&amp;hotel={{ hotel.pk }}{% endif %}" title="Open journal entries for {{ month.label }}">
@@ -161,7 +154,7 @@
             </div>
           </div>
         </a>
-        <div class="acct-trend-value">Revenue ₦{{ month.revenue|floatformat:0 }} · Expenses ₦{{ month.expenses|floatformat:0 }}</div>
+        <div class="acct-bar-value"><span>Revenue ₦{{ month.revenue|floatformat:0 }}</span><span>Expenses ₦{{ month.expenses|floatformat:0 }}</span></div>
         {% endfor %}
       {% else %}<div class="acct-chart-empty">No financial activity is available for this period.</div>{% endif %}
       <div class="acct-net-note"><span>Net result in period</span><strong>₦{{ net_profit_month|floatformat:2 }}</strong></div>
@@ -191,7 +184,7 @@
         </div>
         {% endfor %}
       </div>
-      {% else %}<div class="acct-chart-empty">No expenses have been posted this month.</div>{% endif %}
+      {% else %}<div class="acct-chart-empty">No expenses have been posted in this date range.</div>{% endif %}
     </article>
   </section>
 
