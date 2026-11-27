@@ -20,7 +20,7 @@
 {% if can_create %}
 <section class="exp-card">
 <div style="margin-bottom:16px"><h2 style="margin:0 0 5px">Record an expense</h2><div class="exp-muted">Create an obligation for review. No cash or bank balance changes until a payment is recorded.</div></div>
-<form method="post" enctype="multipart/form-data"><input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"><input type="hidden" name="hotel" value="{{ hotel.id }}"><input type="hidden" name="action" value="CREATE">
+<form method="post" enctype="multipart/form-data">{% csrf_token %}<input type="hidden" name="hotel" value="{{ hotel.id }}"><input type="hidden" name="action" value="CREATE">
 <div class="exp-grid">
 <div class="exp-field"><label for="expense-description">Description *</label><input id="expense-description" name="description" maxlength="255" placeholder="e.g. November staff payroll" required></div>
 <div class="exp-field"><label for="expense-account">Expense account *</label><select id="expense-account" name="expense_account" required><option value="">Select expense account</option>{% for account in expense_accounts %}<option value="{{ account.id }}">{{ account.code }} · {{ account.name }}</option>{% endfor %}</select></div>
@@ -51,11 +51,11 @@
 {% endif %}
 {% if item.status == "APPROVED" or item.status == "PARTIAL" %}
 {% if can_pay %}
-<div class="exp-actions"><form method="post" style="grid-column:1/-1"><input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}"><input type="hidden" name="hotel" value="{{ hotel.id }}"><input type="hidden" name="obligation_id" value="{{ item.id }}"><input type="hidden" name="action" value="PAY"><strong>Record payment</strong><div class="exp-grid" style="margin-top:10px"><div class="exp-field"><label>Amount (NGN)</label><input type="number" name="payment_amount" min="0.01" max="{{ row.outstanding }}" step="0.01" required placeholder="{{ row.outstanding }}"></div><div class="exp-field"><label>Payment date</label><input type="date" name="payment_date" value="{{ today|date:'Y-m-d' }}" required></div><div class="exp-field"><label>Pay from</label><select name="payment_account" required><option value="">Select cash or bank account</option>{% for account in payment_accounts %}<option value="{{ account.id }}">{{ account.code }} · {{ account.name }}</option>{% endfor %}</select></div><div class="exp-field"><label>Payment reference</label><input name="payment_reference" maxlength="100" placeholder="Transfer or cheque reference"></div><div class="exp-field full"><label>Payment notes</label><input name="payment_notes" placeholder="Optional payment details"></div><div class="exp-field full"><button class="exp-btn green" type="submit">Record payment</button></div></div></form></div>
+<div class="exp-actions"><form method="post" style="grid-column:1/-1">{% csrf_token %}<input type="hidden" name="hotel" value="{{ hotel.id }}"><input type="hidden" name="obligation_id" value="{{ item.id }}"><input type="hidden" name="action" value="PAY"><strong>Record payment</strong><div class="exp-grid" style="margin-top:10px"><div class="exp-field"><label>Amount (NGN)</label><input type="number" name="payment_amount" min="0.01" max="{{ row.outstanding }}" step="0.01" required placeholder="{{ row.outstanding }}"></div><div class="exp-field"><label>Payment date</label><input type="date" name="payment_date" value="{{ today|date:'Y-m-d' }}" required></div><div class="exp-field"><label>Pay from</label><select name="payment_account" required><option value="">Select cash or bank account</option>{% for account in payment_accounts %}<option value="{{ account.id }}">{{ account.code }} · {{ account.name }}</option>{% endfor %}</select></div><div class="exp-field"><label>Payment reference</label><input name="payment_reference" maxlength="100" placeholder="Transfer or cheque reference"></div><div class="exp-field full"><label>Payment notes</label><input name="payment_notes" placeholder="Optional payment details"></div><div class="exp-field full"><button class="exp-btn green" type="submit">Record payment</button></div></div></form></div>
 {% endif %}{% endif %}
 </article>
+{% endwith %}
 {% empty %}<div class="exp-empty">No expenses have been recorded for this hotel yet.</div>{% endfor %}
 </section>
 </div>
-{% endwith %}
 {% endblock %}
