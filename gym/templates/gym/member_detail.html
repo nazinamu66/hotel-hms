@@ -7,7 +7,7 @@
 <div class="gym-detail">
 <p><a href="{% url 'gym_home' %}">← Member register</a></p>
 <section class="gym-panel">
-<div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap"><div><h1 style="margin:0 0 5px">{{ member.full_name }}</h1><p style="color:#64748b">{{ member.member_number }} · {{ hotel.name }}</p></div><a class="gym-btn" href="{% url 'gym_membership_checkout' member.pk %}">＋ New membership</a></div>
+<div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap"><div><h1 style="margin:0 0 5px">{{ member.full_name }}</h1><p style="color:#64748b">{{ member.member_number }} · {{ hotel.name }}</p></div><div style="display:flex;gap:9px;flex-wrap:wrap"><a class="gym-btn" style="background:#475569" href="{% url 'gym_member_edit' member.pk %}">Edit member</a><a class="gym-btn" href="{% url 'gym_membership_checkout' member.pk %}">＋ New membership</a></div></div>
 <div class="gym-detail-grid">
 <div><div class="gym-label">Phone</div><div class="gym-value">{{ member.phone }}</div></div>
 <div><div class="gym-label">Email</div><div class="gym-value">{{ member.email|default:"—" }}</div></div>
