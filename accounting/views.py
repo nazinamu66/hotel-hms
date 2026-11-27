@@ -2237,7 +2237,7 @@ def financial_opening_balances(request):
                      "current_liability", "long_term_liability", "equity")
     accounts = list(
         Account.objects.filter(hotel=hotel, is_active=True, account_type__in=balance_types)
-        .exclude(system_key="opening_balance_equity")
+        .exclude(system_key__in=("opening_balance_equity", "bank_control"))
         .order_by("code")
     )
     equity_account = Account.objects.filter(
