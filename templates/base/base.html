@@ -78,12 +78,14 @@
                 Trial Balance
             </a>
 
-            <a href="{% url 'accounting:cash_deposit' %}">
-                Cash Deposit
-            </a>
-
-            <a href="{% url 'accounting:bank_transfer' %}">
+            <div class="accounting-submenu-label" style="margin:14px 0 5px;padding:9px 12px 4px;border-top:1px solid rgba(148,163,184,.18);color:#94a3b8;font-size:11px;font-weight:850;letter-spacing:.12em;text-transform:uppercase;">
+                Operations
+            </div>
+            <a href="{% url 'accounting:bank_transfer' %}" {% if request.resolver_match.url_name == 'bank_transfer' %}aria-current="page"{% endif %}>
                 Bank Transfer
+            </a>
+            <a href="{% url 'accounting:cash_deposit' %}" {% if request.resolver_match.url_name == 'cash_deposit' %}aria-current="page"{% endif %}>
+                Cash Deposit
             </a>
 
         </div>
