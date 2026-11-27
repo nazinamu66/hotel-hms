@@ -558,9 +558,9 @@ def journal_view(request):
                 Q(description__icontains=search) | Q(reference__icontains=search)
             )
 
-    totals = entries.aggregate(
-        debit_total=Sum("lines__debit"),
-        credit_total=Sum("lines__credit"),
+    totals = JournalLine.objects.filter(journal__in=entries).aggregate(
+        debit_total=Sum("debit"),
+        credit_total=Sum("credit"),
     )
     entry_count = entries.count()
     paginator = Paginator(entries, 25)
