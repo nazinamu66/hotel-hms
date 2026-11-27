@@ -45,6 +45,7 @@ def accounting_dashboard(request):
 
     cash_balance = Decimal("0.00")
     bank_balance = Decimal("0.00")
+    payables_balance = Decimal("0.00")
     revenue_month = Decimal("0.00")
     expenses_month = Decimal("0.00")
     for account in accounts:
@@ -53,6 +54,8 @@ def accounting_dashboard(request):
             cash_balance += balance
         elif account.account_type == "bank":
             bank_balance += balance
+        elif account.system_key == "accounts_payable":
+            payables_balance += balance
         if account.account_type in INCOME_TYPES:
             totals = JournalLine.objects.filter(
                 account=account, journal__hotel=hotel,
@@ -81,6 +84,7 @@ def accounting_dashboard(request):
         "today": today,
         "cash_balance": cash_balance,
         "bank_balance": bank_balance,
+        "payables_balance": payables_balance,
         "revenue_month": revenue_month,
         "expenses_month": expenses_month,
         "pending_reimbursements": pending_reimbursements,
