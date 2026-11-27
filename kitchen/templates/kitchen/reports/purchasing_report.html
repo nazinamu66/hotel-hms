@@ -34,48 +34,38 @@
 @media(max-width:1000px){.kpr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.kpr{padding:16px 11px 30px}.kpr-grid{grid-template-columns:1fr}.kpr-head{flex-direction:column}.kpr-field{min-width:100%}}
 
-/* Purchasing & fulfilment: match the Kitchen executive reporting workspace. */
-.main:has(.kpr) { background:#0d1728 !important; }
-.main:has(.kpr) > .content {
-  flex:1 1 auto; min-height:0;
-  background:linear-gradient(135deg,#10203a 0%,#0d1728 58%,#101d32 100%) !important;
-  color:#e7eefb !important;
-}
-.main:has(.kpr) > .topbar {
-  background:#0d1728 !important; color:#f1f5f9 !important;
-  border-bottom:1px solid rgba(148,163,184,.17) !important;
-}
-.main:has(.kpr) .sidebar { background:#0d1728; }
-.kpr{color:#e7eefb !important}
-.kpr h1,.kpr-section{color:#f4f7ff !important}
-.kpr-muted,.kpr-note{color:#9aacc4 !important}
-.kpr-filter,.kpr-panel,.kpr-card{
-  background:#15263d !important;border:1px solid #293d58 !important;
-  box-shadow:0 8px 24px rgba(0,0,0,.12) !important;color:#e7eefb !important;
-}
-.kpr-field label,.kpr-label{color:#9aacc4 !important}
-.kpr-field input,.kpr-field select{
-  background:#0e1b2e !important;color:#edf4ff !important;
-  border:1px solid #344b68 !important;color-scheme:dark;
-}
-.kpr-field input:focus,.kpr-field select:focus{outline:2px solid #5795ff;outline-offset:1px}
-.kpr-panel-head{border-color:#293d58 !important}
-.kpr-panel-head h2{color:#edf4ff !important}
-.kpr-panel-head p{color:#9aacc4 !important}
-.kpr th{background:#0e1b2e !important;color:#9aacc4 !important}
-.kpr td{border-color:#293d58 !important;color:#dce7f6 !important}
-.kpr tr:hover{background:#1b304b !important}
-.kpr-pill{background:#263b56 !important;color:#c7d5e8 !important}
-.kpr-pill.warn{background:#49351e !important;color:#ffd28a !important}
-.kpr-pill.good{background:#123c36 !important;color:#72e0bd !important}
-.kpr-btn.secondary{background:#203650 !important;border:1px solid #344b68;color:#e7eefb}
 
+/* CCH gold, bronze and ivory theme — Kitchen Purchasing & Fulfilment */
+.kpr{color:#302316!important;background:#faf8f4!important}
+.kpr h1,.kpr-section{color:#302316!important}
+.kpr-muted,.kpr-note{color:#6f6253!important}
+.kpr-filter,.kpr-panel,.kpr-card{
+ background:#fff!important;border:1px solid #e7ddce!important;
+ box-shadow:0 6px 20px rgba(74,49,21,.055)!important;color:#302316!important;
+}
+.kpr-field label,.kpr-label{color:#765a35!important}
+.kpr-field input,.kpr-field select{
+ background:#fff!important;color:#302316!important;border:1px solid #d8cbb8!important;color-scheme:light;
+}
+.kpr-field input:focus,.kpr-field select:focus{outline:2px solid rgba(201,154,78,.22)!important;border-color:#c99a4e!important}
+.kpr-panel-head{border-color:#e7ddce!important}
+.kpr-panel-head h2{color:#302316!important}
+.kpr-panel-head p{color:#6f6253!important}
+.kpr th{background:#f2eadc!important;color:#594733!important}
+.kpr td{border-color:#eee5d8!important;color:#302316!important}
+.kpr tr:hover{background:#fbf6ed!important}
+.kpr-pill{background:#f1eadf!important;color:#594733!important}
+.kpr-pill.warn{background:#fff0d9!important;color:#80531f!important}
+.kpr-pill.good{background:#e8f1e9!important;color:#28613c!important}
+.kpr-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important;border:0!important}
+.kpr-btn.secondary{background:#f3eadb!important;border:1px solid #e7ddce!important;color:#704719!important}
 .kpr-card-link{display:block;color:inherit;text-decoration:none;border-radius:14px}
 .kpr-card-link .kpr-card{height:100%;transition:border-color .16s ease,transform .16s ease,box-shadow .16s ease}
-.kpr-card-link:hover .kpr-card,.kpr-card-link:focus-visible .kpr-card{border-color:#5795ff !important;transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,0,0,.2) !important}
-.kpr-card-hint{font-size:.7rem;color:#82b7ff;margin-top:9px;font-weight:750}
-.kpr-drill{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 16px;margin:4px 0 18px;border:1px solid #36577d;border-radius:12px;background:#1b304b;color:#e7eefb}
-.kpr-drill a{color:#8fc2ff;font-weight:800;text-decoration:none}
+.kpr-card-link:hover .kpr-card,.kpr-card-link:focus-visible .kpr-card{border-color:#c99a4e!important;transform:translateY(-2px);box-shadow:0 10px 24px rgba(74,49,21,.10)!important}
+.kpr-card-hint{font-size:.7rem;color:#87551f!important;margin-top:9px;font-weight:750}
+.kpr-drill{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 16px;margin:4px 0 18px;border:1px solid #e7ddce;border-radius:12px;background:#fbf6ed;color:#302316}
+.kpr-drill a{color:#87551f!important;font-weight:800;text-decoration:none}
+
 </style>
 <div class="kpr">
   <header class="kpr-head">
