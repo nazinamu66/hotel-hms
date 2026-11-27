@@ -1,89 +1,73 @@
 {% extends "base/base.html" %}
-
+{% load humanize %}
+{% block title %}General Journal | Accounting{% endblock %}
 {% block content %}
-
-<h2>Journal</h2>
-
-<form method="get" class="mb-3">
-
-    <label>From:</label>
-    <input type="date" name="start_date" value="{{ start_date }}">
-
-    <label>To:</label>
-    <input type="date" name="end_date" value="{{ end_date }}">
-
-    <label>Account:</label>
-    <select name="account">
-
-        <option value="">All</option>
-
-        {% for acc in accounts %}
-            <option value="{{ acc.id }}"
-                {% if selected_account == acc.id|stringformat:"s" %}selected{% endif %}>
-                {{ acc.name }}
-            </option>
-        {% endfor %}
-
-    </select>
-
-    <label>Search:</label>
-    <input type="text" name="search" value="{{ search }}" placeholder="e.g. POS Sale #1">
-
-    <button type="submit" class="btn btn-primary">
-        Filter
-    </button>
-
-    <a href="{% url 'accounting:journal' %}" class="btn btn-secondary">
-        Reset
-    </a>
-
-
-</form>
-<br><br>
-{% if start_date or end_date %}
-<p><strong>Filtered results</strong></p>
-{% endif %}
-
-{% for entry in entries %}
-
-<div class="card mb-3" style="padding:15px;">
-
-    <strong>
-        {{ entry.date }} | {{ entry.description }}
-    </strong>
-
-    <table class="table mt-2">
-        <thead>
-            <tr>
-                <th>Account</th>
-                <th>Debit</th>
-                <th>Credit</th>
-            </tr>
-        </thead>
-        <tbody>
-
-    {% for line in entry.lines.all %}
-        <tr>
-            <td>{{ line.account.name }}</td>
-            <td>{{ line.debit }}</td>
-            <td>{{ line.credit }}</td>
-        </tr>
-        {% endfor %}
-
-        <!-- ✅ TOTAL ROW -->
-        <tr>
-            <th>Total</th>
-            <th>{{ entry.total_debit }}</th>
-            <th>{{ entry.total_credit }}</th>
-        </tr>
-
-    </tbody>
-    </table>
-
-</div>
-
-{% empty %}
-<p>No journal entries found.</p>
-{% endfor %}
-
+<style>
+.jr-page{max-width:1480px;margin:0 auto;padding:22px 0 52px;color:#172033}
+.jr-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:20px}
+.jr-kicker{font-size:.7rem;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#64748b;margin:0 0 7px}
+.jr-title{font-size:clamp(1.8rem,2.5vw,2.25rem);letter-spacing:-.045em;margin:0}
+.jr-sub{color:#64748b;margin:7px 0 0}
+.jr-actions{display:flex;gap:8px;flex-wrap:wrap}
+.jr-btn{display:inline-flex;align-items:center;justify-content:center;min-height:41px;padding:0 15px;border:1px solid #dbe2ea;border-radius:10px;background:#fff;color:#334155;text-decoration:none;font-size:13px;font-weight:800;cursor:pointer}
+.jr-primary{background:#2563eb;border-color:#2563eb;color:#fff}
+.jr-panel{background:#fff;border:1px solid #e2e8f0;border-radius:17px;padding:20px 22px;margin-bottom:16px;box-shadow:0 6px 22px rgba(15,23,42,.035)}
+.jr-hotel{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+.jr-hotel select,.jr-filter input,.jr-filter select{min-height:43px;border:1px solid #cbd5e1;border-radius:9px;padding:9px 11px;background:#fff;color:#172033;font:inherit;box-sizing:border-box}
+.jr-hotel select{min-width:250px}
+.jr-filter{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;align-items:end}
+.jr-field label{display:block;font-size:.72rem;font-weight:850;color:#475569;margin-bottom:6px}
+.jr-field input,.jr-field select{width:100%}
+.jr-filter-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.jr-error{padding:11px 13px;border-radius:10px;background:#fff1f2;border:1px solid #fecdd3;color:#9f1239;font-size:.84rem;margin-bottom:12px}
+.jr-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.jr-stat{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px 18px;min-width:0}
+.jr-stat span{display:block;color:#64748b;font-size:.68rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.jr-stat strong{display:block;font-size:1.35rem;letter-spacing:-.035em;margin-top:7px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.jr-stat small{display:block;color:#94a3b8;font-size:.73rem;margin-top:3px}
+.jr-register-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.jr-register-head h2{font-size:1.15rem;margin:0;letter-spacing:-.025em}
+.jr-register-head p{font-size:.78rem;color:#64748b;margin:4px 0 0}
+.jr-count{background:#f1f5f9;border-radius:99px;padding:6px 10px;font-size:.72rem;font-weight:850;color:#475569}
+.jr-entry{border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;margin-bottom:13px;background:#fff}
+.jr-entry-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:15px 17px;background:#fbfcfe;border-bottom:1px solid #edf0f4}
+.jr-entry-title{font-size:.94rem;font-weight:850;line-height:1.45;color:#172033}
+.jr-entry-meta{font-size:.74rem;color:#64748b;margin-top:4px}
+.jr-entry-total{font-size:.78rem;font-weight:850;white-space:nowrap;color:#334155}
+.jr-table-wrap{overflow-x:auto}
+.jr-table{width:100%;border-collapse:collapse;min-width:570px;font-variant-numeric:tabular-nums}
+.jr-table th{padding:10px 16px;background:#f8fafc;color:#64748b;text-align:left;text-transform:uppercase;letter-spacing:.07em;font-size:.66rem}
+.jr-table td{padding:11px 16px;border-top:1px solid #edf0f4;font-size:.84rem}
+.jr-table .num{text-align:right;white-space:nowrap;font-weight:700}
+.jr-table tfoot td{background:#fbfcfe;font-weight:900}
+.jr-account-code{display:inline-block;background:#f1f5f9;color:#475569;border-radius:5px;padding:3px 6px;font-size:.68rem;font-weight:850;margin-right:7px}
+.jr-entry-foot{display:flex;justify-content:flex-end;padding:10px 16px;border-top:1px solid #edf0f4}
+.jr-link{font-size:.78rem;font-weight:850;color:#1d4ed8;text-decoration:none}
+.jr-empty{text-align:center;padding:42px 18px;color:#64748b}
+.jr-pagination{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+.jr-pagination span{font-size:.78rem;color:#64748b}
+.jr-pages{display:flex;gap:7px;align-items:center}
+.jr-pages a,.jr-pages strong{padding:8px 11px;border:1px solid #dbe2ea;border-radius:8px;text-decoration:none;font-size:.78rem;color:#334155;background:#fff}
+.jr-pages strong{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+@media(max-width:900px){.jr-filter{grid-template-columns:repeat(2,minmax(0,1fr))}.jr-stats{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.jr-page{padding:14px 0 38px}.jr-panel{padding:15px}.jr-filter{grid-template-columns:1fr}.jr-stats{grid-template-columns:1fr}.jr-entry-top{display:block}.jr-entry-total{margin-top:8px}}
+</style>
+<div class="jr-page">
+<header class="jr-head"><div><p class="jr-kicker">Accounting · Audit trail</p><h1 class="jr-title">General Journal</h1><p class="jr-sub">{{ hotel.name }} · Review posted financial transactions and their debit/credit entries.</p></div><div class="jr-actions"><a class="jr-btn" href="{% url 'accounting:chart' %}{% if hotel %}?hotel={{ hotel.id }}{% endif %}">Chart of Accounts</a><a class="jr-btn" href="{% url 'accounting:trial_balance' %}">Trial Balance</a></div></header>
+{% if show_hotel_selector %}<section class="jr-panel jr-hotel"><div><p class="jr-kicker">Hotel scope</p><strong>{{ hotel.name }}</strong></div><form method="get"><label class="jr-field"><span style="display:block;font-size:.72rem;font-weight:850;color:#475569;margin-bottom:6px">Select hotel</span><select name="hotel" onchange="this.form.submit()">{% for item in hotels %}<option value="{{ item.id }}" {% if item.id == hotel.id %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></label></form></section>{% endif %}
+<section class="jr-panel"><form method="get" class="jr-filter">{% if show_hotel_selector %}<input type="hidden" name="hotel" value="{{ hotel.id }}">{% endif %}
+<div class="jr-field"><label for="jr-from">From date</label><input id="jr-from" type="date" name="start_date" value="{{ start_date }}"></div>
+<div class="jr-field"><label for="jr-to">To date</label><input id="jr-to" type="date" name="end_date" value="{{ end_date }}"></div>
+<div class="jr-field"><label for="jr-account">Account</label><select id="jr-account" name="account"><option value="">All accounts</option>{% for acc in accounts %}<option value="{{ acc.id }}" {% if selected_account == acc.id|stringformat:"s" %}selected{% endif %}>{{ acc.code }} · {{ acc.name }}</option>{% endfor %}</select></div>
+<div class="jr-field"><label for="jr-search">Search description or reference</label><input id="jr-search" type="search" name="search" value="{{ search }}" placeholder="e.g. POS sale or reference"></div>
+<div class="jr-filter-actions" style="grid-column:1/-1"><button class="jr-btn jr-primary" type="submit">Apply filters</button><a class="jr-btn" href="{% url 'accounting:journal' %}{% if show_hotel_selector %}?hotel={{ hotel.id }}{% endif %}">Reset filters</a></div>
+</form></section>
+{% for error in filter_errors %}<div class="jr-error">{{ error }}</div>{% endfor %}
+<section class="jr-stats"><article class="jr-stat"><span>Matching journal entries</span><strong>{{ entry_count|intcomma }}</strong><small>{% if has_filters %}Based on current filters{% else %}All posted entries for this hotel{% endif %}</small></article><article class="jr-stat"><span>Total debits</span><strong>₦{{ debit_total|floatformat:2|intcomma }}</strong><small>Across matching journal entries</small></article><article class="jr-stat"><span>Total credits</span><strong>₦{{ credit_total|floatformat:2|intcomma }}</strong><small>Across matching journal entries</small></article></section>
+<section class="jr-panel"><div class="jr-register-head"><div><h2>Journal register</h2><p>Each entry is shown with its complete posting lines and balanced totals.</p></div><span class="jr-count">{{ page_obj.start_index|default:0 }}–{{ page_obj.end_index|default:0 }} of {{ entry_count }}</span></div>
+{% for entry in entries %}<article class="jr-entry"><div class="jr-entry-top"><div><div class="jr-entry-title">{{ entry.date|date:"d M Y" }} · {{ entry.description|default:"Journal entry" }}</div><div class="jr-entry-meta">{% if entry.reference %}Ref: {{ entry.reference }} · {% endif %}{{ entry.get_entry_type_display }} · {% if entry.created_by %}Posted by {{ entry.created_by.get_full_name|default:entry.created_by.username }}{% else %}System posting{% endif %}</div></div><div class="jr-entry-total">₦{{ entry.total_debit|floatformat:2|intcomma }} posted</div></div>
+<div class="jr-table-wrap"><table class="jr-table"><thead><tr><th>Account</th><th class="num">Debit (NGN)</th><th class="num">Credit (NGN)</th></tr></thead><tbody>{% for line in entry.lines.all %}<tr><td><span class="jr-account-code">{{ line.account.code }}</span>{{ line.account.name }}</td><td class="num">{% if line.debit %}₦{{ line.debit|floatformat:2|intcomma }}{% else %}—{% endif %}</td><td class="num">{% if line.credit %}₦{{ line.credit|floatformat:2|intcomma }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody><tfoot><tr><td>TOTAL</td><td class="num">₦{{ entry.total_debit|floatformat:2|intcomma }}</td><td class="num">₦{{ entry.total_credit|floatformat:2|intcomma }}</td></tr></tfoot></table></div><div class="jr-entry-foot"><a class="jr-link" href="{% url 'accounting:journal_detail' entry.id %}">View full journal entry →</a></div></article>
+{% empty %}<div class="jr-empty"><strong>No journal entries found</strong><p>Try widening the date range or clearing one of your filters.</p></div>{% endfor %}
+{% if page_obj.paginator.num_pages > 1 %}<nav class="jr-pagination" aria-label="Journal pages"><span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span><div class="jr-pages">{% if page_obj.has_previous %}<a href="?{% if show_hotel_selector %}hotel={{ hotel.id }}&amp;{% endif %}start_date={{ start_date|urlencode }}&amp;end_date={{ end_date|urlencode }}&amp;account={{ selected_account|urlencode }}&amp;search={{ search|urlencode }}&amp;page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}<strong>{{ page_obj.number }}</strong>{% if page_obj.has_next %}<a href="?{% if show_hotel_selector %}hotel={{ hotel.id }}&amp;{% endif %}start_date={{ start_date|urlencode }}&amp;end_date={{ end_date|urlencode }}&amp;account={{ selected_account|urlencode }}&amp;search={{ search|urlencode }}&amp;page={{ page_obj.next_page_number }}">Next</a>{% endif %}</div></nav>{% endif %}
+</section></div>
 {% endblock %}
