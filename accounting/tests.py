@@ -632,3 +632,98 @@ class FinancialOpeningBalancePageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Enter at least one non-zero opening balance")
         self.assertFalse(FinancialOpeningBalanceSetup.objects.filter(hotel=self.hotel).exists())
+
+
+class FinancialOpeningBalanceAdjustmentTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Hotel
+        from accounting.models import (
+            Account, FinancialOpeningBalanceSetup,
+        )
+
+        self.hotel = Hotel.objects.create(name="Opening Adjustment Test Hotel")
+        User = get_user_model()
+        self.requester = User.objects.create_user(
+            username="opening_maker", password="test-password",
+            role="ACCOUNTANT", hotel=self.hotel,
+        )
+        self.approver = User.objects.create_user(
+            username="opening_checker", password="test-password",
+            role="CHIEF_ACCOUNTANT", hotel=self.hotel,
+        )
+        self.bank = Account.objects.create(
+            hotel=self.hotel, code="5100", name="Access Bank",
+            account_type="bank",
+        )
+        self.equity = Account.objects.create(
+            hotel=self.hotel, code="3002", name="Opening Balance Equity",
+            account_type="equity", system_key="opening_balance_equity",
+            is_system=True, allow_manual_entries=False,
+        )
+        FinancialOpeningBalanceSetup.objects.create(
+            hotel=self.hotel, opening_date="2026-11-01",
+            balances={}, posted_by=self.requester,
+        )
+
+    def test_omitted_bank_asset_requires_independent_approval_and_posts_balanced_journal(self):
+        from django.urls import reverse
+        from accounting.models import FinancialOpeningBalanceAdjustment, JournalLine
+
+        self.client.force_login(self.requester)
+        response = self.client.post(
+            reverse("accounting:financial_opening_adjustments"),
+            {
+                "action": "request",
+                "account": self.bank.pk,
+                "amount": "250000.00",
+                "reason": "This bank account existed at go-live but was omitted from the original opening schedule.",
+                "reference": "Opening bank statement",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        adjustment = FinancialOpeningBalanceAdjustment.objects.get(hotel=self.hotel)
+        self.assertEqual(adjustment.status, "PENDING")
+        self.assertIsNone(adjustment.journal_entry_id)
+
+        self.client.force_login(self.approver)
+        response = self.client.post(
+            reverse("accounting:financial_opening_adjustments"),
+            {
+                "action": "approve",
+                "adjustment_id": adjustment.pk,
+                "review_note": "Verified against the opening bank statement.",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        adjustment.refresh_from_db()
+        self.assertEqual(adjustment.status, "APPROVED")
+        self.assertIsNotNone(adjustment.journal_entry_id)
+        lines = list(JournalLine.objects.filter(journal=adjustment.journal_entry).select_related("account"))
+        self.assertEqual(len(lines), 2)
+        self.assertEqual(sum((line.debit for line in lines), Decimal("0.00")), Decimal("250000.00"))
+        self.assertEqual(sum((line.credit for line in lines), Decimal("0.00")), Decimal("250000.00"))
+        self.assertEqual(
+            {line.account_id for line in lines},
+            {self.bank.pk, self.equity.pk},
+        )
+        self.assertEqual(adjustment.journal_entry.entry_type, "OPENING")
+
+    def test_requester_cannot_approve_own_adjustment(self):
+        from django.urls import reverse
+        from accounting.models import FinancialOpeningBalanceAdjustment
+
+        adjustment = FinancialOpeningBalanceAdjustment.objects.create(
+            hotel=self.hotel, account=self.bank, amount=Decimal("100.00"),
+            reason="Omitted historical bank asset verified from opening statement.",
+            requested_by=self.requester,
+        )
+        self.client.force_login(self.requester)
+        response = self.client.post(
+            reverse("accounting:financial_opening_adjustments"),
+            {"action": "approve", "adjustment_id": adjustment.pk},
+        )
+        self.assertEqual(response.status_code, 302)
+        adjustment.refresh_from_db()
+        self.assertEqual(adjustment.status, "PENDING")
+        self.assertIsNone(adjustment.journal_entry_id)
