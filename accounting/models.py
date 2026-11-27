@@ -521,3 +521,36 @@ class FinancialOpeningBalanceSetup(models.Model):
 
     def __str__(self):
         return f"Financial opening balances · {self.hotel} · {self.opening_date}"
+
+
+
+class FinancialOpeningBalanceAdjustment(models.Model):
+    """Approved addition of an omitted asset to a confirmed opening position."""
+
+    STATUS_CHOICES = (
+        ("PENDING", "Awaiting approval"),
+        ("APPROVED", "Approved and posted"),
+        ("REJECTED", "Rejected"),
+    )
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.PROTECT, related_name="financial_opening_adjustments")
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name="opening_balance_adjustments")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    reason = models.TextField()
+    reference = models.CharField(max_length=100, blank=True)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default="PENDING")
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="requested_opening_adjustments")
+    requested_at = models.DateTimeField(auto_now_add=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="reviewed_opening_adjustments")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True)
+    journal_entry = models.OneToOneField(JournalEntry, null=True, blank=True, on_delete=models.PROTECT, related_name="opening_balance_adjustment")
+
+    class Meta:
+        ordering = ["-requested_at"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name="opening_adjustment_amount_positive"),
+        ]
+
+    def __str__(self):
+        return f"Opening adjustment #{self.pk} · {self.account} · {self.amount} ({self.status})"
