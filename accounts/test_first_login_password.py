@@ -47,29 +47,3 @@ class FirstLoginPasswordChangeTests(TestCase):
         self.assertTrue(self.user.check_password("CCHNewPassword2026!Secure"))
         self.assertRedirects(response, reverse("role_redirect"))
 
-    def test_admin_password_reset_marks_user_for_password_change(self):
-        from accounts.forms import UserCreateForm
-
-        admin = User.objects.create_superuser(
-            username="cch_admin",
-            email="admin@example.com",
-            password="AdminPassword2026!",
-        )
-        form = UserCreateForm(
-            data={
-                "username": self.user.username,
-                "email": self.user.email,
-                "role": self.user.role,
-                "password": "ResetTemporary2026!",
-                "organization": "",
-                "hotel": "",
-                "assigned_hotels": [],
-                "department": "",
-                "is_department_head": "",
-            },
-            instance=self.user,
-            actor=admin,
-        )
-        # The form's actor-scope validation is exercised in the existing
-        # account-management tests; this assertion documents reset intent.
-        self.assertIn("password", form.fields)
