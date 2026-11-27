@@ -6,7 +6,7 @@
 .gym-receipt{max-width:760px;margin:20px auto;color:#172033}.receipt-paper{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:30px}.receipt-head{display:flex;justify-content:space-between;gap:16px;border-bottom:2px solid #0f172a;padding-bottom:18px}.receipt-muted{color:#64748b;font-size:13px}.receipt-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:24px 0}.receipt-label{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em}.receipt-value{font-weight:650;margin-top:4px}.receipt-total{display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding-top:18px;font-size:20px;font-weight:800}.receipt-actions{display:flex;gap:12px;margin:16px 0}@media print{.no-print{display:none!important}.receipt-paper{border:0;box-shadow:none;padding:0}}@media(max-width:600px){.receipt-grid{grid-template-columns:1fr}.receipt-head{display:block}}
 </style>
 <div class="gym-receipt">
-<div class="receipt-actions no-print"><button onclick="window.print()" type="button">Print receipt</button><a href="{% url 'gym_member_detail' membership.member.pk %}">Back to member</a></div>
+<div class="receipt-actions no-print"><button onclick="window.print()" type="button">Print receipt</button><a href="{% url 'gym_member_detail' membership.member.pk %}">Back to member</a><a href="{% url 'gym_membership_pass' membership.pk %}">Print membership pass</a></div>
 <section class="receipt-paper">
 <div class="receipt-head"><div><h1 style="margin:0">{{ hotel.name }}</h1><p class="receipt-muted">Gym Membership Payment Receipt</p></div><div style="text-align:right"><strong>RECEIPT</strong><p class="receipt-muted">GYM-MEM-{{ membership.pk }}</p></div></div>
 <div class="receipt-grid">
