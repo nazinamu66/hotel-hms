@@ -12,7 +12,7 @@ from inventory.models import Hotel
 from accounting.constants import DEBIT_NORMAL_TYPES
 from accounting.constants import (INCOME_TYPES,EXPENSE_TYPES,)
 from accounting.constants import (ASSET_TYPES,LIABILITY_TYPES,EQUITY,)
-from django.db import transaction
+from django.db import transaction, models
 from accounting.forms import AccountForm, BankAccountForm
 from decimal import Decimal
 from accounting.services.journal import record_transaction, get_system_account
@@ -614,15 +614,12 @@ def close_day(request):
 
 @role_required("DIRECTOR", "ACCOUNTANT", "ADMIN")
 def account_ledger(request, account_id):
-
+    from django.contrib.auth import get_user_model
+    from django.db.models import Sum
+    from django.utils.dateparse import parse_date
     from core.utils import get_user_hotels
 
-    # --------------------------------------------------
-    # HOTEL ACCESS
-    # --------------------------------------------------
-
     accessible_hotels = get_user_hotels(request.user)
-
     account = get_object_or_404(
         Account.objects.select_related("hotel"),
         id=account_id,
@@ -630,149 +627,111 @@ def account_ledger(request, account_id):
         is_active=True,
     )
 
-    # --------------------------------------------------
-    # FILTERS
-    # --------------------------------------------------
+    start_date = request.GET.get("start_date", "").strip()
+    end_date = request.GET.get("end_date", "").strip()
+    user_id = request.GET.get("user", "").strip()
+    start_day = parse_date(start_date) if start_date else None
+    end_day = parse_date(end_date) if end_date else None
+    filter_errors = []
 
-    user_id = request.GET.get("user")
+    if start_date and not start_day:
+        filter_errors.append("Enter a valid start date.")
+    if end_date and not end_day:
+        filter_errors.append("Enter a valid end date.")
+    if start_day and end_day and start_day > end_day:
+        filter_errors.append("The start date cannot be after the end date.")
+    if filter_errors:
+        start_day = end_day = None
 
-    from django.contrib.auth import get_user_model
     User = get_user_model()
+    users = User.objects.filter(is_active=True).filter(
+        models.Q(hotel_id=account.hotel_id)
+        | models.Q(department__hotel_id=account.hotel_id)
+    ).distinct().order_by("first_name", "last_name", "username")
 
-    users = User.objects.filter(
-        is_active=True
-    ).order_by("username")
-
-    start_date = request.GET.get("start_date")
-    end_date = request.GET.get("end_date")
-
-    # --------------------------------------------------
-    # BASE JOURNAL LINES
-    # --------------------------------------------------
-
-    lines = (
-        JournalLine.objects
-        .filter(account=account)
-        .select_related(
-            "journal",
-            "journal__created_by",
-            "journal__business_day",
-        )
-    )
-
-    # --------------------------------------------------
-    # OPENING BALANCE
-    # --------------------------------------------------
-
-    opening_balance = account.opening_balance
-
-    if start_date:
-
-        opening_lines = JournalLine.objects.filter(
-            account=account,
-            journal__business_day__date__lt=start_date,
-        )
-
-        if user_id:
-            opening_lines = opening_lines.filter(
-                journal__created_by_id=user_id
-            )
-
-        opening = opening_lines.aggregate(
-            debit=Sum("debit"),
-            credit=Sum("credit"),
-        )
-
-        debit_before = opening["debit"] or 0
-        credit_before = opening["credit"] or 0
-
-        if account.account_type in DEBIT_NORMAL_TYPES:
-            opening_balance += (
-                debit_before - credit_before
-            )
-        else:
-            opening_balance += (
-                credit_before - debit_before
-            )
-
-    # --------------------------------------------------
-    # DISPLAY FILTERS
-    # --------------------------------------------------
-
-    if start_date:
-        lines = lines.filter(
-            journal__business_day__date__gte=start_date
-        )
-
-    if end_date:
-        lines = lines.filter(
-            journal__business_day__date__lte=end_date
-        )
-
+    selected_user = None
     if user_id:
-        lines = lines.filter(
-            journal__created_by_id=user_id
-        )
+        selected_user = users.filter(pk=user_id).first()
+        if not selected_user:
+            user_id = ""
 
-    # --------------------------------------------------
-    # ORDER
-    # --------------------------------------------------
-
-    lines = lines.order_by(
-        "journal__date",
-        "id",
+    base_lines = (
+        JournalLine.objects
+        .filter(account=account, journal__hotel=account.hotel)
+        .select_related("journal", "journal__created_by", "journal__business_day")
     )
 
-    # --------------------------------------------------
-    # RUNNING BALANCE
-    # --------------------------------------------------
+    # The opening position always includes every user's prior activity.
+    # A Posted By filter only controls which rows are displayed, never the
+    # underlying balance carried into the selected period.
+    opening_balance = account.opening_balance
+    if start_day:
+        prior_totals = base_lines.filter(
+            journal__business_day__date__lt=start_day
+        ).aggregate(debit=Sum("debit"), credit=Sum("credit"))
+        prior_debit = prior_totals["debit"] or Decimal("0.00")
+        prior_credit = prior_totals["credit"] or Decimal("0.00")
+        if account.account_type in DEBIT_NORMAL_TYPES:
+            opening_balance += prior_debit - prior_credit
+        else:
+            opening_balance += prior_credit - prior_debit
 
+    period_lines = base_lines
+    if start_day:
+        period_lines = period_lines.filter(journal__business_day__date__gte=start_day)
+    if end_day:
+        period_lines = period_lines.filter(journal__business_day__date__lte=end_day)
+
+    period_lines = period_lines.order_by("journal__date", "journal_id", "id")
     balance = opening_balance
-
     ledger_data = []
+    total_debits = Decimal("0.00")
+    total_credits = Decimal("0.00")
+    visible_count = 0
 
-    for line in lines:
-
+    for line in period_lines:
         if account.account_type in DEBIT_NORMAL_TYPES:
             balance += line.debit - line.credit
         else:
             balance += line.credit - line.debit
 
+        if user_id and str(line.journal.created_by_id or "") != user_id:
+            continue
+
+        total_debits += line.debit
+        total_credits += line.credit
+        visible_count += 1
         ledger_data.append({
             "date": line.journal.date,
-
-            "business_day": (
-                line.journal.business_day.date
-                if line.journal.business_day
-                else None
-            ),
-
+            "business_day": line.journal.business_day.date if line.journal.business_day else None,
             "description": line.journal.description,
-
             "user": line.journal.created_by,
-
             "debit": line.debit,
-
             "credit": line.credit,
-
             "balance": balance,
-
-            "journal_id": line.journal.id,
+            "journal_id": line.journal_id,
+            "reference": line.journal.reference,
+            "entry_type": line.journal.get_entry_type_display(),
         })
 
-    return render(
-        request,
-        "accounting/ledger.html",
-        {
-            "account": account,
-            "ledger": ledger_data,
-            "opening_balance": opening_balance,
-            "start_date": start_date,
-            "end_date": end_date,
-            "users": users,
-            "user_id": user_id,
-        },
-    )
+    closing_balance = balance
+    context = {
+        "account": account,
+        "ledger": ledger_data,
+        "opening_balance": opening_balance,
+        "closing_balance": closing_balance,
+        "total_debits": total_debits,
+        "total_credits": total_credits,
+        "transaction_count": visible_count,
+        "start_date": start_date,
+        "end_date": end_date,
+        "users": users,
+        "user_id": user_id,
+        "filter_errors": filter_errors,
+        "selected_user": selected_user,
+    }
+    return render(request, "accounting/ledger.html", context)
+
 
 def profit_and_loss(request):
 
