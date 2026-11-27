@@ -142,6 +142,56 @@ def accounting_dashboard(request):
     for item in expense_breakdown:
         item["pct"] = min(100, float(item["amount"] / max_expense * 100))
 
+    # Net profit is derived from income less expense balances for the selected month.
+    net_profit_month = revenue_month - expenses_month
+    profit_margin = (
+        float(net_profit_month / revenue_month * 100)
+        if revenue_month > 0 else 0
+    )
+
+    # Net cash movement is the net debit/credit movement across cash and bank
+    # ledger accounts. This is not the same as operating profit.
+    cash_rows = (
+        JournalLine.objects.filter(
+            journal__hotel=hotel,
+            journal__date__gte=first_month,
+            journal__date__lte=today,
+            account__account_type__in=("cash", "bank"),
+        )
+        .annotate(month=TruncMonth("journal__date"))
+        .values("month")
+        .annotate(debit=Sum("debit"), credit=Sum("credit"))
+        .order_by("month")
+    )
+    cash_map = {}
+    for row in cash_rows:
+        key = row["month"].date().replace(day=1) if hasattr(row["month"], "date") else row["month"].replace(day=1)
+        cash_map[key] = (row["debit"] or Decimal("0.00")) - (row["credit"] or Decimal("0.00"))
+    cash_flow_chart = []
+    max_cash_movement = max([abs(value) for value in cash_map.values()] or [Decimal("0.00")]) or Decimal("1.00")
+    for key in month_keys:
+        amount = cash_map.get(key, Decimal("0.00"))
+        cash_flow_chart.append({
+            "label": key.strftime("%b"),
+            "amount": amount,
+            "pct": min(100, float(abs(amount) / max_cash_movement * 100)),
+            "positive": amount >= 0,
+        })
+
+    # Create a CSS conic-gradient for a compact visual expense composition.
+    donut_segments = []
+    running_pct = 0.0
+    donut_palette = ["#2563eb", "#0f766e", "#f59e0b", "#8b5cf6", "#e11d48", "#64748b"]
+    for index, item in enumerate(expense_breakdown):
+        start = running_pct
+        running_pct += item["pct"]
+        item["color"] = donut_palette[index % len(donut_palette)]
+        donut_segments.append(f"{item['color']} {start:.2f}% {running_pct:.2f}%")
+    expense_donut_style = (
+        "conic-gradient(" + ", ".join(donut_segments) + ")"
+        if donut_segments else "conic-gradient(#e2e8f0 0% 100%)"
+    )
+
     pending_reimbursements = StaffReimbursement.objects.filter(hotel=hotel, status="PENDING").count()
     recent_entries = (
         JournalEntry.objects.filter(hotel=hotel)
@@ -153,9 +203,11 @@ def accounting_dashboard(request):
         "hotel": hotel, "hotels": hotels, "today": today,
         "cash_balance": cash_balance, "bank_balance": bank_balance,
         "payables_balance": payables_balance, "revenue_month": revenue_month,
-        "expenses_month": expenses_month, "pending_reimbursements": pending_reimbursements,
+        "expenses_month": expenses_month, "net_profit_month": net_profit_month,
+        "profit_margin": profit_margin, "pending_reimbursements": pending_reimbursements,
         "recent_entries": recent_entries, "monthly_chart": monthly_chart,
-        "expense_breakdown": expense_breakdown,
+        "cash_flow_chart": cash_flow_chart, "expense_breakdown": expense_breakdown,
+        "expense_donut_style": expense_donut_style,
     })
 
 def trial_balance(request):
