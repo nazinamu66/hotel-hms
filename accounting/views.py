@@ -14,7 +14,7 @@ from accounting.constants import (INCOME_TYPES,EXPENSE_TYPES,)
 from accounting.constants import (ASSET_TYPES,LIABILITY_TYPES,EQUITY,)
 from django.db import transaction
 from accounting.forms import AccountForm, BankAccountForm
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from accounting.services.journal import record_transaction, get_system_account
 
 
