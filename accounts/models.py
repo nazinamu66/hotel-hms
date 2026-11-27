@@ -83,6 +83,11 @@ class User(AbstractUser):
         help_text="Department assigned to operational staff.",
     )
 
+    must_change_password = models.BooleanField(
+        default=False,
+        help_text="Require the user to choose a new password at their next login.",
+    )
+
     is_department_head = models.BooleanField(
         default=False,
         help_text="Head of department responsible for assignments and supervision.",
