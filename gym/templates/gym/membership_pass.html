@@ -1,0 +1,42 @@
+{% extends "base/base.html" %}
+{% block title %}Gym Membership Pass{% endblock %}
+{% block content %}
+<style>
+.gym-pass-wrap{max-width:850px;margin:28px auto;padding:0 16px 40px;color:#172033}
+.gym-pass{position:relative;overflow:hidden;background:#fff;border:1px solid #cbd5e1;border-radius:22px;box-shadow:0 12px 35px #0f172a12}
+.gym-pass-top{background:#10243b;color:#fff;padding:24px 28px;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.gym-pass-top h1{font-size:22px;margin:0}.gym-pass-top p{margin:5px 0 0;color:#cbd5e1;font-size:13px}
+.gym-pass-body{display:grid;grid-template-columns:1fr 190px;gap:24px;padding:28px}
+.gym-pass-photo{width:142px;height:164px;object-fit:cover;border-radius:13px;border:1px solid #e2e8f0;background:#f1f5f9}
+.gym-pass-photo-placeholder{width:142px;height:164px;border-radius:13px;background:#f1f5f9;display:grid;place-items:center;color:#64748b;font-size:12px}
+.gym-pass-name{font-size:27px;font-weight:850;margin:0 0 5px}.gym-pass-number{font-family:monospace;font-size:16px;color:#0f766e;font-weight:800}
+.gym-pass-meta{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:26px}
+.gym-pass-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:800}.gym-pass-value{font-weight:750;margin-top:4px}
+.gym-pass-qr{text-align:center;border-left:1px solid #e2e8f0;padding-left:20px}.gym-pass-qr img{width:160px;height:160px}.gym-pass-qr small{display:block;color:#64748b;overflow-wrap:anywhere;font-size:10px}
+.gym-pass-foot{padding:14px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;color:#64748b;font-size:12px}
+.gym-pass-actions{display:flex;gap:10px;margin-bottom:14px}.gym-pass-actions button,.gym-pass-actions a{padding:11px 16px;border-radius:9px;font-weight:700;border:0;text-decoration:none;cursor:pointer}.gym-pass-actions button{background:#0f766e;color:#fff}.gym-pass-actions a{background:#fff;border:1px solid #cbd5e1;color:#334155}
+@media(max-width:620px){.gym-pass-body{grid-template-columns:1fr}.gym-pass-qr{border-left:0;border-top:1px solid #e2e8f0;padding:20px 0 0}.gym-pass-top{padding:20px}.gym-pass-body{padding:20px}.gym-pass-name{font-size:22px}}
+@media print{body{background:#fff!important}.no-print{display:none!important}.gym-pass-wrap{margin:0;max-width:none;padding:0}.gym-pass{box-shadow:none;break-inside:avoid}}
+</style>
+<div class="gym-pass-wrap">
+ <div class="gym-pass-actions no-print"><button type="button" onclick="window.print()">Print membership pass</button><a href="{% url 'gym_member_detail' membership.member.pk %}">Back to member</a></div>
+ <article class="gym-pass">
+  <header class="gym-pass-top"><div><h1>{{ hotel.name }}</h1><p>OFFICIAL GYM MEMBERSHIP PASS</p></div><strong>GYM PASS</strong></header>
+  <div class="gym-pass-body">
+   <div>
+    {% if membership.member.photograph %}<img class="gym-pass-photo" src="{{ membership.member.photograph.url }}" alt="{{ membership.member.full_name }}">{% else %}<div class="gym-pass-photo-placeholder">No photograph</div>{% endif %}
+    <h2 class="gym-pass-name" style="margin-top:18px">{{ membership.member.full_name }}</h2>
+    <div class="gym-pass-number">{{ membership.member.member_number }}</div>
+    <div class="gym-pass-meta">
+     <div><div class="gym-pass-label">Membership plan</div><div class="gym-pass-value">{{ membership.plan_name_snapshot }}</div></div>
+     <div><div class="gym-pass-label">Status</div><div class="gym-pass-value">{{ membership.get_status_display }}</div></div>
+     <div><div class="gym-pass-label">Valid from</div><div class="gym-pass-value">{{ membership.start_date|date:"d M Y" }}</div></div>
+     <div><div class="gym-pass-label">Valid until</div><div class="gym-pass-value">{{ membership.end_date|date:"d M Y" }}</div></div>
+    </div>
+   </div>
+   <div class="gym-pass-qr"><img src="{{ qr_data_uri }}" alt="Membership QR code"><strong style="display:block;margin:8px 0">Scan at Gym entrance</strong><small>{{ membership.pass_token }}</small></div>
+  </div>
+  <footer class="gym-pass-foot">This pass is personal and non-transferable. Entry is subject to active membership validation at the issuing hotel.</footer>
+ </article>
+</div>
+{% endblock %}
