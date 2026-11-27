@@ -613,7 +613,7 @@ def close_day(request):
 
 
 @role_required("DIRECTOR", "ACCOUNTANT", "ADMIN")
-def account_ledger(request, account_id):
+def _account_ledger_context(request, account_id):
     from django.contrib.auth import get_user_model
     from django.db.models import Sum
     from django.utils.dateparse import parse_date
@@ -731,7 +731,177 @@ def account_ledger(request, account_id):
         "filter_errors": filter_errors,
         "selected_user": selected_user,
     }
+    return context
+
+
+
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def account_ledger(request, account_id):
+    context = _account_ledger_context(request, account_id)
     return render(request, "accounting/ledger.html", context)
+
+
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def account_ledger_export_xlsx(request, account_id):
+    from io import BytesIO
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
+
+    context = _account_ledger_context(request, account_id)
+    account = context["account"]
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Account Ledger"
+    ws.merge_cells("A1:G1")
+    ws["A1"] = account.hotel.name.upper()
+    ws["A1"].font = Font(size=16, bold=True, color="FFFFFF")
+    ws["A1"].fill = PatternFill("solid", fgColor="14233B")
+    ws["A1"].alignment = Alignment(horizontal="left")
+    ws.merge_cells("A2:G2")
+    ws["A2"] = "GENERAL LEDGER STATEMENT"
+    ws["A2"].font = Font(size=13, bold=True, color="1D4ED8")
+    ws.merge_cells("A3:G3")
+    ws["A3"] = f"Account {account.code} · {account.name} · {account.get_account_type_display()}"
+    ws.merge_cells("A4:G4")
+    period = f'{context["start_date"] or "Beginning"} to {context["end_date"] or "Current"}'
+    posted = context["selected_user"].get_full_name() or context["selected_user"].username if context["selected_user"] else "All users"
+    ws["A4"] = f"Period: {period}    |    Posted by: {posted}"
+    ws.append([])
+    ws.append(["Opening position", context["opening_balance"], "Period debits", context["total_debits"], "Period credits", context["total_credits"], "Closing balance"])
+    ws.append(["Date", "Business day", "Description", "Reference", "Posted by", "Debit (NGN)", "Credit (NGN)", "Running balance (NGN)"])
+    # Rebuild header row to eight columns after the summary band.
+    ws.merge_cells("A6:H6")
+    ws["A6"] = "TRANSACTION DETAILS"
+    ws["A6"].font = Font(bold=True, color="FFFFFF")
+    ws["A6"].fill = PatternFill("solid", fgColor="14233B")
+    ws.append(["Date", "Business day", "Description", "Reference", "Posted by", "Debit (NGN)", "Credit (NGN)", "Running balance (NGN)"])
+    for cell in ws[7]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="334155")
+    for item in context["ledger"]:
+        posted_by = (item["user"].get_full_name() or item["user"].username) if item["user"] else "System"
+        ws.append([
+            item["date"], item["business_day"], item["description"],
+            item["reference"] or "", posted_by, float(item["debit"]),
+            float(item["credit"]), float(item["balance"]),
+        ])
+    ws.append(["", "", "PERIOD TOTALS", "", "", float(context["total_debits"]), float(context["total_credits"]), float(context["closing_balance"])])
+    for row in ws.iter_rows(min_row=8, min_col=6, max_col=8):
+        for cell in row:
+            cell.number_format = '"₦"#,##0.00;[Red]("₦"#,##0.00)'
+    for cell in ws[6]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="14233B")
+    for cell in ws[ws.max_row]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill("solid", fgColor="E8EEF7")
+    for col, width in enumerate([15, 15, 42, 25, 24, 19, 19, 23], 1):
+        ws.column_dimensions[get_column_letter(col)].width = width
+    ws.freeze_panes = "A8"
+    ws.auto_filter.ref = f"A7:H{max(7, ws.max_row-1)}"
+    ws.sheet_view.showGridLines = False
+    for row in ws.iter_rows(min_row=8, max_col=2):
+        for cell in row:
+            cell.number_format = "dd mmm yyyy"
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    response = HttpResponse(
+        output.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = f'attachment; filename="ledger_{account.code}_{account.pk}.xlsx"'
+    return response
+
+
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def account_ledger_export_pdf(request, account_id):
+    from io import BytesIO
+    from django.http import HttpResponse
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+
+    context = _account_ledger_context(request, account_id)
+    account = context["account"]
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=landscape(A4), rightMargin=13*mm, leftMargin=13*mm,
+        topMargin=13*mm, bottomMargin=13*mm,
+        title=f"General Ledger - {account.name}",
+        author=account.hotel.name,
+    )
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name="HotelTitle", parent=styles["Title"], fontSize=17, leading=20, textColor=colors.HexColor("#14233B"), alignment=TA_LEFT, spaceAfter=3))
+    styles.add(ParagraphStyle(name="SubTitleLedger", parent=styles["Normal"], fontSize=9, textColor=colors.HexColor("#64748B"), spaceAfter=8))
+    styles.add(ParagraphStyle(name="CellLedger", parent=styles["Normal"], fontSize=7, leading=9))
+    styles.add(ParagraphStyle(name="CellRightLedger", parent=styles["CellLedger"], alignment=TA_RIGHT))
+    money = lambda value: f"₦{value:,.2f}"
+    story = [
+        Paragraph(account.hotel.name.upper(), styles["HotelTitle"]),
+        Paragraph("GENERAL LEDGER STATEMENT", styles["Heading2"]),
+        Paragraph(f"Account {account.code} · {account.name} · {account.get_account_type_display()}", styles["SubTitleLedger"]),
+        Paragraph(f"Reporting period: {context['start_date'] or 'Beginning'} to {context['end_date'] or 'Current'}", styles["SubTitleLedger"]),
+        Spacer(1, 4*mm),
+    ]
+    summary = [[
+        "OPENING POSITION", "PERIOD DEBITS", "PERIOD CREDITS", "CLOSING BALANCE"
+    ], [
+        money(context["opening_balance"]), money(context["total_debits"]),
+        money(context["total_credits"]), money(context["closing_balance"])
+    ]]
+    summary_table = Table(summary, colWidths=[65*mm]*4)
+    summary_table.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF7")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.HexColor("#475569")),
+        ("FONTNAME",(0,0),(-1,-1),"Helvetica-Bold"),
+        ("FONTSIZE",(0,0),(-1,-1),8),("GRID",(0,0),(-1,-1),.4,colors.HexColor("#D8E0EA")),
+        ("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8),
+    ]))
+    story.extend([summary_table, Spacer(1, 7*mm)])
+    data = [["Date", "Business day", "Description / reference", "Posted by", "Debit", "Credit", "Running balance"]]
+    for item in context["ledger"]:
+        poster = (item["user"].get_full_name() or item["user"].username) if item["user"] else "System"
+        desc = item["description"] + (f"<br/><font color='#64748B'>{item['reference']}</font>" if item["reference"] else "")
+        data.append([
+            item["date"].strftime("%d %b %Y"),
+            item["business_day"].strftime("%d %b %Y") if item["business_day"] else "—",
+            Paragraph(desc, styles["CellLedger"]), Paragraph(poster, styles["CellLedger"]),
+            Paragraph(money(item["debit"]), styles["CellRightLedger"]),
+            Paragraph(money(item["credit"]), styles["CellRightLedger"]),
+            Paragraph(money(item["balance"]), styles["CellRightLedger"]),
+        ])
+    data.append(["", "", "PERIOD TOTALS", "", money(context["total_debits"]), money(context["total_credits"]), money(context["closing_balance"])])
+    table = Table(data, repeatRows=1, colWidths=[24*mm, 24*mm, 65*mm, 35*mm, 32*mm, 32*mm, 34*mm])
+    table.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#14233B")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+        ("FONTNAME",(0,-1),(-1,-1),"Helvetica-Bold"),
+        ("BACKGROUND",(0,-1),(-1,-1),colors.HexColor("#E8EEF7")),
+        ("FONTSIZE",(0,0),(-1,-1),7),("GRID",(0,0),(-1,-1),.35,colors.HexColor("#D8E0EA")),
+        ("VALIGN",(0,0),(-1,-1),"TOP"),("ALIGN",(4,1),(-1,-1),"RIGHT"),
+        ("ROWBACKGROUNDS",(0,1),(-1,-2),[colors.white,colors.HexColor("#F8FAFC")]),
+        ("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),
+    ]))
+    story.append(table)
+    def footer(canvas, document):
+        canvas.saveState()
+        canvas.setFont("Helvetica", 7)
+        canvas.setFillColor(colors.HexColor("#64748B"))
+        canvas.drawString(13*mm, 7*mm, f"{account.hotel.name} · Confidential financial record")
+        canvas.drawRightString(landscape(A4)[0]-13*mm, 7*mm, f"Page {document.page}")
+        canvas.restoreState()
+    doc.build(story, onFirstPage=footer, onLaterPages=footer)
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="ledger_{account.code}_{account.pk}.pdf"'
+    return response
+
 
 
 def profit_and_loss(request):
