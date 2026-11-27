@@ -1486,7 +1486,7 @@ def create_account(request):
                 bank_account.save()
 
             messages.success(request, f"Account '{account.name}' created successfully.")
-            return redirect("accounting:chart")
+            return redirect(f"/accounting/chart/?hotel={hotel.pk}")
     else:
         account_form = AccountForm(hotel=hotel)
         if opening_balances_locked:
@@ -1520,7 +1520,7 @@ def edit_account(request, account_id):
 
     if account.is_system:
         messages.error(request, "System accounts cannot be edited.")
-        return redirect("accounting:chart")
+        return redirect(f"/accounting/chart/?hotel={hotel.pk}")
 
     try:
         bank_account = account.bank_account
