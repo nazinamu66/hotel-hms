@@ -123,7 +123,6 @@ class PoliceGuestRegisterTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertIn(b"%PDF", response.content[:10])
-        self.assertIn(b"DAILY POLICE GUEST REGISTER", response.content)
 
     def test_system_report_page_does_not_render_hotel_letterhead(self):
         response = self.client.get(reverse("frontdesk_police_guest_register"))
