@@ -57,18 +57,11 @@ def accounting_dashboard(request):
         elif account.system_key == "accounts_payable":
             payables_balance += balance
 
-    monthly_totals = (
-        JournalLine.objects.filter(
-            journal__hotel=hotel,
-            journal__date__gte=(month_start.replace(day=1) - __import__("datetime").timedelta(days=155)),
-            journal__date__lte=today,
-        )
-        .values("account__account_type")
-        .annotate(total_debit=Sum("debit"), total_credit=Sum("credit"))
-    )
     # Build the six calendar-month buckets using the journal's actual posting dates.
     from datetime import timedelta
-    first_month = (month_start.replace(day=1) - timedelta(days=155)).replace(day=1)
+    first_month = month_start
+    for _ in range(5):
+        first_month = (first_month - timedelta(days=1)).replace(day=1)
     monthly_rows = (
         JournalLine.objects.filter(
             journal__hotel=hotel,
