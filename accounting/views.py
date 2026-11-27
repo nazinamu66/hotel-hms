@@ -2731,6 +2731,8 @@ def bank_reconciliation(request):
                     raise ValueError("Enter a valid period and statement balances.")
                 if BankReconciliation.objects.filter(bank_account=bank, period_start=start, period_end=end).exists():
                     raise ValueError("A reconciliation already exists for this bank account and statement period.")
+                if BankReconciliation.objects.filter(bank_account=bank, period_start=start, period_end=end).exists():
+                    raise ValueError("A reconciliation already exists for this bank account and statement period.")
                 active = BankReconciliation.objects.create(
                     hotel=hotel, bank_account=bank, period_start=start, period_end=end,
                     statement_opening_balance=opening, statement_closing_balance=closing,
