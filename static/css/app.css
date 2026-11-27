@@ -2478,3 +2478,190 @@ input:focus, select:focus, textarea:focus,
 .management-custom-reports .empty {border-color:#d8cbb8 !important;color:#6f6253 !important}
 .management-custom-reports .result-card {background:#fff !important;border-color:#e7ddce !important;box-shadow:0 5px 16px rgba(74,49,21,.05)}
 .management-custom-reports .result-card h4,.management-custom-reports .result-value {color:#302316 !important}
+
+
+/* =========================================================
+   CCH Kitchen reports — unified gold / bronze / ivory system
+   Six management reporting screens. Operational Kitchen pages
+   are intentionally not affected.
+   ========================================================= */
+:root{
+ --cch-k-ink:#302316;--cch-k-muted:#6f6253;--cch-k-border:#e7ddce;
+ --cch-k-panel:#fff;--cch-k-head:#f2eadc;--cch-k-page:#faf8f4;
+ --cch-k-bronze:#986126;--cch-k-gold:#c99a4e;
+}
+.main:has(.kitchen-management-report),
+.main:has(.audit-page),
+.main:has(.kir-page),
+.main:has(.kpr),
+.main:has(.spr-page),
+.main:has(.kbp-page){background:var(--cch-k-page)!important}
+.main:has(.kitchen-management-report)>.content,
+.main:has(.audit-page)>.content,
+.main:has(.kir-page)>.content,
+.main:has(.kpr)>.content,
+.main:has(.spr-page)>.content,
+.main:has(.kbp-page)>.content{
+ background:var(--cch-k-page)!important;color:var(--cch-k-ink)!important;
+}
+.main:has(.kitchen-management-report)>.topbar,
+.main:has(.audit-page)>.topbar,
+.main:has(.kir-page)>.topbar,
+.main:has(.kpr)>.topbar,
+.main:has(.spr-page)>.topbar,
+.main:has(.kbp-page)>.topbar{
+ background:#fff!important;color:var(--cch-k-ink)!important;border-bottom:1px solid var(--cch-k-border)!important;
+}
+.main:has(.kitchen-management-report) .sidebar,
+.main:has(.audit-page) .sidebar,
+.main:has(.kir-page) .sidebar,
+.main:has(.kpr) .sidebar,
+.main:has(.spr-page) .sidebar,
+.main:has(.kbp-page) .sidebar{background:#211910!important}
+
+/* Kitchen Management Overview */
+.kitchen-management-report{color:var(--cch-k-ink)!important;background:var(--cch-k-page)!important}
+.kitchen-management-report .kmr-title,.kitchen-management-report .kmr-section,
+.kitchen-management-report h1,.kitchen-management-report h2,.kitchen-management-report h3{color:var(--cch-k-ink)!important}
+.kitchen-management-report .kmr-muted,.kitchen-management-report .kmr-note,
+.kitchen-management-report .kmr-foot{color:var(--cch-k-muted)!important}
+.kitchen-management-report .kmr-filter,.kitchen-management-report .kmr-card,
+.kitchen-management-report .kmr-chart,.kitchen-management-report .kmr-report-link{
+ background:#fff!important;color:var(--cch-k-ink)!important;border:1px solid var(--cch-k-border)!important;
+ box-shadow:0 6px 20px rgba(74,49,21,.055)!important
+}
+.kitchen-management-report .kmr-field label,.kitchen-management-report .kmr-label{color:#765a35!important}
+.kitchen-management-report .kmr-field input,.kitchen-management-report .kmr-field select{
+ background:#fff!important;color:var(--cch-k-ink)!important;border:1px solid #d8cbb8!important;color-scheme:light
+}
+.kitchen-management-report .kmr-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;border:0!important;color:#fff!important}
+.kitchen-management-report .kmr-value,.kitchen-management-report .kmr-trend-value{color:var(--cch-k-ink)!important}
+.kitchen-management-report .kmr-chart-title{color:var(--cch-k-ink)!important}
+.kitchen-management-report .kmr-chart-subtitle,.kitchen-management-report .kmr-report-link small{color:var(--cch-k-muted)!important}
+.kitchen-management-report .kmr-trend-row{color:#594733!important}
+.kitchen-management-report .kmr-track{background:#eee5d8!important}
+.kitchen-management-report .kmr-bar{background:linear-gradient(90deg,#986126,#c99a4e)!important}
+.kitchen-management-report .kmr-bar.production{background:#64856a!important}
+.kitchen-management-report .kmr-bar.spoilage{background:#c58a36!important}
+.kitchen-management-report .kmr-report-link:hover{border-color:#c99a4e!important}
+.kitchen-management-report .kmr-report-icon{background:#f3eadb!important;color:#87551f!important}
+.kitchen-management-report .kmr-report-arrow{color:#87551f!important}
+.kitchen-management-report .kmr-alert{background:#fbf2df!important;border-color:#e6c98e!important;color:#704719!important}
+
+/* Food Sales Audit Report */
+.audit-page{color:var(--cch-k-ink)!important}
+.audit-heading h1,.audit-table-heading h2{color:var(--cch-k-ink)!important}
+.audit-eyebrow,.audit-muted,.audit-note,.audit-empty{color:var(--cch-k-muted)!important}
+.audit-panel,.audit-metric{background:#fff!important;border:1px solid var(--cch-k-border)!important;box-shadow:0 6px 20px rgba(74,49,21,.055)!important}
+.audit-field label{color:#594733!important}
+.audit-field input,.audit-field select{background:#fff!important;color:var(--cch-k-ink)!important;border-color:#d8cbb8!important;color-scheme:light}
+.audit-field input:focus,.audit-field select:focus{outline:2px solid rgba(201,154,78,.22)!important;border-color:#c99a4e!important}
+.audit-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important}
+.audit-btn.secondary{background:#f3eadb!important;color:#704719!important;border:1px solid var(--cch-k-border)!important}
+.audit-btn.export{background:#52785d!important;color:#fff!important}
+.audit-metric-label{color:var(--cch-k-muted)!important}
+.audit-metric-value{color:var(--cch-k-ink)!important}
+.audit-table th{background:var(--cch-k-head)!important;color:#594733!important;border-color:var(--cch-k-border)!important}
+.audit-table td{color:var(--cch-k-ink)!important;border-color:#eee5d8!important}
+.audit-table tbody tr:hover{background:#fbf6ed!important}
+.audit-order{color:#87551f!important}.audit-staff{color:#594733!important}
+.audit-status{background:#f3eadb!important;color:#80531f!important}
+
+/* Inventory report */
+.kir-page,.kird-page{color:var(--cch-k-ink)!important;background:var(--cch-k-page)!important}
+.kir-page .kir-title,.kir-page .kir-section,.kird-page .kird-title,.kird-page .kird-section{color:var(--cch-k-ink)!important}
+.kir-page .kir-muted,.kir-page .kir-note,.kir-page .kir-foot,
+.kird-page .kird-muted,.kird-page .kird-note,.kird-page .kird-foot{color:var(--cch-k-muted)!important}
+.kir-page .kir-filter,.kir-page .kir-card,.kir-page .kir-panel,
+.kird-page .kird-filter,.kird-page .kird-card,.kird-page .kird-panel{
+ background:#fff!important;border:1px solid var(--cch-k-border)!important;color:var(--cch-k-ink)!important;
+ box-shadow:0 6px 20px rgba(74,49,21,.055)!important
+}
+.kir-page .kir-label,.kird-page .kird-label{color:#765a35!important}
+.kir-page .kir-value,.kird-page .kird-value{color:var(--cch-k-ink)!important}
+.kir-page .kir-panel-head,.kird-page .kird-panel-head{border-color:var(--cch-k-border)!important}
+.kir-page .kir-panel-head h2,.kird-page .kird-panel-head h2{color:var(--cch-k-ink)!important}
+.kir-page .kir-panel-head p,.kird-page .kird-panel-head p{color:var(--cch-k-muted)!important}
+.kir-page .kir-table th,.kird-page .kird-table th{background:var(--cch-k-head)!important;color:#594733!important}
+.kir-page .kir-table td,.kird-page .kird-table td{color:var(--cch-k-ink)!important;border-color:#eee5d8!important}
+.kir-page .kir-table tr:hover,.kird-page .kird-table tr:hover{background:#fbf6ed!important}
+.kir-page .kir-field label,.kird-page .kird-field label{color:#594733!important}
+.kir-page .kir-field input,.kir-page .kir-field select,.kird-page .kird-field input{
+ background:#fff!important;color:var(--cch-k-ink)!important;border-color:#d8cbb8!important;color-scheme:light
+}
+.kir-page .kir-btn,.kird-page .kird-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;border:0!important;color:#fff!important}
+.kir-page .kir-btn.secondary,.kird-page .kird-btn.secondary{background:#f3eadb!important;color:#704719!important;border:1px solid var(--cch-k-border)!important}
+.kir-page .kir-link,.kird-page .kird-link{color:#87551f!important}
+
+/* Purchasing report */
+.kpr{color:var(--cch-k-ink)!important}
+.kpr h1,.kpr-section{color:var(--cch-k-ink)!important}
+.kpr-muted,.kpr-note{color:var(--cch-k-muted)!important}
+.kpr-filter,.kpr-panel,.kpr-card{background:#fff!important;border:1px solid var(--cch-k-border)!important;color:var(--cch-k-ink)!important;box-shadow:0 6px 20px rgba(74,49,21,.055)!important}
+.kpr-field label,.kpr-label{color:#765a35!important}
+.kpr-field input,.kpr-field select{background:#fff!important;color:var(--cch-k-ink)!important;border:1px solid #d8cbb8!important;color-scheme:light}
+.kpr-panel-head{border-color:var(--cch-k-border)!important}
+.kpr-panel-head h2{color:var(--cch-k-ink)!important}
+.kpr-panel-head p{color:var(--cch-k-muted)!important}
+.kpr th{background:var(--cch-k-head)!important;color:#594733!important}
+.kpr td{border-color:#eee5d8!important;color:var(--cch-k-ink)!important}
+.kpr tr:hover{background:#fbf6ed!important}
+.kpr-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important;border:0!important}
+.kpr-btn.secondary{background:#f3eadb!important;color:#704719!important;border:1px solid var(--cch-k-border)!important}
+.kpr-card-hint,.kpr-drill a{color:#87551f!important}
+.kpr-card-link:hover .kpr-card,.kpr-card-link:focus-visible .kpr-card{border-color:#c99a4e!important}
+.kpr-drill{background:#fbf6ed!important;border-color:#e7ddce!important;color:var(--cch-k-ink)!important}
+.kpr-pill{background:#f1eadf!important;color:#594733!important}
+.kpr-pill.warn{background:#fff0d9!important;color:#80531f!important}
+.kpr-pill.good{background:#e8f1e9!important;color:#28613c!important}
+
+/* Spoilage report */
+.spr-page{color:var(--cch-k-ink)!important;background:var(--cch-k-page)!important}
+.spr-title{color:var(--cch-k-ink)!important}
+.spr-muted{color:var(--cch-k-muted)!important}
+.spr-card{background:#fff!important;border:1px solid var(--cch-k-border)!important;color:var(--cch-k-ink)!important;box-shadow:0 6px 20px rgba(74,49,21,.055)!important}
+.spr-field label,.spr-label{color:#765a35!important}
+.spr-field input,.spr-field select{background:#fff!important;color:var(--cch-k-ink)!important;border:1px solid #d8cbb8!important;color-scheme:light}
+.spr-chart-head{border-color:var(--cch-k-border)!important}
+.spr-chart-head h2{color:var(--cch-k-ink)!important}
+.spr-chart-unit{background:#f3eadb!important;color:#704719!important}
+.spr-period-row{border-color:#eee5d8!important}
+.spr-period-meta strong{color:#594733!important}.spr-period-meta span{color:var(--cch-k-muted)!important}
+.spr-track{background:#eee5d8!important}
+.spr-month-bar{background:linear-gradient(90deg,#986126,#c99a4e)!important}
+.spr-week-bar{background:linear-gradient(90deg,#64856a,#8eae83)!important}
+.spr-table th{background:var(--cch-k-head)!important;color:#594733!important}
+.spr-table td{border-color:#eee5d8!important;color:var(--cch-k-ink)!important}
+.spr-table tbody tr:hover{background:#fbf6ed!important}
+.spr-status{background:#fff0d9!important;color:#80531f!important}
+.spr-status.reviewed{background:#e8f1e9!important;color:#28613c!important}
+.spr-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important}
+
+/* Batch profitability report */
+.kbp-page{color:var(--cch-k-ink)!important;background:var(--cch-k-page)!important}
+.kbp-eyebrow{color:#986126!important}.kbp-title{color:var(--cch-k-ink)!important}
+.kbp-muted,.kbp-note,.kbp-foot{color:var(--cch-k-muted)!important}
+.kbp-filter,.kbp-card,.kbp-panel{background:#fff!important;border:1px solid var(--cch-k-border)!important;color:var(--cch-k-ink)!important;box-shadow:0 6px 20px rgba(74,49,21,.055)!important}
+.kbp-field label,.kbp-label{color:#765a35!important}
+.kbp-field input,.kbp-field select{background:#fff!important;color:var(--cch-k-ink)!important;border:1px solid #d8cbb8!important;color-scheme:light}
+.kbp-value{color:var(--cch-k-ink)!important}
+.kbp-panel-head{border-color:var(--cch-k-border)!important}
+.kbp-panel-head h2{color:var(--cch-k-ink)!important}
+.kbp-panel-head p,.kbp-legend,.kbp-chart-name small,.kbp-flow-head span{color:var(--cch-k-muted)!important}
+.kbp-chart-name,.kbp-flow-head{color:#594733!important}
+.kbp-bar-line{color:var(--cch-k-muted)!important}
+.kbp-bar-line b{color:var(--cch-k-ink)!important}
+.kbp-track,.kbp-flow-track{background:#eee5d8!important}
+.kbp-legend .revenue,.kbp-bar-line i.revenue,.kbp-legend .sold,.kbp-flow-track .sold{background:#c99a4e!important}
+.kbp-legend .cogs,.kbp-bar-line i.cogs,.kbp-legend .spoiled,.kbp-flow-track .spoiled{background:#b9853c!important}
+.kbp-legend .profit,.kbp-bar-line i.profit,.kbp-legend .remaining,.kbp-flow-track .remaining{background:#64856a!important}
+.kbp-chart-row,.kbp-flow-row{border-color:#eee5d8!important}
+.kbp-table th{background:var(--cch-k-head)!important;color:#594733!important}
+.kbp-table td{border-color:#eee5d8!important;color:var(--cch-k-ink)!important}
+.kbp-table small{color:var(--cch-k-muted)!important}
+.kbp-link{color:#87551f!important}
+.kbp-status.good{background:#e8f1e9!important;color:#28613c!important}
+.kbp-status.warn{background:#fff0d9!important;color:#80531f!important}
+.kbp-empty{color:var(--cch-k-muted)!important}
+.kbp-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important;border:0!important}
+.kbp-btn.secondary{background:#f3eadb!important;color:#704719!important;border:1px solid var(--cch-k-border)!important}
