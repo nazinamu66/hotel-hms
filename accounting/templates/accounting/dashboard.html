@@ -178,7 +178,7 @@
       <div class="acct-legend"><span><i style="background:#0f766e"></i>Net inflow</span><span><i style="background:#e11d48"></i>Net outflow</span></div>
       {% if cash_flow_chart %}
         {% for month in cash_flow_chart %}
-        <a class="acct-chart-click" href="{% url 'accounting:journal' %}?start_date={{ month.start_date }}&amp;end_date={{ month.end_date }}" title="Open journal entries for {{ month.label }}">
+        <a class="acct-chart-click" href="{% url 'accounting:journal' %}?start_date={{ month.start_date }}&amp;end_date={{ month.end_date }}{% if user.role == 'DIRECTOR' and hotels|length > 1 %}&amp;hotel={{ hotel.pk }}{% endif %}" title="Open journal entries for {{ month.label }}">
           <div class="acct-flow-row">
             <span class="acct-month-label">{{ month.label }}</span>
             <div class="acct-flow-track"><div class="acct-flow-fill {% if month.positive %}acct-flow-positive{% else %}acct-flow-negative{% endif %}" style="width:{{ month.pct }}%"></div></div>
