@@ -766,6 +766,166 @@ def police_guest_register(request):
     )
 
 
+@role_required("FRONTDESK", "MANAGER", "ADMIN")
+def police_guest_register_pdf(request):
+    """Generate the official PDF version of the current in-house guest register."""
+    from django.utils import timezone
+
+    hotel = request.user.department.hotel
+    business = BusinessProfile.objects.filter(hotel=hotel).first()
+    generated_at = timezone.localtime()
+    stays = (
+        Folio.objects.filter(
+            hotel=hotel,
+            folio_type="ROOM",
+            is_closed=False,
+        )
+        .select_related("guest", "room")
+        .order_by("room__room_number", "guest__last_name", "guest__first_name")
+    )
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=(A4[1], A4[0]),
+        rightMargin=10 * mm,
+        leftMargin=10 * mm,
+        topMargin=10 * mm,
+        bottomMargin=12 * mm,
+        title=f"Daily Police Guest Register - {hotel.name}",
+        author=(business.name if business else hotel.name),
+    )
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        "PoliceRegisterTitle", parent=styles["Title"],
+        fontName="Helvetica-Bold", fontSize=15, leading=18,
+        alignment=1, textColor=colors.HexColor("#172033"), spaceAfter=4,
+    )
+    sub_style = ParagraphStyle(
+        "PoliceRegisterSub", parent=styles["Normal"],
+        fontSize=8, leading=11, alignment=1,
+        textColor=colors.HexColor("#475569"),
+    )
+    cell_style = ParagraphStyle(
+        "PoliceRegisterCell", parent=styles["Normal"],
+        fontSize=7, leading=9, wordWrap="CJK",
+    )
+    head_style = ParagraphStyle(
+        "PoliceRegisterHead", parent=cell_style,
+        fontName="Helvetica-Bold", textColor=colors.white,
+    )
+
+    story = []
+    if business and business.logo:
+        try:
+            business.logo.open("rb")
+            logo = PDFImage(business.logo, width=25 * mm, height=22 * mm, kind="proportional")
+            business.logo.close()
+            brand = Table(
+                [[logo, Paragraph(f"<b>{escape(business.name)}</b>", title_style)]],
+                colWidths=[32 * mm, 240 * mm],
+                hAlign="CENTER",
+            )
+            brand.setStyle(TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (1, 0), (1, 0), "CENTER"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]))
+            story.append(brand)
+        except Exception:
+            story.append(Paragraph(escape(business.name), title_style))
+    else:
+        story.append(Paragraph(escape(business.name if business else hotel.name), title_style))
+
+    address_parts = []
+    if business:
+        if business.address:
+            address_parts.append(business.address.replace("\n", ", "))
+        locality = ", ".join(part for part in [business.city, business.state, business.country] if part)
+        if locality:
+            address_parts.append(locality)
+    elif hotel.location:
+        address_parts.append(hotel.location)
+    if address_parts:
+        story.append(Paragraph(escape(" · ".join(address_parts)), sub_style))
+    story.append(Spacer(1, 3 * mm))
+    story.append(Paragraph("DAILY POLICE GUEST REGISTER", title_style))
+    story.append(Paragraph(
+        f"Report date: {generated_at.strftime('%d %b %Y')} &nbsp;&nbsp; "
+        f"Generated: {generated_at.strftime('%d %b %Y, %H:%M')} &nbsp;&nbsp; "
+        f"Total guests: {stays.count()}",
+        sub_style,
+    ))
+    story.append(Spacer(1, 5 * mm))
+
+    headers = ["S/N", "Guest full name", "Nationality", "ID / Passport number",
+               "Phone number", "Room", "Check-in date", "Expected departure"]
+    table_data = [[Paragraph(escape(value), head_style) for value in headers]]
+    missing_identity_count = 0
+    for index, folio in enumerate(stays, 1):
+        guest = folio.guest
+        if not guest or not guest.id_number:
+            missing_identity_count += 1
+        values = [
+            str(index),
+            guest.full_name if guest else "Guest record missing",
+            (guest.nationality or "Not recorded") if guest else "Not recorded",
+            (guest.id_number or "Not recorded") if guest else "Not recorded",
+            (guest.phone or "Not recorded") if guest else "Not recorded",
+            folio.room.room_number if folio.room else "Not assigned",
+            timezone.localtime(folio.check_in_at).strftime("%d %b %Y") if folio.check_in_at else "—",
+            timezone.localtime(folio.check_out_at).strftime("%d %b %Y") if folio.check_out_at else "Not set",
+        ]
+        table_data.append([Paragraph(escape(value), cell_style) for value in values[:2]] +
+                          [Paragraph(escape(value), cell_style) for value in values[2:]])
+    col_widths = [9*mm, 47*mm, 27*mm, 42*mm, 31*mm, 19*mm, 34*mm, 36*mm]
+    table = Table(table_data, colWidths=col_widths, repeatRows=1, hAlign="LEFT")
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#24364b")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#d7e0ea")),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    story.append(table)
+    if missing_identity_count:
+        story.append(Spacer(1, 3 * mm))
+        story.append(Paragraph(
+            f"Attention: {missing_identity_count} active stay(s) have no recorded identity number.",
+            styles["Italic"],
+        ))
+    story.append(Spacer(1, 18 * mm))
+    signatures = Table(
+        [["____________________________________", "____________________________________"],
+         ["Prepared by / Front Desk Officer", "Received by / Police Officer"]],
+        colWidths=[130 * mm, 130 * mm],
+    )
+    signatures.setStyle(TableStyle([
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("FONTSIZE", (0, 1), (-1, 1), 8),
+        ("TEXTCOLOR", (0, 1), (-1, 1), colors.HexColor("#475569")),
+    ]))
+    story.append(signatures)
+    story.append(Spacer(1, 4 * mm))
+    story.append(Paragraph(
+        "Confidential guest information. Handle and submit only through the hotel's authorised reporting process.",
+        sub_style,
+    ))
+
+    doc.build(story)
+    pdf = buffer.getvalue()
+    buffer.close()
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = 'inline; filename="daily-police-guest-register.pdf"'
+    return response
+
+
 @role_required("FRONTDESK", "MANAGER")
 def room_board(request):
 
