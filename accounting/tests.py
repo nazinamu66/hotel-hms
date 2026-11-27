@@ -811,3 +811,114 @@ class TrialBalanceCalculationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         codes = {row["code"] for row in response.context["data"]}
         self.assertNotIn("TB9999", codes)
+
+
+
+class ExpenseManagementWorkflowTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from inventory.models import Hotel
+        from accounting.models import Account
+
+        self.hotel = Hotel.objects.create(name="Expense Workflow Test Hotel")
+        User = get_user_model()
+        self.accountant = User.objects.create_user(
+            username="expense_workflow_accountant", password="test-password",
+            role="ACCOUNTANT", hotel=self.hotel,
+        )
+        self.director = User.objects.create_user(
+            username="expense_workflow_director", password="test-password",
+            role="DIRECTOR", hotel=self.hotel,
+        )
+        self.expense_account = Account.objects.create(
+            hotel=self.hotel, code="EXPT5101", name="Test Payroll Expense",
+            account_type="expense",
+        )
+        self.bank_account = Account.objects.create(
+            hotel=self.hotel, code="EXPT1001", name="Test Payroll Bank",
+            account_type="bank", opening_balance=Decimal("1000000.00"),
+        )
+        self.payables = Account.objects.get(
+            hotel=self.hotel, system_key="accounts_payable", is_system=True,
+        )
+
+    def _create_expense(self):
+        from django.urls import reverse
+        self.client.force_login(self.accountant)
+        return self.client.post(reverse("accounting:expense_management"), {
+            "hotel": self.hotel.pk, "action": "CREATE",
+            "description": "November staff payroll",
+            "expense_account": self.expense_account.pk,
+            "amount": "250000.00", "expense_date": "2026-11-30",
+            "period_label": "November 2026", "reference": "PAYROLL-NOV-2026",
+        })
+
+    def test_expense_requires_independent_approval_then_supports_partial_payments(self):
+        from django.urls import reverse
+        from accounting.models import ExpenseObligation, ExpensePayment, JournalLine
+
+        response = self._create_expense()
+        self.assertEqual(response.status_code, 302)
+        obligation = ExpenseObligation.objects.get(hotel=self.hotel)
+        self.assertEqual(obligation.status, "PENDING")
+        self.assertFalse(obligation.approval_journal_id)
+
+        # The creator cannot approve their own expense.
+        response = self.client.post(reverse("accounting:expense_management"), {
+            "hotel": self.hotel.pk, "action": "APPROVE",
+            "obligation_id": obligation.pk, "review_note": "Reviewed",
+        })
+        self.assertEqual(response.status_code, 403)
+        obligation.refresh_from_db()
+        self.assertEqual(obligation.status, "PENDING")
+
+        self.client.force_login(self.director)
+        response = self.client.post(reverse("accounting:expense_management"), {
+            "hotel": self.hotel.pk, "action": "APPROVE",
+            "obligation_id": obligation.pk, "review_note": "Payroll verified",
+        })
+        self.assertEqual(response.status_code, 302)
+        obligation.refresh_from_db()
+        self.assertEqual(obligation.status, "APPROVED")
+        self.assertTrue(obligation.approval_journal_id)
+        approval_lines = list(JournalLine.objects.filter(journal=obligation.approval_journal))
+        self.assertEqual(
+            {line.account_id for line in approval_lines},
+            {self.expense_account.pk, self.payables.pk},
+        )
+        self.assertEqual(sum((line.debit for line in approval_lines), Decimal("0.00")), Decimal("250000.00"))
+        self.assertEqual(sum((line.credit for line in approval_lines), Decimal("0.00")), Decimal("250000.00"))
+
+        # Accountant can pay an approved obligation in more than one instalment.
+        self.client.force_login(self.accountant)
+        for amount, expected_status in (("100000.00", "PARTIAL"), ("150000.00", "PAID")):
+            response = self.client.post(reverse("accounting:expense_management"), {
+                "hotel": self.hotel.pk, "action": "PAY",
+                "obligation_id": obligation.pk, "payment_amount": amount,
+                "payment_date": "2026-11-30",
+                "payment_account": self.bank_account.pk,
+                "payment_reference": f"PAYROLL-TRANSFER-{amount}",
+            })
+            self.assertEqual(response.status_code, 302)
+            obligation.refresh_from_db()
+            self.assertEqual(obligation.status, expected_status)
+        self.assertEqual(ExpensePayment.objects.filter(obligation=obligation).count(), 2)
+        self.assertEqual(obligation.paid_amount, Decimal("250000.00"))
+        self.assertEqual(obligation.outstanding_amount, Decimal("0.00"))
+
+    def test_expense_accounts_are_hotel_scoped(self):
+        from django.urls import reverse
+        from inventory.models import Hotel
+        from accounting.models import Account
+
+        other_hotel = Hotel.objects.create(name="Other Expense Hotel")
+        other_expense = Account.objects.create(
+            hotel=other_hotel, code="EXPT5102", name="Other Hotel Expense",
+            account_type="expense",
+        )
+        self.client.force_login(self.accountant)
+        response = self.client.get(reverse("accounting:expense_management"))
+        self.assertEqual(response.status_code, 200)
+        account_ids = {account.pk for account in response.context["expense_accounts"]}
+        self.assertIn(self.expense_account.pk, account_ids)
+        self.assertNotIn(other_expense.pk, account_ids)
