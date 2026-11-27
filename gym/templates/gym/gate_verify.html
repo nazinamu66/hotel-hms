@@ -1,5 +1,14 @@
 {% extends "base/base.html" %}
-{% block title %}Gym Gate Verification{% endblock %}
+{% block title %}Gym Gate Verification<script>
+(function(){
+ const open=document.getElementById("gym-camera-open"),close=document.getElementById("gym-camera-close"),panel=document.getElementById("gym-camera-panel"),video=document.getElementById("gym-camera-video"),status=document.getElementById("gym-camera-status"),input=document.getElementById("id_code"),form=document.getElementById("gym-gate-lookup");
+ let stream=null,frame=null,detector=null,active=false;
+ async function stop(){active=false;if(frame)cancelAnimationFrame(frame);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;panel.hidden=true;}
+ async function scan(){if(!active||!detector)return;try{const codes=await detector.detect(video);if(codes.length&&codes[0].rawValue){input.value=codes[0].rawValue;await stop();form.requestSubmit();return;}}catch(e){}frame=requestAnimationFrame(scan);}
+ if(open)open.addEventListener("click",async function(){panel.hidden=false;if(!("BarcodeDetector" in window)){status.textContent="QR scanning is not supported by this browser. Use manual pass-token entry or a QR-capable browser.";return;}try{detector=new BarcodeDetector({formats:["qr_code"]});stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});video.srcObject=stream;await video.play();active=true;status.textContent="Camera ready. Hold the QR code steady in front of the camera.";scan();}catch(e){status.textContent="Camera unavailable. Check browser camera permission, or use manual entry.";}});if(close)close.addEventListener("click",stop);window.addEventListener("pagehide",stop);
+})();
+</script>
+{% endblock %}
 {% block content %}
 <style>
 .gym-gate{max-width:1080px;margin:28px auto;padding:0 18px 36px;color:#172033}
@@ -24,12 +33,14 @@
  <section class="gym-gate-panel">
   <h2 style="margin-top:0">Verify membership pass</h2>
   <p class="gym-muted">Scan the member's pass token or enter their Gym member number. Only memberships registered at this hotel can be found.</p>
-  <form method="post" class="gym-gate-form">
+  <form method="post" class="gym-gate-form" id="gym-gate-lookup">
    {% csrf_token %}<input type="hidden" name="action" value="lookup">{{ form.code }}
-   <button type="submit">Verify pass</button>
+   <button type="submit">Search member</button><button type="button" class="secondary" id="gym-camera-open">Open camera</button>
   </form>
+  <div id="gym-camera-panel" hidden style="margin-top:16px"><video id="gym-camera-video" playsinline style="width:min(100%,520px);background:#0f172a;border-radius:12px"></video><p class="gym-muted" id="gym-camera-status">Point the camera at the QR code on the membership pass.</p><button type="button" class="secondary" id="gym-camera-close">Close camera</button></div>
  </section>
  {% if error_message %}<section class="gym-gate-panel"><p class="danger" style="margin:0;font-weight:700">{{ error_message }}</p></section>{% endif %}
+ {% if candidates %}<section class="gym-gate-panel"><h2 style="margin-top:0">Matching members</h2><p class="gym-muted">More than one member matched. Select the correct member to verify the membership.</p>{% for item in candidates %}<form method="post" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #edf0f4;flex-wrap:wrap">{% csrf_token %}<input type="hidden" name="action" value="lookup"><input type="hidden" name="code" value="{{ item.member.member_number }}"><div><strong>{{ item.member.full_name }}</strong><div class="gym-muted">{{ item.member.member_number }} · {{ item.member.phone }}</div></div><button type="submit">Verify this member</button></form>{% endfor %}</section>{% endif %}
  {% if membership %}
  <section class="gym-gate-panel">
   <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
