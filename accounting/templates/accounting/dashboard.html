@@ -1,5 +1,5 @@
 {% extends "base/base.html" %}
-{% load accounting_extras %}
+{% load accounting_extras humanize %}
 {% block title %}Accounting Dashboard | Hotel HMS{% endblock %}
 {% block content %}
 <style>
@@ -132,12 +132,12 @@
   </section>
 
   <section class="acct-metrics">
-    <article class="acct-metric"><span>Cash on hand</span><strong>₦{{ cash_balance|floatformat:2 }}</strong><small>Current ledger balance</small></article>
-    <article class="acct-metric"><span>Bank balances</span><strong>₦{{ bank_balance|floatformat:2 }}</strong><small>All active bank accounts</small></article>
-    <article class="acct-metric"><span>Revenue in period</span><strong>₦{{ revenue_month|floatformat:2 }}</strong><small>Posted journal activity</small></article>
-    <article class="acct-metric"><span>Expenses in period</span><strong>₦{{ expenses_month|floatformat:2 }}</strong><small>Posted journal activity</small></article>
-    <article class="acct-metric"><span>Net result in period</span><strong>₦{{ net_profit_month|floatformat:2 }}</strong><small>{{ profit_margin|floatformat:1 }}% margin on revenue</small></article>
-    <article class="acct-metric"><span>Accounts payable</span><strong>₦{{ payables_balance|floatformat:2 }}</strong><small>Supplier liability balance</small></article>
+    <article class="acct-metric"><span>Cash on hand</span><strong>₦{{ cash_balance|floatformat:2|intcomma }}</strong><small>Current ledger balance</small></article>
+    <article class="acct-metric"><span>Bank balances</span><strong>₦{{ bank_balance|floatformat:2|intcomma }}</strong><small>All active bank accounts</small></article>
+    <article class="acct-metric"><span>Revenue in period</span><strong>₦{{ revenue_month|floatformat:2|intcomma }}</strong><small>Posted journal activity</small></article>
+    <article class="acct-metric"><span>Expenses in period</span><strong>₦{{ expenses_month|floatformat:2|intcomma }}</strong><small>Posted journal activity</small></article>
+    <article class="acct-metric"><span>Net result in period</span><strong>₦{{ net_profit_month|floatformat:2|intcomma }}</strong><small>{{ profit_margin|floatformat:1 }}% margin on revenue</small></article>
+    <article class="acct-metric"><span>Accounts payable</span><strong>₦{{ payables_balance|floatformat:2|intcomma }}</strong><small>Supplier liability balance</small></article>
     <article class="acct-metric"><span>Pending reimbursements</span><strong>{{ pending_reimbursements }}</strong><small>Claims awaiting review</small></article>
   </section>
 
@@ -152,16 +152,16 @@
         <a class="acct-chart-click" href="{% url 'accounting:journal' %}?start_date={{ month.start_date }}&amp;end_date={{ month.end_date }}{% if user.role == 'DIRECTOR' and hotels|length > 1 %}&amp;hotel={{ hotel.pk }}{% endif %}" title="Open journal entries for {{ month.label }}">
           <div class="acct-month">
             <span class="acct-month-label">{{ month.label }}</span>
-            <div class="acct-bars" title="Revenue ₦{{ month.revenue|floatformat:2 }} · Expenses ₦{{ month.expenses|floatformat:2 }}">
+            <div class="acct-bars" title="Revenue ₦{{ month.revenue|floatformat:2|intcomma }} · Expenses ₦{{ month.expenses|floatformat:2|intcomma }}">
               <div class="acct-bar-track"><div class="acct-bar acct-revenue" style="width:{{ month.revenue_pct }}%"></div></div>
               <div class="acct-bar-track"><div class="acct-bar acct-expense" style="width:{{ month.expenses_pct }}%"></div></div>
             </div>
           </div>
         </a>
-        <div class="acct-bar-value"><span>Revenue ₦{{ month.revenue|floatformat:0 }}</span><span>Expenses ₦{{ month.expenses|floatformat:0 }}</span></div>
+        <div class="acct-bar-value"><span>Revenue ₦{{ month.revenue|floatformat:0|intcomma }}</span><span>Expenses ₦{{ month.expenses|floatformat:0|intcomma }}</span></div>
         {% endfor %}
       {% else %}<div class="acct-chart-empty">No financial activity is available for this period.</div>{% endif %}
-      <div class="acct-net-note"><span>Net result in period</span><strong>₦{{ net_profit_month|floatformat:2 }}</strong></div>
+      <div class="acct-net-note"><span>Net result in period</span><strong>₦{{ net_profit_month|floatformat:2|intcomma }}</strong></div>
       <p class="acct-sub" style="font-size:.74rem">Based on income and expense journal lines for this hotel. This is not a cash-flow figure.</p>
     </article>
     <article class="acct-card">
@@ -170,12 +170,12 @@
       {% if expense_breakdown %}
       <div class="acct-donut-layout">
         <div class="acct-donut" style="background:{{ expense_donut_style }}">
-          <div class="acct-donut-center"><strong>₦{{ expenses_month|floatformat:0 }}</strong>Expenses</div>
+          <div class="acct-donut-center"><strong>₦{{ expenses_month|floatformat:0|intcomma }}</strong>Expenses</div>
         </div>
         <div class="acct-key">
           {% for item in expense_composition %}
           {% if item.account_id %}<a class="acct-key-link" href="{% url 'accounting:ledger' item.account_id %}?start_date={{ filter_start|date:'Y-m-d' }}&amp;end_date={{ filter_end|date:'Y-m-d' }}" title="Open {{ item.name }} ledger">{% else %}<div class="acct-key-row">{% endif %}
-            <i class="acct-key-dot" style="background:{{ item.color }}"></i><span title="{{ item.name }}">{{ item.name }}</span><strong>{{ item.share_pct|floatformat:0 }}%</strong>
+            <i class="acct-key-dot" style="background:{{ item.color }}"></i><span title="{{ item.name }}">{{ item.name }}</span><strong>{{ item.share_pct|floatformat:0|intcomma }}%</strong>
           {% if item.account_id %}</a>{% else %}</div>{% endif %}
           {% endfor %}
         </div>
@@ -183,7 +183,7 @@
       <div class="acct-breakdown" style="margin-top:20px">
         {% for item in expense_breakdown %}
         <div class="acct-breakdown-row">
-          <div class="acct-breakdown-head"><a href="{% url 'accounting:ledger' item.account_id %}?start_date={{ filter_start|date:'Y-m-d' }}&amp;end_date={{ filter_end|date:'Y-m-d' }}" style="color:inherit;text-decoration:none;font-weight:700">{{ item.name }}</a><strong>₦{{ item.amount|floatformat:2 }}</strong></div>
+          <div class="acct-breakdown-head"><a href="{% url 'accounting:ledger' item.account_id %}?start_date={{ filter_start|date:'Y-m-d' }}&amp;end_date={{ filter_end|date:'Y-m-d' }}" style="color:inherit;text-decoration:none;font-weight:700">{{ item.name }}</a><strong>₦{{ item.amount|floatformat:2|intcomma }}</strong></div>
           <div class="acct-expense-track"><div class="acct-expense-fill" style="width:{{ item.pct }}%;background:{{ item.color }}"></div></div>
         </div>
         {% endfor %}
@@ -203,7 +203,7 @@
           <div class="acct-flow-row">
             <span class="acct-month-label">{{ month.label }}</span>
             <div class="acct-flow-track"><div class="acct-flow-fill {% if month.positive %}acct-flow-positive{% else %}acct-flow-negative{% endif %}" style="width:{{ month.pct }}%"></div></div>
-            <strong style="font-size:.78rem;text-align:right;white-space:nowrap">₦{{ month.amount|floatformat:0 }}</strong>
+            <strong style="font-size:.78rem;text-align:right;white-space:nowrap">₦{{ month.amount|floatformat:0|intcomma }}</strong>
           </div>
         </a>
         {% endfor %}
@@ -214,12 +214,12 @@
       <h2 class="acct-section-title">Financial position</h2>
       <p class="acct-sub" style="margin:-7px 0 17px">Current balances and outstanding items</p>
       <div class="acct-breakdown">
-        <div class="acct-breakdown-row"><div class="acct-breakdown-head"><span>Cash on hand</span><strong>₦{{ cash_balance|floatformat:2 }}</strong></div></div>
-        <div class="acct-breakdown-row"><div class="acct-breakdown-head"><span>Bank balances</span><strong>₦{{ bank_balance|floatformat:2 }}</strong></div></div>
-        <div class="acct-breakdown-row"><div class="acct-breakdown-head"><span>Accounts payable</span><strong>₦{{ payables_balance|floatformat:2 }}</strong></div></div>
+        <div class="acct-breakdown-row"><div class="acct-breakdown-head"><span>Cash on hand</span><strong>₦{{ cash_balance|floatformat:2|intcomma }}</strong></div></div>
+        <div class="acct-breakdown-row"><div class="acct-breakdown-head"><span>Bank balances</span><strong>₦{{ bank_balance|floatformat:2|intcomma }}</strong></div></div>
+        <div class="acct-breakdown-row"><div class="acct-breakdown-head"><span>Accounts payable</span><strong>₦{{ payables_balance|floatformat:2|intcomma }}</strong></div></div>
         <div class="acct-breakdown-row"><div class="acct-breakdown-head"><span>Pending reimbursements</span><strong>{{ pending_reimbursements }}</strong></div></div>
       </div>
-      <div class="acct-net-note"><span>Combined cash and bank</span><strong>₦{{ cash_balance|add:bank_balance|floatformat:2 }}</strong></div>
+      <div class="acct-net-note"><span>Combined cash and bank</span><strong>₦{{ cash_balance|add:bank_balance|floatformat:2|intcomma }}</strong></div>
       <a class="acct-link" style="margin-top:14px" href="{% url 'accounting:balance_sheet' %}"><strong>Open Balance Sheet</strong><span>Review assets, liabilities and equity</span></a>
     </article>
   </section>
