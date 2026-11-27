@@ -756,6 +756,7 @@ def police_guest_register(request):
         "frontdesk/police_guest_register.html",
         {
             "hotel": hotel,
+            "business": BusinessProfile.objects.filter(hotel=hotel).first(),
             "report_date": today,
             "generated_at": generated_at,
             "rows": rows,
