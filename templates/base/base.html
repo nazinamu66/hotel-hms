@@ -87,6 +87,9 @@
             <a href="{% url 'accounting:cash_deposit' %}" {% if request.resolver_match.url_name == 'cash_deposit' %}aria-current="page"{% endif %}>
                 Cash Deposit
             </a>
+            <a href="{% url 'accounting:expense_management' %}" {% if request.resolver_match.url_name == 'expense_management' %}aria-current="page"{% endif %}>
+                Expenses
+            </a>
 
         </div>
 
