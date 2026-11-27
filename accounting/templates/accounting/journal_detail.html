@@ -102,7 +102,7 @@
       <div class="journal-stat-value">
         {% if is_balanced %}<span class="journal-status"><span class="journal-dot"></span>Balanced</span>{% else %}<span class="journal-status" style="color:#b91c1c">Out of balance</span>{% endif %}
       </div>
-      <div class="journal-note">{% if is_balanced %}Debits equal credits{% else %}Difference: ₦{{ total_debit|add:"-"|floatformat:2 }}{% endif %}</div>
+      <div class="journal-note">{% if is_balanced %}Debits equal credits{% else %}Difference: ₦{{ balance_difference|floatformat:2|intcomma }}{% endif %}</div>
     </div>
   </div>
 
