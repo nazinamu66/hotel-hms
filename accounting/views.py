@@ -2333,3 +2333,109 @@ def financial_opening_balances(request):
         "setup": setup,
         "errors": errors,
     })
+
+
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def financial_opening_adjustments(request):
+    """Request and approve auditable additions for omitted opening assets."""
+    from django.utils import timezone
+    from accounting.models import FinancialOpeningBalanceSetup, FinancialOpeningBalanceAdjustment
+    from accounting.constants import OPENING_BALANCE_EQUITY
+    from core.utils import get_user_hotels
+
+    hotels = get_user_hotels(request.user)
+    if request.user.role not in ("DIRECTOR", "ADMIN") and request.user.hotel_id:
+        hotels = hotels.filter(pk=request.user.hotel_id)
+    selected_id = (request.POST.get("hotel") or request.GET.get("hotel") or "").strip()
+    hotel = hotels.filter(pk=selected_id).first() if selected_id else hotels.first()
+    if not hotel:
+        raise PermissionDenied("No accessible hotel is available.")
+
+    setup = FinancialOpeningBalanceSetup.objects.filter(hotel=hotel).first()
+    if not setup:
+        messages.error(request, "Confirm the hotel's initial financial opening balances before requesting adjustments.")
+        return redirect("accounting:financial_opening_balances")
+
+    can_approve = request.user.role in ("DIRECTOR", "ADMIN", "CHIEF_ACCOUNTANT")
+    asset_types = ("cash", "bank", "current_asset", "inventory", "fixed_asset")
+    accounts = Account.objects.filter(
+        hotel=hotel, is_active=True, account_type__in=asset_types
+    ).exclude(system_key__in=("bank_control", "opening_balance_equity")).order_by("code")
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+        if action == "request":
+            account = accounts.filter(pk=request.POST.get("account")).first()
+            try:
+                amount = Decimal((request.POST.get("amount") or "").replace(",", "")).quantize(Decimal("0.01"))
+            except Exception:
+                amount = Decimal("0.00")
+            reason = (request.POST.get("reason") or "").strip()
+            reference = (request.POST.get("reference") or "").strip()[:100]
+            if not account:
+                messages.error(request, "Choose an active asset account belonging to this hotel.")
+            elif not amount.is_finite() or amount <= 0:
+                messages.error(request, "Enter an amount greater than zero.")
+            elif len(reason) < 10:
+                messages.error(request, "Provide a reason of at least 10 characters.")
+            else:
+                FinancialOpeningBalanceAdjustment.objects.create(
+                    hotel=hotel, account=account, amount=amount, reason=reason,
+                    reference=reference, requested_by=request.user,
+                )
+                messages.success(request, "Opening balance adjustment submitted for independent approval.")
+                return redirect("accounting:financial_opening_adjustments",)
+        elif action in ("approve", "reject"):
+            if not can_approve:
+                raise PermissionDenied("Only Director, Admin or Chief Accountant can review opening balance adjustments.")
+            adjustment = get_object_or_404(
+                FinancialOpeningBalanceAdjustment.objects.select_for_update(),
+                pk=request.POST.get("adjustment_id"), hotel=hotel, status="PENDING",
+            )
+            if adjustment.requested_by_id == request.user.id:
+                messages.error(request, "The person who requested an adjustment cannot approve it.")
+            elif action == "reject":
+                note = (request.POST.get("review_note") or "").strip()
+                if not note:
+                    messages.error(request, "A reason is required when rejecting an adjustment.")
+                else:
+                    adjustment.status = "REJECTED"
+                    adjustment.review_note = note
+                    adjustment.reviewed_by = request.user
+                    adjustment.reviewed_at = timezone.now()
+                    adjustment.save(update_fields=["status", "review_note", "reviewed_by", "reviewed_at"])
+                    messages.success(request, "Opening balance adjustment rejected.")
+            else:
+                equity = Account.objects.filter(
+                    hotel=hotel, system_key=OPENING_BALANCE_EQUITY, is_system=True, is_active=True
+                ).first()
+                if not equity:
+                    raise PermissionDenied("Opening Balance Equity account is unavailable.")
+                from accounting.services.journal import record_transaction
+                journal = record_transaction(
+                    debit_account=adjustment.account,
+                    credit_account=equity,
+                    amount=adjustment.amount,
+                    description=f"Approved omitted opening asset: {adjustment.account.name}",
+                    hotel=hotel,
+                    created_by=request.user,
+                    entry_type="OPENING",
+                    reference=f"OPEN-ADJ-{adjustment.pk}",
+                )
+                adjustment.status = "APPROVED"
+                adjustment.reviewed_by = request.user
+                adjustment.reviewed_at = timezone.now()
+                adjustment.review_note = (request.POST.get("review_note") or "").strip()
+                adjustment.journal_entry = journal
+                adjustment.save(update_fields=["status", "reviewed_by", "reviewed_at", "review_note", "journal_entry"])
+                messages.success(request, "Adjustment approved and posted to the general ledger.")
+            return redirect("accounting:financial_opening_adjustments")
+
+    adjustments = FinancialOpeningBalanceAdjustment.objects.filter(hotel=hotel).select_related(
+        "account", "requested_by", "reviewed_by", "journal_entry"
+    )
+    return render(request, "accounting/financial_opening_adjustments.html", {
+        "hotel": hotel, "hotels": hotels, "accounts": accounts,
+        "adjustments": adjustments, "can_approve": can_approve,
+        "show_hotel_selector": request.user.role in ("DIRECTOR", "ADMIN") and hotels.count() > 1,
+    })
