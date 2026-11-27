@@ -280,6 +280,7 @@ def gym_gate_verify(request):
                         )
                         if len(candidates) == 1:
                             membership = candidates[0]
+                            candidates = []
 
             if membership:
                 open_visit = GymVisit.objects.filter(
@@ -293,6 +294,8 @@ def gym_gate_verify(request):
                     error_message = "This membership has not started yet."
                 elif membership.end_date < timezone.localdate():
                     error_message = "This membership has expired."
+            elif candidates:
+                error_message = "Several members matched. Select the correct member below."
             elif code:
                 error_message = "No membership was found for that pass or member number."
         elif action == "check_in":
