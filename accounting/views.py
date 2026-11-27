@@ -911,9 +911,8 @@ def account_ledger_export_pdf(request, account_id):
 
 
 @role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
-def profit_and_loss(request):
-    """Dynamic, hotel-scoped P&L based on posted journal activity for the period."""
-    from datetime import date
+def _profit_and_loss_context(request):
+    """Build one authoritative, hotel-scoped P&L dataset for screen and exports."""
     from django.utils import timezone
     from django.utils.dateparse import parse_date
     from django.db.models import Sum
@@ -928,7 +927,6 @@ def profit_and_loss(request):
         hotel = hotels.filter(pk=selected_hotel_id).first()
     else:
         hotel = hotels.first()
-
     if not hotel:
         raise PermissionDenied("No accessible hotel is available for the Profit & Loss report.")
 
@@ -948,14 +946,10 @@ def profit_and_loss(request):
         end_date = today
         date_error = "Future dates are not included; the end date was set to today."
 
-    # Aggregate only posted journal activity in the selected period. Closing
-    # entries are excluded so period reporting does not double-count them.
     activity = (
         JournalLine.objects.filter(
-            journal__hotel=hotel,
-            journal__date__gte=start_date,
-            journal__date__lte=end_date,
-            account__is_active=True,
+            journal__hotel=hotel, journal__date__gte=start_date,
+            journal__date__lte=end_date, account__is_active=True,
             account__account_type__in=tuple(INCOME_TYPES) + tuple(EXPENSE_TYPES),
         )
         .exclude(journal__entry_type="CLOSING")
@@ -963,31 +957,21 @@ def profit_and_loss(request):
         .annotate(debit_total=Sum("debit"), credit_total=Sum("credit"))
     )
     activity_by_account = {
-        row["account_id"]: (
-            row["debit_total"] or Decimal("0.00"),
-            row["credit_total"] or Decimal("0.00"),
-        )
+        row["account_id"]: (row["debit_total"] or Decimal("0.00"),
+                            row["credit_total"] or Decimal("0.00"))
         for row in activity
     }
-
     accounts = Account.objects.filter(
-        hotel=hotel,
-        is_active=True,
+        hotel=hotel, is_active=True,
         account_type__in=tuple(INCOME_TYPES) + tuple(EXPENSE_TYPES),
     ).order_by("display_order", "code", "name")
 
     revenue_data, other_income_data, cogs_data = [], [], []
     operating_expense_data, other_expense_data = [], []
-    revenue_total = Decimal("0.00")
-    other_income_total = Decimal("0.00")
-    cogs_total = Decimal("0.00")
-    operating_expense_total = Decimal("0.00")
-    other_expense_total = Decimal("0.00")
-
+    revenue_total = other_income_total = cogs_total = Decimal("0.00")
+    operating_expense_total = other_expense_total = Decimal("0.00")
     for account in accounts:
-        debit, credit = activity_by_account.get(
-            account.pk, (Decimal("0.00"), Decimal("0.00"))
-        )
+        debit, credit = activity_by_account.get(account.pk, (Decimal("0.00"), Decimal("0.00")))
         if account.account_type in INCOME_TYPES:
             amount = credit - debit
             row = {"account": account, "amount": amount}
@@ -1014,30 +998,190 @@ def profit_and_loss(request):
     total_income = revenue_total + other_income_total
     total_expenses = cogs_total + operating_expense_total + other_expense_total
     net_profit = total_income - total_expenses
-
-    return render(request, "accounting/profit_and_loss.html", {
-        "hotel": hotel,
-        "hotels": hotels,
+    return {
+        "hotel": hotel, "hotels": hotels,
         "show_hotel_selector": request.user.role == "DIRECTOR" and hotels.count() > 1,
-        "start_date": start_date,
-        "end_date": end_date,
-        "date_error": date_error,
-        "revenue_data": revenue_data,
-        "other_income_data": other_income_data,
-        "cogs_data": cogs_data,
-        "operating_expense_data": operating_expense_data,
+        "start_date": start_date, "end_date": end_date, "date_error": date_error,
+        "revenue_data": revenue_data, "other_income_data": other_income_data,
+        "cogs_data": cogs_data, "operating_expense_data": operating_expense_data,
         "other_expense_data": other_expense_data,
-        "revenue_total": revenue_total,
-        "other_income_total": other_income_total,
-        "cogs_total": cogs_total,
-        "gross_profit": gross_profit,
+        "revenue_total": revenue_total, "other_income_total": other_income_total,
+        "cogs_total": cogs_total, "gross_profit": gross_profit,
         "operating_expense_total": operating_expense_total,
-        "other_expense_total": other_expense_total,
-        "total_income": total_income,
-        "total_expenses": total_expenses,
-        "net_profit": net_profit,
+        "other_expense_total": other_expense_total, "total_income": total_income,
+        "total_expenses": total_expenses, "net_profit": net_profit,
         "is_profitable": net_profit >= 0,
-    })
+    }
+
+
+def profit_and_loss(request):
+    context = _profit_and_loss_context(request)
+    return render(request, "accounting/profit_and_loss.html", context)
+
+
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def profit_and_loss_export_xlsx(request):
+    from io import BytesIO
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
+
+    context = _profit_and_loss_context(request)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Profit and Loss"
+    ws.merge_cells("A1:C1")
+    ws["A1"] = context["hotel"].name.upper()
+    ws["A1"].font = Font(size=16, bold=True, color="FFFFFF")
+    ws["A1"].fill = PatternFill("solid", fgColor="14233B")
+    ws.merge_cells("A2:C2")
+    ws["A2"] = "PROFIT AND LOSS STATEMENT"
+    ws["A2"].font = Font(size=13, bold=True, color="2454D6")
+    ws.merge_cells("A3:C3")
+    ws["A3"] = f'Reporting period: {context["start_date"]:%d %b %Y} to {context["end_date"]:%d %b %Y}'
+    ws.append([])
+    ws.append(["FINANCIAL SUMMARY", "AMOUNT (NGN)", ""])
+    summary_rows = [
+        ("Total revenue", context["revenue_total"]),
+        ("Other income", context["other_income_total"]),
+        ("Cost of sales", context["cogs_total"]),
+        ("Gross profit", context["gross_profit"]),
+        ("Operating expenses", context["operating_expense_total"]),
+        ("Other expenses", context["other_expense_total"]),
+        ("Total expenses", context["total_expenses"]),
+        ("Net profit / (loss)", context["net_profit"]),
+    ]
+    for label, amount in summary_rows:
+        ws.append([label, float(amount), ""])
+    ws.append([])
+    sections = [
+        ("REVENUE", "revenue_data", "revenue_total"),
+        ("OTHER INCOME", "other_income_data", "other_income_total"),
+        ("COST OF SALES", "cogs_data", "cogs_total"),
+        ("OPERATING EXPENSES", "operating_expense_data", "operating_expense_total"),
+        ("OTHER EXPENSES", "other_expense_data", "other_expense_total"),
+    ]
+    for title, rows_key, total_key in sections:
+        ws.append([title, "", ""])
+        ws.append(["Account code", "Account name", "Amount (NGN)"])
+        for row in context[rows_key]:
+            ws.append([row["account"].code, row["account"].name, float(row["amount"])])
+        ws.append([f"Total {title.title()}", "", float(context[total_key])])
+        ws.append([])
+    for row in ws.iter_rows():
+        for cell in row:
+            cell.alignment = Alignment(vertical="center")
+            if isinstance(cell.value, (int, float)):
+                cell.number_format = '"₦"#,##0.00;[Red]("₦"#,##0.00)'
+    for cell in ws[1]:
+        cell.fill = PatternFill("solid", fgColor="14233B")
+        cell.font = Font(bold=True, color="FFFFFF", size=16)
+    for row in ws.iter_rows():
+        if row[0].value in ("FINANCIAL SUMMARY", "REVENUE", "OTHER INCOME", "COST OF SALES", "OPERATING EXPENSES", "OTHER EXPENSES"):
+            for cell in row:
+                cell.fill = PatternFill("solid", fgColor="E8EEF7")
+                cell.font = Font(bold=True, color="14233B")
+    ws.column_dimensions["A"].width = 24
+    ws.column_dimensions["B"].width = 38
+    ws.column_dimensions["C"].width = 22
+    ws.freeze_panes = "A6"
+    ws.sheet_view.showGridLines = False
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    response = HttpResponse(output.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = f'attachment; filename="profit_and_loss_{context["hotel"].pk}_{context["start_date"]}_{context["end_date"]}.xlsx"'
+    return response
+
+
+@role_required("DIRECTOR", "ADMIN", "ACCOUNTANT", "CHIEF_ACCOUNTANT")
+def profit_and_loss_export_pdf(request):
+    from io import BytesIO
+    from xml.sax.saxutils import escape
+    from django.http import HttpResponse
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_RIGHT
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
+
+    context = _profit_and_loss_context(request)
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=17*mm, leftMargin=17*mm,
+                            topMargin=16*mm, bottomMargin=17*mm,
+                            title=f'Profit and Loss - {context["hotel"].name}',
+                            author=context["hotel"].name)
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name="PnlHotel", parent=styles["Title"], fontSize=17, leading=21,
+                              textColor=colors.HexColor("#14233B"), alignment=0, spaceAfter=3))
+    styles.add(ParagraphStyle(name="PnlSubtitle", parent=styles["Normal"], fontSize=9,
+                              textColor=colors.HexColor("#64748B"), spaceAfter=5))
+    styles.add(ParagraphStyle(name="PnlSection", parent=styles["Heading2"], fontSize=11,
+                              textColor=colors.HexColor("#14233B"), spaceBefore=9, spaceAfter=5))
+    styles.add(ParagraphStyle(name="PnlRight", parent=styles["Normal"], alignment=TA_RIGHT, fontSize=8))
+    money = lambda value: f"NGN {value:,.2f}"
+    story = [
+        Paragraph(escape(context["hotel"].name.upper()), styles["PnlHotel"]),
+        Paragraph("PROFIT AND LOSS STATEMENT", styles["Heading2"]),
+        Paragraph(f'Reporting period: {context["start_date"]:%d %b %Y} to {context["end_date"]:%d %b %Y}', styles["PnlSubtitle"]),
+        Spacer(1, 4*mm),
+    ]
+    summary = [["FINANCIAL SUMMARY", "AMOUNT (NGN)"]]
+    for label, key in [
+        ("Total revenue", "revenue_total"), ("Other income", "other_income_total"),
+        ("Cost of sales", "cogs_total"), ("Gross profit", "gross_profit"),
+        ("Operating expenses", "operating_expense_total"),
+        ("Other expenses", "other_expense_total"), ("Total expenses", "total_expenses"),
+        ("NET PROFIT / (LOSS)", "net_profit"),
+    ]:
+        summary.append([label, money(context[key])])
+    summary_table = Table(summary, colWidths=[105*mm, 65*mm], repeatRows=1)
+    summary_table.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#14233B")),
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+        ("FONTNAME",(0,-1),(-1,-1),"Helvetica-Bold"),
+        ("BACKGROUND",(0,-1),(-1,-1),colors.HexColor("#E8EEF7")),
+        ("ALIGN",(1,1),(1,-1),"RIGHT"), ("GRID",(0,0),(-1,-1),.35,colors.HexColor("#D8E0EA")),
+        ("FONTSIZE",(0,0),(-1,-1),8), ("TOPPADDING",(0,0),(-1,-1),6),
+        ("BOTTOMPADDING",(0,0),(-1,-1),6),
+    ]))
+    story.extend([summary_table, Spacer(1, 5*mm)])
+    for title, rows_key, total_key in [
+        ("Revenue", "revenue_data", "revenue_total"),
+        ("Other income", "other_income_data", "other_income_total"),
+        ("Cost of sales", "cogs_data", "cogs_total"),
+        ("Operating expenses", "operating_expense_data", "operating_expense_total"),
+        ("Other expenses", "other_expense_data", "other_expense_total"),
+    ]:
+        data = [["Account", "Account name", "Amount (NGN)"]]
+        for row in context[rows_key]:
+            data.append([str(row["account"].code), Paragraph(escape(row["account"].name), styles["Normal"]), money(row["amount"])])
+        data.append(["", f"Total {title}", money(context[total_key])])
+        table = Table(data, colWidths=[25*mm, 90*mm, 55*mm], repeatRows=1)
+        table.setStyle(TableStyle([
+            ("BACKGROUND",(0,0),(-1,0),colors.HexColor("#E8EEF7")),
+            ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+            ("FONTNAME",(0,-1),(-1,-1),"Helvetica-Bold"),
+            ("ALIGN",(2,1),(2,-1),"RIGHT"),
+            ("GRID",(0,0),(-1,-1),.3,colors.HexColor("#D8E0EA")),
+            ("FONTSIZE",(0,0),(-1,-1),7),
+            ("TOPPADDING",(0,0),(-1,-1),5), ("BOTTOMPADDING",(0,0),(-1,-1),5),
+        ]))
+        story.append(KeepTogether([Paragraph(title, styles["PnlSection"]), table]))
+    def footer(canvas, document):
+        canvas.saveState()
+        canvas.setFont("Helvetica", 7)
+        canvas.setFillColor(colors.HexColor("#64748B"))
+        canvas.drawString(17*mm, 8*mm, f'{context["hotel"].name} · Confidential financial statement')
+        canvas.drawRightString(A4[0]-17*mm, 8*mm, f"Page {document.page}")
+        canvas.restoreState()
+    doc.build(story, onFirstPage=footer, onLaterPages=footer)
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="profit_and_loss_{context["hotel"].pk}_{context["start_date"]}_{context["end_date"]}.pdf"'
+    return response
 
 def balance_sheet(request):
 
