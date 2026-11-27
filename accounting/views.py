@@ -925,269 +925,99 @@ def balance_sheet(request):
 
 @role_required("DIRECTOR", "ACCOUNTANT", "ADMIN", "KITCHEN")
 @transaction.atomic
+@transaction.atomic
 def create_account(request):
-
     hotel = request.user.hotel
 
     if request.method == "POST":
-
-        account_form = AccountForm(
-            request.POST,
-            hotel=hotel,
-        )
-
+        account_form = AccountForm(request.POST, hotel=hotel)
         bank_form = BankAccountForm(request.POST)
-
-        # -----------------------------------------
-        # Validate Account first
-        # -----------------------------------------
-
         account_valid = account_form.is_valid()
+        needs_bank = account_valid and account_form.cleaned_data["account_type"] == "bank"
+        bank_valid = bank_form.is_valid() if needs_bank else True
 
-        # -----------------------------------------
-        # Validate Bank form only when needed
-        # -----------------------------------------
+        if account_valid and bank_valid:
+            account = account_form.save(commit=False)
+            account.hotel = hotel
+            account.is_system = False
+            account.system_key = None
+            account.save()
 
-        bank_valid = True
+            if needs_bank:
+                bank_account = bank_form.save(commit=False)
+                bank_account.hotel = hotel
+                bank_account.account = account
+                bank_account.full_clean()
+                bank_account.save()
 
-        if (
-            account_valid
-            and account_form.cleaned_data["account_type"] == "bank"
-        ):
-            bank_valid = bank_form.is_valid()
+            messages.success(request, f"Account '{account.name}' created successfully.")
+            return redirect("accounting:chart")
+    else:
+        account_form = AccountForm(hotel=hotel)
+        bank_form = BankAccountForm()
 
-        # -----------------------------------------
-        # Stop if anything is invalid
-        # -----------------------------------------
-
-        if not account_valid or not bank_valid:
-
-            return render(
-                request,
-                "accounting/create_account.html",
-                {
-                    "account_form": account_form,
-                    "bank_form": bank_form,
-                }
-            )
-
-        # -----------------------------------------
-        # Create accounting account
-        # -----------------------------------------
-
-        account = account_form.save(commit=False)
-
-        account.hotel = hotel
-
-        # User-created accounts can NEVER
-        # become system accounts.
-        account.is_system = False
-        account.system_key = None
-
-        account.save()
-
-        # -----------------------------------------
-        # Create BankAccount when applicable
-        # -----------------------------------------
-
-        if account.account_type == "bank":
-
-            bank_account = bank_form.save(
-                commit=False
-            )
-
-            bank_account.hotel = hotel
-            bank_account.account = account
-
-            # Explicitly run model validation.
-            bank_account.full_clean()
-
-            bank_account.save()
-
-        # -----------------------------------------
-        # Success
-        # -----------------------------------------
-
-        messages.success(
-            request,
-            f"Account '{account.name}' created successfully."
-        )
-
-        return redirect(
-            "accounting:chart"
-        )
-
-    # -----------------------------------------
-    # GET
-    # -----------------------------------------
-
-    account_form = AccountForm(
-        hotel=hotel
-    )
-
-    bank_form = BankAccountForm()
-
-    return render(
-        request,
-        "accounting/create_account.html",
-        {
-            "account_form": account_form,
-            "bank_form": bank_form,
-        }
-    )
+    return render(request, "accounting/create_account.html", {
+        "account_form": account_form,
+        "bank_form": bank_form,
+    })
 
 
-@role_required("DIRECTOR","ACCOUNTANT","ADMIN","KITCHEN",)
-
+@role_required("DIRECTOR", "ACCOUNTANT", "ADMIN")
 @transaction.atomic
 def edit_account(request, account_id):
-
     hotel = request.user.hotel
-
-    account = get_object_or_404(
-        Account,
-        id=account_id,
-        hotel=hotel,
-    )
-
-    # --------------------------------------------------
-    # SYSTEM ACCOUNT PROTECTION
-    # --------------------------------------------------
+    account = get_object_or_404(Account, id=account_id, hotel=hotel)
 
     if account.is_system:
-        messages.error(
-            request,
-            "System accounts cannot be edited."
-        )
-
-        return redirect(
-            "accounting:chart"
-        )
-
-    # --------------------------------------------------
-    # BANK ACCOUNT
-    # --------------------------------------------------
+        messages.error(request, "System accounts cannot be edited.")
+        return redirect("accounting:chart")
 
     try:
         bank_account = account.bank_account
     except BankAccount.DoesNotExist:
         bank_account = None
 
-    # --------------------------------------------------
-    # POST
-    # --------------------------------------------------
-
     if request.method == "POST":
-
-        account_form = AccountForm(
-            request.POST,
-            instance=account,
-            hotel=hotel,
+        account_form = AccountForm(request.POST, instance=account, hotel=hotel)
+        account_valid = account_form.is_valid()
+        needs_bank = account_valid and account_form.cleaned_data["account_type"] == "bank"
+        bank_form = (
+            BankAccountForm(request.POST, instance=bank_account)
+            if bank_account else BankAccountForm(request.POST)
         )
+        bank_valid = bank_form.is_valid() if needs_bank else True
 
-        if account_form.is_valid():
-
-            account = account_form.save(
-                commit=False
-            )
-
-            # Never allow these to be changed
+        # Validate both forms before saving either one. The atomic transaction
+        # then protects the account and linked bank record as a single change.
+        if account_valid and bank_valid:
+            account = account_form.save(commit=False)
             account.hotel = hotel
             account.is_system = False
             account.system_key = None
-
             account.save()
 
-            # --------------------------------------------------
-            # BANK ACCOUNT
-            # --------------------------------------------------
+            if needs_bank:
+                bank_record = bank_form.save(commit=False)
+                bank_record.hotel = hotel
+                bank_record.account = account
+                bank_record.full_clean()
+                bank_record.save()
 
-            if account.account_type == "bank":
-
-                if bank_account:
-
-                    bank_form = BankAccountForm(
-                        request.POST,
-                        instance=bank_account,
-                    )
-
-                else:
-
-                    bank_form = BankAccountForm(
-                        request.POST
-                    )
-
-                if bank_form.is_valid():
-
-                    bank_account = bank_form.save(
-                        commit=False
-                    )
-
-                    bank_account.hotel = hotel
-                    bank_account.account = account
-
-                    bank_account.save()
-
-                else:
-
-                    return render(
-                        request,
-                        "accounting/edit_account.html",
-                        {
-                            "account_form": account_form,
-                            "bank_form": bank_form,
-                            "account": account,
-                        },
-                    )
-
-            messages.success(
-                request,
-                f"Account '{account.name}' updated successfully."
-            )
-
-            return redirect(
-                "accounting:chart"
-            )
-
-        bank_form = (
-            BankAccountForm(
-                request.POST,
-                instance=bank_account,
-            )
-            if bank_account
-            else BankAccountForm(request.POST)
-        )
-
-    # --------------------------------------------------
-    # GET
-    # --------------------------------------------------
-
+            messages.success(request, f"Account '{account.name}' updated successfully.")
+            return redirect("accounting:chart")
     else:
-
-        account_form = AccountForm(
-            instance=account,
-            hotel=hotel,
+        account_form = AccountForm(instance=account, hotel=hotel)
+        bank_form = (
+            BankAccountForm(instance=bank_account)
+            if bank_account else BankAccountForm()
         )
 
-        if bank_account:
+    return render(request, "accounting/edit_account.html", {
+        "account_form": account_form,
+        "bank_form": bank_form,
+        "account": account,
+    })
 
-            bank_form = BankAccountForm(
-                instance=bank_account,
-            )
-
-        else:
-
-            bank_form = BankAccountForm()
-
-    return render(
-        request,
-        "accounting/edit_account.html",
-        {
-            "account_form": account_form,
-            "bank_form": bank_form,
-            "account": account,
-        },
-    )
 
 @role_required("DIRECTOR", "ACCOUNTANT", "ADMIN")
 @transaction.atomic
