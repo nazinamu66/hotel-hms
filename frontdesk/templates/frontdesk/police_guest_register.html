@@ -1,0 +1,126 @@
+{% extends "base/base.html" %}
+
+{% block title %}Daily Police Guest Register{% endblock %}
+
+{% block header %}
+<h2>Daily Police Guest Register</h2>
+{% endblock %}
+
+{% block content %}
+<style>
+.pgr-page{max-width:1320px;margin:0 auto;color:#172033}
+.pgr-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.pgr-heading h1{margin:0;font-size:1.65rem;font-weight:850;letter-spacing:-.035em}
+.pgr-heading p{margin:5px 0 0;color:#64748b;font-size:.88rem}
+.pgr-actions{display:flex;gap:9px;flex-wrap:wrap}
+.pgr-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 15px;border:1px solid #d7e0ea;border-radius:9px;background:#fff;color:#334155;text-decoration:none;font-weight:750;font-size:.82rem;cursor:pointer}
+.pgr-btn-primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.pgr-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.pgr-stat{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:15px 17px}
+.pgr-stat span{display:block;color:#64748b;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.pgr-stat strong{display:block;margin-top:5px;color:#172033;font-size:1.35rem;font-weight:850}
+.pgr-panel{background:#fff;border:1px solid #e2e8f0;border-radius:13px;overflow:hidden}
+.pgr-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:17px 19px;border-bottom:1px solid #e8edf3}
+.pgr-meta div{font-size:.82rem;color:#64748b}
+.pgr-meta strong{color:#1e293b}
+.pgr-note{margin:14px 18px;padding:11px 13px;border-radius:8px;background:#eff6ff;color:#1e40af;font-size:.78rem}
+.pgr-warning{margin:14px 18px;padding:11px 13px;border-radius:8px;background:#fff7ed;color:#9a3412;font-size:.78rem}
+.pgr-table-wrap{overflow-x:auto}
+.pgr-table{width:100%;border-collapse:collapse;min-width:850px}
+.pgr-table th{padding:11px 12px;background:#f8fafc;color:#64748b;text-align:left;font-size:.67rem;font-weight:850;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.pgr-table td{padding:12px;border-top:1px solid #edf1f5;color:#334155;font-size:.78rem;vertical-align:top}
+.pgr-table tbody tr:nth-child(even){background:#fcfdff}
+.pgr-muted{color:#94a3b8}
+.pgr-empty{padding:36px 18px;text-align:center;color:#64748b}
+.pgr-signatures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:50px;padding:35px 22px 24px}
+.pgr-signature{border-top:1px solid #64748b;padding-top:8px;color:#475569;font-size:.75rem}
+.pgr-footer{padding:12px 18px;border-top:1px solid #e8edf3;color:#94a3b8;font-size:.68rem}
+@media(max-width:650px){.pgr-summary{grid-template-columns:1fr}.pgr-meta{grid-template-columns:1fr}.pgr-signatures{gap:25px}}
+@media print{
+ @page{size:A4 landscape;margin:12mm}
+ body{background:#fff!important}
+ .sidebar,.topbar,nav,.pgr-toolbar .pgr-actions,.pgr-note{display:none!important}
+ .main-content,.content,.container{margin:0!important;padding:0!important;width:100%!important;max-width:none!important}
+ .pgr-page{max-width:none}
+ .pgr-panel,.pgr-stat{box-shadow:none;break-inside:avoid}
+ .pgr-table{min-width:0}
+ .pgr-table th,.pgr-table td{padding:7px 6px;font-size:9px}
+ .pgr-heading h1{font-size:19px}
+ .pgr-footer{font-size:8px}
+}
+</style>
+
+<div class="pgr-page">
+  <div class="pgr-toolbar">
+    <div class="pgr-heading">
+      <h1>Daily Police Guest Register</h1>
+      <p>Current in-house guest list for the hotel's daily local police reporting.</p>
+    </div>
+    <div class="pgr-actions">
+      <a class="pgr-btn" href="{% url 'frontdesk_room_board' %}">← Front Desk</a>
+      <button class="pgr-btn pgr-btn-primary" type="button" onclick="window.print()">Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <div class="pgr-summary">
+    <div class="pgr-stat"><span>Guests currently checked in</span><strong>{{ guest_count }}</strong></div>
+    <div class="pgr-stat"><span>Report date</span><strong>{{ report_date|date:"d M Y" }}</strong></div>
+    <div class="pgr-stat"><span>Identity numbers missing</span><strong>{{ missing_identity_count }}</strong></div>
+  </div>
+
+  <section class="pgr-panel">
+    <div class="pgr-meta">
+      <div>Hotel: <strong>{{ hotel.name }}</strong></div>
+      <div>Generated: <strong>{{ generated_at|date:"d M Y, H:i" }}</strong></div>
+      <div>Report: <strong>Current in-house guests</strong></div>
+      <div>Reporting period: <strong>Snapshot at generation time</strong></div>
+    </div>
+
+    <p class="pgr-note">This report is a point-in-time snapshot of room stays that are active when the report is generated. It does not include reservations that have not checked in or stays already checked out.</p>
+    {% if missing_identity_count %}
+      <p class="pgr-warning">Attention: {{ missing_identity_count }} active stay(s) have no recorded guest identity number. Review the guest record before submission where required.</p>
+    {% endif %}
+
+    {% if rows %}
+      <div class="pgr-table-wrap">
+        <table class="pgr-table">
+          <thead>
+            <tr>
+              <th>S/N</th>
+              <th>Guest full name</th>
+              <th>Nationality</th>
+              <th>ID / Passport number</th>
+              <th>Phone number</th>
+              <th>Room</th>
+              <th>Check-in date</th>
+              <th>Expected departure</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{% if row.guest %}{{ row.guest.full_name }}{% else %}<span class="pgr-muted">Guest record missing</span>{% endif %}</td>
+                <td>{% if row.guest.nationality %}{{ row.guest.nationality }}{% else %}<span class="pgr-muted">Not recorded</span>{% endif %}</td>
+                <td>{% if row.guest.id_number %}{{ row.guest.id_number }}{% else %}<span class="pgr-muted">Not recorded</span>{% endif %}</td>
+                <td>{% if row.guest.phone %}{{ row.guest.phone }}{% else %}<span class="pgr-muted">Not recorded</span>{% endif %}</td>
+                <td>{% if row.room %}{{ row.room.room_number }}{% else %}<span class="pgr-muted">Not assigned</span>{% endif %}</td>
+                <td>{{ row.check_in_at|date:"d M Y" }}</td>
+                <td>{% if row.expected_departure %}{{ row.expected_departure|date:"d M Y" }}{% else %}<span class="pgr-muted">Not set</span>{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="pgr-empty"><strong>No active checked-in guests.</strong><br>The hotel has no open room stays at the time this report was generated.</div>
+    {% endif %}
+
+    <div class="pgr-signatures">
+      <div class="pgr-signature">Prepared by / Front Desk Officer</div>
+      <div class="pgr-signature">Received by / Police Officer</div>
+    </div>
+    <div class="pgr-footer">Confidential guest information. Handle and submit this register only through the hotel's authorised reporting process.</div>
+  </section>
+</div>
+{% endblock %}
