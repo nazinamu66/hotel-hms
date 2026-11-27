@@ -1,0 +1,49 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+{% block title %}Financial Opening Balances | Hotel HMS{% endblock %}
+{% block content %}
+<style>
+.ob-page{max-width:1420px;margin:0 auto;padding:10px 0 42px;color:#172033}.ob-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:20px}.ob-kicker{font-size:.72rem;font-weight:850;letter-spacing:.13em;text-transform:uppercase;color:#64748b;margin:0 0 7px}.ob-head h1{font-size:clamp(1.7rem,2.5vw,2.25rem);letter-spacing:-.04em;margin:0}.ob-muted{color:#64748b;margin:7px 0 0}.ob-actions{display:flex;gap:9px;flex-wrap:wrap}.ob-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 15px;border-radius:10px;border:1px solid #dbe2ea;background:#fff;color:#334155;text-decoration:none;font-weight:800;cursor:pointer}.ob-btn.primary{background:#1d4ed8;border-color:#1d4ed8;color:#fff}.ob-panel{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px 20px;box-shadow:0 6px 22px rgba(15,23,42,.035);margin-bottom:16px;min-width:0}.ob-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.ob-stat{border:1px solid #e2e8f0;border-radius:13px;background:#fff;padding:15px;min-width:0}.ob-stat span{display:block;color:#64748b;font-size:.7rem;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.ob-stat strong{display:block;margin-top:8px;font-size:clamp(1rem,1.5vw,1.35rem);font-variant-numeric:tabular-nums;white-space:nowrap}.ob-stat small{display:block;color:#94a3b8;margin-top:5px}.ob-row{display:grid;grid-template-columns:90px minmax(180px,1fr) 180px;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid #edf0f4}.ob-row:last-child{border-bottom:0}.ob-code{font-size:.76rem;font-weight:850;color:#64748b;background:#f1f5f9;border-radius:7px;padding:6px 8px;text-align:center}.ob-name{font-weight:800}.ob-type{display:block;color:#94a3b8;font-size:.74rem;margin-top:3px}.ob-input{width:100%;box-sizing:border-box;min-height:42px;padding:9px 11px;border:1px solid #cbd5e1;border-radius:9px;font:inherit;text-align:right;font-variant-numeric:tabular-nums}.ob-auto{background:#f8fafc;border:1px solid #e2e8f0;border-radius:11px;padding:14px;display:flex;justify-content:space-between;gap:15px;align-items:center}.ob-note{font-size:.8rem;color:#64748b;line-height:1.5}.ob-errors{background:#fff1f2;border:1px solid #fecdd3;color:#9f1239;border-radius:10px;padding:12px 15px;margin-bottom:14px}.ob-hotel{display:flex;gap:14px;align-items:end;flex-wrap:wrap}.ob-hotel label{display:block;font-size:.76rem;font-weight:800;color:#475569;margin-bottom:6px}.ob-hotel select,.ob-date{min-height:42px;padding:9px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;font:inherit}.ob-status{display:inline-flex;padding:6px 10px;border-radius:999px;background:#ecfdf5;color:#047857;font-size:.75rem;font-weight:850}.ob-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}.ob-tablehead{display:grid;grid-template-columns:90px minmax(180px,1fr) 180px;gap:14px;color:#64748b;font-size:.68rem;font-weight:850;letter-spacing:.07em;text-transform:uppercase;padding:0 0 9px;border-bottom:1px solid #e2e8f0}@media(max-width:850px){.ob-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.ob-panel{padding:14px}.ob-row,.ob-tablehead{grid-template-columns:65px minmax(0,1fr)}.ob-row .ob-value{grid-column:2}.ob-grid{grid-template-columns:1fr 1fr}.ob-stat strong{font-size:.95rem}}
+</style>
+<div class="ob-page">
+  <header class="ob-head">
+    <div><p class="ob-kicker">Accounting · Initial financial position</p><h1>Financial Opening Balances</h1><p class="ob-muted">{{ hotel.name }} · Establish the balances that existed when the hotel began using Hotel HMS.</p></div>
+    <div class="ob-actions"><a class="ob-btn" href="{% url 'accounting:chart' %}">Chart of Accounts</a><a class="ob-btn" href="{% url 'accounting:balance_sheet' %}">Balance Sheet</a></div>
+  </header>
+
+  {% if show_hotel_selector %}
+  <section class="ob-panel ob-hotel"><form method="get"><label for="ob-hotel">Hotel</label><select id="ob-hotel" name="hotel" onchange="this.form.submit()">{% for item in hotels %}<option value="{{ item.id }}" {% if item.id == hotel.id %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></form><span class="ob-note">Opening balances are maintained separately for each hotel.</span></section>
+  {% endif %}
+
+  {% if setup %}
+    <section class="ob-panel"><span class="ob-status">Opening balances confirmed</span><h2 style="margin:12px 0 5px">Initial position recorded</h2><p class="ob-muted">Confirmed on {{ setup.posted_at|date:"d M Y, H:i" }}{% if setup.posted_by %} by {{ setup.posted_by.get_full_name|default:setup.posted_by.username }}{% endif %}. These balances are now locked; corrections should be made through approved journal entries.</p><p class="ob-note">Opening date: <strong>{{ setup.opening_date|date:"d M Y" }}</strong></p></section>
+  {% else %}
+    <section class="ob-panel"><p class="ob-kicker">Before you begin</p><p class="ob-note">Enter the hotel's financial position as at the date it started using this accounting system. Enter each bank balance against its own bank account. Do not also enter the same bank total in the Bank Accounts control account. Inventory balances should agree with the separately maintained stock opening quantities and values.</p></section>
+    <section class="ob-grid">
+      <article class="ob-stat"><span>Total assets</span><strong>₦{{ asset_total|floatformat:2|intcomma }}</strong><small>Debit-balance opening accounts</small></article>
+      <article class="ob-stat"><span>Liabilities &amp; existing equity</span><strong>₦{{ liability_equity_total|floatformat:2|intcomma }}</strong><small>Before opening balance equity</small></article>
+      <article class="ob-stat"><span>Opening balance equity</span><strong>₦{{ opening_equity|floatformat:2|intcomma }}</strong><small>Automatically calculated</small></article>
+      <article class="ob-stat"><span>Reconciliation difference</span><strong>₦{{ difference|floatformat:2|intcomma }}</strong><small>Must be zero before confirmation</small></article>
+    </section>
+
+    {% if errors %}<div class="ob-errors">{% for error in errors %}<div>{{ error }}</div>{% endfor %}</div>{% endif %}
+    <form method="post" class="ob-panel" id="opening-balance-form">
+      {% csrf_token %}
+      {% if show_hotel_selector %}<input type="hidden" name="hotel" value="{{ hotel.id }}">{% endif %}
+      <div class="ob-footer" style="margin-top:0"><div><h2 style="margin:0">Account opening positions</h2><p class="ob-muted">Opening Balance Equity is calculated automatically and cannot be edited here.</p></div><div><label class="ob-kicker" for="ob-date">Opening date</label><input class="ob-date" type="date" id="ob-date" name="opening_date" value="{{ opening_date|date:'Y-m-d' }}" required></div></div>
+      <div style="margin-top:20px">
+        <div class="ob-tablehead"><span>Code</span><span>Account</span><span style="text-align:right">Opening amount (NGN)</span></div>
+        {% for account in accounts %}
+        <div class="ob-row">
+          <span class="ob-code">{{ account.code }}</span>
+          <span><span class="ob-name">{{ account.name }}</span><span class="ob-type">{{ account.get_account_type_display }}</span></span>
+          <span class="ob-value"><input class="ob-input" type="number" name="opening_{{ account.pk }}" min="0" step="0.01" value="{{ preview|get_item:account.pk|default:'0.00' }}" aria-label="Opening balance for {{ account.name }}"></span>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="ob-auto" style="margin-top:16px"><div><strong>{{ equity_account.code }} · {{ equity_account.name }}</strong><div class="ob-note">System-calculated balancing figure. A negative value represents a debit opening position.</div></div><strong>₦{{ opening_equity|floatformat:2|intcomma }}</strong></div>
+      <div class="ob-footer"><p class="ob-note">Confirmation is a one-time action. It updates account opening balances and stores an audit snapshot; it does not create duplicate journal transactions.</p><button class="ob-btn primary" type="submit" onclick="return confirm('Confirm and lock the financial opening balances for {{ hotel.name|escapejs }}? Please verify every amount first.')">Confirm opening balances</button></div>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}
