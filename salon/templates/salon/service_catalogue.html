@@ -10,6 +10,24 @@
 /* Keep headings readable against the Salon management navy theme. */
 .salon-mgmt h1,.salon-mgmt h2,.salon-mgmt h3,.salon-mgmt h4,.salon-mgmt h5,.salon-mgmt h6{color:#f8fafc!important;}
 .salon-mgmt .mgmt-card h1,.salon-mgmt .mgmt-card h2,.salon-mgmt .mgmt-card h3,.salon-mgmt .mgmt-table h1,.salon-mgmt .mgmt-table h2{color:#f8fafc!important;}
+
+/* CCH unified gold / ivory management styling */
+.salon-mgmt{--salon-text:#302316;--salon-muted:#6f6253;color:#302316!important;background:#faf8f4!important}
+.salon-mgmt h1,.salon-mgmt h2,.salon-mgmt h3,.salon-mgmt h4,.salon-mgmt h5,.salon-mgmt h6{color:#302316!important}
+.salon-mgmt .mgmt-sub{color:#6f6253!important}
+.salon-mgmt .mgmt-select,.salon-mgmt .mgmt-input{background:#fff!important;color:#302316!important;border:1px solid #d8cbb8!important;color-scheme:light}
+.salon-mgmt .mgmt-card,.salon-mgmt .mgmt-table{background:#fff!important;color:#302316!important;border:1px solid #e7ddce!important;box-shadow:0 6px 20px rgba(74,49,21,.055)!important}
+.salon-mgmt .mgmt-card small,.salon-mgmt .mgmt-card label,.salon-mgmt .mgmt-label{color:#594733!important}
+.salon-mgmt .mgmt-value{color:#302316!important}
+.salon-mgmt .mgmt-link{background:#fbf8f2!important;color:#302316!important;border:1px solid #e7ddce!important}
+.salon-mgmt .mgmt-link:hover{background:#f3eadb!important;border-color:#c99a4e!important}
+.salon-mgmt .mgmt-table th{color:#594733!important;background:#f2eadc!important}
+.salon-mgmt .mgmt-table td,.salon-mgmt .mgmt-table th{border-color:#eee5d8!important}
+.salon-mgmt .mgmt-table td{color:#302316!important}
+.salon-mgmt .mgmt-table a{color:#87551f!important}
+.salon-mgmt .mgmt-btn,.salon-mgmt .status-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important;border:0!important}
+.salon-mgmt input[type=checkbox]{accent-color:#986126}
+
 </style>
 <div class="salon-mgmt">
  <header class="mgmt-head"><div><h1 style="margin:0 0 5px">Service Catalogue</h1><div class="mgmt-sub">{{ hotel.name }} · Categories, services and pricing</div></div><form method="get"><select class="mgmt-select" name="hotel" onchange="this.form.submit()">{% for item in hotels %}<option value="{{ item.pk }}" {% if item.pk == hotel.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></form></header>
