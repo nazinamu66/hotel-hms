@@ -1,89 +1,98 @@
 {% extends "base/base.html" %}
-
 {% block content %}
-
-<div class="container mt-4">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <h2>
-            Edit Account
-        </h2>
-
-        <a
-            href="{% url 'accounting:chart' %}"
-            class="btn btn-secondary"
-        >
-            ← Back to Chart of Accounts
-        </a>
-
-    </div>
-
-
-    <form method="post">
-
-        {% csrf_token %}
-
-
-        <!-- ========================================= -->
-        <!-- ACCOUNT INFORMATION -->
-        <!-- ========================================= -->
-
-        <div class="card mb-4">
-
-            <div class="card-body">
-
-                <h4 class="mb-3">
-                    Account Information
-                </h4>
-
-                {{ account_form.as_p }}
-
-            </div>
-
-        </div>
-
-
-        <!-- ========================================= -->
-        <!-- BANK INFORMATION -->
-        <!-- ========================================= -->
-
-        {% if account.account_type == "bank" %}
-
-        <div class="card mb-4">
-
-            <div class="card-body">
-
-                <h4 class="mb-3">
-                    Bank Account Information
-                </h4>
-
-                {{ bank_form.as_p }}
-
-            </div>
-
-        </div>
-
-        {% endif %}
-
-
-        <button
-            type="submit"
-            class="btn btn-primary"
-        >
-            Save Changes
-        </button>
-
-
-        <a
-            href="{% url 'accounting:chart' %}"
-            class="btn btn-secondary"
-        >
-            Cancel
-        </a>
-
-    </form>
-
+<style>
+.account-form-page{max-width:1180px;margin:30px auto 64px;padding:0 22px;color:#172033}
+.account-form-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:22px}
+.account-form-kicker{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#64748b}
+.account-form-title{font-size:30px;font-weight:800;letter-spacing:-.04em;margin:5px 0}
+.account-form-sub{color:#64748b;margin:0}
+.account-form-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:25px;margin-bottom:18px;box-shadow:0 5px 18px rgba(15,23,42,.035)}
+.account-form-card h3{font-size:17px;font-weight:800;margin:0 0 5px}
+.account-form-card .section-hint{color:#64748b;font-size:13px;margin:0 0 20px}
+.account-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 22px}
+.account-form-field label{display:block;font-size:13px;font-weight:700;color:#334155;margin-bottom:7px}
+.account-form-field .finance-input{width:100%;min-height:46px;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;background:#fff;color:#172033;box-sizing:border-box}
+.account-form-field textarea.finance-input{min-height:94px;resize:vertical}
+.account-form-field .finance-input:focus{outline:3px solid rgba(37,99,235,.12);border-color:#2563eb}
+.account-form-field .helptext{display:block;color:#64748b;font-size:12px;margin-top:5px}
+.account-form-field ul.errorlist{color:#b91c1c;font-size:12px;margin:6px 0 0;padding-left:18px}
+.account-form-field.full{grid-column:1/-1}
+.account-form-flags{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.account-form-flag{display:flex;align-items:center;gap:10px;padding:13px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;font-size:13px;font-weight:650}
+.account-form-flag input{width:17px;height:17px;accent-color:#2563eb}
+.account-form-actions{display:flex;align-items:center;gap:12px;margin-top:22px}
+.account-form-primary{border:0;border-radius:10px;background:#1d4ed8;color:#fff;padding:12px 20px;font-weight:750;text-decoration:none}
+.account-form-secondary{border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#334155;padding:11px 17px;font-weight:700;text-decoration:none}
+.account-form-errors{padding:12px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;color:#991b1b;margin-bottom:16px}
+@media(max-width:720px){.account-form-grid{grid-template-columns:1fr}.account-form-flags{grid-template-columns:1fr}.account-form-head{flex-direction:column}.account-form-title{font-size:25px}}
+</style>
+<div class="account-form-page">
+  <div class="account-form-head">
+    <div><div class="account-form-kicker">Accounting · Chart of accounts</div><h1 class="account-form-title">Edit account</h1><p class="account-form-sub">Update this account's ledger details and posting controls.</p></div>
+    <a class="account-form-secondary" href="{% url 'accounting:chart' %}">← Back to chart</a>
+  </div>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if account_form.non_field_errors or bank_form.non_field_errors %}<div class="account-form-errors">{{ account_form.non_field_errors }}{{ bank_form.non_field_errors }}</div>{% endif %}
+    <section class="account-form-card">
+      <h3>Account identity</h3><p class="section-hint">Use a unique code and a clear name that staff can recognise.</p>
+      <div class="account-form-grid">
+        {% for field in account_form %}
+          {% if field.name == "code" or field.name == "name" or field.name == "description" %}
+          <div class="account-form-field {% if field.name == 'description' %}full{% endif %}">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}
+            {{ field.errors }}{% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+    <section class="account-form-card">
+      <h3>Classification and opening balance</h3><p class="section-hint">Choose the account's place in the ledger hierarchy and its opening position.</p>
+      <div class="account-form-grid">
+        {% for field in account_form %}
+          {% if field.name == "account_type" or field.name == "parent" or field.name == "opening_balance" %}
+          <div class="account-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+    <section class="account-form-card">
+      <h3>Account controls</h3><p class="section-hint">Control whether this account can receive postings and manual entries.</p>
+      <div class="account-form-flags">
+        {% for field in account_form %}
+          {% if field.name == "allow_posting" or field.name == "allow_manual_entries" or field.name == "is_active" %}
+          <label class="account-form-flag">{{ field }}<span>{{ field.label }}</span></label>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+    <section class="account-form-card" id="bank-section" {% if account.account_type != 'bank' %}hidden{% endif %}>
+      <h3>Bank account details</h3><p class="section-hint">Link the ledger account to the real bank account used for receipts and transfers.</p>
+      <div class="account-form-grid">
+        {% for field in bank_form %}
+          {% if field.name != "is_default" and field.name != "is_active" %}
+          <div class="account-form-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <div class="account-form-flags" style="margin-top:16px">
+        {% for field in bank_form %}
+          {% if field.name == "is_default" or field.name == "is_active" %}
+          <label class="account-form-flag">{{ field }}<span>{{ field.label }}</span></label>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+    <div class="account-form-actions"><button class="account-form-primary" type="submit">Edit account</button><a class="account-form-secondary" href="{% url 'accounting:chart' %}">Cancel</a></div>
+  </form>
 </div>
-
+<script>
+document.addEventListener("DOMContentLoaded",function(){
+ const type=document.getElementById("id_account_type"),bank=document.getElementById("bank-section");
+ if(!type||!bank)return;
+ function toggle(){bank.hidden=type.value!=="bank";}
+ type.addEventListener("change",toggle);toggle();
+});
+</script>
 {% endblock %}
