@@ -114,8 +114,11 @@ def accounting_dashboard(request):
     max_month_value = max_month_value or Decimal("1.00")
     for key in month_keys:
         values = monthly_map.get(key, {"revenue": Decimal("0.00"), "expenses": Decimal("0.00")})
+        month_end = (key.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
         monthly_chart.append({
             "label": key.strftime("%b %Y"),
+            "start_date": max(key, filter_start).isoformat(),
+            "end_date": min(month_end, filter_end).isoformat(),
             "revenue": values["revenue"],
             "expenses": values["expenses"],
             "revenue_pct": max(0, min(100, float(values["revenue"] / max_month_value * 100))),
@@ -189,7 +192,9 @@ def accounting_dashboard(request):
     for key in month_keys:
         amount = cash_map.get(key, Decimal("0.00"))
         cash_flow_chart.append({
-            "label": key.strftime("%b"),
+            "label": key.strftime("%b %Y"),
+            "start_date": max(key, filter_start).isoformat(),
+            "end_date": min((key.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1), filter_end).isoformat(),
             "amount": amount,
             "pct": min(100, float(abs(amount) / max_cash_movement * 100)),
             "positive": amount >= 0,
