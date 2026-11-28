@@ -22,6 +22,39 @@
 .ri-good{background:#164e3a;color:#bbf7d0}.ri-warn{background:#713f12;color:#fde68a}
 .ri-alert{padding:13px 15px;margin-bottom:18px;border:1px solid #8b5a24;border-radius:11px;background:#3a2b1a;color:#fde68a;font-size:13px}
 @media(max-width:950px){.ri-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.ri-grid{grid-template-columns:1fr}.ri-head h1{font-size:23px}}
+
+/* CCH unified gold, bronze and ivory theme */
+.restaurant-inventory{--cch-ink:#302316;--cch-muted:#6f6253;--cch-border:#e7ddce}
+.main:has(.restaurant-inventory){background:#faf8f4!important;color:#302316!important}
+.main:has(.restaurant-inventory)>.topbar{background:#fff!important;color:#302316!important;border-bottom:1px solid #e7ddce!important}
+.main:has(.restaurant-inventory)>.topbar a{color:#87551f!important}
+.restaurant-inventory *{box-sizing:border-box}
+ 
+.restaurant-inventory{background:#faf8f4!important;color:#302316!important}
+.restaurant-inventory h1,.restaurant-inventory h2,.restaurant-inventory h3,.restaurant-inventory .ri-section{color:#302316!important}
+.restaurant-inventory .ri-eyebrow{color:#87551f!important}
+.restaurant-inventory .ri-muted,.restaurant-inventory .ri-note{color:#6f6253!important}
+.restaurant-inventory .ri-panel,.restaurant-inventory .ri-kpi{background:#fff!important;color:#302316!important;border:1px solid #e7ddce!important;box-shadow:0 6px 20px rgba(74,49,21,.055)!important}
+.restaurant-inventory .ri-label,.restaurant-inventory .ri-kpi-label{color:#765a35!important}
+.restaurant-inventory .ri-value,.restaurant-inventory .ri-kpi-value{color:#302316!important}
+.restaurant-inventory .ri-field label,.restaurant-inventory label{color:#594733!important}
+.restaurant-inventory .ri-field input,.restaurant-inventory .ri-field select,.restaurant-inventory input,.restaurant-inventory select{background:#fff!important;color:#302316!important;border:1px solid #d8cbb8!important;color-scheme:light}
+.restaurant-inventory .ri-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important;border:1px solid transparent!important}
+.restaurant-inventory .ri-link{color:#87551f!important}
+.restaurant-inventory .ri-table-wrap{background:#fff!important;border:1px solid #e7ddce!important;border-radius:12px!important;overflow-x:auto}
+.restaurant-inventory .ri-table{background:#fff!important;color:#302316!important}
+.restaurant-inventory .ri-table th{background:#f2eadc!important;color:#594733!important;border-color:#e7ddce!important}
+.restaurant-inventory .ri-table td{background:#fff!important;color:#302316!important;border-color:#eee5d8!important}
+.restaurant-inventory .ri-table tbody tr:nth-child(even) td{background:#fdfbf8!important}
+.restaurant-inventory .ri-table tbody tr:hover td{background:#fbf6ed!important}
+.restaurant-inventory .ri-status,.restaurant-inventory .ri-pill{background:#f3eadb!important;color:#704719!important;border:1px solid #e7ddce!important}
+.restaurant-inventory .ri-open,.restaurant-inventory .ri-warning,.restaurant-inventory .ri-warn,.restaurant-inventory .ri-status-AMOUNT_MISMATCH{background:#fff1d5!important;color:#80520f!important}
+.restaurant-inventory .ri-good,.restaurant-inventory .ri-resolved,.restaurant-inventory .ri-status-RECONCILED{background:#e6f3e9!important;color:#24623b!important}
+.restaurant-inventory .ri-bad,.restaurant-inventory .ri-overdue{background:#fbe8e5!important;color:#9b3026!important}
+.restaurant-inventory .ri-alert{background:#fff8eb!important;color:#704719!important;border:1px solid #ead9b9!important}
+
+@media(max-width:900px){.restaurant-inventory .ri-grid,.restaurant-inventory .ri-kpis,.restaurant-inventory .menu-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.restaurant-inventory .ri-grid,.restaurant-inventory .ri-kpis,.restaurant-inventory .ri-filters,.restaurant-inventory .menu-stats{grid-template-columns:1fr}}
 </style>
 <div class="restaurant-inventory">
   <nav style="display:flex;gap:9px;flex-wrap:wrap;margin:0 0 18px;font-size:13px;font-weight:750"><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_management_overview" %}">Management overview</a><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_sales_performance" %}">Sales performance</a><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_inventory_status" %}">Inventory status</a><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_spoilage_analysis" %}">Spoilage &amp; loss</a></nav>
