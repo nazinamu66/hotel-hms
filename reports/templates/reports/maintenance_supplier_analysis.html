@@ -5,6 +5,32 @@
 <style>
 .msa{box-sizing:border-box;min-height:100%;margin:calc(-1 * clamp(18px,2.5vw,34px));padding:clamp(18px,2.5vw,34px);background:#0d1728;color:#e8eef8}.msa *{box-sizing:border-box}.msa-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}.msa h1{font-size:27px;color:#f8fafc;margin:5px 0}.msa h2{font-size:16px;color:#f8fafc;margin:0 0 14px}.msa-muted{color:#9aabc1;font-size:13px;line-height:1.5}.msa-panel{background:#172b43;border:1px solid #29415e;border-radius:14px;padding:18px;margin:16px 0}.msa-filters{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr)) auto;gap:12px;align-items:end}.msa label{display:block;color:#b8c7da;font-size:12px;font-weight:750;margin-bottom:5px}.msa input,.msa select{width:100%;min-height:40px;border:1px solid #3b5573;border-radius:8px;background:#102239;color:#f8fafc;padding:8px}.msa-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 14px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none;border:0;font-weight:750}.msa-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.msa-kpi{background:#172b43;border:1px solid #29415e;border-radius:13px;padding:17px;min-width:0}.msa-kpi span{display:block;color:#9aabc1;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}.msa-kpi strong{display:block;color:#f8fafc;font-size:24px;margin:7px 0 3px}.msa-wrap{overflow-x:auto}.msa table{width:100%;border-collapse:collapse;min-width:650px}.msa th{background:#102239;color:#aebfd4;text-transform:uppercase;font-size:10px;letter-spacing:.06em;text-align:left;padding:11px;white-space:nowrap}.msa td{padding:11px;border-bottom:1px solid #29415e;font-size:13px}.msa-empty{text-align:center;color:#9aabc1;padding:22px!important}.msa-pages{display:flex;justify-content:space-between;gap:12px;margin-top:14px}.msa-pages a{color:#93c5fd;text-decoration:none}
 @media(max-width:900px){.msa-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.msa-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.msa-kpis,.msa-filters{grid-template-columns:1fr}}
+
+/* CCH unified brand override */
+.msa{background:#faf8f4!important;color:#302316!important}
+.msa h1,.msa h2,.msa h3{color:#302316!important}
+.msa .msa-muted{color:#6f6253!important}
+.msa .msa-panel,.msa .msa-kpi{background:#fff!important;color:#302316!important;border:1px solid #e7ddce!important;box-shadow:0 6px 20px rgba(74,49,21,.05)!important}
+.msa .msa-kpi span{color:#765a35!important}
+.msa .msa-kpi strong{color:#302316!important}
+.msa label{color:#594733!important}
+.msa input,.msa select{background:#fff!important;color:#302316!important;border:1px solid #d8cbb8!important;color-scheme:light}
+.msa input:focus,.msa select:focus{outline:2px solid rgba(201,154,78,.22);border-color:#c99a4e!important}
+.msa .msa-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important;border:1px solid transparent!important}
+.msa .msa-btn.secondary,.msa .msa-btn.alt{background:#f3eadb!important;color:#704719!important;border:1px solid #e7ddce!important}
+.msa .msa-wrap{overflow-x:auto;border:1px solid #e7ddce;border-radius:10px}
+.msa table{background:#fff!important;color:#302316!important;border-collapse:collapse}
+.msa th{background:#f2eadc!important;color:#594733!important;border-color:#e7ddce!important}
+.msa td{background:#fff!important;color:#302316!important;border-color:#eee5d8!important}
+.msa tbody tr:nth-child(even) td{background:#fdfbf8!important}
+.msa tbody tr:hover td{background:#fbf6ed!important}
+.msa .msa-empty{color:#6f6253!important}
+.msa .msa-pill{background:#f3eadb!important;color:#704719!important;border:1px solid #e7ddce!important}
+.msa .msa-open,.msa .msa-due{background:#fff3d8!important;color:#80520f!important}
+.msa .msa-resolved,.msa .msa-good,.msa .msa-ontime{background:#e6f3e9!important;color:#24623b!important}
+.msa .msa-overdue,.msa .msa-late,.msa .msa-bad{background:#fbe8e5!important;color:#9b3026!important}
+@media(max-width:900px){.msa .msa-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.msa .msa-kpis,.msa .msa-grid,.msa .msa-filters{grid-template-columns:1fr}}
 </style>
 <div class="msa">
 <header class="msa-head"><div><div class="msa-muted">FACILITIES &amp; ENGINEERING · MANAGEMENT REPORTING</div><h1>Supplier &amp; Contractor Analysis</h1><p class="msa-muted">Supplier-linked outsourced labour and direct maintenance material entries by hotel, supplier and period.</p></div><a class="msa-btn" href="{% url 'maintenance_management_overview' %}">Back to Maintenance Overview</a></header>
