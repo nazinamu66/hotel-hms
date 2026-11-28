@@ -38,6 +38,39 @@
 @media(max-width:700px){.rs-recon-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:950px){.rs-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rs-split{grid-template-columns:1fr}}
 @media(max-width:560px){.rs-grid{grid-template-columns:1fr}.rs-head h1{font-size:23px}}
+
+/* CCH unified gold, bronze and ivory theme */
+.restaurant-sales{--cch-ink:#302316;--cch-muted:#6f6253;--cch-border:#e7ddce}
+.main:has(.restaurant-sales){background:#faf8f4!important;color:#302316!important}
+.main:has(.restaurant-sales)>.topbar{background:#fff!important;color:#302316!important;border-bottom:1px solid #e7ddce!important}
+.main:has(.restaurant-sales)>.topbar a{color:#87551f!important}
+.restaurant-sales *{box-sizing:border-box}
+ 
+.restaurant-sales{background:#faf8f4!important;color:#302316!important}
+.restaurant-sales h1,.restaurant-sales h2,.restaurant-sales h3,.restaurant-sales .rs-section{color:#302316!important}
+.restaurant-sales .rs-eyebrow{color:#87551f!important}
+.restaurant-sales .rs-muted,.restaurant-sales .rs-note{color:#6f6253!important}
+.restaurant-sales .rs-panel,.restaurant-sales .rs-kpi{background:#fff!important;color:#302316!important;border:1px solid #e7ddce!important;box-shadow:0 6px 20px rgba(74,49,21,.055)!important}
+.restaurant-sales .rs-label,.restaurant-sales .rs-kpi-label{color:#765a35!important}
+.restaurant-sales .rs-value,.restaurant-sales .rs-kpi-value{color:#302316!important}
+.restaurant-sales .rs-field label,.restaurant-sales label{color:#594733!important}
+.restaurant-sales .rs-field input,.restaurant-sales .rs-field select,.restaurant-sales input,.restaurant-sales select{background:#fff!important;color:#302316!important;border:1px solid #d8cbb8!important;color-scheme:light}
+.restaurant-sales .rs-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important;border:1px solid transparent!important}
+.restaurant-sales .rs-link{color:#87551f!important}
+.restaurant-sales .rs-table-wrap{background:#fff!important;border:1px solid #e7ddce!important;border-radius:12px!important;overflow-x:auto}
+.restaurant-sales .rs-table{background:#fff!important;color:#302316!important}
+.restaurant-sales .rs-table th{background:#f2eadc!important;color:#594733!important;border-color:#e7ddce!important}
+.restaurant-sales .rs-table td{background:#fff!important;color:#302316!important;border-color:#eee5d8!important}
+.restaurant-sales .rs-table tbody tr:nth-child(even) td{background:#fdfbf8!important}
+.restaurant-sales .rs-table tbody tr:hover td{background:#fbf6ed!important}
+.restaurant-sales .rs-status,.restaurant-sales .rs-pill{background:#f3eadb!important;color:#704719!important;border:1px solid #e7ddce!important}
+.restaurant-sales .rs-open,.restaurant-sales .rs-warning,.restaurant-sales .rs-warn,.restaurant-sales .rs-status-AMOUNT_MISMATCH{background:#fff1d5!important;color:#80520f!important}
+.restaurant-sales .rs-good,.restaurant-sales .rs-resolved,.restaurant-sales .rs-status-RECONCILED{background:#e6f3e9!important;color:#24623b!important}
+.restaurant-sales .rs-bad,.restaurant-sales .rs-overdue{background:#fbe8e5!important;color:#9b3026!important}
+.restaurant-sales .rs-alert{background:#fff8eb!important;color:#704719!important;border:1px solid #ead9b9!important}
+
+@media(max-width:900px){.restaurant-sales .rs-grid,.restaurant-sales .rs-kpis,.restaurant-sales .menu-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.restaurant-sales .rs-grid,.restaurant-sales .rs-kpis,.restaurant-sales .rs-filters,.restaurant-sales .menu-stats{grid-template-columns:1fr}}
 </style>
 <div class="restaurant-sales">
   <nav style="display:flex;gap:9px;flex-wrap:wrap;margin:0 0 18px;font-size:13px;font-weight:750"><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_management_overview" %}">Management overview</a><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_sales_performance" %}">Sales performance</a><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_inventory_status" %}">Inventory status</a><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_spoilage_analysis" %}">Spoilage &amp; loss</a></nav>
