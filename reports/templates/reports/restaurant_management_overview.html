@@ -30,6 +30,39 @@
 .restaurant-management .rm-warning{background:#713f12;color:#fde68a}
 @media(max-width:900px){.restaurant-management .rm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.restaurant-management h1{font-size:23px}.restaurant-management .rm-kpis{grid-template-columns:1fr}}
+
+/* CCH unified gold, bronze and ivory theme */
+.restaurant-management{--cch-ink:#302316;--cch-muted:#6f6253;--cch-border:#e7ddce}
+.main:has(.restaurant-management){background:#faf8f4!important;color:#302316!important}
+.main:has(.restaurant-management)>.topbar{background:#fff!important;color:#302316!important;border-bottom:1px solid #e7ddce!important}
+.main:has(.restaurant-management)>.topbar a{color:#87551f!important}
+.restaurant-management *{box-sizing:border-box}
+ 
+.restaurant-management{background:#faf8f4!important;color:#302316!important}
+.restaurant-management h1,.restaurant-management h2,.restaurant-management h3,.restaurant-management .rm-section{color:#302316!important}
+.restaurant-management .rm-eyebrow{color:#87551f!important}
+.restaurant-management .rm-muted,.restaurant-management .rm-note{color:#6f6253!important}
+.restaurant-management .rm-panel,.restaurant-management .rm-kpi{background:#fff!important;color:#302316!important;border:1px solid #e7ddce!important;box-shadow:0 6px 20px rgba(74,49,21,.055)!important}
+.restaurant-management .rm-label,.restaurant-management .rm-kpi-label{color:#765a35!important}
+.restaurant-management .rm-value,.restaurant-management .rm-kpi-value{color:#302316!important}
+.restaurant-management .rm-field label,.restaurant-management label{color:#594733!important}
+.restaurant-management .rm-field input,.restaurant-management .rm-field select,.restaurant-management input,.restaurant-management select{background:#fff!important;color:#302316!important;border:1px solid #d8cbb8!important;color-scheme:light}
+.restaurant-management .rm-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important;border:1px solid transparent!important}
+.restaurant-management .rm-link{color:#87551f!important}
+.restaurant-management .rm-table-wrap{background:#fff!important;border:1px solid #e7ddce!important;border-radius:12px!important;overflow-x:auto}
+.restaurant-management .rm-table{background:#fff!important;color:#302316!important}
+.restaurant-management .rm-table th{background:#f2eadc!important;color:#594733!important;border-color:#e7ddce!important}
+.restaurant-management .rm-table td{background:#fff!important;color:#302316!important;border-color:#eee5d8!important}
+.restaurant-management .rm-table tbody tr:nth-child(even) td{background:#fdfbf8!important}
+.restaurant-management .rm-table tbody tr:hover td{background:#fbf6ed!important}
+.restaurant-management .rm-status,.restaurant-management .rm-pill{background:#f3eadb!important;color:#704719!important;border:1px solid #e7ddce!important}
+.restaurant-management .rm-open,.restaurant-management .rm-warning,.restaurant-management .rm-warn,.restaurant-management .rm-status-AMOUNT_MISMATCH{background:#fff1d5!important;color:#80520f!important}
+.restaurant-management .rm-good,.restaurant-management .rm-resolved,.restaurant-management .rm-status-RECONCILED{background:#e6f3e9!important;color:#24623b!important}
+.restaurant-management .rm-bad,.restaurant-management .rm-overdue{background:#fbe8e5!important;color:#9b3026!important}
+.restaurant-management .rm-alert{background:#fff8eb!important;color:#704719!important;border:1px solid #ead9b9!important}
+
+@media(max-width:900px){.restaurant-management .rm-grid,.restaurant-management .rm-kpis,.restaurant-management .menu-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.restaurant-management .rm-grid,.restaurant-management .rm-kpis,.restaurant-management .rm-filters,.restaurant-management .menu-stats{grid-template-columns:1fr}}
 </style>
 <div class="restaurant-management">
   <nav style="display:flex;gap:9px;flex-wrap:wrap;margin:0 0 18px;font-size:13px;font-weight:750"><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_management_overview" %}">Management overview</a><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_sales_performance" %}">Sales performance</a><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_inventory_status" %}">Inventory status</a><a style="color:#93c5fd;text-decoration:none" href="{% url "restaurant_spoilage_analysis" %}">Spoilage &amp; loss</a></nav>
