@@ -1,10 +1,40 @@
 {% extends "base/base.html" %}
 
 {% block content %}
+<style>
+/* CCH Wi-Fi management workspace */
+.wifi-page{--wf-ink:#302316;--wf-muted:#6f6253;--wf-border:#e7ddce;--wf-head:#f2eadc;color:var(--wf-ink)!important;padding-top:24px;padding-bottom:36px}
+.wifi-page h1,.wifi-page h2,.wifi-page h3{color:var(--wf-ink)!important;font-weight:800;letter-spacing:-.025em}
+.wifi-page p.text-muted,.wifi-page small.text-muted{color:var(--wf-muted)!important}
+.wifi-page .page-intro{color:var(--wf-muted)!important}
+.wifi-page .card{background:#fff!important;border:1px solid var(--wf-border)!important;border-radius:15px!important;box-shadow:0 7px 22px rgba(74,49,21,.055)!important;overflow:hidden}
+.wifi-page .card-body{color:var(--wf-ink)!important}
+.wifi-page .table-responsive{border-radius:14px}
+.wifi-page table{margin:0!important;color:var(--wf-ink)!important;background:#fff!important;border-collapse:separate;border-spacing:0}
+.wifi-page thead th{background:var(--wf-head)!important;color:#594733!important;border-bottom:1px solid var(--wf-border)!important;border-top:0!important;text-transform:uppercase;font-size:10px;letter-spacing:.065em;font-weight:800;padding:14px 15px!important;white-space:nowrap}
+.wifi-page tbody td{padding:14px 15px!important;vertical-align:middle;color:var(--wf-ink)!important;border-bottom:1px solid #eee5d8!important;background:#fff!important;font-size:13px}
+.wifi-page tbody tr:nth-child(even) td{background:#fdfbf8!important}
+.wifi-page tbody tr:hover td{background:#fbf6ed!important}
+.wifi-page tbody tr:last-child td{border-bottom:0!important}
+.wifi-page code{background:#f3eadb!important;color:#704719!important;border:1px solid #e7ddce;border-radius:6px;padding:4px 7px;font-weight:700}
+.wifi-page .btn-primary{background:linear-gradient(110deg,#986126,#c99a4e)!important;border-color:#986126!important;color:#fff!important;font-weight:750;box-shadow:0 4px 10px rgba(152,97,38,.15)}
+.wifi-page .btn-outline-primary{color:#87551f!important;border-color:#c99a4e!important;background:#fff!important;font-weight:700}
+.wifi-page .btn-outline-primary:hover{background:#f3eadb!important}
+.wifi-page .btn-outline-secondary{color:#594733!important;border-color:#d8cbb8!important;background:#fbf8f2!important;font-weight:700}
+.wifi-page .badge{padding:.48em .72em;border-radius:999px;font-weight:750;letter-spacing:.01em}
+.wifi-page .badge.bg-success{background:#e6f3e9!important;color:#24623b!important}
+.wifi-page .badge.bg-secondary{background:#eee9e1!important;color:#65594a!important}
+.wifi-page .badge.bg-warning{background:#fff1d5!important;color:#80520f!important}
+.wifi-page .badge.bg-danger{background:#fbe8e5!important;color:#9b3026!important}
+.wifi-page .alert{border-radius:10px;border:1px solid var(--wf-border)}
+.wifi-page .wifi-empty{padding:42px 20px!important;text-align:center!important;color:var(--wf-muted)!important}
+.wifi-page .wifi-empty h5{color:var(--wf-ink)!important;font-weight:800}
+@media(max-width:700px){.wifi-page{padding-left:14px;padding-right:14px}.wifi-page .page-heading{align-items:flex-start!important;gap:14px;flex-direction:column}}
+</style>
 
-<div class="container mt-4">
+<div class="wifi-page container mt-4">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-heading d-flex justify-content-between align-items-center mb-4 flex-wrap">
 
         <div>
             <h2>Wi-Fi Profiles</h2>
@@ -160,7 +190,7 @@
 
                             <td
                                 colspan="7"
-                                class="text-center py-4"
+                                class="wifi-empty text-center py-4"
                             >
                                 No Wi-Fi profiles have been created yet.
                             </td>
