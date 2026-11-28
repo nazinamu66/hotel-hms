@@ -31,6 +31,39 @@
 .rsa-empty{text-align:center;padding:26px;color:#9aabc1}
 @media(max-width:950px){.rsa-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rsa-split{grid-template-columns:1fr}}
 @media(max-width:560px){.rsa-grid{grid-template-columns:1fr}.rsa-head h1{font-size:23px}}
+
+/* CCH unified gold, bronze and ivory theme */
+.restaurant-spoilage{--cch-ink:#302316;--cch-muted:#6f6253;--cch-border:#e7ddce}
+.main:has(.restaurant-spoilage){background:#faf8f4!important;color:#302316!important}
+.main:has(.restaurant-spoilage)>.topbar{background:#fff!important;color:#302316!important;border-bottom:1px solid #e7ddce!important}
+.main:has(.restaurant-spoilage)>.topbar a{color:#87551f!important}
+.restaurant-spoilage *{box-sizing:border-box}
+ 
+.restaurant-spoilage{background:#faf8f4!important;color:#302316!important}
+.restaurant-spoilage h1,.restaurant-spoilage h2,.restaurant-spoilage h3,.restaurant-spoilage .rsa-section{color:#302316!important}
+.restaurant-spoilage .rsa-eyebrow{color:#87551f!important}
+.restaurant-spoilage .rsa-muted,.restaurant-spoilage .rsa-note{color:#6f6253!important}
+.restaurant-spoilage .rsa-panel,.restaurant-spoilage .rsa-kpi{background:#fff!important;color:#302316!important;border:1px solid #e7ddce!important;box-shadow:0 6px 20px rgba(74,49,21,.055)!important}
+.restaurant-spoilage .rsa-label,.restaurant-spoilage .rsa-kpi-label{color:#765a35!important}
+.restaurant-spoilage .rsa-value,.restaurant-spoilage .rsa-kpi-value{color:#302316!important}
+.restaurant-spoilage .rsa-field label,.restaurant-spoilage label{color:#594733!important}
+.restaurant-spoilage .rsa-field input,.restaurant-spoilage .rsa-field select,.restaurant-spoilage input,.restaurant-spoilage select{background:#fff!important;color:#302316!important;border:1px solid #d8cbb8!important;color-scheme:light}
+.restaurant-spoilage .rsa-btn{background:linear-gradient(110deg,#986126,#c99a4e)!important;color:#fff!important;border:1px solid transparent!important}
+.restaurant-spoilage .rsa-link{color:#87551f!important}
+.restaurant-spoilage .rsa-table-wrap{background:#fff!important;border:1px solid #e7ddce!important;border-radius:12px!important;overflow-x:auto}
+.restaurant-spoilage .rsa-table{background:#fff!important;color:#302316!important}
+.restaurant-spoilage .rsa-table th{background:#f2eadc!important;color:#594733!important;border-color:#e7ddce!important}
+.restaurant-spoilage .rsa-table td{background:#fff!important;color:#302316!important;border-color:#eee5d8!important}
+.restaurant-spoilage .rsa-table tbody tr:nth-child(even) td{background:#fdfbf8!important}
+.restaurant-spoilage .rsa-table tbody tr:hover td{background:#fbf6ed!important}
+.restaurant-spoilage .rsa-status,.restaurant-spoilage .rsa-pill{background:#f3eadb!important;color:#704719!important;border:1px solid #e7ddce!important}
+.restaurant-spoilage .rsa-open,.restaurant-spoilage .rsa-warning,.restaurant-spoilage .rsa-warn,.restaurant-spoilage .rsa-status-AMOUNT_MISMATCH{background:#fff1d5!important;color:#80520f!important}
+.restaurant-spoilage .rsa-good,.restaurant-spoilage .rsa-resolved,.restaurant-spoilage .rsa-status-RECONCILED{background:#e6f3e9!important;color:#24623b!important}
+.restaurant-spoilage .rsa-bad,.restaurant-spoilage .rsa-overdue{background:#fbe8e5!important;color:#9b3026!important}
+.restaurant-spoilage .rsa-alert{background:#fff8eb!important;color:#704719!important;border:1px solid #ead9b9!important}
+
+@media(max-width:900px){.restaurant-spoilage .rsa-grid,.restaurant-spoilage .rsa-kpis,.restaurant-spoilage .menu-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.restaurant-spoilage .rsa-grid,.restaurant-spoilage .rsa-kpis,.restaurant-spoilage .rsa-filters,.restaurant-spoilage .menu-stats{grid-template-columns:1fr}}
 </style>
 <div class="restaurant-spoilage">
   <header class="rsa-head"><div><div class="rsa-eyebrow">Restaurant · Management reporting</div><h1>Spoilage &amp; Loss Analysis</h1><p class="rsa-muted">Approved stock write-offs, reasons, products, accountability and unresolved reports.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="rsa-btn" href="{% url 'restaurant_spoilage_records' %}?from={{ date_from }}&amp;to={{ date_to }}&amp;hotel={{ selected_hotel }}">View all records</a><a class="rsa-btn" href="{% url 'restaurant_spoilage' %}">Open spoilage register</a></div></header>
