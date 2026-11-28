@@ -3,8 +3,41 @@
 {% block title %}{{ report_title }} | Hotel HMS{% endblock %}
 {% block content %}
 <style>
-.lrm{box-sizing:border-box;min-height:100%;margin:calc(-1 * clamp(18px,2.5vw,34px));padding:clamp(18px,2.5vw,34px);background:#0d1728;color:#e8eef8}.lrm *{box-sizing:border-box}.lrm-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}.lrm h1{font-size:27px;color:#f8fafc;margin:5px 0}.lrm h2{font-size:16px;color:#f8fafc;margin:0 0 14px}.lrm-muted{color:#9aabc1;font-size:13px;line-height:1.5}.lrm-panel{background:#172b43;border:1px solid #29415e;border-radius:14px;padding:18px;margin:16px 0}.lrm-nav{display:flex;gap:8px;flex-wrap:wrap}.lrm-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 12px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none;border:0;font-weight:750;font-size:12px}.lrm-btn.secondary{background:#263c58}.lrm-filters{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr)) auto;gap:12px;align-items:end}.lrm label{display:block;color:#b8c7da;font-size:12px;font-weight:750;margin-bottom:5px}.lrm input,.lrm select{width:100%;min-height:40px;border:1px solid #3b5573;border-radius:8px;background:#102239;color:#f8fafc;padding:8px}.lrm-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.lrm-kpi{background:#172b43;border:1px solid #29415e;border-radius:13px;padding:17px;min-width:0}.lrm-kpi span{display:block;color:#9aabc1;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}.lrm-kpi strong{display:block;color:#f8fafc;font-size:24px;margin:7px 0 3px}.lrm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.lrm-wrap{overflow-x:auto}.lrm table{width:100%;border-collapse:collapse;min-width:580px}.lrm th{background:#102239;color:#aebfd4;text-transform:uppercase;font-size:10px;letter-spacing:.06em;text-align:left;padding:11px;white-space:nowrap}.lrm td{padding:11px;border-bottom:1px solid #29415e;font-size:13px}.lrm-empty{text-align:center;color:#9aabc1;padding:22px!important}
-@media(max-width:900px){.lrm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.lrm-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.lrm-kpis,.lrm-grid,.lrm-filters{grid-template-columns:1fr}}
+/* CCH unified Laundry management reports — all five report views */
+:root{--lrm-ink:#302316;--lrm-muted:#6f6253;--lrm-border:#e7ddce;--lrm-panel:#fff;--lrm-head:#f2eadc;--lrm-page:#faf8f4;--lrm-bronze:#986126;--lrm-gold:#c99a4e}
+.main:has(.lrm),.main:has(.lrm)>.content{background:var(--lrm-page)!important;color:var(--lrm-ink)!important}
+.main:has(.lrm)>.topbar{background:#fff!important;color:var(--lrm-ink)!important;border-bottom:1px solid var(--lrm-border)!important}
+.main:has(.lrm)>.topbar a{color:#87551f!important}
+.lrm{box-sizing:border-box;min-height:100%;margin:calc(-1 * clamp(18px,2.5vw,34px));padding:clamp(18px,2.5vw,34px);background:var(--lrm-page)!important;color:var(--lrm-ink)!important}
+.lrm *{box-sizing:border-box}
+.lrm-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.lrm h1{font-size:clamp(24px,2.2vw,30px);font-weight:850;color:var(--lrm-ink)!important;margin:5px 0}
+.lrm h2{font-size:16px;font-weight:800;color:var(--lrm-ink)!important;margin:0 0 14px}
+.lrm-muted{color:var(--lrm-muted)!important;font-size:13px;line-height:1.55}
+.lrm-nav{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+.lrm-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border-radius:8px;background:linear-gradient(110deg,var(--lrm-bronze),var(--lrm-gold))!important;color:#fff!important;text-decoration:none;border:1px solid transparent;font-weight:750;font-size:12px;transition:filter .15s,transform .15s}
+.lrm-btn:hover{filter:brightness(.96);transform:translateY(-1px)}
+.lrm-btn.secondary{background:#f3eadb!important;color:#704719!important;border:1px solid var(--lrm-border)!important}
+.lrm-btn.secondary:hover{background:#eadcc5!important}
+.lrm-panel{background:var(--lrm-panel)!important;color:var(--lrm-ink)!important;border:1px solid var(--lrm-border)!important;border-radius:14px;padding:18px;margin:16px 0;box-shadow:0 6px 20px rgba(74,49,21,.055)}
+.lrm-filters{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr)) auto;gap:12px;align-items:end}
+.lrm label{display:block;color:#594733!important;font-size:12px;font-weight:750;margin-bottom:5px}
+.lrm input,.lrm select{width:100%;min-height:40px;border:1px solid #d8cbb8!important;border-radius:8px;background:#fff!important;color:var(--lrm-ink)!important;padding:8px;color-scheme:light}
+.lrm input:focus,.lrm select:focus{outline:2px solid rgba(201,154,78,.22);border-color:var(--lrm-gold)!important}
+.lrm-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:16px 0}
+.lrm-kpi{background:#fff!important;border:1px solid var(--lrm-border)!important;border-radius:13px;padding:17px;min-width:0;box-shadow:0 5px 16px rgba(74,49,21,.045)}
+.lrm-kpi span{display:block;color:#765a35!important;font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+.lrm-kpi strong{display:block;color:var(--lrm-ink)!important;font-size:24px;font-weight:850;margin:7px 0 3px;overflow-wrap:anywhere}
+.lrm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.lrm-wrap{overflow-x:auto;border:1px solid var(--lrm-border);border-radius:10px}
+.lrm table{width:100%;border-collapse:collapse;min-width:580px;background:#fff}
+.lrm th{background:var(--lrm-head)!important;color:#594733!important;text-transform:uppercase;font-size:10px;letter-spacing:.06em;text-align:left;padding:11px;white-space:nowrap;border-bottom:1px solid var(--lrm-border)}
+.lrm td{padding:11px;color:var(--lrm-ink)!important;border-bottom:1px solid #eee5d8;font-size:13px}
+.lrm tbody tr:nth-child(even){background:#fdfbf8}
+.lrm tbody tr:hover{background:#fbf6ed}
+.lrm-empty{text-align:center;color:var(--lrm-muted)!important;padding:22px!important}
+@media(max-width:900px){.lrm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.lrm-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.lrm-kpis,.lrm-grid,.lrm-filters{grid-template-columns:1fr}}
 </style>
 <div class="lrm">
 <header class="lrm-head"><div><div class="lrm-muted">LAUNDRY · DIRECTOR REPORTING</div><h1>{{ report_title }}</h1><p class="lrm-muted">{{ report_subtitle }}</p></div></header>
