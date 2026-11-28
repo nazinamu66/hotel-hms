@@ -38,6 +38,38 @@
 .menu-empty strong{display:block;margin-bottom:5px;color:#f8fafc}
 .menu-note{padding:14px 16px;margin-bottom:16px;background:#102239;border:1px solid #29415e;border-radius:11px;color:#cfe0f5;font-size:.83rem;line-height:1.5}
 @media(max-width:700px){.menu-head{flex-direction:column}.menu-stats{grid-template-columns:1fr 1fr}.menu-toolbar{align-items:stretch}.menu-field,.menu-field.grow{min-width:100%}.menu-btn{width:100%}}
+
+/* CCH unified gold, bronze and ivory theme */
+.menu-admin{--cch-ink:#302316;--cch-muted:#6f6253;--cch-border:#e7ddce}
+.main:has(.menu-admin){background:#faf8f4!important;color:#302316!important}
+.main:has(.menu-admin)>.topbar{background:#fff!important;color:#302316!important;border-bottom:1px solid #e7ddce!important}
+.main:has(.menu-admin)>.topbar a{color:#87551f!important}
+.menu-admin *{box-sizing:border-box}
+
+.menu-admin .menu-head{background:linear-gradient(120deg,#211910,#49321d 68%,#80531f)!important;color:#fff8eb!important;border:1px solid #65451f!important;border-radius:16px;padding:22px!important}
+.menu-admin .menu-head h1,.menu-admin .menu-head h2{color:#fff8eb!important}
+.menu-admin .menu-head p,.menu-admin .menu-note{color:#e2cfad!important}
+.menu-admin .menu-toolbar{background:#fff!important;border:1px solid #e7ddce!important;border-radius:13px;padding:16px!important}
+.menu-admin .menu-field label{color:#594733!important}
+.menu-admin .menu-field input,.menu-admin .menu-field select{background:#fff!important;color:#302316!important;border:1px solid #d8cbb8!important;color-scheme:light}
+.menu-admin .menu-stats{display:grid;gap:12px}
+.menu-admin .menu-stat{background:#fbf8f2!important;border:1px solid #e7ddce!important;border-radius:12px;padding:14px!important;color:#302316!important}
+.menu-admin .menu-stat strong,.menu-admin .menu-stat b{color:#302316!important}
+.menu-admin .menu-table-wrap{background:#fff!important;border:1px solid #e7ddce!important;border-radius:13px!important;overflow-x:auto}
+.menu-admin .menu-table th{background:#f2eadc!important;color:#594733!important}
+.menu-admin .menu-table td{background:#fff!important;color:#302316!important;border-color:#eee5d8!important}
+.menu-admin .menu-table tbody tr:nth-child(even) td{background:#fdfbf8!important}
+.menu-admin .menu-table tbody tr:hover td{background:#fbf6ed!important}
+.menu-admin .menu-pill{border:1px solid #e7ddce!important}
+.menu-admin .pill-food{background:#e6f3e9!important;color:#24623b!important}
+.menu-admin .pill-drink{background:#f3eadb!important;color:#704719!important}
+.menu-admin .pill-on{background:#e6f3e9!important;color:#24623b!important}
+.menu-admin .pill-off{background:#eee9e1!important;color:#65594a!important}
+.menu-admin .menu-toggle-btn{background:#f3eadb!important;color:#704719!important;border:1px solid #e7ddce!important}
+.menu-admin .menu-empty{background:#fff!important;color:#6f6253!important;border:1px dashed #d8cbb8!important}
+
+@media(max-width:900px){.menu-admin .menu-grid,.menu-admin .menu-kpis,.menu-admin .menu-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.menu-admin .menu-grid,.menu-admin .menu-kpis,.menu-admin .menu-filters,.menu-admin .menu-stats{grid-template-columns:1fr}}
 </style>
 
 <div class="menu-admin">
